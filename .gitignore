@@ -1,1 +1,35 @@
-.vscode
+# IDEs and editor settings
+.vscode/
+.idea/
+*.iml
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Java / Maven
+**/target/
+*.class
+*.log
+
+# Node / frontend build output
+**/node_modules/
+**/dist/
+**/coverage/
+**/.vite/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
