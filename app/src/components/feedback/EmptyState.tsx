@@ -1,10 +1,21 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
 
-export function EmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  className,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center" aria-live="polite">
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      {description ? <p className="mt-2 max-w-md text-sm text-slate-500">{description}</p> : null}
+    <section className={cn("eds-empty-state", className)} aria-live="polite">
+      <h3 className="eds-empty-state__title">{title}</h3>
+      {description ? <p className="eds-empty-state__description">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </section>
   );
