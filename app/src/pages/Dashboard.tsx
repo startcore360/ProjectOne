@@ -7,6 +7,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
+        //added 
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-600">
           Overview
         </p>
