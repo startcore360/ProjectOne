@@ -15,6 +15,11 @@ import com.edu360.api.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Holds the business rules for courses: creating them, listing "my courses" for the
+ * signed-in user, and enrolling students. This is where we check that a teacher only
+ * ever sees or edits their own courses, and a student only sees courses they're enrolled in.
+ */
 @Service
 @RequiredArgsConstructor
 public class CourseService {

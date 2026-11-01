@@ -4,6 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+/**
+ * One student's performance in one course: their average score and how much of class
+ * they've attended. This is the building block both performance reports are made of.
+ */
 @Data
 @AllArgsConstructor
 @Builder

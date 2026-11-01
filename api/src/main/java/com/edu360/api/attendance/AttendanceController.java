@@ -22,6 +22,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * The web addresses (API endpoints) for attendance. A teacher can mark attendance
+ * and see it for their own course; a student can only see their own attendance.
+ * Each method below just hands off the real work to AttendanceService.
+ */
 @RestController
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor

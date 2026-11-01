@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
+// A standard clickable button with color styles (variant), sizes, a loading
+// spinner, and a full-width option, so every button in the app looks the same.
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent";
 type ButtonSize = "sm" | "md" | "lg";
 
@@ -43,7 +45,13 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn("eds-button", variants[variant], sizes[size], fullWidth && "eds-button--block", className)}
+      className={cn(
+        "eds-button",
+        variants[variant],
+        sizes[size],
+        fullWidth && "eds-button--block",
+        className,
+      )}
     >
       {loading ? <span className="eds-spinner" aria-hidden="true" /> : null}
       {children}

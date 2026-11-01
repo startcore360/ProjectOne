@@ -22,6 +22,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * One row in the "courses" table: a course has one teacher who owns it
+ * and any number of students enrolled in it.
+ */
 @Entity
 @Table(name = "courses")
 @Getter

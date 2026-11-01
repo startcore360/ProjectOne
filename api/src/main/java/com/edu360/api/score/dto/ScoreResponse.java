@@ -4,6 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+/**
+ * A single grade sent back to the app: which assessment, what score out of what
+ * max, and the percentage already worked out so the frontend doesn't have to.
+ */
 @Data
 @AllArgsConstructor
 @Builder

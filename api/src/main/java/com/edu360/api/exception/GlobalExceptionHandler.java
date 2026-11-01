@@ -12,6 +12,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * The one place that turns a thrown error into an HTTP response. Instead of
+ * every controller writing its own try/catch, a controller can just throw
+ * (for example) a ResourceNotFoundException, and this class catches it and
+ * turns it into a proper 404 with a consistent {timestamp, status, error} body.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -23,6 +29,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountLocked(AccountLockedException ex) {
+        return buildResponse(HttpStatus.LOCKED, ex.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -50,6 +61,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    // Catches anything not handled above. The real error message is never sent
+    // back to the caller, so an unexpected bug doesn't leak internal details.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");

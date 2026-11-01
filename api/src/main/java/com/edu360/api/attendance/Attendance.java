@@ -23,8 +23,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * One row of attendance: did this student attend this course on this date, and
+ * what was the result (present, absent, late). This is the database table shape,
+ * not what gets sent over the API (see dto/AttendanceResponse for that).
+ */
 @Entity
 @Table(name = "attendance",
+       // A student can only have one attendance record per course per day — the
+       // database itself blocks a duplicate row instead of relying on app code to catch it.
        uniqueConstraints = @UniqueConstraint(columnNames = {"course_id", "student_id", "date"}))
 @Getter
 @Setter

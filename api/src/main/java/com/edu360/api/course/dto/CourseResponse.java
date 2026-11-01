@@ -6,6 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+/**
+ * The shape of a course when we send it back to the app: its name, code, who teaches it,
+ * and who's enrolled. This is a DTO (a simple data holder) — it has no logic of its own.
+ */
 @Data
 @AllArgsConstructor
 @Builder

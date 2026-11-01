@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
+// A reusable "something went wrong" message box, used instead of a blank
+// screen when a page or action fails.
 export function ErrorState({
   title = "Something went wrong",
   message,

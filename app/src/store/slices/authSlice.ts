@@ -15,6 +15,10 @@ type AuthState = {
   loading: boolean;
 };
 
+// This piece of the store holds "who is logged in right now" (or nobody, if no
+// one is). loading starts as true on purpose: when the app first opens, we don't
+// yet know if the user is logged in, so the app can show a loading state instead
+// of briefly flashing the login page before bootstrapAuth finishes checking.
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,

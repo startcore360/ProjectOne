@@ -20,6 +20,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Runs on every incoming request, before it reaches a controller. It looks for
+ * the login cookie, checks the token inside it is real, and if so tells Spring
+ * Security "this request belongs to this user, with this role" for the rest
+ * of the request. If there's no valid cookie, the request just stays anonymous.
+ */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -30,6 +36,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        // Pull the token out of the cookie by name - the browser doesn't send it any
+        // other way, since this app does not use a bearer Authorization header.
         String token = null;
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {

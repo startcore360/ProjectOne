@@ -1,8 +1,7 @@
 import { useEffect, type RefObject } from "react";
 
-/**
- * Calls onClose when a pointer interaction happens outside the referenced element.
- */
+// Used for things like dropdown menus: closes them when the user clicks or
+// taps anywhere outside the given element.
 export function useClickOutside<T extends Element>(
   ref: RefObject<T | null>,
   onClose: () => void,

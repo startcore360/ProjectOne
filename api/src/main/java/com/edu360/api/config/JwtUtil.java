@@ -1,6 +1,5 @@
 package com.edu360.api.config;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -11,8 +10,15 @@ import org.springframework.stereotype.Component;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
+/**
+ * Creates and checks the signed login tokens (JWTs). A JWT is just a small
+ * piece of text that proves who a user is without the server needing to
+ * remember a session in memory - anyone holding a valid one is trusted
+ * until it expires.
+ */
 @Component
 public class JwtUtil {
     private final SecretKey key;
@@ -20,7 +26,9 @@ public class JwtUtil {
 
     public JwtUtil(@Value("${app.jwt.secret}") String secret,
                    @Value("${app.jwt.expiration-ms}") long expirationMs) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        // app.jwt.secret is documented as a Base64-encoded key; decode it rather than
+        // using the property's raw characters as key bytes.
+        this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
         this.expirationMs = expirationMs;
     }
 

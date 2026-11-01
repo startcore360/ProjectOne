@@ -6,6 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+/**
+ * What we send a student when they ask for their own performance: their name plus a
+ * performance summary for every course they're enrolled in.
+ */
 @Data
 @AllArgsConstructor
 @Builder

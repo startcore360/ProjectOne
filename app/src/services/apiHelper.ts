@@ -9,6 +9,9 @@ export type ApiErrorResponse = {
 
 export type ApiError = AxiosError<ApiErrorResponse>;
 
+// Small shared helpers for talking to the backend API: building URLs,
+// turning a failed request into a friendly on-screen message, and turning
+// a filter object into a "?key=value" query string.
 /**
  * Builds an API path using the backend's current /api route prefix.
  * Axios service calls should continue using relative paths with the shared
@@ -20,6 +23,11 @@ export class ApiHelper {
     return `/api/${normalizedPath}`;
   }
 
+  // Turns whatever error axios throws into one plain sentence to show the
+  // user. It checks several possible places the backend might have put its
+  // message, then falls back to a friendly generic message (network issue,
+  // expired session, no permission, server error) so the UI never shows a
+  // raw technical error.
   static normalizeError(error: unknown): string {
     if (typeof error === "string" && error.trim()) {
       return error;

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
+// A reusable page title bar: a heading, an optional description, and optional
+// buttons on the right, so every page's header looks the same.
 export function PageHeader({
   title,
   description,

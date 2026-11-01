@@ -16,6 +16,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * The web endpoints for performance reports: a teacher can see how a whole course is doing
+ * (average scores, attendance), and a student can see their own summary across all courses.
+ * The two endpoints are locked to one role each (@PreAuthorize) so a student can never pull
+ * up a teacher's course-wide report, and a teacher can't use the "my performance" endpoint.
+ */
 @RestController
 @RequestMapping("/api/performance")
 @RequiredArgsConstructor

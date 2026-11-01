@@ -18,6 +18,10 @@ import com.edu360.api.user.User;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Builds the performance numbers shown to teachers and students: average score and
+ * attendance percentage, worked out from the raw scores and attendance records.
+ */
 @Service
 @RequiredArgsConstructor
 public class PerformanceService {
@@ -72,6 +76,9 @@ public class PerformanceService {
         long attended = attendanceRepository.countByCourseAndStudentAndStatus(
                 course, student, AttendanceStatus.PRESENT);
 
+        // Turn "classes attended out of total classes" into a percentage, rounded to 2
+        // decimal places so the number looks clean on screen (e.g. 86.67, not 86.666666...).
+        // Guard against dividing by zero when a student has no classes recorded yet.
         double attendancePct = (totalClasses > 0)
                 ? Math.round((double) attended / totalClasses * 100 * 100.0) / 100.0
                 : 0;

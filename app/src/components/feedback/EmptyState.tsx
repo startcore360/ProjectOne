@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
+// A reusable "there's nothing here yet" message, used instead of showing a
+// blank box when a list or page has no data to show.
 export function EmptyState({
   title,
   description,

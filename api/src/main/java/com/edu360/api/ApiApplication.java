@@ -3,6 +3,10 @@ package com.edu360.api;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/**
+ * The starting point of the whole backend. Running this file's main method
+ * starts the Spring Boot server (by default on port 8080).
+ */
 @SpringBootApplication
 public class ApiApplication {
 

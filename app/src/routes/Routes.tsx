@@ -6,6 +6,10 @@ import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
+// The app's full list of pages and URLs: which page shows for which path,
+// and whether that path needs the signed-out layout (PublicRoute/AuthLayout)
+// or the signed-in layout (PrivateRoute/AppLayout). Any unknown URL falls
+// back to the home page.
 export default function AppRoutes() {
   return (
     <Routes>
