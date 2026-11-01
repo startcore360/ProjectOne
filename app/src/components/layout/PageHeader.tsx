@@ -1,13 +1,24 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
 
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  className,
+}: {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  className?: string;
+}) {
   return (
-    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <header className={cn("eds-page-header", className)}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+        <h1 className="eds-page-header__title">{title}</h1>
+        {description ? <p className="eds-page-header__description">{description}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="eds-page-header__actions">{actions}</div> : null}
     </header>
   );
 }
