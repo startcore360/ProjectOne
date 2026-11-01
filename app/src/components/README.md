@@ -1,9 +1,11 @@
-# Shared frontend components
+# Frontend component organization
 
-Reusable components live here; domain-specific components should live beside their feature module.
+This directory contains reusable, domain-independent components.
 
-- `ui/`: accessible primitives (Button, Badge, Spinner)
-- `layout/`: page-level layout elements (PageHeader)
-- `feedback/`: empty and error states
+- `ui/`: accessible primitives such as Button, Badge and Spinner.
+- `feedback/`: empty and error states.
+- `layout/`: reusable layout elements such as PageHeader.
 
-Import from `@/components` or a focused subfolder. Keep API calls and business rules out of presentational components. Add components only when they have a real use case; do not expose nonfunctional placeholder controls.
+Feature-specific UI belongs under `src/features/<feature>/`. For example, authentication pages live in `src/features/auth/` and dashboard pages live in `src/features/dashboard/`.
+
+Keep API calls and business rules out of presentational components. Add components only for real use cases; do not expose nonfunctional placeholder controls.
