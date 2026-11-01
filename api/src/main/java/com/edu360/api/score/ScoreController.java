@@ -22,6 +22,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * The web endpoints for grades: a teacher submits scores for an assessment and can look
+ * them up by course, and a student can see their own scores. Every endpoint is locked to
+ * one role (@PreAuthorize) — teachers never see "my scores", students never submit scores.
+ */
 @RestController
 @RequestMapping("/api/scores")
 @RequiredArgsConstructor

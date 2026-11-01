@@ -8,6 +8,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
+/**
+ * What a teacher sends to submit grades for one assessment: which course, what the
+ * assessment is called, the max possible score, and every student's score.
+ */
 @Data
 public class SubmitScoresRequest {
 

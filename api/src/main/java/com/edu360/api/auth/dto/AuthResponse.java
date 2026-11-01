@@ -6,6 +6,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+/**
+ * Internal result of a login or account creation: who the user is, their
+ * role, and the signed token that proves they're logged in. This never
+ * goes straight to the browser - AuthController wraps the token in a
+ * cookie first and sends AuthUserResponse back instead.
+ */
 @Data
 @AllArgsConstructor
 @Builder

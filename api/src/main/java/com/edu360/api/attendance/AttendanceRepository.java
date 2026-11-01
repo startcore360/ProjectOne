@@ -9,6 +9,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.edu360.api.course.Course;
 import com.edu360.api.user.User;
 
+/**
+ * The database lookup methods for attendance records. This interface has no
+ * code in it — Spring reads the method names (like "findByCourseAndDate") and
+ * builds the matching database query automatically.
+ */
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     List<Attendance> findByCourseAndDate(Course course, LocalDate date);

@@ -17,6 +17,10 @@ import com.edu360.api.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * The actual attendance logic: saving who was present/absent, and fetching
+ * attendance records for a teacher's course or a student's own history.
+ */
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
@@ -36,7 +40,8 @@ public class AttendanceService {
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Student not found: " + entry.getStudentId()));
 
-            // Upsert: update if exists, insert if not
+            // If today's attendance for this student already exists, change it instead of
+            // making a second row for the same day (the database would reject a duplicate anyway).
             Attendance attendance = attendanceRepository
                     .findByCourseAndStudentAndDate(course, student, request.getDate())
                     .orElse(Attendance.builder()

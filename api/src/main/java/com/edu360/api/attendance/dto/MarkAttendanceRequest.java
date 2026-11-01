@@ -7,6 +7,10 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+/**
+ * What a teacher sends in to mark attendance: which course, which date, and
+ * a list of student+status pairs (one request marks a whole class at once).
+ */
 @Data
 public class MarkAttendanceRequest {
 

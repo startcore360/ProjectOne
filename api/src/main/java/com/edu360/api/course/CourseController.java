@@ -23,6 +23,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * The web endpoints for courses: a teacher can create a course and enroll
+ * students into it; both teachers and students can list and view their own courses.
+ */
 @RestController
 @RequestMapping("/api/courses")
 @RequiredArgsConstructor

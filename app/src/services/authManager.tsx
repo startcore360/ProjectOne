@@ -1,53 +1,36 @@
 import { store } from "../store";
 import { clearUser, setUser } from "../store/slices/authSlice";
 import { authService } from "./modules/authService";
-
-const TOKEN_KEY = "edu360-token";
-const USER_KEY = "edu360-user";
-
+// The three actions a page can call to sign a user in, sign them out, or
+// re-check who's currently signed in. Each one also updates the shared
+// Redux store, so the rest of the app (sidebar, route guards, etc.)
+// immediately sees the change.
 export const login = async (email: string, password: string) => {
   const { data } = await authService.login(email, password);
-  const user = {
-    id: data.userId,
-    name: data.name,
-    email: data.email,
-    role: data.role,
-  };
-
-  localStorage.setItem(TOKEN_KEY, data.token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  const user = { id: data.id, name: data.name, email: data.email, role: data.role };
   store.dispatch(setUser(user));
-
   return user;
 };
-
 export const logout = async () => {
   try {
     await authService.logout();
   } finally {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    // Clear the local "signed in" state and leave the page even if the
+    // server call above failed — an offline sign-out should still work
+    // from the user's point of view.
     store.dispatch(clearUser());
-    window.location.href = "/login";
+    window.location.replace("/login");
   }
 };
-
+// Asks the backend "who am I, if anyone?" and updates the store to match.
+// Used when the app first loads, to pick up an existing session.
 export const hydrateAuth = async () => {
   try {
-    const userJson = localStorage.getItem(USER_KEY);
-    const token = localStorage.getItem(TOKEN_KEY);
-
-    if (!userJson || !token) {
-      store.dispatch(clearUser());
-      return null;
-    }
-
-    const user = JSON.parse(userJson);
+    const { data } = await authService.me();
+    const user = { id: data.id, name: data.name, email: data.email, role: data.role };
     store.dispatch(setUser(user));
     return user;
-  } catch (error) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+  } catch {
     store.dispatch(clearUser());
     return null;
   }

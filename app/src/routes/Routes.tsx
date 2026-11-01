@@ -1,14 +1,18 @@
-import { Navigate, Route, Routes as RouterRoutes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "../layout/AppLayout";
 import AuthLayout from "../layout/AuthLayout";
-import DashboardPage from "../pages/Dashboard";
-import LoginPage from "../pages/Login";
+import LoginPage from "../features/auth/pages/LoginPage";
+import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
-export default function Routes() {
+// The app's full list of pages and URLs: which page shows for which path,
+// and whether that path needs the signed-out layout (PublicRoute/AuthLayout)
+// or the signed-in layout (PrivateRoute/AppLayout). Any unknown URL falls
+// back to the home page.
+export default function AppRoutes() {
   return (
-    <RouterRoutes>
+    <Routes>
       <Route element={<PublicRoute />}>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
@@ -23,6 +27,6 @@ export default function Routes() {
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </RouterRoutes>
+    </Routes>
   );
 }

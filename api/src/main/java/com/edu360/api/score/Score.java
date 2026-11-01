@@ -18,6 +18,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * One grade: how a student did on one assessment (like a quiz or exam) in one course.
+ * This class describes the "scores" database table — each field is a column.
+ */
 @Entity
 @Table(name = "scores")
 @Getter

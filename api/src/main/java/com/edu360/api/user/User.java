@@ -1,5 +1,7 @@
 package com.edu360.api.user;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,6 +16,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * One row in the "users" database table: a single account, whether that's
+ * the platform admin, a teacher, or a student. Stores the hashed password
+ * and the lockout info used by AuthService, never the real password.
+ */
 @Entity
 @Table(name = "users")
 @Getter
@@ -36,7 +43,17 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // Stored as the word "TEACHER"/"STUDENT"/etc. in the database, not as a plain
+    // number, so the data stays readable and safe even if the Role list is reordered later.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    // Account lockout (5 failed attempts / 15 minutes) — see AuthService.login.
+    @Column(nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    @Column
+    private Instant lockedUntil;
 }

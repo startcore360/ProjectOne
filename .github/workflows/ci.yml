@@ -1,0 +1,163 @@
+name: EDU 360 CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edu360-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend quality gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Run complete unit test suite
+        run: npm test
+      - name: Type-check and production build
+        run: npm run build
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: edu360-frontend-dist-${{ github.sha }}
+          path: app/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  backend:
+    name: Spring Boot quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: api/pom.xml
+      - name: Verify backend
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml verify
+      - name: Upload backend package
+        uses: actions/upload-artifact@v4
+        with:
+          name: edu360-backend-package-${{ github.sha }}
+          path: api/target/*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  security:
+    name: Dependency and secret checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Audit npm dependencies
+        working-directory: app
+        run: npm audit --audit-level=high
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Audit Maven dependencies
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+      - name: Scan repository for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: Pull request dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  codeql:
+    name: CodeQL static analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript, java-kotlin
+      - name: Autobuild supported projects
+        uses: github/codeql-action/autobuild@v3
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+
+  database-migration-validation:
+    name: PostgreSQL migration validation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+      - name: Validate EDU 360 SQL package
+        env:
+          PGPASSWORD: postgres
+          PSQL: psql -h localhost -U postgres
+        run: |
+          if [ -f sql/run_all.sh ]; then
+            chmod +x sql/run_all.sh
+            ./sql/run_all.sh
+          else
+            echo "::warning::Database validation is not yet executable: sql/run_all.sh and its versioned SQL assets are not present in this repository. Add the reviewed EDU 360 SQL package before making this check a required merge gate."
+          fi

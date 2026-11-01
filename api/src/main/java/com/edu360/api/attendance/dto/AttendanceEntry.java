@@ -5,6 +5,7 @@ import com.edu360.api.attendance.AttendanceStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+/** One student's attendance status, as part of a bigger "mark attendance" request. */
 @Data
 public class AttendanceEntry {
 

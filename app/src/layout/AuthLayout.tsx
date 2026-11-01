@@ -1,11 +1,11 @@
 import { Outlet } from "react-router-dom";
-
+// The page frame used for pages a signed-out user can see, like the login
+// page. Much simpler than AppLayout — no sidebar or user menu, since there's
+// no signed-in user to show one for.
 export default function AuthLayout() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Outlet />
-      </div>
+    <div className="auth-layout">
+      <Outlet />
     </div>
   );
 }

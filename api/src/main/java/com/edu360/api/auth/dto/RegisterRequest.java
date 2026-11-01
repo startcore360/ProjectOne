@@ -8,6 +8,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * What a platform admin sends to POST /api/auth/register to create a new
+ * TEACHER or STUDENT account for someone else.
+ */
 @Data
 public class RegisterRequest {
 
@@ -22,6 +26,7 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
+    // PLATFORM_ADMIN is deliberately not creatable through this endpoint — see AuthService.register.
     @NotNull(message = "Role is required (TEACHER or STUDENT)")
     private Role role;
 }

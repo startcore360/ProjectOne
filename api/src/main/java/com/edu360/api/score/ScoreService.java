@@ -17,6 +17,11 @@ import com.edu360.api.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Handles saving and fetching grades. Before doing anything, it checks (via CourseService)
+ * that the teacher actually owns the course, or the student is actually enrolled in it —
+ * so nobody can submit or read scores for a course they have no business touching.
+ */
 @Service
 @RequiredArgsConstructor
 public class ScoreService {
@@ -71,6 +76,7 @@ public class ScoreService {
     }
 
     private ScoreResponse toResponse(Score s) {
+        // Guard against dividing by zero if a score was ever saved with maxScore of 0.
         double percentage = (s.getMaxScore() > 0) ? (s.getScore() / s.getMaxScore() * 100) : 0;
         return ScoreResponse.builder()
                 .id(s.getId())
