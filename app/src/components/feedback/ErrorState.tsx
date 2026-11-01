@@ -1,10 +1,21 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
 
-export function ErrorState({ title = "Something went wrong", message, action }: { title?: string; message: string; action?: ReactNode }) {
+export function ErrorState({
+  title = "Something went wrong",
+  message,
+  action,
+  className,
+}: {
+  title?: string;
+  message: string;
+  action?: ReactNode;
+  className?: string;
+}) {
   return (
-    <section role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5">
-      <h3 className="font-semibold text-red-900">{title}</h3>
-      <p className="mt-1 text-sm text-red-800">{message}</p>
+    <section role="alert" className={cn("eds-error-state", className)}>
+      <h3 className="eds-error-state__title">{title}</h3>
+      <p className="eds-error-state__message">{message}</p>
       {action ? <div className="mt-3">{action}</div> : null}
     </section>
   );
