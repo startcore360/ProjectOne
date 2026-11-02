@@ -95,13 +95,20 @@ public class CourseService {
         return course;
     }
 
+    // Helper: verify student is enrolled when the course is already loaded.
+    // Attendance and score writes use this overload so a caller cannot submit
+    // records for an arbitrary user who is not a member of the course.
+    public void verifyStudentEnrolled(Course course, User student) {
+        if (student.getRole() != Role.STUDENT || !course.getStudents().contains(student)) {
+            throw new UnauthorizedException("Student is not enrolled in this course");
+        }
+    }
+
     // Helper: verify student is enrolled in the course
     public Course verifyStudentEnrolled(Long courseId, User student) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
-        if (!course.getStudents().contains(student)) {
-            throw new UnauthorizedException("You are not enrolled in this course");
-        }
+        verifyStudentEnrolled(course, student);
         return course;
     }
 
