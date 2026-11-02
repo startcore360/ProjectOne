@@ -288,7 +288,15 @@ a {
   text-decoration: none;
 }
 .auth-brand {
+  width: 100%;
+  justify-content: center;
   margin-bottom: 24px;
+}
+.auth-brand__logo {
+  display: block;
+  width: clamp(148px, 52vw, 220px);
+  max-width: 100%;
+  height: auto;
 }
 .auth-brand strong,
 .app-brand strong {
@@ -322,6 +330,12 @@ a {
   .theme-toggle--fab {
     right: var(--space-4);
     bottom: var(--space-4);
+  }
+  .auth-brand__logo {
+    width: clamp(120px, 40vw, 160px);
+  }
+  .auth-brand__logo .tagline-group {
+    display: none;
   }
 }
 .auth-brand__mark,
@@ -430,6 +444,13 @@ a {
 }
 .auth-submit {
   min-height: 52px;
+  margin-top: var(--space-5);
+}
+.auth-cancel-link {
+  display: block;
+  margin-top: var(--space-4);
+  text-align: center;
+  width: 100%;
 }
 .auth-message {
   margin-bottom: 16px;
@@ -468,6 +489,12 @@ a {
   }
   .auth-brand {
     margin-bottom: 12px;
+  }
+  .auth-brand__logo {
+    width: min(100%, 170px);
+  }
+  .auth-brand__logo .tagline-group {
+    display: none;
   }
   .auth-card {
     padding: 20px;
