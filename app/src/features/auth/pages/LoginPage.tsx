@@ -1,16 +1,16 @@
 import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { Button, Kicker, LinkButton, PasswordField, TextField } from "../../../design-system/components";
+import Edu360Logo from "../../../assets/Edu360Logo";
 import { login } from "../../../services/authManager";
-// The sign-in screen. Shows the login form, sends what the user types to the
-// backend, and sends them to the dashboard if it works.
+// The sign-in screen. Posts straight to this app's own /api/auth/login - Keycloak verifies
+// the password behind the scenes (see docs/KEYCLOAK_MIGRATION_PLAN.md), but this screen is
+// the only thing a user ever sees; there is no redirect to Keycloak's own page.
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  // Collected from the checkbox below, but not sent to the backend yet — the
-  // backend doesn't have a "remember me for longer" option implemented yet.
-  const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -18,18 +18,22 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setNotice("");
-    if (!identifier.trim() || !password) {
-      setError("Enter your school email or student ID and password.");
+    if (!email.trim() || !password) {
+      setError("Enter your email and password.");
       return;
     }
     setBusy(true);
     try {
-      await login(identifier.trim(), password);
-      navigate("/dashboard");
+      const user = await login(email.trim(), password);
+      navigate(user.mustChangePassword ? "/change-password" : "/dashboard");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Sign-in failed. Check your details and try again.",
-      );
+      // The backend's GlobalExceptionHandler sends a real, human message in the body
+      // ({error: "Invalid email or password"}) - show that, never axios's own generic
+      // "Request failed with status code 401" text.
+      const backendMessage = axios.isAxiosError<{ error?: string }>(err)
+        ? err.response?.data?.error
+        : undefined;
+      setError(backendMessage ?? "Sign-in failed. Check your details and try again.");
     } finally {
       setBusy(false);
     }
@@ -37,18 +41,15 @@ export default function LoginPage() {
   return (
     <main className="auth-screen">
       <div className="auth-brand">
-        <span className="auth-brand__mark">e</span>
-        <span>
-          EDU <strong>360</strong>
-        </span>
+        <Edu360Logo className="auth-brand__logo" />
       </div>
       <section className="auth-card" aria-labelledby="login-title">
-        <p className="eds-kicker">WELCOME BACK</p>
+        <Kicker>WELCOME BACK</Kicker>
         <h1 id="login-title" className="auth-card__title">
           Welcome back.
         </h1>
         <p className="auth-card__subtitle">
-          Sign in with your school account to continue to your learning workspace.
+          Sign in to continue to your workspace.
         </p>
         {error && (
           <div className="auth-message auth-message--error" role="alert">
@@ -61,57 +62,28 @@ export default function LoginPage() {
           </div>
         )}
         <form onSubmit={submit} noValidate>
-          <div className="eds-field">
-            <label htmlFor="login-identifier">
-              School email or student ID <span>Required</span>
-            </label>
-            <input
-              id="login-identifier"
-              autoComplete="username"
-              autoCapitalize="none"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="name@school.edu.in or student ID"
-              required
-            />
-          </div>
-          <div className="eds-field">
-            <label htmlFor="login-password">
-              Password <span>Required</span>
-            </label>
-            <div className="auth-password">
-              <input
-                id="login-password"
-                autoComplete="current-password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-              />
-              <button
-                className="auth-password__toggle"
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-pressed={showPassword}
-                aria-controls="login-password"
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
-          <div className="auth-options">
-            <label className="eds-check">
-              <input
-                type="checkbox"
-                checked={keepSignedIn}
-                onChange={(e) => setKeepSignedIn(e.target.checked)}
-              />
-              <span>Keep me signed in</span>
-            </label>
-            <button
-              className="eds-link-button"
-              type="button"
+          <TextField
+            id="login-email"
+            label="Email"
+            type="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+          />
+          <PasswordField
+            id="login-password"
+            label="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            required
+          />
+          <div className="auth-options -mb-3">
+            <LinkButton
               onClick={() =>
                 setNotice(
                   "Password recovery is managed by your institution. Please contact your school administrator.",
@@ -119,15 +91,11 @@ export default function LoginPage() {
               }
             >
               Forgot password?
-            </button>
+            </LinkButton>
           </div>
-          <button
-            className="eds-button eds-button--primary eds-button--lg eds-button--block auth-submit"
-            type="submit"
-            disabled={busy}
-          >
+          <Button type="submit" size="lg" block busy={busy} className="auth-submit">
             {busy ? "Signing in…" : "Sign in"}
-          </button>
+          </Button>
         </form>
         <p className="auth-security">
           <span aria-hidden="true">◆</span>Your access follows your institution’s roles and

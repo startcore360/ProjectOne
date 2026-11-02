@@ -1,16 +1,27 @@
 import api from "../axios";
-// The actual network calls for signing in, signing up, signing out, and asking
-// "who am I logged in as right now". Everything else in the app goes through
-// these functions instead of calling the backend directly.
+// The network calls behind sign-in/out and account management. login() posts straight to
+// this app's own /api/auth/login - Keycloak checks the password behind the scenes
+// (KeycloakAuthClient on the backend), but this SPA's code only ever talks to this API.
 export type AuthUserResponse = {
   id: number;
   name: string;
   email: string;
   role: "TEACHER" | "STUDENT" | string;
+  mustChangePassword: boolean;
+};
+export type AuthTokenResponse = {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresInSeconds: number;
+  user: AuthUserResponse;
 };
 export const authService = {
   login: (email: string, password: string) =>
-    api.post<AuthUserResponse>("/auth/login", { email, password }),
+    api.post<AuthTokenResponse>("/auth/login", { email, password }),
+  refresh: (refreshToken: string) =>
+    api.post<AuthTokenResponse>("/auth/refresh", { refreshToken }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post<AuthUserResponse>("/auth/change-password", { currentPassword, newPassword }),
   register: (payload: {
     name: string;
     email: string;

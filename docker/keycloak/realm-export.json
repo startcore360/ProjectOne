@@ -1,0 +1,49 @@
+{
+  "realm": "edu360",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginTheme": "edu360",
+  "roles": {
+    "realm": [
+      { "name": "PLATFORM_ADMIN", "description": "EDU 360 platform admin" },
+      { "name": "TEACHER", "description": "EDU 360 teacher" },
+      { "name": "STUDENT", "description": "EDU 360 student" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "edu360-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "edu360-admin-cli",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "secret": "dev-admin-cli-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-edu360-admin-cli",
+      "enabled": true,
+      "serviceAccountClientId": "edu360-admin-cli",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users", "view-realm"]
+      }
+    }
+  ]
+}

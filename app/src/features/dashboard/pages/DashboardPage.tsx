@@ -1,3 +1,4 @@
+import { Kicker } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 // Placeholder cards shown on the dashboard. They're fixed text for now — no
 // real attendance/course/score data is wired up to this screen yet.
@@ -47,7 +48,7 @@ export default function DashboardPage() {
       <section className="dashboard-section" aria-labelledby="overview-heading">
         <div className="dashboard-section__heading">
           <div>
-            <p className="eds-kicker">AT A GLANCE</p>
+            <Kicker>AT A GLANCE</Kicker>
             <h2 id="overview-heading">Your overview</h2>
           </div>
           <p>Information available to your account</p>

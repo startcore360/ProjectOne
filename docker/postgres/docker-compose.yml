@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: edu360
+      POSTGRES_PASSWORD: edu360
+      POSTGRES_DB: edu360db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

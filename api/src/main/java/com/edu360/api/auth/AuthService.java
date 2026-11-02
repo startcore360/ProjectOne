@@ -1,18 +1,15 @@
 package com.edu360.api.auth;
 
-import java.time.Duration;
-import java.time.Instant;
-
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
-import com.edu360.api.auth.dto.AuthResponse;
-import com.edu360.api.auth.dto.LoginRequest;
+import com.edu360.api.auth.dto.AuthTokenResponse;
+import com.edu360.api.auth.dto.AuthUserResponse;
 import com.edu360.api.auth.dto.RegisterRequest;
-import com.edu360.api.config.JwtUtil;
-import com.edu360.api.exception.AccountLockedException;
+import com.edu360.api.config.keycloak.KeycloakAdminClient;
+import com.edu360.api.config.keycloak.KeycloakAuthClient;
+import com.edu360.api.exception.InvalidCredentialsException;
 import com.edu360.api.user.Role;
 import com.edu360.api.user.User;
 import com.edu360.api.user.UserRepository;
@@ -20,24 +17,22 @@ import com.edu360.api.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Does the real work behind signing in and creating accounts: checking the
- * password, counting failed attempts, locking an account after too many
- * wrong guesses, and writing down what happened in the audit log.
+ * Does the real work behind accounts and sign-in: creating accounts by provisioning the
+ * matching Keycloak identity (OD-80), linking it to a local User row by Keycloak's user id
+ * (OD-10), forwarding login/refresh attempts to Keycloak without ever storing the password,
+ * and writing down what happened in the audit log. Keycloak itself — never this service —
+ * checks the password; this class only relays the attempt and records the outcome.
  */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
-    // Security policy: lock an account after 5 failed attempts for 15 minutes.
-    private static final int MAX_FAILED_ATTEMPTS = 5;
-    private static final Duration LOCKOUT_DURATION = Duration.ofMinutes(15);
-
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+    private final KeycloakAdminClient keycloakAdminClient;
+    private final KeycloakAuthClient keycloakAuthClient;
     private final AuditLogService auditLogService;
 
-    public AuthResponse register(RegisterRequest request, Long createdByUserId, String ipAddress) {
+    public User register(RegisterRequest request, Long createdByUserId, String ipAddress) {
         // Nobody can create a new PLATFORM_ADMIN through the API, including an existing
         // platform admin. That role only ever comes from the dev seeder (DevAdminSeeder) or
         // a real production setup step - never from a normal request.
@@ -48,10 +43,13 @@ public class AuthService {
             throw new IllegalArgumentException("Email already in use");
         }
 
+        String keycloakId = keycloakAdminClient.provisionUser(
+                request.getName(), request.getEmail(), request.getPassword(), request.getRole().name());
+
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .keycloakId(keycloakId)
                 .role(request.getRole())
                 .build();
 
@@ -60,70 +58,56 @@ public class AuthService {
         auditLogService.record(AuditEventType.ACCOUNT_CREATED, user.getId(), user.getEmail(), ipAddress,
                 "Created by user " + createdByUserId);
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
-
-        return AuthResponse.builder()
-                .token(token)
-                .userId(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .role(user.getRole())
-                .build();
+        return user;
     }
 
-    public AuthResponse login(LoginRequest request, String ipAddress) {
-        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
-        if (user == null) {
-            auditLogService.record(AuditEventType.LOGIN_FAILURE, null, request.getEmail(), ipAddress,
-                    "No account for identifier");
-            throw new IllegalArgumentException("Invalid email or password");
+    public AuthTokenResponse login(String email, String password, String ipAddress) {
+        KeycloakAuthClient.TokenResult tokens;
+        try {
+            tokens = keycloakAuthClient.login(email, password);
+        } catch (InvalidCredentialsException ex) {
+            auditLogService.record(AuditEventType.LOGIN_FAILURE, null, email, ipAddress, null);
+            throw ex;
         }
 
-        Instant now = Instant.now();
-        if (user.getLockedUntil() != null) {
-            if (user.getLockedUntil().isAfter(now)) {
-                auditLogService.record(AuditEventType.LOGIN_FAILURE, user.getId(), user.getEmail(), ipAddress,
-                        "Attempt while locked");
-                throw new AccountLockedException(
-                        "Too many failed attempts. Try again after " + user.getLockedUntil() + ".");
-            }
-            // Lock window has passed; reset before evaluating this attempt.
-            user.setFailedLoginAttempts(0);
-            user.setLockedUntil(null);
-        }
+        User user = userRepository.findByKeycloakId(tokens.keycloakId())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
-        // Wrong password: bump the failed-attempt counter, and lock the account once it
-        // reaches MAX_FAILED_ATTEMPTS. The counter is reset to 0 on the next successful
-        // login (below) or once the lock window above has passed.
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            int attempts = user.getFailedLoginAttempts() + 1;
-            user.setFailedLoginAttempts(attempts);
-            if (attempts >= MAX_FAILED_ATTEMPTS) {
-                user.setLockedUntil(now.plus(LOCKOUT_DURATION));
-                userRepository.save(user);
-                auditLogService.record(AuditEventType.ACCOUNT_LOCKED, user.getId(), user.getEmail(), ipAddress,
-                        "Locked after " + attempts + " failed attempts");
-                throw new AccountLockedException("Too many failed attempts. Account locked for 15 minutes.");
-            }
-            userRepository.save(user);
-            auditLogService.record(AuditEventType.LOGIN_FAILURE, user.getId(), user.getEmail(), ipAddress,
-                    "Failed attempt " + attempts + " of " + MAX_FAILED_ATTEMPTS);
-            throw new IllegalArgumentException("Invalid email or password");
-        }
-
-        user.setFailedLoginAttempts(0);
-        user.setLockedUntil(null);
-        userRepository.save(user);
-
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
         auditLogService.record(AuditEventType.LOGIN_SUCCESS, user.getId(), user.getEmail(), ipAddress, null);
 
-        return AuthResponse.builder()
-                .token(token)
-                .userId(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .role(user.getRole())
+        return toResponse(tokens, user);
+    }
+
+    public AuthTokenResponse refresh(String refreshToken) {
+        KeycloakAuthClient.TokenResult tokens = keycloakAuthClient.refresh(refreshToken);
+        User user = userRepository.findByKeycloakId(tokens.keycloakId())
+                .orElseThrow(() -> new InvalidCredentialsException("Session is no longer valid"));
+        return toResponse(tokens, user);
+    }
+
+    /** Used both for the forced first-time change and a later voluntary one - the current
+     *  password is re-verified against Keycloak itself (not trusted from the bearer token
+     *  alone) before the new one is accepted. */
+    public AuthUserResponse changePassword(User user, String currentPassword, String newPassword,
+                                            String ipAddress) {
+        keycloakAuthClient.login(user.getEmail(), currentPassword);
+
+        keycloakAdminClient.resetPassword(user.getKeycloakId(), newPassword);
+
+        user.setMustChangePassword(false);
+        user = userRepository.save(user);
+
+        auditLogService.record(AuditEventType.PASSWORD_CHANGED, user.getId(), user.getEmail(), ipAddress, null);
+
+        return AuthUserResponse.from(user);
+    }
+
+    private AuthTokenResponse toResponse(KeycloakAuthClient.TokenResult tokens, User user) {
+        return AuthTokenResponse.builder()
+                .accessToken(tokens.accessToken())
+                .refreshToken(tokens.refreshToken())
+                .expiresInSeconds(tokens.expiresInSeconds())
+                .user(AuthUserResponse.from(user))
                 .build();
     }
 }

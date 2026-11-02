@@ -7,6 +7,7 @@ export type AuthUser = {
   email: string;
   name: string;
   role?: Role;
+  mustChangePassword?: boolean;
 };
 
 type AuthState = {

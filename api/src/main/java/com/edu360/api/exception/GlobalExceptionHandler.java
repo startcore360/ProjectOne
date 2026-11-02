@@ -12,6 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.edu360.api.config.keycloak.KeycloakProvisioningException;
+
 /**
  * The one place that turns a thrown error into an HTTP response. Instead of
  * every controller writing its own try/catch, a controller can just throw
@@ -31,9 +33,14 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
-    @ExceptionHandler(AccountLockedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccountLocked(AccountLockedException ex) {
-        return buildResponse(HttpStatus.LOCKED, ex.getMessage());
+    @ExceptionHandler(KeycloakProvisioningException.class)
+    public ResponseEntity<Map<String, Object>> handleKeycloakProvisioning(KeycloakProvisioningException ex) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "Account provisioning is temporarily unavailable");
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

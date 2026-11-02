@@ -1,0 +1,128 @@
+/* EDU 360 branding for the Keycloak login page (popup flow).
+   Values are copied from app/src/design-system/tokens.css (:root, light theme only -
+   this theme file has no access to the React app's CSS, so the literal values are
+   duplicated here on purpose; keep the two in sync if the design tokens change). */
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap");
+
+:root {
+  --edu-color-canvas: #f3f6f3;
+  --edu-color-brand-soft: #dcebe3;
+  --edu-color-surface: #ffffff;
+  --edu-color-text: #1c302d;
+  --edu-color-text-muted: #596b63;
+  --edu-color-border: #dde6e0;
+  --edu-color-border-control: #7a8c83;
+  --edu-color-primary: #2d6154;
+  --edu-color-primary-hover: #214a40;
+  --edu-color-focus: #216eae;
+  --edu-font-display: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --edu-font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --edu-radius-card: 28px;
+  --edu-radius-control: 12px;
+
+  /* PatternFly v5 global tokens the keycloak.v2 base theme is built on. */
+  --pf-v5-global--primary-color--100: var(--edu-color-primary);
+  --pf-v5-global--primary-color--200: var(--edu-color-primary-hover);
+  --pf-v5-global--link--Color: var(--edu-color-primary);
+  --pf-v5-global--link--Color--hover: var(--edu-color-primary-hover);
+  --pf-v5-global--BackgroundColor--100: var(--edu-color-surface);
+  --pf-v5-global--BackgroundColor--200: var(--edu-color-canvas);
+  --pf-v5-global--Color--100: var(--edu-color-text);
+  --pf-v5-global--Color--200: var(--edu-color-text-muted);
+  --pf-v5-global--BorderColor--100: var(--edu-color-border);
+  --pf-v5-global--FontFamily--heading--sans-serif: var(--edu-font-display);
+  --pf-v5-global--FontFamily--sans-serif: var(--edu-font-body);
+  --pf-v5-global--active-color--100: var(--edu-color-focus);
+}
+
+body,
+.pf-v5-c-login,
+[class*="login__"] {
+  background: radial-gradient(ellipse at 50% 0%, var(--edu-color-brand-soft), transparent 48%),
+    var(--edu-color-canvas) !important;
+  font-family: var(--edu-font-body) !important;
+  color: var(--edu-color-text) !important;
+}
+
+/* The login card itself - several class-name shapes covered since PatternFly versions drift. */
+.pf-v5-c-card,
+.pf-v5-c-login__main-body,
+[class*="c-card"],
+[class*="login__main-body"] {
+  border-radius: var(--edu-radius-card) !important;
+  border: 1px solid var(--edu-color-border) !important;
+  background: var(--edu-color-surface) !important;
+  box-shadow: 0 22px 70px rgba(28, 48, 45, 0.07) !important;
+}
+
+h1,
+h2,
+.pf-v5-c-title,
+[class*="c-title"] {
+  font-family: var(--edu-font-display) !important;
+  color: var(--edu-color-text) !important;
+  letter-spacing: -0.03em;
+}
+
+/* Inputs */
+.pf-v5-c-form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  min-height: 48px !important;
+  border-radius: var(--edu-radius-control) !important;
+  border: 1px solid var(--edu-color-border-control) !important;
+  background: var(--edu-color-canvas) !important;
+  color: var(--edu-color-text) !important;
+  font-family: var(--edu-font-body) !important;
+  font-size: 16px !important;
+}
+.pf-v5-c-form-control:focus,
+input:focus {
+  outline: none !important;
+  border-color: var(--edu-color-focus) !important;
+  box-shadow: 0 0 0 3px rgba(33, 110, 174, 0.25) !important;
+}
+
+/* Primary button ("Sign In") */
+.pf-v5-c-button.pf-m-primary,
+[class*="c-button"][class*="m-primary"] {
+  min-height: 44px !important;
+  border-radius: 999px !important;
+  background: var(--edu-color-primary) !important;
+  border-color: var(--edu-color-primary) !important;
+  font-family: var(--edu-font-body) !important;
+  font-weight: 600 !important;
+}
+.pf-v5-c-button.pf-m-primary:hover,
+[class*="c-button"][class*="m-primary"]:hover {
+  background: var(--edu-color-primary-hover) !important;
+  border-color: var(--edu-color-primary-hover) !important;
+}
+
+/* Default Keycloak logo image -> replace with a CSS-only EDU 360 brand mark,
+   matching app/src/features/auth/pages/LoginPage.tsx's .auth-brand/.auth-brand__mark. */
+#kc-header-wrapper,
+.pf-v5-c-login__header,
+[class*="login__header"] {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  font: 600 18px var(--edu-font-display) !important;
+  color: var(--edu-color-text) !important;
+  text-indent: 0 !important;
+  background-image: none !important;
+}
+#kc-header-wrapper::before,
+.pf-v5-c-login__header::before,
+[class*="login__header"]::before {
+  content: "e";
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--edu-color-primary);
+  color: #ffffff;
+  font: 800 23px var(--edu-font-display);
+}

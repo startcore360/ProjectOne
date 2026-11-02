@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Button } from "../design-system/components";
 import { logout } from "../services/authManager";
 import { useAppSelector } from "../store/hooks";
 // The page frame shown once a user is signed in: sidebar, top bar with the
@@ -63,9 +64,9 @@ export default function AppLayout() {
               <strong>{name}</strong>
               <small>{role}</small>
             </span>
-            <button className="app-logout" type="button" onClick={signOut}>
+            <Button variant="secondary" className="app-logout" onClick={signOut}>
               Sign out
-            </button>
+            </Button>
           </div>
         </header>
         <main className="app-content">
