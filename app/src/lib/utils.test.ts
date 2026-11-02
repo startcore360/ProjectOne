@@ -6,7 +6,8 @@ describe("cn", () => {
     expect(cn("px-2", "px-4")).toBe("px-4");
   });
 
-  it("preserves independent classes and conditional class values", () => {
-    expect(cn("text-sm", false && "hidden", "font-medium")).toBe("text-sm font-medium");
+  it("preserves independent classes and omits a disabled conditional class", () => {
+    const isHidden = false;
+    expect(cn("text-sm", isHidden ? "hidden" : undefined, "font-medium")).toBe("text-sm font-medium");
   });
 });
