@@ -40,6 +40,7 @@ public class ScoreService {
             User student = userRepository.findById(entry.getStudentId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Student not found: " + entry.getStudentId()));
+            courseService.verifyStudentEnrolled(course, student);
 
             Score score = Score.builder()
                     .course(course)
