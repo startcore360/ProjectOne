@@ -39,6 +39,7 @@ public class AttendanceService {
             User student = userRepository.findById(entry.getStudentId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Student not found: " + entry.getStudentId()));
+            courseService.verifyStudentEnrolled(course, student);
 
             // If today's attendance for this student already exists, change it instead of
             // making a second row for the same day (the database would reject a duplicate anyway).
