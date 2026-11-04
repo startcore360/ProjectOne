@@ -155,9 +155,5 @@ jobs:
           PGPASSWORD: postgres
           PSQL: psql -h localhost -U postgres
         run: |
-          if [ -f sql/run_all.sh ]; then
-            chmod +x sql/run_all.sh
-            ./sql/run_all.sh
-          else
-            echo "::warning::Database validation is not yet executable: sql/run_all.sh and its versioned SQL assets are not present in this repository. Add the reviewed EDU 360 SQL package before making this check a required merge gate."
-          fi
+          chmod +x sql/run_all.sh
+          ./sql/run_all.sh

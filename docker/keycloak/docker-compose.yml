@@ -13,5 +13,13 @@ services:
     ports:
       - "8081:8080"
     volumes:
-      - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      # Three separate realms, one per login identity space, matching the DB schema's own split:
+      # - abc-university / xyz-university: tenant realms (platform.tenant.keycloak_realm)
+      # - edu360-platform: platform staff (platform.platform_user has no tenant_id at all -
+      #   it is a genuinely separate identity space, never mixed with a tenant's users)
+      # Keycloak's --import-realm flag imports every *.json file found under this folder, so
+      # dropping a new file here is enough to add another realm - no code change needed.
+      - ./realm-export-abc.json:/opt/keycloak/data/import/realm-export-abc.json:ro
+      - ./realm-export-xyz.json:/opt/keycloak/data/import/realm-export-xyz.json:ro
+      - ./realm-export-platform.json:/opt/keycloak/data/import/realm-export-platform.json:ro
       - ./themes/edu360:/opt/keycloak/themes/edu360:ro

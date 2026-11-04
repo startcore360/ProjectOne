@@ -16,46 +16,39 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 /**
- * Exercises the real HTTP calls KeycloakAdminClient makes against a mocked Keycloak server,
- * so the URL-building (where a full "http://host" value is embedded in the path rather than
- * passed as a URI template variable - getting it backwards previously broke every call with
- * "URI with undefined scheme") stays covered without needing a live Keycloak instance.
+ * Exercises the real HTTP calls KeycloakAdminClient makes against a mocked Keycloak server -
+ * now authenticating once as the master-realm admin (see KeycloakProperties' class comment for
+ * why), then calling the TARGET realm's admin endpoints, so both URLs stay covered without
+ * needing a live Keycloak instance.
  */
 class KeycloakAdminClientTest {
+
+    private static final String REALM = "abc-university";
 
     private KeycloakProperties properties() {
         KeycloakProperties properties = new KeycloakProperties();
         properties.setBaseUrl("http://kc.test");
-        properties.setRealm("edu360");
-        properties.setAdminClientId("edu360-admin-cli");
-        properties.setAdminClientSecret("secret");
+        properties.setMasterAdminUsername("kcadmin");
+        properties.setMasterAdminPassword("kcadmin");
         return properties;
     }
 
     @Test
-    void provisionUser_createsAccountAndAssignsRealmRole() {
+    void provisionUser_createsAccountWithMustChangePasswordAttribute() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         KeycloakAdminClient client = new KeycloakAdminClient(builder, properties());
 
-        server.expect(requestTo("http://kc.test/realms/edu360/protocol/openid-connect/token"))
+        server.expect(requestTo("http://kc.test/realms/master/protocol/openid-connect/token"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
 
-        server.expect(requestTo("http://kc.test/admin/realms/edu360/users"))
+        server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/users"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.CREATED)
-                        .location(URI.create("http://kc.test/admin/realms/edu360/users/kc-user-123")));
+                        .location(URI.create("http://kc.test/admin/realms/" + REALM + "/users/kc-user-123")));
 
-        server.expect(requestTo("http://kc.test/admin/realms/edu360/roles/TEACHER"))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess("{\"id\":\"role-1\",\"name\":\"TEACHER\"}", MediaType.APPLICATION_JSON));
-
-        server.expect(requestTo("http://kc.test/admin/realms/edu360/users/kc-user-123/role-mappings/realm"))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess());
-
-        String keycloakId = client.provisionUser("Jane Teacher", "jane@edu360.local", "Temp#Pass1", "TEACHER");
+        String keycloakId = client.provisionUser(REALM, "Jane Teacher", "jane@edu360.local", "Temp#Pass1", true);
 
         assertThat(keycloakId).isEqualTo("kc-user-123");
         server.verify();
@@ -67,12 +60,40 @@ class KeycloakAdminClientTest {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         KeycloakAdminClient client = new KeycloakAdminClient(builder, properties());
 
-        server.expect(requestTo("http://kc.test/realms/edu360/protocol/openid-connect/token"))
+        server.expect(requestTo("http://kc.test/realms/master/protocol/openid-connect/token"))
                 .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
-        server.expect(requestTo("http://kc.test/admin/realms/edu360/users"))
+        server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/users"))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
         org.junit.jupiter.api.Assertions.assertThrows(KeycloakProvisioningException.class,
-                () -> client.provisionUser("Jane", "jane@edu360.local", "Temp#Pass1", "TEACHER"));
+                () -> client.provisionUser(REALM, "Jane", "jane@edu360.local", "Temp#Pass1", true));
+    }
+
+    @Test
+    void resetPassword_updatesCredentialAndClearsMustChangePasswordAttribute() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KeycloakAdminClient client = new KeycloakAdminClient(builder, properties());
+
+        server.expect(requestTo("http://kc.test/realms/master/protocol/openid-connect/token"))
+                .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/users/kc-user-123/reset-password"))
+                .andExpect(method(HttpMethod.PUT))
+                .andRespond(withSuccess());
+        // setMustChangePasswordAttribute now GETs the current representation first and merges
+        // in just the one changed field, instead of PUTting a bare {"attributes": ...} body -
+        // found by actually calling it against a real Keycloak and watching it silently wipe a
+        // user's firstName/lastName/email (see that method's own javadoc).
+        server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/users/kc-user-123"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(
+                        "{\"id\":\"kc-user-123\",\"username\":\"jane\",\"firstName\":\"Jane\",\"lastName\":\"Teacher\"}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/users/kc-user-123"))
+                .andExpect(method(HttpMethod.PUT))
+                .andRespond(withSuccess());
+
+        client.resetPassword(REALM, "kc-user-123", "NewPass#1");
+        server.verify();
     }
 }
