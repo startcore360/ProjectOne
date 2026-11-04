@@ -52,7 +52,7 @@ export function PlatformOverviewPage() {
     </div>
     <div className="platform-two-col">
       <Panel title="Go-live readiness" description="Tenants with setup items still to complete"><div className="platform-list">{tenants.filter((t) => t.gates > 0).map((tenant) => <div className="platform-list-row" key={tenant.id}><span className="platform-list-icon">!</span><span className="platform-list-copy"><strong>{tenant.name}</strong><small>{tenant.gates} setup item{tenant.gates === 1 ? "" : "s"} remaining · {tenant.type}</small></span><Status value={tenant.status} /></div>)}</div>{openGates === 0 && <p className="platform-empty-inline">All current setup gates are complete.</p>}</Panel>
-      <Panel title="Platform activity" description="Latest platform-scope events"><div className="platform-list">{initialAudit.slice(0, 4).map((event) => <div className="platform-list-row" key={event.id}><span className="platform-list-icon">◷</span><span className="platform-list-copy"><strong>{event.action}</strong><small>{event.actor} · {event.when}</small></span><Status value={event.outcome} /></div>)}</div></Panel>
+      <Panel title="Platform activity" description="Latest platform-scope events"><div className="platform-list">{initialAudit.length ? initialAudit.slice(0, 4).map((event) => <div className="platform-list-row" key={event.id}><span className="platform-list-icon">◷</span><span className="platform-list-copy"><strong>{event.action}</strong><small>{event.actor} · {event.when}</small></span><Status value={event.outcome} /></div>) : <p className="platform-empty-inline">No platform events are loaded in this prototype snapshot.</p>}</div></Panel>
     </div>
     <SampleNote />
   </div>;
