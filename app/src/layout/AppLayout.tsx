@@ -43,7 +43,7 @@ export default function AppLayout() {
         <p className="app-sidebar__label">{isPlatformAdmin ? "PLATFORM" : isUniversityAdmin ? "UNIVERSITY" : "WORKSPACE"}</p>
         <nav className="app-nav" aria-label="Main navigation">
           {navigation.map((item) => (
-            <NavLink key={item.to} to={item.to} end className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}>
+            <NavLink key={item.to} to={item.to} end title={item.label} aria-label={item.label} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}>
               <span aria-hidden="true">{item.icon}</span>{item.label}
             </NavLink>
           ))}
