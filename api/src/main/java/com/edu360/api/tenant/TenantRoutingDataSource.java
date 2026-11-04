@@ -7,9 +7,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 
@@ -24,7 +26,10 @@ import com.zaxxer.hikari.HikariDataSource;
  * WHAT: the one DataSource every repository in this app actually talks to. Picks, per request,
  * either the shared Postgres pool (SHARED tenants, kept apart by RLS) or a lazily-opened pool
  * for that specific ISOLATED tenant's own database - then, either way, tells Postgres which
- * tenant this connection is allowed to see before handing the connection back to Hibernate.
+ * tenant (app.tenant_id) AND which institutions within that tenant (app.institution_scope /
+ * app.institution_ids - the OD-03 institution-level RLS layer under tenant RLS) this connection
+ * is allowed to see before handing the connection back to Hibernate. See applyTenantGucs(...)
+ * below for exactly what is set and why.
  *
  * HOW routing decides SHARED vs ISOLATED: entirely from TenantContext, which the JWT converter
  * (TenantIssuerAuthenticationManagerResolver) populates only after a token is fully verified.
@@ -181,9 +186,13 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
     }
 
     /**
-     * Tells Postgres, on this specific connection, which tenant (and, once Foundation Item 7
-     * exists, which institution scope) the current request is allowed to see - this is what
-     * sql/03_bindings.sql's RLS policies actually read via current_setting('app.tenant_id').
+     * Tells Postgres, on this specific connection, which tenant AND which institution scope the
+     * current request is allowed to see - this is what sql/03_bindings.sql's RLS policies
+     * actually read via current_setting('app.tenant_id'/'app.institution_scope'/
+     * 'app.institution_ids'). Package-private (not private) so
+     * TenantRoutingDataSourceInstitutionScopeIT can exercise it directly against a real
+     * connection without going through the full getConnection()/Hikari path - the same reason
+     * cachedPoolCount()/evict(...) below are package-private rather than private.
      *
      * HOW/WHY session-level SET, not SET LOCAL (found by actually logging in, not by review):
      * SET LOCAL only lasts for the current transaction, but this method runs at connection-
@@ -195,14 +204,20 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
      * regardless of tenant, which is exactly what keeps pooled-connection reuse safe: a
      * connection previously used for tenant A is explicitly reset (to tenant B's value, or
      * fully cleared below) the moment it is borrowed again - the GUC is never left over from
-     * whoever used this physical connection last.
+     * whoever used this physical connection last. The same discipline applies to
+     * app.institution_ids below: it is ALWAYS explicitly SET (to the real CSV list, or to an
+     * empty string) on every borrow, never just RESET-or-skipped on one path and left untouched
+     * on another - a connection previously borrowed for a request scoped to institution X must
+     * never carry institution X's id into a later borrow for a request with no institution
+     * access at all.
      *
      * WHY string concatenation here is safe (not a SQL-injection risk) even though Postgres's
-     * SET command does not accept JDBC bind parameters at all: tenantId is a java.util.UUID,
-     * whose toString() is always exactly 36 fixed hex-and-hyphen characters - it structurally
-     * cannot contain a quote character to break out of the literal.
+     * SET command does not accept JDBC bind parameters at all: tenantId and every element of
+     * institutionIds are java.util.UUID, whose toString() is always exactly 36 fixed
+     * hex-and-hyphen characters - structurally incapable of containing a quote character to
+     * break out of the literal.
      */
-    private void applyTenantGucs(Connection connection) throws SQLException {
+    void applyTenantGucs(Connection connection) throws SQLException {
         UUID tenantId = TenantContext.currentTenantId();
         try (Statement statement = connection.createStatement()) {
             if (tenantId == null) {
@@ -214,6 +229,7 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
                 // closed for this borrow (Platform Admin, or anything pre-authentication).
                 statement.execute("RESET app.tenant_id");
                 statement.execute("RESET app.institution_scope");
+                statement.execute("RESET app.institution_ids");
                 return;
             }
             statement.execute("SET app.tenant_id = '" + tenantId + "'");
@@ -223,6 +239,21 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
             // policy treats "scope = NONE and no institution id matches" as "deny every
             // institution-scoped row" - never "allow everything" by default.
             statement.execute("SET app.institution_scope = 'NONE'");
+            statement.execute(institutionIdsSetStatement());
         }
+    }
+
+    /** Builds the SET app.institution_ids statement from TenantContext.currentInstitutionIds() -
+     *  an empty CSV string when the caller has no institution scope (TenantContext's fail-closed
+     *  default, see its class comment's INSTITUTION SCOPE section), never a bare RESET, so this
+     *  GUC is always explicitly overwritten on every borrow regardless of what the previous
+     *  occupant of this pooled connection left behind. */
+    private String institutionIdsSetStatement() {
+        Set<UUID> institutionIds = TenantContext.currentInstitutionIds();
+        if (institutionIds.isEmpty()) {
+            return "SET app.institution_ids = ''";
+        }
+        String csv = institutionIds.stream().map(UUID::toString).collect(Collectors.joining(","));
+        return "SET app.institution_ids = '" + csv + "'";
     }
 }

@@ -61,6 +61,21 @@ if ($schemaApplied.Trim() -ne "t") {
     Write-Host "EDU 360 schema already present in edu360db."
 }
 
+# 05_ref_data.sql (the 71 roles / 278 actions / 1,851 role-action pairs) was previously only
+# ever loaded into the throwaway edu360_v4_test/edu360_v4_ref databases by sql/run_all.sh, never
+# into this actual dev database - found the hard way when DevRoleAssignmentSeeder failed to
+# start the whole app with "Key is not present in table standard_role" because ref.standard_role
+# had zero rows here. It's part of the same approved, already-tested sql/ bundle, so applying it
+# to the real dev database is not a new decision, just closing a real operational gap.
+$refDataApplied = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT count(*) FROM ref.standard_role"
+if ($refDataApplied.Trim() -eq "0") {
+    Write-Host "Applying EDU 360 reference data (71 roles / 278 actions) to edu360db..."
+    Run-Sql "05_ref_data.sql"
+    Write-Host "Reference data applied."
+} else {
+    Write-Host "EDU 360 reference data already present in edu360db ($($refDataApplied.Trim()) standard roles)."
+}
+
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "ALTER ROLE edu_app WITH PASSWORD '$password'"
 Write-Host "edu_app role credential set."
 
