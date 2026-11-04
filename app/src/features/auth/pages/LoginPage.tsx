@@ -25,7 +25,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const user = await login(email.trim(), password);
-      navigate(user.mustChangePassword ? "/change-password" : "/dashboard");
+      navigate(user.mustChangePassword ? "/change-password" : "/");
     } catch (err) {
       // The backend's GlobalExceptionHandler sends a real, human message in the body
       // ({error: "Invalid email or password"}) - show that, never axios's own generic
