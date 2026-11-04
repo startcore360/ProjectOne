@@ -157,6 +157,48 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * AUTH_DEVICES_MANAGE (Sign-in epic, Scope: Self): revokes one Keycloak user session by its
+     * "sid" claim, via Keycloak's own admin logout-session endpoint - DELETE /admin/realms/
+     * {realm}/sessions/{sessionId}. This is the same admin-token pattern every other method in
+     * this class uses (fetchMasterAdminAccessToken + a single admin REST call), reused here
+     * rather than standing up a second HTTP client, per the Sign-in epic self-service brief.
+     *
+     * Reuses sessionsUrl for both calls rather than adding a second idempotent-DELETE helper:
+     * Keycloak itself answers a repeat DELETE of an already-gone session as a no-op (204), so no
+     * extra existence check is added here before calling it.
+     */
+    public void logoutSession(String realm, String sessionId) {
+        String adminToken = fetchMasterAdminAccessToken();
+        restClient.delete()
+                .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/sessions/" + sessionId)
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    /**
+     * USER_PASSWORD_RESET_UNLOCK's real "unlock" half: clears Keycloak's own brute-force/
+     * attack-detection lockout record for one user - DELETE /admin/realms/{realm}/
+     * attack-detection/brute-force/users/{userId}, the endpoint Keycloak's own docs name for
+     * this exact purpose (distinct from resetPassword, which only gives the user a fresh
+     * credential and does nothing to this separate failure-count record).
+     *
+     * Same admin-token + single REST call pattern as every other method in this class
+     * (fetchMasterAdminAccessToken + one admin call); like logoutSession, a repeat DELETE of an
+     * already-clear record is a no-op on Keycloak's side, so no existence check is added here
+     * first.
+     */
+    public void clearBruteForceLockout(String realm, String keycloakUserId) {
+        String adminToken = fetchMasterAdminAccessToken();
+        restClient.delete()
+                .uri(properties.getBaseUrl() + "/admin/realms/" + realm
+                        + "/attack-detection/brute-force/users/" + keycloakUserId)
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    /**
      * WHAT: flips the must_change_password attribute without touching anything else about the
      * user.
      *

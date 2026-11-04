@@ -12,5 +12,11 @@ public enum AuditEventType {
     LOGIN_FAILURE,
     LOGOUT,
     ACCOUNT_CREATED,
-    PASSWORD_CHANGED
+    PASSWORD_CHANGED,
+    /** PROFILE_EDIT_OWN (selfservice/ProfileService): the authenticated principal changed its
+     *  own display name/contact details. */
+    PROFILE_UPDATED,
+    /** AUTH_DEVICES_MANAGE (selfservice/SessionService): the authenticated principal revoked
+     *  the session it was currently using. */
+    SESSION_REVOKED
 }

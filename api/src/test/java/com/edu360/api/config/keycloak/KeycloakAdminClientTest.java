@@ -96,4 +96,22 @@ class KeycloakAdminClientTest {
         client.resetPassword(REALM, "kc-user-123", "NewPass#1");
         server.verify();
     }
+
+    @Test
+    void clearBruteForceLockout_sendsDeleteToAttackDetectionEndpoint() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KeycloakAdminClient client = new KeycloakAdminClient(builder, properties());
+
+        server.expect(requestTo("http://kc.test/realms/master/protocol/openid-connect/token"))
+                .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(
+                        "http://kc.test/admin/realms/" + REALM + "/attack-detection/brute-force/users/kc-user-123"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        client.clearBruteForceLockout(REALM, "kc-user-123");
+
+        server.verify();
+    }
 }

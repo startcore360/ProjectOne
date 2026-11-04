@@ -5,13 +5,18 @@ import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
 import ChangePasswordPage from "../features/auth/pages/ChangePasswordPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import ProfilePage from "../features/profile/pages/ProfilePage";
+import SessionsPage from "../features/sessions/pages/SessionsPage";
 import {
   AuditLogPage,
+  BackupStatusPage,
+  IntegrationTypesPage,
   PlatformOverviewPage,
   PlatformUsersPage,
   PlansPage,
   SupportAccessPage,
   TenantsPage,
+  UsageCountsPage,
 } from "../features/platform/pages/PlatformPages";
 import {
   InstitutionUsersPage,
@@ -19,6 +24,15 @@ import {
   MissingRolesPage,
   RolesPermissionsPage,
 } from "../features/institution-admin/pages/InstitutionAdminPages";
+import {
+  CalendarEventsPage,
+  ClassTeacherAssignmentPage,
+  HodAssignmentPage,
+  MentorAssignmentPage,
+  StudentLoginSwitchPage,
+  WeeklyOffRulesPage,
+} from "../features/institution-admin/pages/InstitutionSetupPages";
+import { UserDetailPage, UserListPage } from "../features/user-management/pages/UserManagementPages";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
@@ -66,6 +80,12 @@ export default function AppRoutes() {
             <Route path="/university/users" element={<InstitutionUsersPage />} />
             <Route path="/university/roles" element={<RolesPermissionsPage />} />
             <Route path="/university/missing-roles" element={<MissingRolesPage />} />
+            <Route path="/university/setup/hod" element={<HodAssignmentPage />} />
+            <Route path="/university/setup/mentor" element={<MentorAssignmentPage />} />
+            <Route path="/university/setup/class-teacher" element={<ClassTeacherAssignmentPage />} />
+            <Route path="/university/setup/student-login" element={<StudentLoginSwitchPage />} />
+            <Route path="/university/setup/calendar-events" element={<CalendarEventsPage />} />
+            <Route path="/university/setup/weekly-off" element={<WeeklyOffRulesPage />} />
           </Route>
         </Route>
         <Route element={<PlatformAdminRoute />}>
@@ -76,11 +96,18 @@ export default function AppRoutes() {
             <Route path="/platform/users" element={<PlatformUsersPage />} />
             <Route path="/platform/support" element={<SupportAccessPage />} />
             <Route path="/platform/audit" element={<AuditLogPage />} />
+            <Route path="/platform/usage-counts" element={<UsageCountsPage />} />
+            <Route path="/platform/backup-status" element={<BackupStatusPage />} />
+            <Route path="/platform/integration-types" element={<IntegrationTypesPage />} />
           </Route>
         </Route>
         <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+          <Route path="/tenants/users" element={<UserListPage />} />
+          <Route path="/tenants/users/:userId" element={<UserDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
