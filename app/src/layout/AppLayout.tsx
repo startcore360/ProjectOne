@@ -3,7 +3,7 @@ import { Button } from "../design-system/components";
 import { logout } from "../services/authManager";
 import { useAppSelector } from "../store/hooks";
 
-const platformNavigation = [
+const universityNavigation = [\n  { label: "Institutions", to: "/university/institutions", icon: "▤" },\n  { label: "Users & roles", to: "/university/users", icon: "♙" },\n  { label: "Roles & permissions", to: "/university/roles", icon: "⛨" },\n  { label: "Missing roles", to: "/university/missing-roles", icon: "⇣" },\n];\n\nconst platformNavigation = [
   { label: "Overview", to: "/platform", icon: "▦" },
   { label: "Tenants", to: "/platform/tenants", icon: "▤" },
   { label: "Plans & billing", to: "/platform/plans", icon: "◈" },
@@ -18,7 +18,7 @@ export default function AppLayout() {
   const name = user?.name?.trim() || "Account";
   const role = user?.role?.replaceAll("_", " ") || "Member";
   const normalizedRole = role.toUpperCase().replaceAll(" ", "_");
-  const isPlatformAdmin = normalizedRole === "PLATFORM_ADMIN" || normalizedRole === "PLATFORM_ADMINISTRATOR";
+  const isPlatformAdmin = normalizedRole === "PLATFORM_ADMIN" || normalizedRole === "PLATFORM_ADMINISTRATOR";\n  const isUniversityAdmin = normalizedRole === "UNIVERSITY_ADMIN";
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "A";
 
   const signOut = async () => {
@@ -31,7 +31,7 @@ export default function AppLayout() {
     }
   };
 
-  const navigation = isPlatformAdmin ? platformNavigation : [{ label: "Overview", to: "/dashboard", icon: "▦" }];
+  const navigation = isPlatformAdmin ? platformNavigation : isUniversityAdmin ? universityNavigation : [{ label: "Overview", to: "/dashboard", icon: "▦" }];
 
   return (
     <div className="app-shell">
@@ -40,7 +40,7 @@ export default function AppLayout() {
           <span className="app-brand__mark">e</span>
           <span>EDU <strong>360</strong></span>
         </NavLink>
-        <p className="app-sidebar__label">{isPlatformAdmin ? "PLATFORM" : "WORKSPACE"}</p>
+        <p className="app-sidebar__label">{isPlatformAdmin ? "PLATFORM" : isUniversityAdmin ? "UNIVERSITY" : "WORKSPACE"}</p>
         <nav className="app-nav" aria-label="Main navigation">
           {navigation.map((item) => (
             <NavLink key={item.to} to={item.to} end className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}>
@@ -50,12 +50,12 @@ export default function AppLayout() {
         </nav>
         <div className="app-sidebar__bottom">
           <span className="app-sidebar__dot" />
-          {isPlatformAdmin ? "Platform scope" : "Institution workspace"}
+          {isPlatformAdmin ? "Platform scope" : isUniversityAdmin ? "University scope" : "Institution workspace"}
         </div>
       </aside>
       <div className="app-main">
         <header className="app-topbar">
-          <div className="app-topbar__context"><span>EDU 360</span><span>/</span><strong>{isPlatformAdmin ? "Platform console" : "Workspace"}</strong></div>
+          <div className="app-topbar__context"><span>EDU 360</span><span>/</span><strong>{isPlatformAdmin ? "Platform console" : isUniversityAdmin ? "University admin" : "Workspace"}</strong></div>
           <div className="app-user">
             <span className="app-user__avatar">{initials}</span>
             <span className="app-user__details"><strong>{name}</strong><small>{role}</small></span>
