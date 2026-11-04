@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "../../../components/ui";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button, Kicker } from "../../../design-system/components";
@@ -9,7 +9,7 @@ const institutions = [
   { name: "Northbridge School of Commerce", type: "College · setup in progress", status: "Pending" },
 ];
 
-function Panel({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Panel({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return <section className="platform-panel"><header className="platform-panel__header"><div><h2>{title}</h2>{description && <p>{description}</p>}</div></header>{children}</section>;
 }
 function StateBadge({ status }: { status: string }) {
