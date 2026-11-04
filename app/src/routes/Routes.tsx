@@ -16,7 +16,7 @@ import {
 import {\n  InstitutionUsersPage,\n  InstitutionsPage,\n  MissingRolesPage,\n  RolesPermissionsPage,\n} from "../features/institution-admin/pages/InstitutionAdminPages";\nimport PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
-function UniversityAdminRoute() {\n  const role = useAppSelector((state) => state.auth.user?.role || "");\n  const normalized = role.toUpperCase().replaceAll(" ", "_");\n  return normalized === "UNIVERSITY_ADMIN" ? <Outlet /> : <Navigate to="/dashboard" replace />;\n}\n\nfunction PlatformAdminRoute() {
+function RoleHomeRedirect() {\n  const role = useAppSelector((state) => state.auth.user?.role || "");\n  const normalized = role.toUpperCase().replaceAll(" ", "_");\n  if (normalized === "PLATFORM_ADMIN" || normalized === "PLATFORM_ADMINISTRATOR") return <Navigate to="/platform" replace />;\n  if (normalized === "UNIVERSITY_ADMIN") return <Navigate to="/university/institutions" replace />;\n  return <Navigate to="/dashboard/workspace" replace />;\n}\n\nfunction UniversityAdminRoute() {\n  const role = useAppSelector((state) => state.auth.user?.role || "");\n  const normalized = role.toUpperCase().replaceAll(" ", "_");\n  return normalized === "UNIVERSITY_ADMIN" ? <Outlet /> : <Navigate to="/dashboard" replace />;\n}\n\nfunction PlatformAdminRoute() {
   const role = useAppSelector((state) => state.auth.user?.role || "");
   const normalized = role.toUpperCase().replaceAll(" ", "_");
   const allowed = normalized === "PLATFORM_ADMIN" || normalized === "PLATFORM_ADMINISTRATOR";
