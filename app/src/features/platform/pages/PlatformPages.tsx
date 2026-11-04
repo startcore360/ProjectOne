@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";\nimport { useNavigate } from "react-router-dom";
 import { Button, Kicker, TextField } from "../../../design-system/components";
 import { Badge } from "../../../components/ui";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -8,22 +8,15 @@ type PlatformUser = { id: string; name: string; email: string; role: string; sta
 type AuditEvent = { id: string; when: string; actor: string; action: string; target: string; outcome: "Success" | "Denied" };
 
 const initialTenants: Tenant[] = [
-  { id: "TEN-0001", name: "Greenwood Public School", type: "School", plan: "Standard", status: "Active", gates: 0, updated: "04 Nov 2026" },
-  { id: "TEN-0002", name: "Northbridge University", type: "University", plan: "Enterprise", status: "Active", gates: 0, updated: "03 Nov 2026" },
-  { id: "TEN-0003", name: "Riverdale College", type: "College", plan: "Premium", status: "Trial", gates: 2, updated: "02 Nov 2026" },
-  { id: "TEN-0004", name: "Oakfield Academy", type: "School", plan: "Standard", status: "Trial", gates: 1, updated: "01 Nov 2026" },
+  { id: "TEN-0001", name: "Greenwood Public School", type: "School", plan: "Premium", status: "Active", gates: 0, updated: "Sample register" },
+  { id: "TEN-0002", name: "Northbridge University", type: "University", plan: "Enterprise", status: "Active", gates: 0, updated: "Sample register" },
+  { id: "TEN-0003", name: "Riverbank College", type: "College", plan: "Standard", status: "Trial", gates: 1, updated: "Sample register" },
+  { id: "TEN-0004", name: "Hillside School", type: "School", plan: "Standard", status: "Suspended", gates: 0, updated: "Sample register" },
 ];
 const initialUsers: PlatformUser[] = [
-  { id: "PLT-0001", name: "Aarav Mehta", email: "aarav.mehta@example.edu", role: "Platform Admin", status: "Active", lastActive: "Today, 10:42 AM" },
-  { id: "PLT-0002", name: "S. Menon", email: "s.menon@example.edu", role: "Platform Support", status: "Active", lastActive: "Today, 09:18 AM" },
-  { id: "PLT-0003", name: "R. Iyer", email: "r.iyer@example.edu", role: "Platform Auditor", status: "Invited", lastActive: "—" },
+  { id: "PLT-0001", name: "Aarav Mehta", email: "Not provided in prototype", role: "Platform Admin", status: "Active", lastActive: "Not recorded" },
 ];
-const initialAudit: AuditEvent[] = [
-  { id: "AUD-1028", when: "04 Nov 2026 · 10:42 AM", actor: "Aarav Mehta", action: "Signed in", target: "Platform console", outcome: "Success" },
-  { id: "AUD-1027", when: "04 Nov 2026 · 10:16 AM", actor: "S. Menon", action: "Viewed support sessions", target: "Platform scope", outcome: "Success" },
-  { id: "AUD-1026", when: "04 Nov 2026 · 09:58 AM", actor: "Unknown user", action: "Sign-in attempt", target: "Platform console", outcome: "Denied" },
-  { id: "AUD-1025", when: "03 Nov 2026 · 05:24 PM", actor: "Aarav Mehta", action: "Reviewed tenant readiness", target: "Riverdale College", outcome: "Success" },
-];
+const initialAudit: AuditEvent[] = [];
 
 function Metric({ label, value, note, mark }: { label: string; value: string | number; note: string; mark: string }) {
   return <article className="platform-metric"><span className="platform-metric__mark" aria-hidden="true">{mark}</span><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
@@ -46,11 +39,11 @@ function SampleNote() {
 }
 
 export function PlatformOverviewPage() {
-  const [tenants] = useState(initialTenants);
+  const navigate = useNavigate();\n  const [tenants] = useState(initialTenants);
   const [users] = useState(initialUsers);
   const openGates = tenants.reduce((sum, tenant) => sum + tenant.gates, 0);
   return <div className="platform-page">
-    <PageHeader title="Platform overview" description="Tenant lifecycle, platform access and service health at a glance." actions={<Button variant="secondary" onClick={() => window.location.assign("/platform/tenants")}>View tenants <span aria-hidden="true">→</span></Button>} />
+    <PageHeader title="Platform overview" description="Tenant lifecycle, platform access and service health at a glance." actions={<Button variant="secondary" onClick={() => navigate("/platform/tenants")}>View tenants <span aria-hidden="true">→</span></Button>} />
     <div className="platform-metrics">
       <Metric label="Tenants" value={tenants.length} note="Across the platform" mark="▤" />
       <Metric label="Active tenants" value={tenants.filter((t) => t.status === "Active").length} note="Currently active" mark="✓" />
@@ -105,7 +98,7 @@ export function PlansPage() {
 }
 
 export function SupportAccessPage() {
-  const sessions = [{ ticket: "SUP-2026-00431", tenant: "Riverdale College", purpose: "Investigate login issue", status: "Awaiting tenant approval", expires: "After approval" }, { ticket: "SUP-2026-00418", tenant: "Greenwood Public School", purpose: "Review integration error", status: "Expired", expires: "03 Nov 2026" }];
+  const sessions = [{ ticket: "SUP-2026-00398", tenant: "Greenwood Public School", purpose: "Report export failure", status: "Expired", expires: "21 Oct 2026, 4:30 PM IST" }];
   return <div className="platform-page"><PageHeader title="Support access" description="Support access is ticket-bound, read-only, revocable and limited to 24 hours." /><div className="platform-policy-callout"><span aria-hidden="true">⛨</span><div><strong>Tenant data remains protected</strong><p>Platform roles do not browse tenant records. A support session requires a ticket, a stated purpose and tenant approval.</p></div></div><Panel title="Support sessions" description="Requests and time-limited sessions"><DataTable headers={["Ticket", "Institution", "Purpose", "Status", "Access ends"]}>{sessions.map((s) => <tr key={s.ticket}><td><strong>{s.ticket}</strong></td><td>{s.tenant}</td><td>{s.purpose}</td><td><Status value={s.status} /></td><td>{s.expires}</td></tr>)}</DataTable></Panel><SampleNote /></div>;
 }
 
