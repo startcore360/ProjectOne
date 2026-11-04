@@ -3,7 +3,14 @@ import { Button } from "../design-system/components";
 import { logout } from "../services/authManager";
 import { useAppSelector } from "../store/hooks";
 
-const universityNavigation = [\n  { label: "Institutions", to: "/university/institutions", icon: "▤" },\n  { label: "Users & roles", to: "/university/users", icon: "♙" },\n  { label: "Roles & permissions", to: "/university/roles", icon: "⛨" },\n  { label: "Missing roles", to: "/university/missing-roles", icon: "⇣" },\n];\n\nconst platformNavigation = [
+const universityNavigation = [
+  { label: "Institutions", to: "/university/institutions", icon: "▤" },
+  { label: "Users & roles", to: "/university/users", icon: "♙" },
+  { label: "Roles & permissions", to: "/university/roles", icon: "⛨" },
+  { label: "Missing roles", to: "/university/missing-roles", icon: "⇣" },
+];
+
+const platformNavigation = [
   { label: "Overview", to: "/platform", icon: "▦" },
   { label: "Tenants", to: "/platform/tenants", icon: "▤" },
   { label: "Plans & billing", to: "/platform/plans", icon: "◈" },
@@ -18,7 +25,8 @@ export default function AppLayout() {
   const name = user?.name?.trim() || "Account";
   const role = user?.role?.replaceAll("_", " ") || "Member";
   const normalizedRole = role.toUpperCase().replaceAll(" ", "_");
-  const isPlatformAdmin = normalizedRole === "PLATFORM_ADMIN" || normalizedRole === "PLATFORM_ADMINISTRATOR";\n  const isUniversityAdmin = normalizedRole === "UNIVERSITY_ADMIN";
+  const isPlatformAdmin = normalizedRole === "PLATFORM_ADMIN" || normalizedRole === "PLATFORM_ADMINISTRATOR";
+  const isUniversityAdmin = normalizedRole === "UNIVERSITY_ADMIN";
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "A";
 
   const signOut = async () => {
