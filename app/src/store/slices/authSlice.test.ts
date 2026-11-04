@@ -17,12 +17,14 @@ describe("authSlice", () => {
     });
   });
 
-  it("marks the session authenticated when a user is set", () => {
+  it("marks the session authenticated when a tenant user is set", () => {
     const user: AuthUser = {
       id: "user-123",
-      email: "teacher@example.edu",
-      name: "Test Teacher",
-      role: "TEACHER",
+      displayName: "Test Teacher",
+      tenantId: "tenant-abc",
+      userType: "STAFF",
+      platformRole: null,
+      mustChangePassword: false,
     };
 
     const state = authReducer(undefined, setUser(user));
@@ -34,10 +36,12 @@ describe("authSlice", () => {
 
   it("clears the user and finishes loading when the session is cleared", () => {
     const user: AuthUser = {
-      id: 42,
-      email: "student@example.edu",
-      name: "Test Student",
-      role: "STUDENT",
+      id: "user-456",
+      displayName: "Test Student",
+      tenantId: "tenant-abc",
+      userType: "STUDENT",
+      platformRole: null,
+      mustChangePassword: false,
     };
     const authenticated = authReducer(undefined, setUser(user));
 
@@ -50,10 +54,12 @@ describe("authSlice", () => {
 
   it("updates the session restoration loading state without changing identity", () => {
     const user: AuthUser = {
-      id: 7,
-      email: "admin@example.edu",
-      name: "Test Admin",
-      role: "PLATFORM_ADMIN",
+      id: "user-789",
+      displayName: "Test Admin",
+      tenantId: null,
+      userType: null,
+      platformRole: "PLATFORM_ADMIN",
+      mustChangePassword: false,
     };
     const authenticated = authReducer(undefined, setUser(user));
 
