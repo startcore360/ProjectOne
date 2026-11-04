@@ -32,6 +32,12 @@ public class TenantUserLookup {
     }
 
     public ResolvedUser resolveActiveUser(Tenant tenant, String realm, String subject) {
+        // No per-user institution-assignment data exists anywhere in the current identity model
+        // (UserAccount/UserIdentityLink carry no institution_id) - Foundation Item 7 is what
+        // will eventually compute that. Until then this 3-arg overload defaults
+        // TenantContext's institutionIds to the empty, fail-closed set (see TenantContext's
+        // class comment, INSTITUTION SCOPE section) rather than granting blanket institution
+        // access as a shortcut.
         TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef());
 
         UserIdentityLink link = userIdentityLinkRepository
