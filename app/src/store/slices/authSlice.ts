@@ -1,13 +1,17 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { PlatformRole, UserType } from "../../services/modules/authService";
 
-export type Role = "TEACHER" | "STUDENT" | string;
-
+// Mirrors api/.../auth/dto/AuthUserResponse.java: exactly one of (tenantId + userType) or
+// (platformRole) is populated for a real signed-in user, never both, never neither. There is
+// no generic "role" string any more - tenant identities are scoped by userType (STAFF/STUDENT/
+// GUARDIAN/APPLICANT/GOVERNANCE/SYSTEM), platform identities by platformRole.
 export type AuthUser = {
-  id: number | string;
-  email: string;
-  name: string;
-  role?: Role;
-  mustChangePassword?: boolean;
+  id: string;
+  displayName: string;
+  tenantId: string | null;
+  userType: UserType | null;
+  platformRole: PlatformRole | null;
+  mustChangePassword: boolean;
 };
 
 type AuthState = {

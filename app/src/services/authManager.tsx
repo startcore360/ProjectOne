@@ -1,6 +1,6 @@
 import { store } from "../store";
-import { clearUser, setUser } from "../store/slices/authSlice";
-import { authService } from "./modules/authService";
+import { clearUser, setUser, type AuthUser } from "../store/slices/authSlice";
+import { authService, type AuthUserResponse } from "./modules/authService";
 import { clearTokens, getAccessToken, setTokens } from "./tokenStorage";
 // The actions a page can call to sign a user in, sign them out, re-check who's currently
 // signed in, or change the password. Each one also updates the shared Redux store, so the
@@ -8,16 +8,23 @@ import { clearTokens, getAccessToken, setTokens } from "./tokenStorage";
 // straight to this app's own /api/auth/login (see features/auth/pages/LoginPage.tsx) -
 // Keycloak verifies the password behind the scenes, but this app's own screen is the only
 // thing the user ever sees.
+
+// Maps the backend's AuthUserResponse shape {id, displayName, tenantId, userType,
+// platformRole, mustChangePassword} onto the store's AuthUser - same fields, kept as its own
+// function so the one mapping lives in one place.
+const toAuthUser = (data: AuthUserResponse): AuthUser => ({
+  id: data.id,
+  displayName: data.displayName,
+  tenantId: data.tenantId,
+  userType: data.userType,
+  platformRole: data.platformRole,
+  mustChangePassword: data.mustChangePassword,
+});
+
 export const login = async (email: string, password: string) => {
   const { data } = await authService.login(email, password);
   setTokens(data.accessToken, data.refreshToken);
-  const user = {
-    id: data.user.id,
-    name: data.user.name,
-    email: data.user.email,
-    role: data.user.role,
-    mustChangePassword: data.user.mustChangePassword,
-  };
+  const user = toAuthUser(data.user);
   store.dispatch(setUser(user));
   return user;
 };
@@ -42,13 +49,7 @@ export const hydrateAuth = async () => {
   }
   try {
     const { data } = await authService.me();
-    const user = {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      mustChangePassword: data.mustChangePassword,
-    };
+    const user = toAuthUser(data);
     store.dispatch(setUser(user));
     return user;
   } catch {
@@ -62,13 +63,7 @@ export const hydrateAuth = async () => {
 // success so route guards immediately let the user through to the rest of the app.
 export const changePassword = async (currentPassword: string, newPassword: string) => {
   const { data } = await authService.changePassword(currentPassword, newPassword);
-  const user = {
-    id: data.id,
-    name: data.name,
-    email: data.email,
-    role: data.role,
-    mustChangePassword: data.mustChangePassword,
-  };
+  const user = toAuthUser(data);
   store.dispatch(setUser(user));
   return user;
 };

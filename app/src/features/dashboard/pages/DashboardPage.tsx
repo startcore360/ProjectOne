@@ -23,8 +23,8 @@ const items = [
 // plus placeholder cards (see above) until real data is connected.
 export default function DashboardPage() {
   const { user } = useAppSelector((s) => s.auth);
-  const name = user?.name?.trim() || "there";
-  const role = user?.role?.replaceAll("_", " ") || "Member";
+  const name = user?.displayName?.trim() || "there";
+  const role = (user?.platformRole ?? user?.userType)?.replaceAll("_", " ") || "Member";
   return (
     <div className="dashboard-page">
       <div className="dashboard-breadcrumb">

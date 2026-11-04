@@ -9,8 +9,8 @@ import { useAppSelector } from "../store/hooks";
 export default function AppLayout() {
   const user = useAppSelector((s) => s.auth.user);
   const navigate = useNavigate();
-  const name = user?.name?.trim() || "Account";
-  const role = user?.role?.replaceAll("_", " ") || "Member";
+  const name = user?.displayName?.trim() || "Account";
+  const role = (user?.platformRole ?? user?.userType)?.replaceAll("_", " ") || "Member";
   const initials =
     name
       .split(/\\s+/)
