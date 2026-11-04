@@ -1,0 +1,17 @@
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    environment:
+      SERVICES: secretsmanager
+      DEFAULT_REGION: ap-south-1
+      # Deterministic test credentials - LocalStack does not enforce real AWS auth, but the
+      # AWS SDK still requires something present in the environment/credentials chain.
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+
+volumes:
+  localstack-data:

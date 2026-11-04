@@ -2,8 +2,8 @@ package com.edu360.api.auth;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,8 +17,8 @@ import com.edu360.api.auth.dto.AuthUserResponse;
 import com.edu360.api.auth.dto.ChangePasswordRequest;
 import com.edu360.api.auth.dto.LoginRequest;
 import com.edu360.api.auth.dto.RefreshRequest;
-import com.edu360.api.auth.dto.RegisterRequest;
-import com.edu360.api.user.User;
+import com.edu360.api.config.PlatformPrincipal;
+import com.edu360.api.config.TenantPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,10 +27,18 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Account operations plus login/refresh, all kept in this app's own API so the frontend's
- * sign-in form never leaves this app's UI. Keycloak still checks the password and issues the
- * tokens (OD-80) - this controller just relays the attempt via AuthService and returns the
- * result, rather than redirecting the browser to Keycloak's hosted login page.
+ * Account sign-in operations, all kept in this app's own API so the frontend's sign-in form
+ * never leaves this app's UI. Keycloak still checks the password and issues the tokens -
+ * this controller just relays the attempt via AuthService and returns the result.
+ *
+ * WHICH realm a request targets (a tenant, or the platform) is never a field in the request
+ * body - see LoginTenantResolver: it is resolved from the Host header for login/refresh (no
+ * identity exists yet), or from the already-verified principal for change-password/me/logout.
+ *
+ * There is no /register endpoint any more: the old PLATFORM_ADMIN-creates-TEACHER/STUDENT
+ * authorization model does not correspond to anything in the V4.0 tenant/platform separation.
+ * Real account creation (USER_CREATE) needs the role model (Foundation Item 7) to authorize
+ * correctly - local dev seeding is DevAdminSeeder's job instead.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -41,18 +49,19 @@ public class AuthController {
     private final AuditLogService auditLogService;
 
     @PostMapping("/login")
-    @Operation(summary = "Sign in with email and password")
+    @Operation(summary = "Sign in - which tenant or the platform is resolved from the request's hostname")
     public ResponseEntity<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request,
                                                      HttpServletRequest httpRequest) {
-        AuthTokenResponse response = authService.login(request.getEmail(), request.getPassword(),
+        AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(),
                 httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
     @Operation(summary = "Exchange a refresh token for a new access token")
-    public ResponseEntity<AuthTokenResponse> refresh(@Valid @RequestBody RefreshRequest request) {
-        return ResponseEntity.ok(authService.refresh(request.getRefreshToken()));
+    public ResponseEntity<AuthTokenResponse> refresh(@Valid @RequestBody RefreshRequest request,
+                                                       HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.refresh(httpRequest, request.getRefreshToken()));
     }
 
     @PostMapping("/change-password")
@@ -60,40 +69,54 @@ public class AuthController {
     public ResponseEntity<AuthUserResponse> changePassword(@Valid @RequestBody ChangePasswordRequest request,
                                                              Authentication authentication,
                                                              HttpServletRequest httpRequest) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        AuthUserResponse response = authService.changePassword(user, request.getCurrentPassword(),
-                request.getNewPassword(), httpRequest.getRemoteAddr());
+        String keycloakSubject = ((Jwt) authentication.getCredentials()).getSubject();
+        String ip = httpRequest.getRemoteAddr();
+
+        AuthUserResponse response = switch (authentication.getPrincipal()) {
+            case TenantPrincipal tenant -> authService.changeTenantPassword(
+                    tenant, keycloakSubject, request.getCurrentPassword(), request.getNewPassword(), ip);
+            case PlatformPrincipal platform -> authService.changePlatformPassword(
+                    platform, keycloakSubject, request.getCurrentPassword(), request.getNewPassword(), ip);
+            case null, default -> null;
+        };
+        if (response == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/register")
-    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
-    @Operation(summary = "Create a TEACHER or STUDENT account (platform admin only)")
-    public ResponseEntity<AuthUserResponse> register(@Valid @RequestBody RegisterRequest request,
-                                                       Authentication authentication,
-                                                       HttpServletRequest httpRequest) {
-        Long createdByUserId = authentication.getPrincipal() instanceof User creator ? creator.getId() : null;
-        User created = authService.register(request, createdByUserId, httpRequest.getRemoteAddr());
-        return ResponseEntity.status(HttpStatus.CREATED).body(AuthUserResponse.from(created));
-    }
-
     @GetMapping("/me")
-    @Operation(summary = "Get the authenticated user")
+    @Operation(summary = "Get the authenticated identity")
     public ResponseEntity<AuthUserResponse> me(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(AuthUserResponse.from(user));
+        AuthUserResponse response = switch (authentication.getPrincipal()) {
+            case TenantPrincipal tenant -> AuthUserResponse.fromTenant(tenant, tenant.displayName());
+            case PlatformPrincipal platform -> AuthUserResponse.fromPlatform(platform);
+            case null, default -> null;
+        };
+        if (response == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
     @Operation(summary = "Record sign-out for audit")
     public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest httpRequest) {
-        if (authentication != null && authentication.getPrincipal() instanceof User user) {
-            auditLogService.record(AuditEventType.LOGOUT, user.getId(), user.getEmail(),
-                    httpRequest.getRemoteAddr(), null);
+        if (authentication != null) {
+            String actor = switch (authentication.getPrincipal()) {
+                case TenantPrincipal tenant -> tenant.displayName();
+                case PlatformPrincipal platform -> platform.email();
+                case null, default -> null;
+            };
+            if (actor != null) {
+                auditLogService.record(AuditEventType.LOGOUT, null, actor, httpRequest.getRemoteAddr(), null);
+            }
         }
         return ResponseEntity.noContent().build();
     }

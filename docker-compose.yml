@@ -1,0 +1,4 @@
+include:
+  - docker/postgres/docker-compose.yml
+  - docker/keycloak/docker-compose.yml
+  - docker/localstack/docker-compose.yml

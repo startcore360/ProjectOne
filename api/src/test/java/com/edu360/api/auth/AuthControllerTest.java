@@ -1,204 +1,212 @@
 package com.edu360.api.auth;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.edu360.api.config.keycloak.KeycloakAdminClient;
-import com.edu360.api.config.keycloak.KeycloakAuthClient;
-import com.edu360.api.exception.InvalidCredentialsException;
-import com.edu360.api.user.Role;
-import com.edu360.api.user.User;
-import com.edu360.api.user.UserRepository;
+import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditLogService;
+import com.edu360.api.auth.dto.AuthTokenResponse;
+import com.edu360.api.auth.dto.AuthUserResponse;
+import com.edu360.api.auth.dto.ChangePasswordRequest;
+import com.edu360.api.auth.dto.LoginRequest;
+import com.edu360.api.auth.dto.RefreshRequest;
+import com.edu360.api.config.PlatformPrincipal;
+import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.identity.UserType;
+import com.edu360.api.platform.PlatformRole;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * Exercises the real request pipeline - SecurityConfig's resource-server filter,
- * KeycloakJwtAuthenticationConverter, and AuthController together - the same way a real
- * Keycloak-issued bearer token would flow, except JwtDecoder is stubbed so no live Keycloak
- * is needed: only token *validation* is faked, everything after it (converting the token to
- * our User principal, @PreAuthorize, the controller logic, persistence) is real.
+ * Plain unit tests for AuthController - no Spring context/MockMvc, since the real security
+ * pipeline (JWT verification, tenant resolution, RLS) is already covered by
+ * TenantIssuerAuthenticationManagerResolverIT and the Step 8 live manual verification. These
+ * tests exist to pin down this controller's own logic: switching correctly on principal type,
+ * and refusing (401) rather than throwing when no identity is present.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Transactional
+@ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private UserRepository userRepository;
+    @Mock private AuthService authService;
+    @Mock private AuditLogService auditLogService;
+    @Mock private HttpServletRequest httpServletRequest;
+    @Mock private Jwt jwt;
 
-    @MockitoBean
-    private JwtDecoder jwtDecoder;
-    @MockitoBean
-    private KeycloakAdminClient keycloakAdminClient;
-    @MockitoBean
-    private KeycloakAuthClient keycloakAuthClient;
+    private AuthController controller;
 
-    private User admin;
-    private User teacher;
+    private static final UUID TENANT_ID = UUID.randomUUID();
+    private static final UUID USER_ACCOUNT_ID = UUID.randomUUID();
 
-    @BeforeEach
-    void seedUsers() {
-        admin = userRepository.save(User.builder().name("Admin").email("admin@edu360.local")
-                .keycloakId("kc-admin-1").role(Role.PLATFORM_ADMIN).mustChangePassword(false).build());
-        teacher = userRepository.save(User.builder().name("Teacher").email("teacher@edu360.local")
-                .keycloakId("kc-teacher-1").role(Role.TEACHER).mustChangePassword(false).build());
+    private AuthController controller() {
+        return new AuthController(authService, auditLogService);
     }
 
-    private Jwt jwtFor(String subject, String role) {
-        return Jwt.withTokenValue(subject + "-token")
-                .header("alg", "none")
-                .subject(subject)
-                .claim("realm_access", Map.of("roles", List.of(role)))
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(60))
-                .build();
+    // ------------------------------------------------------------------------------- login/refresh
+
+    @Test
+    void login_delegatesToAuthServiceWithHostAndRemoteAddress() {
+        controller = controller();
+        LoginRequest request = new LoginRequest();
+        request.setEmail("teacher1");
+        request.setPassword("pw");
+        when(httpServletRequest.getRemoteAddr()).thenReturn("10.0.0.5");
+        AuthTokenResponse expected = AuthTokenResponse.builder().accessToken("at").build();
+        when(authService.login(httpServletRequest, "teacher1", "pw", "10.0.0.5")).thenReturn(expected);
+
+        ResponseEntity<AuthTokenResponse> response = controller.login(request, httpServletRequest);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(expected);
     }
 
     @Test
-    void me_withoutToken_isUnauthorized() throws Exception {
-        mockMvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+    void refresh_delegatesToAuthService() {
+        controller = controller();
+        RefreshRequest request = new RefreshRequest();
+        request.setRefreshToken("rt");
+        AuthTokenResponse expected = AuthTokenResponse.builder().accessToken("at2").build();
+        when(authService.refresh(httpServletRequest, "rt")).thenReturn(expected);
+
+        ResponseEntity<AuthTokenResponse> response = controller.refresh(request, httpServletRequest);
+
+        assertThat(response.getBody()).isSameAs(expected);
+    }
+
+    // --------------------------------------------------------------------------- change-password
+
+    @Test
+    void changePassword_noAuthentication_returns401WithoutCallingAuthService() {
+        controller = controller();
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("old");
+        request.setNewPassword("new");
+
+        ResponseEntity<AuthUserResponse> response = controller.changePassword(request, null, httpServletRequest);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        verify(authService, never()).changeTenantPassword(any(), anyString(), anyString(), anyString(), anyString());
+        verify(authService, never()).changePlatformPassword(any(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test
-    void me_withValidToken_returnsLinkedLocalUser() throws Exception {
-        when(jwtDecoder.decode("kc-admin-1-token")).thenReturn(jwtFor("kc-admin-1", "PLATFORM_ADMIN"));
+    void changePassword_tenantPrincipal_callsChangeTenantPassword() {
+        controller = controller();
+        when(jwt.getSubject()).thenReturn("kc-subject");
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Test User", true);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+        when(httpServletRequest.getRemoteAddr()).thenReturn("10.0.0.5");
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("old");
+        request.setNewPassword("new");
+        AuthUserResponse expected = AuthUserResponse.fromTenant(principal, "Test User");
+        when(authService.changeTenantPassword(eq(principal), eq("kc-subject"), eq("old"), eq("new"), eq("10.0.0.5")))
+                .thenReturn(expected);
 
-        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer kc-admin-1-token"))
-                .andExpect(status().isOk())
-                .andExpect(content().json("{\"email\":\"admin@edu360.local\",\"role\":\"PLATFORM_ADMIN\"}"));
+        ResponseEntity<AuthUserResponse> response = controller.changePassword(request, authentication, httpServletRequest);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(expected);
+        verify(authService, never()).changePlatformPassword(any(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test
-    void me_withTokenForUnprovisionedKeycloakUser_isUnauthorized() throws Exception {
-        when(jwtDecoder.decode("kc-ghost-1-token")).thenReturn(jwtFor("kc-ghost-1", "TEACHER"));
+    void changePassword_platformPrincipal_callsChangePlatformPassword() {
+        controller = controller();
+        when(jwt.getSubject()).thenReturn("kc-subject");
+        PlatformPrincipal principal = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.PLATFORM_ADMIN,
+                "admin@edu360-platform.local", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+        when(httpServletRequest.getRemoteAddr()).thenReturn("10.0.0.5");
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword("old");
+        request.setNewPassword("new");
+        AuthUserResponse expected = AuthUserResponse.fromPlatform(principal);
+        when(authService.changePlatformPassword(eq(principal), eq("kc-subject"), eq("old"), eq("new"), eq("10.0.0.5")))
+                .thenReturn(expected);
 
-        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer kc-ghost-1-token"))
-                .andExpect(status().isUnauthorized());
+        ResponseEntity<AuthUserResponse> response = controller.changePassword(request, authentication, httpServletRequest);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(expected);
+        verify(authService, never()).changeTenantPassword(any(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    // ----------------------------------------------------------------------------------------- me
+
+    @Test
+    void me_noAuthentication_returns401() {
+        controller = controller();
+        ResponseEntity<AuthUserResponse> response = controller.me(null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
-    void register_asPlatformAdmin_createsTeacherAndLinksKeycloakId() throws Exception {
-        when(jwtDecoder.decode("kc-admin-1-token")).thenReturn(jwtFor("kc-admin-1", "PLATFORM_ADMIN"));
-        when(keycloakAdminClient.provisionUser(eq("New Teacher"), eq("new.teacher@edu360.local"),
-                eq("Temp#Pass1"), eq("TEACHER"))).thenReturn("kc-new-teacher-1");
+    void me_tenantPrincipal_returnsTenantResponse() {
+        controller = controller();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STUDENT,
+                "Test Student", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
 
-        mockMvc.perform(post("/api/auth/register")
-                        .header("Authorization", "Bearer kc-admin-1-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"New Teacher","email":"new.teacher@edu360.local",
-                                 "password":"Temp#Pass1","role":"TEACHER"}
-                                """))
-                .andExpect(status().isCreated())
-                .andExpect(content().json("{\"email\":\"new.teacher@edu360.local\",\"role\":\"TEACHER\"}"));
+        ResponseEntity<AuthUserResponse> response = controller.me(authentication);
 
-        var saved = userRepository.findByEmail("new.teacher@edu360.local").orElseThrow();
-        org.assertj.core.api.Assertions.assertThat(saved.getKeycloakId()).isEqualTo("kc-new-teacher-1");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().tenantId()).isEqualTo(TENANT_ID);
+        assertThat(response.getBody().platformRole()).isNull();
     }
 
     @Test
-    void register_asTeacher_isForbidden() throws Exception {
-        when(jwtDecoder.decode("kc-teacher-1-token")).thenReturn(jwtFor("kc-teacher-1", "TEACHER"));
+    void me_platformPrincipal_returnsPlatformResponse() {
+        controller = controller();
+        PlatformPrincipal principal = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.SUPPORT_MANAGER,
+                "support@edu360-platform.local", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
 
-        mockMvc.perform(post("/api/auth/register")
-                        .header("Authorization", "Bearer kc-teacher-1-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"New Teacher","email":"someone@edu360.local",
-                                 "password":"Temp#Pass1","role":"TEACHER"}
-                                """))
-                .andExpect(status().isForbidden());
+        ResponseEntity<AuthUserResponse> response = controller.me(authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().tenantId()).isNull();
+        assertThat(response.getBody().platformRole()).isEqualTo(PlatformRole.SUPPORT_MANAGER);
+    }
+
+    // ------------------------------------------------------------------------------------- logout
+
+    @Test
+    void logout_noAuthentication_noAuditRecordButStillNoContent() {
+        controller = controller();
+        ResponseEntity<Void> response = controller.logout(null, httpServletRequest);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(auditLogService, never()).record(any(), any(), anyString(), anyString(), any());
     }
 
     @Test
-    void register_platformAdminRole_isRejected() throws Exception {
-        when(jwtDecoder.decode("kc-admin-1-token")).thenReturn(jwtFor("kc-admin-1", "PLATFORM_ADMIN"));
+    void logout_tenantPrincipal_recordsAuditWithDisplayName() {
+        controller = controller();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Test User", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+        when(httpServletRequest.getRemoteAddr()).thenReturn("10.0.0.5");
 
-        mockMvc.perform(post("/api/auth/register")
-                        .header("Authorization", "Bearer kc-admin-1-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"Another Admin","email":"another.admin@edu360.local",
-                                 "password":"Temp#Pass1","role":"PLATFORM_ADMIN"}
-                                """))
-                .andExpect(status().isBadRequest());
-    }
+        controller.logout(authentication, httpServletRequest);
 
-    @Test
-    void mustChangePasswordUser_isBlockedFromOtherEndpoints() throws Exception {
-        userRepository.save(User.builder().name("New Teacher").email("new.teacher@edu360.local")
-                .keycloakId("kc-new-teacher-1").role(Role.TEACHER).mustChangePassword(true).build());
-        when(jwtDecoder.decode("kc-new-teacher-1-token")).thenReturn(jwtFor("kc-new-teacher-1", "TEACHER"));
-
-        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer kc-new-teacher-1-token"))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(post("/api/auth/register")
-                        .header("Authorization", "Bearer kc-new-teacher-1-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isForbidden())
-                .andExpect(content().json("{\"error\":\"PASSWORD_CHANGE_REQUIRED\"}"));
-    }
-
-    @Test
-    void changePassword_success_clearsFlagAndResetsKeycloakCredential() throws Exception {
-        userRepository.save(User.builder().name("New Teacher").email("new.teacher@edu360.local")
-                .keycloakId("kc-new-teacher-1").role(Role.TEACHER).mustChangePassword(true).build());
-        when(jwtDecoder.decode("kc-new-teacher-1-token")).thenReturn(jwtFor("kc-new-teacher-1", "TEACHER"));
-
-        mockMvc.perform(post("/api/auth/change-password")
-                        .header("Authorization", "Bearer kc-new-teacher-1-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"currentPassword":"Temp#Pass1","newPassword":"NewPass#2"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(content().json("{\"mustChangePassword\":false}"));
-
-        var saved = userRepository.findByEmail("new.teacher@edu360.local").orElseThrow();
-        org.assertj.core.api.Assertions.assertThat(saved.isMustChangePassword()).isFalse();
-        org.mockito.Mockito.verify(keycloakAdminClient).resetPassword("kc-new-teacher-1", "NewPass#2");
-    }
-
-    @Test
-    void changePassword_wrongCurrentPassword_isUnauthorizedAndFlagStaysSet() throws Exception {
-        userRepository.save(User.builder().name("New Teacher").email("new.teacher@edu360.local")
-                .keycloakId("kc-new-teacher-1").role(Role.TEACHER).mustChangePassword(true).build());
-        when(jwtDecoder.decode("kc-new-teacher-1-token")).thenReturn(jwtFor("kc-new-teacher-1", "TEACHER"));
-        when(keycloakAuthClient.login("new.teacher@edu360.local", "WrongPass"))
-                .thenThrow(new InvalidCredentialsException("Invalid email or password"));
-
-        mockMvc.perform(post("/api/auth/change-password")
-                        .header("Authorization", "Bearer kc-new-teacher-1-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"currentPassword":"WrongPass","newPassword":"NewPass#2"}
-                                """))
-                .andExpect(status().isUnauthorized());
-
-        var saved = userRepository.findByEmail("new.teacher@edu360.local").orElseThrow();
-        org.assertj.core.api.Assertions.assertThat(saved.isMustChangePassword()).isTrue();
+        verify(auditLogService).record(AuditEventType.LOGOUT, null, "Test User", "10.0.0.5", null);
     }
 }

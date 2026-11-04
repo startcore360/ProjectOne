@@ -1,0 +1,64 @@
+{
+  "realm": "abc-university",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginTheme": "edu360",
+  "roles": {
+    "realm": [
+      { "name": "TEACHER", "description": "EDU 360 teacher" },
+      { "name": "STUDENT", "description": "EDU 360 student" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "edu360-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://abc.edu360.local:5173/*", "http://localhost:5173/*"],
+      "webOrigins": ["http://abc.edu360.local:5173", "http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "must-change-password",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "must_change_password",
+            "claim.name": "must_change_password",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "edu360-admin-cli",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "secret": "dev-admin-cli-secret-abc",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-edu360-admin-cli",
+      "enabled": true,
+      "serviceAccountClientId": "edu360-admin-cli",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users", "view-realm"]
+      }
+    }
+  ]
+}

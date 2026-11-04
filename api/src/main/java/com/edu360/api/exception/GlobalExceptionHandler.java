@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +24,8 @@ import com.edu360.api.config.keycloak.KeycloakProvisioningException;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
@@ -68,10 +72,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    // Catches anything not handled above. The real error message is never sent
-    // back to the caller, so an unexpected bug doesn't leak internal details.
+    // Catches anything not handled above. The real error message is never sent back to the
+    // caller (an unexpected bug shouldn't leak internal details), but it MUST be logged
+    // server-side - found by hitting exactly this gap while debugging the ISOLATED datasource
+    // routing path live: this handler was swallowing the real exception with no trace anywhere,
+    // making a genuine bug undiagnosable from the logs alone.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
+        log.error("Unhandled exception reached GlobalExceptionHandler", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
     }
 

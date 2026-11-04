@@ -11,17 +11,23 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 /**
- * Talks to Keycloak's Admin REST API to provision accounts (OD-80: registration stays an
- * application operation, but the credential itself now lives in Keycloak, not this app).
- * Nothing here ever stores a password locally — it's forwarded once and then forgotten.
- * The credential is set as immediately usable, not "temporary" with a forced change: login
- * goes through the Direct Grant (ROPC) flow entirely inside this app's own UI, and Keycloak's
- * forced-password-change step only exists as an interactive, browser-hosted page that ROPC
- * has no way to show or complete - a temporary credential would make the account permanently
- * unable to log in via this flow.
+ * WHAT: talks to Keycloak's Admin REST API to provision accounts and manage their credentials -
+ * now parameterized by realm, since this app administers many realms (every tenant realm, plus
+ * the platform realm), not one fixed realm.
+ *
+ * HOW admin access works: authenticates once as the master-realm admin account (see
+ * KeycloakProperties' class comment for why), then calls /admin/realms/{realm}/... for whatever
+ * realm the caller asks about. Nothing here ever stores a password locally - it is forwarded
+ * once and then forgotten.
  */
 @Component
 public class KeycloakAdminClient {
+
+    /** Keycloak's user attribute holding "must change password at next login" (see the Sprint 1
+     *  identity migration brief: app.user_account has no such column in the approved V4.0
+     *  schema, so this state lives entirely in Keycloak as a custom attribute, read back out as
+     *  a JWT claim via each realm's protocol mapper - see realm-export-*.json). */
+    static final String MUST_CHANGE_PASSWORD_ATTRIBUTE = "must_change_password";
 
     private final RestClient restClient;
     private final KeycloakProperties properties;
@@ -31,22 +37,25 @@ public class KeycloakAdminClient {
         this.properties = properties;
     }
 
-    /** Creates the Keycloak account, assigns the realm role, and returns Keycloak's user id (OD-10). */
-    public String provisionUser(String name, String email, String initialPassword, String roleName) {
-        String adminToken = fetchAdminAccessToken();
-        String keycloakUserId = createUser(adminToken, name, email, initialPassword);
-        assignRealmRole(adminToken, keycloakUserId, roleName);
-        return keycloakUserId;
+    /** Creates the Keycloak account in the given realm and returns Keycloak's user id (OD-10).
+     *  mustChangePassword controls the initial must_change_password attribute. */
+    public String provisionUser(String realm, String name, String email, String initialPassword,
+                                 boolean mustChangePassword) {
+        String adminToken = fetchMasterAdminAccessToken();
+        return createUser(adminToken, realm, name, email, initialPassword, mustChangePassword);
     }
 
-    private String fetchAdminAccessToken() {
+    private String fetchMasterAdminAccessToken() {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("grant_type", "client_credentials");
-        form.add("client_id", properties.getAdminClientId());
-        form.add("client_secret", properties.getAdminClientSecret());
+        form.add("grant_type", "password");
+        // "admin-cli" is Keycloak's own built-in public client in the master realm, present in
+        // every Keycloak instance by default specifically for this kind of server-side admin
+        // bootstrap - not a client this app defines itself.
+        form.add("client_id", "admin-cli");
+        form.add("username", properties.getMasterAdminUsername());
+        form.add("password", properties.getMasterAdminPassword());
 
-        String tokenUrl = properties.getBaseUrl() + "/realms/" + properties.getRealm()
-                + "/protocol/openid-connect/token";
+        String tokenUrl = properties.getBaseUrl() + "/realms/master/protocol/openid-connect/token";
         Map<String, Object> response = restClient.post()
                 .uri(tokenUrl)
                 .body(form)
@@ -55,12 +64,13 @@ public class KeycloakAdminClient {
 
         Object token = response == null ? null : response.get("access_token");
         if (token == null) {
-            throw new KeycloakProvisioningException("Keycloak did not return an admin access token");
+            throw new KeycloakProvisioningException("Keycloak did not return a master admin access token");
         }
         return token.toString();
     }
 
-    private String createUser(String adminToken, String name, String email, String initialPassword) {
+    private String createUser(String adminToken, String realm, String name, String email,
+                               String initialPassword, boolean mustChangePassword) {
         Map<String, Object> credential = Map.of(
                 "type", "password",
                 "value", initialPassword,
@@ -82,9 +92,10 @@ public class KeycloakAdminClient {
                 "lastName", lastName,
                 "enabled", true,
                 "emailVerified", true,
-                "credentials", List.of(credential));
+                "credentials", List.of(credential),
+                "attributes", Map.of(MUST_CHANGE_PASSWORD_ATTRIBUTE, List.of(String.valueOf(mustChangePassword))));
 
-        String usersUrl = properties.getBaseUrl() + "/admin/realms/" + properties.getRealm() + "/users";
+        String usersUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users";
         try {
             var response = restClient.post()
                     .uri(usersUrl)
@@ -99,18 +110,17 @@ public class KeycloakAdminClient {
             }
             return location.substring(location.lastIndexOf('/') + 1);
         } catch (HttpClientErrorException ex) {
-            // A prior attempt (e.g. a retried dev seeding, or a register() call whose local save
-            // then failed) can leave the Keycloak account behind without a matching local User
-            // row. Rather than fail the whole provisioning step, reuse that existing account.
+            // A prior attempt (e.g. a retried dev seeding) can leave the Keycloak account
+            // behind. Rather than fail the whole provisioning step, reuse that existing account.
             if (ex.getStatusCode() == HttpStatusCode.valueOf(409)) {
-                return findUserIdByEmail(adminToken, email);
+                return findUserIdByEmail(adminToken, realm, email);
             }
             throw ex;
         }
     }
 
-    private String findUserIdByEmail(String adminToken, String email) {
-        String searchUrl = properties.getBaseUrl() + "/admin/realms/" + properties.getRealm()
+    private String findUserIdByEmail(String adminToken, String realm, String email) {
+        String searchUrl = properties.getBaseUrl() + "/admin/realms/" + realm
                 + "/users?username=" + email + "&exact=true";
         List<Map<String, Object>> matches = restClient.get()
                 .uri(searchUrl)
@@ -126,39 +136,64 @@ public class KeycloakAdminClient {
     }
 
     /** Overwrites the user's Keycloak credential - used by AuthService.changePassword after the
-     *  current password has already been verified via KeycloakAuthClient.login. */
-    public void resetPassword(String keycloakUserId, String newPassword) {
-        String adminToken = fetchAdminAccessToken();
+     *  current password has already been verified via KeycloakAuthClient.login. Also clears the
+     *  must_change_password attribute, since a change just happened. */
+    public void resetPassword(String realm, String keycloakUserId, String newPassword) {
+        String adminToken = fetchMasterAdminAccessToken();
         Map<String, Object> credential = Map.of(
                 "type", "password",
                 "value", newPassword,
                 "temporary", false);
 
         restClient.put()
-                .uri(properties.getBaseUrl() + "/admin/realms/" + properties.getRealm()
+                .uri(properties.getBaseUrl() + "/admin/realms/" + realm
                         + "/users/" + keycloakUserId + "/reset-password")
                 .header("Authorization", "Bearer " + adminToken)
                 .body(credential)
                 .retrieve()
                 .toBodilessEntity();
+
+        setMustChangePasswordAttribute(adminToken, realm, keycloakUserId, false);
     }
 
-    private void assignRealmRole(String adminToken, String keycloakUserId, String roleName) {
-        String realmPath = properties.getBaseUrl() + "/admin/realms/" + properties.getRealm();
-
-        Map<String, Object> role = restClient.get()
-                .uri(realmPath + "/roles/" + roleName)
+    /**
+     * WHAT: flips the must_change_password attribute without touching anything else about the
+     * user.
+     *
+     * WHY this GETs the full representation first instead of just PUTting {"attributes": {...}}
+     * directly (what this method originally did): found by actually calling it against a real
+     * Keycloak and then trying to log that user back in - Keycloak's PUT /users/{id} treats a
+     * partial body as the FULL new representation for the fields it manages, so a bare
+     * {"attributes": ...} body silently wiped the user's firstName/lastName/email, which then
+     * made every subsequent login attempt fail outright. Fetching the current representation and
+     * only changing the one field keeps everything else exactly as it was.
+     */
+    @SuppressWarnings("unchecked")
+    private void setMustChangePasswordAttribute(String adminToken, String realm, String keycloakUserId,
+                                                 boolean mustChangePassword) {
+        String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
+        Map<String, Object> current = restClient.get()
+                .uri(userUrl)
                 .header("Authorization", "Bearer " + adminToken)
                 .retrieve()
                 .body(Map.class);
-        if (role == null) {
-            throw new KeycloakProvisioningException("Realm role not found in Keycloak: " + roleName);
+        if (current == null) {
+            throw new KeycloakProvisioningException("Could not read user " + keycloakUserId + " before updating it");
         }
 
-        restClient.post()
-                .uri(realmPath + "/users/" + keycloakUserId + "/role-mappings/realm")
+        java.util.Map<String, Object> attributes = new java.util.HashMap<>(
+                current.get("attributes") instanceof Map<?, ?> existing
+                        ? (Map<String, Object>) existing
+                        : Map.of());
+        attributes.put(MUST_CHANGE_PASSWORD_ATTRIBUTE, List.of(String.valueOf(mustChangePassword)));
+
+        java.util.Map<String, Object> updated = new java.util.HashMap<>(current);
+        updated.put("attributes", attributes);
+
+        restClient.put()
+                .uri(userUrl)
                 .header("Authorization", "Bearer " + adminToken)
-                .body(List.of(role))
+                .body(updated)
                 .retrieve()
                 .toBodilessEntity();
     }

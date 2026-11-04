@@ -1,0 +1,68 @@
+{
+  "realm": "edu360-platform",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginTheme": "edu360",
+  "roles": {
+    "realm": [
+      { "name": "PRODUCT_OWNER", "description": "EDU 360 platform: product owner" },
+      { "name": "PLATFORM_ADMIN", "description": "EDU 360 platform: platform admin" },
+      { "name": "BILLING_MANAGER", "description": "EDU 360 platform: billing manager" },
+      { "name": "SUPPORT_MANAGER", "description": "EDU 360 platform: support manager" },
+      { "name": "RELEASE_MANAGER", "description": "EDU 360 platform: release manager" },
+      { "name": "DATA_PROTECTION_OFFICER", "description": "EDU 360 platform: data protection officer" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "edu360-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://platform.edu360.local:5173/*", "http://localhost:5173/*"],
+      "webOrigins": ["http://platform.edu360.local:5173", "http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "must-change-password",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "must_change_password",
+            "claim.name": "must_change_password",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "edu360-admin-cli",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "secret": "dev-admin-cli-secret-platform",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-edu360-admin-cli",
+      "enabled": true,
+      "serviceAccountClientId": "edu360-admin-cli",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users", "view-realm"]
+      }
+    }
+  ]
+}
