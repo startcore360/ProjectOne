@@ -1,16 +1,28 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useAppSelector } from "../store/hooks";
 import AppLayout from "../layout/AppLayout";
 import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
 import ChangePasswordPage from "../features/auth/pages/ChangePasswordPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import {
+  AuditLogPage,
+  PlatformOverviewPage,
+  PlatformUsersPage,
+  PlansPage,
+  SupportAccessPage,
+  TenantsPage,
+} from "../features/platform/pages/PlatformPages";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
-// The app's full list of pages and URLs: which page shows for which path,
-// and whether that path needs the signed-out layout (PublicRoute/AuthLayout)
-// or the signed-in layout (PrivateRoute/AppLayout). Any unknown URL falls
-// back to the home page.
+function PlatformAdminRoute() {
+  const role = useAppSelector((state) => state.auth.user?.role || "");
+  const normalized = role.toUpperCase().replaceAll(" ", "_");
+  const allowed = normalized === "PLATFORM_ADMIN" || normalized === "PLATFORM_ADMINISTRATOR";
+  return allowed ? <Outlet /> : <Navigate to="/dashboard" replace />;
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -22,12 +34,21 @@ export default function AppRoutes() {
 
       <Route element={<PrivateRoute />}>
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route element={<PlatformAdminRoute />}>
+          <Route element={<AppLayout />}>
+            <Route path="/platform" element={<PlatformOverviewPage />} />
+            <Route path="/platform/tenants" element={<TenantsPage />} />
+            <Route path="/platform/plans" element={<PlansPage />} />
+            <Route path="/platform/users" element={<PlatformUsersPage />} />
+            <Route path="/platform/support" element={<SupportAccessPage />} />
+            <Route path="/platform/audit" element={<AuditLogPage />} />
+          </Route>
+        </Route>
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
         </Route>
       </Route>
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
