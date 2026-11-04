@@ -61,7 +61,7 @@ export function PlatformOverviewPage() {
 }
 
 export function TenantsPage() {
-  const [tenants, setTenants] = useState(initialTenants);
+  const [tenants] = useState(initialTenants);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [showCreate, setShowCreate] = useState(false);

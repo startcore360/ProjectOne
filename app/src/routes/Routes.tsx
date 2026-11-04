@@ -22,25 +22,31 @@ import {
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
+// AuthUserResponse (api/.../auth/dto/AuthUserResponse.java) only ever populates platformRole
+// for a platform identity, or tenantId+userType for a tenant identity - never a generic "role"
+// string. PLATFORM_ADMIN is a real platformRole value, so that branch can be checked for real.
 function RoleHomeRedirect() {
-  const role = useAppSelector((state) => state.auth.user?.role || "");
-  const normalized = role.toUpperCase().replaceAll(" ", "_");
-  if (normalized === "PLATFORM_ADMIN" || normalized === "PLATFORM_ADMINISTRATOR") return <Navigate to="/platform" replace />;
-  if (normalized === "UNIVERSITY_ADMIN") return <Navigate to="/university/institutions" replace />;
-  return <Navigate to="/dashboard/workspace" replace />;
+  const platformRole = useAppSelector((state) => state.auth.user?.platformRole);
+  if (platformRole === "PLATFORM_ADMIN") return <Navigate to="/platform" replace />;
+  // There is no tenant-side "university admin" role on the backend yet (Foundation item 7,
+  // not yet built - no role field exists on AuthUserResponse beyond userType), so that branch
+  // can't be satisfied by any real login right now. Default everyone else to the one route
+  // that actually exists - do NOT point this at "/dashboard/workspace", which doesn't exist
+  // and broke login entirely before this fix.
+  return <Navigate to="/dashboard" replace />;
 }
 
+// Blocked on the same missing tenant role model as above: there is nothing in AuthUserResponse
+// to check for "university admin" yet, so this cannot actually gate anything today. Left as a
+// pass-through (not a hard redirect to /dashboard) so the /university/* screens stay reachable
+// by direct URL for now, instead of being deleted, until Foundation item 7 lands.
 function UniversityAdminRoute() {
-  const role = useAppSelector((state) => state.auth.user?.role || "");
-  const normalized = role.toUpperCase().replaceAll(" ", "_");
-  return normalized === "UNIVERSITY_ADMIN" ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  return <Outlet />;
 }
 
 function PlatformAdminRoute() {
-  const role = useAppSelector((state) => state.auth.user?.role || "");
-  const normalized = role.toUpperCase().replaceAll(" ", "_");
-  const allowed = normalized === "PLATFORM_ADMIN" || normalized === "PLATFORM_ADMINISTRATOR";
-  return allowed ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  const platformRole = useAppSelector((state) => state.auth.user?.platformRole);
+  return platformRole === "PLATFORM_ADMIN" ? <Outlet /> : <Navigate to="/dashboard" replace />;
 }
 
 export default function AppRoutes() {
@@ -72,8 +78,8 @@ export default function AppRoutes() {
             <Route path="/platform/audit" element={<AuditLogPage />} />
           </Route>
         </Route>
+        <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
         </Route>
       </Route>

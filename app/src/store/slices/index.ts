@@ -2,4 +2,4 @@
 // instead of the exact file each piece lives in.
 export { default as authReducer } from "./authSlice";
 export { clearUser, setLoading, setUser } from "./authSlice";
-export type { AuthUser, Role } from "./authSlice";
+export type { AuthUser } from "./authSlice";

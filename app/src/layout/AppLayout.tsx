@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../design-system/components";
 import { logout } from "../services/authManager";
 import { useAppSelector } from "../store/hooks";
@@ -22,13 +22,25 @@ const platformNavigation = [
 export default function AppLayout() {
   const user = useAppSelector((s) => s.auth.user);
   const navigate = useNavigate();
-  const name = user?.name?.trim() || "Account";
-  const role = user?.role?.replaceAll("_", " ") || "Member";
-  const normalizedRole = role.toUpperCase().replaceAll(" ", "_");
-  const isPlatformAdmin = normalizedRole === "PLATFORM_ADMIN" || normalizedRole === "PLATFORM_ADMINISTRATOR";
-  const isUniversityAdmin = normalizedRole === "UNIVERSITY_ADMIN";
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "A";
-
+  const location = useLocation();
+  const name = user?.displayName?.trim() || "Account";
+  const role = (user?.platformRole ?? user?.userType)?.replaceAll("_", " ") || "Member";
+  const isPlatformAdmin = user?.platformRole === "PLATFORM_ADMIN";
+  // There is no tenant-side role model on the backend yet (Foundation item 7, not yet built -
+  // AuthUserResponse has no field for a "university admin" role), so this cannot be derived
+  // from the signed-in identity. The /university/* section is kept reachable by direct URL
+  // only; the sidebar switches into its nav purely based on being on one of those paths.
+  const isUniversityAdmin = location.pathname.startsWith("/university");
+  const initials =
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((x) => x[0]?.toUpperCase())
+      .join("") || "A";
+  // Always send the user back to /login, even if the sign-out request to the
+  // server fails (e.g. they're offline) — being stuck looking signed-in is
+  // worse than one failed network call.
   const signOut = async () => {
     try {
       await logout();
