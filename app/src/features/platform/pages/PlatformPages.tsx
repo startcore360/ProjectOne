@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";\nimport { useNavigate } from "react-router-dom";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button, Kicker, TextField } from "../../../design-system/components";
 import { Badge } from "../../../components/ui";
 import { PageHeader } from "../../../components/layout/PageHeader";
@@ -39,7 +40,8 @@ function SampleNote() {
 }
 
 export function PlatformOverviewPage() {
-  const navigate = useNavigate();\n  const [tenants] = useState(initialTenants);
+  const navigate = useNavigate();
+  const [tenants] = useState(initialTenants);
   const [users] = useState(initialUsers);
   const openGates = tenants.reduce((sum, tenant) => sum + tenant.gates, 0);
   return <div className="platform-page">
