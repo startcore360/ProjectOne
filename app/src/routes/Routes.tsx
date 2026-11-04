@@ -13,10 +13,10 @@ import {
   SupportAccessPage,
   TenantsPage,
 } from "../features/platform/pages/PlatformPages";
-import PrivateRoute from "./PrivateRoute";
+import {\n  InstitutionUsersPage,\n  InstitutionsPage,\n  MissingRolesPage,\n  RolesPermissionsPage,\n} from "../features/institution-admin/pages/InstitutionAdminPages";\nimport PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
-function PlatformAdminRoute() {
+function UniversityAdminRoute() {\n  const role = useAppSelector((state) => state.auth.user?.role || "");\n  const normalized = role.toUpperCase().replaceAll(" ", "_");\n  return normalized === "UNIVERSITY_ADMIN" ? <Outlet /> : <Navigate to="/dashboard" replace />;\n}\n\nfunction PlatformAdminRoute() {
   const role = useAppSelector((state) => state.auth.user?.role || "");
   const normalized = role.toUpperCase().replaceAll(" ", "_");
   const allowed = normalized === "PLATFORM_ADMIN" || normalized === "PLATFORM_ADMINISTRATOR";
@@ -34,7 +34,7 @@ export default function AppRoutes() {
 
       <Route element={<PrivateRoute />}>
         <Route path="/change-password" element={<ChangePasswordPage />} />
-        <Route element={<PlatformAdminRoute />}>
+        <Route element={<UniversityAdminRoute />}>\n          <Route element={<AppLayout />}>\n            <Route path="/university/institutions" element={<InstitutionsPage />} />\n            <Route path="/university/users" element={<InstitutionUsersPage />} />\n            <Route path="/university/roles" element={<RolesPermissionsPage />} />\n            <Route path="/university/missing-roles" element={<MissingRolesPage />} />\n          </Route>\n        </Route>\n        <Route element={<PlatformAdminRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/platform" element={<PlatformOverviewPage />} />
             <Route path="/platform/tenants" element={<TenantsPage />} />
