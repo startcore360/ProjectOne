@@ -191,8 +191,7 @@ class TenantIssuerAuthenticationManagerResolverIT {
                 "firstName", "Test",
                 "lastName", "User",
                 "enabled", true,
-                "emailVerified", true,
-                "credentials", List.of(Map.of("type", "password", "value", TEST_PASSWORD, "temporary", false)));
+                "emailVerified", true);
 
         HttpRequest createRequest = HttpRequest.newBuilder()
                 .uri(URI.create(KEYCLOAK_BASE_URL + "/admin/realms/" + realm + "/users"))
@@ -201,14 +200,49 @@ class TenantIssuerAuthenticationManagerResolverIT {
                 .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(userRepresentation)))
                 .build();
         HttpResponse<String> response = HTTP.send(createRequest, HttpResponse.BodyHandlers.ofString());
-        // 201 = created just now, 409 = already exists from an earlier run of this test - both
-        // are fine, since the password above is set unconditionally either way for a fresh 201,
-        // and an existing 409 user from a prior run already has it.
+        // 201 = created just now, 409 = already exists from an earlier run of this test - both are
+        // fine; either way we still explicitly (re)set the password below rather than trust an
+        // inline "credentials" array on the create payload. Found by reproducing it live: Keycloak
+        // 26 persists that inline credential (GET .../credentials shows a password row) but a
+        // password-grant login with it still returns invalid_grant - only a separate, explicit
+        // PUT .../reset-password call actually activates a usable credential. Relying on the
+        // inline array silently breaks this test the moment the user doesn't already exist from an
+        // earlier 409 case, which is exactly what happened here.
         if (response.statusCode() != 201 && response.statusCode() != 409) {
             throw new IllegalStateException(
                     "Could not provision test user " + username + " in realm " + realm
                             + ": " + response.statusCode() + " " + response.body());
         }
+
+        String userId = findUserId(realm, adminToken, username);
+        Map<String, Object> passwordPayload = Map.of(
+                "type", "password", "value", TEST_PASSWORD, "temporary", false);
+        HttpRequest resetRequest = HttpRequest.newBuilder()
+                .uri(URI.create(KEYCLOAK_BASE_URL + "/admin/realms/" + realm + "/users/" + userId + "/reset-password"))
+                .header("Authorization", "Bearer " + adminToken)
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(passwordPayload)))
+                .build();
+        HttpResponse<String> resetResponse = HTTP.send(resetRequest, HttpResponse.BodyHandlers.ofString());
+        if (resetResponse.statusCode() != 204) {
+            throw new IllegalStateException(
+                    "Could not set password for test user " + username + " in realm " + realm
+                            + ": " + resetResponse.statusCode() + " " + resetResponse.body());
+        }
+    }
+
+    private static String findUserId(String realm, String adminToken, String username) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(KEYCLOAK_BASE_URL + "/admin/realms/" + realm + "/users?username=" + username + "&exact=true"))
+                .header("Authorization", "Bearer " + adminToken)
+                .GET()
+                .build();
+        HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+        List<Map<String, Object>> users = JSON.readValue(response.body(), List.class);
+        if (users.isEmpty()) {
+            throw new IllegalStateException("User " + username + " not found in realm " + realm + " right after creation");
+        }
+        return (String) users.get(0).get("id");
     }
 
     private static String fetchClientCredentialsToken(String realm, String clientSecret) throws Exception {
