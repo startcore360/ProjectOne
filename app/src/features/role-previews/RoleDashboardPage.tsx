@@ -32,7 +32,7 @@ const familyMetrics: Record<DashboardFamily,string[]> = {
 };
 
 function EmptyState({ title, text }: { title:string; text:string }) {
-  return <div className="role-preview-empty"><span><Icon name="file" size={18}/></span><div><strong>{title}</strong><p>{text}</p></div></div>;
+  return <div className="role-preview-empty"><span><Icon name="book" size={18}/></span><div><strong>{title}</strong><p>{text}</p></div></div>;
 }
 
 function RoleCard({ role }: { role: RoleProfile }) {
