@@ -6,7 +6,7 @@ function Metric({ label, value, detail, icon }: { label: string; value: string; 
 }
 
 function Panel({ id, title, eyebrow, children }: { id: string; title: string; eyebrow: string; children: React.ReactNode }) {
-  return <section className="student-panel" id={id}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div><span className="student-panel__chevron" aria-hidden="true"><Icon name="arrow-up-right" size={17} /></span></header>{children}</section>;
+  return <section className="student-panel" id={id}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div><span className="student-panel__chevron" aria-hidden="true"><Icon name="more" size={17} /></span></header>{children}</section>;
 }
 
 function QuietEmpty({ title, description }: { title: string; description: string }) {
@@ -17,8 +17,8 @@ function StudentDashboard({ name }: { name: string }) {
   return <div className="student-dashboard">
     <div className="student-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div>
     <section className="student-welcome">
-      <div className="student-welcome__copy"><p className="student-eyebrow">YOUR LEARNING SPACE</p><h1>Good morning, {name}.</h1><p>A little clarity for the day ahead. Focus on one good next step.</p><a href="#student-plan" className="student-text-link">View your day <Icon name="arrow-up-right" size={16} /></a></div>
-      <div className="student-welcome__aside"><div className="student-streak__icon"><Icon name="flame" size={22} /></div><div><p className="student-eyebrow">LEARNING STREAK</p><strong>Start your streak</strong><span>Build a steady rhythm, one learning day at a time.</span></div><div className="student-streak__days" aria-label="Your weekly streak will appear when activity is connected"><i/><i/><i/><i/><i/><i/><i/></div><small>Weekly activity · awaiting connection</small></div>
+      <div className="student-welcome__copy"><p className="student-eyebrow">YOUR LEARNING SPACE</p><h1>Good morning, {name}.</h1><p>A little clarity for the day ahead. Focus on one good next step.</p><a href="#student-plan" className="student-text-link">View your day <Icon name="more" size={16} /></a></div>
+      <div className="student-welcome__aside"><div className="student-streak__icon"><Icon name="chart" size={22} /></div><div><p className="student-eyebrow">LEARNING STREAK</p><strong>Start your streak</strong><span>Build a steady rhythm, one learning day at a time.</span></div><div className="student-streak__days" aria-label="Your weekly streak will appear when activity is connected"><i/><i/><i/><i/><i/><i/><i/></div><small>Weekly activity · awaiting connection</small></div>
     </section>
     <section className="student-section" aria-labelledby="student-glance"><div className="student-section__heading"><div><p className="student-eyebrow">AT A GLANCE</p><h2 id="student-glance">Your progress</h2></div><span className="student-muted">Live academic data will appear here</span></div>
       <div className="student-metrics"><Metric label="Attendance" value="—" detail="Not connected yet" icon="calendar" /><Metric label="Assignments" value="—" detail="No live tasks loaded" icon="file" /><Metric label="Published average" value="—" detail="Published results only" icon="chart" /></div>
@@ -42,7 +42,7 @@ function WorkspaceDashboard({ name, userType }: { name: string; userType: string
     SYSTEM: { title: "Your workspace.", description: "Your assigned services and permitted actions will appear here when connected.", scope: "System workspace" },
   };
   const content = labels[userType] ?? { title: "Your workspace.", description: "Your assigned services and permitted actions will appear here as they become available.", scope: "Institution workspace" };
-  return <div className="workspace-dashboard"><div className="student-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div><section className="workspace-welcome"><p className="student-eyebrow">{content.scope.toUpperCase()}</p><h1>Welcome, {name}.</h1><h2>{content.title}</h2><p>{content.description}</p></section><section className="student-panel workspace-state"><span className="student-panel__chevron"><Icon name="grid" size={20}/></span><h2>Your workspace is ready</h2><p>Live information will appear here when the relevant institution services are connected. Available actions remain controlled by your assigned role and permissions.</p></section></div>;
+  return <div className="workspace-dashboard"><div className="student-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div><section className="workspace-welcome"><p className="student-eyebrow">{content.scope.toUpperCase()}</p><h1>Welcome, {name}.</h1><h2>{content.title}</h2><p>{content.description}</p></section><section className="student-panel workspace-state"><span className="student-panel__chevron"><Icon name="home" size={20}/></span><h2>Your workspace is ready</h2><p>Live information will appear here when the relevant institution services are connected. Available actions remain controlled by your assigned role and permissions.</p></section></div>;
 }
 
 export default function DashboardPage() {
