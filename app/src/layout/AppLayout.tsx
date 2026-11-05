@@ -39,7 +39,8 @@ export default function AppLayout() {
       <NavLink className="app-brand" to={isPlatformAdmin ? "/platform" : "/dashboard"}><span className="app-brand__mark">e</span><span>EDU <strong>360</strong></span></NavLink>
       <p className="app-sidebar__label">{isPlatformAdmin ? "PLATFORM" : isUniversityAdmin ? "UNIVERSITY" : user?.userType === "STUDENT" ? "STUDENT SPACE" : "WORKSPACE"}</p>
       <nav className="app-nav" aria-label="Main navigation">
-        {navigation.map((item) => <NavLink key={item.to} to={item.to} end title={item.label} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={18}/><span>{item.label}</span></NavLink>)}
+        {navigation.map((item) => <NavLink key={item.to} to={item.to} end title={item.label} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={24}/><span>{item.label}</span></NavLink>)}
+        {import.meta.env.DEV && <NavLink to="/role-previews" end title="Role dashboard previews" className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name="help" size={24}/><span>Role previews</span></NavLink>}
       </nav>
       <div className="app-sidebar__bottom"><span className="app-sidebar__dot" />{isPlatformAdmin ? "Platform scope" : isUniversityAdmin ? "University scope" : "Institution workspace"}</div>
     </aside>
