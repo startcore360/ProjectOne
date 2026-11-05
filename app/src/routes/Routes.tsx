@@ -5,6 +5,7 @@ import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
 import ChangePasswordPage from "../features/auth/pages/ChangePasswordPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import RoleDashboardPage from "../features/role-previews/RoleDashboardPage";
 import ProfilePage from "../features/profile/pages/ProfilePage";
 import SessionsPage from "../features/sessions/pages/SessionsPage";
 import {
@@ -104,6 +105,7 @@ export default function AppRoutes() {
         <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/tenants/users" element={<UserListPage />} />
