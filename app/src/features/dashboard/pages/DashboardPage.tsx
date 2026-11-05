@@ -1,11 +1,12 @@
 import { useAppSelector } from "../../../store/hooks";
+import type { ReactNode } from "react";
 import { Icon } from "../../../components/ui/Icon";
 
-function Metric({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: "calendar" | "file" | "chart" | "clock" }) {
+function Metric({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: "calendar" | "book" | "chart" | "clock" }) {
   return <article className="student-metric"><span className="student-metric__icon"><Icon name={icon} size={18} /></span><div><p>{label}</p><strong>{value}</strong><small>{detail}</small></div></article>;
 }
 
-function Panel({ id, title, eyebrow, children }: { id: string; title: string; eyebrow: string; children: React.ReactNode }) {
+function Panel({ id, title, eyebrow, children }: { id: string; title: string; eyebrow: string; children: ReactNode }) {
   return <section className="student-panel" id={id}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div><span className="student-panel__chevron" aria-hidden="true"><Icon name="more" size={17} /></span></header>{children}</section>;
 }
 
@@ -36,7 +37,7 @@ function StudentDashboard({ name }: { name: string }) {
       <div className="student-section__heading"><div><p className="student-eyebrow">AT A GLANCE</p><h2 id="student-glance">Your progress</h2></div><span className="student-muted">A clear view of this term</span></div>
       <div className="student-metrics">
         <Metric label="Attendance" value="—" detail="Term-to-date · awaiting data" icon="calendar"/>
-        <Metric label="Assignments to submit" value="—" detail="Published assignments only" icon="file"/>
+        <Metric label="Assignments to submit" value="—" detail="Published assignments only" icon="book"/>
         <Metric label="Published average" value="—" detail="Published results only" icon="chart"/>
         <Metric label="Leave requests" value="—" detail="Your pending requests" icon="clock"/>
       </div>
@@ -66,7 +67,7 @@ function StudentDashboard({ name }: { name: string }) {
         <QuietEmpty title="Your weekly streak starts here" description="Study goals and consistent learning activity will help you see your progress over time."/>
       </Panel>
     </div>
-    <p className="student-data-note"><span aria-hidden="true">i</span> Your dashboard shows information available to your signed-in account. No sample scores, attendance figures or assignment counts are presented as live data.</p>
+    <p className="student-data-note"><Icon name="info" size={16}/> Your dashboard shows information available to your signed-in account. No sample scores, attendance figures or assignment counts are presented as live data.</p>
   </div>;
 }
 
