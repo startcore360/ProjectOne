@@ -4,6 +4,7 @@ import { Button, Kicker, TextField } from "../../../design-system/components";
 import { Badge, Spinner } from "../../../components/ui";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import api from "../../../services/axios";
+import { Icon } from "../../../components/ui/Icon";
 
 type Tenant = { id: string; name: string; type: string; plan: string; status: "Active" | "Trial" | "Suspended"; gates: number; updated: string };
 type PlatformUser = { id: string; name: string; email: string; role: string; status: "Active" | "Invited" | "Suspended"; lastActive: string };
@@ -20,8 +21,8 @@ const initialUsers: PlatformUser[] = [
 ];
 const initialAudit: AuditEvent[] = [];
 
-function Metric({ label, value, note, mark }: { label: string; value: string | number; note: string; mark: string }) {
-  return <article className="platform-metric"><span className="platform-metric__mark" aria-hidden="true">{mark}</span><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
+function Metric({ label, value, note, mark }: { label: string; value: string | number; note: string; mark: "building" | "check" | "clock" | "users" | "wallet" }) {
+  return <article className="platform-metric"><span className="platform-metric__mark" aria-hidden="true"><Icon name={mark} size={19}/></span><p>{label}</p><strong>{value}</strong><small>{note}</small></article>;
 }
 function Panel({ title, description, action, children }: { title: string; description?: string; action?: ReactNode; children: ReactNode }) {
   return <section className="platform-panel"><header className="platform-panel__header"><div><h2>{title}</h2>{description && <p>{description}</p>}</div>{action}</header>{children}</section>;
@@ -34,10 +35,10 @@ function DataTable({ headers, children, empty, emptyMessage }: { headers: string
   return <div className="platform-table-wrap"><table className="platform-table"><thead><tr>{headers.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{empty ? <tr><td colSpan={headers.length} className="platform-empty-cell">{emptyMessage ?? "No matching records."}</td></tr> : children}</tbody></table></div>;
 }
 function SearchBox({ value, onChange, placeholder = "Search records" }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return <label className="platform-search"><span aria-hidden="true">⌕</span><span className="visually-hidden">Search</span><input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} /></label>;
+  return <label className="platform-search"><span aria-hidden="true"><Icon name="search" size={17}/></span><span className="visually-hidden">Search</span><input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} /></label>;
 }
 function SampleNote() {
-  return <p className="platform-sample-note"><span aria-hidden="true">ⓘ</span> Sample interface data for layout review. Live records and actions are not connected yet.</p>;
+  return <p className="platform-sample-note"><span aria-hidden="true"><Icon name="shield" size={15}/></span> Sample interface data for layout review. Live records and actions are not connected yet.</p>;
 }
 // Reuses the existing .platform-inline-notice box (info-toned by default in components.css) for
 // every honest caveat banner on this page: "not connected yet", "not available", and fetch
@@ -75,14 +76,14 @@ export function PlatformOverviewPage() {
   return <div className="platform-page">
     <PageHeader title="Platform overview" description="Tenant lifecycle, platform access and service health at a glance." actions={<Button variant="secondary" onClick={() => navigate("/platform/tenants")}>View tenants <span aria-hidden="true">→</span></Button>} />
     <div className="platform-metrics">
-      <Metric label="Tenants" value={tenants.length} note="Across the platform" mark="▤" />
-      <Metric label="Active tenants" value={tenants.filter((t) => t.status === "Active").length} note="Currently active" mark="✓" />
-      <Metric label="Trial tenants" value={tenants.filter((t) => t.status === "Trial").length} note={openGates + " open setup gates"} mark="◷" />
-      <Metric label="Platform users" value={users.length} note="Admin and support accounts" mark="♙" />
+      <Metric label="Tenants" value={tenants.length} note="Across the platform" mark="building" />
+      <Metric label="Active tenants" value={tenants.filter((t) => t.status === "Active").length} note="Currently active" mark="check" />
+      <Metric label="Trial tenants" value={tenants.filter((t) => t.status === "Trial").length} note={openGates + " open setup gates"} mark="clock" />
+      <Metric label="Platform users" value={users.length} note="Admin and support accounts" mark="users" />
     </div>
     <div className="platform-two-col">
-      <Panel title="Go-live readiness" description="Tenants with setup items still to complete"><div className="platform-list">{tenants.filter((t) => t.gates > 0).map((tenant) => <div className="platform-list-row" key={tenant.id}><span className="platform-list-icon">!</span><span className="platform-list-copy"><strong>{tenant.name}</strong><small>{tenant.gates} setup item{tenant.gates === 1 ? "" : "s"} remaining · {tenant.type}</small></span><Status value={tenant.status} /></div>)}</div>{openGates === 0 && <p className="platform-empty-inline">All current setup gates are complete.</p>}</Panel>
-      <Panel title="Platform activity" description="Latest platform-scope events"><div className="platform-list">{initialAudit.length ? initialAudit.slice(0, 4).map((event) => <div className="platform-list-row" key={event.id}><span className="platform-list-icon">◷</span><span className="platform-list-copy"><strong>{event.action}</strong><small>{event.actor} · {event.when}</small></span><Status value={event.outcome} /></div>) : <p className="platform-empty-inline">No platform events are loaded in this prototype snapshot.</p>}</div></Panel>
+      <Panel title="Go-live readiness" description="Tenants with setup items still to complete"><div className="platform-list">{tenants.filter((t) => t.gates > 0).map((tenant) => <div className="platform-list-row" key={tenant.id}><span className="platform-list-icon"><Icon name="clock" size={16}/></span><span className="platform-list-copy"><strong>{tenant.name}</strong><small>{tenant.gates} setup item{tenant.gates === 1 ? "" : "s"} remaining · {tenant.type}</small></span><Status value={tenant.status} /></div>)}</div>{openGates === 0 && <p className="platform-empty-inline">All current setup gates are complete.</p>}</Panel>
+      <Panel title="Platform activity" description="Latest platform-scope events"><div className="platform-list">{initialAudit.length ? initialAudit.slice(0, 4).map((event) => <div className="platform-list-row" key={event.id}><span className="platform-list-icon"><Icon name="clock" size={16}/></span><span className="platform-list-copy"><strong>{event.action}</strong><small>{event.actor} · {event.when}</small></span><Status value={event.outcome} /></div>) : <p className="platform-empty-inline">No platform events are loaded in this prototype snapshot.</p>}</div></Panel>
     </div>
     <SampleNote />
   </div>;
@@ -109,7 +110,7 @@ export function TenantsPage() {
       <div className="platform-toolbar"><SearchBox value={query} onChange={setQuery} placeholder="Search by institution or ID" /><label className="platform-select-label">Status <select value={status} onChange={(e) => setStatus(e.target.value)}><option>All</option><option>Active</option><option>Trial</option><option>Suspended</option></select></label></div>
       <DataTable headers={["Institution", "Type", "Plan", "Status", "Open gates", "Last updated"]} empty={!filtered.length}>{filtered.map((tenant) => <tr key={tenant.id}><td><strong>{tenant.name}</strong><small className="platform-cell-sub">{tenant.id}</small></td><td>{tenant.type}</td><td>{tenant.plan}</td><td><Status value={tenant.status} /></td><td>{tenant.gates ? <Status value={tenant.gates + " pending"} /> : <Status value="Complete" />}</td><td>{tenant.updated}</td></tr>)}</DataTable>
     </Panel>
-    {showCreate && <div className="platform-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}><section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-create-title"><header><div><Kicker>NEW TENANT</Kicker><h2 id="tenant-create-title">Create trial tenant</h2><p>New tenants begin in Trial. Activation remains gated until setup is complete.</p></div><button className="platform-icon-button" onClick={() => setShowCreate(false)} aria-label="Close">×</button></header><form onSubmit={submit}><TextField id="tenant-name" label="Institution name" required value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Lakeside School" /><div className="platform-form-grid"><label className="platform-form-field">Institution type<select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })}><option>School</option><option>College</option><option>University</option></select></label><label className="platform-form-field">Plan<select value={draft.plan} onChange={(e) => setDraft({ ...draft, plan: e.target.value })}><option>Standard</option><option>Premium</option><option>Enterprise</option></select></label></div><TextField id="tenant-admin-email" label="First administrator email" type="email" required value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} placeholder="admin@institution.edu" /><div className="platform-modal-note">This screen is currently a frontend preview. The form will not create a tenant or send an invitation until the API is integrated.</div><footer><Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button><Button type="submit">Validate details</Button></footer></form></section></div>}
+    {showCreate && <div className="platform-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}><section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-create-title"><header><div><Kicker>NEW TENANT</Kicker><h2 id="tenant-create-title">Create trial tenant</h2><p>New tenants begin in Trial. Activation remains gated until setup is complete.</p></div><button className="platform-icon-button" onClick={() => setShowCreate(false)} aria-label="Close"><Icon name="check" size={16}/></button></header><form onSubmit={submit}><TextField id="tenant-name" label="Institution name" required value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Lakeside School" /><div className="platform-form-grid"><label className="platform-form-field">Institution type<select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })}><option>School</option><option>College</option><option>University</option></select></label><label className="platform-form-field">Plan<select value={draft.plan} onChange={(e) => setDraft({ ...draft, plan: e.target.value })}><option>Standard</option><option>Premium</option><option>Enterprise</option></select></label></div><TextField id="tenant-admin-email" label="First administrator email" type="email" required value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} placeholder="admin@institution.edu" /><div className="platform-modal-note">This screen is currently a frontend preview. The form will not create a tenant or send an invitation until the API is integrated.</div><footer><Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button><Button type="submit">Validate details</Button></footer></form></section></div>}
     <SampleNote />
   </div>;
 }
