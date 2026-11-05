@@ -7,7 +7,7 @@ function Metric({ label, value, detail, icon }: { label: string; value: string; 
 }
 
 function Panel({ id, title, eyebrow, children }: { id: string; title: string; eyebrow: string; children: ReactNode }) {
-  return <section className="student-panel" id={id}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div><span className="student-panel__chevron" aria-hidden="true"><Icon name="more" size={17} /></span></header>{children}</section>;
+  return <section className="student-panel" id={id}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div></header>{children}</section>;
 }
 
 function QuietEmpty({ title, description }: { title: string; description: string }) {
