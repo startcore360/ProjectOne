@@ -1,7 +1,7 @@
 import { useAppSelector } from "../../../store/hooks";
 import { Icon } from "../../../components/ui/Icon";
 
-function Metric({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: "calendar" | "file" | "chart" }) {
+function Metric({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: "calendar" | "file" | "chart" | "clock" }) {
   return <article className="student-metric"><span className="student-metric__icon"><Icon name={icon} size={18} /></span><div><p>{label}</p><strong>{value}</strong><small>{detail}</small></div></article>;
 }
 
@@ -17,19 +17,56 @@ function StudentDashboard({ name }: { name: string }) {
   return <div className="student-dashboard">
     <div className="student-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div>
     <section className="student-welcome">
-      <div className="student-welcome__copy"><p className="student-eyebrow">YOUR LEARNING SPACE</p><h1>Good morning, {name}.</h1><p>A little clarity for the day ahead. Focus on one good next step.</p><a href="#student-plan" className="student-text-link">View your day <Icon name="more" size={16} /></a></div>
-      <div className="student-welcome__aside"><div className="student-streak__icon"><Icon name="chart" size={22} /></div><div><p className="student-eyebrow">LEARNING STREAK</p><strong>Start your streak</strong><span>Build a steady rhythm, one learning day at a time.</span></div><div className="student-streak__days" aria-label="Your weekly streak will appear when activity is connected"><i/><i/><i/><i/><i/><i/><i/></div><small>Weekly activity · awaiting connection</small></div>
+      <div className="student-welcome__copy">
+        <p className="student-eyebrow">YOUR WEEK, IN BALANCE</p>
+        <h1>Good morning, {name}.</h1>
+        <h2 className="student-welcome__headline">Progress isn’t a race.<br/>It’s a rhythm.</h2>
+        <p>A little clarity for the day ahead. Take it one step at a time.</p>
+        <a href="#student-plan" className="student-text-link">View today’s plan <Icon name="more" size={16}/></a>
+      </div>
+      <aside className="student-welcome__aside" aria-label="Learning streak">
+        <div className="student-streak__icon"><Icon name="chart" size={22}/></div>
+        <div><p className="student-eyebrow">LEARNING STREAK</p><strong>Start your rhythm</strong><span>Small, consistent study sessions add up.</span></div>
+        <div className="student-streak__days" aria-label="Weekly activity is not connected yet"><i/><i/><i/><i/><i/><i/><i/></div>
+        <small>Weekly activity · connect your learning activity to begin</small>
+      </aside>
     </section>
-    <section className="student-section" aria-labelledby="student-glance"><div className="student-section__heading"><div><p className="student-eyebrow">AT A GLANCE</p><h2 id="student-glance">Your progress</h2></div><span className="student-muted">Live academic data will appear here</span></div>
-      <div className="student-metrics"><Metric label="Attendance" value="—" detail="Not connected yet" icon="calendar" /><Metric label="Assignments" value="—" detail="No live tasks loaded" icon="file" /><Metric label="Published average" value="—" detail="Published results only" icon="chart" /></div>
+
+    <section className="student-section" aria-labelledby="student-glance">
+      <div className="student-section__heading"><div><p className="student-eyebrow">AT A GLANCE</p><h2 id="student-glance">Your progress</h2></div><span className="student-muted">A clear view of this term</span></div>
+      <div className="student-metrics">
+        <Metric label="Attendance" value="—" detail="Term-to-date · awaiting data" icon="calendar"/>
+        <Metric label="Assignments to submit" value="—" detail="Published assignments only" icon="file"/>
+        <Metric label="Published average" value="—" detail="Published results only" icon="chart"/>
+        <Metric label="Leave requests" value="—" detail="Your pending requests" icon="clock"/>
+      </div>
     </section>
+
     <div className="student-content-grid">
-      <Panel id="student-plan" title="Your day" eyebrow="TODAY · TIMETABLE"><QuietEmpty title="Your timetable will appear here" description="When your institution connects timetable data, you’ll see upcoming classes, rooms and teachers in this space." /></Panel>
-      <Panel id="student-focus" title="Next small steps" eyebrow="YOUR PRIORITIES"><QuietEmpty title="Nothing waiting just yet" description="Assignments and other tasks that need your attention will be listed here." /></Panel>
-      <Panel id="student-updates" title="From your campus" eyebrow="NOTICES & UPDATES"><QuietEmpty title="No new notices" description="School announcements and useful updates will appear here." /></Panel>
-      <Panel id="student-results" title="Recent results" eyebrow="ASSESSMENT"><QuietEmpty title="Results will appear here" description="Only published results will be shown in your learning overview." /></Panel>
+      <Panel id="student-plan" title="Your timetable" eyebrow="TODAY · WHAT’S AHEAD">
+        <div className="student-week-strip" aria-label="Weekly timetable preview"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span></div>
+        <QuietEmpty title="Your classes will appear here" description="See today’s periods, subjects, rooms and teachers when your institution timetable is connected."/>
+      </Panel>
+      <Panel id="student-focus" title="Next small steps" eyebrow="CLEAR PRIORITIES, NO CLUTTER">
+        <QuietEmpty title="You’re all caught up for now" description="Published assignments, due dates and tasks that need your attention will appear here."/>
+      </Panel>
+      <Panel id="student-updates" title="From your campus" eyebrow="USEFUL UPDATES, IN ONE PLACE">
+        <QuietEmpty title="No new notices" description="School announcements, class updates and useful reminders will appear here."/>
+      </Panel>
+      <Panel id="student-results" title="Recent results" eyebrow="LATEST PUBLISHED ASSESSMENTS">
+        <QuietEmpty title="Your results will appear here" description="Only results that have been approved and published will be shown."/>
+      </Panel>
     </div>
-    <p className="student-data-note"><span aria-hidden="true">i</span> Your dashboard shows information available to your signed-in account. No sample scores, attendance figures or task counts are displayed.</p>
+
+    <div className="student-content-grid student-content-grid--lower">
+      <Panel id="student-attendance" title="Attendance, at a glance" eyebrow="TERM TO DATE · ALL SUBJECTS">
+        <div className="student-attendance-summary"><div className="student-attendance-ring" aria-hidden="true"><span>—</span></div><div><strong>Attendance data isn’t available yet</strong><p>When registers are connected, this view will show your attendance percentage and sessions attended.</p></div></div>
+      </Panel>
+      <Panel id="student-study" title="Your learning rhythm" eyebrow="STUDY HABITS">
+        <QuietEmpty title="Your weekly streak starts here" description="Study goals and consistent learning activity will help you see your progress over time."/>
+      </Panel>
+    </div>
+    <p className="student-data-note"><span aria-hidden="true">i</span> Your dashboard shows information available to your signed-in account. No sample scores, attendance figures or assignment counts are presented as live data.</p>
   </div>;
 }
 
