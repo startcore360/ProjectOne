@@ -2,12 +2,12 @@ import { useAppSelector } from "../../../store/hooks";
 import type { ReactNode } from "react";
 import { Icon } from "../../../components/ui/Icon";
 
-function Metric({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: "calendar" | "book" | "chart" | "clock" }) {
+function Metric({ label, value, detail, icon }: { label: string; value: string; detail: string; icon: "calendar" | "book" | "chart" | "wallet" }) {
   return <article className="student-metric"><span className="student-metric__icon"><Icon name={icon} size={18} /></span><div><p>{label}</p><strong>{value}</strong><small>{detail}</small></div></article>;
 }
 
-function Panel({ id, title, eyebrow, children }: { id: string; title: string; eyebrow: string; children: ReactNode }) {
-  return <section className="student-panel" id={id}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div></header>{children}</section>;
+function Panel({ id, title, eyebrow, action, children }: { id: string; title: string; eyebrow: string; action?: { label: string; href: string }; children: ReactNode }) {
+  return <section className="student-panel" id={id}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div>{action && <a className="student-panel__link" href={action.href}>{action.label}</a>}</header>{children}</section>;
 }
 
 function QuietEmpty({ title, description }: { title: string; description: string }) {
@@ -37,30 +37,30 @@ export function StudentDashboard({ name }: { name: string }) {
       <div className="student-section__heading"><div><p className="student-eyebrow">AT A GLANCE</p><h2 id="student-glance">Your progress</h2></div><span className="student-muted">A clear view of this term</span></div>
       <div className="student-metrics">
         <Metric label="Attendance" value="—" detail="Term-to-date · awaiting data" icon="calendar"/>
-        <Metric label="Assignments to submit" value="—" detail="Published assignments only" icon="book"/>
-        <Metric label="Published average" value="—" detail="Published results only" icon="chart"/>
-        <Metric label="Leave requests" value="—" detail="Your pending requests" icon="clock"/>
+        <Metric label="Current CGPA" value="—" detail="Latest published academic record" icon="chart"/>
+        <Metric label="To-do list" value="—" detail="Tasks due soon" icon="book"/>
+        <Metric label="Fee status" value="—" detail="Current outstanding balance" icon="wallet"/>
       </div>
     </section>
 
     <div className="student-content-grid">
-      <Panel id="student-plan" title="Your timetable" eyebrow="TODAY · WHAT’S AHEAD">
+      <Panel id="student-plan" title="Your timetable" eyebrow="TODAY · WHAT’S AHEAD" action={{label:"Full calendar",href:"#student-plan"}}>
         <div className="student-week-strip" aria-label="Weekly timetable preview"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span></div>
         <QuietEmpty title="Your classes will appear here" description="See today’s periods, subjects, rooms and teachers when your institution timetable is connected."/>
       </Panel>
-      <Panel id="student-focus" title="Next small steps" eyebrow="CLEAR PRIORITIES, NO CLUTTER">
+      <Panel id="student-focus" title="Next small steps" eyebrow="CLEAR PRIORITIES, NO CLUTTER" action={{label:"All tasks",href:"#student-focus"}}>
         <QuietEmpty title="You’re all caught up for now" description="Published assignments, due dates and tasks that need your attention will appear here."/>
       </Panel>
-      <Panel id="student-updates" title="From your campus" eyebrow="USEFUL UPDATES, IN ONE PLACE">
+      <Panel id="student-updates" title="From your campus" eyebrow="USEFUL UPDATES, IN ONE PLACE" action={{label:"All notices",href:"#student-updates"}}>
         <QuietEmpty title="No new notices" description="School announcements, class updates and useful reminders will appear here."/>
       </Panel>
-      <Panel id="student-results" title="Recent results" eyebrow="LATEST PUBLISHED ASSESSMENTS">
+      <Panel id="student-results" title="Recent results" eyebrow="LATEST PUBLISHED ASSESSMENTS" action={{label:"All results",href:"#student-results"}}>
         <QuietEmpty title="Your results will appear here" description="Only results that have been approved and published will be shown."/>
       </Panel>
     </div>
 
     <div className="student-content-grid student-content-grid--lower">
-      <Panel id="student-attendance" title="Attendance, at a glance" eyebrow="TERM TO DATE · ALL SUBJECTS">
+      <Panel id="student-attendance" title="Attendance, at a glance" eyebrow="TERM TO DATE · ALL SUBJECTS" action={{label:"Attendance details",href:"#student-attendance"}}>
         <div className="student-attendance-summary"><div className="student-attendance-ring" aria-hidden="true"><span>—</span></div><div><strong>Attendance data isn’t available yet</strong><p>When registers are connected, this view will show your attendance percentage and sessions attended.</p></div></div>
       </Panel>
       <Panel id="student-study" title="Your learning rhythm" eyebrow="STUDY HABITS">
