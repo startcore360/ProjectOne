@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "../../../components/ui";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button, Kicker } from "../../../design-system/components";
+import { Icon } from "../../../components/ui/Icon";
 
 const institutions = [
   { name: "Greenwood Public School", type: "School · Classes 1–12", status: "Active" },
@@ -16,7 +17,7 @@ function StateBadge({ status }: { status: string }) {
   return <Badge tone={status === "Active" ? "success" : status === "Pending" ? "warning" : "neutral"}>{status}</Badge>;
 }
 function Note() {
-  return <p className="platform-sample-note"><span aria-hidden="true">ⓘ</span> Prototype reference data only. Changes are not connected to the institution API.</p>;
+  return <p className="platform-sample-note"><span aria-hidden="true"><Icon name="shield" size={15}/></span> Prototype reference data only. Changes are not connected to the institution API.</p>;
 }
 
 export function InstitutionsPage() {
@@ -27,7 +28,7 @@ export function InstitutionUsersPage() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("All");
   const emptyMessage = query || kind !== "All" ? "No Northbridge University users match these filters." : "No Northbridge University user records are loaded in this prototype view.";
-  return <div className="platform-page"><PageHeader title="Users & roles" description="Create institution profiles, assign roles and link guardians. Profile creation and role assignment are separate steps." actions={<Button disabled title="User management API is not connected">＋ Create user</Button>} /><Panel title="User register" description="University scope · the current prototype does not supply university user rows."><div className="platform-toolbar"><label className="platform-search"><span aria-hidden="true">⌕</span><span className="visually-hidden">Search</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, ID or email" /></label><label className="platform-select-label">Profile type <select value={kind} onChange={(e) => setKind(e.target.value)}><option>All</option><option>Student</option><option>Teacher</option><option>Parent</option></select></label></div><div className="platform-admin-empty"><span aria-hidden="true">♙</span><strong>{emptyMessage}</strong><p>When institution records are connected, this register will show only people within the selected university scope.</p></div></Panel><Note /></div>;
+  return <div className="platform-page"><PageHeader title="Users & roles" description="Create institution profiles, assign roles and link guardians. Profile creation and role assignment are separate steps." actions={<Button disabled title="User management API is not connected">＋ Create user</Button>} /><Panel title="User register" description="University scope · the current prototype does not supply university user rows."><div className="platform-toolbar"><label className="platform-search"><span aria-hidden="true"><Icon name="search" size={17}/></span><span className="visually-hidden">Search</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, ID or email" /></label><label className="platform-select-label">Profile type <select value={kind} onChange={(e) => setKind(e.target.value)}><option>All</option><option>Student</option><option>Teacher</option><option>Parent</option></select></label></div><div className="platform-admin-empty"><span aria-hidden="true"><Icon name="users" size={19}/></span><strong>{emptyMessage}</strong><p>When institution records are connected, this register will show only people within the selected university scope.</p></div></Panel><Note /></div>;
 }
 
 const roleRows = [
