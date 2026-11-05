@@ -1005,3 +1005,51 @@ a {
   .app-content { padding-bottom: 28px; }
   .app-footer { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
 }
+
+
+/* Student dashboard — Stillwater, restrained iconography and data-honest states */
+.student-dashboard,.workspace-dashboard{width:100%;max-width:var(--content-max);margin:0 auto;color:var(--color-text)}
+.student-breadcrumb{display:flex;align-items:center;gap:10px;margin:0 0 22px;color:var(--color-text-muted);font-size:var(--fs-body-sm)}
+.student-breadcrumb strong{color:var(--color-text);font-weight:600}
+.student-welcome{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.75fr);gap:28px;align-items:center;min-height:230px;padding:clamp(24px,4vw,42px);border:1px solid var(--color-border-divider);border-radius:var(--radius-xl);background:linear-gradient(115deg,var(--color-bg-surface),var(--color-bg-brand-soft));}
+.student-welcome__copy h1,.workspace-welcome h1{font-size:clamp(30px,4vw,44px);line-height:1.12;letter-spacing:-.035em}
+.student-welcome__copy>p:not(.student-eyebrow){max-width:48ch;margin:12px 0 18px;color:var(--color-text-muted)}
+.student-eyebrow{margin:0 0 9px;color:var(--color-text-muted);font-size:var(--fs-overline);font-weight:700;letter-spacing:.12em}
+.student-text-link{display:inline-flex;align-items:center;gap:7px;color:var(--color-text-brand);font-size:var(--fs-body-sm);font-weight:650;text-decoration:none}
+.student-text-link:hover{text-decoration:underline;text-underline-offset:3px}
+.student-welcome__aside{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px 14px;padding:20px;border:1px solid var(--color-border-divider);border-radius:var(--radius-lg);background:var(--color-bg-surface)}
+.student-streak__icon,.student-metric__icon,.student-empty__mark{display:grid;place-items:center;color:var(--color-text-muted);background:var(--color-bg-subtle);border:1px solid var(--color-border-divider);border-radius:12px}
+.student-streak__icon{width:44px;height:44px}
+.student-welcome__aside strong{display:block;font-size:var(--fs-body-lg);font-weight:700}
+.student-welcome__aside span{display:block;margin-top:3px;color:var(--color-text-muted);font-size:var(--fs-caption);line-height:1.45}
+.student-streak__days{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-top:5px}
+.student-streak__days i{height:7px;border-radius:99px;background:var(--color-bg-subtle-strong)}
+.student-welcome__aside>small{grid-column:1/-1;color:var(--color-text-muted);font-size:11px}
+.student-section{margin-top:32px}
+.student-section__heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}
+.student-section__heading h2,.student-panel__header h2{font-size:21px;letter-spacing:-.02em}
+.student-muted{color:var(--color-text-muted);font-size:var(--fs-caption)}
+.student-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.student-metric{display:flex;align-items:flex-start;gap:14px;min-height:112px;padding:18px;border:1px solid var(--color-border-divider);border-radius:var(--radius-lg);background:var(--color-bg-surface)}
+.student-metric__icon{width:38px;height:38px;flex:none}
+.student-metric p{margin:1px 0 5px;color:var(--color-text-muted);font-size:var(--fs-body-sm)}
+.student-metric strong{display:block;font-size:25px;line-height:1.15;font-weight:700}
+.student-metric small{display:block;margin-top:5px;color:var(--color-text-muted);font-size:var(--fs-caption)}
+.student-content-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}
+.student-panel{min-width:0;padding:20px;border:1px solid var(--color-border-divider);border-radius:var(--radius-lg);background:var(--color-bg-surface)}
+.student-panel__header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+.student-panel__chevron{display:grid;width:32px;height:32px;place-items:center;border:1px solid var(--color-border-divider);border-radius:50%;color:var(--color-text-muted)}
+.student-empty{display:flex;align-items:center;gap:13px;min-height:84px;padding:14px 0 2px;border-top:1px solid var(--color-border-divider)}
+.student-empty__mark{width:38px;height:38px;flex:none}
+.student-empty strong{display:block;font-size:var(--fs-body-sm);font-weight:650}
+.student-empty p{margin:4px 0 0;color:var(--color-text-muted);font-size:var(--fs-caption);line-height:1.5}
+.student-data-note{display:flex;align-items:flex-start;gap:10px;margin:18px 0 0;padding:13px 15px;border:1px solid var(--color-border-divider);border-radius:var(--radius-md);color:var(--color-text-muted);font-size:var(--fs-caption);line-height:1.5}
+.student-data-note>span{display:grid;width:18px;height:18px;flex:none;place-items:center;border:1px solid var(--color-border-control);border-radius:50%;font-size:11px;font-weight:700}
+.workspace-welcome{padding:28px 0 30px;border-bottom:1px solid var(--color-border-divider)}
+.workspace-welcome h2{margin-top:22px;font-size:clamp(24px,3vw,32px);letter-spacing:-.03em}
+.workspace-welcome>p:last-child{max-width:58ch;margin:10px 0 0;color:var(--color-text-muted)}
+.workspace-state{max-width:700px;margin-top:24px;padding:28px}
+.workspace-state h2{margin-top:16px;font-size:20px}
+.workspace-state p{margin:8px 0 0;color:var(--color-text-muted);line-height:1.6}
+@media(max-width:800px){.student-welcome{grid-template-columns:1fr}.student-welcome__aside{max-width:none}.student-content-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.student-metrics{grid-template-columns:1fr}.student-section__heading{align-items:flex-start;flex-direction:column;gap:5px}.student-metric{min-height:92px}.student-panel{padding:16px}.student-welcome{padding:22px}.student-welcome__copy h1{font-size:32px}}
