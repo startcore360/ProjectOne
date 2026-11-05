@@ -1114,3 +1114,7 @@ a {
 .app-nav__link>svg{color:var(--color-text-muted)}
 .app-nav__link:hover>svg,.app-nav__link.is-active>svg{color:var(--color-text-muted)}
 .app-sidebar__dot{background:var(--color-text-muted)}
+
+.student-panel__link{display:inline-flex;min-height:44px;align-items:center;justify-content:center;padding:0 8px;color:var(--color-text-brand);font-size:var(--fs-body-sm);font-weight:650;text-decoration:none;white-space:nowrap}
+.student-panel__link:hover{text-decoration:underline;text-underline-offset:3px}
+.role-preview-queue{margin:18px 0 14px}
