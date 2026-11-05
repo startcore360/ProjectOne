@@ -100,7 +100,7 @@ export default function RoleDashboardPage() {
     <p className="role-preview-footnote">Design preview only. Standard-role templates are not active assignments and do not grant access. Live permissions remain enforced by the server for the signed-in role, scope and record state.</p>
   </section>;
   if (role.family === "student") return <section className="role-preview-page"><div className="role-preview-student-head"><span className="role-preview-tag">DESIGN PREVIEW · {role.name}</span><Link to="/role-previews" className="student-text-link">All roles <Icon name="more" size={15}/></Link></div><StudentDashboard name="Student"/></section>;
-  const content = roleOverrides[role.code] ?? { ...familyCopy[role.family], metrics: familyMetrics[role.family] };
+  const content = roleOverrides[role.code] ?? { ...familyCopy[role.family], title: `${role.name} dashboard`, focus: role.purpose, metrics: familyMetrics[role.family] };
   return <section className="role-preview-page">
     <div className="student-breadcrumb"><Link to="/role-previews">All role dashboards</Link><span>/</span><strong>{role.name}</strong></div>
     <div className="role-preview-banner"><div><p className="student-eyebrow">{role.level.toUpperCase()} · {role.code}</p><h1>{role.name}</h1><p>{role.purpose}</p></div><span className="role-preview-tag">DESIGN PREVIEW</span></div>
