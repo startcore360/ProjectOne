@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../design-system/components";
 import { logout } from "../services/authManager";
 import { useAppSelector } from "../store/hooks";
 import { Icon } from "../components/ui/Icon";
+import { startInactivityTracker } from "../services/inactivityTracker";
 
 const universityNavigation = [
   { label: "Institutions", to: "/university/institutions", icon: "book" as const },
@@ -28,6 +30,7 @@ export default function AppLayout() {
   const isPlatformAdmin = user?.platformRole === "PLATFORM_ADMIN";
   const isUniversityAdmin = location.pathname.startsWith("/university");
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "A";
+  useEffect(() => startInactivityTracker(() => { void logout(); }), []);
   const signOut = async () => {
     try { await logout(); } catch { /* Always clear the local signed-in view. */ }
     finally { navigate("/login", { replace: true }); }
