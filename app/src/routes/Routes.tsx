@@ -5,6 +5,7 @@ import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
 import ChangePasswordPage from "../features/auth/pages/ChangePasswordPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import RoleDashboardPage from "../features/role-previews/RoleDashboardPage";
 import ProfilePage from "../features/profile/pages/ProfilePage";
 import SessionsPage from "../features/sessions/pages/SessionsPage";
 import {
@@ -50,12 +51,12 @@ function RoleHomeRedirect() {
   return <Navigate to="/dashboard" replace />;
 }
 
-// Blocked on the same missing tenant role model as above: there is nothing in AuthUserResponse
-// to check for "university admin" yet, so this cannot actually gate anything today. Left as a
-// pass-through (not a hard redirect to /dashboard) so the /university/* screens stay reachable
-// by direct URL for now, instead of being deleted, until Foundation item 7 lands.
+// Fail closed until the backend exposes an authoritative tenant role/permission
+// context to the browser. userType=STAFF is not an administrator grant, and URL
+// placement must never be treated as proof of authorization. The backend must
+// continue enforcing each endpoint independently.
 function UniversityAdminRoute() {
-  return <Outlet />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function PlatformAdminRoute() {
@@ -104,6 +105,7 @@ export default function AppRoutes() {
         <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/tenants/users" element={<UserListPage />} />
