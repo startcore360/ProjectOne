@@ -428,7 +428,7 @@ export function IntegrationTypesPage() {
     <PageHeader
       title="Integration types"
       description="The catalogue of integration types a tenant may enable (e.g. SMS, payments). Type catalogue only - never a tenant's own keys or webhooks."
-      actions={<Button onClick={() => { setMessage(""); setCreateError(""); setShowCreate(true); }}>＋ Add integration type</Button>}
+      actions={<Button onClick={() => { setMessage(""); setCreateError(""); setShowCreate(true); }}>Add integration type</Button>}
     />
     {message && <div className="platform-inline-notice" role="status">{message}</div>}
     {status === "error" && <Notice tone="danger">Could not load integration types: {errorMessage}</Notice>}
