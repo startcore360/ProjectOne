@@ -51,12 +51,12 @@ function RoleHomeRedirect() {
   return <Navigate to="/dashboard" replace />;
 }
 
-// Blocked on the same missing tenant role model as above: there is nothing in AuthUserResponse
-// to check for "university admin" yet, so this cannot actually gate anything today. Left as a
-// pass-through (not a hard redirect to /dashboard) so the /university/* screens stay reachable
-// by direct URL for now, instead of being deleted, until Foundation item 7 lands.
+// Fail closed until the backend exposes an authoritative tenant role/permission
+// context to the browser. userType=STAFF is not an administrator grant, and URL
+// placement must never be treated as proof of authorization. The backend must
+// continue enforcing each endpoint independently.
 function UniversityAdminRoute() {
-  return <Outlet />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function PlatformAdminRoute() {
