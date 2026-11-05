@@ -14,7 +14,7 @@ function QuietEmpty({ title, description }: { title: string; description: string
   return <div className="student-empty"><span className="student-empty__mark"><Icon name="book" size={20} /></span><div><strong>{title}</strong><p>{description}</p></div></div>;
 }
 
-function StudentDashboard({ name }: { name: string }) {
+export function StudentDashboard({ name }: { name: string }) {
   return <div className="student-dashboard">
     <div className="student-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div>
     <section className="student-welcome">
