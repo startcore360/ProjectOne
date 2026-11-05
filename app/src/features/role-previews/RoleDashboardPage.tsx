@@ -39,7 +39,7 @@ function RoleCard({ role }: { role: RoleProfile }) {
   return <Link className="role-directory-card" to={`/role-preview/${role.code}`}>
     <span className="role-directory-card__level">{role.level}</span>
     <h3>{role.name}</h3><p>{role.purpose}</p>
-    <span className="role-directory-card__open">Open dashboard <Icon name="arrow-up-right" size={15}/></span>
+    <span className="role-directory-card__open">Open dashboard <Icon name="more" size={15}/></span>
   </Link>;
 }
 
@@ -61,9 +61,9 @@ export default function RoleDashboardPage() {
   return <section className="role-preview-page">
     <div className="student-breadcrumb"><Link to="/role-previews">All role dashboards</Link><span>/</span><strong>{role.name}</strong></div>
     <div className="role-preview-banner"><div><p className="student-eyebrow">{role.level.toUpperCase()} · {role.code}</p><h1>{role.name}</h1><p>{role.purpose}</p></div><span className="role-preview-tag">DESIGN PREVIEW</span></div>
-    <div className="role-preview-intro"><div><p className="student-eyebrow">ROLE DASHBOARD</p><h2>{content.title}</h2><p>{content.focus}</p></div><Link to="/role-previews" className="student-text-link">All roles <Icon name="arrow-up-right" size={15}/></Link></div>
+    <div className="role-preview-intro"><div><p className="student-eyebrow">ROLE DASHBOARD</p><h2>{content.title}</h2><p>{content.focus}</p></div><Link to="/role-previews" className="student-text-link">All roles <Icon name="more" size={15}/></Link></div>
     <div className="role-preview-metrics">{familyMetrics[role.family].map((label,i)=><article className="role-preview-metric" key={label}><span>{label}</span><strong>—</strong><small>{i===0?"Awaiting connected data":"No live records loaded"}</small></article>)}</div>
-    <div className="role-preview-panels">{content.panels.map(([title,eyebrow,description],i)=><article className="student-panel" key={title}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div><span className="student-panel__chevron"><Icon name={i===1?"clock":i===2?"chart":"grid"} size={17}/></span></header><EmptyState title={`${title} will appear here`} text={description + ". Live records will be shown when the relevant module and role-scoped API are connected."}/></article>)}</div>
+    <div className="role-preview-panels">{content.panels.map(([title,eyebrow,description],i)=><article className="student-panel" key={title}><header className="student-panel__header"><div><p className="student-eyebrow">{eyebrow}</p><h2>{title}</h2></div><span className="student-panel__chevron"><Icon name={i===1?"clock":i===2?"chart":"home"} size={17}/></span></header><EmptyState title={`${title} will appear here`} text={description + ". Live records will be shown when the relevant module and role-scoped API are connected."}/></article>)}</div>
     <div className="role-preview-note"><Icon name="shield" size={17}/><p>This is a visual dashboard specification preview based on the role catalogue. It does not activate this role, switch the signed-in session, or bypass action-level permissions, tenant scope, approval chains or record-state rules.</p></div>
   </section>;
 }
