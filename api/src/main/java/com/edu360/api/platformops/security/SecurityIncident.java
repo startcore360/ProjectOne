@@ -69,7 +69,7 @@ public class SecurityIncident {
     @Column(name = "updated_by", nullable = false)
     private UUID updatedBy;
 
-    @Version
     @Column(name = "row_version", nullable = false)
-    private Integer rowVersion;
+    @Builder.Default
+    private Integer rowVersion = 1;
 }

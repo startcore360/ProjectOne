@@ -85,5 +85,13 @@ if ($frontendProc.HasExited) {
     Write-Warning "Frontend window closed immediately (exit code $($frontendProc.ExitCode)); check the app/ setup."
 }
 
+# A tenant created since the last hosts update can't be opened until it has an entry there.
+$hostsFile = "$env:SystemRoot\System32\drivers\etc\hosts"
+$tenantSubdomains = docker compose -f (Join-Path $root "docker-compose.yml") exec -T -e PGPASSWORD=edu360 postgres psql -h localhost -U edu360 -d edu360db -tAc "SELECT subdomain FROM platform.tenant WHERE state IN ('ACTIVE', 'TRIAL')" 2>$null
+$missingHosts = @($tenantSubdomains | Where-Object { $_ -and ((Get-Content $hostsFile) -notcontains "127.0.0.1 $_.edu360.local") })
+if ($missingHosts.Count -gt 0) {
+    Write-Warning "$($missingHosts.Count) tenant address(es) aren't in your hosts file. To open them, run as Administrator: .\docker\dev-hosts-setup.ps1"
+}
+
 Write-Host "Postgres + Keycloak running in Docker; backend and frontend starting in new windows."
 Write-Host "Logs: $backendLog / $frontendLog (or .\dev-logs.ps1)"

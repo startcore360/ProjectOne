@@ -1,5 +1,6 @@
 package com.edu360.api.config.keycloak;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -80,12 +81,16 @@ public class KeycloakAdminClient {
             }
         }
 
+        allowCustomUserAttributes(adminToken, realm);
+
         try {
             Map<String, Object> clientRep = Map.of(
                     "clientId", properties.getFrontendClientId(),
                     "enabled", true,
                     "publicClient", true,
                     "directAccessGrantsEnabled", true,
+                    "protocolMappers", List.of(mustChangePasswordClaimMapper()),
+                    // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P7): dev addresses. Must come from configuration.
                     "redirectUris", List.of("http://*.edu360.local:5173/*", "http://localhost:5173/*"));
             restClient.post()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients")
@@ -98,6 +103,49 @@ public class KeycloakAdminClient {
                 throw new KeycloakProvisioningException("Failed to register frontend client in realm '" + realm + "': " + ex.getMessage(), ex);
             }
         }
+    }
+
+    /**
+     * Keycloak 26 silently drops user attributes its profile schema doesn't declare, which would
+     * lose must_change_password. The seeded realms get this from docker/keycloak/provision-realms.ps1,
+     * so realms created at runtime have to set it here.
+     */
+    private void allowCustomUserAttributes(String adminToken, String realm) {
+        String profileUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/profile";
+        try {
+            Map<String, Object> profile = new HashMap<>(restClient.get()
+                    .uri(profileUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class));
+            profile.put("unmanagedAttributePolicy", "ENABLED");
+            restClient.put()
+                    .uri(profileUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .body(profile)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException ex) {
+            throw new KeycloakProvisioningException(
+                    "Failed to configure the user profile of realm '" + realm + "': " + ex.getMessage(), ex);
+        }
+    }
+
+    /** Puts must_change_password in the token, where MustChangePasswordFilter reads it. Matches the
+     *  mapper in docker/keycloak/realm-export-*.json. */
+    private static Map<String, Object> mustChangePasswordClaimMapper() {
+        return Map.of(
+                "name", "must-change-password",
+                "protocol", "openid-connect",
+                "protocolMapper", "oidc-usermodel-attribute-mapper",
+                "consentRequired", false,
+                "config", Map.of(
+                        "user.attribute", MUST_CHANGE_PASSWORD_ATTRIBUTE,
+                        "claim.name", MUST_CHANGE_PASSWORD_ATTRIBUTE,
+                        "jsonType.label", "boolean",
+                        "id.token.claim", "true",
+                        "access.token.claim", "true",
+                        "userinfo.token.claim", "true"));
     }
 
     private String fetchMasterAdminAccessToken() {

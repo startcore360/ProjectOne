@@ -189,6 +189,7 @@ public class RoleCustomService {
         }
 
         roleActionRepository.deleteByIdTenantIdAndRoleDefinitionId(tenantId, roleDefinitionId);
+        roleActionRepository.flush();
 
         List<String> savedActions = new ArrayList<>();
         for (String actionCode : actionCodes) {

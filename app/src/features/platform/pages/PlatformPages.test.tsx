@@ -185,6 +185,37 @@ describe("Sprint 1 platform screens", () => {
     });
   });
 
+  it("shows the first admin's temporary password once after creating a tenant, until dismissed", async () => {
+    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.post.mockResolvedValue({
+      data: {
+        tenantId: "ten-99",
+        tenantName: "Doon World Academy",
+        subdomain: "doon-world",
+        state: "TRIAL",
+        firstAdminEmail: "principal@doon.edu",
+        firstAdminTemporaryPassword: "Edu@abc12345!",
+      },
+    });
+
+    renderWithStore(<TenantsPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
+    fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Doon World Academy" } });
+    fireEvent.change(screen.getByLabelText(/Assigned subdomain/i), { target: { value: "doon-world" } });
+    fireEvent.change(screen.getByLabelText(/Primary administrator full name/i), { target: { value: "Anita Roy" } });
+    fireEvent.change(screen.getByLabelText(/Primary administrator email/i), { target: { value: "principal@doon.edu" } });
+    fireEvent.change(screen.getByLabelText(/Primary contact mobile/i), { target: { value: "+919876543210" } });
+    fireEvent.change(screen.getByLabelText(/Aadhaar \/ National ID/i), { target: { value: "7891" } });
+    fireEvent.click(screen.getByRole("button", { name: /Submit & create tenant/i }));
+
+    expect(await screen.findByText("Edu@abc12345!")).toBeInTheDocument();
+    expect(screen.getByText("principal@doon.edu")).toBeInTheDocument();
+    expect(screen.getByText(/doon-world\./)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "I've saved it" }));
+    expect(screen.queryByText("Edu@abc12345!")).not.toBeInTheDocument();
+  });
+
   it("opens activation dialog for a trial tenant and calls activation endpoint upon confirmation", async () => {
     mockedApi.get.mockResolvedValue({
       data: {

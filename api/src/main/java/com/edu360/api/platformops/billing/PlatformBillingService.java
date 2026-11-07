@@ -69,15 +69,12 @@ public class PlatformBillingService {
                 .createdBy(principal.platformUserId())
                 .updatedAt(now)
                 .updatedBy(principal.platformUserId())
-                .rowVersion(1)
                 .build();
 
         Invoice saved = invoiceRepository.save(invoice);
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "INVOICE_CREATED", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
+            platformAuditWriter.record(principal, "CREATE", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
         }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Invoice created: " + invoiceNumber + " for tenant: " + req.tenantId());
         return InvoiceResponse.fromEntity(saved);
     }
 

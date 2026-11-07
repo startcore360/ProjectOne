@@ -41,7 +41,8 @@ public class KeycloakProperties {
 
     /** Local-dev-only hostname suffix stripped from the Host header to find a tenant's
      *  subdomain (see LoginTenantResolver) - e.g. ".edu360.local". Blank in production, where
-     *  real subdomain/custom-domain routing is a separate, not-yet-built decision. */
+     *  real subdomain/custom-domain routing is not built yet: see
+     *  docker/PRODUCTION_TENANT_ROUTING.txt, P4. */
     private String localDevHostSuffix = "";
 
     /** The one hostname label that means "this is a platform login, not a tenant login" (e.g.

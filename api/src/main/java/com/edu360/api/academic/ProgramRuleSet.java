@@ -36,6 +36,7 @@ public class ProgramRuleSet {
     private int versionNo = 1;
 
     @Column(name = "rules", nullable = false, columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private String rules;
 
     @Column(name = "effective_from", nullable = false)

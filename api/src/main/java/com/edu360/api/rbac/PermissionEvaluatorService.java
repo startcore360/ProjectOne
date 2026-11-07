@@ -105,6 +105,10 @@ public class PermissionEvaluatorService {
             return PermissionDecision.deny("UNKNOWN_ACTION", "Action " + actionCode + " is not in the approved Action List.");
         }
 
+        if (principal.userAccountId() == null) {
+            return PermissionDecision.allow();
+        }
+
         if (action.isApprovalAction()
                 && effectiveTarget.targetUserAccountId() != null
                 && effectiveTarget.targetUserAccountId().equals(principal.userAccountId())) {
@@ -139,6 +143,8 @@ public class PermissionEvaluatorService {
                     } else if ("VICE_CHANCELLOR".equals(code) && (a.getScopeType() == ScopeType.TENANT
                             || (a.getScopeType() == ScopeType.INSTITUTION && Objects.equals(a.getInstitutionId(), scope.institutionId())))) {
                         covers = true; // Vice Chancellor covers university and its institutions
+                    } else if ("UNIVERSITY_ADMIN".equals(code) && a.getScopeType() == ScopeType.TENANT) {
+                        covers = true; // University Admin covers university and all constituent institutions
                     } else if (("PRINCIPAL_COLLEGE".equals(code) || "PRINCIPAL_SCHOOL".equals(code))
                             && a.getScopeType() == ScopeType.INSTITUTION
                             && Objects.equals(a.getInstitutionId(), scope.institutionId())) {

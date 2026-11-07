@@ -38,7 +38,7 @@ public class UserMeController {
 
     private final UserMeService userMeService;
 
-    @GetMapping({"/v1/tenants/{tenantId}/me", "/api/me"})
+    @GetMapping({"/v1/tenants/{tenantId}/me", "/api/tenants/{tenantId}/me", "/api/me"})
     @Operation(summary = "Get current authenticated identity, active role, and all available role options (ROLE_SWITCH)")
     public ResponseEntity<UserMeResponse> getMe(
             @PathVariable(value = "tenantId", required = false) UUID tenantId,
@@ -49,7 +49,7 @@ public class UserMeController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping({"/v1/tenants/{tenantId}/me/permissions", "/api/me/permissions"})
+    @GetMapping({"/v1/tenants/{tenantId}/me/permissions", "/api/tenants/{tenantId}/me/permissions", "/api/me/permissions"})
     @Operation(summary = "Get active role code, scope, and allowed action codes for the authenticated user")
     public ResponseEntity<UserPermissionsResponse> getPermissions(
             @PathVariable(value = "tenantId", required = false) UUID tenantId,
@@ -60,7 +60,7 @@ public class UserMeController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping({"/v1/tenants/{tenantId}/me/active-role", "/api/me/active-role"})
+    @PostMapping({"/v1/tenants/{tenantId}/me/active-role", "/api/tenants/{tenantId}/me/active-role", "/api/me/active-role"})
     @Operation(summary = "Switch the current active role (ROLE_SWITCH / Rule HI-15)")
     public ResponseEntity<SwitchActiveRoleResponse> switchActiveRole(
             @PathVariable(value = "tenantId", required = false) UUID tenantId,
@@ -72,7 +72,7 @@ public class UserMeController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping({"/v1/tenants/{tenantId}/me/dashboard-preferences", "/api/me/dashboard-preferences"})
+    @PutMapping({"/v1/tenants/{tenantId}/me/dashboard-preferences", "/api/tenants/{tenantId}/me/dashboard-preferences", "/api/me/dashboard-preferences"})
     @Operation(summary = "Save user dashboard preferences per active role")
     public ResponseEntity<Map<String, String>> saveDashboardPreferences(
             @PathVariable(value = "tenantId", required = false) UUID tenantId,

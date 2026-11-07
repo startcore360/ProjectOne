@@ -45,7 +45,7 @@ public class PlatformSecurityPolicyController {
     private final PlatformAuditWriter auditWriter;
     private final ObjectMapper objectMapper;
 
-    private static final String SETTING_KEY_SECURITY_POLICY = "SECURITY_POLICY";
+    private static final String SETTING_KEY_SECURITY_POLICY = "security.policy";
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformSecurityPolicyController(
@@ -205,7 +205,6 @@ public class PlatformSecurityPolicyController {
                         .createdBy(principal.platformUserId())
                         .updatedAt(now)
                         .updatedBy(principal.platformUserId())
-                        .rowVersion(1)
                         .build();
                 settingValueRepository.save(newVal);
             } catch (JsonProcessingException ex) {
@@ -214,10 +213,8 @@ public class PlatformSecurityPolicyController {
         }
 
         if (auditWriter != null) {
-            auditWriter.record(principal, "SECURITY_POLICY_UPDATED", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
+            auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
         }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Platform security policy updated by Product Owner");
 
         return ResponseEntity.ok(newPolicy);
     }

@@ -105,10 +105,8 @@ public class PlatformFeatureToggleController {
         }
 
         if (auditWriter != null) {
-            auditWriter.record(principal, "PLAN_ENTITLEMENTS_UPDATED", "FEATURE_TOGGLE", "PLAN", id);
+            auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "PLAN", id);
         }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Plan " + id + " feature toggles updated: " + req.features());
 
         return ResponseEntity.ok(new EntitlementsResponse(id, "PLAN", req.features()));
     }
@@ -152,10 +150,8 @@ public class PlatformFeatureToggleController {
         }
 
         if (auditWriter != null) {
-            auditWriter.record(principal, "TENANT_ENTITLEMENTS_UPDATED", "FEATURE_TOGGLE", "TENANT", id);
+            auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "TENANT", id);
         }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Tenant " + id + " feature toggles updated: " + req.features());
 
         return ResponseEntity.ok(new EntitlementsResponse(id, "TENANT", req.features()));
     }

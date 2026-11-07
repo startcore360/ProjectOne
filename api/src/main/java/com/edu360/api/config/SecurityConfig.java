@@ -91,7 +91,11 @@ public class SecurityConfig {
             config.setAllowedOrigins(List.of(allowedOrigin));
         }
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With"));
+        config.setAllowedHeaders(List.of(
+                "Authorization", "Content-Type", "Accept", "X-Requested-With",
+                "X-Correlation-ID", "x-correlation-id", "If-Match", "If-None-Match", "serviceAuth"
+        ));
+        config.setExposedHeaders(List.of("X-Correlation-ID", "ETag", "Location"));
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

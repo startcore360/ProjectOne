@@ -121,7 +121,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception reached GlobalExceptionHandler", ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "An unexpected error occurred", request);
+        String detail = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+        if (ex.getCause() != null && ex.getCause().getMessage() != null) {
+            detail += " -> " + ex.getCause().getMessage();
+        }
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", detail, request);
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String code, String message, HttpServletRequest request) {
