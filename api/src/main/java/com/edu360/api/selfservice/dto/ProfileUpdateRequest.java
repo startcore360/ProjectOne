@@ -33,4 +33,7 @@ public class ProfileUpdateRequest {
      *  column). E.164-ish shape, same intent as the mobile column's own schema comment. */
     @Pattern(regexp = "^\\+?[1-9]\\d{6,14}$", message = "Mobile must be a valid E.164-style number")
     private String mobile;
+
+    /** Verification code required when a parent (GUARDIAN) updates their mobile number (Rule WF-30). */
+    private String otpCode;
 }

@@ -74,4 +74,13 @@ public class PlatformAuditOutboxEvent {
 
     @Column(name = "correlation_id", nullable = false)
     private String correlationId;
+
+    @Column(name = "payload_hash", nullable = false, length = 64)
+    private String payloadHash;
+
+    @Column(name = "created_by", nullable = false)
+    private UUID createdBy;
+
+    @Column(name = "updated_by", nullable = false)
+    private UUID updatedBy;
 }

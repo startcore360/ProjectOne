@@ -3,6 +3,8 @@ package com.edu360.api.tenant;
 import java.util.Set;
 import java.util.UUID;
 
+import com.edu360.api.rbac.ScopeType;
+
 /**
  * WHAT: holds "which tenant is this request for" for the lifetime of one request, on one
  * worker thread - a ThreadLocal, not a Spring bean, because the value has to be readable from
@@ -28,21 +30,10 @@ import java.util.UUID;
  * that has an institution_id column. The policy's own predicate is:
  *   institution_id IS NULL OR current_setting('app.institution_scope', true) = 'ALL'
  *     OR institution_id = ANY(string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[])
- * so an empty institutionIds set here, combined with TenantRoutingDataSource never setting
- * app.institution_scope to 'ALL', makes every institution-scoped row invisible - the same
- * fail-closed philosophy as the no-tenant-context case above, extended one layer down.
  *
- * WHY it defaults to empty rather than "no restriction": Foundation Item 7 (the 71-role/280-
- * action model) is what will eventually compute "which institutions can this principal see"
- * from the caller's active role assignment - that data does not exist anywhere in the current
- * identity model (UserAccount/UserIdentityLink carry no institution assignment at all). Until
- * Foundation Item 7 exists, every caller of set(...) that does not explicitly pass
- * institutionIds gets the empty set, which is the only honest, fail-closed placeholder: it never
- * grants blanket institution access as a shortcut, and it never leaves the GUC unset either (see
- * TenantRoutingDataSource.applyTenantGucs, which always explicitly SETs app.institution_ids -
- * never relies on it merely being unset - because this is a pooled connection and a bare RESET
- * on one code path while another path forgets to touch it at all would be exactly the kind of
- * cross-request leak this class exists to prevent).
+ * Per D4 §2.2, app.institution_scope = 'ALL' is reserved strictly for tenant-wide roles (University Admin,
+ * Management, Vice Chancellor, Registrar, GBA). Institution and department roles receive scope 'LIST' with their
+ * specific institution IDs.
  */
 public final class TenantContext {
 
@@ -51,50 +42,38 @@ public final class TenantContext {
     private final UUID tenantId;
     private final IsolationMode isolationMode;
     private final String dbConnectionRef;
+    private final String institutionScope; // "ALL", "LIST", or "NONE"
     private final Set<UUID> institutionIds;
+    private final String activeRoleCode;
+    private final ScopeType activeScopeType;
 
     private TenantContext(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef,
-                           Set<UUID> institutionIds) {
+                          String institutionScope, Set<UUID> institutionIds,
+                          String activeRoleCode, ScopeType activeScopeType) {
         this.tenantId = tenantId;
         this.isolationMode = isolationMode;
         this.dbConnectionRef = dbConnectionRef;
-        this.institutionIds = institutionIds;
+        this.institutionScope = institutionScope == null ? "NONE" : institutionScope;
+        this.institutionIds = institutionIds == null ? Set.of() : Set.copyOf(institutionIds);
+        this.activeRoleCode = activeRoleCode;
+        this.activeScopeType = activeScopeType;
     }
 
-    /**
-     * Called exactly once per request, from inside the already-verified JWT converter - which
-     * already has the full Tenant row in hand at that point, so it passes dbConnectionRef
-     * straight through here rather than making TenantRoutingDataSource look the tenant back up
-     * itself.
-     *
-     * WHY that matters: platform.tenant lives in the shared/central database ALWAYS, even for
-     * an ISOLATED tenant whose actual app data lives in its own separate database. If
-     * TenantRoutingDataSource re-queried TenantRepository to find an isolated tenant's
-     * connection details, that query would recursively ask the SAME routing datasource for a
-     * connection to resolve itself - a reentrancy bug. Carrying dbConnectionRef here instead
-     * means the routing datasource never needs a repository dependency of its own at all.
-     *
-     * Overload without institutionIds: delegates to the 4-arg set(...) below with an empty set -
-     * see the class comment's INSTITUTION SCOPE section for why empty, not "no restriction", is
-     * the correct default until Foundation Item 7 exists. Every current production caller
-     * (TenantUserLookup) uses this overload today, since no institution-assignment data exists
-     * yet to pass.
-     */
     public static void set(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef) {
-        set(tenantId, isolationMode, dbConnectionRef, Set.of());
+        set(tenantId, isolationMode, dbConnectionRef, "NONE", Set.of(), null, null);
     }
 
-    /**
-     * Full form, for callers that already know which institutions the caller may see (once
-     * Foundation Item 7 exists) and for tests exercising institution scoping directly.
-     * institutionIds is defensively copied into an immutable set; a null argument is treated as
-     * the fail-closed empty set rather than throwing, so a caller that forgets to compute it yet
-     * never accidentally widens access either.
-     */
     public static void set(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef,
-                            Set<UUID> institutionIds) {
-        Set<UUID> safeInstitutionIds = institutionIds == null ? Set.of() : Set.copyOf(institutionIds);
-        CURRENT.set(new TenantContext(tenantId, isolationMode, dbConnectionRef, safeInstitutionIds));
+                           Set<UUID> institutionIds) {
+        String scope = (institutionIds != null && !institutionIds.isEmpty()) ? "LIST" : "NONE";
+        set(tenantId, isolationMode, dbConnectionRef, scope, institutionIds, null, null);
+    }
+
+    public static void set(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef,
+                           String institutionScope, Set<UUID> institutionIds,
+                           String activeRoleCode, ScopeType activeScopeType) {
+        CURRENT.set(new TenantContext(tenantId, isolationMode, dbConnectionRef,
+                institutionScope, institutionIds, activeRoleCode, activeScopeType));
     }
 
     /** MUST be called at the end of every request, success or failure (see
@@ -125,13 +104,26 @@ public final class TenantContext {
         return ctx == null ? null : ctx.dbConnectionRef;
     }
 
+    public static String currentInstitutionScope() {
+        TenantContext ctx = CURRENT.get();
+        return ctx == null ? "NONE" : ctx.institutionScope;
+    }
+
     /** Never null - an empty set (no context set at all, or set(...) called without
-     *  institutionIds) is the fail-closed default described in the class comment's INSTITUTION
-     *  SCOPE section, not a sentinel for "unrestricted." Callers must never treat empty as
-     *  "every institution." */
+     *  institutionIds) is the fail-closed default. Callers must never treat empty as "every institution." */
     public static Set<UUID> currentInstitutionIds() {
         TenantContext ctx = CURRENT.get();
         return ctx == null ? Set.of() : ctx.institutionIds;
+    }
+
+    public static String currentActiveRoleCode() {
+        TenantContext ctx = CURRENT.get();
+        return ctx == null ? null : ctx.activeRoleCode;
+    }
+
+    public static ScopeType currentActiveScopeType() {
+        TenantContext ctx = CURRENT.get();
+        return ctx == null ? null : ctx.activeScopeType;
     }
 
     public static boolean isSet() {

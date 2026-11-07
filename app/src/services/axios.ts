@@ -21,6 +21,13 @@ api.interceptors.request.use((config) => {
     throw new Error("Blocked API request to an untrusted origin.");
   }
 
+  // OD-09 correlation tracing: assign UUID to each client request if not already present
+  if (!config.headers["X-Correlation-ID"]) {
+    config.headers["X-Correlation-ID"] = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  }
+
   // Login and refresh authenticate using their request bodies; neither needs an
   // existing access token. In particular, do not forward an expired token to refresh.
   const requestPath = requestUrl.pathname.replace(/\/+$/, "");

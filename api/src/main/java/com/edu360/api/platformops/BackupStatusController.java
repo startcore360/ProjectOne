@@ -29,7 +29,7 @@ import lombok.RequiredArgsConstructor;
  * anywhere.
  */
 @RestController
-@RequestMapping("/api/platform/backup-status")
+@RequestMapping({"/v1/platform/backup-status", "/api/platform/backup-status"})
 @RequiredArgsConstructor
 @Tag(name = "Platform Ops", description = "Platform Admin / Product Owner read-mostly operations")
 public class BackupStatusController {

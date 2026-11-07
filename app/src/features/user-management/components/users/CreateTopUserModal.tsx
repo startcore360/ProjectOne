@@ -1,0 +1,147 @@
+import { useState, type FormEvent } from "react";
+import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { getApiErrorMessage } from "../../../../services/apiHelper";
+import {
+  userManagementService,
+  type TopUserResponse,
+  type TopUserRoleCode,
+} from "../../api/userManagementService";
+
+export interface CreateTopUserModalProps {
+  tenantId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onCreated: (topUser: TopUserResponse) => void;
+}
+
+export function CreateTopUserModal({
+  tenantId,
+  isOpen,
+  onClose,
+  onCreated,
+}: CreateTopUserModalProps) {
+  const [roleCode, setRoleCode] = useState<TopUserRoleCode>("VICE_CHANCELLOR");
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await userManagementService.createTopUser(tenantId, {
+        roleCode,
+        displayName,
+        email,
+        mobile: mobile ? mobile : undefined,
+      });
+      onCreated(data);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      kicker="TENANT_TOP_USERS_CREATE"
+      title="Create governance / top user"
+      titleId="governance-user-title"
+      description="Provision executive leadership and statutory governance accounts [Action #268]."
+      size="md"
+    >
+      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
+        {error && (
+          <div style={{ marginBottom: "1rem" }}>
+            <Notice tone="danger">{error}</Notice>
+          </div>
+        )}
+
+        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
+          <label htmlFor="top-role-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
+            Governance Role
+          </label>
+          <select
+            id="top-role-select"
+            value={roleCode}
+            onChange={(e) => setRoleCode(e.target.value as TopUserRoleCode)}
+            style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
+          >
+            <option value="VICE_CHANCELLOR">Vice Chancellor (Academic & Executive Head) [Staff]</option>
+            <option value="GOVERNING_BODY_APPROVER">Governing Body Approver (Statutory Leave Gate) [Governance]</option>
+            <option value="MANAGEMENT">Management / Trustee [Governance]</option>
+            <option value="DATA_PROTECTION_CONTACT">Data Protection Officer [Staff]</option>
+          </select>
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <TextField
+            id="top-user-name"
+            label="Full Name"
+            required
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="e.g. Prof. Suresh Chandra"
+          />
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <TextField
+            id="top-user-email"
+            label="Email Address"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="e.g. vc@northbridge.edu.in"
+          />
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <TextField
+            id="top-user-mobile"
+            label="Mobile Number (Optional, E.164)"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="+919876543210"
+          />
+        </div>
+
+        <div
+          style={{
+            padding: "0.75rem",
+            backgroundColor: "var(--color-surface-subtle, #f3f4f6)",
+            borderRadius: "6px",
+            fontSize: "0.8125rem",
+            color: "var(--color-muted)",
+            marginBottom: "1rem",
+          }}
+        >
+          <strong>Governance Policies:</strong>
+          <ul style={{ margin: "0.25rem 0 0 1.25rem", padding: 0 }}>
+            <li><strong>[Rule F-12]:</strong> Two-step login (MFA) will be enforced upon first sign-in.</li>
+            <li><strong>[Addendum Rule 11]:</strong> Self-assignment prohibited. Cannot create or assign to own identity.</li>
+            <li><strong>[Decision C9]:</strong> Management & Governing Body Approver hold Governance type; VC & DPO hold Staff type.</li>
+          </ul>
+        </div>
+
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" busy={loading}>
+            Create governance account
+          </Button>
+        </footer>
+      </form>
+    </Modal>
+  );
+}
+
+export default CreateTopUserModal;

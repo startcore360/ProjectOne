@@ -40,6 +40,9 @@ public class RoleAction {
     @Column(name = "action_code", nullable = false)
     private String actionCode;
 
+    @Column(name = "access_mode")
+    private String accessMode;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 

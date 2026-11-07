@@ -1,6 +1,7 @@
 package com.edu360.api.audit;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,9 +16,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// Scoped to authentication/access events only (login, logout, lockout, account creation).
-// Full action-level audit coverage (every create/edit/delete/approval/export) is a much
-// larger, separately tracked V4.0 gap — see docs/V4.0_SPEC_SUMMARY.md §5.
+/**
+ * OD-09 Append-Only Audit Log Entity.
+ * Tracks operational and security actions with active role, scope, institution, and correlation ID.
+ */
 @Entity
 @Table(name = "audit_logs")
 @Getter
@@ -50,4 +52,16 @@ public class AuditLog {
 
     @Column
     private String details;
+
+    @Column(name = "actor_role_code")
+    private String actorRoleCode;
+
+    @Column(name = "scope_type")
+    private String scopeType;
+
+    @Column(name = "institution_id")
+    private UUID institutionId;
+
+    @Column(name = "correlation_id")
+    private String correlationId;
 }

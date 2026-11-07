@@ -20,4 +20,8 @@ public interface RoleDefinitionRepository extends Repository<RoleDefinition, Rol
     Optional<RoleDefinition> findById(RoleDefinitionId id);
 
     List<RoleDefinition> findByIdTenantId(UUID tenantId);
+
+    boolean existsByIdTenantIdAndRoleCode(UUID tenantId, String roleCode);
+
+    Optional<RoleDefinition> findByIdTenantIdAndRoleCode(UUID tenantId, String roleCode);
 }

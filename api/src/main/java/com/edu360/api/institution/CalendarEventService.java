@@ -7,6 +7,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.institution.dto.CalendarEventRequest;
 import com.edu360.api.institution.dto.CalendarEventResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
@@ -21,29 +23,40 @@ import lombok.RequiredArgsConstructor;
  * institution. Writes/reads app.academic_calendar_event rows pinned to
  * source_level = 'INSTITUTION' and event_type in ('LOCAL_HOLIDAY','LOCAL_EVENT') only.
  *
- * WHY "Never allowed: cannot change university-level semester dates" is enforced here even
- * though ck_academic_calendar_event_r2/r3 already forbid it at the database level: a caller who
- * tried SEMESTER_DATES/UNIVERSITY_HOLIDAY would otherwise get a raw constraint-violation 500
- * (GlobalExceptionHandler's catch-all) instead of a clear 400 - this rejects it before the
- * insert, same intent as the DB check, friendlier failure.
- *
- * institutionId comes from the request body (there is no institutionId in the
- * /api/tenants/{tenantId}/calendar-events path), the same pattern UserCreationController uses
- * for USER_CREATE's scope.
+ * Enforces T06 (valid session required, 404 if missing), T07 (blank title rejected with 400),
+ * and exam conflict prevention (LOCAL_HOLIDAY blocked on dates overlapping exam events).
  */
 @Service
-@RequiredArgsConstructor
 public class CalendarEventService {
 
     private static final Set<String> ALLOWED_LOCAL_EVENT_TYPES = Set.of("LOCAL_HOLIDAY", "LOCAL_EVENT");
 
     private final AcademicCalendarEventRepository academicCalendarEventRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
+    private final AcademicSessionRepository academicSessionRepository;
+
+    public CalendarEventService(AcademicCalendarEventRepository academicCalendarEventRepository,
+                                PermissionEvaluatorService permissionEvaluatorService) {
+        this(academicCalendarEventRepository, permissionEvaluatorService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CalendarEventService(AcademicCalendarEventRepository academicCalendarEventRepository,
+                                PermissionEvaluatorService permissionEvaluatorService,
+                                @org.springframework.beans.factory.annotation.Autowired(required = false) AcademicSessionRepository academicSessionRepository) {
+        this.academicCalendarEventRepository = academicCalendarEventRepository;
+        this.permissionEvaluatorService = permissionEvaluatorService;
+        this.academicSessionRepository = academicSessionRepository;
+    }
 
     @Transactional
     public CalendarEventResponse addLocalEvent(RbacPrincipal principal, CalendarEventRequest request) {
         permissionEvaluatorService.authorize(principal, "CALENDAR_LOCAL_SET",
                 RbacScope.institution(request.institutionId()), RbacTarget.NONE);
+
+        if (request.title() == null || request.title().trim().isEmpty()) {
+            throw new IllegalArgumentException("title must not be blank.");
+        }
 
         if (!ALLOWED_LOCAL_EVENT_TYPES.contains(request.eventType())) {
             throw new IllegalArgumentException(
@@ -54,6 +67,28 @@ public class CalendarEventService {
             throw new IllegalArgumentException("endDate must not be before startDate.");
         }
 
+        // T06: Validate academicSessionId exists in DB, 404 if missing
+        if (academicSessionRepository != null) {
+            academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), request.academicSessionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Academic session not found: " + request.academicSessionId()));
+        }
+
+        // Exam conflict check: holidays on exam days are blocked with a warning
+        if ("LOCAL_HOLIDAY".equalsIgnoreCase(request.eventType())) {
+            List<AcademicCalendarEvent> universityEvents = academicCalendarEventRepository
+                    .findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(
+                            principal.tenantId(), request.academicSessionId(), "UNIVERSITY");
+            boolean conflictsWithExam = universityEvents.stream()
+                    .filter(e -> e.getTitle() != null && e.getTitle().toUpperCase().contains("EXAM"))
+                    .anyMatch(e -> !request.endDate().isBefore(e.getStartDate()) && !request.startDate().isAfter(e.getEndDate()));
+
+            if (conflictsWithExam) {
+                throw new BusinessRuleViolationException(
+                        "HOLIDAY_EXAM_CONFLICT",
+                        "Local holiday overlaps with scheduled university exam dates.");
+            }
+        }
+
         AcademicCalendarEvent event = new AcademicCalendarEvent();
         event.setAcademicCalendarEventId(UUID.randomUUID());
         event.setTenantId(principal.tenantId());
@@ -61,7 +96,7 @@ public class CalendarEventService {
         event.setInstitutionId(request.institutionId());
         event.setSourceLevel("INSTITUTION");
         event.setEventType(request.eventType());
-        event.setTitle(request.title());
+        event.setTitle(request.title().trim());
         event.setStartDate(request.startDate());
         event.setEndDate(request.endDate());
         event.setCreatedBy(principal.userAccountId());

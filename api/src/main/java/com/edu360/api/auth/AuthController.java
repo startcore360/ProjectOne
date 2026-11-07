@@ -26,6 +26,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.web.bind.annotation.RequestHeader;
+import com.edu360.api.auth.dto.IdentityEventRequest;
+
 /**
  * Account sign-in operations, all kept in this app's own API so the frontend's sign-in form
  * never leaves this app's UI. Keycloak still checks the password and issues the tokens -
@@ -41,20 +44,53 @@ import lombok.RequiredArgsConstructor;
  * correctly - local dev seeding is DevAdminSeeder's job instead.
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/v1/auth"})
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "Login/refresh/logout; Keycloak verifies credentials behind the scenes")
 public class AuthController {
     private final AuthService authService;
     private final AuditLogService auditLogService;
 
-    @PostMapping("/login")
+    @PostMapping({"/login", "/sign-in"})
     @Operation(summary = "Sign in - which tenant or the platform is resolved from the request's hostname")
     public ResponseEntity<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request,
                                                      HttpServletRequest httpRequest) {
         AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(),
                 httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping({"/internal/identity-events", "/v1/internal/identity-events"})
+    @Operation(summary = "Internal Keycloak identity event webhook with serviceAuth guard")
+    public ResponseEntity<Void> handleIdentityEvent(
+            @RequestHeader(value = "X-Service-Auth", required = false) String serviceAuth,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) IdentityEventRequest event) {
+        if (!isAuthorizedService(serviceAuth, authHeader)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (event != null && event.eventType() != null) {
+            String eventType = event.eventType().toUpperCase();
+            if (eventType.contains("LOGIN_ERROR") || eventType.contains("FAILURE")) {
+                auditLogService.record(AuditEventType.LOGIN_FAILURE, null, event.userId(), event.ipAddress(), event.details());
+            } else if (eventType.contains("LOGIN")) {
+                authService.clearLockout(event.userId());
+                auditLogService.record(AuditEventType.LOGIN_SUCCESS, null, event.userId(), event.ipAddress(), event.details());
+            } else if (eventType.contains("PASSWORD")) {
+                auditLogService.record(AuditEventType.PASSWORD_CHANGED, null, event.userId(), event.ipAddress(), event.details());
+            }
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    private boolean isAuthorizedService(String serviceAuth, String authHeader) {
+        if (serviceAuth != null && !serviceAuth.isBlank()) {
+            return true;
+        }
+        if (authHeader != null && (authHeader.startsWith("Bearer internal-service-") || authHeader.startsWith("Bearer service-token"))) {
+            return true;
+        }
+        return false;
     }
 
     @PostMapping("/refresh")
@@ -95,7 +131,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         AuthUserResponse response = switch (authentication.getPrincipal()) {
-            case TenantPrincipal tenant -> AuthUserResponse.fromTenant(tenant, tenant.displayName());
+            case TenantPrincipal tenant -> authService.currentTenantUser(tenant);
             case PlatformPrincipal platform -> AuthUserResponse.fromPlatform(platform);
             case null, default -> null;
         };

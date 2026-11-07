@@ -27,5 +27,12 @@ public record SessionResponse(
         boolean current,
         boolean revocable,
         Instant issuedAt,
-        Instant expiresAt) {
+        Instant expiresAt,
+        String deviceType,
+        String deviceName,
+        String ipAddress) {
+
+    public SessionResponse(String sessionId, boolean current, boolean revocable, Instant issuedAt, Instant expiresAt) {
+        this(sessionId, current, revocable, issuedAt, expiresAt, "COMPUTER", "Current device", null);
+    }
 }

@@ -40,18 +40,34 @@ public class SessionService {
 
     public void revokeCurrentSession(TenantPrincipal principal, Jwt jwt) {
         String sessionId = requireSessionId(jwt);
+        revokeSession(principal, sessionId);
+    }
+
+    public void revokeSession(TenantPrincipal principal, String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("Session ID is required for revocation");
+        }
         Tenant tenant = tenantRepository.findById(principal.tenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant no longer exists"));
         keycloakAdminClient.logoutSession(tenant.getKeycloakRealm(), sessionId);
-        // Same actor-identifier convention as AuthController.logout: tenant principal -> displayName.
         auditLogService.record(AuditEventType.SESSION_REVOKED, null, principal.displayName(), null, null);
     }
 
     public void revokeCurrentSession(PlatformPrincipal principal, Jwt jwt) {
         String sessionId = requireSessionId(jwt);
+        revokeSession(principal, sessionId);
+    }
+
+    public void revokeSession(PlatformPrincipal principal, String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("Session ID is required for revocation");
+        }
         keycloakAdminClient.logoutSession(keycloakProperties.getPlatformRealm(), sessionId);
-        // Same actor-identifier convention as AuthController.logout: platform principal -> email.
         auditLogService.record(AuditEventType.SESSION_REVOKED, null, principal.email(), null, null);
+    }
+
+    public void registerPushSubscription(TenantPrincipal principal, String endpoint) {
+        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.displayName(), null, "Push subscription registered");
     }
 
     private String requireSessionId(Jwt jwt) {

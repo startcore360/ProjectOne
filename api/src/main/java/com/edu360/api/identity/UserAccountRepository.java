@@ -11,4 +11,10 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UserAc
      *  assignment for - deliberately requires an explicit status rather than "any account",
      *  since DEACTIVATED/PENDING_ACTIVATION accounts should never be handed a usable role. */
     List<UserAccount> findByIdTenantIdAndStatus(UUID tenantId, UserAccountStatus status);
+
+    boolean existsByIdTenantIdAndEmail(UUID tenantId, String email);
+
+    boolean existsByIdTenantIdAndMobile(UUID tenantId, String mobile);
+
+    long countByIdTenantIdAndStatusNot(UUID tenantId, UserAccountStatus status);
 }

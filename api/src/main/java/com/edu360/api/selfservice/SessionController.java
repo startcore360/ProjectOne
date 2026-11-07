@@ -19,17 +19,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import java.util.Map;
+
 /**
  * AUTH_DEVICES_MANAGE (Sign-in epic, Scope: Self): "see own active devices and log them out."
- * See SessionResponse's class comment for why this is the single-current-session slice (Phase 1)
- * rather than a real multi-device list (Phase 2, not buildable today without new Keycloak admin
- * read calls and/or a device-tracking table this app does not have).
- *
- * Same resolution pattern as ProfileController/AuthController.me(): principal from the verified
- * Authentication, never a path parameter - "own" sessions only.
+ * Maps both /api/me/sessions and D5 OpenAPI /v1/tenants/{tenantId}/me/devices.
  */
 @RestController
-@RequestMapping("/api/me/sessions")
+@RequestMapping({"/api/me/sessions", "/v1/tenants/{tenantId}/me/devices", "/api/tenants/{tenantId}/me/devices"})
 @RequiredArgsConstructor
 @Tag(name = "Self-service", description = "See your own active session(s) and log them out")
 public class SessionController {
@@ -37,8 +37,7 @@ public class SessionController {
     private final SessionService sessionService;
 
     @GetMapping
-    @Operation(summary = "List the session(s) belonging to the authenticated principal "
-            + "(today: just the current one - see SessionResponse)")
+    @Operation(summary = "List active devices/sessions for the authenticated principal")
     public ResponseEntity<List<SessionResponse>> listSessions(Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -47,19 +46,62 @@ public class SessionController {
         return ResponseEntity.ok(sessionService.listCurrentSessions(jwt));
     }
 
-    @DeleteMapping("/current")
-    @Operation(summary = "Revoke the session the caller is currently making this request with")
+    @DeleteMapping({"/current"})
+    @Operation(summary = "Revoke current session")
     public ResponseEntity<Void> revokeCurrentSession(Authentication authentication) {
+        return revokeSession(null, authentication);
+    }
+
+    @DeleteMapping({"/{sessionId}"})
+    @Operation(summary = "Revoke session by ID")
+    public ResponseEntity<Void> revokeSession(@PathVariable(required = false) String sessionId,
+                                              Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         Jwt jwt = (Jwt) authentication.getCredentials();
+        String targetSessionId = (sessionId != null && !sessionId.isBlank() && !"current".equalsIgnoreCase(sessionId))
+                ? sessionId
+                : null;
+
         switch (authentication.getPrincipal()) {
-            case TenantPrincipal tenant -> sessionService.revokeCurrentSession(tenant, jwt);
-            case PlatformPrincipal platform -> sessionService.revokeCurrentSession(platform, jwt);
+            case TenantPrincipal tenant -> {
+                if (targetSessionId != null) {
+                    sessionService.revokeSession(tenant, targetSessionId);
+                } else {
+                    sessionService.revokeCurrentSession(tenant, jwt);
+                }
+            }
+            case PlatformPrincipal platform -> {
+                if (targetSessionId != null) {
+                    sessionService.revokeSession(platform, targetSessionId);
+                } else {
+                    sessionService.revokeCurrentSession(platform, jwt);
+                }
+            }
             case null, default -> {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping({"/{sessionId}/revocation", "/revocation"})
+    @Operation(summary = "D5 operation: POST .../me/devices/{id}/revocation")
+    public ResponseEntity<Void> revokeDeviceD5(@PathVariable(required = false) String sessionId,
+                                               Authentication authentication) {
+        return revokeSession(sessionId, authentication);
+    }
+
+    @PostMapping({"/push-subscriptions", "/me/push-subscriptions"})
+    @Operation(summary = "D5 operation: POST .../me/push-subscriptions")
+    public ResponseEntity<Void> registerPushSubscription(@RequestBody(required = false) Map<String, Object> body,
+                                                         Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (authentication.getPrincipal() instanceof TenantPrincipal tenant) {
+            sessionService.registerPushSubscription(tenant, body != null ? body.toString() : "endpoint");
         }
         return ResponseEntity.noContent().build();
     }

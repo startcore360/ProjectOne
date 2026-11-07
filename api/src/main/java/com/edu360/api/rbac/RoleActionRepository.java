@@ -1,5 +1,6 @@
 package com.edu360.api.rbac;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.repository.Repository;
@@ -16,4 +17,8 @@ public interface RoleActionRepository extends Repository<RoleAction, RoleActionI
     RoleAction save(RoleAction roleAction);
 
     boolean existsByIdTenantIdAndRoleDefinitionIdAndActionCode(UUID tenantId, UUID roleDefinitionId, String actionCode);
+
+    List<RoleAction> findByIdTenantIdAndRoleDefinitionId(UUID tenantId, UUID roleDefinitionId);
+
+    void deleteByIdTenantIdAndRoleDefinitionId(UUID tenantId, UUID roleDefinitionId);
 }

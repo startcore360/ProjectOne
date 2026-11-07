@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,6 +24,9 @@ import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.config.keycloak.KeycloakAuthClient;
 import com.edu360.api.config.keycloak.KeycloakProperties;
+import com.edu360.api.files.FileObject;
+import com.edu360.api.files.FileObjectId;
+import com.edu360.api.files.FileObjectRepository;
 import com.edu360.api.identity.IdentityLinkStatus;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
@@ -39,6 +44,17 @@ import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platform.PlatformUser;
 import com.edu360.api.platform.PlatformUserRepository;
 import com.edu360.api.platform.PlatformUserStatus;
+import com.edu360.api.rbac.AssignmentStatus;
+import com.edu360.api.rbac.RoleDefinition;
+import com.edu360.api.rbac.RoleDefinitionId;
+import com.edu360.api.rbac.RoleDefinitionRepository;
+import com.edu360.api.rbac.RoleLevel;
+import com.edu360.api.rbac.RoleOrigin;
+import com.edu360.api.rbac.RoleDefinitionStatus;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.rbac.UserRoleAssignment;
+import com.edu360.api.rbac.UserRoleAssignmentId;
+import com.edu360.api.rbac.UserRoleAssignmentRepository;
 import com.edu360.api.tenant.LoginTenantResolver;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantRepository;
@@ -68,6 +84,9 @@ class AuthServiceTest {
     @Mock private KeycloakAuthClient keycloakAuthClient;
     @Mock private AuditLogService auditLogService;
     @Mock private HttpServletRequest httpServletRequest;
+    @Mock private UserRoleAssignmentRepository userRoleAssignmentRepository;
+    @Mock private RoleDefinitionRepository roleDefinitionRepository;
+    @Mock private FileObjectRepository fileObjectRepository;
 
     private KeycloakProperties keycloakProperties;
     private AuthService authService;
@@ -83,7 +102,7 @@ class AuthServiceTest {
         authService = new AuthService(loginTenantResolver, tenantRepository, platformUserRepository,
                 userAccountRepository, userIdentityLinkRepository, studentProfileRepository,
                 tenantUserLookup, keycloakAdminClient, keycloakAuthClient, keycloakProperties,
-                auditLogService);
+                auditLogService, userRoleAssignmentRepository, roleDefinitionRepository, fileObjectRepository);
     }
 
     // WHY this is a separate statement everywhere it's used, never inlined as an argument
@@ -143,7 +162,7 @@ class AuthServiceTest {
 
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
                 "Test User", true);
-        authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newpass", "127.0.0.1");
+        authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newSecurePassword123!", "127.0.0.1");
 
         verify(keycloakAuthClient).login(REALM, "staff@abc.test", "oldpass");
     }
@@ -162,7 +181,7 @@ class AuthServiceTest {
 
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.GUARDIAN,
                 "Test Parent", true);
-        authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newpass", "127.0.0.1");
+        authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newSecurePassword123!", "127.0.0.1");
 
         verify(keycloakAuthClient).login(REALM, "+911234567890", "oldpass");
     }
@@ -185,7 +204,7 @@ class AuthServiceTest {
 
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STUDENT,
                 "Test Student", true);
-        authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newpass", "127.0.0.1");
+        authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newSecurePassword123!", "127.0.0.1");
 
         verify(keycloakAuthClient).login(REALM, "STU-0042", "oldpass");
     }
@@ -208,7 +227,7 @@ class AuthServiceTest {
         // response must say false, since resetPassword just cleared it, not echo the stale value.
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
                 "Test User", true);
-        var response = authService.changeTenantPassword(principal, "kc-subject", "old", "new", "127.0.0.1");
+        var response = authService.changeTenantPassword(principal, "kc-subject", "old", "newSecurePassword123!", "127.0.0.1");
 
         assertThat(response.mustChangePassword()).isFalse();
     }
@@ -220,9 +239,26 @@ class AuthServiceTest {
 
         PlatformPrincipal principal = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.PLATFORM_ADMIN,
                 "admin@edu360-platform.local", true);
-        var response = authService.changePlatformPassword(principal, "kc-subject", "old", "new", "127.0.0.1");
+        var response = authService.changePlatformPassword(principal, "kc-subject", "old", "newSecurePassword123!", "127.0.0.1");
 
         assertThat(response.mustChangePassword()).isFalse();
+    }
+
+    // ----------------------------------------------------------------------------------- /me
+
+    @Test
+    void currentTenantUser_noActiveAssignment_roleCodeIsNullNotGuessed() {
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of());
+
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Test User", false);
+        var response = authService.currentTenantUser(principal);
+
+        assertThat(response.roleCode()).isNull();
+        assertThat(response.roleName()).isNull();
+        assertThat(response.displayName()).isEqualTo("Test User");
     }
 
     // ------------------------------------------------------------------------------- login
@@ -242,6 +278,72 @@ class AuthServiceTest {
 
         assertThat(response.user().tenantId()).isEqualTo(TENANT_ID);
         assertThat(response.user().platformRole()).isNull();
+        // No UserRoleAssignment stubbed for this user -> resolveRole finds nothing, same as a
+        // real not-yet-assigned user; the response must say so honestly, not guess a role.
+        assertThat(response.user().roleCode()).isNull();
+        // Likewise: no FileObject stubbed -> resolvePhotoUrl finds nothing, photoUrl stays null
+        // rather than pointing at a photo that does not exist.
+        assertThat(response.user().photoUrl()).isNull();
+    }
+
+    @Test
+    void login_userWithActiveCleanPhoto_resolvesPhotoUrl() {
+        Tenant tenant = mockTenant();
+        when(loginTenantResolver.resolve(httpServletRequest))
+                .thenReturn(new LoginTenantResolver.TenantLogin(tenant));
+        when(keycloakAuthClient.login(REALM, "teacher1", "pw"))
+                .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        UserAccount account = account("teacher1@abc.test", null);
+        when(tenantUserLookup.resolveActiveUser(tenant, REALM, "kc-subject"))
+                .thenReturn(new TenantUserLookup.ResolvedUser(account, link(UsernameKind.EMAIL)));
+        when(fileObjectRepository.findFirstByIdTenantIdAndUploadedByAndPurposeAndStatusAndScanStatus(
+                TENANT_ID, USER_ACCOUNT_ID, "PROFILE_PHOTO", "ACTIVE", "CLEAN"))
+                .thenReturn(Optional.of(FileObject.builder().id(new FileObjectId(TENANT_ID, UUID.randomUUID())).build()));
+
+        var response = authService.login(httpServletRequest, "teacher1", "pw", "127.0.0.1");
+
+        assertThat(response.user().photoUrl()).isEqualTo("/me/profile/photo");
+    }
+
+    @Test
+    void login_userWithActiveTenantScopeAssignment_resolvesRoleCodeAndName() {
+        Tenant tenant = mockTenant();
+        when(loginTenantResolver.resolve(httpServletRequest))
+                .thenReturn(new LoginTenantResolver.TenantLogin(tenant));
+        when(keycloakAuthClient.login(REALM, "teacher1", "pw"))
+                .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        UserAccount account = account("teacher1@abc.test", null);
+        when(tenantUserLookup.resolveActiveUser(tenant, REALM, "kc-subject"))
+                .thenReturn(new TenantUserLookup.ResolvedUser(account, link(UsernameKind.EMAIL)));
+
+        UUID roleDefinitionId = UUID.randomUUID();
+        UserRoleAssignment assignment = UserRoleAssignment.builder()
+                .id(new UserRoleAssignmentId(TENANT_ID, UUID.randomUUID()))
+                .userAccountId(USER_ACCOUNT_ID)
+                .roleDefinitionId(roleDefinitionId)
+                .scopeType(ScopeType.TENANT)
+                .effectiveFrom(Instant.now().minusSeconds(60))
+                .status(AssignmentStatus.ACTIVE)
+                .build();
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(assignment));
+        RoleDefinition roleDefinition = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, roleDefinitionId))
+                .roleCode("CLASS_TEACHER")
+                .roleName("Class Teacher")
+                .roleOrigin(RoleOrigin.STANDARD)
+                .roleLevel(RoleLevel.SCHOOL)
+                .baseStandardRole("CLASS_TEACHER")
+                .status(RoleDefinitionStatus.ACTIVE)
+                .build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, roleDefinitionId)))
+                .thenReturn(Optional.of(roleDefinition));
+
+        var response = authService.login(httpServletRequest, "teacher1", "pw", "127.0.0.1");
+
+        assertThat(response.user().roleCode()).isEqualTo("CLASS_TEACHER");
+        assertThat(response.user().roleName()).isEqualTo("Class Teacher");
     }
 
     @Test

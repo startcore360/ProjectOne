@@ -165,12 +165,19 @@ class AuthControllerTest {
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STUDENT,
                 "Test Student", false);
         Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+        AuthUserResponse expected = AuthUserResponse.fromTenant(principal, "Test Student", "CLASS_TEACHER", "Class Teacher", "/me/profile/photo");
+        when(authService.currentTenantUser(principal)).thenReturn(expected);
 
         ResponseEntity<AuthUserResponse> response = controller.me(authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().tenantId()).isEqualTo(TENANT_ID);
         assertThat(response.getBody().platformRole()).isNull();
+        // AuthController must delegate role resolution to AuthService.currentTenantUser(...)
+        // rather than building the response itself with AuthUserResponse.fromTenant directly -
+        // that older shortcut never looked up a role at all.
+        assertThat(response.getBody().roleCode()).isEqualTo("CLASS_TEACHER");
+        assertThat(response.getBody().photoUrl()).isEqualTo("/me/profile/photo");
     }
 
     @Test

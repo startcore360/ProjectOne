@@ -13,5 +13,7 @@ public interface ActionCatalogRepository extends Repository<ActionCatalog, Strin
 
     Optional<ActionCatalog> findById(String actionCode);
 
+    List<ActionCatalog> findAllById(Iterable<String> actionCodes);
+
     List<ActionCatalog> findAll();
 }

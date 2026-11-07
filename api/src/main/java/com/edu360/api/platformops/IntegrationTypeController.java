@@ -40,7 +40,7 @@ import lombok.RequiredArgsConstructor;
  * platform package, flagged here rather than silently assumed.
  */
 @RestController
-@RequestMapping("/api/platform/integration-types")
+@RequestMapping({"/v1/platform/integration-types", "/api/platform/integration-types"})
 @RequiredArgsConstructor
 @Tag(name = "Platform Ops", description = "Platform Admin / Product Owner read-mostly operations")
 public class IntegrationTypeController {

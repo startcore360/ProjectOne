@@ -23,6 +23,9 @@ function renderWithStore(platformRole: string | null = null) {
       userType: platformRole ? null : "STAFF",
       // @ts-expect-error - test-only literal, not every PlatformRole is needed here
       platformRole,
+      roleCode: null,
+      roleName: null,
+      photoUrl: null,
       mustChangePassword: false,
     }),
   );
