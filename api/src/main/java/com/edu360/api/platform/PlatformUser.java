@@ -50,6 +50,10 @@ public class PlatformUser {
     @Column(name = "platform_role", nullable = false)
     private PlatformRole platformRole;
 
+    /** The custom role held, if any. Null means the standard rights of platformRole apply. */
+    @Column(name = "platform_role_id")
+    private UUID platformRoleId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PlatformUserStatus status;

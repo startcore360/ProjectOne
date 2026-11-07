@@ -20,10 +20,6 @@ import lombok.Setter;
  * standard role copied at provisioning, or a custom role a tenant administrator built from
  * approved actions only (Addendum rules 3 and 4). This is the "which role" half of an
  * assignment; the "which actions" half lives in RoleAction, never duplicated here.
- *
- * row_version mapped read-only for the same reason as UserAccount: this slice only needs
- * SELECT (PermissionEvaluatorService reads roleCode/status), so proper optimistic locking is
- * deferred to whichever future story first UPDATEs this row (role editing/retirement).
  */
 @Entity
 @Table(schema = "app", name = "role_definition")
@@ -68,6 +64,12 @@ public class RoleDefinition {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RoleDefinitionStatus status;
+
+    @Column(name = "owner_level")
+    private String ownerLevel;
+
+    @Column(name = "owner_institution_id")
+    private UUID ownerInstitutionId;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;

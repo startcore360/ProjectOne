@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
  * yet, so this will return an empty page until a platform-action audit writer exists.
  */
 @RestController
-@RequestMapping("/api/platform/audit-logs")
+@RequestMapping({"/v1/platform/audit-logs", "/api/platform/audit-logs"})
 @RequiredArgsConstructor
 @Tag(name = "Platform Ops", description = "Platform Admin / Product Owner read-mostly operations")
 public class PlatformAuditLogController {

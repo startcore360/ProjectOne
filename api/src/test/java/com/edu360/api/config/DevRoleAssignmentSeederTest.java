@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -31,8 +32,10 @@ import com.edu360.api.rbac.RoleDefinitionStatus;
 import com.edu360.api.rbac.RoleLevel;
 import com.edu360.api.rbac.RoleOrigin;
 import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.rbac.StandardRole;
 import com.edu360.api.rbac.StandardRoleAction;
 import com.edu360.api.rbac.StandardRoleActionRepository;
+import com.edu360.api.rbac.StandardRoleRepository;
 import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.UserRoleAssignmentRepository;
 import com.edu360.api.tenant.IsolationMode;
@@ -59,6 +62,7 @@ class DevRoleAssignmentSeederTest {
     @Mock private UserAccountRepository userAccountRepository;
     @Mock private RoleDefinitionRepository roleDefinitionRepository;
     @Mock private RoleActionRepository roleActionRepository;
+    @Mock private StandardRoleRepository standardRoleRepository;
     @Mock private StandardRoleActionRepository standardRoleActionRepository;
     @Mock private UserRoleAssignmentRepository userRoleAssignmentRepository;
 
@@ -67,7 +71,7 @@ class DevRoleAssignmentSeederTest {
 
     private DevRoleAssignmentSeeder seeder() {
         return new DevRoleAssignmentSeeder(tenantRepository, userAccountRepository, roleDefinitionRepository,
-                roleActionRepository, standardRoleActionRepository, userRoleAssignmentRepository);
+                roleActionRepository, standardRoleRepository, standardRoleActionRepository, userRoleAssignmentRepository);
     }
 
     private Tenant tenant() {
@@ -119,6 +123,7 @@ class DevRoleAssignmentSeederTest {
                 .thenReturn(List.of(activeAccount()));
         when(roleDefinitionRepository.findByIdTenantId(TENANT_ID)).thenReturn(List.of());
         when(roleDefinitionRepository.save(any(RoleDefinition.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(standardRoleRepository.findById("COLLEGE_ADMIN")).thenReturn(Optional.empty());
 
         StandardRoleAction templateAction = standardRoleAction("USER_PASSWORD_RESET_UNLOCK");
         when(standardRoleActionRepository.findByRoleCode("COLLEGE_ADMIN")).thenReturn(List.of(templateAction));
@@ -151,6 +156,66 @@ class DevRoleAssignmentSeederTest {
         assertThat(savedAssignment.getInstitutionId()).isNull();
         assertThat(savedAssignment.getDepartmentId()).isNull();
         assertThat(savedAssignment.getStatus()).isEqualTo(AssignmentStatus.ACTIVE);
+    }
+
+    @Test
+    void run_namedTestAccount_isSeededWithItsMappedRoleCodeNotTheDefault() {
+        UUID namedUserAccountId = UUID.randomUUID();
+        UserAccount namedAccount = UserAccount.builder()
+                .id(new UserAccountId(TENANT_ID, namedUserAccountId))
+                .userType(UserType.STAFF)
+                .displayName("ABC Teacher One")
+                .status(UserAccountStatus.ACTIVE)
+                .build();
+
+        Tenant tenant = tenant();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenant));
+        when(userAccountRepository.findByIdTenantIdAndStatus(TENANT_ID, UserAccountStatus.ACTIVE))
+                .thenReturn(List.of(namedAccount));
+        when(roleDefinitionRepository.findByIdTenantId(TENANT_ID)).thenReturn(List.of());
+        when(roleDefinitionRepository.save(any(RoleDefinition.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(standardRoleRepository.findById("CLASS_TEACHER")).thenReturn(Optional.empty());
+        when(standardRoleActionRepository.findByRoleCode("CLASS_TEACHER")).thenReturn(List.of());
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, namedUserAccountId, ScopeType.TENANT, null, null, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of());
+
+        seeder().run();
+
+        ArgumentCaptor<RoleDefinition> roleDefinitionCaptor = ArgumentCaptor.forClass(RoleDefinition.class);
+        verify(roleDefinitionRepository).save(roleDefinitionCaptor.capture());
+        assertThat(roleDefinitionCaptor.getValue().getBaseStandardRole()).isEqualTo("CLASS_TEACHER");
+
+        ArgumentCaptor<UserRoleAssignment> assignmentCaptor = ArgumentCaptor.forClass(UserRoleAssignment.class);
+        verify(userRoleAssignmentRepository).save(assignmentCaptor.capture());
+        assertThat(assignmentCaptor.getValue().getUserAccountId()).isEqualTo(namedUserAccountId);
+    }
+
+    @Test
+    void run_tenantWithMultipleActiveAccounts_seedsEveryAccountNotJustTheFirst() {
+        UUID secondUserAccountId = UUID.randomUUID();
+        UserAccount second = UserAccount.builder()
+                .id(new UserAccountId(TENANT_ID, secondUserAccountId))
+                .userType(UserType.STAFF)
+                .displayName("Second Test User")
+                .status(UserAccountStatus.ACTIVE)
+                .build();
+
+        Tenant tenant = tenant();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenant));
+        when(userAccountRepository.findByIdTenantIdAndStatus(TENANT_ID, UserAccountStatus.ACTIVE))
+                .thenReturn(List.of(activeAccount(), second));
+        when(roleDefinitionRepository.findByIdTenantId(TENANT_ID)).thenReturn(List.of());
+        when(roleDefinitionRepository.save(any(RoleDefinition.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(standardRoleRepository.findById("COLLEGE_ADMIN")).thenReturn(Optional.empty());
+        when(standardRoleActionRepository.findByRoleCode("COLLEGE_ADMIN")).thenReturn(List.of());
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                eq(TENANT_ID), any(), eq(ScopeType.TENANT), eq(null), eq(null), eq(AssignmentStatus.ACTIVE)))
+                .thenReturn(List.of());
+
+        seeder().run();
+
+        verify(userRoleAssignmentRepository, org.mockito.Mockito.times(2)).save(any(UserRoleAssignment.class));
     }
 
     @Test

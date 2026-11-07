@@ -1,0 +1,692 @@
+{
+  "AUTH_LOGIN": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\auth\\AuthService.java",
+      "java\\com\\edu360\\api\\identity\\UsernameKind.java"
+    ],
+    "apiTest": [],
+    "app": []
+  },
+  "AUTH_FIRST_LOGIN_RESET": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "AUTH_PASSWORD_CHANGE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "AUTH_DEVICES_MANAGE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\config\\keycloak\\KeycloakAdminClient.java",
+      "java\\com\\edu360\\api\\selfservice\\dto\\SessionResponse.java",
+      "java\\com\\edu360\\api\\selfservice\\SessionController.java",
+      "java\\com\\edu360\\api\\selfservice\\SessionService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\selfservice\\SessionServiceTest.java"
+    ],
+    "app": [
+      "features\\sessions\\api\\sessionsService.ts",
+      "features\\sessions\\pages\\SessionsPage.tsx"
+    ]
+  },
+  "PROFILE_EDIT_OWN": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\selfservice\\dto\\ProfileUpdateRequest.java",
+      "java\\com\\edu360\\api\\selfservice\\ProfileController.java",
+      "java\\com\\edu360\\api\\selfservice\\ProfileService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\selfservice\\ProfileServiceTest.java"
+    ],
+    "app": [
+      "features\\profile\\api\\profileService.ts",
+      "features\\profile\\pages\\ProfilePage.tsx"
+    ]
+  },
+  "ROLE_SWITCH": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\selfservice\\UserMeController.java",
+      "java\\com\\edu360\\api\\selfservice\\UserMeService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\selfservice\\UserMeControllerTest.java"
+    ],
+    "app": [
+      "components\\layout\\RoleSwitcher.test.tsx"
+    ]
+  },
+  "SELF_SERVICE_VIEW": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "USER_VIEW": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\rbac\\dto\\InstitutionScopeRequest.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\UserListResponse.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\UserSummaryResponse.java",
+      "java\\com\\edu360\\api\\rbac\\UserDeactivationController.java",
+      "java\\com\\edu360\\api\\rbac\\UserRequestSupport.java",
+      "java\\com\\edu360\\api\\rbac\\UserViewController.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\rbac\\UserViewActionTest.java"
+    ],
+    "app": [
+      "features\\user-management\\api\\userManagementService.ts",
+      "features\\user-management\\pages\\UserManagementPages.tsx"
+    ]
+  },
+  "USER_CREATE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\auth\\AuthController.java",
+      "java\\com\\edu360\\api\\auth\\AuthService.java",
+      "java\\com\\edu360\\api\\config\\DevRoleAssignmentSeeder.java",
+      "java\\com\\edu360\\api\\identity\\TopUserService.java",
+      "java\\com\\edu360\\api\\identity\\UserAccountService.java",
+      "java\\com\\edu360\\api\\institution\\CalendarEventService.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\CreateUserCheckRequest.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\CreateUserCheckResponse.java",
+      "java\\com\\edu360\\api\\rbac\\RbacTarget.java",
+      "java\\com\\edu360\\api\\rbac\\UserCreationController.java",
+      "java\\com\\edu360\\api\\selfservice\\ProfileService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\identity\\TopUserControllerTest.java",
+      "java\\com\\edu360\\api\\rbac\\PermissionEvaluatorServiceTest.java",
+      "java\\com\\edu360\\api\\rbac\\UserCreationControllerTest.java",
+      "java\\com\\edu360\\api\\rbac\\UserDeactivationActionTest.java",
+      "java\\com\\edu360\\api\\rbac\\UserEditActionTest.java",
+      "java\\com\\edu360\\api\\rbac\\UserPasswordResetUnlockActionTest.java",
+      "java\\com\\edu360\\api\\rbac\\UserViewActionTest.java"
+    ],
+    "app": [
+      "features\\user-management\\api\\userManagementService.ts",
+      "features\\user-management\\pages\\UserManagementPages.test.tsx",
+      "features\\user-management\\pages\\UserManagementPages.tsx"
+    ]
+  },
+  "USER_BULK_UPLOAD": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\imports\\UserBulkUploadController.java",
+      "java\\com\\edu360\\api\\imports\\UserBulkUploadService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\imports\\UserBulkUploadControllerTest.java"
+    ],
+    "app": [
+      "features\\user-management\\api\\userManagementService.ts",
+      "features\\user-management\\pages\\UserManagementPages.test.tsx",
+      "features\\user-management\\pages\\UserManagementPages.tsx"
+    ]
+  },
+  "USER_EDIT": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\rbac\\dto\\InstitutionScopeRequest.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\UpdateUserRequest.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\UserSummaryResponse.java",
+      "java\\com\\edu360\\api\\rbac\\UserDeactivationController.java",
+      "java\\com\\edu360\\api\\rbac\\UserEditController.java",
+      "java\\com\\edu360\\api\\rbac\\UserRequestSupport.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\rbac\\UserEditActionTest.java"
+    ],
+    "app": [
+      "features\\user-management\\api\\userManagementService.ts",
+      "features\\user-management\\pages\\UserManagementPages.tsx"
+    ]
+  },
+  "USER_DEACTIVATE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\config\\DevRoleAssignmentSeeder.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\InstitutionScopeRequest.java",
+      "java\\com\\edu360\\api\\rbac\\UserDeactivationController.java",
+      "java\\com\\edu360\\api\\rbac\\UserEditController.java",
+      "java\\com\\edu360\\api\\rbac\\UserPasswordResetUnlockController.java",
+      "java\\com\\edu360\\api\\rbac\\UserRequestSupport.java",
+      "java\\com\\edu360\\api\\rbac\\UserViewController.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\rbac\\UserDeactivationActionTest.java"
+    ],
+    "app": [
+      "features\\user-management\\api\\userManagementService.ts",
+      "features\\user-management\\pages\\UserManagementPages.test.tsx",
+      "features\\user-management\\pages\\UserManagementPages.tsx"
+    ]
+  },
+  "USER_PASSWORD_RESET_UNLOCK": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\config\\DevRoleAssignmentSeeder.java",
+      "java\\com\\edu360\\api\\config\\keycloak\\KeycloakAdminClient.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\InstitutionScopeRequest.java",
+      "java\\com\\edu360\\api\\rbac\\dto\\PasswordResetResponse.java",
+      "java\\com\\edu360\\api\\rbac\\UserEditController.java",
+      "java\\com\\edu360\\api\\rbac\\UserPasswordResetUnlockController.java",
+      "java\\com\\edu360\\api\\rbac\\UserRequestSupport.java",
+      "java\\com\\edu360\\api\\rbac\\UserViewController.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\config\\DevRoleAssignmentSeederTest.java",
+      "java\\com\\edu360\\api\\rbac\\UserPasswordResetUnlockActionTest.java",
+      "java\\com\\edu360\\api\\rbac\\UserPasswordResetUnlockUnlockActionTest.java"
+    ],
+    "app": [
+      "features\\user-management\\api\\userManagementService.ts",
+      "features\\user-management\\pages\\UserManagementPages.test.tsx",
+      "features\\user-management\\pages\\UserManagementPages.tsx"
+    ]
+  },
+  "ROLE_ASSIGN": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\config\\keycloak\\KeycloakAdminClient.java",
+      "java\\com\\edu360\\api\\rbac\\PermissionEvaluatorService.java",
+      "java\\com\\edu360\\api\\rbac\\RoleAssignmentController.java",
+      "java\\com\\edu360\\api\\rbac\\RoleAssignmentService.java",
+      "java\\com\\edu360\\api\\selfservice\\UserMeService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\rbac\\PermissionEvaluatorServiceTest.java",
+      "java\\com\\edu360\\api\\rbac\\RoleAssignmentControllerTest.java",
+      "java\\com\\edu360\\api\\selfservice\\UserMeControllerTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionAdminPages.tsx"
+    ]
+  },
+  "ROLE_ASSIGN_NON_SENSITIVE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\rbac\\RoleAssignmentService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\rbac\\RoleAssignmentControllerTest.java"
+    ],
+    "app": []
+  },
+  "ROLE_CUSTOM_MANAGE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\config\\DevRoleAssignmentSeeder.java"
+    ],
+    "apiTest": [],
+    "app": []
+  },
+  "GUARDIAN_LINK": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "GUARDIAN_CHANGE_REQUEST": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "GUARDIAN_CHANGE_APPROVE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\identity\\IdentityLinkStatus.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\rbac\\PermissionEvaluatorServiceTest.java"
+    ],
+    "app": []
+  },
+  "APPROVAL_DELEGATE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "APPROVAL_BULK": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "TENANT_TOP_USERS_CREATE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\identity\\TopUserController.java",
+      "java\\com\\edu360\\api\\identity\\TopUserService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\identity\\TopUserControllerTest.java"
+    ],
+    "app": [
+      "features\\user-management\\api\\userManagementService.ts",
+      "features\\user-management\\pages\\UserManagementPages.test.tsx",
+      "features\\user-management\\pages\\UserManagementPages.tsx"
+    ]
+  },
+  "ROLLDOWN_VIEW": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\rbac\\PermissionEvaluatorService.java"
+    ],
+    "apiTest": [],
+    "app": []
+  },
+  "ROLLDOWN_OVERRIDE_SET": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "INSTITUTION_CREATE_DRAFT": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\InstitutionController.java",
+      "java\\com\\edu360\\api\\institution\\InstitutionService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\InstitutionControllerTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionAdminPages.test.tsx"
+    ]
+  },
+  "INSTITUTION_ACTIVATE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\institution\\InstitutionController.java",
+      "java\\com\\edu360\\api\\institution\\InstitutionService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\InstitutionControllerTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionAdminPages.test.tsx"
+    ]
+  },
+  "INSTITUTION_BLOCK_REQUEST": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\institution\\InstitutionController.java",
+      "java\\com\\edu360\\api\\institution\\InstitutionService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\InstitutionControllerTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionAdminPages.test.tsx",
+      "features\\institution-admin\\pages\\InstitutionAdminPages.tsx"
+    ]
+  },
+  "INSTITUTION_BLOCK_APPROVE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\InstitutionController.java",
+      "java\\com\\edu360\\api\\institution\\InstitutionService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\InstitutionControllerTest.java"
+    ],
+    "app": []
+  },
+  "STRUCTURE_MANAGE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\dto\\CreateDepartmentRequest.java",
+      "java\\com\\edu360\\api\\institution\\dto\\CreateProgramRequest.java",
+      "java\\com\\edu360\\api\\institution\\StructureController.java",
+      "java\\com\\edu360\\api\\institution\\StructureService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\StructureControllerTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.test.tsx",
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "PROGRAM_RULES_SET": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "CALENDAR_MASTER_SET": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\AcademicCalendarEvent.java",
+      "java\\com\\edu360\\api\\institution\\CalendarEventService.java",
+      "java\\com\\edu360\\api\\institution\\dto\\CalendarEventRequest.java",
+      "java\\com\\edu360\\api\\institution\\MasterCalendarController.java",
+      "java\\com\\edu360\\api\\institution\\MasterCalendarService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\CalendarEventServiceTest.java",
+      "java\\com\\edu360\\api\\institution\\MasterCalendarControllerTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "CALENDAR_LOCAL_SET": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\AcademicCalendarEvent.java",
+      "java\\com\\edu360\\api\\institution\\CalendarEventController.java",
+      "java\\com\\edu360\\api\\institution\\CalendarEventService.java",
+      "java\\com\\edu360\\api\\institution\\dto\\CalendarEventRequest.java",
+      "java\\com\\edu360\\api\\institution\\dto\\CalendarEventResponse.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\CalendarEventServiceTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "WEEKLY_OFF_SET": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\dto\\WeeklyOffRuleRequest.java",
+      "java\\com\\edu360\\api\\institution\\dto\\WeeklyOffRuleResponse.java",
+      "java\\com\\edu360\\api\\institution\\WeeklyOffRule.java",
+      "java\\com\\edu360\\api\\institution\\WeeklyOffRuleController.java",
+      "java\\com\\edu360\\api\\institution\\WeeklyOffRuleService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\WeeklyOffRuleServiceTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "GRADING_SCHEME_SET": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "HOD_ASSIGN": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\ClassTeacherAssignmentService.java",
+      "java\\com\\edu360\\api\\institution\\Department.java",
+      "java\\com\\edu360\\api\\institution\\DepartmentController.java",
+      "java\\com\\edu360\\api\\institution\\dto\\HodAssignRequest.java",
+      "java\\com\\edu360\\api\\institution\\dto\\HodAssignResponse.java",
+      "java\\com\\edu360\\api\\institution\\HodAssignmentService.java",
+      "java\\com\\edu360\\api\\institution\\StaffAssignment.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\HodAssignmentServiceTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.test.tsx",
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "SUBJECT_ALLOCATE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "MENTOR_ASSIGN": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\ClassTeacherAssignmentService.java",
+      "java\\com\\edu360\\api\\institution\\dto\\MentorAssignRequest.java",
+      "java\\com\\edu360\\api\\institution\\dto\\MentorAssignResponse.java",
+      "java\\com\\edu360\\api\\institution\\MentorAssignment.java",
+      "java\\com\\edu360\\api\\institution\\MentorAssignmentService.java",
+      "java\\com\\edu360\\api\\institution\\ProgramYear.java",
+      "java\\com\\edu360\\api\\institution\\Section.java",
+      "java\\com\\edu360\\api\\institution\\SectionController.java",
+      "java\\com\\edu360\\api\\institution\\Semester.java",
+      "java\\com\\edu360\\api\\institution\\StaffAssignment.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\MentorAssignmentServiceTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.test.tsx",
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "CLASS_TEACHER_ASSIGN": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\ClassTeacherAssignment.java",
+      "java\\com\\edu360\\api\\institution\\ClassTeacherAssignmentService.java",
+      "java\\com\\edu360\\api\\institution\\dto\\ClassTeacherAssignRequest.java",
+      "java\\com\\edu360\\api\\institution\\dto\\ClassTeacherAssignResponse.java",
+      "java\\com\\edu360\\api\\institution\\Section.java",
+      "java\\com\\edu360\\api\\institution\\SectionController.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\ClassTeacherAssignmentServiceTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.test.tsx",
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "PROMOTION_RUN": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "PROMOTION_APPROVE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "STUDENT_STATUS_CHANGE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "STUDENT_LOGIN_SWITCH": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\institution\\dto\\StudentLoginSwitchRequest.java",
+      "java\\com\\edu360\\api\\institution\\dto\\StudentLoginSwitchResponse.java",
+      "java\\com\\edu360\\api\\institution\\SchoolClass.java",
+      "java\\com\\edu360\\api\\institution\\SchoolClassController.java",
+      "java\\com\\edu360\\api\\institution\\StudentLoginSwitchService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\institution\\StudentLoginSwitchServiceTest.java"
+    ],
+    "app": [
+      "features\\institution-admin\\pages\\InstitutionSetupPages.test.tsx",
+      "features\\institution-admin\\pages\\InstitutionSetupPages.tsx"
+    ]
+  },
+  "TERM_LOCK": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "TERM_UNLOCK": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "PRINCIPAL_LEAVE_APPROVER_SET": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "VC_LEAVE_APPROVER_SET": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "PLAN_MANAGE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "TENANT_CREATE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\config\\DevAdminSeeder.java",
+      "java\\com\\edu360\\api\\config\\DevRoleAssignmentSeeder.java",
+      "java\\com\\edu360\\api\\config\\keycloak\\KeycloakProperties.java",
+      "java\\com\\edu360\\api\\platformops\\dto\\TenantCreateRequest.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionService.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformTenantController.java",
+      "java\\com\\edu360\\api\\platformops\\TenantManagementService.java",
+      "java\\com\\edu360\\api\\tenant\\Tenant.java",
+      "java\\com\\edu360\\api\\tenant\\TenantRoutingDataSource.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\PlatformTenantControllerTest.java"
+    ],
+    "app": [
+      "features\\platform\\pages\\PlatformPages.tsx"
+    ]
+  },
+  "TENANT_ACTIVATE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\audit\\AuditEventType.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionService.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformTenantController.java",
+      "java\\com\\edu360\\api\\platformops\\TenantManagementService.java",
+      "java\\com\\edu360\\api\\tenant\\Tenant.java",
+      "java\\com\\edu360\\api\\tenant\\TenantRoutingDataSource.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\PlatformTenantControllerTest.java"
+    ],
+    "app": [
+      "features\\platform\\pages\\PlatformPages.tsx"
+    ]
+  },
+  "TENANT_SUSPEND_ARCHIVE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "TENANT_SETTINGS": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\tenant\\Tenant.java"
+    ],
+    "apiTest": [],
+    "app": []
+  },
+  "FEATURE_TOGGLE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "INVOICE_MANAGE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "DISCOUNT_APPLY": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "OVERDUE_FLAG": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "SUPPORT_TICKET_RAISE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "SUPPORT_TICKET_MANAGE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "SUPPORT_ACCESS_GRANT": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\tenant\\TenantContext.java"
+    ],
+    "apiTest": [],
+    "app": []
+  },
+  "SUPPORT_ACCESS_USE": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "RELEASE_MANAGE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\platform\\PlatformRole.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\BackupStatusControllerTest.java"
+    ],
+    "app": [
+      "features\\platform\\api\\platformUserService.ts",
+      "features\\platform\\pages\\PlatformPages.tsx",
+      "features\\profile\\api\\profileService.ts",
+      "features\\role-previews\\roleDashboardCatalog.ts",
+      "services\\modules\\authService.tsx"
+    ]
+  },
+  "INTEGRATION_TYPES_MANAGE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\platformops\\IntegrationType.java",
+      "java\\com\\edu360\\api\\platformops\\IntegrationTypeController.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionServiceTest.java"
+    ],
+    "app": []
+  },
+  "PLATFORM_AUDIT_VIEW": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\platformops\\dto\\AuditLogEntryResponse.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformAuditLogController.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformAuditOutboxEvent.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionServiceTest.java"
+    ],
+    "app": []
+  },
+  "USAGE_COUNTS_VIEW": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\platformops\\dto\\UsageCountsResponse.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionService.java",
+      "java\\com\\edu360\\api\\platformops\\UsageCountsController.java",
+      "java\\com\\edu360\\api\\platformops\\UsageMetricDaily.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionServiceTest.java"
+    ],
+    "app": []
+  },
+  "SECURITY_POLICY_SET": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  },
+  "BACKUP_STATUS_VIEW": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\platformops\\BackupStatusController.java",
+      "java\\com\\edu360\\api\\platformops\\dto\\BackupStatusEntryResponse.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionService.java",
+      "java\\com\\edu360\\api\\platformops\\TenantBackupStatus.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionServiceTest.java"
+    ],
+    "app": []
+  },
+  "PLATFORM_USER_MANAGE": {
+    "apiMain": [
+      "java\\com\\edu360\\api\\platformops\\dto\\PlatformUserCreateRequest.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionService.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformUserController.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformUserManagementService.java"
+    ],
+    "apiTest": [
+      "java\\com\\edu360\\api\\platformops\\PlatformPermissionServiceTest.java",
+      "java\\com\\edu360\\api\\platformops\\PlatformUserControllerTest.java"
+    ],
+    "app": [
+      "features\\platform\\pages\\PlatformPages.tsx"
+    ]
+  },
+  "PLATFORM_REPORTS_VIEW": {
+    "apiMain": [],
+    "apiTest": [],
+    "app": []
+  }
+}

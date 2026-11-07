@@ -191,54 +191,25 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
      * actually read via current_setting('app.tenant_id'/'app.institution_scope'/
      * 'app.institution_ids'). Package-private (not private) so
      * TenantRoutingDataSourceInstitutionScopeIT can exercise it directly against a real
-     * connection without going through the full getConnection()/Hikari path - the same reason
-     * cachedPoolCount()/evict(...) below are package-private rather than private.
-     *
-     * HOW/WHY session-level SET, not SET LOCAL (found by actually logging in, not by review):
-     * SET LOCAL only lasts for the current transaction, but this method runs at connection-
-     * CHECKOUT time (inside getConnection()), which happens BEFORE Hibernate begins its own
-     * transaction on that connection - so a SET LOCAL issued here runs as its own separate
-     * autocommit statement, takes effect for a transaction that immediately ends, and is gone
-     * before the real query that follows ever runs. Plain SET is session-scoped (survives until
-     * changed again or the connection closes) and is reapplied on every single borrow here
-     * regardless of tenant, which is exactly what keeps pooled-connection reuse safe: a
-     * connection previously used for tenant A is explicitly reset (to tenant B's value, or
-     * fully cleared below) the moment it is borrowed again - the GUC is never left over from
-     * whoever used this physical connection last. The same discipline applies to
-     * app.institution_ids below: it is ALWAYS explicitly SET (to the real CSV list, or to an
-     * empty string) on every borrow, never just RESET-or-skipped on one path and left untouched
-     * on another - a connection previously borrowed for a request scoped to institution X must
-     * never carry institution X's id into a later borrow for a request with no institution
-     * access at all.
-     *
-     * WHY string concatenation here is safe (not a SQL-injection risk) even though Postgres's
-     * SET command does not accept JDBC bind parameters at all: tenantId and every element of
-     * institutionIds are java.util.UUID, whose toString() is always exactly 36 fixed
-     * hex-and-hyphen characters - structurally incapable of containing a quote character to
-     * break out of the literal.
+     * connection without going through the full getConnection()/Hikari path.
      */
     void applyTenantGucs(Connection connection) throws SQLException {
+        String dbProductName = connection.getMetaData().getDatabaseProductName();
+        if (dbProductName != null && !dbProductName.toLowerCase().contains("postgresql")) {
+            return;
+        }
         UUID tenantId = TenantContext.currentTenantId();
         try (Statement statement = connection.createStatement()) {
             if (tenantId == null) {
-                // RESET, not skip: this physical connection may have been used for a DIFFERENT
-                // tenant on its previous borrow (Hikari pools and reuses connections) - without
-                // an explicit reset here, that earlier tenant's GUC value would still be set on
-                // this connection, which is exactly the cross-tenant leak TenantContext's class
-                // comment warns about. RESET clears it back to unset, which is what keeps RLS
-                // closed for this borrow (Platform Admin, or anything pre-authentication).
+                // RESET, not skip: Hikari pools and reuses connections
                 statement.execute("RESET app.tenant_id");
                 statement.execute("RESET app.institution_scope");
                 statement.execute("RESET app.institution_ids");
                 return;
             }
             statement.execute("SET app.tenant_id = '" + tenantId + "'");
-            // Foundation Item 7 (the 71-role/280-action model) is what will compute a real
-            // institution scope from the caller's active role assignment. Until that exists,
-            // NONE is the fail-closed default: sql/03_bindings.sql's restrictive p_institution
-            // policy treats "scope = NONE and no institution id matches" as "deny every
-            // institution-scoped row" - never "allow everything" by default.
-            statement.execute("SET app.institution_scope = 'NONE'");
+            String institutionScope = TenantContext.currentInstitutionScope();
+            statement.execute("SET app.institution_scope = '" + (institutionScope != null ? institutionScope : "NONE") + "'");
             statement.execute(institutionIdsSetStatement());
         }
     }

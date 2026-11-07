@@ -15,4 +15,6 @@ public interface PlatformUserRepository extends JpaRepository<PlatformUser, UUID
      *  exists, before Keycloak's own "sub" is known (identitySubject can't be checked by email -
      *  it is Keycloak's own generated subject id, not a login name). */
     Optional<PlatformUser> findByEmail(String email);
+
+    long countByPlatformRoleIdAndStatus(UUID platformRoleId, PlatformUserStatus status);
 }

@@ -1,25 +1,48 @@
 import axios from "axios";
 import { getAccessToken } from "./tokenStorage";
 
-// WHY the base URL is derived from window.location, not just VITE_API_BASE_URL: the backend
-// tells tenants apart by the Host header on each request (LoginTenantResolver -
-// abc.edu360.local / xyz.edu360.local / platform.edu360.local each resolve to a different
-// tenant or the platform realm). A single fixed VITE_API_BASE_URL would send every request to
-// the same host regardless of which tenant hostname the page was actually loaded from, which is
-// exactly backwards - found by actually loading the app at abc.edu360.local and getting
-// "Unknown sign-in address" because every call was still going to plain localhost. The backend
-// always runs on port 8080 in dev regardless of which tenant hostname is used, so only the
-// hostname needs to change, not the port. VITE_API_BASE_URL remains available as an explicit
-// override (e.g. a deployed environment with a different port/origin entirely).
+// Tenant identity is resolved by the request hostname, so keep the API origin
+// derived from the active tenant host unless an explicit deployment override exists.
 const inferredBaseUrl = `${window.location.protocol}//${window.location.hostname}:8080/api`;
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL || inferredBaseUrl;
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || inferredBaseUrl,
+  baseURL: configuredBaseUrl,
+  // This application authenticates with explicit bearer headers, not ambient cookies.
+  withCredentials: false,
 });
 
+const apiOrigin = new URL(configuredBaseUrl, window.location.origin).origin;
+
 api.interceptors.request.use((config) => {
+  // Never attach an EDU 360 bearer token to an absolute URL on another origin.
+  // Axios accepts absolute request URLs even when a baseURL is configured.
+  const requestUrl = new URL(config.url ?? "", config.baseURL ?? configuredBaseUrl);
+  if (requestUrl.origin !== apiOrigin) {
+    throw new Error("Blocked API request to an untrusted origin.");
+  }
+
+  // OD-09 correlation tracing: assign UUID to each client request if not already present
+  if (!config.headers["X-Correlation-ID"]) {
+    config.headers["X-Correlation-ID"] = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  }
+
+  // Login and refresh authenticate using their request bodies; neither needs an
+  // existing access token. In particular, do not forward an expired token to refresh.
+  const requestPath = requestUrl.pathname.replace(/\/+$/, "");
+  const isAuthBootstrapRequest =
+    requestPath.endsWith("/auth/login") || requestPath.endsWith("/auth/refresh");
+  if (isAuthBootstrapRequest) {
+    delete config.headers.Authorization;
+    return config;
+  }
+
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    delete config.headers.Authorization;
   }
   return config;
 });

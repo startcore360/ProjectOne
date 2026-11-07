@@ -2,6 +2,7 @@ package com.edu360.api.config;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -24,8 +25,10 @@ import com.edu360.api.rbac.RoleDefinitionStatus;
 import com.edu360.api.rbac.RoleLevel;
 import com.edu360.api.rbac.RoleOrigin;
 import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.rbac.StandardRole;
 import com.edu360.api.rbac.StandardRoleAction;
 import com.edu360.api.rbac.StandardRoleActionRepository;
+import com.edu360.api.rbac.StandardRoleRepository;
 import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.UserRoleAssignmentId;
 import com.edu360.api.rbac.UserRoleAssignmentRepository;
@@ -55,21 +58,28 @@ import lombok.RequiredArgsConstructor;
  * automatically once TENANT_CREATE/USER_CREATE are built), this seeder gives that account exactly
  * one standard role so the RBAC evaluator has something real to check.
  *
- * WHICH role: ref.standard_role 'COLLEGE_ADMIN' ("College Admin", COLLEGE level, is_staff=true) -
- * picked as the broadest generic staff role available for a generic test account (University/
- * School Admin would be an equally defensible choice; COLLEGE_ADMIN was picked because it is the
- * role USER_PASSWORD_RESET_UNLOCK/USER_DEACTIVATE/ROLE_CUSTOM_MANAGE already use as their
- * canonical "institution admin" example in sql/05_ref_data.sql rows 456/451/873).
+ * WHICH role, per account: looked up by the account's display name in {@link #TEST_ACCOUNT_ROLES}
+ * (the named ABC/XYZ dev test personas from earlier manual testing, e.g. "ABC Teacher One" ->
+ * CLASS_TEACHER) - every other ACTIVE account in the tenant falls back to 'COLLEGE_ADMIN' ("College
+ * Admin", COLLEGE level, is_staff=true), the broadest generic staff role available, same default
+ * this class used before per-account roles existed (picked because it is the role
+ * USER_PASSWORD_RESET_UNLOCK/USER_DEACTIVATE/ROLE_CUSTOM_MANAGE already use as their canonical
+ * "institution admin" example in sql/05_ref_data.sql rows 456/451/873). This was previously only
+ * the FIRST active account per tenant; now every active account gets a role, since a frontend
+ * dashboard now reads this to pick a role-appropriate view (see AuthService.resolveRole) and a
+ * test account with no assignment at all would just fall back to the generic dashboard, same as
+ * a real not-yet-assigned user - which defeats the point of a named test persona.
  *
  * WHICH scope: no app.institution rows are seeded anywhere in sql/05_ref_data.sql (confirmed by
  * reading the whole file - only ref.* template rows exist, no app.institution INSERTs), so this
- * seeder scopes the assignment at TENANT level (scopeType=TENANT, institutionId=null,
+ * seeder scopes every assignment at TENANT level (scopeType=TENANT, institutionId=null,
  * departmentId=null) rather than inventing a fake institution id Addendum rule 8/9 would then
  * have to reject as make-believe.
  *
  * IDEMPOTENT, same pattern as DevAdminSeeder: re-running this on an already-seeded tenant is a
- * no-op (checks for an existing STANDARD/COLLEGE_ADMIN RoleDefinition and an existing ACTIVE
- * TENANT-scope UserRoleAssignment for the chosen account before inserting either).
+ * no-op per account (checks for an existing STANDARD RoleDefinition for that account's resolved
+ * role code and an existing ACTIVE TENANT-scope UserRoleAssignment for that account before
+ * inserting either).
  */
 @Component
 @Profile("dev")
@@ -78,13 +88,23 @@ public class DevRoleAssignmentSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevRoleAssignmentSeeder.class);
 
-    /** Broadest generic staff standard role available - see class javadoc. */
-    static final String SEEDED_STANDARD_ROLE_CODE = "COLLEGE_ADMIN";
+    /** Fallback for any ACTIVE account not named in {@link #TEST_ACCOUNT_ROLES} - see class javadoc. */
+    static final String DEFAULT_STANDARD_ROLE_CODE = "COLLEGE_ADMIN";
+
+    /**
+     * Known dev test personas by exact display name -> ref.standard_role code. Add a row here for
+     * any other named ABC/XYZ test account that should land on its own role-shaped dashboard
+     * instead of the generic COLLEGE_ADMIN default.
+     */
+    static final Map<String, String> TEST_ACCOUNT_ROLES = Map.of(
+            "ABC Teacher One", "CLASS_TEACHER"
+    );
 
     private final TenantRepository tenantRepository;
     private final UserAccountRepository userAccountRepository;
     private final RoleDefinitionRepository roleDefinitionRepository;
     private final RoleActionRepository roleActionRepository;
+    private final StandardRoleRepository standardRoleRepository;
     private final StandardRoleActionRepository standardRoleActionRepository;
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
 
@@ -111,35 +131,38 @@ public class DevRoleAssignmentSeeder implements CommandLineRunner {
                         + "nothing to seed a role assignment for.", tenant.getTenantId());
                 return;
             }
-            UserAccount testAccount = activeAccounts.get(0);
-            RoleDefinition roleDefinition = ensureRoleDefinition(tenant.getTenantId(), testAccount);
-            ensureUserRoleAssignment(tenant.getTenantId(), testAccount, roleDefinition);
+            for (UserAccount account : activeAccounts) {
+                String roleCode = TEST_ACCOUNT_ROLES.getOrDefault(account.getDisplayName(), DEFAULT_STANDARD_ROLE_CODE);
+                RoleDefinition roleDefinition = ensureRoleDefinition(tenant.getTenantId(), account, roleCode);
+                ensureUserRoleAssignment(tenant.getTenantId(), account, roleDefinition);
+            }
         } finally {
             TenantContext.clear();
         }
     }
 
-    private RoleDefinition ensureRoleDefinition(UUID tenantId, UserAccount testAccount) {
+    private RoleDefinition ensureRoleDefinition(UUID tenantId, UserAccount account, String roleCode) {
         List<RoleDefinition> existing = roleDefinitionRepository.findByIdTenantId(tenantId);
         for (RoleDefinition candidate : existing) {
             if (candidate.getRoleOrigin() == RoleOrigin.STANDARD
-                    && SEEDED_STANDARD_ROLE_CODE.equals(candidate.getBaseStandardRole())
+                    && roleCode.equals(candidate.getBaseStandardRole())
                     && candidate.getStatus() == RoleDefinitionStatus.ACTIVE) {
                 return candidate;
             }
         }
-        return createRoleDefinition(tenantId, testAccount);
+        return createRoleDefinition(tenantId, account, roleCode);
     }
 
-    private RoleDefinition createRoleDefinition(UUID tenantId, UserAccount testAccount) {
-        UUID actor = testAccount.getId().getUserAccountId();
+    private RoleDefinition createRoleDefinition(UUID tenantId, UserAccount account, String roleCode) {
+        UUID actor = account.getId().getUserAccountId();
+        StandardRole standardRole = standardRoleRepository.findById(roleCode).orElse(null);
         RoleDefinition roleDefinition = RoleDefinition.builder()
                 .id(new RoleDefinitionId(tenantId, UUID.randomUUID()))
-                .roleCode(SEEDED_STANDARD_ROLE_CODE)
-                .roleName("College Admin")
+                .roleCode(roleCode)
+                .roleName(standardRole != null ? standardRole.getRoleName() : roleCode)
                 .roleOrigin(RoleOrigin.STANDARD)
-                .roleLevel(RoleLevel.COLLEGE)
-                .baseStandardRole(SEEDED_STANDARD_ROLE_CODE)
+                .roleLevel(standardRole != null ? standardRole.getRoleLevel() : RoleLevel.COLLEGE)
+                .baseStandardRole(roleCode)
                 .customScope(null)
                 .sensitiveRole(false)
                 .status(RoleDefinitionStatus.ACTIVE)
@@ -147,16 +170,14 @@ public class DevRoleAssignmentSeeder implements CommandLineRunner {
                 .updatedBy(actor)
                 .build();
         RoleDefinition saved = roleDefinitionRepository.save(roleDefinition);
-        copyStandardRoleActions(tenantId, saved, actor);
+        copyStandardRoleActions(tenantId, saved, roleCode, actor);
         log.warn("DevRoleAssignmentSeeder: seeded a dev RoleDefinition ({}) for tenant {} from "
-                + "ref.standard_role '{}'. Dev only.", saved.getId().getRoleDefinitionId(), tenantId,
-                SEEDED_STANDARD_ROLE_CODE);
+                + "ref.standard_role '{}'. Dev only.", saved.getId().getRoleDefinitionId(), tenantId, roleCode);
         return saved;
     }
 
-    private void copyStandardRoleActions(UUID tenantId, RoleDefinition roleDefinition, UUID actor) {
-        List<StandardRoleAction> templateActions =
-                standardRoleActionRepository.findByRoleCode(SEEDED_STANDARD_ROLE_CODE);
+    private void copyStandardRoleActions(UUID tenantId, RoleDefinition roleDefinition, String roleCode, UUID actor) {
+        List<StandardRoleAction> templateActions = standardRoleActionRepository.findByRoleCode(roleCode);
         UUID roleDefinitionId = roleDefinition.getId().getRoleDefinitionId();
         for (StandardRoleAction templateAction : templateActions) {
             boolean alreadyGranted = roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
@@ -175,8 +196,8 @@ public class DevRoleAssignmentSeeder implements CommandLineRunner {
         }
     }
 
-    private void ensureUserRoleAssignment(UUID tenantId, UserAccount testAccount, RoleDefinition roleDefinition) {
-        UUID userAccountId = testAccount.getId().getUserAccountId();
+    private void ensureUserRoleAssignment(UUID tenantId, UserAccount account, RoleDefinition roleDefinition) {
+        UUID userAccountId = account.getId().getUserAccountId();
         List<UserRoleAssignment> existing = userRoleAssignmentRepository
                 .findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
                         tenantId, userAccountId, ScopeType.TENANT, null, null, AssignmentStatus.ACTIVE);
@@ -199,6 +220,6 @@ public class DevRoleAssignmentSeeder implements CommandLineRunner {
         userRoleAssignmentRepository.save(assignment);
         log.warn("DevRoleAssignmentSeeder: seeded a dev TENANT-scope ACTIVE UserRoleAssignment for "
                 + "user {} in tenant {} -> role '{}'. Dev only.", userAccountId, tenantId,
-                SEEDED_STANDARD_ROLE_CODE);
+                roleDefinition.getRoleCode());
     }
 }

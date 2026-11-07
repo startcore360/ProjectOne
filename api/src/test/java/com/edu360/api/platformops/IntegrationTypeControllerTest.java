@@ -31,7 +31,7 @@ class IntegrationTypeControllerTest {
 
     @Mock private IntegrationTypeRepository integrationTypeRepository;
 
-    private final PlatformPermissionService platformPermissionService = new PlatformPermissionService();
+    private final PlatformPermissionService platformPermissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
     private IntegrationTypeController controller() {
         return new IntegrationTypeController(platformPermissionService, integrationTypeRepository);

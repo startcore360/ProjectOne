@@ -10,14 +10,17 @@ import { clearTokens, getAccessToken, setTokens } from "./tokenStorage";
 // thing the user ever sees.
 
 // Maps the backend's AuthUserResponse shape {id, displayName, tenantId, userType,
-// platformRole, mustChangePassword} onto the store's AuthUser - same fields, kept as its own
-// function so the one mapping lives in one place.
+// platformRole, roleCode, roleName, photoUrl, mustChangePassword} onto the store's AuthUser -
+// same fields, kept as its own function so the one mapping lives in one place.
 const toAuthUser = (data: AuthUserResponse): AuthUser => ({
   id: data.id,
   displayName: data.displayName,
   tenantId: data.tenantId,
   userType: data.userType,
   platformRole: data.platformRole,
+  roleCode: data.roleCode,
+  roleName: data.roleName,
+  photoUrl: data.photoUrl,
   mustChangePassword: data.mustChangePassword,
 });
 

@@ -4,11 +4,11 @@ import { clearUser } from "../store/slices/authSlice";
 import { authService } from "./modules/authService";
 import { clearTokens, getRefreshToken, setTokens } from "./tokenStorage";
 
-// Watches every API response for a 401 (meaning "your access token has expired or you were
-// never signed in"). First tries a silent refresh (one attempt, using the stored refresh
-// token) and retries the original request; only signs the user out and sends them to /login
-// if that refresh also fails - otherwise a short-lived access token would log people out far
-// more often than necessary.
+type RetriableRequest = {
+  _retried?: boolean;
+  url?: string;
+};
+
 export const setupAxiosInterceptors = () => {
   let refreshInFlight: Promise<string | null> | null = null;
 
@@ -40,8 +40,20 @@ export const setupAxiosInterceptors = () => {
   api.interceptors.response.use(
     (response) => response,
     async (error) => {
-      const original = error?.config;
-      if (error?.response?.status === 401 && original && !original._retried) {
+      const original = error?.config as (typeof error.config & RetriableRequest) | undefined;
+      const requestPath = (original?.url ?? "").split("?")[0].replace(/\/+$/, "");
+      const isRefreshRequest = requestPath.endsWith("/auth/refresh");
+      const isLoginRequest = requestPath.endsWith("/auth/login");
+
+      // A rejected refresh request must never trigger another refresh attempt.
+      // Login failures are credential errors, not expired-session events.
+      if (
+        error?.response?.status === 401 &&
+        original &&
+        !original._retried &&
+        !isRefreshRequest &&
+        !isLoginRequest
+      ) {
         original._retried = true;
         const newToken = await refreshAccessToken();
         if (newToken) {
@@ -50,9 +62,7 @@ export const setupAxiosInterceptors = () => {
         }
         signOutLocally();
       }
-      // MustChangePasswordFilter on the backend blocks every endpoint except /me, this one,
-      // and /logout until the password is changed - send the user straight there instead of
-      // showing whatever generic error the blocked call would otherwise surface.
+
       if (
         error?.response?.status === 403 &&
         error.response.data?.error === "PASSWORD_CHANGE_REQUIRED" &&

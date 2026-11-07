@@ -16,6 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 
+import com.edu360.api.audit.AuditLogService;
+import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.identity.IdentityLinkStatus;
@@ -46,6 +48,7 @@ class UserPasswordResetUnlockUnlockActionTest {
     @Mock private TenantRepository tenantRepository;
     @Mock private UserIdentityLinkRepository userIdentityLinkRepository;
     @Mock private KeycloakAdminClient keycloakAdminClient;
+    @Mock private AuditLogService auditLogService;
     @Mock private Authentication authentication;
     @Mock private Tenant tenant;
 
@@ -117,7 +120,7 @@ class UserPasswordResetUnlockUnlockActionTest {
         when(tenant.getKeycloakRealm()).thenReturn(REALM);
 
         UserPasswordResetUnlockController controller = new UserPasswordResetUnlockController(
-                realEvaluator, tenantRepository, userIdentityLinkRepository, keycloakAdminClient);
+                realEvaluator, tenantRepository, userIdentityLinkRepository, keycloakAdminClient, auditLogService);
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF, "Admin", false);
         when(authentication.getPrincipal()).thenReturn(principal);
 
@@ -127,5 +130,7 @@ class UserPasswordResetUnlockUnlockActionTest {
 
         verify(keycloakAdminClient).resetPassword(eq(REALM), eq("kc-target-subject"), any());
         verify(keycloakAdminClient).clearBruteForceLockout(REALM, "kc-target-subject");
+        verify(keycloakAdminClient).logoutUser(REALM, "kc-target-subject");
+        verify(auditLogService).record(eq(AuditEventType.USER_UNLOCKED), any(), eq("kc-target-subject"), any(), any());
     }
 }

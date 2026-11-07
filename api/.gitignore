@@ -4,6 +4,9 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# LocalFileStorage's dev-only local-disk location (uploaded profile photos etc.) - never committed.
+/data/uploads/
+
 ### STS ###
 .apt_generated
 .classpath

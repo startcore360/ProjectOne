@@ -3,6 +3,8 @@ package com.edu360.api.config.keycloak;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -23,6 +25,8 @@ import org.springframework.web.client.RestClient;
 @Component
 public class KeycloakAdminClient {
 
+    private static final Logger log = LoggerFactory.getLogger(KeycloakAdminClient.class);
+
     /** Keycloak's user attribute holding "must change password at next login" (see the Sprint 1
      *  identity migration brief: app.user_account has no such column in the approved V4.0
      *  schema, so this state lives entirely in Keycloak as a custom attribute, read back out as
@@ -33,7 +37,15 @@ public class KeycloakAdminClient {
     private final KeycloakProperties properties;
 
     public KeycloakAdminClient(RestClient.Builder restClientBuilder, KeycloakProperties properties) {
-        this.restClient = restClientBuilder.build();
+        RestClient client;
+        try {
+            client = restClientBuilder.build();
+        } catch (Throwable t) {
+            client = restClientBuilder
+                    .requestFactory(new org.springframework.http.client.SimpleClientHttpRequestFactory())
+                    .build();
+        }
+        this.restClient = client;
         this.properties = properties;
     }
 
@@ -43,6 +55,49 @@ public class KeycloakAdminClient {
                                  boolean mustChangePassword) {
         String adminToken = fetchMasterAdminAccessToken();
         return createUser(adminToken, realm, name, email, initialPassword, mustChangePassword);
+    }
+
+    /**
+     * Provisions a new Keycloak realm and frontend client for a tenant.
+     * Idempotent: if the realm or client already exists, completes without error.
+     */
+    public void provisionRealm(String realm, String displayName) {
+        String adminToken = fetchMasterAdminAccessToken();
+        try {
+            Map<String, Object> realmRep = Map.of(
+                    "realm", realm,
+                    "displayName", displayName,
+                    "enabled", true);
+            restClient.post()
+                    .uri(properties.getBaseUrl() + "/admin/realms")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .body(realmRep)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode() != HttpStatusCode.valueOf(409)) {
+                throw new KeycloakProvisioningException("Failed to provision realm '" + realm + "' in Keycloak: " + ex.getMessage(), ex);
+            }
+        }
+
+        try {
+            Map<String, Object> clientRep = Map.of(
+                    "clientId", properties.getFrontendClientId(),
+                    "enabled", true,
+                    "publicClient", true,
+                    "directAccessGrantsEnabled", true,
+                    "redirectUris", List.of("http://*.edu360.local:5173/*", "http://localhost:5173/*"));
+            restClient.post()
+                    .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .body(clientRep)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode() != HttpStatusCode.valueOf(409)) {
+                throw new KeycloakProvisioningException("Failed to register frontend client in realm '" + realm + "': " + ex.getMessage(), ex);
+            }
+        }
     }
 
     private String fetchMasterAdminAccessToken() {
@@ -174,6 +229,55 @@ public class KeycloakAdminClient {
                 .header("Authorization", "Bearer " + adminToken)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    /**
+     * ROLE_ASSIGN (WF-27, PQ-20): logs out all active sessions for a user so that changed
+     * role permissions take effect immediately upon next login:
+     * POST /admin/realms/{realm}/users/{userId}/logout
+     */
+    public void logoutUser(String realm, String keycloakUserId) {
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            restClient.post()
+                    .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId + "/logout")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception ex) {
+            log.warn("KeycloakAdminClient.logoutUser skipped or non-fatal for user {} in realm {}: {}",
+                    keycloakUserId, realm, ex.getMessage());
+        }
+    }
+
+    /**
+     * Sets enabled flag for a Keycloak user account (e.g. disabled upon deactivation):
+     * PUT /admin/realms/{realm}/users/{userId}
+     */
+    @SuppressWarnings("unchecked")
+    public void setUserEnabled(String realm, String keycloakUserId, boolean enabled) {
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
+            Map<String, Object> current = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+            if (current != null) {
+                Map<String, Object> updated = new java.util.HashMap<>(current);
+                updated.put("enabled", enabled);
+                restClient.put()
+                        .uri(userUrl)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .body(updated)
+                        .retrieve()
+                        .toBodilessEntity();
+            }
+        } catch (Exception ex) {
+            log.warn("KeycloakAdminClient.setUserEnabled({}) skipped or non-fatal for user {} in realm {}: {}",
+                    enabled, keycloakUserId, realm, ex.getMessage());
+        }
     }
 
     /**

@@ -1,7 +1,10 @@
 package com.edu360.api.platformops;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.springframework.stereotype.Service;
 
@@ -10,58 +13,136 @@ import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platform.PlatformRole;
 
 /**
- * WHAT: the platform-scoped sibling of {@code rbac.PermissionEvaluatorService.can(...)} for the
- * four read-mostly platform stories (PLATFORM_AUDIT_VIEW, USAGE_COUNTS_VIEW, BACKUP_STATUS_VIEW,
- * INTEGRATION_TYPES_MANAGE). It is deliberately NOT a call into
- * {@code PermissionEvaluatorService}, even though the task brief that created this package asked
- * for "the same pattern as UserCreationController" - see WHY below.
+ * Platform-scoped authorization. Fail-closed: an unrecognized action or a role without it is denied.
  *
- * WHY this is a separate, hand-rolled check instead of reusing PermissionEvaluatorService:
- * {@code PermissionEvaluatorService.can(principal, actionCode, scope, target)} takes an
- * {@code rbac.RbacPrincipal(UUID tenantId, UUID userAccountId)} and matches it against
- * app.user_role_assignment rows, which are keyed by tenant_id. A request authenticated against
- * the platform realm produces a {@link PlatformPrincipal}, which has NO tenantId field at all -
- * see that class's own javadoc on why a platform login must never carry tenant context (the
- * "Platform Admin must never become an implicit RLS bypass" rule). Fabricating or borrowing a
- * tenantId to force a PlatformPrincipal through RbacPrincipal would be exactly that anti-pattern.
- * There is also no app.user_role_assignment row for a platform user in the first place: platform
- * staff hold one of the six fixed {@link PlatformRole} values directly, never a tenant
- * role_definition. So the tenant-shaped evaluator is structurally the wrong tool here, not just
- * an inconvenient one.
- *
- * WHAT this checks against instead: sql/05_ref_data.sql already seeds the ground truth for these
- * four actions in ref.action_catalog / ref.standard_role_action - PRODUCT_OWNER and
- * PLATFORM_ADMIN are the only platform roles bound to PLATFORM_AUDIT_VIEW (ids 1684/1685),
- * USAGE_COUNTS_VIEW (1686/1687) and INTEGRATION_TYPES_MANAGE (1682/1683); BACKUP_STATUS_VIEW
- * (1689-1692) additionally lists the tenant-side IT_ADMINISTRATOR/SCHOOL_IT_SUPPORT roles for a
- * tenant's OWN backup status, which is a different, tenant-scoped story this package does not
- * build (see BackupStatusController's javadoc). ALLOWED_ROLES below mirrors exactly the
- * PRODUCT_OWNER/PLATFORM_ADMIN rows for all four actions, per this package's own brief ("Who:
- * Product Owner, Platform Admin").
- *
- * An unrecognized action code is always denied, never silently allowed - same fail-closed
- * default as PermissionEvaluatorService.can(...).
+ * ALLOWED_ROLES holds the standard rights from ref.standard_role_action, with the Product Owner
+ * additions approved in TPA-01 and TPA-04 (docs/GOVERNANCE_DECISION_LOG.md, 2026-11-07). Someone
+ * holding a custom role gets that role's actions instead. The Product Owner holds everything marked
+ * here, but while an active person holds a handed-over action, the Product Owner must step in first.
  */
 @Service
 public class PlatformPermissionService {
 
-    private static final Map<String, Set<PlatformRole>> ALLOWED_ROLES = Map.of(
-            "PLATFORM_AUDIT_VIEW", Set.of(PlatformRole.PRODUCT_OWNER, PlatformRole.PLATFORM_ADMIN),
-            "USAGE_COUNTS_VIEW", Set.of(PlatformRole.PRODUCT_OWNER, PlatformRole.PLATFORM_ADMIN),
-            "BACKUP_STATUS_VIEW", Set.of(PlatformRole.PRODUCT_OWNER, PlatformRole.PLATFORM_ADMIN),
-            "INTEGRATION_TYPES_MANAGE", Set.of(PlatformRole.PRODUCT_OWNER, PlatformRole.PLATFORM_ADMIN));
+    private static final Set<PlatformRole> OWNER = Set.of(PlatformRole.PRODUCT_OWNER);
+    private static final Set<PlatformRole> OWNER_AND_ADMIN = Set.of(PlatformRole.PRODUCT_OWNER, PlatformRole.PLATFORM_ADMIN);
+    private static final Set<PlatformRole> DPO = Set.of(PlatformRole.DATA_PROTECTION_OFFICER);
+
+    private static final Map<String, Set<PlatformRole>> ALLOWED_ROLES = Map.ofEntries(
+            Map.entry("TENANT_CREATE", OWNER_AND_ADMIN),
+            Map.entry("TENANT_ACTIVATE", OWNER), // D1 §11.1, D2 action 203
+            Map.entry("TENANT_SUSPEND_ARCHIVE", OWNER),
+            Map.entry("TENANT_SETTINGS", OWNER_AND_ADMIN),
+            Map.entry("FEATURE_TOGGLE", OWNER_AND_ADMIN),
+            Map.entry("PLAN_MANAGE", OWNER_AND_ADMIN),
+            Map.entry("INTEGRATION_TYPES_MANAGE", OWNER_AND_ADMIN),
+            Map.entry("PLATFORM_AUDIT_VIEW", OWNER_AND_ADMIN),
+            Map.entry("USAGE_COUNTS_VIEW", OWNER_AND_ADMIN),
+            Map.entry("BACKUP_STATUS_VIEW", OWNER_AND_ADMIN),
+            Map.entry("PLATFORM_USER_MANAGE", OWNER),
+            Map.entry("SECURITY_POLICY_SET", OWNER),
+            Map.entry("DISCOUNT_APPLY", OWNER), // Rule [F-4]: Billing Manager denied
+            Map.entry("INVOICE_MANAGE", Set.of(PlatformRole.BILLING_MANAGER, PlatformRole.PRODUCT_OWNER)),
+            Map.entry("OVERDUE_FLAG", Set.of(PlatformRole.BILLING_MANAGER, PlatformRole.PRODUCT_OWNER)),
+            Map.entry("SUPPORT_TICKET_MANAGE", Set.of(PlatformRole.SUPPORT_MANAGER, PlatformRole.PLATFORM_ADMIN, PlatformRole.PRODUCT_OWNER)),
+            // SUPPORT_ACCESS_GRANT and SUPPORT_TICKET_RAISE are deliberately absent: they belong to
+            // tenant users (TenantSupportController). Platform roles never approve their own access.
+            Map.entry("SUPPORT_ACCESS_USE", Set.of(PlatformRole.SUPPORT_MANAGER, PlatformRole.PRODUCT_OWNER)),
+            Map.entry("RELEASE_MANAGE", Set.of(PlatformRole.RELEASE_MANAGER, PlatformRole.PRODUCT_OWNER, PlatformRole.PLATFORM_ADMIN)),
+            Map.entry("PLATFORM_REPORTS_VIEW", Set.of(PlatformRole.BILLING_MANAGER, PlatformRole.SUPPORT_MANAGER, PlatformRole.PRODUCT_OWNER)),
+            Map.entry("TENANT_EXPORT_REQUEST", OWNER),
+            Map.entry("TENANT_DELETION_REQUEST", OWNER),
+            Map.entry("TENANT_DELETION_CONFIRM", OWNER),
+            Map.entry("RBAC_MAPPING_CHECK", Set.of(PlatformRole.DATA_PROTECTION_OFFICER, PlatformRole.PRODUCT_OWNER)),
+            // Data protection approvals stay with a separate person (TPA-04, D2 action 198).
+            Map.entry("TENANT_EXPORT_APPROVE", DPO),
+            Map.entry("TENANT_DELETION_APPROVE", DPO),
+            Map.entry("RETENTION_CHANGE_APPROVE", DPO),
+            Map.entry("APPROVAL_DELEGATE", DPO)
+    );
+
+    private final PlatformAccessLookup accessLookup;
+
+    public PlatformPermissionService(PlatformAccessLookup accessLookup) {
+        this.accessLookup = accessLookup;
+    }
 
     public void authorize(PlatformPrincipal principal, String actionCode) {
-        Set<PlatformRole> allowedRoles = ALLOWED_ROLES.get(actionCode);
-        if (allowedRoles == null) {
+        if (!ALLOWED_ROLES.containsKey(actionCode)) {
             throw new UnauthorizedException("Action " + actionCode + " is not a recognized platform action.");
         }
         if (principal == null) {
             throw new UnauthorizedException(actionCode + " requires an authenticated platform principal.");
         }
-        if (!allowedRoles.contains(principal.platformRole())) {
+        if (!holds(principal, actionCode)) {
             throw new UnauthorizedException(
                     "Platform role " + principal.platformRole() + " does not hold action " + actionCode + ".");
         }
+        if (requiresStepIn(principal, actionCode)) {
+            throw new UnauthorizedException(
+                    "STEP_IN_REQUIRED: " + actionCode + " has been handed over. Step in on the Platform roles page, with a reason, to act on it.");
+        }
+    }
+
+    /** Passes if the principal may perform any one of the actions, as D5 lists for shared reads. */
+    public void authorizeAny(PlatformPrincipal principal, Collection<String> actionCodes) {
+        if (principal == null) {
+            throw new UnauthorizedException("This action requires an authenticated platform principal.");
+        }
+        boolean allowed = actionCodes.stream().anyMatch(action -> ALLOWED_ROLES.containsKey(action)
+                && holds(principal, action)
+                && !requiresStepIn(principal, action));
+        if (!allowed) {
+            throw new UnauthorizedException(
+                    "Platform role " + principal.platformRole() + " holds none of " + actionCodes + ".");
+        }
+    }
+
+    public boolean holds(PlatformPrincipal principal, String actionCode) {
+        return accessLookup.customRoleActions(principal.platformUserId())
+                .map(actions -> actions.contains(actionCode))
+                .orElseGet(() -> ALLOWED_ROLES.getOrDefault(actionCode, Set.of()).contains(principal.platformRole()));
+    }
+
+    /** Actions this person holds, whether or not they must step in first. */
+    public Set<String> heldActions(PlatformPrincipal principal) {
+        Set<String> held = new TreeSet<>();
+        for (String action : ALLOWED_ROLES.keySet()) {
+            if (holds(principal, action)) {
+                held.add(action);
+            }
+        }
+        return held;
+    }
+
+    /** Held, but handed over and not stepped in on. Only ever non-empty for a Product Owner. */
+    public List<String> actionsNeedingStepIn(PlatformPrincipal principal) {
+        if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
+            return List.of();
+        }
+        return accessLookup.handedOverActions().stream()
+                .filter(action -> holds(principal, action))
+                .filter(action -> !accessLookup.hasActiveStepIn(principal.platformUserId(), action))
+                .sorted()
+                .toList();
+    }
+
+    public static Set<String> knownActions() {
+        return ALLOWED_ROLES.keySet();
+    }
+
+    public static Set<String> standardActions(PlatformRole role) {
+        Set<String> actions = new TreeSet<>();
+        ALLOWED_ROLES.forEach((action, roles) -> {
+            if (roles.contains(role)) {
+                actions.add(action);
+            }
+        });
+        return actions;
+    }
+
+    private boolean requiresStepIn(PlatformPrincipal principal, String actionCode) {
+        return principal.platformRole() == PlatformRole.PRODUCT_OWNER
+                && accessLookup.isHandedOver(actionCode)
+                && !accessLookup.hasActiveStepIn(principal.platformUserId(), actionCode);
     }
 }

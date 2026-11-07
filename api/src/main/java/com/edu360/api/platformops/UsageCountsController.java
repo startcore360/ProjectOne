@@ -40,7 +40,7 @@ import lombok.RequiredArgsConstructor;
  * number.
  */
 @RestController
-@RequestMapping("/api/platform/usage-counts")
+@RequestMapping({"/v1/platform/usage-counts", "/api/platform/usage-counts"})
 @RequiredArgsConstructor
 @Tag(name = "Platform Ops", description = "Platform Admin / Product Owner read-mostly operations")
 public class UsageCountsController {

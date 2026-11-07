@@ -1,23 +1,19 @@
 import { Suspense } from "react";
-import { ThemeToggle } from "./components/ui";
 import AppRoutes from "./routes/Routes";
 
-// The top of the whole app. It shows all the pages (via AppRoutes) and always
-// shows the light/dark theme button on every screen, so it never has to be
-// added page by page.
+// The top of the whole app. Each layout (AuthLayout for signed-out pages,
+// AppLayout for the signed-in shell) mounts its own ThemeToggle, since the
+// right placement differs between them - no toggle lives here directly.
 export default function App() {
   return (
-    <>
-      <Suspense
-        fallback={
-          <div className="flex min-h-screen items-center justify-center" role="status">
-            Loading...
-          </div>
-        }
-      >
-        <AppRoutes />
-      </Suspense>
-      <ThemeToggle />
-    </>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center" role="status">
+          Loading...
+        </div>
+      }
+    >
+      <AppRoutes />
+    </Suspense>
   );
 }

@@ -76,6 +76,17 @@ if ($refDataApplied.Trim() -eq "0") {
     Write-Host "EDU 360 reference data already present in edu360db ($($refDataApplied.Trim()) standard roles)."
 }
 
+# V4.1 platform roles: added after the base bundle, so an existing dev database needs them too.
+$platformRolesApplied = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('platform.platform_role') IS NOT NULL"
+if ($platformRolesApplied.Trim() -ne "t") {
+    Write-Host "Applying V4.1 platform roles to edu360db..."
+    Run-Sql "12_v41_platform_roles.sql"
+}
+Run-Sql "12d_v41_platform_role_templates.sql"
+Run-Sql "14_v41_audit_foundation.sql"
+Run-Sql "15_v41_user_active_role.sql"
+Run-Sql "16_v41_tenant_top_post_authority.sql"
+
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "ALTER ROLE edu_app WITH PASSWORD '$password'"
 Write-Host "edu_app role credential set."
 
@@ -91,14 +102,25 @@ Write-Host "edu_app role credential set."
 # USAGE on the schema is required separately from SELECT on the tables - Postgres checks both;
 # granting only table-level SELECT still fails with "permission denied for schema platform".
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT USAGE ON SCHEMA platform TO edu_app"
-docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT ON platform.tenant, platform.platform_user TO edu_app"
-Write-Host "Granted edu_app read-only access to platform.tenant and platform.platform_user."
+docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT ON platform.tenant, platform.platform_user, platform.audit_outbox TO edu_app"
+Write-Host "Granted edu_app read-only access to platform.tenant, platform.platform_user, and platform.audit_outbox."
 
 # edu_platform (created by sql/01_schema.sql, already granted SELECT/INSERT/UPDATE on
 # platform.platform_user and platform.plan by sql/03_bindings.sql) is the role DevAdminSeeder
 # uses for its one dev-only INSERT - never edu_app, which the schema deliberately keeps
 # read-only (or with zero access at all) on every platform.* table. Setting its password here,
 # not granting it anything new: every grant it needs already exists in the approved bundle.
+# V4.1 platform roles: added after the base bundle, so an existing dev database needs them too.
+$platformRolesApplied = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('platform.platform_role') IS NOT NULL"
+if ($platformRolesApplied.Trim() -ne "t") {
+    Write-Host "Applying V4.1 platform roles to edu360db..."
+    Run-Sql "12_v41_platform_roles.sql"
+}
+Run-Sql "12d_v41_platform_role_templates.sql"
+Run-Sql "14_v41_audit_foundation.sql"
+Run-Sql "15_v41_user_active_role.sql"
+Run-Sql "16_v41_tenant_top_post_authority.sql"
+
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "ALTER ROLE edu_platform WITH LOGIN PASSWORD '$platformPassword'"
 Write-Host "edu_platform role credential set."
 

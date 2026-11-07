@@ -22,6 +22,13 @@ export type AuthUserResponse = {
   tenantId: string | null;
   userType: UserType | null;
   platformRole: PlatformRole | null;
+  // The tenant user's resolved RBAC role (app.role_definition), null for platform principals
+  // and for a tenant user with no active role assignment yet - see AuthService.resolveRole.
+  roleCode: string | null;
+  roleName: string | null;
+  // Same meaning as ProfileResponse.photoUrl (see profileService.ts) - null for platform
+  // principals and for a tenant user with no active photo yet.
+  photoUrl: string | null;
   mustChangePassword: boolean;
 };
 export type AuthTokenResponse = {

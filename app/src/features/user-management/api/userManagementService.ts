@@ -60,6 +60,97 @@ export type UpdateUserFields = {
   mobile?: string;
 };
 
+export type CreateUserPayload = {
+  displayName: string;
+  userType: UserType;
+  email: string;
+  mobile: string;
+  nationalIdLast4?: string;
+  initialRoleCode?: string;
+  scopeType: ScopeType;
+  institutionId?: string;
+  departmentId?: string;
+};
+
+export type CreateUserResponse = {
+  userAccountId: string;
+  displayName: string;
+  email: string;
+  mobile: string;
+  userType: UserType;
+  status: UserAccountStatus;
+  temporaryPassword?: string;
+  initialRoleCode?: string;
+  message: string;
+};
+
+export type ImportJobStatus =
+  | "UPLOADED"
+  | "VALIDATING"
+  | "VALIDATED"
+  | "IMPORTING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
+
+export type ImportJobResponse = {
+  importJobId: string;
+  status: ImportJobStatus;
+  importKind: string;
+  institutionId?: string;
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  importMode?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  createdAt: string;
+};
+
+export type ImportRowErrorResponse = {
+  id: string;
+  rowNumber: number;
+  fieldName?: string;
+  errorCode: string;
+  errorMessage: string;
+  rowData: string;
+};
+
+export type ImportTemplateResponse = {
+  importKind: string;
+  filename: string;
+  headers: string[];
+  sampleRows: string[][];
+  csvTemplate: string;
+};
+
+// Story #23: TENANT_TOP_USERS_CREATE (Action #268)
+export type TopUserRoleCode =
+  | "MANAGEMENT"
+  | "DATA_PROTECTION_CONTACT"
+  | "VICE_CHANCELLOR"
+  | "GOVERNING_BODY_APPROVER";
+
+export type TopUserCreatePayload = {
+  roleCode: TopUserRoleCode;
+  displayName: string;
+  email: string;
+  mobile?: string;
+};
+
+export type TopUserResponse = {
+  userAccountId: string;
+  displayName: string;
+  email: string;
+  mobile?: string;
+  roleCode: string;
+  userType: UserType;
+  status: UserAccountStatus;
+  temporaryPassword: string;
+  twoStepLoginRequired: boolean;
+  message: string;
+};
+
 function scopeParams(scope: ActingScope) {
   return {
     scopeType: scope.scopeType,
@@ -97,10 +188,51 @@ export const userManagementService = {
   unlockUser: (tenantId: string, userId: string, institutionId: string) =>
     api.post<ActionResponse>(`/tenants/${tenantId}/users/${userId}/unlock`, { institutionId }),
 
-  // POST /api/tenants/{tenantId}/users (USER_CREATE) - deliberately NOT a real user-creation
-  // call. UserCreationController.java is an authorization-check / proof-of-integration endpoint
-  // only: "no user was created" (its own javadoc). Named checkCreateUserAuthorization here, not
-  // createUser, so nothing in this file implies it inserts a row.
+  // POST /api/tenants/{tenantId}/users (USER_CREATE) - real user creation
+  // with Keycloak provisioning, user account creation, DPDP Act 2023 compliance, and temporary credentials.
+  createUser: (tenantId: string, payload: CreateUserPayload) =>
+    api.post<CreateUserResponse>(`/tenants/${tenantId}/users`, payload),
+
+  // POST /api/tenants/{tenantId}/users/check (USER_CREATE authorization-check)
   checkCreateUserAuthorization: (tenantId: string, scope: ActingScope) =>
-    api.post<ActionResponse>(`/tenants/${tenantId}/users`, { ...scopeParams(scope) }),
+    api.post<ActionResponse>(`/tenants/${tenantId}/users/check`, { ...scopeParams(scope) }),
+
+  // GET /api/tenants/{tenantId}/import-templates/{kind} (USER_BULK_UPLOAD / Rule MD-26)
+  getImportTemplate: (tenantId: string, kind: string = "USERS") =>
+    api.get<ImportTemplateResponse>(`/tenants/${tenantId}/import-templates/${kind}`),
+
+  // POST /api/tenants/{tenantId}/user-imports (USER_BULK_UPLOAD / Rule MD-27 pre-validation)
+  createUserImport: (
+    tenantId: string,
+    csvContent: string,
+    institutionId?: string,
+    importKind: string = "USERS"
+  ) =>
+    api.post<ImportJobResponse>(`/tenants/${tenantId}/user-imports`, {
+      csvContent,
+      institutionId,
+      importKind,
+    }),
+
+  // GET /api/tenants/{tenantId}/imports/{importJobId}
+  getImportJob: (tenantId: string, importJobId: string) =>
+    api.get<ImportJobResponse>(`/tenants/${tenantId}/imports/${importJobId}`),
+
+  // GET /api/tenants/{tenantId}/imports/{importJobId}/errors (Rule MD-27 bad rows breakdown)
+  listImportErrors: (tenantId: string, importJobId: string) =>
+    api.get<ImportRowErrorResponse[]>(`/tenants/${tenantId}/imports/${importJobId}/errors`),
+
+  // POST /api/tenants/{tenantId}/imports/{importJobId}/start (execute import under chosen mode: CLEAN_ONLY | GOOD_ROWS_ONLY)
+  startImport: (
+    tenantId: string,
+    importJobId: string,
+    importMode: "CLEAN_ONLY" | "GOOD_ROWS_ONLY"
+  ) =>
+    api.post<ImportJobResponse>(`/tenants/${tenantId}/imports/${importJobId}/start`, {
+      importMode,
+    }),
+
+  // POST /api/tenants/{tenantId}/top-users (TENANT_TOP_USERS_CREATE / Action #268)
+  createTopUser: (tenantId: string, payload: TopUserCreatePayload) =>
+    api.post<TopUserResponse>(`/tenants/${tenantId}/top-users`, payload),
 };

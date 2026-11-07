@@ -1,12 +1,22 @@
 package com.edu360.api.identity;
 
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.edu360.api.exception.InvalidCredentialsException;
+import com.edu360.api.rbac.AssignmentStatus;
+import com.edu360.api.rbac.RoleDefinition;
+import com.edu360.api.rbac.RoleDefinitionId;
+import com.edu360.api.rbac.RoleDefinitionRepository;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.rbac.UserRoleAssignment;
+import com.edu360.api.rbac.UserRoleAssignmentRepository;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantContext;
-
-import lombok.RequiredArgsConstructor;
 
 /**
  * WHAT: the one place that turns "this subject, in this realm, belongs to this tenant" into a
@@ -15,29 +25,35 @@ import lombok.RequiredArgsConstructor;
  * AuthService.login (after Keycloak's own password check succeeds), so the two call sites can
  * never drift into checking different things.
  *
- * SECURITY: callers must only invoke this with a tenant and subject that already came from a
- * trusted source - a cryptographically verified JWT, or Keycloak's own just-issued token after
- * a successful password grant. This class sets TenantContext itself (required before the
- * RLS-protected app.user_identity_link/app.user_account queries below can see anything at all),
- * so by the time it runs, the caller must already be certain the tenant is the right one.
+ * Scopes: Reads user's active role assignment(s) and computes real institution scope:
+ * - TENANT scope: institutionScope = "ALL" (per D4 §2.2 reserved for tenant-wide roles)
+ * - INSTITUTION / DEPARTMENT scope: institutionScope = "LIST", institutionIds = {institutionId}
+ * - No active assignment: institutionScope = "NONE", institutionIds = {}
  */
 @Component
-@RequiredArgsConstructor
 public class TenantUserLookup {
 
     private final UserIdentityLinkRepository userIdentityLinkRepository;
     private final UserAccountRepository userAccountRepository;
+    private final UserRoleAssignmentRepository userRoleAssignmentRepository;
+    private final RoleDefinitionRepository roleDefinitionRepository;
+
+    public TenantUserLookup(
+            UserIdentityLinkRepository userIdentityLinkRepository,
+            UserAccountRepository userAccountRepository,
+            @Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
+            @Autowired(required = false) RoleDefinitionRepository roleDefinitionRepository) {
+        this.userIdentityLinkRepository = userIdentityLinkRepository;
+        this.userAccountRepository = userAccountRepository;
+        this.userRoleAssignmentRepository = userRoleAssignmentRepository;
+        this.roleDefinitionRepository = roleDefinitionRepository;
+    }
 
     public record ResolvedUser(UserAccount account, UserIdentityLink link) {
     }
 
     public ResolvedUser resolveActiveUser(Tenant tenant, String realm, String subject) {
-        // No per-user institution-assignment data exists anywhere in the current identity model
-        // (UserAccount/UserIdentityLink carry no institution_id) - Foundation Item 7 is what
-        // will eventually compute that. Until then this 3-arg overload defaults
-        // TenantContext's institutionIds to the empty, fail-closed set (see TenantContext's
-        // class comment, INSTITUTION SCOPE section) rather than granting blanket institution
-        // access as a shortcut.
+        // Initial fail-closed tenant context required before querying tenant data
         TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef());
 
         UserIdentityLink link = userIdentityLinkRepository
@@ -49,6 +65,46 @@ public class TenantUserLookup {
                 .findById(new UserAccountId(tenant.getTenantId(), link.getUserAccountId()))
                 .filter(a -> a.getStatus() == UserAccountStatus.ACTIVE)
                 .orElseThrow(() -> new InvalidCredentialsException("Account is not active"));
+
+        String institutionScope = "NONE";
+        Set<UUID> institutionIds = Set.of();
+        String activeRoleCode = null;
+        ScopeType activeScopeType = null;
+
+        if (userRoleAssignmentRepository != null) {
+            List<UserRoleAssignment> assignments = userRoleAssignmentRepository
+                    .findByIdTenantIdAndUserAccountIdAndStatus(
+                            tenant.getTenantId(), account.getId().getUserAccountId(), AssignmentStatus.ACTIVE);
+
+            if (!assignments.isEmpty()) {
+                // Prioritize TENANT scope if user has multiple active assignments
+                UserRoleAssignment primary = assignments.stream()
+                        .filter(a -> a.getScopeType() == ScopeType.TENANT)
+                        .findFirst()
+                        .orElse(assignments.get(0));
+
+                activeScopeType = primary.getScopeType();
+                if (activeScopeType == ScopeType.TENANT) {
+                    institutionScope = "ALL";
+                } else {
+                    institutionScope = "LIST";
+                    if (primary.getInstitutionId() != null) {
+                        institutionIds = Set.of(primary.getInstitutionId());
+                    }
+                }
+
+                if (roleDefinitionRepository != null) {
+                    activeRoleCode = roleDefinitionRepository
+                            .findById(new RoleDefinitionId(tenant.getTenantId(), primary.getRoleDefinitionId()))
+                            .map(RoleDefinition::getRoleCode)
+                            .orElse(null);
+                }
+            }
+        }
+
+        // Set the full authenticated tenant context with real institution scope and role
+        TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef(),
+                institutionScope, institutionIds, activeRoleCode, activeScopeType);
 
         return new ResolvedUser(account, link);
     }

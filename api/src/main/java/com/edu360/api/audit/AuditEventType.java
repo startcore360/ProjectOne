@@ -1,11 +1,8 @@
 package com.edu360.api.audit;
 
 /**
- * The kinds of security events we keep a record of: a login attempt (success or failure),
- * logging out, or a new account being created. Keycloak itself verifies the password - this
- * app only records the outcome, since AuthController.login forwards every attempt through
- * KeycloakAuthClient rather than checking credentials itself. See AuditLog for where these
- * get stored.
+ * The kinds of security and operational events we keep a record of.
+ * Aligns with OD-09 append-only audit requirements.
  */
 public enum AuditEventType {
     LOGIN_SUCCESS,
@@ -18,5 +15,56 @@ public enum AuditEventType {
     PROFILE_UPDATED,
     /** AUTH_DEVICES_MANAGE (selfservice/SessionService): the authenticated principal revoked
      *  the session it was currently using. */
-    SESSION_REVOKED
+    SESSION_REVOKED,
+    INSTITUTION_CREATED_DRAFT,
+    INSTITUTION_ACTIVATED,
+    INSTITUTION_BLOCK_REQUESTED,
+    INSTITUTION_BLOCKED,
+    INSTITUTION_BLOCK_REJECTED,
+    ROLE_ASSIGNED,
+    ROLE_ASSIGNMENT_ENDED,
+    ROLE_SWITCHED,
+    USER_BULK_UPLOADED,
+    TOP_USER_CREATED,
+    USER_DEACTIVATED,
+    USER_PASSWORD_RESET,
+    USER_UNLOCKED,
+    DEPARTMENT_CREATED,
+    PROGRAM_CREATED,
+    PROGRAM_YEAR_CREATED,
+    SEMESTER_CREATED,
+    SCHOOL_CLASS_CREATED,
+    SECTION_CREATED,
+    SUBJECT_CREATED,
+    COURSE_OFFERING_CREATED,
+    ACADEMIC_SESSION_CREATED,
+    ACADEMIC_SESSION_UPDATED,
+    MASTER_CALENDAR_EVENT_CREATED,
+    TENANT_ACTIVATED,
+    PRINCIPAL_LEAVE_APPROVER_SET,
+    VC_LEAVE_APPROVER_SET,
+    PLAN_CREATED,
+    PLAN_UPDATED,
+    TENANT_SUSPENDED,
+    TENANT_ARCHIVED,
+    TENANT_REACTIVATED,
+    TENANT_SETTINGS_UPDATED,
+    CUSTOM_ROLE_CREATED,
+    CUSTOM_ROLE_UPDATED,
+    CUSTOM_ROLE_RETIRED,
+    APPROVAL_DELEGATED,
+    APPROVAL_DELEGATION_CANCELLED,
+    APPROVAL_BULK_DECIDED,
+    TERM_LOCKED,
+    TERM_UNLOCKED,
+    GUARDIAN_LINKED,
+    GUARDIAN_CHANGE_REQUESTED,
+    GUARDIAN_CHANGE_APPROVED,
+    CREATE,
+    EDIT,
+    DELETE,
+    APPROVAL,
+    EXPORT,
+    DENIED_ATTEMPT,
+    SENSITIVE_VIEW
 }

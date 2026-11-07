@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Button, Kicker } from "../../../design-system/components";
-import { Badge, Spinner } from "../../../components/ui";
-import { PageHeader } from "../../../components/layout/PageHeader";
-import { EmptyState } from "../../../components/feedback/EmptyState";
-import { ErrorState } from "../../../components/feedback/ErrorState";
+import {
+  Button,
+  Spinner,
+  PageHeader,
+  EmptyState,
+  ErrorState,
+} from "../../../design-system/components";
 import { clearTokens } from "../../../services/tokenStorage";
 import { useAppDispatch } from "../../../store/hooks";
 import { clearUser } from "../../../store/slices/authSlice";
 import { sessionsService, type SessionResponse } from "../api/sessionsService";
+import { CurrentSessionCard } from "../components";
 import "./SessionsPage.css";
 
 // AUTH_DEVICES_MANAGE (Sign-in epic, Scope: Self): "see own active devices and log them out."
@@ -119,51 +122,13 @@ export default function SessionsPage() {
       )}
 
       {!loading && !loadError && current && (
-        <section className="sessions-card" aria-labelledby="sessions-title">
-          <Kicker>CURRENT SESSION</Kicker>
-          <h2 id="sessions-title" className="sessions-card__title">
-            This device
-          </h2>
-
-          <dl className="sessions-readonly">
-            <div>
-              <dt>Status</dt>
-              <dd>
-                <Badge tone="success">Active</Badge>
-              </dd>
-            </div>
-            <div>
-              <dt>Signed in</dt>
-              <dd>{formatInstant(current.issuedAt)}</dd>
-            </div>
-            <div>
-              <dt>Expires</dt>
-              <dd>{formatInstant(current.expiresAt)}</dd>
-            </div>
-          </dl>
-
-          {revokeError && (
-            <div className="sessions-message sessions-message--error" role="alert">
-              {revokeError}
-            </div>
-          )}
-
-          {!current.revocable && (
-            <p className="sessions-notice">
-              This session cannot be revoked from here (no session id is present on your current
-              sign-in token).
-            </p>
-          )}
-
-          <Button
-            variant="danger"
-            busy={revoking}
-            disabled={!current.revocable}
-            onClick={() => void revokeAndSignOut()}
-          >
-            {revoking ? "Signing out…" : "Sign out this session"}
-          </Button>
-        </section>
+        <CurrentSessionCard
+          current={current}
+          revoking={revoking}
+          revokeError={revokeError}
+          onRevoke={() => void revokeAndSignOut()}
+          formatInstant={formatInstant}
+        />
       )}
     </div>
   );

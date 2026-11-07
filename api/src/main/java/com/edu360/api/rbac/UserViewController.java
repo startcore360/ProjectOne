@@ -1,8 +1,11 @@
 package com.edu360.api.rbac;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,45 +24,38 @@ import com.edu360.api.rbac.dto.UserSummaryResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 
 /**
- * WHAT: "See user accounts" (USER_VIEW) - GET /api/tenants/{tenantId}/users (list) and
- * GET /api/tenants/{tenantId}/users/{userId} (detail). Per the spec (sql/05_ref_data.sql
- * ref.standard_role_action rows 416-434) this is granted "Own scope" to University/College/
- * School Admin, Vice Principal (College/School), Registrar, Management, Vice Chancellor,
- * Finance Director, Controller of Examinations, University Accountant, University HR Manager,
- * Principal (College/School), College/School Accountant, System Operator, IT Administrator and
- * School IT Support - i.e. "any scope shape", unlike USER_DEACTIVATE/USER_PASSWORD_RESET_UNLOCK
- * which are "Own institution" only. The caller states which scope it is asking in (same shape as
- * UserCreationController's CreateUserCheckRequest), since app.user_role_assignment has no
- * column recording "the one scope a user operates in" - a principal can hold several differently
- * scoped assignments (Addendum rules 8/9), so the evaluator always needs to be told exactly
- * which one this request means.
- *
- * WHY list filters UserAccountRepository.findAll() by tenantId in Java rather than a new derived
- * query method: UserAccountRepository (identity/, read-only reference for this task) exposes no
- * tenant-scoped finder today. Postgres RLS (app.tenant_id session GUC, already wired per recent
- * commit history) is the primary isolation layer; this filter is the same "defence in depth, not
- * instead of" posture UserAccount's own class javadoc describes for tenant_id being a real
- * column at all. A dedicated, paginated findByIdTenantId(...) method is a natural follow-up once
- * identity/ is back in scope for this task.
- *
- * WHY this does NOT filter the returned rows by "the target user's institution" even though the
- * requested scope might be INSTITUTION: app.user_account has no institution_id column in the
- * current schema (it is purely a login identity - see UserAccount's own javadoc), so there is no
- * column here to filter the TARGET population by. Only the CALLER's own grant is scope-checked
- * via the evaluator; which rows "belong" to an institution is a gap flagged here rather than
- * silently invented.
+ * Controller for USER_VIEW - listing and inspecting user accounts in scope.
+ * Enforces T01 boundary so institution-scoped callers cannot see users outside their institution.
  */
 @RestController
 @RequestMapping("/api/tenants/{tenantId}/users")
-@RequiredArgsConstructor
 @Tag(name = "Users", description = "USER_VIEW - see user accounts")
 public class UserViewController {
 
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final UserAccountRepository userAccountRepository;
+    private final UserRoleAssignmentRepository userRoleAssignmentRepository;
+    private final UserGovernanceGuard userGovernanceGuard;
+
+    @Autowired
+    public UserViewController(
+            PermissionEvaluatorService permissionEvaluatorService,
+            UserAccountRepository userAccountRepository,
+            @Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
+            @Autowired(required = false) UserGovernanceGuard userGovernanceGuard) {
+        this.permissionEvaluatorService = permissionEvaluatorService;
+        this.userAccountRepository = userAccountRepository;
+        this.userRoleAssignmentRepository = userRoleAssignmentRepository;
+        this.userGovernanceGuard = userGovernanceGuard;
+    }
+
+    public UserViewController(
+            PermissionEvaluatorService permissionEvaluatorService,
+            UserAccountRepository userAccountRepository) {
+        this(permissionEvaluatorService, userAccountRepository, null, null);
+    }
 
     @GetMapping
     @Operation(summary = "List user accounts in a given scope (USER_VIEW)")
@@ -77,10 +73,25 @@ public class UserViewController {
                 new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
                 "USER_VIEW", scope, RbacTarget.NONE);
 
-        List<UserSummaryResponse> users = userAccountRepository.findAll().stream()
-                .filter(account -> tenantId.equals(account.getId().getTenantId()))
-                .map(this::toSummary)
-                .toList();
+        List<UserSummaryResponse> users;
+        if (scopeType != ScopeType.TENANT && institutionId != null && userRoleAssignmentRepository != null) {
+            Set<UUID> institutionUserIds = userRoleAssignmentRepository
+                    .findByIdTenantIdAndInstitutionIdAndStatus(tenantId, institutionId, AssignmentStatus.ACTIVE)
+                    .stream()
+                    .map(UserRoleAssignment::getUserAccountId)
+                    .collect(Collectors.toSet());
+
+            users = userAccountRepository.findAll().stream()
+                    .filter(account -> tenantId.equals(account.getId().getTenantId())
+                            && institutionUserIds.contains(account.getId().getUserAccountId()))
+                    .map(this::toSummary)
+                    .toList();
+        } else {
+            users = userAccountRepository.findAll().stream()
+                    .filter(account -> tenantId.equals(account.getId().getTenantId()))
+                    .map(this::toSummary)
+                    .toList();
+        }
 
         return ResponseEntity.ok(new UserListResponse(users));
     }
@@ -101,6 +112,10 @@ public class UserViewController {
         permissionEvaluatorService.authorize(
                 new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
                 "USER_VIEW", scope, RbacTarget.of(userId));
+
+        if (scopeType != ScopeType.TENANT && institutionId != null && userGovernanceGuard != null) {
+            userGovernanceGuard.checkTargetUserAuthority(tenantId, principal.userAccountId(), userId, institutionId);
+        }
 
         UserAccount account = userAccountRepository.findById(new UserAccountId(tenantId, userId))
                 .orElseThrow(() -> new ResourceNotFoundException("User " + userId + " was not found"));

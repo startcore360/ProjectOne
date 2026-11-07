@@ -24,6 +24,9 @@ describe("authSlice", () => {
       tenantId: "tenant-abc",
       userType: "STAFF",
       platformRole: null,
+      roleCode: null,
+      roleName: null,
+      photoUrl: null,
       mustChangePassword: false,
     };
 
@@ -41,6 +44,9 @@ describe("authSlice", () => {
       tenantId: "tenant-abc",
       userType: "STUDENT",
       platformRole: null,
+      roleCode: null,
+      roleName: null,
+      photoUrl: null,
       mustChangePassword: false,
     };
     const authenticated = authReducer(undefined, setUser(user));
@@ -59,6 +65,9 @@ describe("authSlice", () => {
       tenantId: null,
       userType: null,
       platformRole: "PLATFORM_ADMIN",
+      roleCode: null,
+      roleName: null,
+      photoUrl: null,
       mustChangePassword: false,
     };
     const authenticated = authReducer(undefined, setUser(user));

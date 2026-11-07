@@ -1,12 +1,23 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import axios from "axios";
 import "./ProfilePage.css";
-import { Button, Kicker, TextField } from "../../../design-system/components";
-import { Badge, Spinner } from "../../../components/ui";
-import { PageHeader } from "../../../components/layout/PageHeader";
-import { ErrorState } from "../../../components/feedback/ErrorState";
+import {
+  Button,
+  Kicker,
+  TextField,
+  Badge,
+  Spinner,
+  PageHeader,
+  ErrorState,
+} from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { profileService, type ProfileResponse } from "../api/profileService";
+import { ProfileAvatarSection } from "../components";
+
+// Same JPEG/PNG + 2 MB rule the backend enforces (ProfileService.uploadTenantPhoto) - checked
+// here too so a bad file never leaves the browser instead of round-tripping for a 400.
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png"];
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 // PROFILE_EDIT_OWN (Sign-in epic, Scope: Self). View and edit your own display name, and
 // (tenant accounts only) your own mobile number. Role/platformRole/email are shown read-only -
@@ -47,6 +58,56 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Photo state is deliberately separate from the display-name/mobile form's own
+  // loading/success/error state above - an upload failure must never be reported as (or
+  // confused with) a "profile save" failure, and vice versa.
+  const [photoObjectUrl, setPhotoObjectUrl] = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoSuccess, setPhotoSuccess] = useState(false);
+  // Tracks the currently-live blob: URL so it can be revoked the instant it's replaced, not
+  // just on unmount - without this, uploading a new photo twice in one visit would leak the
+  // first blob: URL for the lifetime of the tab.
+  const objectUrlRef = useRef<string | null>(null);
+
+  const setDisplayedPhoto = (url: string | null) => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+    objectUrlRef.current = url;
+    setPhotoObjectUrl(url);
+  };
+
+  useEffect(() => {
+    // Revoke whatever blob: URL is still live when this page unmounts.
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+    };
+  }, []);
+
+  // this app authenticates with a bearer header (services/axios.ts), not cookies, so a plain
+  // <img src="/me/profile/photo"> can never carry that header - the bytes have to come through
+  // axios (which does attach it) and get turned into an object URL for the <img> to point at.
+  // Only called when the profile actually has a photo, to avoid a wasted 404 for everyone else.
+  const loadPhoto = async (hasPhoto: boolean) => {
+    if (!hasPhoto) {
+      setDisplayedPhoto(null);
+      return;
+    }
+    setPhotoLoading(true);
+    try {
+      const { data } = await profileService.getPhoto();
+      setDisplayedPhoto(URL.createObjectURL(data));
+    } catch {
+      setDisplayedPhoto(null);
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
   // No synchronous setState call sits directly in this function's body - only inside the
   // promise callbacks below - so it is safe to call from the mount effect as-is; loading/error
   // start correctly set via useState's initial values above, and "Retry" resets them itself
@@ -59,6 +120,7 @@ export default function ProfilePage() {
         setDisplayName(data.displayName);
         setMobile(data.mobile ?? "");
         setLoadError(null);
+        void loadPhoto(!!data.photoUrl);
       })
       .catch((err) => {
         setLoadError(
@@ -76,6 +138,14 @@ export default function ProfilePage() {
     setLoading(true);
     setLoadError(null);
     fetchProfile();
+  };
+
+  // Clears the stale "saved"/error banner the moment the user starts editing again - it
+  // previously only cleared on the next submit, so after a successful save the "updated"
+  // banner stayed visible next to a field the user had since changed but not yet saved again.
+  const clearFeedback = () => {
+    if (success) setSuccess(false);
+    if (saveError) setSaveError(null);
   };
 
   const validate = (): FieldErrors => {
@@ -122,6 +192,37 @@ export default function ProfilePage() {
     }
   };
 
+  const onPhotoSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset the input so selecting the exact same file again still fires a change event.
+    e.target.value = "";
+    if (!file) {
+      return;
+    }
+    setPhotoSuccess(false);
+    setPhotoError(null);
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      setPhotoError("Photo must be a JPEG or PNG image.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError("Photo must be 2 MB or smaller.");
+      return;
+    }
+
+    setPhotoUploading(true);
+    try {
+      const { data } = await profileService.uploadPhoto(file);
+      setProfile(data);
+      await loadPhoto(!!data.photoUrl);
+      setPhotoSuccess(true);
+    } catch (err) {
+      setPhotoError(backendMessage(err) ?? "Could not upload your photo. Please try again.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
   return (
     <div className="profile-page">
       <PageHeader title="My profile" description="View and update your own display name and contact details." />
@@ -149,6 +250,17 @@ export default function ProfilePage() {
           <h2 id="profile-title" className="profile-card__title">
             Account details
           </h2>
+
+          <ProfileAvatarSection
+            displayName={profile.displayName}
+            isPlatform={isPlatform}
+            photoLoading={photoLoading}
+            photoObjectUrl={photoObjectUrl}
+            photoUploading={photoUploading}
+            photoSuccess={photoSuccess}
+            photoError={photoError}
+            onPhotoSelected={(e) => void onPhotoSelected(e)}
+          />
 
           <dl className="profile-readonly">
             <div>
@@ -180,7 +292,7 @@ export default function ProfilePage() {
               label="Display name"
               required
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => { setDisplayName(e.target.value); clearFeedback(); }}
               aria-invalid={!!fieldErrors.displayName}
               aria-describedby={fieldErrors.displayName ? "profile-display-name-error" : undefined}
             />
@@ -197,7 +309,7 @@ export default function ProfilePage() {
                   label="Mobile"
                   placeholder="+15551234567"
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  onChange={(e) => { setMobile(e.target.value); clearFeedback(); }}
                   aria-invalid={!!fieldErrors.mobile}
                   aria-describedby={fieldErrors.mobile ? "profile-mobile-error" : undefined}
                 />
