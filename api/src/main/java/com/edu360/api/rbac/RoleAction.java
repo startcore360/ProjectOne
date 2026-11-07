@@ -40,8 +40,9 @@ public class RoleAction {
     @Column(name = "action_code", nullable = false)
     private String actionCode;
 
-    @Column(name = "access_mode")
-    private String accessMode;
+    @Builder.Default
+    @Column(name = "access_mode", nullable = false)
+    private String accessMode = "SHARED";
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;

@@ -18,6 +18,7 @@ import {
 } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
 import { CreateTenantModal, type CreateTenantDraft } from "./CreateTenantModal";
+import { TenantCredentialsNotice, type CreatedTenantCredentials } from "./TenantCredentialsNotice";
 import { ActivateTenantModal } from "./ActivateTenantModal";
 import { SuspendTenantModal, ArchiveTenantModal } from "./TenantLifecycleModals";
 import { TenantSettingsModal, type TenantSettingsDraft } from "./TenantSettingsModal";
@@ -38,6 +39,7 @@ export function TenantsView() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [message, setMessage] = useState("");
+  const [createdCredentials, setCreatedCredentials] = useState<CreatedTenantCredentials | null>(null);
 
   const [showActivate, setShowActivate] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -169,8 +171,19 @@ export function TenantsView() {
       });
 
       const newTenant = response.data;
-      setMessage(
-        `Tenant "${newTenant.tenantName}" created successfully in TRIAL state. Subdomain: ${newTenant.subdomain}.edu360.local`
+      const rootDomain = window.location.hostname.split(".").slice(1).join(".");
+      const port = window.location.port ? `:${window.location.port}` : "";
+      const loginAddress = `${window.location.protocol}//${newTenant.subdomain}.${rootDomain}${port}`;
+      setMessage(`Tenant "${newTenant.tenantName}" created successfully in TRIAL state.`);
+      setCreatedCredentials(
+        newTenant.firstAdminTemporaryPassword
+          ? {
+              tenantName: newTenant.tenantName,
+              adminEmail: newTenant.firstAdminEmail ?? draft.firstAdminEmail,
+              loginAddress,
+              temporaryPassword: newTenant.firstAdminTemporaryPassword,
+            }
+          : null,
       );
       setShowCreate(false);
       setDraft({
@@ -360,6 +373,9 @@ export function TenantsView() {
           </Button>
         }
       />
+      {createdCredentials && (
+        <TenantCredentialsNotice credentials={createdCredentials} onDismiss={() => setCreatedCredentials(null)} />
+      )}
       {message && (
         <div className="platform-inline-notice" role="status">
           {message}

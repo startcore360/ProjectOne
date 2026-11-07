@@ -57,6 +57,9 @@ public class LoginTenantResolver {
         return new TenantLogin(tenant);
     }
 
+    // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P4 and P9): the suffix is blank in production today, so
+    // abc.edu360.com is looked up as the full name and login fails. Custom domains aren't read
+    // here either. Required before the first production deployment.
     private String stripLocalDevSuffix(String host) {
         String suffix = keycloakProperties.getLocalDevHostSuffix();
         if (!suffix.isBlank() && host.endsWith(suffix)) {

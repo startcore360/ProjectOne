@@ -37,7 +37,7 @@ public class TermLockEvent {
     @Column(name = "actor_user_id", nullable = false)
     private UUID actorUserId;
 
-    @Column(name = "notes")
+    @Column(name = "reason")
     private String notes;
 
     @Column(name = "created_at", nullable = false)

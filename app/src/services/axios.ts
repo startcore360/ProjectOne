@@ -3,6 +3,8 @@ import { getAccessToken } from "./tokenStorage";
 
 // Tenant identity is resolved by the request hostname, so keep the API origin
 // derived from the active tenant host unless an explicit deployment override exists.
+// PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P3): port 8080 below works only locally. Production must call /api on the
+// page's own address through the reverse proxy, and must not set one fixed VITE_API_BASE_URL.
 const inferredBaseUrl = `${window.location.protocol}//${window.location.hostname}:8080/api`;
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL || inferredBaseUrl;
 const api = axios.create({

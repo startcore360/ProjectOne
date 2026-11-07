@@ -69,7 +69,6 @@ public class RetentionChangeRequest {
     @Column(name = "updated_by", nullable = false)
     private UUID updatedBy;
 
-    @Version
     @Column(name = "row_version", nullable = false)
     private Integer rowVersion;
 }

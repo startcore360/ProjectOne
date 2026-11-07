@@ -162,141 +162,141 @@ export type PlatformReportItem = {
 
 export const platformOpsService = {
   async listIntegrationTypes(): Promise<IntegrationTypeItem[]> {
-    const res = await api.get<IntegrationTypeItem[]>("/api/platform/integration-types");
+    const res = await api.get<IntegrationTypeItem[]>("/platform/integration-types");
     return res.data;
   },
 
   async createIntegrationType(payload: CreateIntegrationTypePayload): Promise<IntegrationTypeItem> {
-    const res = await api.post<IntegrationTypeItem>("/api/platform/integration-types", payload);
+    const res = await api.post<IntegrationTypeItem>("/platform/integration-types", payload);
     return res.data;
   },
 
   async listAuditLogs(): Promise<PlatformAuditLogItem[]> {
-    const res = await api.get<PlatformAuditLogItem[] | { items?: PlatformAuditLogItem[] }>("/api/platform/audit-logs");
+    const res = await api.get<PlatformAuditLogItem[] | { items?: PlatformAuditLogItem[] }>("/platform/audit-logs");
     if (Array.isArray(res.data)) return res.data;
     if (Array.isArray(res.data?.items)) return res.data.items;
     return [];
   },
 
   async getUsageCounts(): Promise<UsageCountsResponse> {
-    const res = await api.get<UsageCountsResponse>("/api/platform/usage-counts");
+    const res = await api.get<UsageCountsResponse>("/platform/usage-counts");
     return res.data;
   },
 
   async getPlatformBackupStatus(): Promise<BackupStatusItem[]> {
-    const res = await api.get<BackupStatusItem[]>("/api/platform/backup-status");
+    const res = await api.get<BackupStatusItem[]>("/platform/backup-status");
     return res.data;
   },
 
   async getTenantBackupStatus(tenantId: string): Promise<BackupStatusItem[]> {
-    const res = await api.get<BackupStatusItem[]>(`/api/tenants/${tenantId}/backup-status`);
+    const res = await api.get<BackupStatusItem[]>(`/tenants/${tenantId}/backup-status`);
     return res.data;
   },
 
   // Billing & Invoices
   async listInvoices(tenantId?: string): Promise<InvoiceItem[]> {
     const query = tenantId ? `?tenantId=${tenantId}` : "";
-    const res = await api.get<InvoiceItem[]>(`/api/platform/invoices${query}`);
+    const res = await api.get<InvoiceItem[]>(`/platform/invoices${query}`);
     return res.data;
   },
 
   async createInvoice(payload: CreateInvoicePayload): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>("/api/platform/invoices", payload);
+    const res = await api.post<InvoiceItem>("/platform/invoices", payload);
     return res.data;
   },
 
   async sendInvoice(invoiceId: string): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/api/platform/invoices/${invoiceId}/send`);
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/send`);
     return res.data;
   },
 
   async applyDiscount(invoiceId: string, discountAmount: number): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/api/platform/invoices/${invoiceId}/discounts`, { discountAmount });
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/discounts`, { discountAmount });
     return res.data;
   },
 
   async flagOverdue(invoiceId: string): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/api/platform/invoices/${invoiceId}/overdue-flags`);
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/overdue-flags`);
     return res.data;
   },
 
   async recordPayment(invoiceId: string, payload: { paymentMode: string; paymentReference: string }): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/api/platform/invoices/${invoiceId}/record-payment`, payload);
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/record-payment`, payload);
     return res.data;
   },
 
   // Releases
   async listReleases(): Promise<ReleaseItem[]> {
-    const res = await api.get<ReleaseItem[]>("/api/platform/releases");
+    const res = await api.get<ReleaseItem[]>("/platform/releases");
     return res.data;
   },
 
   async createRelease(payload: CreateReleasePayload): Promise<ReleaseItem> {
-    const res = await api.post<ReleaseItem>("/api/platform/releases", payload);
+    const res = await api.post<ReleaseItem>("/platform/releases", payload);
     return res.data;
   },
 
   async updateRelease(releaseId: string, payload: Partial<CreateReleasePayload>): Promise<ReleaseItem> {
-    const res = await api.put<ReleaseItem>(`/api/platform/releases/${releaseId}`, payload);
+    const res = await api.put<ReleaseItem>(`/platform/releases/${releaseId}`, payload);
     return res.data;
   },
 
   async transitionRelease(releaseId: string, targetStatus: string): Promise<ReleaseItem> {
-    const res = await api.post<ReleaseItem>(`/api/platform/releases/${releaseId}/transitions`, { targetStatus });
+    const res = await api.post<ReleaseItem>(`/platform/releases/${releaseId}/transitions`, { targetStatus });
     return res.data;
   },
 
   // Reports
   async getReport(reportCode: string): Promise<PlatformReportItem> {
-    const res = await api.get<PlatformReportItem>(`/api/platform/reports/${reportCode}`);
+    const res = await api.get<PlatformReportItem>(`/platform/reports/${reportCode}`);
     return res.data;
   },
 
   // Security Policy & Incidents
   async getSecurityPolicy(): Promise<SecurityPolicyItem> {
-    const res = await api.get<SecurityPolicyItem>("/api/platform/security-policy");
+    const res = await api.get<SecurityPolicyItem>("/platform/security-policy");
     return res.data;
   },
 
   async updateSecurityPolicy(payload: Partial<SecurityPolicyItem>): Promise<SecurityPolicyItem> {
-    const res = await api.put<SecurityPolicyItem>("/api/platform/security-policy", payload);
+    const res = await api.put<SecurityPolicyItem>("/platform/security-policy", payload);
     return res.data;
   },
 
   async listSecurityIncidents(): Promise<SecurityIncidentItem[]> {
-    const res = await api.get<SecurityIncidentItem[]>("/api/platform/security-incidents");
+    const res = await api.get<SecurityIncidentItem[]>("/platform/security-incidents");
     return res.data;
   },
 
   async createSecurityIncident(payload: { tenantId?: string; title: string; severity?: string; externalNotificationRequired?: boolean }): Promise<SecurityIncidentItem> {
-    const res = await api.post<SecurityIncidentItem>("/api/platform/security-incidents", payload);
+    const res = await api.post<SecurityIncidentItem>("/platform/security-incidents", payload);
     return res.data;
   },
 
   async updateSecurityIncident(id: string, payload: { status?: string; closureNote?: string }): Promise<SecurityIncidentItem> {
-    const res = await api.patch<SecurityIncidentItem>(`/api/platform/security-incidents/${id}`, payload);
+    const res = await api.patch<SecurityIncidentItem>(`/platform/security-incidents/${id}`, payload);
     return res.data;
   },
 
   // Support
   async listSupportTickets(tenantId?: string): Promise<SupportTicketItem[]> {
     const query = tenantId ? `?tenantId=${tenantId}` : "";
-    const res = await api.get<SupportTicketItem[]>(`/api/platform/support-tickets${query}`);
+    const res = await api.get<SupportTicketItem[]>(`/platform/support-tickets${query}`);
     return res.data;
   },
 
   async updateSupportTicket(ticketId: string, payload: { status?: string; assignedTo?: string; resolutionNote?: string }): Promise<SupportTicketItem> {
-    const res = await api.patch<SupportTicketItem>(`/api/platform/support-tickets/${ticketId}`, payload);
+    const res = await api.patch<SupportTicketItem>(`/platform/support-tickets/${ticketId}`, payload);
     return res.data;
   },
 
   async assumeSupportSession(ticketId: string): Promise<{ token: string; expiresAt: string; ticketNumber: string }> {
-    const res = await api.post<{ token: string; expiresAt: string; ticketNumber: string }>(`/api/platform/support-sessions?ticketId=${ticketId}`);
+    const res = await api.post<{ token: string; expiresAt: string; ticketNumber: string }>(`/platform/support-sessions?ticketId=${ticketId}`);
     return res.data;
   },
 
   async listActiveGrants(): Promise<SupportAccessGrantItem[]> {
-    const res = await api.get<SupportAccessGrantItem[]>("/api/platform/support-access-grants");
+    const res = await api.get<SupportAccessGrantItem[]>("/platform/support-access-grants");
     return res.data;
   },
 };

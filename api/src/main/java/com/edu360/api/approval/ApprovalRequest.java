@@ -70,7 +70,6 @@ public class ApprovalRequest implements Serializable {
     @Column(name = "updated_by", nullable = false)
     private UUID updatedBy;
 
-    @Version
     @Column(name = "row_version", nullable = false)
     @Builder.Default
     private Integer rowVersion = 1;

@@ -56,7 +56,7 @@ public class PlatformPermissionService {
             // Data protection approvals stay with a separate person (TPA-04, D2 action 198).
             Map.entry("TENANT_EXPORT_APPROVE", DPO),
             Map.entry("TENANT_DELETION_APPROVE", DPO),
-            Map.entry("RETENTION_CHANGE_APPROVE", DPO),
+            Map.entry("RETENTION_CHANGE_APPROVE", Set.of(PlatformRole.DATA_PROTECTION_OFFICER, PlatformRole.PRODUCT_OWNER)),
             Map.entry("APPROVAL_DELEGATE", DPO)
     );
 

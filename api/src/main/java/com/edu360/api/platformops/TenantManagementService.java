@@ -68,6 +68,7 @@ import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.UserRoleAssignmentId;
 import com.edu360.api.rbac.UserRoleAssignmentRepository;
 import com.edu360.api.tenant.Tenant;
+import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.tenant.TenantRepository;
 import com.edu360.api.tenant.TenantState;
 
@@ -109,6 +110,9 @@ public class TenantManagementService {
     private final RoleActionRepository roleActionRepository;
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
 
     @org.springframework.beans.factory.annotation.Autowired
     public TenantManagementService(
@@ -195,6 +199,7 @@ public class TenantManagementService {
         String normalizedSubdomain = request.getSubdomain().toLowerCase().trim();
 
         // 1. Check subdomain uniqueness
+        // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P6): reserved names such as "platform" must also be refused.
         if (tenantRepository.findBySubdomain(normalizedSubdomain).isPresent()) {
             throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists");
         }
@@ -273,93 +278,114 @@ public class TenantManagementService {
         }
 
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "TENANT_CREATED", "TENANT_CREATE", "TENANT", savedTenant.getTenantId());
+            platformAuditWriter.record(principal, "CREATE", "TENANT_CREATE", "TENANT", savedTenant.getTenantId());
         }
 
-        if (userAccountRepository != null) {
-            UserAccount adminAccount = UserAccount.builder()
-                    .id(new UserAccountId(tenantId, adminUserAccountId))
-                    .userType(UserType.STAFF)
-                    .displayName(request.getFirstAdminName().trim())
-                    .email(request.getFirstAdminEmail().toLowerCase().trim())
-                    .mobile(request.getFirstAdminMobile() != null && !request.getFirstAdminMobile().isBlank()
-                            ? request.getFirstAdminMobile().trim() : null)
-                    .status(UserAccountStatus.ACTIVE)
-                    .createdBy(principal.platformUserId())
-                    .updatedBy(principal.platformUserId())
-                    .build();
-            userAccountRepository.save(adminAccount);
-
-            if (userIdentityLinkRepository != null) {
-                UserIdentityLink link = UserIdentityLink.builder()
-                        .id(new UserIdentityLinkId(tenantId, UUID.randomUUID()))
-                        .userAccountId(adminUserAccountId)
-                        .identityRealm(realmName)
-                        .identitySubject(keycloakUserId)
-                        .usernameKind(UsernameKind.EMAIL)
-                        .status(IdentityLinkStatus.ACTIVE)
+        if (entityManager != null) {
+            entityManager.createNativeQuery("SET app.tenant_id = '" + tenantId + "'").executeUpdate();
+            entityManager.createNativeQuery("SET app.institution_scope = 'ALL'").executeUpdate();
+            entityManager.createNativeQuery(
+                    "INSERT INTO app.tenant_local (tenant_id, tenant_type, time_zone, provisioned_at) VALUES (:tid, :ttype, :tz, now()) ON CONFLICT (tenant_id) DO NOTHING")
+                    .setParameter("tid", tenantId)
+                    .setParameter("ttype", request.getTenantType())
+                    .setParameter("tz", request.getTimeZone() != null ? request.getTimeZone() : "Asia/Kolkata")
+                    .executeUpdate();
+        }
+        TenantContext.set(tenantId, request.getIsolationMode(), null, "ALL", Set.of(), null, null);
+        try {
+            if (userAccountRepository != null) {
+                UserAccount adminAccount = UserAccount.builder()
+                        .id(new UserAccountId(tenantId, adminUserAccountId))
+                        .userType(UserType.STAFF)
+                        .displayName(request.getFirstAdminName().trim())
+                        .email(request.getFirstAdminEmail().toLowerCase().trim())
+                        .mobile(request.getFirstAdminMobile() != null && !request.getFirstAdminMobile().isBlank()
+                                ? request.getFirstAdminMobile().trim() : null)
+                        .status(UserAccountStatus.ACTIVE)
                         .createdBy(principal.platformUserId())
                         .updatedBy(principal.platformUserId())
                         .build();
-                userIdentityLinkRepository.save(link);
-            }
+                userAccountRepository.save(adminAccount);
 
-            // Assign standard role
-            String roleCode = "STANDALONE_SCHOOL".equals(request.getTenantType()) ? "SCHOOL_ADMIN"
-                    : "STANDALONE_COLLEGE".equals(request.getTenantType()) ? "COLLEGE_ADMIN"
-                    : "UNIVERSITY_ADMIN";
-
-            if (roleDefinitionRepository != null) {
-                RoleDefinition roleDef = roleDefinitionRepository.findByIdTenantIdAndRoleCode(tenantId, roleCode)
-                        .orElseGet(() -> {
-                            StandardRole sr = standardRoleRepository != null ? standardRoleRepository.findById(roleCode).orElse(null) : null;
-                            RoleDefinition rd = RoleDefinition.builder()
-                                    .id(new RoleDefinitionId(tenantId, UUID.randomUUID()))
-                                    .roleCode(roleCode)
-                                    .roleName(sr != null ? sr.getRoleName() : "Tenant Administrator")
-                                    .roleOrigin(RoleOrigin.STANDARD)
-                                    .roleLevel(sr != null ? sr.getRoleLevel() : RoleLevel.TENANT)
-                                    .baseStandardRole(roleCode)
-                                    .customScope(null)
-                                    .sensitiveRole(false)
-                                    .status(RoleDefinitionStatus.ACTIVE)
-                                    .createdBy(principal.platformUserId())
-                                    .updatedBy(principal.platformUserId())
-                                    .build();
-                            return roleDefinitionRepository.save(rd);
-                        });
-
-                if (standardRoleActionRepository != null && roleActionRepository != null) {
-                    List<StandardRoleAction> templateActions = standardRoleActionRepository.findByRoleCode(roleCode);
-                    UUID roleDefId = roleDef.getId().getRoleDefinitionId();
-                    for (StandardRoleAction ta : templateActions) {
-                        boolean exists = roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
-                                tenantId, roleDefId, ta.getActionCode());
-                        if (!exists) {
-                            roleActionRepository.save(RoleAction.builder()
-                                    .id(new RoleActionId(tenantId, UUID.randomUUID()))
-                                    .roleDefinitionId(roleDefId)
-                                    .actionCode(ta.getActionCode())
-                                    .createdBy(principal.platformUserId())
-                                    .updatedBy(principal.platformUserId())
-                                    .build());
-                        }
-                    }
-                }
-
-                if (userRoleAssignmentRepository != null) {
-                    UserRoleAssignment assignment = UserRoleAssignment.builder()
-                            .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID()))
+                if (userIdentityLinkRepository != null) {
+                    UserIdentityLink link = UserIdentityLink.builder()
+                            .id(new UserIdentityLinkId(tenantId, UUID.randomUUID()))
                             .userAccountId(adminUserAccountId)
-                            .roleDefinitionId(roleDef.getId().getRoleDefinitionId())
-                            .scopeType(ScopeType.TENANT)
-                            .status(AssignmentStatus.ACTIVE)
+                            .identityRealm(realmName)
+                            .identitySubject(keycloakUserId)
+                            .usernameKind(UsernameKind.EMAIL)
+                            .status(IdentityLinkStatus.ACTIVE)
                             .createdBy(principal.platformUserId())
                             .updatedBy(principal.platformUserId())
                             .build();
-                    userRoleAssignmentRepository.save(assignment);
+                    userIdentityLinkRepository.save(link);
+                }
+
+                // Assign standard role
+                String roleCode = "STANDALONE_SCHOOL".equals(request.getTenantType()) ? "SCHOOL_ADMIN"
+                        : "STANDALONE_COLLEGE".equals(request.getTenantType()) ? "COLLEGE_ADMIN"
+                        : "UNIVERSITY_ADMIN";
+
+                if (roleDefinitionRepository != null) {
+                    RoleDefinition roleDef = roleDefinitionRepository.findByIdTenantIdAndRoleCode(tenantId, roleCode)
+                            .orElseGet(() -> {
+                                StandardRole sr = standardRoleRepository != null ? standardRoleRepository.findById(roleCode).orElse(null) : null;
+                                RoleDefinition rd = RoleDefinition.builder()
+                                        .id(new RoleDefinitionId(tenantId, UUID.randomUUID()))
+                                        .roleCode(roleCode)
+                                        .roleName(sr != null ? sr.getRoleName() : "Tenant Administrator")
+                                        .roleOrigin(RoleOrigin.STANDARD)
+                                        .roleLevel(sr != null ? sr.getRoleLevel() : RoleLevel.TENANT)
+                                        .baseStandardRole(roleCode)
+                                        .customScope(null)
+                                        .sensitiveRole(false)
+                                        .status(RoleDefinitionStatus.ACTIVE)
+                                        .createdBy(principal.platformUserId())
+                                        .updatedBy(principal.platformUserId())
+                                        .build();
+                                return roleDefinitionRepository.save(rd);
+                            });
+
+                    if (standardRoleActionRepository != null && roleActionRepository != null) {
+                        List<StandardRoleAction> templateActions = standardRoleActionRepository.findByRoleCode(roleCode);
+                        UUID roleDefId = roleDef.getId().getRoleDefinitionId();
+                        for (StandardRoleAction ta : templateActions) {
+                            boolean exists = roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                                    tenantId, roleDefId, ta.getActionCode());
+                            if (!exists) {
+                                roleActionRepository.save(RoleAction.builder()
+                                        .id(new RoleActionId(tenantId, UUID.randomUUID()))
+                                        .roleDefinitionId(roleDefId)
+                                        .actionCode(ta.getActionCode())
+                                        .accessMode("SHARED")
+                                        .createdBy(principal.platformUserId())
+                                        .updatedBy(principal.platformUserId())
+                                        .build());
+                            }
+                        }
+                    }
+
+                    if (userRoleAssignmentRepository != null) {
+                        UserRoleAssignment assignment = UserRoleAssignment.builder()
+                                .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID()))
+                                .userAccountId(adminUserAccountId)
+                                .roleDefinitionId(roleDef.getId().getRoleDefinitionId())
+                                .scopeType(ScopeType.TENANT)
+                                .effectiveFrom(java.time.Instant.now())
+                                .status(AssignmentStatus.ACTIVE)
+                                .createdBy(principal.platformUserId())
+                                .updatedBy(principal.platformUserId())
+                                .build();
+                        userRoleAssignmentRepository.save(assignment);
+                    }
                 }
             }
+        } finally {
+            if (entityManager != null) {
+                entityManager.createNativeQuery("RESET app.tenant_id").executeUpdate();
+                entityManager.createNativeQuery("RESET app.institution_scope").executeUpdate();
+            }
+            TenantContext.clear();
         }
 
         // 6. Record audit log
@@ -461,12 +487,8 @@ public class TenantManagementService {
         tenantRepository.save(tenant);
 
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "TENANT_ACTIVATED", "TENANT_ACTIVATE", "TENANT", tenantId);
+            platformAuditWriter.record(principal, "APPROVE", "TENANT_ACTIVATE", "TENANT", tenantId);
         }
-
-        String auditDetails = "Tenant " + tenant.getTenantName() + " (" + tenantId + ") activated by " + principal.email()
-                + (request != null && request.paymentReference() != null ? " [PaymentRef: " + request.paymentReference() + "]" : "");
-        auditLogService.record(AuditEventType.TENANT_ACTIVATED, null, tenant.getTenantName(), null, auditDetails);
 
         return TenantResponse.from(tenant, planName, null, null, null);
     }
@@ -566,10 +588,8 @@ public class TenantManagementService {
 
         Plan saved = planRepository.save(plan);
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "PLAN_CREATED", "PLAN_MANAGE", "PLAN", saved.getPlanId());
+            platformAuditWriter.record(principal, "CREATE", "PLAN_MANAGE", "PLAN", saved.getPlanId());
         }
-        auditLogService.record(AuditEventType.PLAN_CREATED, null, principal.email(), null,
-                "Plan '" + saved.getPlanName() + "' (" + planId + ") created by " + principal.email());
 
         return PlanResponse.from(saved);
     }
@@ -620,10 +640,8 @@ public class TenantManagementService {
 
         Plan saved = planRepository.save(plan);
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "PLAN_UPDATED", "PLAN_MANAGE", "PLAN", saved.getPlanId());
+            platformAuditWriter.record(principal, "UPDATE", "PLAN_MANAGE", "PLAN", saved.getPlanId());
         }
-        auditLogService.record(AuditEventType.PLAN_UPDATED, null, principal.email(), null,
-                "Plan '" + saved.getPlanName() + "' (" + planId + ") updated by " + principal.email());
 
         return PlanResponse.from(saved);
     }
@@ -637,12 +655,8 @@ public class TenantManagementService {
         tenantRepository.save(tenant);
 
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "TENANT_SUSPENDED", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
+            platformAuditWriter.record(principal, "UPDATE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
         }
-
-        String details = "Tenant '" + tenant.getTenantName() + "' (" + tenantId + ") SUSPENDED by "
-                + principal.email() + (reason != null ? ". Reason: " + reason : "");
-        auditLogService.record(AuditEventType.TENANT_SUSPENDED, null, tenant.getTenantName(), null, details);
 
         String planName = getPlanName(tenant.getPlanId());
         return TenantResponse.from(tenant, planName, null, null, null);
@@ -657,12 +671,8 @@ public class TenantManagementService {
         tenantRepository.save(tenant);
 
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "TENANT_ARCHIVED", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
+            platformAuditWriter.record(principal, "UPDATE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
         }
-
-        String details = "Tenant '" + tenant.getTenantName() + "' (" + tenantId + ") ARCHIVED by "
-                + principal.email() + (reason != null ? ". Reason: " + reason : "");
-        auditLogService.record(AuditEventType.TENANT_ARCHIVED, null, tenant.getTenantName(), null, details);
 
         String planName = getPlanName(tenant.getPlanId());
         return TenantResponse.from(tenant, planName, null, null, null);
@@ -676,8 +686,9 @@ public class TenantManagementService {
         tenant.setState(TenantState.ACTIVE);
         tenantRepository.save(tenant);
 
-        String details = "Tenant '" + tenant.getTenantName() + "' (" + tenantId + ") REACTIVATED to ACTIVE state by " + principal.email();
-        auditLogService.record(AuditEventType.TENANT_REACTIVATED, null, tenant.getTenantName(), null, details);
+        if (platformAuditWriter != null) {
+            platformAuditWriter.record(principal, "UPDATE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
+        }
 
         String planName = getPlanName(tenant.getPlanId());
         return TenantResponse.from(tenant, planName, null, null, null);
@@ -721,13 +732,16 @@ public class TenantManagementService {
             tenant.setApiLimit(request.apiLimit());
         }
 
-        tenantRepository.save(tenant);
+        tenant.setUpdatedAt(Instant.now());
+        tenant.setUpdatedBy(principal.platformUserId());
+        Tenant saved = tenantRepository.save(tenant);
 
-        String details = "Tenant settings updated for '" + tenant.getTenantName() + "' (" + tenantId + ") by " + principal.email();
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, tenant.getTenantName(), null, details);
+        if (platformAuditWriter != null) {
+            platformAuditWriter.record(principal, "CONFIG_CHANGE", "TENANT_SETTINGS", "TENANT", tenantId);
+        }
 
-        String planName = getPlanName(tenant.getPlanId());
-        return TenantSettingsResponse.from(tenant, planName);
+        String planName = getPlanName(saved.getPlanId());
+        return TenantSettingsResponse.from(saved, planName);
     }
 
     private String getPlanName(UUID planId) {
@@ -751,10 +765,8 @@ public class TenantManagementService {
         tenantRepository.save(tenant);
 
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "TENANT_DELETED", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
+            platformAuditWriter.record(principal, "DELETE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
         }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, tenant.getTenantName(), null,
-                "Tenant '" + tenant.getTenantName() + "' (" + tenantId + ") DELETED by " + principal.email() + ". Reason: " + reason);
     }
 
     private static final java.util.List<java.util.Map<String, Object>> IN_MEMORY_EXPORTS = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -773,7 +785,7 @@ public class TenantManagementService {
         );
         IN_MEMORY_EXPORTS.add(export);
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "TENANT_EXPORT_REQUESTED", "TENANT_SETTINGS", "TENANT", tenantId);
+            platformAuditWriter.record(principal, "EXPORT", "TENANT_SETTINGS", "TENANT", tenantId);
         }
         return export;
     }
@@ -819,7 +831,7 @@ public class TenantManagementService {
         );
         IN_MEMORY_RETENTION_REQUESTS.add(req);
         if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "RETENTION_CHANGE_REQUESTED", "TENANT_SETTINGS", "TENANT", tenantId);
+            platformAuditWriter.record(principal, "CONFIG_CHANGE", "TENANT_SETTINGS", "TENANT", tenantId);
         }
         return req;
     }

@@ -31,6 +31,7 @@ public class PlatformSettingValue {
     private String settingKey;
 
     @Column(name = "value", nullable = false, columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private String value;
 
     @Column(name = "version_no", nullable = false)
@@ -57,7 +58,7 @@ public class PlatformSettingValue {
     @Column(name = "updated_by", nullable = false)
     private UUID updatedBy;
 
-    @Version
     @Column(name = "row_version", nullable = false)
-    private Integer rowVersion;
+    @Builder.Default
+    private Integer rowVersion = 1;
 }
