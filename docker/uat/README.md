@@ -75,11 +75,19 @@ can obtain certificates.
    `/etc/systemd/system/caddy.service.d/override.conf`, then install
    `docker/uat/edu360-api.service` under
    `/etc/systemd/system/edu360-api.service`. Create `/var/log/edu360`
-   and enable the services.
+   and enable the services. Create writable runtime paths before starting the API:
+   `sudo install -d -o edu360 -g edu360 /var/log/edu360 /var/lib/edu360/uploads`.
+   Install and enable the units with `sudo systemctl daemon-reload`,
+   `sudo systemctl enable caddy edu360-api`, and start Caddy after its environment
+   override is installed. The deploy script restarts `edu360-api` after a successful build.
 7. Start Compose and provision the database roles/schema and Keycloak realms/users.
-   The current checked-in provisioning scripts are PowerShell-oriented; they are not
-   executed by this Ubuntu deployment script. Use reviewed Linux commands and the
-   SQL order in the repository. Do not reuse development passwords.
+   **This is currently a manual prerequisite on Ubuntu:** the checked-in database and
+   Keycloak provisioning scripts are PowerShell-only. Do not proceed to public UAT
+   sign-in until equivalent Linux provisioning has been implemented and verified.
+   Apply the SQL migration sequence from `sql/run_all.sh` to a fresh UAT database,
+   then provision the application roles with unique credentials. Do not reuse development
+   passwords or apply `sql/run_all.sh` directly to the live UAT database: it creates and
+   drops throw-away test databases.
 8. Run `docker/uat/deploy-ubuntu.sh` as `edu360`. It refuses to run outside the
    `uat` branch or with a dirty worktree, fetches only `uat`, executes backend
    verification and frontend lint/tests/build, then deploys the build.
