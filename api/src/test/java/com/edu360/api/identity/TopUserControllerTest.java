@@ -262,4 +262,26 @@ class TopUserControllerTest {
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("not an allowed top governance role");
     }
+
+    @Test
+    @DisplayName("D10 / BS-21: Keycloak provisioning failure propagates KeycloakProvisioningException without saving database rows")
+    void testCreateTopUser_KeycloakFailure_PropagatesException() {
+        TopUserCreateRequest request = new TopUserCreateRequest(
+                "VICE_CHANCELLOR",
+                "Prof. Keycloak Fail",
+                "fail.vc@northbridge.edu.in",
+                "+919876543210"
+        );
+
+        when(userAccountRepository.existsByIdTenantIdAndEmail(tenantId, "fail.vc@northbridge.edu.in")).thenReturn(false);
+        when(keycloakAdminClient.provisionUser(any(), any(), any(), any(), eq(true)))
+                .thenThrow(new com.edu360.api.config.keycloak.KeycloakProvisioningException("Keycloak service connection timeout"));
+
+        assertThatThrownBy(() -> controller.createTopUser(tenantId, request, auth))
+                .isInstanceOf(com.edu360.api.config.keycloak.KeycloakProvisioningException.class)
+                .hasMessageContaining("Keycloak service connection timeout");
+
+        verify(userAccountRepository, never()).save(any());
+        verify(roleAssignmentService, never()).assignRole(any(), any(), any());
+    }
 }

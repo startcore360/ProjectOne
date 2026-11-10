@@ -83,13 +83,13 @@ public class StudentStatusService {
     }
 
     @Transactional(readOnly = true)
-    public StudentStatusResponse getStudent(UUID tenantId, UUID studentId) {
+    public StudentStatusResponse getStudent(UUID tenantId, TenantPrincipal principal, UUID studentId) {
         StudentProfile student = repository.findById(studentId)
                 .filter(s -> s.getTenantId().equals(tenantId))
                 .orElseThrow(() -> new BusinessRuleViolationException("STUDENT_NOT_FOUND", "Student record not found"));
 
         permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, null),
+                new RbacPrincipal(tenantId, principal.userAccountId()),
                 "STUDENT_STATUS_CHANGE",
                 student.getInstitutionId() != null ? RbacScope.institution(student.getInstitutionId()) : RbacScope.tenant(),
                 RbacTarget.NONE

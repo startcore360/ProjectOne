@@ -11,6 +11,8 @@ import java.util.List;
  */
 public record UsageCountsResponse(
         long totalTenantCount,
+        long tenantsInAnalytics,
+        long tenantsOptedOut,
         List<UsageMetricSnapshot> metrics,
         String totalUserCountGap) {
 }

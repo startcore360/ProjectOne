@@ -171,4 +171,31 @@ class UserEditActionTest {
 
         verify(userAccountRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
+
+    @Test
+    void userEdit_delegatesToUserGovernanceGuardWhenConfigured() {
+        PermissionEvaluatorService realEvaluator = evaluator();
+        when(actionCatalogRepository.findById(USER_EDIT)).thenReturn(Optional.of(action()));
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, ScopeType.INSTITUTION, INSTITUTION_ID, null, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(activeAssignment(INSTITUTION_ID)));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(TENANT_ID, ROLE_DEFINITION_ID, USER_EDIT))
+                .thenReturn(true);
+
+        UserGovernanceGuard guard = org.mockito.Mockito.mock(UserGovernanceGuard.class);
+        org.mockito.Mockito.doThrow(new UnauthorizedException("T02 violation"))
+                .when(guard).checkTargetUserAuthority(TENANT_ID, USER_ACCOUNT_ID, TARGET_USER_ID, INSTITUTION_ID);
+
+        UserEditController controller = new UserEditController(realEvaluator, userAccountRepository, guard);
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF, "Admin", false);
+        when(authentication.getPrincipal()).thenReturn(principal);
+
+        UpdateUserRequest request = new UpdateUserRequest(ScopeType.INSTITUTION, INSTITUTION_ID, null, "New Name", null, null);
+
+        assertThrows(UnauthorizedException.class, () ->
+                controller.updateUser(TENANT_ID, TARGET_USER_ID, request, authentication));
+
+        verify(guard).checkTargetUserAuthority(TENANT_ID, USER_ACCOUNT_ID, TARGET_USER_ID, INSTITUTION_ID);
+        verify(userAccountRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
 }

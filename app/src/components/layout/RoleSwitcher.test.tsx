@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../store/slices/authSlice";
 import { meService, type UserRoleOption } from "../../features/profile/api/meService";
@@ -78,7 +79,9 @@ describe("RoleSwitcher component (Story #6: ROLE_SWITCH)", () => {
     const store = storeWithUser();
     render(
       <Provider store={store}>
-        <RoleSwitcher />
+        <MemoryRouter>
+          <RoleSwitcher />
+        </MemoryRouter>
       </Provider>
     );
 
@@ -115,15 +118,23 @@ describe("RoleSwitcher component (Story #6: ROLE_SWITCH)", () => {
     } as never);
 
     const store = storeWithUser();
+    // Start on some other page, to prove a successful switch always lands on the dashboard.
     render(
       <Provider store={store}>
-        <RoleSwitcher />
+        <MemoryRouter initialEntries={["/university/setup/term-lock"]}>
+          <RoleSwitcher />
+          <Routes>
+            <Route path="/dashboard" element={<p>Dashboard page</p>} />
+            <Route path="*" element={<p>Some other page</p>} />
+          </Routes>
+        </MemoryRouter>
       </Provider>
     );
 
     await waitFor(() => {
       expect(screen.getByLabelText("Switch active role")).toBeInTheDocument();
     });
+    expect(screen.getByText("Some other page")).toBeInTheDocument();
 
     const select = screen.getByLabelText("Switch active role") as HTMLSelectElement;
     expect(select.options.length).toBe(2);
@@ -135,6 +146,38 @@ describe("RoleSwitcher component (Story #6: ROLE_SWITCH)", () => {
       expect(meService.switchActiveRole).toHaveBeenCalledWith("as-2");
       expect(store.getState().auth.user?.roleCode).toBe("HEAD_OF_DEPARTMENT");
       expect(store.getState().auth.user?.roleName).toBe("Head of Department");
+      expect(screen.getByText("Dashboard page")).toBeInTheDocument();
     });
+  });
+
+  it("stays on the current page when the role switch fails", async () => {
+    vi.mocked(meService.getMe).mockResolvedValueOnce({
+      data: { currentAssignmentId: "as-1", roles: mockRoles },
+    } as never);
+    vi.mocked(meService.switchActiveRole).mockRejectedValueOnce(new Error("denied"));
+
+    const store = storeWithUser();
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={["/sessions"]}>
+          <RoleSwitcher />
+          <Routes>
+            <Route path="/dashboard" element={<p>Dashboard page</p>} />
+            <Route path="*" element={<p>Some other page</p>} />
+          </Routes>
+        </MemoryRouter>
+      </Provider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Switch active role")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Switch active role"), { target: { value: "as-2" } });
+
+    await waitFor(() => {
+      expect(meService.switchActiveRole).toHaveBeenCalledWith("as-2");
+    });
+    expect(screen.getByText("Some other page")).toBeInTheDocument();
+    expect(store.getState().auth.user?.roleCode).toBe("PROFESSOR");
   });
 });

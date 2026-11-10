@@ -16,14 +16,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.edu360.api.audit.AuditEventType;
-import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,36 +37,43 @@ import lombok.extern.slf4j.Slf4j;
 public class PlatformSecurityPolicyController {
 
     private final PlatformPermissionService permissionService;
-    private final AuditLogService auditLogService;
     private final SecurityIncidentRepository incidentRepository;
     private final PlatformSettingValueRepository settingValueRepository;
     private final PlatformAuditWriter auditWriter;
     private final ObjectMapper objectMapper;
+    private final SecurityPolicyService securityPolicyService;
+    private final RealmSecuritySyncService realmSecuritySyncService;
 
-    private static final String SETTING_KEY_SECURITY_POLICY = "security.policy";
+    private static final String SETTING_KEY_SECURITY_POLICY = SecurityPolicyService.SETTING_KEY_SECURITY_POLICY;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformSecurityPolicyController(
             PlatformPermissionService permissionService,
-            AuditLogService auditLogService,
             @org.springframework.beans.factory.annotation.Autowired(required = false) SecurityIncidentRepository incidentRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) PlatformSettingValueRepository settingValueRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) PlatformAuditWriter auditWriter,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) ObjectMapper objectMapper
+            PlatformAuditWriter auditWriter,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) ObjectMapper objectMapper,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) SecurityPolicyService securityPolicyService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) RealmSecuritySyncService realmSecuritySyncService
     ) {
         this.permissionService = permissionService;
-        this.auditLogService = auditLogService;
         this.incidentRepository = incidentRepository;
         this.settingValueRepository = settingValueRepository;
         this.auditWriter = auditWriter;
         this.objectMapper = (objectMapper != null) ? objectMapper : new ObjectMapper();
+        this.securityPolicyService = securityPolicyService != null
+                ? securityPolicyService : new SecurityPolicyService(settingValueRepository);
+        this.realmSecuritySyncService = realmSecuritySyncService;
     }
 
     public PlatformSecurityPolicyController(
             PlatformPermissionService permissionService,
-            AuditLogService auditLogService
+            SecurityIncidentRepository incidentRepository,
+            PlatformSettingValueRepository settingValueRepository,
+            PlatformAuditWriter auditWriter,
+            ObjectMapper objectMapper
     ) {
-        this(permissionService, auditLogService, null, null, null, null);
+        this(permissionService, incidentRepository, settingValueRepository, auditWriter, objectMapper, null, null);
     }
 
     public record SecurityPolicyResponse(
@@ -79,8 +84,17 @@ public class PlatformSecurityPolicyController {
             int lockoutMinutes,
             int idleSessionTimeoutMinutes,
             boolean mfaRequiredForPrivileged,
-            int defaultBackupRetentionDays
-    ) {}
+            int defaultBackupRetentionDays,
+            int passwordRotationDays,
+            List<RealmSecuritySyncService.RealmSyncResult> realmSync
+    ) {
+        static SecurityPolicyResponse of(SecurityPolicyService.SecurityPolicy p,
+                                         List<RealmSecuritySyncService.RealmSyncResult> sync) {
+            return new SecurityPolicyResponse(p.minPasswordLength(), p.requireSpecialChar(), p.requireDigit(),
+                    p.maxFailedLogins(), p.lockoutMinutes(), p.idleSessionTimeoutMinutes(), p.mfaRequiredForPrivileged(),
+                    p.defaultBackupRetentionDays(), p.rotationDays(), sync);
+        }
+    }
 
     public record UpdateSecurityPolicyRequest(
             int minPasswordLength,
@@ -90,8 +104,16 @@ public class PlatformSecurityPolicyController {
             int lockoutMinutes,
             int idleSessionTimeoutMinutes,
             boolean mfaRequiredForPrivileged,
-            int defaultBackupRetentionDays
-    ) {}
+            int defaultBackupRetentionDays,
+            Integer passwordRotationDays
+    ) {
+        public UpdateSecurityPolicyRequest(int minPasswordLength, boolean requireSpecialChar, boolean requireDigit,
+                                           int maxFailedLogins, int lockoutMinutes, int idleSessionTimeoutMinutes,
+                                           boolean mfaRequiredForPrivileged, int defaultBackupRetentionDays) {
+            this(minPasswordLength, requireSpecialChar, requireDigit, maxFailedLogins, lockoutMinutes,
+                    idleSessionTimeoutMinutes, mfaRequiredForPrivileged, defaultBackupRetentionDays, null);
+        }
+    }
 
     public record SecurityIncidentResponse(
             UUID securityIncidentId,
@@ -135,32 +157,16 @@ public class PlatformSecurityPolicyController {
             String closureNote
     ) {}
 
-    private static final SecurityPolicyResponse DEFAULT_POLICY = new SecurityPolicyResponse(
-            12, true, true, 5, 15, 30, true, 90
-    );
-
     @GetMapping("/security-policy")
     @Operation(summary = "Get current platform security policy (SECURITY_POLICY_SET)")
     public ResponseEntity<SecurityPolicyResponse> getPolicy(Authentication auth) {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "SECURITY_POLICY_SET");
-
-        if (settingValueRepository != null) {
-            var existing = settingValueRepository.findBySettingKeyAndStatus(SETTING_KEY_SECURITY_POLICY, "ACTIVE");
-            if (existing.isPresent()) {
-                try {
-                    return ResponseEntity.ok(objectMapper.readValue(existing.get().getValue(), SecurityPolicyResponse.class));
-                } catch (JsonProcessingException ex) {
-                    log.warn("Failed to parse security policy from DB: {}", ex.getMessage());
-                }
-            }
-        }
-
-        return ResponseEntity.ok(DEFAULT_POLICY);
+        return ResponseEntity.ok(SecurityPolicyResponse.of(securityPolicyService.current(), List.of()));
     }
 
     @PutMapping("/security-policy")
-    @Operation(summary = "Update platform security policy (SECURITY_POLICY_SET)")
+    @Operation(summary = "Update platform security policy (SECURITY_POLICY_SET); pushed to every Keycloak realm (I-06)")
     public ResponseEntity<SecurityPolicyResponse> updatePolicy(
             @RequestBody UpdateSecurityPolicyRequest req,
             Authentication auth
@@ -168,7 +174,32 @@ public class PlatformSecurityPolicyController {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "SECURITY_POLICY_SET");
 
-        SecurityPolicyResponse newPolicy = new SecurityPolicyResponse(
+        if (req == null || req.minPasswordLength() < 8) {
+            throw new BusinessRuleViolationException("INVALID_MIN_PASSWORD_LENGTH", "Minimum password length must be at least 8.");
+        }
+        if (req.minPasswordLength() > 64) {
+            throw new BusinessRuleViolationException("INVALID_MIN_PASSWORD_LENGTH", "Minimum password length must be at most 64.");
+        }
+        if (req.maxFailedLogins() <= 0) {
+            throw new BusinessRuleViolationException("INVALID_MAX_FAILED_LOGINS", "Max failed logins must be at least 1.");
+        }
+        if (req.lockoutMinutes() <= 0) {
+            throw new BusinessRuleViolationException("INVALID_LOCKOUT_MINUTES", "Lockout duration must be at least 1 minute.");
+        }
+        if (req.idleSessionTimeoutMinutes() <= 0) {
+            throw new BusinessRuleViolationException("INVALID_IDLE_TIMEOUT", "Idle session timeout must be at least 1 minute.");
+        }
+        if (!req.mfaRequiredForPrivileged()) {
+            // D1 Part II §11.0 / NF-09 and PD-8: two-step login is mandatory for the listed
+            // roles; the policy cannot switch it off.
+            throw new BusinessRuleViolationException("MFA_MANDATORY",
+                    "Two-step login is mandatory for platform roles, Admins, Principals, Accountants, HR and Payroll (D1 NF-09, PD-8).");
+        }
+        if (req.passwordRotationDays() != null && (req.passwordRotationDays() < 1 || req.passwordRotationDays() > 365)) {
+            throw new BusinessRuleViolationException("INVALID_ROTATION_DAYS", "Password rotation must be between 1 and 365 days.");
+        }
+
+        SecurityPolicyService.SecurityPolicy newPolicy = new SecurityPolicyService.SecurityPolicy(
                 req.minPasswordLength(),
                 req.requireSpecialChar(),
                 req.requireDigit(),
@@ -176,8 +207,9 @@ public class PlatformSecurityPolicyController {
                 req.lockoutMinutes(),
                 req.idleSessionTimeoutMinutes(),
                 req.mfaRequiredForPrivileged(),
-                req.defaultBackupRetentionDays()
-        );
+                req.defaultBackupRetentionDays(),
+                req.passwordRotationDays() != null
+                        ? req.passwordRotationDays() : SecurityPolicyService.D1_DEFAULT.passwordRotationDays());
 
         if (settingValueRepository != null) {
             int nextVersion = 1;
@@ -191,32 +223,43 @@ public class PlatformSecurityPolicyController {
                 nextVersion = oldVal.getVersionNo() + 1;
             }
 
-            try {
-                String jsonVal = objectMapper.writeValueAsString(newPolicy);
-                Instant now = Instant.now();
-                PlatformSettingValue newVal = PlatformSettingValue.builder()
-                        .settingValueId(UUID.randomUUID())
-                        .settingKey(SETTING_KEY_SECURITY_POLICY)
-                        .value(jsonVal)
-                        .versionNo(nextVersion)
-                        .status("ACTIVE")
-                        .changeReason("Updated by Product Owner " + principal.email())
-                        .createdAt(now)
-                        .createdBy(principal.platformUserId())
-                        .updatedAt(now)
-                        .updatedBy(principal.platformUserId())
-                        .build();
-                settingValueRepository.save(newVal);
-            } catch (JsonProcessingException ex) {
-                log.error("Could not serialize security policy: {}", ex.getMessage());
-            }
+            Instant now = Instant.now();
+            PlatformSettingValue newVal = PlatformSettingValue.builder()
+                    .settingValueId(UUID.randomUUID())
+                    .settingKey(SETTING_KEY_SECURITY_POLICY)
+                    .value(securityPolicyService.toJson(newPolicy))
+                    .versionNo(nextVersion)
+                    .status("ACTIVE")
+                    .changeReason("Updated by Product Owner " + principal.email())
+                    .createdAt(now)
+                    .createdBy(principal.platformUserId())
+                    .updatedAt(now)
+                    .updatedBy(principal.platformUserId())
+                    .build();
+            settingValueRepository.save(newVal);
         }
 
-        if (auditWriter != null) {
-            auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
-        }
+        auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
 
-        return ResponseEntity.ok(newPolicy);
+        // I-06: push the saved policy into every Keycloak realm now.
+        List<RealmSecuritySyncService.RealmSyncResult> sync = realmSecuritySyncService != null
+                ? realmSecuritySyncService.applyToAllRealms(newPolicy)
+                : List.of();
+        return ResponseEntity.ok(SecurityPolicyResponse.of(newPolicy, sync));
+    }
+
+    /** I-06: re-push the current policy and the sign-in baseline to every realm (e.g. after a deployment). */
+    @PostMapping("/security-policy/realm-sync")
+    @Operation(summary = "Re-apply the security policy to every Keycloak realm (SECURITY_POLICY_SET)")
+    public ResponseEntity<List<RealmSecuritySyncService.RealmSyncResult>> syncRealms(Authentication auth) {
+        PlatformPrincipal principal = requirePlatformPrincipal(auth);
+        permissionService.authorize(principal, "SECURITY_POLICY_SET");
+        if (realmSecuritySyncService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        List<RealmSecuritySyncService.RealmSyncResult> results = realmSecuritySyncService.applyToAllRealms();
+        auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
+        return ResponseEntity.ok(results);
     }
 
     @GetMapping({"/incidents", "/security-incidents"})
@@ -259,11 +302,7 @@ public class PlatformSecurityPolicyController {
                 .build();
 
         SecurityIncident saved = incidentRepository.save(inc);
-        if (auditWriter != null) {
-            auditWriter.record(principal, "SECURITY_INCIDENT_REPORTED", "PLATFORM_AUDIT_VIEW", "SECURITY_INCIDENT", saved.getSecurityIncidentId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Security incident reported: " + req.title());
+        auditWriter.record(principal, "SECURITY_INCIDENT_REPORTED", "PLATFORM_AUDIT_VIEW", "SECURITY_INCIDENT", saved.getSecurityIncidentId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(SecurityIncidentResponse.from(saved));
     }
@@ -291,11 +330,7 @@ public class PlatformSecurityPolicyController {
         inc.setUpdatedBy(principal.platformUserId());
 
         SecurityIncident saved = incidentRepository.save(inc);
-        if (auditWriter != null) {
-            auditWriter.record(principal, "SECURITY_INCIDENT_UPDATED", "PLATFORM_AUDIT_VIEW", "SECURITY_INCIDENT", saved.getSecurityIncidentId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Security incident " + id + " updated to " + inc.getStatus());
+        auditWriter.record(principal, "SECURITY_INCIDENT_UPDATED", "PLATFORM_AUDIT_VIEW", "SECURITY_INCIDENT", saved.getSecurityIncidentId());
 
         return ResponseEntity.ok(SecurityIncidentResponse.from(saved));
     }

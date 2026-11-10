@@ -69,10 +69,15 @@ export function titleCaseOutcome(outcome: string): string {
 
 export function readErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === "object" && "response" in err) {
-    const response = (err as { response?: { data?: { error?: string } } }).response;
+    const response = (err as { response?: { data?: { error?: string; message?: string } } }).response;
     if (response?.data?.error) return response.data.error.replace("STEP_IN_REQUIRED: ", "");
+    if (response?.data?.message) return response.data.message;
   }
-  if (err instanceof Error && err.message) return err.message;
+  if (err instanceof Error && err.message) {
+    if (!err.message.startsWith("Request failed with status code")) {
+      return err.message;
+    }
+  }
   return fallback;
 }
 

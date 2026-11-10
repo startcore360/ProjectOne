@@ -15,6 +15,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class ApiApplication {
 
+	// M-01: the "no active profile" startup check lives in config/ActiveProfileValidatorInitializer
+	// (registered in META-INF/spring.factories), which runs before any bean is created.
+
 	public static void main(String[] args) {
 		SpringApplication.run(ApiApplication.class, args);
 	}

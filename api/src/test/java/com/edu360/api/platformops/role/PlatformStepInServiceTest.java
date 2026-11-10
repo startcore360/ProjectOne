@@ -39,7 +39,7 @@ class PlatformStepInServiceTest {
         lookup = mock(PlatformAccessLookup.class);
         audit = mock(PlatformAuditWriter.class);
         when(lookup.customRoleActions(any())).thenReturn(java.util.Optional.empty());
-        service = new PlatformStepInService(repository, lookup, new PlatformPermissionService(lookup), audit);
+        service = new PlatformStepInService(repository, lookup, com.edu360.api.platformops.PlatformTestSupport.permissions(lookup), audit);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 

@@ -156,4 +156,19 @@ class RoleCustomControllerTest {
         assertThatThrownBy(() -> controller.getRole(otherTenantId, UUID.randomUUID(), authFor(TENANT_ID, USER_ID)))
                 .isInstanceOf(UnauthorizedException.class);
     }
+
+    @Test
+    void DENY_grantingLockedActionInCustomRoleForbidden() {
+        CreateCustomRoleRequest request = new CreateCustomRoleRequest(
+                "CUSTOM_PAYROLL_MASTER",
+                "Custom Payroll",
+                RoleLevel.COLLEGE,
+                CustomScope.INSTITUTION,
+                List.of("PAYROLL_APPROVE")
+        );
+
+        assertThatThrownBy(() -> controller.createCustomRole(TENANT_ID, request, authFor(TENANT_ID, USER_ID)))
+                .isInstanceOf(com.edu360.api.exception.BusinessRuleViolationException.class)
+                .hasMessageContaining("locked action");
+    }
 }

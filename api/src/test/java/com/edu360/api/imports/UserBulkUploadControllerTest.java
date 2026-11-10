@@ -358,4 +358,64 @@ class UserBulkUploadControllerTest {
         assertThat(template.headers()).contains("email", "fullName", "userType", "mobile", "nationalIdLast4");
         assertThat(template.csvTemplate()).contains("email,fullName,userType,mobile,nationalIdLast4");
     }
+
+    @Test
+    @DisplayName("H10: Non-creator without USER_BULK_UPLOAD permission is denied reading import job and errors")
+    void testGetImportJob_NonCreatorWithoutPermission_Denied() {
+        UUID otherUser = UUID.randomUUID();
+        UUID importJobId = UUID.randomUUID();
+        ImportJob job = ImportJob.builder()
+                .id(new ImportJobId(tenantId, importJobId))
+                .uploadedBy(otherUser)
+                .status("VALIDATED")
+                .totalRows(1)
+                .validRows(1)
+                .errorRows(0)
+                .createdAt(Instant.now())
+                .createdBy(otherUser)
+                .updatedAt(Instant.now())
+                .updatedBy(otherUser)
+                .rowVersion(1)
+                .build();
+
+        when(importJobRepository.findByIdTenantIdAndIdImportJobId(tenantId, importJobId))
+                .thenReturn(Optional.of(job));
+        doThrow(new UnauthorizedException("No permission"))
+                .when(permissionEvaluatorService).authorize(any(), eq("USER_BULK_UPLOAD"), any(), any());
+
+        assertThatThrownBy(() -> controller.getImportJob(tenantId, importJobId, auth))
+                .isInstanceOf(UnauthorizedException.class);
+        assertThatThrownBy(() -> controller.listImportErrors(tenantId, importJobId, auth))
+                .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("H10: Creator can read import job and errors directly without re-authorizing")
+    void testGetImportJob_Creator_Allowed() {
+        UUID importJobId = UUID.randomUUID();
+        ImportJob job = ImportJob.builder()
+                .id(new ImportJobId(tenantId, importJobId))
+                .uploadedBy(userId)
+                .status("VALIDATED")
+                .totalRows(1)
+                .validRows(1)
+                .errorRows(0)
+                .createdAt(Instant.now())
+                .createdBy(userId)
+                .updatedAt(Instant.now())
+                .updatedBy(userId)
+                .rowVersion(1)
+                .build();
+
+        when(importJobRepository.findByIdTenantIdAndIdImportJobId(tenantId, importJobId))
+                .thenReturn(Optional.of(job));
+        when(importRowErrorRepository.findByIdTenantIdAndImportJobIdOrderByRowNumberAsc(tenantId, importJobId))
+                .thenReturn(List.of());
+
+        ResponseEntity<ImportJobResponse> jobRes = controller.getImportJob(tenantId, importJobId, auth);
+        assertThat(jobRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<List<ImportRowErrorResponse>> errRes = controller.listImportErrors(tenantId, importJobId, auth);
+        assertThat(errRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
 }

@@ -2,104 +2,63 @@ package com.edu360.api.approval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
-import com.edu360.api.audit.AuditEventType;
-import com.edu360.api.audit.AuditLogService;
-import com.edu360.api.config.TenantPrincipal;
-import com.edu360.api.exception.BusinessRuleViolationException;
-import com.edu360.api.exception.UnauthorizedException;
-import com.edu360.api.identity.UserType;
-import com.edu360.api.approval.dto.ApprovalInboxResponseDto;
-import com.edu360.api.approval.dto.ApprovalSummaryDto;
 import com.edu360.api.approval.dto.DecideApprovalRequestDto;
-import com.edu360.api.approval.dto.DecideApprovalResponseDto;
+import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.exception.SelfApprovalForbiddenException;
+import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.tenant.TenantContext;
 
-public class ApprovalInboxControllerTest {
+/**
+ * The inbox controller over the real services and evaluator (R3): ALLOW/DENY/SCOPE/GUARD of
+ * APPROVALS_INBOX and the decision endpoint. Step-role, delegation, roll-down and scope rules are
+ * in {@link ApprovalEngineB2Test}.
+ */
+class ApprovalInboxControllerTest {
 
-    private static final UUID TENANT_ID = UUID.randomUUID();
-    private static final UUID USER_ID = UUID.randomUUID();
-    private static final UUID REQUEST_ID = UUID.randomUUID();
-    private static final UUID STEP_ID = UUID.randomUUID();
-
-    private ApprovalRequestRepository requestRepo;
-    private ApprovalStepRepository stepRepo;
-    private AuditLogService auditLogService;
-    private ApprovalInboxService inboxService;
+    private ApprovalTestWorld t;
     private ApprovalInboxController controller;
+    private UUID inst;
+    private UUID principal;
+    private UUID requester;
 
     @BeforeEach
     void setUp() {
-        requestRepo = mock(ApprovalRequestRepository.class);
-        stepRepo = mock(ApprovalStepRepository.class);
-        auditLogService = mock(AuditLogService.class);
-
-        inboxService = new ApprovalInboxService(requestRepo, stepRepo, auditLogService);
-        controller = new ApprovalInboxController(inboxService);
+        t = new ApprovalTestWorld();
+        controller = new ApprovalInboxController(t.inbox);
+        inst = t.institution("COLLEGE", "ACTIVE");
+        principal = t.staff("Principal", "PRINCIPAL_COLLEGE", ScopeType.INSTITUTION, inst);
+        requester = t.staff("Admin", "COLLEGE_ADMIN", ScopeType.INSTITUTION, inst);
     }
 
-    private Authentication authenticatedTenantUser(UUID tenantId, UUID userId) {
-        TenantPrincipal principal = new TenantPrincipal(
-                tenantId,
-                userId,
-                UserType.STAFF,
-                "Approver User",
-                false
-        );
-        return new UsernamePasswordAuthenticationToken(principal, "n/a", Collections.emptyList());
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
+    }
+
+    private ApprovalRequest pending(UUID by) {
+        return t.guardianRequest(t.link(t.student(inst).getStudentProfileId()), inst, by, "PRINCIPAL_COLLEGE");
     }
 
     @Test
     @DisplayName("ACT-APPROVAL_INBOX-ALLOW: Approver lists pending steps")
     void actApprovalInbox_allow() {
-        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        pending(requester);
+        Authentication auth = t.auth(t.as(principal));
 
-        ApprovalStep step = ApprovalStep.builder()
-                .id(new ApprovalStepId(TENANT_ID, STEP_ID))
-                .approvalRequestId(REQUEST_ID)
-                .stepNo((short) 1)
-                .approverRoleCode("PRINCIPAL_COLLEGE")
-                .approverUserId(USER_ID)
-                .decision("PENDING")
-                .build();
-
-        ApprovalRequest req = ApprovalRequest.builder()
-                .id(new ApprovalRequestId(TENANT_ID, REQUEST_ID))
-                .requestedByUserId(UUID.randomUUID()) // Different user, not self
-                .processCode("LEAVE_FACULTY")
-                .subjectType("LEAVE_REQUEST")
-                .subjectId(UUID.randomUUID())
-                .requesterActiveRole("PROFESSOR")
-                .status("PENDING")
-                .currentStepNo((short) 1)
-                .build();
-
-        when(stepRepo.findByIdTenantIdAndApproverUserIdAndDecision(TENANT_ID, USER_ID, "PENDING"))
-                .thenReturn(List.of(step));
-        when(requestRepo.findByIdTenantIdAndIdApprovalRequestId(TENANT_ID, REQUEST_ID))
-                .thenReturn(Optional.of(req));
-
-        ResponseEntity<ApprovalInboxResponseDto> response = controller.listPendingApprovals(TENANT_ID, auth);
+        var response = controller.listPendingApprovals(t.tenantId, auth);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().items()).hasSize(1);
         assertThat(response.getBody().items().get(0).approverRoleCode()).isEqualTo("PRINCIPAL_COLLEGE");
     }
@@ -107,17 +66,15 @@ public class ApprovalInboxControllerTest {
     @Test
     @DisplayName("ACT-APPROVAL_INBOX-DENY: Unauthenticated call is refused")
     void actApprovalInbox_deny() {
-        assertThatThrownBy(() -> controller.listPendingApprovals(TENANT_ID, null))
+        assertThatThrownBy(() -> controller.listPendingApprovals(t.tenantId, null))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
-    @DisplayName("ACT-APPROVAL_INBOX-SCOPE: Tenant ID mismatch is rejected with 401/403")
+    @DisplayName("ACT-APPROVAL_INBOX-SCOPE: Tenant ID mismatch is rejected with 403")
     void actApprovalInbox_scope() {
-        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
-        UUID foreignTenant = UUID.randomUUID();
-
-        assertThatThrownBy(() -> controller.listPendingApprovals(foreignTenant, auth))
+        Authentication auth = t.auth(t.as(principal));
+        assertThatThrownBy(() -> controller.listPendingApprovals(UUID.randomUUID(), auth))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("Tenant ID in path does not match");
     }
@@ -125,63 +82,40 @@ public class ApprovalInboxControllerTest {
     @Test
     @DisplayName("ACT-APPROVAL_DECIDE-GUARD: Self-approval is strictly forbidden (Addendum rule 11)")
     void actApprovalDecide_guard_selfApproval() {
-        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        ApprovalRequest own = pending(principal);
+        Authentication auth = t.auth(t.as(principal));
 
-        ApprovalRequest req = ApprovalRequest.builder()
-                .id(new ApprovalRequestId(TENANT_ID, REQUEST_ID))
-                .requestedByUserId(USER_ID) // Self-request!
-                .processCode("LEAVE_FACULTY")
-                .subjectType("LEAVE_REQUEST")
-                .subjectId(UUID.randomUUID())
-                .requesterActiveRole("PROFESSOR")
-                .status("PENDING")
-                .currentStepNo((short) 1)
-                .build();
-
-        when(requestRepo.findByIdTenantIdAndIdApprovalRequestId(TENANT_ID, REQUEST_ID))
-                .thenReturn(Optional.of(req));
-
-        DecideApprovalRequestDto requestDto = new DecideApprovalRequestDto((short) 1, "APPROVED", null, 1);
-
-        assertThatThrownBy(() -> controller.decideApproval(TENANT_ID, REQUEST_ID, requestDto, auth))
-                .isInstanceOf(BusinessRuleViolationException.class)
+        assertThatThrownBy(() -> controller.decideApproval(t.tenantId, own.getId().getApprovalRequestId(),
+                new DecideApprovalRequestDto((short) 1, "APPROVED", null, 1), auth))
+                .isInstanceOf(SelfApprovalForbiddenException.class)
                 .hasMessageContaining("A principal may not approve or decide their own request");
+        assertThat(own.getStatus()).isEqualTo("PENDING");
     }
 
     @Test
     @DisplayName("ACT-APPROVAL_DECIDE-GUARD: Rejection requires mandatory remark")
     void actApprovalDecide_guard_rejectionRemark() {
-        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        ApprovalRequest r = pending(requester);
+        Authentication auth = t.auth(t.as(principal));
 
-        ApprovalRequest req = ApprovalRequest.builder()
-                .id(new ApprovalRequestId(TENANT_ID, REQUEST_ID))
-                .requestedByUserId(UUID.randomUUID()) // Different user
-                .processCode("LEAVE_FACULTY")
-                .subjectType("LEAVE_REQUEST")
-                .subjectId(UUID.randomUUID())
-                .requesterActiveRole("PROFESSOR")
-                .status("PENDING")
-                .currentStepNo((short) 1)
-                .build();
-
-        ApprovalStep step = ApprovalStep.builder()
-                .id(new ApprovalStepId(TENANT_ID, STEP_ID))
-                .approvalRequestId(REQUEST_ID)
-                .stepNo((short) 1)
-                .approverRoleCode("PRINCIPAL_COLLEGE")
-                .decision("PENDING")
-                .build();
-
-        when(requestRepo.findByIdTenantIdAndIdApprovalRequestId(TENANT_ID, REQUEST_ID))
-                .thenReturn(Optional.of(req));
-        when(stepRepo.findByIdTenantIdAndApprovalRequestIdAndStepNo(TENANT_ID, REQUEST_ID, (short) 1))
-                .thenReturn(Optional.of(step));
-
-        // Missing remark on rejection
-        DecideApprovalRequestDto requestDto = new DecideApprovalRequestDto((short) 1, "REJECTED", "", 1);
-
-        assertThatThrownBy(() -> controller.decideApproval(TENANT_ID, REQUEST_ID, requestDto, auth))
+        assertThatThrownBy(() -> controller.decideApproval(t.tenantId, r.getId().getApprovalRequestId(),
+                new DecideApprovalRequestDto((short) 1, "REJECTED", "", 1), auth))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("A remark is mandatory when rejecting");
+        assertThat(r.getStatus()).isEqualTo("PENDING");
+    }
+
+    @Test
+    @DisplayName("ACT-APPROVAL_DECIDE-ALLOW: the step's role holder approves through the controller; state and audit saved")
+    void actApprovalDecide_allow() {
+        ApprovalRequest r = pending(requester);
+        Authentication auth = t.auth(t.as(principal));
+
+        var res = controller.decideApproval(t.tenantId, r.getId().getApprovalRequestId(),
+                new DecideApprovalRequestDto((short) 1, "APPROVED", null, 1), auth);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(r.getStatus()).isEqualTo("APPROVED");
+        assertThat(t.audited("decided as APPROVED by PRINCIPAL_COLLEGE")).isTrue();
     }
 }

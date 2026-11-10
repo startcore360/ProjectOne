@@ -40,10 +40,24 @@ public class TermLockEvent {
     @Column(name = "reason")
     private String notes;
 
+    @Column(name = "unlock_until")
+    private Instant unlockUntil;
+
+    @Column(name = "occurred_at", nullable = false)
+    @Builder.Default
+    private Instant occurredAt = Instant.now();
+
     @Column(name = "created_at", nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
 
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
+
+    @Column(name = "updated_at", nullable = false)
+    @Builder.Default
+    private Instant updatedAt = Instant.now();
+
+    @Column(name = "updated_by", nullable = false)
+    private UUID updatedBy;
 }

@@ -41,8 +41,8 @@ class PlatformReleaseControllerTest {
     void setUp() {
         releaseRepository = mock(PlatformReleaseRepository.class);
         auditLogService = mock(AuditLogService.class);
-        permissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
-        releaseService = new PlatformReleaseService(releaseRepository, auditLogService);
+        permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+        releaseService = new PlatformReleaseService(releaseRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
         controller = new PlatformReleaseController(releaseService, permissionService);
     }
 

@@ -7,19 +7,16 @@ import lombok.Builder;
 /**
  * AUTH_DEVICES_MANAGE (Sign-in epic, Scope: Self): "see own active devices and log them out."
  *
- * PHASE-1 SCOPE, NOT THE FULL STORY: this app has no device/session tracking table of its own
- * (grepped for "session"/"device" across api/src/main/java - nothing exists beyond this). What
- * Keycloak's token actually gives this server, per request, is the ONE session the current
- * access token belongs to (its "sid" claim) - never a list of a user's other sessions on other
- * devices, because that would need the Keycloak admin session-list endpoint cross-referenced
- * with device/user-agent metadata this app does not capture anywhere today. Building a real
- * multi-device list is Phase 2 (needs either Keycloak's GET /admin/realms/{realm}/users/{id}/
- * sessions surfaced through a new admin-read call, or this app's own session/device table) -
- * deliberately not invented here as a fake list.
+ * One entry per live Keycloak session of the caller (SES-01: any number of devices, one session
+ * per browser). Keycloak decides which sessions exist; the device fields come from the row this
+ * app recorded at sign-in (app.user_device / platform.platform_user_device).
  *
- * sessionId is null (and revocable=false) when the current access token carries no "sid" claim
- * at all - seen with some direct-grant tokens depending on realm settings - in which case there
- * is nothing this server can ask Keycloak to revoke.
+ * - current: this is the session the request itself was made with.
+ * - issuedAt: when that device signed in. lastActiveAt: Keycloak's last activity time.
+ * - expiresAt: the current access token's expiry; null for other sessions.
+ * - deviceType: PHONE, COMPUTER, or UNKNOWN for a session signed in before device recording
+ *   existed (then deviceName/ipAddress are null too).
+ * - revocable: false only when no session id is known (a token without a "sid" claim).
  */
 @Builder
 public record SessionResponse(
@@ -30,9 +27,10 @@ public record SessionResponse(
         Instant expiresAt,
         String deviceType,
         String deviceName,
-        String ipAddress) {
+        String ipAddress,
+        Instant lastActiveAt) {
 
     public SessionResponse(String sessionId, boolean current, boolean revocable, Instant issuedAt, Instant expiresAt) {
-        this(sessionId, current, revocable, issuedAt, expiresAt, "COMPUTER", "Current device", null);
+        this(sessionId, current, revocable, issuedAt, expiresAt, "UNKNOWN", null, null, null);
     }
 }

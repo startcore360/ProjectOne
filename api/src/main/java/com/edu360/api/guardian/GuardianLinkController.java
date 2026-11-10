@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.TenantPrincipal;
@@ -42,8 +41,8 @@ public class GuardianLinkController {
             @PathVariable UUID studentId,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        List<GuardianLinkResponse> responses = guardianLinkService.listGuardianLinks(tenantId, studentId);
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        List<GuardianLinkResponse> responses = guardianLinkService.listGuardianLinks(tenantId, studentId, principal);
         return ResponseEntity.ok(responses);
     }
 
@@ -55,14 +54,12 @@ public class GuardianLinkController {
     public ResponseEntity<GuardianLinkResponse> linkGuardian(
             @PathVariable UUID tenantId,
             @PathVariable UUID studentId,
-            @RequestParam(required = false) UUID institutionId,
             @Valid @RequestBody LinkGuardianRequest request,
             Authentication authentication
     ) {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
-        UUID effectiveInstId = institutionId != null ? institutionId : UUID.randomUUID();
         GuardianLinkResponse response = guardianLinkService.linkGuardian(
-                tenantId, effectiveInstId, studentId, principal, request);
+                tenantId, studentId, principal, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -74,14 +71,12 @@ public class GuardianLinkController {
     public ResponseEntity<GuardianLinkResponse> requestChange(
             @PathVariable UUID tenantId,
             @PathVariable UUID id,
-            @RequestParam(required = false) UUID institutionId,
             @Valid @RequestBody GuardianChangeRequestDto request,
             Authentication authentication
     ) {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
-        UUID effectiveInstId = institutionId != null ? institutionId : UUID.randomUUID();
         GuardianLinkResponse response = guardianLinkService.requestChange(
-                tenantId, effectiveInstId, id, principal, request);
+                tenantId, id, principal, request);
         return ResponseEntity.ok(response);
     }
 
@@ -93,14 +88,12 @@ public class GuardianLinkController {
     public ResponseEntity<GuardianLinkResponse> decideChange(
             @PathVariable UUID tenantId,
             @PathVariable UUID id,
-            @RequestParam(required = false) UUID institutionId,
             @Valid @RequestBody GuardianChangeDecisionRequest request,
             Authentication authentication
     ) {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
-        UUID effectiveInstId = institutionId != null ? institutionId : UUID.randomUUID();
         GuardianLinkResponse response = guardianLinkService.decideChange(
-                tenantId, effectiveInstId, id, principal, request);
+                tenantId, id, principal, request);
         return ResponseEntity.ok(response);
     }
 

@@ -41,8 +41,8 @@ public class TermLockController {
             @PathVariable UUID institutionId,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        List<TermLockResponse> response = termLockService.listTermLocks(tenantId, institutionId);
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        List<TermLockResponse> response = termLockService.listTermLocks(tenantId, institutionId, principal);
         return ResponseEntity.ok(response);
     }
 
@@ -56,8 +56,8 @@ public class TermLockController {
             @RequestParam UUID institutionId,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        List<TermLockResponse> response = termLockService.listTermLocks(tenantId, institutionId);
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        List<TermLockResponse> response = termLockService.listTermLocks(tenantId, institutionId, principal);
         return ResponseEntity.ok(response);
     }
 
@@ -95,12 +95,8 @@ public class TermLockController {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
         UUID effectiveInstitutionId = institutionId != null ? institutionId : instId;
         if (effectiveInstitutionId == null) {
-            // Retrieve term lock to get institutionId
-            effectiveInstitutionId = termLockService.listTermLocks(tenantId, null).stream()
-                    .filter(tl -> tl.termLockId().equals(id))
-                    .map(TermLockResponse::institutionId)
-                    .findFirst()
-                    .orElse(UUID.randomUUID());
+            // Retrieve term lock to get institutionId, failing with 404 if not found
+            effectiveInstitutionId = termLockService.getTermLock(tenantId, id).institutionId();
         }
         TermLockResponse response = termLockService.unlockTerm(tenantId, effectiveInstitutionId, id, principal, request);
         return ResponseEntity.ok(response);

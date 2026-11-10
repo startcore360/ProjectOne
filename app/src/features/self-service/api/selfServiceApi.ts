@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../../services/axios";
 
 export interface NotificationItem {
   notificationId: string;
@@ -43,19 +43,19 @@ export interface NoticeItem {
 
 export const selfServiceApi = {
   getNotifications: async (tenantId: string): Promise<NotificationItem[]> => {
-    const res = await axios.get<NotificationItem[]>(`/v1/tenants/${tenantId}/me/notifications`);
-    return res.data;
+    const res = await api.get<NotificationItem[]>(`/tenants/${tenantId}/me/notifications`);
+    return Array.isArray(res.data) ? res.data : [];
   },
   getLeaveBalances: async (tenantId: string): Promise<LeaveBalanceItem[]> => {
-    const res = await axios.get<LeaveBalanceItem[]>(`/v1/tenants/${tenantId}/me/leave-balances`);
-    return res.data;
+    const res = await api.get<LeaveBalanceItem[]>(`/tenants/${tenantId}/me/leave-balances`);
+    return Array.isArray(res.data) ? res.data : [];
   },
   getLeaveRequests: async (tenantId: string): Promise<LeaveRequestItem[]> => {
-    const res = await axios.get<LeaveRequestItem[]>(`/v1/tenants/${tenantId}/me/leave-requests`);
-    return res.data;
+    const res = await api.get<LeaveRequestItem[]>(`/tenants/${tenantId}/me/leave-requests`);
+    return Array.isArray(res.data) ? res.data : [];
   },
   getNotices: async (tenantId: string): Promise<NoticeItem[]> => {
-    const res = await axios.get<NoticeItem[]>(`/v1/tenants/${tenantId}/notices`);
-    return res.data;
+    const res = await api.get<NoticeItem[]>(`/tenants/${tenantId}/notices`);
+    return Array.isArray(res.data) ? res.data : [];
   },
 };

@@ -97,34 +97,37 @@ public class UserAccountService {
             );
         }
 
-        // 4. Resolve Keycloak Realm
-        Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
-        String realm = tenant != null && tenant.getKeycloakRealm() != null
-                ? tenant.getKeycloakRealm()
-                : tenantId.toString() + "-realm";
+        // 4. Resolve the tenant's own Keycloak realm. No made-up realm name (R7): a tenant without a
+        // realm cannot sign anyone in, so the account is not created.
+        String realm = tenantRepository.findById(tenantId)
+                .map(Tenant::getKeycloakRealm)
+                .filter(r -> !r.isBlank())
+                .orElseThrow(() -> new KeycloakProvisioningException(
+                        "Tenant " + tenantId + " has no sign-in realm, so no account can be provisioned."));
+
+        // Sign-in identities are e-mail based (UsernameKind.EMAIL); an account with no e-mail could
+        // never sign in, and making up an identity subject for it is forbidden (A-07, R7).
+        if (normalizedEmail == null || normalizedEmail.isBlank()) {
+            throw new IllegalArgumentException("email is required: every account needs a sign-in identity.");
+        }
 
         // 5. Generate one-time temporary password
         String tempPassword = generateTemporaryPassword();
 
-        // 6. Provision user in Keycloak tenant realm
-        String keycloakUserId = null;
-        if (normalizedEmail != null) {
-            try {
-                keycloakUserId = keycloakAdminClient.provisionUser(
-                        realm,
-                        request.displayName().trim(),
-                        normalizedEmail,
-                        tempPassword,
-                        true
-                );
-                log.info("Provisioned Keycloak account {} for '{}' in realm '{}'", keycloakUserId, normalizedEmail, realm);
-            } catch (KeycloakProvisioningException ex) {
-                log.warn("Keycloak provisioning failed or non-fatal in current environment: {}", ex.getMessage());
-                keycloakUserId = UUID.randomUUID().toString();
-            }
-        } else {
-            keycloakUserId = UUID.randomUUID().toString();
+        // 6. Provision the user in the tenant's Keycloak realm BEFORE anything is saved. If Keycloak is
+        // down or returns no id, the request fails with 503 (KeycloakProvisioningException) and no
+        // user_account or user_identity_link row is written (A-07, BS-21). The exception propagates.
+        String keycloakUserId = keycloakAdminClient.provisionUser(
+                realm,
+                request.displayName().trim(),
+                normalizedEmail,
+                tempPassword,
+                true
+        );
+        if (keycloakUserId == null || keycloakUserId.isBlank()) {
+            throw new KeycloakProvisioningException("Keycloak created no account id for this user; nothing was saved.");
         }
+        log.info("Provisioned Keycloak account {} in realm '{}'", keycloakUserId, realm);
 
         // 7. Persist UserAccount (app.user_account)
         UUID userAccountId = UUID.randomUUID();
@@ -135,6 +138,8 @@ public class UserAccountService {
                 .email(normalizedEmail)
                 .mobile(request.mobile() != null ? request.mobile().trim() : null)
                 .status(UserAccountStatus.PENDING_ACTIVATION)
+                // B3 / I-05 (R2-35, PD-1): a student's printed first-login password stops working 7 days after issue.
+                .credentialExpiresAt(com.edu360.api.auth.PrintedPasswordPolicy.expiryFor(request.userType(), java.time.Instant.now()))
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
                 .build();

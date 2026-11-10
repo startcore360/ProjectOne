@@ -24,11 +24,12 @@ public class ProgramRuleService {
     private final ProgramRuleSetRepository repository;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
+    private static final com.fasterxml.jackson.databind.ObjectMapper OBJECT_MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @Transactional(readOnly = true)
-    public List<ProgramRuleSetResponse> listRuleSets(UUID tenantId) {
+    public List<ProgramRuleSetResponse> listRuleSets(UUID tenantId, TenantPrincipal principal) {
         permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, null),
+                new RbacPrincipal(tenantId, principal.userAccountId()),
                 "PROGRAM_RULES_SET",
                 RbacScope.tenant(),
                 RbacTarget.NONE
@@ -37,9 +38,9 @@ public class ProgramRuleService {
     }
 
     @Transactional(readOnly = true)
-    public ProgramRuleSetResponse getRuleSet(UUID tenantId, UUID ruleSetId) {
+    public ProgramRuleSetResponse getRuleSet(UUID tenantId, TenantPrincipal principal, UUID ruleSetId) {
         permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, null),
+                new RbacPrincipal(tenantId, principal.userAccountId()),
                 "PROGRAM_RULES_SET",
                 RbacScope.tenant(),
                 RbacTarget.NONE
@@ -57,6 +58,14 @@ public class ProgramRuleService {
                 RbacScope.tenant(),
                 RbacTarget.NONE
         );
+
+        if (request.rules() != null) {
+            try {
+                OBJECT_MAPPER.readTree(request.rules());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Rules must be valid JSON: " + e.getMessage());
+            }
+        }
 
         UUID ruleSetId = UUID.randomUUID();
         ProgramRuleSet ruleSet = ProgramRuleSet.builder()

@@ -51,7 +51,7 @@ class PlatformUserControllerTest {
         keycloakAdminClient = mock(KeycloakAdminClient.class);
         keycloakProperties = mock(KeycloakProperties.class);
         when(keycloakProperties.getPlatformRealm()).thenReturn("edu360-platform");
-        platformPermissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+        platformPermissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
         platformUserManagementService = new PlatformUserManagementService(
                 platformUserRepository, keycloakAdminClient, keycloakProperties,

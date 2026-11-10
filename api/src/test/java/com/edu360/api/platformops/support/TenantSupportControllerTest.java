@@ -54,7 +54,7 @@ class TenantSupportControllerTest {
         grantRepository = mock(SupportAccessGrantRepository.class);
         evaluator = mock(PermissionEvaluatorService.class);
         PlatformSupportService service =
-                new PlatformSupportService(ticketRepository, grantRepository, mock(AuditLogService.class));
+                new PlatformSupportService(ticketRepository, grantRepository, mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), mock(AuditLogService.class));
         controller = new TenantSupportController(service, evaluator);
         when(grantRepository.save(any(SupportAccessGrant.class))).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -204,21 +204,18 @@ class TenantSupportControllerTest {
                 .thenReturn(Optional.of(activeGrant));
 
         // 3. Platform support assumes the session
-        PlatformSupportService service = new PlatformSupportService(ticketRepository, grantRepository, mock(AuditLogService.class));
+        PlatformSupportService service = new PlatformSupportService(ticketRepository, grantRepository, mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), mock(AuditLogService.class));
         PlatformSupportController platformController = new PlatformSupportController(
                 service,
-                new com.edu360.api.platformops.PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly())
+                com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly())
         );
 
         PlatformPrincipal supportStaff = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.SUPPORT_MANAGER, "support@platform.edu360.local", false);
         Authentication platformAuth = new UsernamePasswordAuthenticationToken(supportStaff, null, List.of());
 
-        ResponseEntity<com.edu360.api.platformops.support.dto.AssumeSupportSessionResponse> sessionRes =
-                platformController.assumeSupportSession(ticketId, platformAuth);
-
-        assertThat(sessionRes.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(sessionRes.getBody()).isNotNull();
-        assertThat(sessionRes.getBody().ticketNumber()).isEqualTo("SUP-2026-TEST1");
-        assertThat(sessionRes.getBody().accessMode()).isEqualTo("READ_ONLY");
+        // L-03 / R7: a live grant exists, but the real read-only session is not built, so the answer is an honest 501.
+        assertThatThrownBy(() -> platformController.assumeSupportSession(ticketId, platformAuth))
+                .isInstanceOfSatisfying(com.edu360.api.exception.FeatureNotAvailableException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("SUPPORT_SESSION_NOT_AVAILABLE"));
     }
 }

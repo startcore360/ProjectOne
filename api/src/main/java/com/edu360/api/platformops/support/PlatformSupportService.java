@@ -9,12 +9,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.edu360.api.audit.AuditEventType;
-import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.ResourceNotFoundException;
-import com.edu360.api.platformops.support.dto.AssumeSupportSessionResponse;
 import com.edu360.api.platformops.support.dto.CreateSupportTicketRequest;
 import com.edu360.api.platformops.support.dto.GrantSupportAccessRequest;
 import com.edu360.api.platformops.support.dto.SupportAccessGrantResponse;
@@ -28,28 +25,20 @@ public class PlatformSupportService {
 
     private final SupportTicketRepository ticketRepository;
     private final SupportAccessGrantRepository grantRepository;
-    private final AuditLogService auditLogService;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
+    private final com.edu360.api.audit.AuditLogService tenantAuditService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformSupportService(
             SupportTicketRepository ticketRepository,
             SupportAccessGrantRepository grantRepository,
-            AuditLogService auditLogService,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter,
+            com.edu360.api.audit.AuditLogService tenantAuditService
     ) {
         this.ticketRepository = ticketRepository;
         this.grantRepository = grantRepository;
-        this.auditLogService = auditLogService;
         this.platformAuditWriter = platformAuditWriter;
-    }
-
-    public PlatformSupportService(
-            SupportTicketRepository ticketRepository,
-            SupportAccessGrantRepository grantRepository,
-            AuditLogService auditLogService
-    ) {
-        this(ticketRepository, grantRepository, auditLogService, null);
+        this.tenantAuditService = tenantAuditService;
     }
 
     @Transactional
@@ -76,7 +65,7 @@ public class PlatformSupportService {
                 .build();
 
         SupportTicket saved = ticketRepository.save(ticket);
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, actorUserId.toString(), null,
+        tenantAuditService.record(com.edu360.api.audit.AuditEventType.SUPPORT_TICKET_CREATED, null, actorUserId.toString(), null,
                 "Support ticket raised: " + ticketNumber + " for tenant: " + tenantId);
         return SupportTicketResponse.fromEntity(saved);
     }
@@ -111,11 +100,7 @@ public class PlatformSupportService {
         ticket.setUpdatedBy(principal.platformUserId());
 
         SupportTicket saved = ticketRepository.save(ticket);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "SUPPORT_TICKET_UPDATED", "SUPPORT_TICKET_MANAGE", "SUPPORT_TICKET", saved.getSupportTicketId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Support ticket updated: " + ticket.getTicketNumber() + " new status: " + ticket.getStatus());
+        platformAuditWriter.record(principal, "SUPPORT_TICKET_UPDATED", "SUPPORT_TICKET_MANAGE", "SUPPORT_TICKET", saved.getSupportTicketId());
         return SupportTicketResponse.fromEntity(saved);
     }
 
@@ -149,35 +134,24 @@ public class PlatformSupportService {
                 .build();
 
         SupportAccessGrant saved = grantRepository.save(grant);
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, actorUserId.toString(), null,
+        tenantAuditService.record(com.edu360.api.audit.AuditEventType.SUPPORT_ACCESS_GRANT_CREATED, null, actorUserId.toString(), null,
                 "Support access grant created for ticket: " + req.ticketId() + " expires at: " + expiresAt);
         return SupportAccessGrantResponse.fromEntity(saved);
     }
 
-    @Transactional
-    public AssumeSupportSessionResponse assumeSupportSession(UUID ticketId, PlatformPrincipal principal) {
+    /**
+     * L-03, rule R7: a real read-only support session is designed (docs/SUPPORT_SESSION_DESIGN.md) but not built yet.
+     * The made-up session token that used to be returned here is gone. The ticket and the grant are still
+     * checked, so the answer is honest about what is missing: the session itself, not the grant.
+     */
+    @Transactional(readOnly = true)
+    public void assumeSupportSession(UUID ticketId, PlatformPrincipal principal) {
         SupportTicket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
-
-        SupportAccessGrant grant = grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(ticketId, Instant.now())
+        grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(ticketId, Instant.now())
                 .orElseThrow(() -> new BusinessRuleViolationException("Rule WF-11: No active support access grant found for ticket " + ticket.getTicketNumber()));
-
-        String token = "supp_token_" + UUID.randomUUID();
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "SUPPORT_SESSION_ASSUMED", "SUPPORT_ACCESS_USE", "SUPPORT_TICKET", ticket.getSupportTicketId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Read-only support session assumed for ticket " + ticket.getTicketNumber() + " by " + principal.platformRole());
-
-        return new AssumeSupportSessionResponse(
-                UUID.randomUUID(),
-                ticket.getSupportTicketId(),
-                ticket.getTenantId(),
-                ticket.getTicketNumber(),
-                token,
-                grant.getExpiresAt(),
-                "READ_ONLY"
-        );
+        throw new com.edu360.api.exception.FeatureNotAvailableException("SUPPORT_SESSION_NOT_AVAILABLE",
+                "Support sessions are not available yet. A tenant grant exists for this ticket, but read-only access to tenant data has not been built.");
     }
 
     @Transactional
@@ -192,7 +166,7 @@ public class PlatformSupportService {
         grant.setUpdatedAt(Instant.now());
         grant.setUpdatedBy(actorUserId);
         SupportAccessGrant saved = grantRepository.save(grant);
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, actorUserId.toString(), null,
+        tenantAuditService.record(com.edu360.api.audit.AuditEventType.SUPPORT_ACCESS_GRANT_WITHDRAWN, null, actorUserId.toString(), null,
                 "Support access grant withdrawn for ticket: " + grant.getTicketId());
         return SupportAccessGrantResponse.fromEntity(saved);
     }

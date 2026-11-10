@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "../../../services/axios";
 
 export interface RolldownMapEntry {
   missingRoleCode: string;
@@ -43,13 +43,13 @@ export const rolldownService = {
     const params = new URLSearchParams();
     if (institutionId) params.append("institutionId", institutionId);
     if (context) params.append("context", context);
-    const res = await axios.get<RolldownMapEntry[]>(`/v1/tenants/${tenantId}/rolldown/map?${params.toString()}`);
+    const res = await api.get<RolldownMapEntry[]>(`/v1/tenants/${tenantId}/rolldown/map?${params.toString()}`);
     return res.data;
   },
   getOverrides: async (tenantId: string, institutionId?: string): Promise<RolldownOverride[]> => {
     const params = new URLSearchParams();
     if (institutionId) params.append("institutionId", institutionId);
-    const res = await axios.get<RolldownOverride[]>(`/v1/tenants/${tenantId}/rolldown/overrides?${params.toString()}`);
+    const res = await api.get<RolldownOverride[]>(`/v1/tenants/${tenantId}/rolldown/overrides?${params.toString()}`);
     return res.data;
   },
   createOverride: async (
@@ -57,13 +57,13 @@ export const rolldownService = {
     activeRole: string,
     req: CreateRolldownOverrideRequest
   ): Promise<RolldownOverride> => {
-    const res = await axios.post<RolldownOverride>(`/v1/tenants/${tenantId}/rolldown/overrides`, req, {
+    const res = await api.post<RolldownOverride>(`/v1/tenants/${tenantId}/rolldown/overrides`, req, {
       headers: { "X-Active-Role": activeRole },
     });
     return res.data;
   },
   revokeOverride: async (tenantId: string, overrideId: string): Promise<RolldownOverride> => {
-    const res = await axios.post<RolldownOverride>(`/v1/tenants/${tenantId}/rolldown/overrides/${overrideId}/revocation`);
+    const res = await api.post<RolldownOverride>(`/v1/tenants/${tenantId}/rolldown/overrides/${overrideId}/revocation`);
     return res.data;
   },
 };

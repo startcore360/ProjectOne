@@ -43,9 +43,21 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found: " + ex.getResourcePath(), request);
     }
 
+    /** Part 9 section 2.7: an unknown address is 404, never 500. */
+    @ExceptionHandler(org.springframework.web.servlet.NoHandlerFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoHandlerFound(org.springframework.web.servlet.NoHandlerFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found: " + ex.getRequestURL(), request);
+    }
+
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateResourceException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", ex.getMessage(), request);
+    }
+
+    /** P-01: deciding your own request is 403, not 422. */
+    @ExceptionHandler(SelfApprovalForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleSelfApproval(SelfApprovalForbiddenException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getErrorCode(), ex.getMessage(), request);
     }
 
     @ExceptionHandler(BusinessRuleViolationException.class)
@@ -68,6 +80,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage(), request);
     }
 
+    /** A-02: several active roles and none chosen - 409, the screen sends the user to the role switcher. */
+    @ExceptionHandler(ActiveRoleRequiredException.class)
+    public ResponseEntity<Map<String, Object>> handleActiveRoleRequired(ActiveRoleRequiredException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ActiveRoleRequiredException.CODE, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(KeycloakProvisioningException.class)
     public ResponseEntity<Map<String, Object>> handleKeycloakProvisioning(KeycloakProvisioningException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE", "Account provisioning is temporarily unavailable", request);
@@ -81,6 +99,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, "BAD_REQUEST", ex.getMessage(), request);
+    }
+
+    /** B3: sign-in challenges (MFA_REQUIRED, MFA_ENROLMENT_REQUIRED, LOCKED, INVALID_CREDENTIALS). */
+    @ExceptionHandler(AuthChallengeException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthChallenge(AuthChallengeException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatus());
+        ResponseEntity<Map<String, Object>> base = buildResponse(status, ex.getCode(), ex.getMessage(), request);
+        Map<String, Object> body = new HashMap<>(base.getBody());
+        body.putAll(ex.getDetails());
+        return ResponseEntity.status(status).header("Cache-Control", "no-store").body(body);
+    }
+
+    /** B3 / I-07: the tenant's plan or override has this module switched off. */
+    @ExceptionHandler(ModuleNotEnabledException.class)
+    public ResponseEntity<Map<String, Object>> handleModuleNotEnabled(ModuleNotEnabledException ex, HttpServletRequest request) {
+        ResponseEntity<Map<String, Object>> base = buildResponse(HttpStatus.FORBIDDEN, "MODULE_NOT_ENABLED", ex.getMessage(), request);
+        Map<String, Object> body = new HashMap<>(base.getBody());
+        body.put("moduleCode", ex.getModuleCode());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -118,14 +155,45 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Database integrity violation: {}", ex.getMessage());
+        String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        if (msg.contains("unique") || msg.contains("duplicate")) {
+            return buildResponse(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", "A record with this identifier already exists.", request);
+        } else if (msg.contains("foreign key") || msg.contains("referential integrity") || msg.contains("violates foreign key constraint")) {
+            return buildResponse(HttpStatus.NOT_FOUND, "REFERENCE_NOT_FOUND", "Referenced entity was not found in the current scope.", request);
+        } else {
+            return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, "BUSINESS_RULE_VIOLATION", "The requested operation violates a business rule constraint.", request);
+        }
+    }
+
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex, HttpServletRequest request) {
+        log.warn("Constraint violation: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Input validation constraint violated.", request);
+    }
+
+    @ExceptionHandler(FeatureNotAvailableException.class)
+    public ResponseEntity<Map<String, Object>> handleNotAvailable(FeatureNotAvailableException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_IMPLEMENTED, ex.getCode(), ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled exception reached GlobalExceptionHandler", ex);
-        String detail = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
-        if (ex.getCause() != null && ex.getCause().getMessage() != null) {
-            detail += " -> " + ex.getCause().getMessage();
+        String correlationId = java.util.UUID.randomUUID().toString();
+        log.error("Unhandled exception reached GlobalExceptionHandler [correlationId={}]", correlationId, ex);
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("code", "INTERNAL_ERROR");
+        body.put("error", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
+        body.put("message", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
+        body.put("correlationId", correlationId);
+        if (request != null) {
+            body.put("path", request.getRequestURI());
         }
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", detail, request);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String code, String message, HttpServletRequest request) {

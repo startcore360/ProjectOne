@@ -1,2 +1,4 @@
-export { CurrentSessionCard } from "./CurrentSessionCard";
-export type { CurrentSessionCardProps } from "./CurrentSessionCard";
+export { SessionDeviceCard } from "./SessionDeviceCard";
+export type { SessionDeviceCardProps } from "./SessionDeviceCard";
+export { activityStatus, deviceTitle } from "./deviceLabels";
+export type { ActivityKind } from "./deviceLabels";

@@ -16,6 +16,7 @@ import com.edu360.api.identity.UserType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.tenant.IsolationMode;
+import com.edu360.api.tenant.TenantContext;
 
 @ExtendWith(MockitoExtension.class)
 class RolldownControllerTest {
@@ -65,6 +70,12 @@ class RolldownControllerTest {
                 false
         );
         auth = new UsernamePasswordAuthenticationToken(principal, null);
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", java.util.Set.of(), "MANAGEMENT", ScopeType.TENANT);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
     @Test

@@ -47,6 +47,7 @@ public class IntegrationTypeController {
 
     private final PlatformPermissionService platformPermissionService;
     private final IntegrationTypeRepository integrationTypeRepository;
+    private final com.edu360.api.platformops.role.PlatformAuditWriter auditWriter;
 
     @GetMapping
     @Operation(summary = "List allowed integration types (INTEGRATION_TYPES_MANAGE)")
@@ -83,6 +84,7 @@ public class IntegrationTypeController {
                 .build();
 
         IntegrationType saved = integrationTypeRepository.save(entity);
+        auditWriter.record(principal, "INTEGRATION_TYPE_CREATED", "INTEGRATION_TYPES_MANAGE", "INTEGRATION_TYPE", saved.getIntegrationTypeId());
         return ResponseEntity.ok(IntegrationTypeResponse.from(saved));
     }
 
@@ -110,6 +112,7 @@ public class IntegrationTypeController {
         entity.setUpdatedBy(principal.platformUserId());
 
         IntegrationType saved = integrationTypeRepository.save(entity);
+        auditWriter.record(principal, "INTEGRATION_TYPE_UPDATED", "INTEGRATION_TYPES_MANAGE", "INTEGRATION_TYPE", saved.getIntegrationTypeId());
         return ResponseEntity.ok(IntegrationTypeResponse.from(saved));
     }
 

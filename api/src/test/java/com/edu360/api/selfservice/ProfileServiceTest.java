@@ -313,4 +313,29 @@ class ProfileServiceTest {
         assertThat(photo.content()).containsExactly(9, 9, 9);
         assertThat(photo.contentType()).isEqualTo("image/jpeg");
     }
+
+    // ------------------------------------------------------------------------ I-08 parent phone change
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("REG-I08-3: a parent's mobile change is refused and the audit says exactly that (no code checked, no alert sent)")
+    void updateTenantProfile_guardianMobileChange_refusedAndAuditIsHonest() {
+        profileService = service();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.GUARDIAN, "Parent", false);
+        UserAccount parent = UserAccount.builder()
+                .id(new UserAccountId(TENANT_ID, USER_ACCOUNT_ID)).userType(UserType.GUARDIAN)
+                .displayName("Parent").mobile("+10000000000").build();
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, USER_ACCOUNT_ID))).thenReturn(Optional.of(parent));
+        ProfileUpdateRequest request = new ProfileUpdateRequest();
+        request.setMobile("+19999999999");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> profileService.updateTenantProfile(principal, request))
+                .isInstanceOfSatisfying(com.edu360.api.exception.BusinessRuleViolationException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo("PHONE_VERIFICATION_UNAVAILABLE"));
+
+        assertThat(parent.getMobile()).isEqualTo("+10000000000");
+        verify(userAccountRepository, org.mockito.Mockito.never()).save(any(UserAccount.class));
+        verify(auditLogService).record(AuditEventType.DENIED_ATTEMPT, null, "Parent", null,
+                ProfileService.PARENT_MOBILE_CHANGE_REFUSED_AUDIT);
+        assertThat(ProfileService.PARENT_MOBILE_CHANGE_REFUSED_AUDIT).contains("no SMS provider").contains("no alert was sent");
+    }
 }

@@ -1,18 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button, MetricCard, Panel, StatusBadge } from "../../../../design-system/components";
+import { MetricCard, Panel, StatusBadge } from "../../../../design-system/components";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Spinner } from "../../../../components/ui";
 import { Icon } from "../../../../components/ui/Icon";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { platformUserService, type PlatformUserItem } from "../../api/platformUserService";
 import { platformOpsService, type PlatformAuditLogItem } from "../../api/platformOpsService";
-import { PLATFORM_PAGE_ACTIONS, usePlatformAccess } from "../../platformAccess";
 
 export function PlatformOverviewView() {
-  const navigate = useNavigate();
-  const { canAny } = usePlatformAccess();
-
   const [tenants, setTenants] = useState<TenantItem[]>([]);
   const [users, setUsers] = useState<PlatformUserItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<PlatformAuditLogItem[]>([]);
@@ -44,35 +39,6 @@ export function PlatformOverviewView() {
       <PageHeader
         title="Platform overview"
         description="Tenant lifecycle, platform access, integrations and service health at a glance."
-        actions={
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {canAny(PLATFORM_PAGE_ACTIONS.audit) && (
-              <Button variant="secondary" onClick={() => navigate("/platform/audit")}>
-                Audit log
-              </Button>
-            )}
-            {canAny(PLATFORM_PAGE_ACTIONS.integrations) && (
-              <Button variant="secondary" onClick={() => navigate("/platform/integration-types")}>
-                Integrations
-              </Button>
-            )}
-            {canAny(PLATFORM_PAGE_ACTIONS.usage) && (
-              <Button variant="secondary" onClick={() => navigate("/platform/usage-counts")}>
-                Usage metrics
-              </Button>
-            )}
-            {canAny(PLATFORM_PAGE_ACTIONS.backup) && (
-              <Button variant="secondary" onClick={() => navigate("/platform/backup-status")}>
-                Backup status
-              </Button>
-            )}
-            {canAny(PLATFORM_PAGE_ACTIONS.tenants) && (
-              <Button variant="secondary" onClick={() => navigate("/platform/tenants")}>
-                View tenants
-              </Button>
-            )}
-          </div>
-        }
       />
 
       {loading ? (

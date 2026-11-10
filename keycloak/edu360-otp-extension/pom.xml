@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  EDU 360 Keycloak extension: in-app authenticator (TOTP) enrolment.
+
+  Keycloak's admin REST API cannot add an OTP credential to a user, so the app could only send
+  people to Keycloak's own account page to set up an authenticator. This extension adds two
+  realm endpoints (see Edu360OtpResource) that the EDU 360 API calls with its existing master
+  admin token, so the QR-code step can live in the EDU 360 login screen while the secret and
+  every code check stay inside Keycloak (OD-10 / OD-80).
+
+  Built against the exact Keycloak version the stack runs (docker/keycloak/docker-compose.yml);
+  rebuild when Keycloak is upgraded. The jar is written to docker/keycloak/providers/, which is
+  mounted at /opt/keycloak/providers. Build:  cd api && ./mvnw -f ../keycloak/edu360-otp-extension/pom.xml package
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.edu360</groupId>
+    <artifactId>edu360-otp-extension</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <keycloak.version>26.0.8</keycloak.version>
+    </properties>
+
+    <dependencies>
+        <!-- Provided by the Keycloak server at runtime; never bundled. -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-server-spi</artifactId>
+            <version>${keycloak.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-server-spi-private</artifactId>
+            <version>${keycloak.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-services</artifactId>
+            <version>${keycloak.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-core</artifactId>
+            <version>${keycloak.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.3</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>edu360-otp-extension</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <outputDirectory>${project.basedir}/../../docker/keycloak/providers</outputDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

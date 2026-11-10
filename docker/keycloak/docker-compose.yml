@@ -35,6 +35,13 @@ services:
       - ./realm-export-xyz.json:/opt/keycloak/data/import/realm-export-xyz.json:ro
       - ./realm-export-platform.json:/opt/keycloak/data/import/realm-export-platform.json:ro
       - ./themes/edu360:/opt/keycloak/themes/edu360:ro
+      # In-app authenticator enrolment (keycloak/edu360-otp-extension, built by dev-up.ps1).
+      # A folder mount, so Keycloak still starts if the jar has not been built yet.
+      - ./providers:/opt/keycloak/providers:ro
+      # B3 / I-06: the common-password denylist, the same file the API checks
+      # (api/src/main/resources/security/common-passwords.txt). Realms reference it as
+      # passwordBlacklist(edu360-common-passwords.txt); a container recreate is needed to mount it.
+      - ../../api/src/main/resources/security/common-passwords.txt:/opt/keycloak/data/password-blacklists/edu360-common-passwords.txt:ro
 
 volumes:
   keycloak_data:

@@ -32,8 +32,8 @@ public class SubjectAllocationController {
             @RequestParam(required = false) UUID institutionId,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        return ResponseEntity.ok(subjectAllocationService.listAllocations(tenantId, institutionId));
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(subjectAllocationService.listAllocations(tenantId, principal, institutionId));
     }
 
     @PostMapping({"/v1/tenants/{tenantId}/subject-allocations", "/api/tenants/{tenantId}/subject-allocations"})

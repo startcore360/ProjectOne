@@ -66,6 +66,14 @@ public class ProfileService {
     private final LocalFileStorage fileStorage;
     private final AuditLogService auditLogService;
 
+    /** A-08: PROFILE_EDIT_OWN is checked at the user's own active scope. Set by Spring. */
+    private com.edu360.api.rbac.PermissionEvaluatorService permissionEvaluatorService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionEvaluatorService(com.edu360.api.rbac.PermissionEvaluatorService permissionEvaluatorService) {
+        this.permissionEvaluatorService = permissionEvaluatorService;
+    }
+
     public ProfileResponse getTenantProfile(TenantPrincipal principal) {
         UserAccount account = loadTenantAccount(principal);
         return ProfileResponse.fromTenant(principal, account, resolvePhotoUrl(principal.tenantId(), principal.userAccountId()));
@@ -174,20 +182,31 @@ public class ProfileService {
     /** Applies only the fields ProfileUpdateRequest actually declares (displayName, mobile) -
      *  see that class's comment for why role/email are not among them. A null field on the
      *  request means "leave this one unchanged", not "clear it". */
+    /** Audit text for a refused parent mobile change: states what happened and nothing else. */
+    static final String PARENT_MOBILE_CHANGE_REFUSED_AUDIT =
+            "Parent mobile change refused: no SMS provider is connected, so no code was sent or checked and no alert was sent; mobile unchanged.";
+
     public ProfileResponse updateTenantProfile(TenantPrincipal principal, ProfileUpdateRequest request) {
+        if (permissionEvaluatorService != null) {
+            com.edu360.api.rbac.RbacPrincipal self =
+                    new com.edu360.api.rbac.RbacPrincipal(principal.tenantId(), principal.userAccountId());
+            permissionEvaluatorService.authorize(self, "PROFILE_EDIT_OWN",
+                    permissionEvaluatorService.ownScope(self), com.edu360.api.rbac.RbacTarget.of(principal.userAccountId()));
+        }
         UserAccount account = loadTenantAccount(principal);
         if (request.getDisplayName() != null) {
             account.setDisplayName(request.getDisplayName());
         }
         if (request.getMobile() != null && !request.getMobile().equals(account.getMobile())) {
-            // Rule WF-30: If parent (GUARDIAN) changes mobile number, verify with code and alert old number
+            // Rule WF-30 (story 5, I-08): a parent's new mobile must be confirmed with a code and the
+            // old number alerted. No SMS provider is connected yet, so the change is refused and the
+            // audit says exactly that; the number stays unchanged.
             if (account.getUserType() == com.edu360.api.identity.UserType.GUARDIAN) {
-                if (request.getOtpCode() == null || request.getOtpCode().isBlank()) {
-                    throw new com.edu360.api.exception.BusinessRuleViolationException(
-                            "Rule WF-30: Parent mobile number update requires verification code sent to the new mobile number.");
-                }
-                auditLogService.record(AuditEventType.PROFILE_UPDATED, null, principal.displayName(), null,
-                        "Parent mobile updated from " + account.getMobile() + " to " + request.getMobile() + ". Alert sent to old number.");
+                auditLogService.record(AuditEventType.DENIED_ATTEMPT, null, principal.displayName(), null,
+                        PARENT_MOBILE_CHANGE_REFUSED_AUDIT);
+                throw new com.edu360.api.exception.BusinessRuleViolationException("PHONE_VERIFICATION_UNAVAILABLE",
+                        "Rule WF-30: A parent's mobile number can only be changed after a code sent to the new number is confirmed. "
+                                + "Text messages are not connected yet, so the number was not changed. Please contact the school office.");
             }
             account.setMobile(request.getMobile());
         }

@@ -9,8 +9,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.edu360.api.audit.AuditEventType;
-import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.ResourceNotFoundException;
@@ -26,22 +24,15 @@ import lombok.RequiredArgsConstructor;
 public class PlatformBillingService {
 
     private final InvoiceRepository invoiceRepository;
-    private final AuditLogService auditLogService;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformBillingService(
             InvoiceRepository invoiceRepository,
-            AuditLogService auditLogService,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
     ) {
         this.invoiceRepository = invoiceRepository;
-        this.auditLogService = auditLogService;
         this.platformAuditWriter = platformAuditWriter;
-    }
-
-    public PlatformBillingService(InvoiceRepository invoiceRepository, AuditLogService auditLogService) {
-        this(invoiceRepository, auditLogService, null);
     }
 
     @Transactional
@@ -72,9 +63,7 @@ public class PlatformBillingService {
                 .build();
 
         Invoice saved = invoiceRepository.save(invoice);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "CREATE", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
-        }
+        platformAuditWriter.record(principal, "CREATE", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
         return InvoiceResponse.fromEntity(saved);
     }
 
@@ -99,11 +88,7 @@ public class PlatformBillingService {
         invoice.setUpdatedBy(principal.platformUserId());
 
         Invoice saved = invoiceRepository.save(invoice);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "DISCOUNT_APPLIED", "DISCOUNT_APPLY", "INVOICE", saved.getInvoiceId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Discount of " + req.discountAmount() + " applied to invoice " + invoice.getInvoiceNumber());
+        platformAuditWriter.record(principal, "DISCOUNT_APPLIED", "DISCOUNT_APPLY", "INVOICE", saved.getInvoiceId());
         return InvoiceResponse.fromEntity(saved);
     }
 
@@ -117,11 +102,7 @@ public class PlatformBillingService {
         invoice.setUpdatedBy(principal.platformUserId());
 
         Invoice saved = invoiceRepository.save(invoice);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "OVERDUE_FLAGGED", "OVERDUE_FLAG", "INVOICE", saved.getInvoiceId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Invoice " + invoice.getInvoiceNumber() + " flagged as overdue by " + principal.platformRole());
+        platformAuditWriter.record(principal, "OVERDUE_FLAGGED", "OVERDUE_FLAG", "INVOICE", saved.getInvoiceId());
         return InvoiceResponse.fromEntity(saved);
     }
 
@@ -137,11 +118,7 @@ public class PlatformBillingService {
         invoice.setUpdatedBy(principal.platformUserId());
 
         Invoice saved = invoiceRepository.save(invoice);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "INVOICE_SENT", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Invoice " + invoice.getInvoiceNumber() + " sent to tenant");
+        platformAuditWriter.record(principal, "INVOICE_SENT", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
         return InvoiceResponse.fromEntity(saved);
     }
 
@@ -159,11 +136,7 @@ public class PlatformBillingService {
         invoice.setUpdatedBy(principal.platformUserId());
 
         Invoice saved = invoiceRepository.save(invoice);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "INVOICE_PAID", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Payment recorded for invoice " + invoice.getInvoiceNumber() + " via " + req.paymentMode() + " (Ref: " + req.paymentReference() + ")");
+        platformAuditWriter.record(principal, "INVOICE_PAID", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
         return InvoiceResponse.fromEntity(saved);
     }
 

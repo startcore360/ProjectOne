@@ -121,6 +121,26 @@
   --color-dv-4: #9b4038;
   --color-dv-5: #6b5a8e;
   --color-dv-6: #2e7a80;
+  /* FS-11: EDS and legacy token mappings for full theme and dark mode compatibility */
+  --eds-color-info-border: var(--color-status-info-border);
+  --eds-color-info-bg: var(--color-status-info-bg);
+  --eds-color-info-text: var(--color-status-info-fg);
+  --eds-color-warning-border: var(--color-status-warning-border);
+  --eds-color-warning-bg: var(--color-status-warning-bg);
+  --eds-color-warning-text: var(--color-status-warning-fg);
+  --eds-color-danger-border: var(--color-status-danger-border);
+  --eds-color-danger-bg: var(--color-status-danger-bg);
+  --eds-color-danger-text: var(--color-status-danger-fg);
+  --eds-color-success-border: var(--color-status-success-border);
+  --eds-color-success-bg: var(--color-status-success-bg);
+  --eds-color-success-text: var(--color-status-success-fg);
+
+  --color-border: var(--color-border-divider);
+  --color-surface: var(--color-bg-surface);
+  --color-text-secondary: var(--color-text-muted);
+  --color-primary: var(--color-action-primary);
+  --p-primary-600: var(--color-action-primary);
+  --text-muted: var(--color-text-muted);
   --color-dv-grid: var(--p-neutral-200);
   --color-seq-1: #dcebe3;
   --color-seq-2: #a6c9b6;
@@ -186,6 +206,7 @@
   --button-height: 44px;
   --control-height-compact: 40px;
   --target-min: 44px;
+  --target-max: 48px;
   --icon-sm: 16px;
   --icon-md: 20px;
   --icon-lg: 24px;

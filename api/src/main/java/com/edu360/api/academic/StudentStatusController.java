@@ -29,8 +29,8 @@ public class StudentStatusController {
             @PathVariable UUID id,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        return ResponseEntity.ok(studentStatusService.getStudent(tenantId, id));
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(studentStatusService.getStudent(tenantId, principal, id));
     }
 
     @PostMapping({"/v1/tenants/{tenantId}/students/{id}/status-changes", "/api/tenants/{tenantId}/students/{id}/status-changes"})

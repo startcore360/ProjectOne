@@ -30,7 +30,10 @@ public final class DataProtectionDtos {
             Instant poConfirmedAt,
             LocalDate retentionEndsAt,
             Instant deletedAt,
-            Instant createdAt
+            Instant createdAt,
+            String purgeStatus,
+            Instant dpoDecidedAt,
+            String dpoRemark
     ) {}
 
     public record RetentionPolicyResponse(
@@ -58,5 +61,16 @@ public final class DataProtectionDtos {
             @NotBlank(message = "dataClassCode is required") String dataClassCode,
             @NotNull(message = "requestedMonths is required") @Positive(message = "requestedMonths must be positive") Integer requestedMonths,
             @NotBlank(message = "reason is required") String reason
+    ) {}
+
+    public record CreateDeletionRequestDto(
+            @NotNull(message = "tenantId is required") UUID tenantId,
+            String origin,
+            String reason
+    ) {}
+
+    public record DecideDeletionRequestDto(
+            @NotBlank(message = "decision is required") String decision,
+            String remark
     ) {}
 }

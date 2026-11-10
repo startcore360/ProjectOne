@@ -10,6 +10,7 @@ import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,24 +27,23 @@ public class GradingSchemeService {
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
-    public List<GradingSchemeResponse> listGradingSchemes(UUID tenantId, UUID institutionId) {
-        permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, null),
-                "GRADING_SCHEME_SET",
-                institutionId != null ? RbacScope.institution(institutionId) : RbacScope.tenant(),
-                RbacTarget.NONE
-        );
-        return repository.findByIdTenantId(tenantId).stream().map(GradingSchemeResponse::from).toList();
+    public List<GradingSchemeResponse> listGradingSchemes(UUID tenantId, TenantPrincipal principal, UUID institutionId) {
+        RbacPrincipal rbac = new RbacPrincipal(tenantId, principal.userAccountId());
+        RbacScope scope = scopeFor(rbac, institutionId);
+        permissionEvaluatorService.authorize(rbac, "GRADING_SCHEME_SET", scope, RbacTarget.NONE);
+        // An institution-level caller sees its own institution's schemes and the university-wide ones.
+        return repository.findByIdTenantId(tenantId).stream()
+                .filter(s -> scope.scopeType() == com.edu360.api.rbac.ScopeType.TENANT
+                        || s.getInstitutionId() == null
+                        || s.getInstitutionId().equals(scope.institutionId()))
+                .map(GradingSchemeResponse::from)
+                .toList();
     }
 
     @Transactional
     public GradingSchemeResponse createGradingScheme(UUID tenantId, TenantPrincipal principal, CreateGradingSchemeRequest request) {
-        permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, principal.userAccountId()),
-                "GRADING_SCHEME_SET",
-                request.institutionId() != null ? RbacScope.institution(request.institutionId()) : RbacScope.tenant(),
-                RbacTarget.NONE
-        );
+        RbacPrincipal rbac = new RbacPrincipal(tenantId, principal.userAccountId());
+        permissionEvaluatorService.authorize(rbac, "GRADING_SCHEME_SET", scopeFor(rbac, request.institutionId()), RbacTarget.NONE);
 
         UUID schemeId = UUID.randomUUID();
         GradingSchemeVersion scheme = GradingSchemeVersion.builder()
@@ -75,15 +75,13 @@ public class GradingSchemeService {
 
     @Transactional
     public GradingSchemeResponse activateGradingScheme(UUID tenantId, TenantPrincipal principal, UUID schemeId) {
-        permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, principal.userAccountId()),
-                "GRADING_SCHEME_SET",
-                RbacScope.tenant(),
-                RbacTarget.NONE
-        );
-
         GradingSchemeVersion scheme = repository.findByIdTenantIdAndIdGradingSchemeVersionId(tenantId, schemeId)
                 .orElseThrow(() -> new BusinessRuleViolationException("SCHEME_NOT_FOUND", "Grading scheme version not found"));
+
+        // A-05: activation is checked at the scheme's own institution (College/School Admin) or the
+        // university (Registrar), never as a blanket tenant-wide check.
+        RbacPrincipal rbac = new RbacPrincipal(tenantId, principal.userAccountId());
+        permissionEvaluatorService.authorize(rbac, "GRADING_SCHEME_SET", scopeFor(rbac, scheme.getInstitutionId()), RbacTarget.NONE);
 
         scheme.setStatus("ACTIVE");
         scheme.setUpdatedAt(Instant.now());
@@ -99,5 +97,11 @@ public class GradingSchemeService {
         );
 
         return GradingSchemeResponse.from(scheme);
+    }
+
+    /** A-05 scope for a target record; the institution scope only if the evaluator gives none. */
+    private RbacScope scopeFor(RbacPrincipal rbac, UUID institutionId) {
+        RbacScope fallback = institutionId != null ? RbacScope.institution(institutionId) : RbacScope.tenant();
+        return Objects.requireNonNullElse(permissionEvaluatorService.targetScope(rbac, institutionId, null), fallback);
     }
 }
