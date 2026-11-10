@@ -25,6 +25,7 @@ export function RetireCustomRoleModal({
   const handleRetire = async () => {
     setRetiring(true);
     try {
+      if (!role.roleDefinitionId) return;
       const res = await roleAssignmentService.retireCustomRole(tenantId, role.roleDefinitionId);
       onRetired(res);
       onClose();

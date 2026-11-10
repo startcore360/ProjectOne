@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import authReducer, {
   clearUser,
+  profileUpdated,
   setLoading,
   setUser,
   type AuthUser,
@@ -84,5 +85,40 @@ describe("authSlice", () => {
 
     expect(state.user).toBeNull();
     expect(state.isAuthenticated).toBe(false);
+  });
+
+  it("reflects a profile photo upload and name change in the signed-in identity", () => {
+    const user: AuthUser = {
+      id: "user-321",
+      displayName: "Old Name",
+      tenantId: "tenant-abc",
+      userType: "STAFF",
+      platformRole: null,
+      roleCode: null,
+      roleName: null,
+      photoUrl: null,
+      mustChangePassword: false,
+    };
+    let state = authReducer(undefined, setUser(user));
+
+    // First upload: photoUrl goes from null to the path, and the revision starts counting.
+    state = authReducer(state, profileUpdated({ photoUrl: "/me/profile/photo", photoChanged: true }));
+    expect(state.user?.photoUrl).toBe("/me/profile/photo");
+    expect(state.user?.photoRevision).toBe(1);
+
+    // Replacement: same path, so only the revision bump can trigger the avatar re-fetch.
+    state = authReducer(state, profileUpdated({ photoUrl: "/me/profile/photo", photoChanged: true }));
+    expect(state.user?.photoRevision).toBe(2);
+
+    // Name-only save leaves the photo alone.
+    state = authReducer(state, profileUpdated({ displayName: "New Name" }));
+    expect(state.user?.displayName).toBe("New Name");
+    expect(state.user?.photoRevision).toBe(2);
+  });
+
+  it("ignores a profile update when nobody is signed in", () => {
+    const state = authReducer(undefined, profileUpdated({ displayName: "X", photoChanged: true }));
+
+    expect(state.user).toBeNull();
   });
 });

@@ -15,4 +15,6 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
     List<ApprovalRequest> findByIdTenantIdAndRequestedByUserId(UUID tenantId, UUID requestedByUserId);
 
     List<ApprovalRequest> findByIdTenantIdAndStatus(UUID tenantId, String status);
+    List<ApprovalRequest> findByIdTenantIdAndSubjectTypeAndSubjectIdAndStatus(
+            UUID tenantId, String subjectType, UUID subjectId, String status);
 }

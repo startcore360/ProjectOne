@@ -4,6 +4,8 @@ import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
@@ -41,11 +43,6 @@ public class RolldownService {
             "PARENT_COLLEGE", "PARENT_SCHOOL", "PLATFORM_ADMIN", "PRODUCT_OWNER", "RELEASE_MANAGER",
             "STUDENT_COLLEGE", "STUDENT_SCHOOL", "SUPPORT_MANAGER"
     );
-
-    @Transactional(readOnly = true)
-    public List<RolldownMapEntryDto> getRolldownMap(UUID tenantId, UUID institutionId, String context) {
-        return getRolldownMap(tenantId, institutionId, context, null);
-    }
 
     @Transactional(readOnly = true)
     public List<RolldownMapEntryDto> getRolldownMap(UUID tenantId, UUID institutionId, String context, TenantPrincipal principal) {
@@ -90,11 +87,6 @@ public class RolldownService {
     }
 
     @Transactional(readOnly = true)
-    public List<RolldownOverrideDto> getOverrides(UUID tenantId, UUID institutionId) {
-        return getOverrides(tenantId, institutionId, null);
-    }
-
-    @Transactional(readOnly = true)
     public List<RolldownOverrideDto> getOverrides(UUID tenantId, UUID institutionId, TenantPrincipal principal) {
         UUID actorUserId = principal != null ? principal.userAccountId() : null;
         permissionEvaluatorService.authorize(
@@ -121,7 +113,18 @@ public class RolldownService {
                 RbacTarget.NONE
         );
 
-        String setterRole = activeRole != null ? activeRole : "MANAGEMENT";
+        String contextActiveRole = TenantContext.currentActiveRoleCode();
+        if (activeRole != null && contextActiveRole != null && !activeRole.equalsIgnoreCase(contextActiveRole)) {
+            throw new UnauthorizedException("Spoofed role header: X-Active-Role does not match authenticated active role.");
+        }
+        if (contextActiveRole == null) {
+            throw new UnauthorizedException("No active role: choose an active role before setting a roll-down override.");
+        }
+        String setterRole = contextActiveRole;
+        Set<String> allowedSetters = Set.of("MANAGEMENT", "VICE_CHANCELLOR", "UNIVERSITY_ADMIN", "GOVERNING_BODY_APPROVER");
+        if (!allowedSetters.contains(setterRole.toUpperCase())) {
+            throw new UnauthorizedException("Role " + setterRole + " is not permitted to set rolldown overrides.");
+        }
 
         // Guard RD-G4: Missing role check
         if (UNROLLABLE_ROLES.contains(request.missingRoleCode())) {

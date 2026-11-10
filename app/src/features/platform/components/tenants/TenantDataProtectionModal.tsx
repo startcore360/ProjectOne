@@ -218,17 +218,17 @@ export function TenantDataProtectionModal({
                       <code>{exp.id.slice(0, 8)}...</code>
                     </td>
                     <td>
-                      <StatusBadge value={exp.status === "COMPLETED" ? "Active" : exp.status === "FAILED" ? "Suspended" : "Trial"} />
+                      <StatusBadge value={exp.status === "COMPLETED" ? "Success" : exp.status === "FAILED" ? "Denied" : "Trial"} status={exp.status} />
                     </td>
                     <td>{exp.requestedAt ? new Date(exp.requestedAt).toLocaleString() : "-"}</td>
                     <td>{exp.completedAt ? new Date(exp.completedAt).toLocaleString() : "Processing"}</td>
                     <td>
-                      {exp.downloadUrl ? (
-                        <a href={exp.downloadUrl} target="_blank" rel="noreferrer" style={{ color: "var(--p-primary-600)" }}>
+                      {exp.downloadUrl && (exp.downloadUrl.startsWith("https://") || exp.downloadUrl.startsWith("/")) ? (
+                        <a href={exp.downloadUrl} target="_blank" rel="noreferrer" style={{ color: "var(--color-primary-600, #2563eb)" }}>
                           Download Zip
                         </a>
                       ) : (
-                        <span style={{ color: "var(--text-muted)" }}>Pending</span>
+                        <span style={{ color: "var(--color-text-muted)" }}>-</span>
                       )}
                     </td>
                   </tr>

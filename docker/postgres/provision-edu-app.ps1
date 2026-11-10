@@ -2,6 +2,14 @@
 # superuser, never BYPASSRLS - see sql/01_schema.sql). Generates a random password only
 # if docker/postgres/.env.local does not already hold one; reuses it on every later run.
 # Applies the EDU 360 schema (sql/) to the dev database if not already applied.
+#
+# -Container: optional. Defaults to the docker compose "postgres" service (what dev-up.ps1 uses).
+#   Pass a container name only to provision a separate throwaway Postgres (e.g. to prove a fresh
+#   volume works) - that container must use the same POSTGRES_USER/PASSWORD/DB as
+#   docker/postgres/docker-compose.yml (edu360 / edu360 / edu360db).
+param(
+    [string]$Container = ""
+)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $envFile = Join-Path $PSScriptRoot ".env.local"
@@ -41,15 +49,40 @@ if ([string]::IsNullOrWhiteSpace($platformPassword)) {
     throw "$envFile exists but EDU_PLATFORM_PASSWORD is empty or malformed."
 }
 
-$container = (docker compose -f (Join-Path $root "docker-compose.yml") ps -q postgres)
+if ([string]::IsNullOrWhiteSpace($Container)) {
+    $container = (docker compose -f (Join-Path $root "docker-compose.yml") ps -q postgres)
+} else {
+    $container = $Container
+}
 if ([string]::IsNullOrWhiteSpace($container)) {
     throw "Postgres container is not running. Run .\dev-up.ps1 first."
 }
 
 function Run-Sql($file) {
-    Get-Content (Join-Path $root "sql\$file") -Raw | docker exec -i -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q
+    # Copy the file in and run it with psql -f, instead of piping it through PowerShell: Windows
+    # PowerShell 5.1 re-encodes piped text to native programs, which turned every non-ASCII
+    # character of the bundle (e.g. the '<=3.2' (U+2264) version labels in 05_ref_data.sql) into '?'.
+    $target = "/tmp/edu360_provision_$file"
+    docker cp (Join-Path $root "sql\$file") "${container}:$target" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Copying sql\$file into the Postgres container failed (docker exit code $LASTEXITCODE)."
+    }
+    docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -f $target
+    $psqlExit = $LASTEXITCODE
+    docker exec $container rm -f $target | Out-Null
+    if ($psqlExit -ne 0) {
+        throw "Applying sql\$file to edu360db failed (psql exit code $psqlExit)."
+    }
 }
 
+# ---------------------------------------------------------------------------------------------
+# Bundle order. Keep in step with sql/run_all.sh (Q-06): the schema files of section A, then the
+# reference data of section B, then the V4.1 files of section C, in the same order:
+#   01 02 03 03b 08 10 | 05 10d | 12 12d 14 15 16 18 20
+# Base files and 05 / 12 are not re-runnable, so each is guarded by a "already applied?" check.
+# Every other file is idempotent and is applied on every run, so an existing dev database picks
+# up later fixes (proved by run_all.sh section D, which applies the V4.1 files twice).
+# ---------------------------------------------------------------------------------------------
 $schemaApplied = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.tenant_local') IS NOT NULL"
 if ($schemaApplied.Trim() -ne "t") {
     Write-Host "Applying EDU 360 schema to edu360db..."
@@ -75,6 +108,9 @@ if ($refDataApplied.Trim() -eq "0") {
 } else {
     Write-Host "EDU 360 reference data already present in edu360db ($($refDataApplied.Trim()) standard roles)."
 }
+# V4.0 roll-down reference rows (2 actions, 12 role-action pairs, 182 roll-down defaults).
+# Idempotent (run_all.sh checks a second load inserts 0 rows). It was missing from this script.
+Run-Sql "10d_v40_rolldown_ref.sql"
 
 # V4.1 platform roles: added after the base bundle, so an existing dev database needs them too.
 $platformRolesApplied = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('platform.platform_role') IS NOT NULL"
@@ -82,10 +118,11 @@ if ($platformRolesApplied.Trim() -ne "t") {
     Write-Host "Applying V4.1 platform roles to edu360db..."
     Run-Sql "12_v41_platform_roles.sql"
 }
-Run-Sql "12d_v41_platform_role_templates.sql"
-Run-Sql "14_v41_audit_foundation.sql"
-Run-Sql "15_v41_user_active_role.sql"
-Run-Sql "16_v41_tenant_top_post_authority.sql"
+foreach ($f in @("12d_v41_platform_role_templates.sql", "14_v41_audit_foundation.sql", "15_v41_user_active_role.sql",
+                 "16_v41_tenant_top_post_authority.sql", "18_v41_user_sessions.sql", "20_v41_never_allowed_guard.sql", "22_v41_platform_audit_event_type.sql", "24_v41_sign_in_security.sql", "24d_v41_action_module_map.sql")) {
+    Run-Sql $f
+}
+Write-Host "V4.1 migrations applied (12d, 14, 15, 16, 18, 20, 22)."
 
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "ALTER ROLE edu_app WITH PASSWORD '$password'"
 Write-Host "edu_app role credential set."
@@ -110,27 +147,14 @@ Write-Host "Granted edu_app read-only access to platform.tenant, platform.platfo
 # uses for its one dev-only INSERT - never edu_app, which the schema deliberately keeps
 # read-only (or with zero access at all) on every platform.* table. Setting its password here,
 # not granting it anything new: every grant it needs already exists in the approved bundle.
-# V4.1 platform roles: added after the base bundle, so an existing dev database needs them too.
-$platformRolesApplied = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('platform.platform_role') IS NOT NULL"
-if ($platformRolesApplied.Trim() -ne "t") {
-    Write-Host "Applying V4.1 platform roles to edu360db..."
-    Run-Sql "12_v41_platform_roles.sql"
-}
-Run-Sql "12d_v41_platform_role_templates.sql"
-Run-Sql "14_v41_audit_foundation.sql"
-Run-Sql "15_v41_user_active_role.sql"
-Run-Sql "16_v41_tenant_top_post_authority.sql"
-
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "ALTER ROLE edu_platform WITH LOGIN PASSWORD '$platformPassword'"
 Write-Host "edu_platform role credential set."
 
-# public.audit_logs is LEGACY debt, not part of the approved V4.0 schema at all - it is the
-# pre-migration single-tenant audit trail (AuditLog/AuditLogService), left over from a
-# ddl-auto=update run before the identity migration retired that approach. The real V4.0 audit
-# mechanism (Foundation Item 9: every create/edit/delete/approval/export/login logged in the
-# app/platform schema) is a separate, not-yet-built piece - this grant exists only to keep the
-# existing (imperfect) login/logout audit calls from throwing, not to expand this table's role
-# in the system. Do not add more legacy tables here; replace this with the real mechanism.
-docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT, INSERT ON public.audit_logs TO edu_app" 2>$null
-docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT USAGE, SELECT ON public.audit_logs_id_seq TO edu_app" 2>$null
-Write-Host "Granted edu_app access to the legacy public.audit_logs table (if present)."
+# public.audit_logs is LEGACY, not a D4 table (sql/14_v41_audit_foundation.sql now creates it in
+# the AuditLog entity's shape). Tenant audit goes to app.audit_outbox (RLS, append-only, granted
+# by sql/03_bindings.sql); platform audit to platform.audit_outbox. This sink only receives events
+# that have no tenant user yet. INSERT needs SELECT as well because Hibernate reads back the
+# generated id. Do not add more legacy tables here.
+docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT, INSERT ON public.audit_logs TO edu_app"
+docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT USAGE, SELECT ON public.audit_logs_id_seq TO edu_app"
+Write-Host "Granted edu_app access to the legacy public.audit_logs sink."

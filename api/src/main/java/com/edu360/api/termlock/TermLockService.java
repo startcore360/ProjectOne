@@ -37,11 +37,31 @@ public class TermLockService {
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
-    public List<TermLockResponse> listTermLocks(UUID tenantId, UUID institutionId) {
+    public List<TermLockResponse> listTermLocks(UUID tenantId, UUID institutionId, TenantPrincipal principal) {
+        if (principal != null && institutionId != null) {
+            permissionEvaluatorService.authorize(
+                    new RbacPrincipal(tenantId, principal.userAccountId()),
+                    "TERM_LOCK",
+                    RbacScope.institution(institutionId),
+                    RbacTarget.NONE
+            );
+        }
         return termLockRepository.findByIdTenantIdAndInstitutionId(tenantId, institutionId)
                 .stream()
                 .map(TermLockResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TermLockResponse> listTermLocks(UUID tenantId, UUID institutionId) {
+        return listTermLocks(tenantId, institutionId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public TermLockResponse getTermLock(UUID tenantId, UUID termLockId) {
+        TermLock termLock = termLockRepository.findByIdTenantIdAndIdTermLockId(tenantId, termLockId)
+                .orElseThrow(() -> new ResourceNotFoundException("Term lock not found: " + termLockId));
+        return TermLockResponse.from(termLock);
     }
 
     @Transactional
@@ -89,10 +109,11 @@ public class TermLockService {
                 .id(new TermLockEventId(tenantId, eventId))
                 .institutionId(institutionId)
                 .termLockId(saved.getTermLockId())
-                .eventType("LOCKED")
+                .eventType("LOCK")
                 .actorUserId(principal.userAccountId())
                 .notes(request.notes())
                 .createdBy(principal.userAccountId())
+                .updatedBy(principal.userAccountId())
                 .createdAt(Instant.now())
                 .build();
         termLockEventRepository.save(event);
@@ -138,6 +159,13 @@ public class TermLockService {
             throw new BusinessRuleViolationException("INSTITUTION_MISMATCH", "Term lock does not belong to the specified institution.");
         }
 
+        // Rule AT-09: Block repeated re-unlocking while already active
+        if ("TEMP_UNLOCKED".equals(termLock.getLockState()) && termLock.getUnlockUntil() != null
+                && termLock.getUnlockUntil().isAfter(Instant.now())) {
+            throw new BusinessRuleViolationException("ALREADY_UNLOCKED",
+                    "Term is currently temporarily unlocked until " + termLock.getUnlockUntil() + "; repeated re-unlocking is prohibited under Rule AT-09.");
+        }
+
         Instant unlockUntil = Instant.now().plus(hours, ChronoUnit.HOURS);
         termLock.setLockState("TEMP_UNLOCKED");
         termLock.setUnlockUntil(unlockUntil);
@@ -153,10 +181,13 @@ public class TermLockService {
                 .id(new TermLockEventId(tenantId, eventId))
                 .institutionId(institutionId)
                 .termLockId(saved.getTermLockId())
-                .eventType("UNLOCKED")
+                .eventType("UNLOCK")
                 .actorUserId(principal.userAccountId())
                 .notes(request.reason())
+                .unlockUntil(unlockUntil)
+                .occurredAt(Instant.now())
                 .createdBy(principal.userAccountId())
+                .updatedBy(principal.userAccountId())
                 .createdAt(Instant.now())
                 .build();
         termLockEventRepository.save(event);

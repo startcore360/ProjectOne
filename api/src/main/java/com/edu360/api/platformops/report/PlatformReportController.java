@@ -83,7 +83,10 @@ public class PlatformReportController {
         if (principal.platformRole() == PlatformRole.BILLING_MANAGER) {
             if (invoiceRepository != null) {
                 List<Invoice> paidInvoices = invoiceRepository.findByStatus("PAID");
+                // L-06: year to date means paid since 1 January of this year (UTC), not every invoice ever paid.
+                Instant startOfYear = LocalDate.now(ZoneOffset.UTC).withDayOfYear(1).atStartOfDay().toInstant(ZoneOffset.UTC);
                 BigDecimal totalRevenueYtd = paidInvoices.stream()
+                        .filter(i -> i.getPaidAt() != null && !i.getPaidAt().isBefore(startOfYear))
                         .map(Invoice::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -122,16 +125,19 @@ public class PlatformReportController {
             }
 
             metrics.put("openTicketsCount", (int) openCount);
-            metrics.put("avgResolutionHours", 0.0);
+            // L-06: figures that are not measured are reported as null, never as a made-up 0 or 100.
+            metrics.put("avgResolutionHours", averageResolutionHours());
             metrics.put("activeSupportSessions", activeGrants);
-            metrics.put("slaCompliancePercent", 100.0);
+            metrics.put("slaCompliancePercent", null);
+            metrics.put("slaNote", "Not measured: there is no SLA in version 1.");
         } else {
             long activeTenants = (tenantRepository != null) ? tenantRepository.countByState(TenantState.ACTIVE) : 0;
             long totalTenants = (tenantRepository != null) ? tenantRepository.count() : 0;
             metrics.put("activeTenants", (int) activeTenants);
             metrics.put("totalTenants", (int) totalTenants);
-            metrics.put("storageUsedGb", 0.0);
-            metrics.put("apiRequestsToday", 0);
+            metrics.put("storageUsedGb", null);
+            metrics.put("apiRequestsToday", null);
+            metrics.put("usageNote", "Storage and API request totals are not measured yet.");
         }
 
         return ResponseEntity.ok(new PlatformReportResponse(
@@ -176,6 +182,18 @@ public class PlatformReportController {
                 "INR",
                 metrics
         ));
+    }
+
+    /** Mean hours from raised to closed over closed tickets; null when no ticket has been closed. */
+    private Double averageResolutionHours() {
+        if (ticketRepository == null) {
+            return null;
+        }
+        double[] hours = ticketRepository.findAllByOrderByCreatedAtDesc().stream()
+                .filter(t -> t.getClosedAt() != null && t.getCreatedAt() != null)
+                .mapToDouble(t -> java.time.Duration.between(t.getCreatedAt(), t.getClosedAt()).toMinutes() / 60.0)
+                .toArray();
+        return hours.length == 0 ? null : java.util.Arrays.stream(hours).average().getAsDouble();
     }
 
     private PlatformPrincipal requirePlatformPrincipal(Authentication authentication) {

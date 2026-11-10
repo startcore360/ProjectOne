@@ -35,10 +35,10 @@ class PlatformSecurityReportControllerTest {
 
     @BeforeEach
     void setUp() {
-        permissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+        permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         auditLogService = mock(AuditLogService.class);
-        securityPolicyController = new PlatformSecurityPolicyController(permissionService, auditLogService);
-        featureToggleController = new PlatformFeatureToggleController(permissionService, auditLogService);
+        securityPolicyController = new PlatformSecurityPolicyController(permissionService, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), null);
+        featureToggleController = new PlatformFeatureToggleController(permissionService, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
         reportController = new PlatformReportController(permissionService);
     }
 
@@ -70,6 +70,17 @@ class PlatformSecurityReportControllerTest {
         // Platform Admin is denied setting security policy (Product Owner only per prompt specification)
         assertThatThrownBy(() -> securityPolicyController.updatePolicy(req, authFor(PlatformRole.PLATFORM_ADMIN)))
                 .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    void H15_SECURITY_POLICY_SET_minPasswordLengthLessThan8_rejected() {
+        var req = new PlatformSecurityPolicyController.UpdateSecurityPolicyRequest(
+                0, true, true, 3, 30, 20, true, 180
+        );
+
+        assertThatThrownBy(() -> securityPolicyController.updatePolicy(req, authFor(PlatformRole.PRODUCT_OWNER)))
+                .isInstanceOf(com.edu360.api.exception.BusinessRuleViolationException.class)
+                .hasMessageContaining("Minimum password length must be at least 8");
     }
 
     @Test

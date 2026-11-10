@@ -32,8 +32,8 @@ public class GradingSchemeController {
             @RequestParam(required = false) UUID institutionId,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        return ResponseEntity.ok(gradingSchemeService.listGradingSchemes(tenantId, institutionId));
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(gradingSchemeService.listGradingSchemes(tenantId, principal, institutionId));
     }
 
     @PostMapping({"/v1/tenants/{tenantId}/grading-schemes", "/api/tenants/{tenantId}/grading-schemes"})

@@ -196,6 +196,10 @@ Also needed:
 
 Don't simply copy the dev approach, because a master-realm password in production has very wide power. Prefer a dedicated service account using the client credentials that production already expects, limited to the rights it needs. Change `fetchMasterAdminAccessToken` to use `grant_type=client_credentials`.
 
+## P12. Keycloak service account for identity events
+
+**Required for go-live (M-03 / C4 / D3 / PD-2).** The internal `/v1/internal/identity-events` endpoint requires a service token issued to `edu360-identity-events` in the platform realm with role `identity-events:write`. In production, set `app.keycloak.identity-events-client-id=${KEYCLOAK_IDENTITY_EVENTS_CLIENT_ID}` and `app.keycloak.identity-events-client-secret=${KEYCLOAK_IDENTITY_EVENTS_CLIENT_SECRET}` without defaults. Normal user tokens (even Product Owner) and tokens from other clients or without the required role are strictly refused with 401.
+
 ## Normal running in production
 
 Creating a tenant needs no restart. A restart or redeploy happens only when releasing new code, with a rolling deployment so users aren't interrupted.
@@ -212,6 +216,8 @@ Add these to the deployment configuration and `CLAUDE.md`'s production list:
 | `PLATFORM_HOST_LABEL` | `platform` |
 | `KEYCLOAK_FRONTEND_REDIRECT_URIS` | `https://*.edu360.com/*` |
 | `CORS_ALLOWED_ORIGIN` | `https://platform.edu360.com` |
+| `KEYCLOAK_IDENTITY_EVENTS_CLIENT_ID` | `edu360-identity-events` |
+| `KEYCLOAK_IDENTITY_EVENTS_CLIENT_SECRET` | `<from secret store>` |
 
 ## Done when
 

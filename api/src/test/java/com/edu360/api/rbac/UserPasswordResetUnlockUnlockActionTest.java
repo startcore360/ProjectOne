@@ -1,9 +1,12 @@
 package com.edu360.api.rbac;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
@@ -105,6 +108,7 @@ class UserPasswordResetUnlockUnlockActionTest {
     }
 
     @Test
+    @org.junit.jupiter.api.DisplayName("REG-I03-2: admin unlock clears the Keycloak lockout so the user can sign in")
     void unlockUser_resetsPasswordAndClearsBruteForceLockout() {
         PermissionEvaluatorService realEvaluator = evaluator();
         when(actionCatalogRepository.findById(ACTION_CODE)).thenReturn(Optional.of(action()));
@@ -126,9 +130,11 @@ class UserPasswordResetUnlockUnlockActionTest {
 
         InstitutionScopeRequest request = new InstitutionScopeRequest(INSTITUTION_ID);
 
-        controller.unlockUser(TENANT_ID, TARGET_USER_ID, request, authentication);
+        var response = controller.unlockUser(TENANT_ID, TARGET_USER_ID, request, authentication);
 
-        verify(keycloakAdminClient).resetPassword(eq(REALM), eq("kc-target-subject"), any());
+        assertThat(response.getHeaders().getFirst("Cache-Control")).isEqualTo("no-store");
+        verify(keycloakAdminClient, never()).resetPassword(any(), any(), any());
+        verify(keycloakAdminClient, never()).resetPassword(any(), any(), any(), anyBoolean());
         verify(keycloakAdminClient).clearBruteForceLockout(REALM, "kc-target-subject");
         verify(keycloakAdminClient).logoutUser(REALM, "kc-target-subject");
         verify(auditLogService).record(eq(AuditEventType.USER_UNLOCKED), any(), eq("kc-target-subject"), any(), any());

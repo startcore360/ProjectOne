@@ -17,6 +17,14 @@ CREATE TABLE IF NOT EXISTS app.user_active_role (
 COMMENT ON TABLE app.user_active_role IS 'Persisted active role selection per user session [ROLE_SWITCH, Rule HI-15, PO-3].';
 COMMENT ON COLUMN app.user_active_role.user_role_assignment_id IS 'The active role assignment currently selected by the user.';
 
+-- Q-05 (found by DB-191): trg_touch below runs app.fn_touch, which sets NEW.row_version. Without
+-- this column every UPDATE (a second role switch) failed with 'record "new" has no field
+-- "row_version"'. Added idempotently so existing databases are repaired too.
+ALTER TABLE app.user_active_role ADD COLUMN IF NOT EXISTS row_version integer NOT NULL DEFAULT 1;
+ALTER TABLE app.user_active_role DROP CONSTRAINT IF EXISTS ck_user_active_role_row_version;
+ALTER TABLE app.user_active_role ADD CONSTRAINT ck_user_active_role_row_version CHECK (row_version >= 1);
+COMMENT ON COLUMN app.user_active_role.row_version IS 'Optimistic-concurrency counter; incremented by trigger trg_touch. [PTD-08]';
+
 CREATE INDEX IF NOT EXISTS ix_user_active_role_assignment ON app.user_active_role (tenant_id, user_role_assignment_id);
 
 DO $$

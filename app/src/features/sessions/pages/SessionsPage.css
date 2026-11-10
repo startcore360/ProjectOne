@@ -1,45 +1,52 @@
-/* Sessions page (AUTH_DEVICES_MANAGE, Phase 1) - built from the shared EDU 360 design-system
-   tokens only, same pattern as design-system/components.css's platform compositions. */
+/* Sessions page (AUTH_DEVICES_MANAGE, SES-01: every signed-in device) - built from the shared
+   EDU 360 design-system tokens only, same pattern as design-system/components.css.
+   Layout: active-devices summary -> "This device" (wide highlighted card) -> other devices
+   (responsive card grid). Uses the full content width like the other workspace pages. */
 .sessions-page {
   display: grid;
   gap: var(--space-6);
-  max-width: 560px;
+  min-width: 0;
 }
-.sessions-card {
+.sessions-panel {
   padding: var(--space-6);
   border: 1px solid var(--color-border-divider);
   border-radius: var(--radius-lg);
   background: var(--color-bg-surface);
   box-shadow: var(--elevation-card);
 }
-.sessions-card__title {
-  margin: 0 0 var(--space-4);
-  font: var(--fw-bold) var(--fs-h3) / var(--lh-h3) var(--font-display);
-}
-.sessions-readonly {
+
+/* Current active devices at a glance. */
+.sessions-summary {
   display: grid;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-5);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border-divider);
-}
-.sessions-readonly div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-3);
 }
-.sessions-readonly dt {
+.sessions-summary__item {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border-divider);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  box-shadow: var(--elevation-card);
+}
+.sessions-summary__item--total {
+  border-color: var(--color-status-success-border);
+  background: var(--color-bg-brand-soft);
+}
+.sessions-summary__value {
+  color: var(--color-text);
+  font: var(--fw-bold) var(--fs-h2) / 1.1 var(--font-display);
+}
+.sessions-summary__item--total .sessions-summary__value {
+  color: var(--color-text-brand-strong);
+}
+.sessions-summary__label {
   color: var(--color-text-muted);
   font-size: var(--fs-body-sm);
 }
-.sessions-readonly dd {
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--fs-body-sm);
-}
+
 .sessions-message {
-  margin-bottom: var(--space-4);
   padding: var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--fs-body-sm);
@@ -49,8 +56,240 @@
   background: var(--color-status-danger-bg);
   color: var(--color-status-danger-fg);
 }
-.sessions-notice {
-  margin: 0 0 var(--space-4);
+.sessions-message--success {
+  border: 1px solid var(--color-status-success-border);
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success-fg);
+}
+
+.sessions-section {
+  display: grid;
+  gap: var(--space-3);
+}
+.sessions-section__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.sessions-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font: var(--fw-bold) var(--fs-h3) / var(--lh-h3) var(--font-display);
+}
+.sessions-section__count {
+  display: inline-grid;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 var(--space-2);
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+  font: var(--fw-bold) var(--fs-caption) / 1 var(--font-body);
+}
+.sessions-empty {
+  margin: 0;
+  padding: var(--space-5);
+  border: 1px dashed var(--color-border-divider);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  font-size: var(--fs-body-sm);
+  text-align: center;
+}
+
+/* Device cards. */
+.session-device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+.session-device {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-divider);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  box-shadow: var(--elevation-card);
+}
+.session-device__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.session-device__icon {
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-brand);
+}
+.session-device__heading {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.session-device__title {
+  margin: 0;
+  font: var(--fw-semibold) var(--fs-body) / 1.4 var(--font-body);
+  overflow-wrap: anywhere;
+}
+.session-device__kind {
   color: var(--color-text-muted);
   font-size: var(--fs-caption);
+}
+.session-device__meta {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+.session-device__meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.session-device__meta dt,
+.session-device__meta dd {
+  margin: 0;
+  font-size: var(--fs-body-sm);
+}
+.session-device__meta dt {
+  color: var(--color-text-muted);
+}
+.session-device__meta dd {
+  color: var(--color-text);
+  text-align: right;
+}
+.session-device__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-caption);
+}
+.session-device__action {
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+.session-device__action .eds-button {
+  width: 100%;
+}
+
+/* This device: wide highlighted card - details laid out across, action on the right. */
+.session-device--current {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: var(--space-5);
+  border-color: var(--color-status-success-border);
+  background: var(--color-bg-brand-soft);
+}
+.session-device--current .session-device__icon {
+  width: 52px;
+  height: 52px;
+  background: var(--color-bg-surface);
+}
+.session-device--current .session-device__top {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.session-device--current .session-device__meta {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+.session-device--current .session-device__meta div {
+  display: grid;
+  justify-content: start;
+  gap: 2px;
+}
+.session-device--current .session-device__meta dd {
+  text-align: left;
+}
+.session-device--current .session-device__action {
+  margin: 0;
+  padding: 0;
+}
+.session-device--current .session-device__note {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .session-device--current {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+}
+@media (max-width: 640px) {
+  .session-device,
+  .session-device--current {
+    padding: var(--space-4);
+  }
+  .session-device-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Live status: Active now (pulsing green dot) / Active N min ago / Idle. */
+.session-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border-divider);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font: var(--fw-semibold) var(--fs-caption) / 1.4 var(--font-body);
+  white-space: nowrap;
+}
+.session-status--live {
+  border-color: var(--color-status-success-border);
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success-fg);
+}
+.session-status__dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+.session-status--recent .session-status__dot {
+  background: var(--color-text-brand);
+}
+.session-status--live .session-status__dot,
+.session-status__dot--live {
+  background: var(--color-status-success-border);
+}
+.sessions-summary__value .session-status__dot--live {
+  width: 10px;
+  height: 10px;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+}
+/* The "live" ring: a soft ripple from the dot. Off for users who prefer reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .session-status--live .session-status__dot::after,
+  .session-status__dot--live::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: inherit;
+    animation: session-live-pulse 1.8s var(--ease-standard) infinite;
+  }
+}
+@keyframes session-live-pulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(2.6); opacity: 0; }
 }

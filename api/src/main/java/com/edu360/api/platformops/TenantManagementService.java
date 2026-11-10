@@ -15,8 +15,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.edu360.api.audit.AuditEventType;
-import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.config.keycloak.KeycloakProvisioningException;
@@ -99,7 +97,6 @@ public class TenantManagementService {
     private final TenantRepository tenantRepository;
     private final PlanRepository planRepository;
     private final KeycloakAdminClient keycloakAdminClient;
-    private final AuditLogService auditLogService;
     private final LeaveApproverSettingRepository leaveApproverSettingRepository;
     private final InstitutionRepository institutionRepository;
     private final UserAccountRepository userAccountRepository;
@@ -110,16 +107,23 @@ public class TenantManagementService {
     private final RoleActionRepository roleActionRepository;
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
+    private final com.edu360.api.platformops.billing.InvoiceRepository invoiceRepository;
 
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager entityManager;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.edu360.api.config.TenantIssuerAuthenticationManagerResolver tenantIssuerResolver;
+
+    /** B3 / I-06: a new tenant realm gets the current security policy and sign-in baseline. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.edu360.api.platformops.security.RealmSecuritySyncService realmSecuritySyncService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public TenantManagementService(
             TenantRepository tenantRepository,
             PlanRepository planRepository,
             KeycloakAdminClient keycloakAdminClient,
-            AuditLogService auditLogService,
             LeaveApproverSettingRepository leaveApproverSettingRepository,
             InstitutionRepository institutionRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) UserAccountRepository userAccountRepository,
@@ -129,12 +133,12 @@ public class TenantManagementService {
             @org.springframework.beans.factory.annotation.Autowired(required = false) StandardRoleActionRepository standardRoleActionRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) RoleActionRepository roleActionRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+            com.edu360.api.platformops.billing.InvoiceRepository invoiceRepository,
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
     ) {
         this.tenantRepository = tenantRepository;
         this.planRepository = planRepository;
         this.keycloakAdminClient = keycloakAdminClient;
-        this.auditLogService = auditLogService;
         this.leaveApproverSettingRepository = leaveApproverSettingRepository;
         this.institutionRepository = institutionRepository;
         this.userAccountRepository = userAccountRepository;
@@ -145,37 +149,7 @@ public class TenantManagementService {
         this.roleActionRepository = roleActionRepository;
         this.userRoleAssignmentRepository = userRoleAssignmentRepository;
         this.platformAuditWriter = platformAuditWriter;
-    }
-
-    public TenantManagementService(
-            TenantRepository tenantRepository,
-            PlanRepository planRepository,
-            KeycloakAdminClient keycloakAdminClient,
-            AuditLogService auditLogService,
-            LeaveApproverSettingRepository leaveApproverSettingRepository,
-            InstitutionRepository institutionRepository,
-            UserAccountRepository userAccountRepository,
-            UserIdentityLinkRepository userIdentityLinkRepository,
-            RoleDefinitionRepository roleDefinitionRepository,
-            StandardRoleRepository standardRoleRepository,
-            StandardRoleActionRepository standardRoleActionRepository,
-            RoleActionRepository roleActionRepository,
-            UserRoleAssignmentRepository userRoleAssignmentRepository
-    ) {
-        this(tenantRepository, planRepository, keycloakAdminClient, auditLogService, leaveApproverSettingRepository, institutionRepository,
-                userAccountRepository, userIdentityLinkRepository, roleDefinitionRepository, standardRoleRepository, standardRoleActionRepository, roleActionRepository, userRoleAssignmentRepository, null);
-    }
-
-    public TenantManagementService(
-            TenantRepository tenantRepository,
-            PlanRepository planRepository,
-            KeycloakAdminClient keycloakAdminClient,
-            AuditLogService auditLogService,
-            LeaveApproverSettingRepository leaveApproverSettingRepository,
-            InstitutionRepository institutionRepository
-    ) {
-        this(tenantRepository, planRepository, keycloakAdminClient, auditLogService, leaveApproverSettingRepository, institutionRepository,
-                null, null, null, null, null, null, null, null);
+        this.invoiceRepository = invoiceRepository;
     }
 
     /**
@@ -225,6 +199,18 @@ public class TenantManagementService {
             log.warn("Keycloak realm provisioning skipped or non-fatal in current environment: {}", ex.getMessage());
         }
 
+        // B3 / I-06 (REG-I06-2): lockout, password policy, two-step flow and password-check client
+        // from the current security policy. A realm without them must not be used, so a failure
+        // here fails the tenant creation (KeycloakProvisioningException -> 503).
+        if (realmSecuritySyncService != null) {
+            try {
+                realmSecuritySyncService.applyToRealm(realmName);
+            } catch (RuntimeException ex) {
+                throw new KeycloakProvisioningException(
+                        "Could not apply the security policy to realm '" + realmName + "': " + ex.getMessage(), ex);
+            }
+        }
+
         // 5. Construct and persist Tenant entity
         Instant now = Instant.now();
         Instant trialEndsAt = now.plus(Duration.ofDays(30));
@@ -258,28 +244,20 @@ public class TenantManagementService {
         // 5b. Provision First Tenant Admin
         UUID adminUserAccountId = UUID.randomUUID();
         String tempPassword = "Edu@" + UUID.randomUUID().toString().substring(0, 8) + "!";
-        String keycloakUserId = null;
-        try {
-            keycloakUserId = keycloakAdminClient.provisionUser(
-                    realmName,
-                    request.getFirstAdminName(),
-                    request.getFirstAdminEmail().toLowerCase().trim(),
-                    tempPassword,
-                    true
-            );
-            log.info("Provisioned first tenant admin Keycloak account {} for '{}' in realm '{}'",
-                    keycloakUserId, request.getFirstAdminEmail(), realmName);
-        } catch (KeycloakProvisioningException ex) {
-            log.warn("Keycloak admin provisioning failed: {}", ex.getMessage());
-            throw new BusinessRuleViolationException("KEYCLOAK_PROVISIONING_FAILED", "Failed to provision tenant first admin in Keycloak: " + ex.getMessage());
-        }
+        String keycloakUserId = keycloakAdminClient.provisionUser(
+                realmName,
+                request.getFirstAdminName(),
+                request.getFirstAdminEmail().toLowerCase().trim(),
+                tempPassword,
+                true
+        );
         if (keycloakUserId == null || keycloakUserId.isBlank()) {
-            keycloakUserId = adminUserAccountId.toString();
+            throw new KeycloakProvisioningException("Keycloak did not return a valid user id for tenant first admin");
         }
+        log.info("Provisioned first tenant admin Keycloak account {} for '{}' in realm '{}'",
+                keycloakUserId, request.getFirstAdminEmail(), realmName);
 
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "CREATE", "TENANT_CREATE", "TENANT", savedTenant.getTenantId());
-        }
+        platformAuditWriter.record(principal, savedTenant.getTenantId(), "TENANT_CREATED", "TENANT_CREATE", "TENANT", savedTenant.getTenantId());
 
         if (entityManager != null) {
             entityManager.createNativeQuery("SET app.tenant_id = '" + tenantId + "'").executeUpdate();
@@ -388,16 +366,6 @@ public class TenantManagementService {
             TenantContext.clear();
         }
 
-        // 6. Record audit log
-        auditLogService.record(
-                AuditEventType.ACCOUNT_CREATED,
-                null,
-                request.getFirstAdminEmail(),
-                null,
-                "Created tenant '" + savedTenant.getTenantName() + "' (subdomain: " + savedTenant.getSubdomain()
-                        + ", plan: " + plan.getPlanName() + ") in TRIAL state with initial admin by " + principal.email()
-        );
-
         return TenantResponse.from(
                 savedTenant,
                 plan.getPlanName(),
@@ -450,13 +418,23 @@ public class TenantManagementService {
             return TenantResponse.from(tenant, planName, null, null, null);
         }
 
-        if (tenant.getState() == TenantState.DELETED || tenant.getState() == TenantState.ARCHIVED) {
+        if (tenant.getState() == TenantState.DELETED || tenant.getState() == TenantState.ARCHIVED
+                || tenant.getState() == TenantState.SUSPENDED) {
             throw new BusinessRuleViolationException("INVALID_STATE_TRANSITION",
-                    "Cannot activate tenant in state " + tenant.getState());
+                    "Cannot activate tenant in state " + tenant.getState() + (tenant.getState() == TenantState.SUSPENDED
+                            ? " (use reactivation)" : ""));
+        }
+
+        // L-05 / D1: a tenant goes live only after its first invoice is PAID (R2-24).
+        if (!invoiceRepository.existsByTenantIdAndStatus(tenantId, "PAID")) {
+            throw new BusinessRuleViolationException("PAYMENT_REQUIRED",
+                    "Tenant activation refused: no paid invoice exists for this tenant yet.");
         }
 
         // Statutory go-live blocker evaluation (Rule 02_rules.sql app.go_live_blockers)
         List<String> blockers = new ArrayList<>();
+        openTenantScope(tenantId);
+        try {
 
         if ("UNIVERSITY_GROUP".equalsIgnoreCase(tenant.getTenantType())) {
             boolean vcApproverExists = leaveApproverSettingRepository
@@ -476,6 +454,9 @@ public class TenantManagementService {
                 blockers.add("PRINCIPAL_LEAVE_APPROVER_MISSING for institution " + inst.getInstitutionName() + " (" + instId + ")");
             }
         }
+        } finally {
+            closeTenantScope();
+        }
 
         if (!blockers.isEmpty()) {
             throw new BusinessRuleViolationException("GO_LIVE_BLOCKED",
@@ -486,11 +467,24 @@ public class TenantManagementService {
         tenant.setActivatedAt(Instant.now());
         tenantRepository.save(tenant);
 
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "APPROVE", "TENANT_ACTIVATE", "TENANT", tenantId);
-        }
+        platformAuditWriter.record(principal, tenantId, "TENANT_ACTIVATED", "TENANT_ACTIVATE", "TENANT", tenantId);
 
         return TenantResponse.from(tenant, planName, null, null, null);
+    }
+
+    /** Go-live checks read app.* rows, which RLS hides unless the tenant is set (L-05). */
+    private void openTenantScope(UUID tenantId) {
+        if (entityManager != null) {
+            entityManager.createNativeQuery("SET app.tenant_id = '" + tenantId + "'").executeUpdate();
+            entityManager.createNativeQuery("SET app.institution_scope = 'ALL'").executeUpdate();
+        }
+    }
+
+    private void closeTenantScope() {
+        if (entityManager != null) {
+            entityManager.createNativeQuery("RESET app.tenant_id").executeUpdate();
+            entityManager.createNativeQuery("RESET app.institution_scope").executeUpdate();
+        }
     }
 
     private List<Plan> seedDefaultPlans() {
@@ -587,9 +581,7 @@ public class TenantManagementService {
                 .build();
 
         Plan saved = planRepository.save(plan);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "CREATE", "PLAN_MANAGE", "PLAN", saved.getPlanId());
-        }
+        platformAuditWriter.record(principal, "CREATE", "PLAN_MANAGE", "PLAN", saved.getPlanId());
 
         return PlanResponse.from(saved);
     }
@@ -639,9 +631,7 @@ public class TenantManagementService {
         plan.setRowVersion(currentVersion + 1);
 
         Plan saved = planRepository.save(plan);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "UPDATE", "PLAN_MANAGE", "PLAN", saved.getPlanId());
-        }
+        platformAuditWriter.record(principal, "UPDATE", "PLAN_MANAGE", "PLAN", saved.getPlanId());
 
         return PlanResponse.from(saved);
     }
@@ -650,13 +640,16 @@ public class TenantManagementService {
     public TenantResponse suspendTenant(UUID tenantId, String reason, PlatformPrincipal principal) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
+        requireTransition(tenant, TenantState.SUSPENDED);
 
         tenant.setState(TenantState.SUSPENDED);
         tenantRepository.save(tenant);
 
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "UPDATE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
+        if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {
+            tenantIssuerResolver.evictTenantIssuer(tenant.getKeycloakRealm());
         }
+
+        platformAuditWriter.record(principal, tenantId, "TENANT_SUSPENDED", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
 
         String planName = getPlanName(tenant.getPlanId());
         return TenantResponse.from(tenant, planName, null, null, null);
@@ -666,13 +659,16 @@ public class TenantManagementService {
     public TenantResponse archiveTenant(UUID tenantId, String reason, PlatformPrincipal principal) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
+        requireTransition(tenant, TenantState.ARCHIVED);
 
         tenant.setState(TenantState.ARCHIVED);
         tenantRepository.save(tenant);
 
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "UPDATE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
+        if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {
+            tenantIssuerResolver.evictTenantIssuer(tenant.getKeycloakRealm());
         }
+
+        platformAuditWriter.record(principal, tenantId, "TENANT_ARCHIVED", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
 
         String planName = getPlanName(tenant.getPlanId());
         return TenantResponse.from(tenant, planName, null, null, null);
@@ -682,16 +678,34 @@ public class TenantManagementService {
     public TenantResponse reactivateTenant(UUID tenantId, PlatformPrincipal principal) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
+        requireTransition(tenant, TenantState.ACTIVE);
 
         tenant.setState(TenantState.ACTIVE);
         tenantRepository.save(tenant);
 
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "UPDATE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
+        if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {
+            tenantIssuerResolver.evictTenantIssuer(tenant.getKeycloakRealm());
         }
+
+        platformAuditWriter.record(principal, tenantId, "TENANT_REACTIVATED", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
 
         String planName = getPlanName(tenant.getPlanId());
         return TenantResponse.from(tenant, planName, null, null, null);
+    }
+
+    /** L-09: lifecycle moves only along allowed edges; a DELETED (locked) tenant never comes back. */
+    static void requireTransition(Tenant tenant, TenantState target) {
+        TenantState from = tenant.getState();
+        boolean allowed = switch (target) {
+            case SUSPENDED -> from == TenantState.ACTIVE || from == TenantState.TRIAL;
+            case ARCHIVED -> from == TenantState.ACTIVE || from == TenantState.TRIAL || from == TenantState.SUSPENDED;
+            case ACTIVE -> from == TenantState.SUSPENDED || from == TenantState.ARCHIVED;
+            default -> false;
+        };
+        if (!allowed) {
+            throw new BusinessRuleViolationException("INVALID_STATE_TRANSITION",
+                    "A tenant in state " + from + " cannot be moved to " + target + ".");
+        }
     }
 
     public TenantSettingsResponse getTenantSettings(UUID tenantId) {
@@ -736,9 +750,7 @@ public class TenantManagementService {
         tenant.setUpdatedBy(principal.platformUserId());
         Tenant saved = tenantRepository.save(tenant);
 
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "CONFIG_CHANGE", "TENANT_SETTINGS", "TENANT", tenantId);
-        }
+        platformAuditWriter.record(principal, tenantId, "TENANT_SETTINGS_UPDATED", "TENANT_SETTINGS", "TENANT", tenantId);
 
         String planName = getPlanName(saved.getPlanId());
         return TenantSettingsResponse.from(saved, planName);
@@ -749,90 +761,4 @@ public class TenantManagementService {
         return planRepository.findById(planId).map(Plan::getPlanName).orElse("Custom Plan");
     }
 
-    @Transactional
-    public void deleteTenant(UUID tenantId, String reason, PlatformPrincipal principal) {
-        if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
-            throw new UnauthorizedException("Rule WF-05: Only the Product Owner may delete a tenant.");
-        }
-        Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
-
-        if (tenant.getState() != TenantState.ARCHIVED) {
-            throw new BusinessRuleViolationException("Rule WF-05: Tenant must be in ARCHIVED state before deletion.");
-        }
-
-        tenant.setState(TenantState.DELETED);
-        tenantRepository.save(tenant);
-
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "DELETE", "TENANT_SUSPEND_ARCHIVE", "TENANT", tenantId);
-        }
-    }
-
-    private static final java.util.List<java.util.Map<String, Object>> IN_MEMORY_EXPORTS = new java.util.concurrent.CopyOnWriteArrayList<>();
-    private static final java.util.List<java.util.Map<String, Object>> IN_MEMORY_RETENTION_REQUESTS = new java.util.concurrent.CopyOnWriteArrayList<>();
-
-    public java.util.Map<String, Object> requestExport(UUID tenantId, PlatformPrincipal principal) {
-        UUID exportId = UUID.randomUUID();
-        Instant now = Instant.now();
-        java.util.Map<String, Object> export = java.util.Map.of(
-                "id", exportId.toString(),
-                "tenantId", tenantId.toString(),
-                "status", "REQUESTED",
-                "exportType", "ALL_DATA",
-                "requestedAt", now.toString(),
-                "requestedBy", principal.email()
-        );
-        IN_MEMORY_EXPORTS.add(export);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "EXPORT", "TENANT_SETTINGS", "TENANT", tenantId);
-        }
-        return export;
-    }
-
-    public java.util.List<java.util.Map<String, Object>> listExports(UUID tenantId) {
-        if (tenantId == null) return java.util.List.copyOf(IN_MEMORY_EXPORTS);
-        return IN_MEMORY_EXPORTS.stream()
-                .filter(e -> tenantId.toString().equals(e.get("tenantId")))
-                .toList();
-    }
-
-    public java.util.List<java.util.Map<String, Object>> getRetentionPolicies(UUID tenantId) {
-        return java.util.List.of(
-                java.util.Map.of(
-                        "id", UUID.randomUUID().toString(),
-                        "tenantId", tenantId.toString(),
-                        "dataClassCode", "STUDENT_RECORDS",
-                        "retentionPeriodDays", 90,
-                        "retentionMonths", 3,
-                        "status", "ACTIVE"
-                ),
-                java.util.Map.of(
-                        "id", UUID.randomUUID().toString(),
-                        "tenantId", tenantId.toString(),
-                        "dataClassCode", "AUDIT_LOGS",
-                        "retentionPeriodDays", 365,
-                        "retentionMonths", 12,
-                        "status", "ACTIVE"
-                )
-        );
-    }
-
-    public java.util.Map<String, Object> requestRetentionChange(UUID tenantId, java.util.Map<String, Object> request, PlatformPrincipal principal) {
-        UUID reqId = UUID.randomUUID();
-        java.util.Map<String, Object> req = java.util.Map.of(
-                "id", reqId.toString(),
-                "tenantId", tenantId.toString(),
-                "dataClassCode", request.getOrDefault("dataClassCode", "STUDENT_RECORDS"),
-                "requestedMonths", request.getOrDefault("requestedMonths", 12),
-                "reason", request.getOrDefault("reason", ""),
-                "status", "PENDING_DPO_APPROVAL",
-                "createdAt", Instant.now().toString()
-        );
-        IN_MEMORY_RETENTION_REQUESTS.add(req);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "CONFIG_CHANGE", "TENANT_SETTINGS", "TENANT", tenantId);
-        }
-        return req;
-    }
 }

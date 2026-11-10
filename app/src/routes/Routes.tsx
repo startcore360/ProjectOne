@@ -28,7 +28,6 @@ import {
   TicketsPage,
 } from "../features/platform/pages/PlatformPages";
 import {
-  InstitutionUsersPage,
   InstitutionsPage,
   MissingRolesPage,
   RolesPermissionsPage,
@@ -89,28 +88,22 @@ export default function AppRoutes() {
         <Route element={<UniversityAdminRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/university/institutions" element={<InstitutionsPage />} />
-            <Route path="/university/users" element={<InstitutionUsersPage />} />
+            <Route path="/university/users" element={<UserListPage />} />
             <Route path="/university/roles" element={<RolesPermissionsPage />} />
             <Route path="/university/missing-roles" element={<MissingRolesPage />} />
+            <Route path="/university/setup/hod" element={<HodAssignmentPage />} />
+            <Route path="/university/setup/mentor" element={<MentorAssignmentPage />} />
+            <Route path="/university/setup/class-teacher" element={<ClassTeacherAssignmentPage />} />
+            <Route path="/university/setup/student-login" element={<StudentLoginSwitchPage />} />
+            <Route path="/university/setup/calendar-events" element={<CalendarEventsPage />} />
+            <Route path="/university/setup/weekly-off" element={<WeeklyOffRulesPage />} />
+            <Route path="/university/setup/structure" element={<AcademicStructurePage />} />
+            <Route path="/university/setup/term-lock" element={<TermLockPage />} />
+            <Route path="/university/setup/delegations" element={<DelegationsApprovalsPage />} />
+            <Route path="/university/setup/academic-governance" element={<AcademicGovernancePage />} />
+            <Route path="/tenants/users" element={<UserListPage />} />
+            <Route path="/tenants/users/:userId" element={<UserDetailPage />} />
           </Route>
-        </Route>
-        {/* Not gated by UniversityAdminRoute: these call real backend endpoints that already
-            enforce authorization server-side via PermissionEvaluatorService. There is no tenant
-            role field on AuthUserResponse yet to gate on client-side (same reasoning as
-            /tenants/users below) - a client-side fail-closed gate here would make these
-            unreachable for everyone rather than add real security, since the server already
-            denies anyone without the right grant. */}
-        <Route element={<AppLayout />}>
-          <Route path="/university/setup/hod" element={<HodAssignmentPage />} />
-          <Route path="/university/setup/mentor" element={<MentorAssignmentPage />} />
-          <Route path="/university/setup/class-teacher" element={<ClassTeacherAssignmentPage />} />
-          <Route path="/university/setup/student-login" element={<StudentLoginSwitchPage />} />
-          <Route path="/university/setup/calendar-events" element={<CalendarEventsPage />} />
-          <Route path="/university/setup/weekly-off" element={<WeeklyOffRulesPage />} />
-          <Route path="/university/setup/structure" element={<AcademicStructurePage />} />
-          <Route path="/university/setup/term-lock" element={<TermLockPage />} />
-          <Route path="/university/setup/delegations" element={<DelegationsApprovalsPage />} />
-          <Route path="/university/setup/academic-governance" element={<AcademicGovernancePage />} />
         </Route>
         <Route element={<PlatformConsoleRoute />}>
           <Route element={<AppLayout />}>
@@ -165,8 +158,6 @@ export default function AppRoutes() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/self-service" element={<SelfServicePage />} />
           <Route path="/sessions" element={<SessionsPage />} />
-          <Route path="/tenants/users" element={<UserListPage />} />
-          <Route path="/tenants/users/:userId" element={<UserDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

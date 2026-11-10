@@ -50,23 +50,23 @@ import com.edu360.api.auth.dto.IdentityEventRequest;
 public class AuthController {
     private final AuthService authService;
     private final AuditLogService auditLogService;
+    private final IdentityEventTokenValidator identityEventTokenValidator;
 
     @PostMapping({"/login", "/sign-in"})
     @Operation(summary = "Sign in - which tenant or the platform is resolved from the request's hostname")
     public ResponseEntity<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request,
                                                      HttpServletRequest httpRequest) {
-        AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(),
+        AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(), request.getTotp(),
                 httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping({"/internal/identity-events", "/v1/internal/identity-events"})
-    @Operation(summary = "Internal Keycloak identity event webhook with serviceAuth guard")
+    @Operation(summary = "Internal Keycloak identity event webhook with Keycloak service token guard")
     public ResponseEntity<Void> handleIdentityEvent(
-            @RequestHeader(value = "X-Service-Auth", required = false) String serviceAuth,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody(required = false) IdentityEventRequest event) {
-        if (!isAuthorizedService(serviceAuth, authHeader)) {
+        if (!identityEventTokenValidator.isValidServiceToken(authHeader)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         if (event != null && event.eventType() != null) {
@@ -80,17 +80,7 @@ public class AuthController {
                 auditLogService.record(AuditEventType.PASSWORD_CHANGED, null, event.userId(), event.ipAddress(), event.details());
             }
         }
-        return ResponseEntity.noContent().build();
-    }
-
-    private boolean isAuthorizedService(String serviceAuth, String authHeader) {
-        if (serviceAuth != null && !serviceAuth.isBlank()) {
-            return true;
-        }
-        if (authHeader != null && (authHeader.startsWith("Bearer internal-service-") || authHeader.startsWith("Bearer service-token"))) {
-            return true;
-        }
-        return false;
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/refresh")
@@ -142,9 +132,14 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Record sign-out for audit")
+    @Operation(summary = "Sign out: end this browser's Keycloak session and record it for audit")
     public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest httpRequest) {
         if (authentication != null) {
+            // Previously audit-only, which left the Keycloak session alive - it would then keep
+            // showing as an active device in "My sessions" (SES-01) until it timed out.
+            if (authentication.getCredentials() instanceof Jwt jwt) {
+                authService.endSession(authentication.getPrincipal(), jwt);
+            }
             String actor = switch (authentication.getPrincipal()) {
                 case TenantPrincipal tenant -> tenant.displayName();
                 case PlatformPrincipal platform -> platform.email();

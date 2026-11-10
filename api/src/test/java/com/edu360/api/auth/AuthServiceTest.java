@@ -87,6 +87,9 @@ class AuthServiceTest {
     @Mock private UserRoleAssignmentRepository userRoleAssignmentRepository;
     @Mock private RoleDefinitionRepository roleDefinitionRepository;
     @Mock private FileObjectRepository fileObjectRepository;
+    @Mock private com.edu360.api.selfservice.SessionService sessionService;
+    @Mock private com.edu360.api.config.keycloak.KeycloakRealmSecurityService realmSecurityService;
+    @Mock private com.edu360.api.identity.StudentLoginLookup studentLoginLookup;
 
     private KeycloakProperties keycloakProperties;
     private AuthService authService;
@@ -102,7 +105,31 @@ class AuthServiceTest {
         authService = new AuthService(loginTenantResolver, tenantRepository, platformUserRepository,
                 userAccountRepository, userIdentityLinkRepository, studentProfileRepository,
                 tenantUserLookup, keycloakAdminClient, keycloakAuthClient, keycloakProperties,
-                auditLogService, userRoleAssignmentRepository, roleDefinitionRepository, fileObjectRepository);
+                auditLogService, userRoleAssignmentRepository, roleDefinitionRepository, fileObjectRepository,
+                sessionService,
+                new PasswordPolicyService(new com.edu360.api.platformops.security.SecurityPolicyService(null)),
+                new MfaRequirementService(keycloakAdminClient, userIdentityLinkRepository, userRoleAssignmentRepository, roleDefinitionRepository),
+                realmSecurityService,
+                new com.edu360.api.platformops.security.SecurityPolicyService(null),
+                studentLoginLookup);
+    }
+
+    /** B3: the password is proven through the password-check client before any token is asked for. */
+    private void passwordProven(String realm, String username, KeycloakAdminClient.KeycloakUser kcUser,
+                                List<KeycloakAdminClient.CredentialInfo> credentials) {
+        when(keycloakAuthClient.verifyPassword(eq(realm), eq(username), anyString(), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
+        when(keycloakAdminClient.findUser(realm, username)).thenReturn(Optional.of(kcUser));
+        when(keycloakAdminClient.listCredentials(realm, kcUser.id())).thenReturn(credentials);
+    }
+
+    private static KeycloakAdminClient.KeycloakUser kcUser(String username, boolean mfaAttribute) {
+        return new KeycloakAdminClient.KeycloakUser("kc-subject", username, true,
+                mfaAttribute ? java.util.Map.of("mfa_required", List.of("true")) : java.util.Map.of(), List.of());
+    }
+
+    private static List<KeycloakAdminClient.CredentialInfo> passwordOnly() {
+        return List.of(new KeycloakAdminClient.CredentialInfo("password", Instant.now().minusSeconds(3600)));
     }
 
     // WHY this is a separate statement everywhere it's used, never inlined as an argument
@@ -157,14 +184,14 @@ class AuthServiceTest {
         when(userIdentityLinkRepository.findFirstByIdTenantIdAndUserAccountIdAndStatus(
                 TENANT_ID, USER_ACCOUNT_ID, IdentityLinkStatus.ACTIVE))
                 .thenReturn(Optional.of(link(UsernameKind.EMAIL)));
-        when(keycloakAuthClient.login(eq(REALM), eq("staff@abc.test"), anyString()))
-                .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("staff@abc.test"), anyString(), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
 
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
                 "Test User", true);
         authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newSecurePassword123!", "127.0.0.1");
 
-        verify(keycloakAuthClient).login(REALM, "staff@abc.test", "oldpass");
+        verify(keycloakAuthClient).verifyPassword(eq(REALM), eq("staff@abc.test"), eq("oldpass"), any());
     }
 
     @Test
@@ -176,14 +203,14 @@ class AuthServiceTest {
         when(userIdentityLinkRepository.findFirstByIdTenantIdAndUserAccountIdAndStatus(
                 TENANT_ID, USER_ACCOUNT_ID, IdentityLinkStatus.ACTIVE))
                 .thenReturn(Optional.of(link(UsernameKind.MOBILE)));
-        when(keycloakAuthClient.login(eq(REALM), eq("+911234567890"), anyString()))
-                .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("+911234567890"), anyString(), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
 
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.GUARDIAN,
                 "Test Parent", true);
         authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newSecurePassword123!", "127.0.0.1");
 
-        verify(keycloakAuthClient).login(REALM, "+911234567890", "oldpass");
+        verify(keycloakAuthClient).verifyPassword(eq(REALM), eq("+911234567890"), eq("oldpass"), any());
     }
 
     @Test
@@ -199,14 +226,14 @@ class AuthServiceTest {
         when(profile.getStudentCode()).thenReturn("STU-0042");
         when(studentProfileRepository.findByTenantIdAndUserAccountId(TENANT_ID, USER_ACCOUNT_ID))
                 .thenReturn(Optional.of(profile));
-        when(keycloakAuthClient.login(eq(REALM), eq("STU-0042"), anyString()))
-                .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("STU-0042"), anyString(), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
 
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STUDENT,
                 "Test Student", true);
         authService.changeTenantPassword(principal, "kc-subject", "oldpass", "newSecurePassword123!", "127.0.0.1");
 
-        verify(keycloakAuthClient).login(REALM, "STU-0042", "oldpass");
+        verify(keycloakAuthClient).verifyPassword(eq(REALM), eq("STU-0042"), eq("oldpass"), any());
     }
 
     // ------------------------------------------------------------------- response accuracy
@@ -220,8 +247,8 @@ class AuthServiceTest {
         when(userIdentityLinkRepository.findFirstByIdTenantIdAndUserAccountIdAndStatus(
                 TENANT_ID, USER_ACCOUNT_ID, IdentityLinkStatus.ACTIVE))
                 .thenReturn(Optional.of(link(UsernameKind.EMAIL)));
-        when(keycloakAuthClient.login(any(), any(), any()))
-                .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        when(keycloakAuthClient.verifyPassword(any(), any(), any(), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
 
         // Principal walks in with mustChangePassword=true (the forced-change case) - the
         // response must say false, since resetPassword just cleared it, not echo the stale value.
@@ -234,8 +261,8 @@ class AuthServiceTest {
 
     @Test
     void changePlatformPassword_responseNeverEchoesStaleMustChangePassword() {
-        when(keycloakAuthClient.login(any(), any(), any()))
-                .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        when(keycloakAuthClient.verifyPassword(any(), any(), any(), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
 
         PlatformPrincipal principal = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.PLATFORM_ADMIN,
                 "admin@edu360-platform.local", true);
@@ -268,6 +295,7 @@ class AuthServiceTest {
         Tenant tenant = mockTenant();
         when(loginTenantResolver.resolve(httpServletRequest))
                 .thenReturn(new LoginTenantResolver.TenantLogin(tenant));
+        passwordProven(REALM, "teacher1", kcUser("teacher1", false), passwordOnly());
         when(keycloakAuthClient.login(REALM, "teacher1", "pw"))
                 .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
         UserAccount account = account("teacher1@abc.test", null);
@@ -291,6 +319,7 @@ class AuthServiceTest {
         Tenant tenant = mockTenant();
         when(loginTenantResolver.resolve(httpServletRequest))
                 .thenReturn(new LoginTenantResolver.TenantLogin(tenant));
+        passwordProven(REALM, "teacher1", kcUser("teacher1", false), passwordOnly());
         when(keycloakAuthClient.login(REALM, "teacher1", "pw"))
                 .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
         UserAccount account = account("teacher1@abc.test", null);
@@ -310,6 +339,7 @@ class AuthServiceTest {
         Tenant tenant = mockTenant();
         when(loginTenantResolver.resolve(httpServletRequest))
                 .thenReturn(new LoginTenantResolver.TenantLogin(tenant));
+        passwordProven(REALM, "teacher1", kcUser("teacher1", false), passwordOnly());
         when(keycloakAuthClient.login(REALM, "teacher1", "pw"))
                 .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
         UserAccount account = account("teacher1@abc.test", null);
@@ -350,8 +380,14 @@ class AuthServiceTest {
     void login_platformResolution_buildsPlatformUserResponse() {
         when(loginTenantResolver.resolve(httpServletRequest))
                 .thenReturn(new LoginTenantResolver.PlatformLogin("edu360-platform"));
-        when(keycloakAuthClient.login("edu360-platform", "admin@edu360-platform.local", "pw"))
+        // PLATFORM_ADMIN is a two-step role (PD-8): this sign-in carries the authenticator code.
+        when(keycloakAuthClient.login("edu360-platform", "admin@edu360-platform.local", "pw", "123456"))
                 .thenReturn(new KeycloakAuthClient.TokenResult("at", "rt", 300, "kc-subject", false));
+        when(keycloakAdminClient.getUser("edu360-platform", "kc-subject"))
+                .thenReturn(Optional.of(kcUser("admin@edu360-platform.local", true)));
+        when(keycloakAdminClient.listCredentials("edu360-platform", "kc-subject"))
+                .thenReturn(List.of(new KeycloakAdminClient.CredentialInfo("password", Instant.now()),
+                        new KeycloakAdminClient.CredentialInfo("otp", Instant.now())));
         PlatformUser platformUser = PlatformUser.builder()
                 .platformUserId(UUID.randomUUID())
                 .email("admin@edu360-platform.local")
@@ -365,7 +401,7 @@ class AuthServiceTest {
                 .build();
         when(platformUserRepository.findByIdentitySubject("kc-subject")).thenReturn(Optional.of(platformUser));
 
-        var response = authService.login(httpServletRequest, "admin@edu360-platform.local", "pw", "127.0.0.1");
+        var response = authService.login(httpServletRequest, "admin@edu360-platform.local", "pw", "123456", "127.0.0.1");
 
         assertThat(response.user().tenantId()).isNull();
         assertThat(response.user().platformRole()).isEqualTo(PlatformRole.PLATFORM_ADMIN);

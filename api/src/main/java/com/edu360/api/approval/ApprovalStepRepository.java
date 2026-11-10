@@ -19,4 +19,5 @@ public interface ApprovalStepRepository extends JpaRepository<ApprovalStep, Appr
     List<ApprovalStep> findByIdTenantIdAndApproverRoleCodeAndDecision(UUID tenantId, String approverRoleCode, String decision);
 
     List<ApprovalStep> findByIdTenantIdAndApproverUserIdAndDecision(UUID tenantId, UUID approverUserId, String decision);
+    List<ApprovalStep> findByIdTenantIdAndDecision(UUID tenantId, String decision);
 }

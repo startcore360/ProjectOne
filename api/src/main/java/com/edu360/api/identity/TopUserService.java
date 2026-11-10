@@ -125,21 +125,18 @@ public class TopUserService {
         String tempPassword = generateTemporaryPassword();
 
         // 8. Provision user in Keycloak tenant realm (mustChangePassword = true, two-step login required)
-        String keycloakUserId;
-        try {
-            keycloakUserId = keycloakAdminClient.provisionUser(
-                    realm,
-                    request.displayName().trim(),
-                    normalizedEmail,
-                    tempPassword,
-                    true
-            );
-            log.info("Provisioned Keycloak account {} for top user '{}' ({}) in realm '{}'",
-                    keycloakUserId, request.displayName(), normalizedEmail, realm);
-        } catch (KeycloakProvisioningException ex) {
-            log.warn("Keycloak provisioning failed or stubbed in current environment: {}", ex.getMessage());
-            keycloakUserId = UUID.randomUUID().toString();
+        String keycloakUserId = keycloakAdminClient.provisionUser(
+                realm,
+                request.displayName().trim(),
+                normalizedEmail,
+                tempPassword,
+                true
+        );
+        if (keycloakUserId == null || keycloakUserId.isBlank()) {
+            throw new KeycloakProvisioningException("Keycloak did not return a valid user id for top user");
         }
+        log.info("Provisioned Keycloak account {} for top user '{}' ({}) in realm '{}'",
+                keycloakUserId, request.displayName(), normalizedEmail, realm);
 
         // 9. Persist UserAccount (app.user_account)
         UUID userAccountId = UUID.randomUUID();

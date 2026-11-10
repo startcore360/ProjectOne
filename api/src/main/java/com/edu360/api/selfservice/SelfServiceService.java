@@ -96,12 +96,14 @@ public class SelfServiceService {
                 .toList();
     }
 
+    /**
+     * A-08: SELF_SERVICE_VIEW ("Self" in D2) is checked at the user's own active scope - a
+     * Teacher at their institution, an HOD at their department - never as a tenant-wide check
+     * that only tenant-level roles could pass.
+     */
     private void authorizeSelfService(UUID tenantId, UUID userId) {
-        permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, userId),
-                "SELF_SERVICE_VIEW",
-                RbacScope.tenant(),
-                RbacTarget.NONE
-        );
+        RbacPrincipal self = new RbacPrincipal(tenantId, userId);
+        RbacScope own = java.util.Objects.requireNonNullElse(permissionEvaluatorService.ownScope(self), RbacScope.tenant());
+        permissionEvaluatorService.authorize(self, "SELF_SERVICE_VIEW", own, RbacTarget.NONE);
     }
 }

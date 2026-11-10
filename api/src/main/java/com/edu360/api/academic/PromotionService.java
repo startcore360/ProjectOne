@@ -10,6 +10,10 @@ import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.institution.Institution;
+import com.edu360.api.institution.InstitutionId;
+import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
@@ -31,6 +35,7 @@ public class PromotionService {
     private final AuditLogService auditLogService;
     private final ApprovalRequestRepository approvalRequestRepository;
     private final ApprovalStepRepository approvalStepRepository;
+    private final InstitutionRepository institutionRepository;
 
     @Autowired
     public PromotionService(
@@ -38,19 +43,30 @@ public class PromotionService {
             PermissionEvaluatorService permissionEvaluatorService,
             AuditLogService auditLogService,
             @Autowired(required = false) ApprovalRequestRepository approvalRequestRepository,
-            @Autowired(required = false) ApprovalStepRepository approvalStepRepository) {
+            @Autowired(required = false) ApprovalStepRepository approvalStepRepository,
+            @Autowired(required = false) InstitutionRepository institutionRepository) {
         this.repository = repository;
         this.permissionEvaluatorService = permissionEvaluatorService;
         this.auditLogService = auditLogService;
         this.approvalRequestRepository = approvalRequestRepository;
         this.approvalStepRepository = approvalStepRepository;
+        this.institutionRepository = institutionRepository;
+    }
+
+    public PromotionService(
+            PromotionRunRepository repository,
+            PermissionEvaluatorService permissionEvaluatorService,
+            AuditLogService auditLogService,
+            ApprovalRequestRepository approvalRequestRepository,
+            ApprovalStepRepository approvalStepRepository) {
+        this(repository, permissionEvaluatorService, auditLogService, approvalRequestRepository, approvalStepRepository, null);
     }
 
     public PromotionService(
             PromotionRunRepository repository,
             PermissionEvaluatorService permissionEvaluatorService,
             AuditLogService auditLogService) {
-        this(repository, permissionEvaluatorService, auditLogService, null, null);
+        this(repository, permissionEvaluatorService, auditLogService, null, null, null);
     }
 
     @Transactional
@@ -95,12 +111,12 @@ public class PromotionService {
     }
 
     @Transactional(readOnly = true)
-    public PromotionRunResponse getPromotionRun(UUID tenantId, UUID runId) {
+    public PromotionRunResponse getPromotionRun(UUID tenantId, TenantPrincipal principal, UUID runId) {
         PromotionRun run = repository.findByIdTenantIdAndIdPromotionRunId(tenantId, runId)
                 .orElseThrow(() -> new BusinessRuleViolationException("PROMOTION_RUN_NOT_FOUND", "Promotion run not found"));
 
         permissionEvaluatorService.authorize(
-                new RbacPrincipal(tenantId, null),
+                new RbacPrincipal(tenantId, principal.userAccountId()),
                 "PROMOTION_RUN",
                 RbacScope.institution(run.getInstitutionId()),
                 RbacTarget.NONE
@@ -113,6 +129,10 @@ public class PromotionService {
     public PromotionRunResponse submitPromotionRun(UUID tenantId, TenantPrincipal principal, UUID runId) {
         PromotionRun run = repository.findByIdTenantIdAndIdPromotionRunId(tenantId, runId)
                 .orElseThrow(() -> new BusinessRuleViolationException("PROMOTION_RUN_NOT_FOUND", "Promotion run not found"));
+
+        if (!"DRAFT".equalsIgnoreCase(run.getStatus())) {
+            throw new BusinessRuleViolationException("INVALID_STATUS", "Only DRAFT promotion runs can be submitted.");
+        }
 
         permissionEvaluatorService.authorize(
                 new RbacPrincipal(tenantId, principal.userAccountId()),
@@ -130,6 +150,13 @@ public class PromotionService {
 
         if (approvalRequestRepository != null && approvalStepRepository != null) {
             String activeRole = TenantContext.currentActiveRoleCode() != null ? TenantContext.currentActiveRoleCode() : "EXAM_REGISTRAR";
+            String approverRole = "PRINCIPAL_COLLEGE";
+            if (institutionRepository != null && run.getInstitutionId() != null) {
+                approverRole = institutionRepository.findById(new InstitutionId(tenantId, run.getInstitutionId()))
+                        .map(inst -> "SCHOOL".equalsIgnoreCase(inst.getInstitutionType()) ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE")
+                        .orElse("PRINCIPAL_COLLEGE");
+            }
+
             ApprovalRequest approvalReq = ApprovalRequest.builder()
                     .id(new ApprovalRequestId(tenantId, approvalRequestId))
                     .institutionId(run.getInstitutionId())
@@ -137,7 +164,7 @@ public class PromotionService {
                     .status("PENDING")
                     .subjectType("PROMOTION_RUN")
                     .subjectId(runId)
-                    .requestedByUserId(UUID.fromString("e1cec57c-6b56-4e7b-a6b2-bd19f5186ab4"))
+                    .requestedByUserId(principal.userAccountId())
                     .requesterActiveRole(activeRole)
                     .currentStepNo((short) 1)
                     .createdAt(Instant.now())
@@ -152,7 +179,7 @@ public class PromotionService {
                     .id(new ApprovalStepId(tenantId, UUID.randomUUID()))
                     .approvalRequestId(approvalRequestId)
                     .stepNo((short) 1)
-                    .approverRoleCode("PRINCIPAL_COLLEGE")
+                    .approverRoleCode(approverRole)
                     .decision("PENDING")
                     .createdAt(Instant.now())
                     .createdBy(principal.userAccountId())
@@ -179,11 +206,25 @@ public class PromotionService {
         PromotionRun run = repository.findByIdTenantIdAndIdPromotionRunId(tenantId, runId)
                 .orElseThrow(() -> new BusinessRuleViolationException("PROMOTION_RUN_NOT_FOUND", "Promotion run not found"));
 
+        if (!"PENDING_APPROVAL".equalsIgnoreCase(run.getStatus()) && !"SUBMITTED".equalsIgnoreCase(run.getStatus())) {
+            throw new BusinessRuleViolationException("INVALID_STATUS", "Only pending promotion runs can be decided.");
+        }
+
+        if (run.getCreatedBy() != null && principal.userAccountId().equals(run.getCreatedBy())) {
+            throw new UnauthorizedException("Self-approval forbidden: the requester cannot approve their own promotion run.");
+        }
+
+        // P-04: the step and the audit record the real active role; with none the decision is denied.
+        final String decidingRole = TenantContext.currentActiveRoleCode();
+        if (decidingRole == null) {
+            throw new UnauthorizedException("No active role: choose an active role before deciding a promotion run.");
+        }
+
         permissionEvaluatorService.authorize(
                 new RbacPrincipal(tenantId, principal.userAccountId()),
                 "PROMOTION_APPROVE",
                 RbacScope.institution(run.getInstitutionId()),
-                RbacTarget.NONE
+                RbacTarget.of(run.getCreatedBy())
         );
 
         if (!"APPROVED".equalsIgnoreCase(request.decision()) && (request.comment() == null || request.comment().isBlank())) {
@@ -215,6 +256,8 @@ public class PromotionService {
                                     .ifPresent(st -> {
                                         st.setDecision(approved ? "APPROVED" : "REJECTED");
                                         st.setActedByUserId(principal.userAccountId());
+                                        String activeRole = decidingRole;
+                                        st.setActedActiveRole(activeRole);
                                         st.setDecidedAt(Instant.now());
                                         st.setRemark(request.comment());
                                         approvalStepRepository.save(st);

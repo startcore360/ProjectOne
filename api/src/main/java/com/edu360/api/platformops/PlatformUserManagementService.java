@@ -115,6 +115,17 @@ public class PlatformUserManagementService {
             throw new UnauthorizedException("You can't change your own role or status (Addendum rule 11).");
         }
 
+        // L-09: the platform must never be left without an active Product Owner.
+        boolean losesOwnerRole = user.getPlatformRole() == PlatformRole.PRODUCT_OWNER
+                && user.getStatus() == PlatformUserStatus.ACTIVE
+                && (changesStatus && request.status() != PlatformUserStatus.ACTIVE
+                    || changesRole && (request.platformRole() != PlatformRole.PRODUCT_OWNER));
+        if (losesOwnerRole
+                && platformUserRepository.countByPlatformRoleAndStatus(PlatformRole.PRODUCT_OWNER, PlatformUserStatus.ACTIVE) <= 1) {
+            throw new BusinessRuleViolationException("LAST_PRODUCT_OWNER",
+                    "The last active Product Owner cannot be demoted or deactivated.");
+        }
+
         if (request.fullName() != null) {
             String name = request.fullName().trim();
             if (name.isEmpty()) {

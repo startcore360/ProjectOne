@@ -7,11 +7,13 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.edu360.api.approval.ApprovalInboxService;
 import com.edu360.api.approval.ApprovalRequest;
+import com.edu360.api.approval.dto.DecideApprovalRequestDto;
+import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.approval.ApprovalRequestId;
 import com.edu360.api.approval.ApprovalRequestRepository;
 import com.edu360.api.approval.ApprovalStep;
@@ -48,6 +50,9 @@ import lombok.RequiredArgsConstructor;
 @Service
 public class InstitutionService {
 
+    static final String BLOCK_PROCESS = "INSTITUTION_BLOCK";
+    static final String ACTIVATION_PROCESS = "INSTITUTION_ACTIVATION";
+
     private static final Logger log = LoggerFactory.getLogger(InstitutionService.class);
 
     private final InstitutionRepository institutionRepository;
@@ -59,25 +64,8 @@ public class InstitutionService {
     private final ApprovalRequestRepository approvalRequestRepository;
     private final ApprovalStepRepository approvalStepRepository;
 
-    @Autowired
-    public InstitutionService(
-            InstitutionRepository institutionRepository,
-            LeaveApproverSettingRepository leaveApproverSettingRepository,
-            TenantRepository tenantRepository,
-            PlanRepository planRepository,
-            PermissionEvaluatorService permissionEvaluatorService,
-            AuditLogService auditLogService,
-            @Autowired(required = false) ApprovalRequestRepository approvalRequestRepository,
-            @Autowired(required = false) ApprovalStepRepository approvalStepRepository) {
-        this.institutionRepository = institutionRepository;
-        this.leaveApproverSettingRepository = leaveApproverSettingRepository;
-        this.tenantRepository = tenantRepository;
-        this.planRepository = planRepository;
-        this.permissionEvaluatorService = permissionEvaluatorService;
-        this.auditLogService = auditLogService;
-        this.approvalRequestRepository = approvalRequestRepository;
-        this.approvalStepRepository = approvalStepRepository;
-    }
+
+    private final ApprovalInboxService approvalInboxService;
 
     public InstitutionService(
             InstitutionRepository institutionRepository,
@@ -85,10 +73,22 @@ public class InstitutionService {
             TenantRepository tenantRepository,
             PlanRepository planRepository,
             PermissionEvaluatorService permissionEvaluatorService,
-            AuditLogService auditLogService) {
-        this(institutionRepository, leaveApproverSettingRepository, tenantRepository, planRepository,
-                permissionEvaluatorService, auditLogService, null, null);
+            AuditLogService auditLogService,
+            ApprovalRequestRepository approvalRequestRepository,
+            ApprovalStepRepository approvalStepRepository,
+            ApprovalInboxService approvalInboxService) {
+        // P-03: the approval repositories are required; a missing one used to skip the chain silently.
+        this.institutionRepository = institutionRepository;
+        this.leaveApproverSettingRepository = leaveApproverSettingRepository;
+        this.tenantRepository = tenantRepository;
+        this.planRepository = planRepository;
+        this.permissionEvaluatorService = permissionEvaluatorService;
+        this.auditLogService = auditLogService;
+        this.approvalRequestRepository = Objects.requireNonNull(approvalRequestRepository);
+        this.approvalStepRepository = Objects.requireNonNull(approvalStepRepository);
+        this.approvalInboxService = Objects.requireNonNull(approvalInboxService);
     }
+
 
     /**
      * Creates a new institution in DRAFT state (INSTITUTION_CREATE_DRAFT).
@@ -166,68 +166,60 @@ public class InstitutionService {
     }
 
     /**
-     * Activates a DRAFT institution (INSTITUTION_ACTIVATE).
-     * Enforces:
-     * 1. Authorization: Vice Chancellor (or authorized role) at tenant/university scope.
-     * 2. Rule C7 / fn_institution_activation_gate: Refused until Principal's-leave approver
-     *    is set in app.leave_approver_setting (status = 'ACTIVE').
-     * 3. Transitions status from DRAFT -> ACTIVE, stamps activated_at.
+     * Approves a pending activation request (INSTITUTION_ACTIVATE, the Vice Chancellor's step).
+     * P-03: there is no direct path. A Draft, or a Blocked institution being reactivated, goes
+     * live only through its own approval request (requestActivation) decided in the approvals
+     * inbox; with no pending request this is 422. The C7 go-live gate (Principal's-leave
+     * approver set) is enforced when the approval is applied.
      */
     @Transactional
     public InstitutionResponse activateInstitution(RbacPrincipal principal, UUID institutionId) {
         Objects.requireNonNull(principal, "principal is required");
         Objects.requireNonNull(institutionId, "institutionId is required");
 
-        // 1. Authorize action
-        permissionEvaluatorService.authorize(
-                principal,
-                "INSTITUTION_ACTIVATE",
-                RbacScope.tenant(),
-                RbacTarget.NONE
-        );
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_ACTIVATE", RbacScope.tenant(), RbacTarget.NONE);
 
         UUID tenantId = principal.tenantId();
         Institution institution = institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found."));
+        ApprovalRequest pending = approvalInboxService
+                .pendingRequestFor(tenantId, "INSTITUTION", institutionId, ACTIVATION_PROCESS)
+                .orElseThrow(() -> new BusinessRuleViolationException("NO_PENDING_REQUEST",
+                        "Institution " + institutionId + " (" + institution.getStatus() + ") has no pending activation request; "
+                                + "activation and reactivation need their own request and approval."));
+        approvalInboxService.decideApproval(tenantId, pending.getId().getApprovalRequestId(),
+                new DecideApprovalRequestDto(pending.getCurrentStepNo(), "APPROVED", null, null), principal.userAccountId());
+        return InstitutionResponse.fromEntity(institutionRepository
+                .findByIdTenantIdAndIdInstitutionId(tenantId, institutionId).orElse(institution));
+    }
 
-        if ("ACTIVE".equalsIgnoreCase(institution.getStatus())) {
-            return InstitutionResponse.fromEntity(institution);
+    /**
+     * Raises the activation request for a Draft or Blocked institution; the Vice Chancellor decides
+     * it in the approvals inbox. The requester holds INSTITUTION_CREATE_DRAFT (University Admin).
+     */
+    @Transactional
+    public InstitutionResponse requestActivation(RbacPrincipal principal, UUID institutionId) {
+        Objects.requireNonNull(principal, "principal is required");
+        Objects.requireNonNull(institutionId, "institutionId is required");
+
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_CREATE_DRAFT", RbacScope.tenant(), RbacTarget.NONE);
+
+        UUID tenantId = principal.tenantId();
+        Institution institution = institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found."));
+        if (!"DRAFT".equalsIgnoreCase(institution.getStatus()) && !"BLOCKED".equalsIgnoreCase(institution.getStatus())) {
+            throw new BusinessRuleViolationException("INVALID_INSTITUTION_STATUS",
+                    "Only a Draft or Blocked institution can be submitted for activation. Current status is "
+                            + institution.getStatus() + ".");
         }
-
-        // 2. Enforce Rule C7: Principal's-leave approver must be configured and active
-        boolean hasPrincipalLeaveApprover = leaveApproverSettingRepository
-                .existsByIdTenantIdAndSubjectRoleAndInstitutionIdAndStatus(
-                        tenantId, "PRINCIPAL", institutionId, "ACTIVE"
-                );
-
-        if (!hasPrincipalLeaveApprover) {
-            log.warn("Activation refused for institution {} in tenant {}: missing Principal's-leave approver [C7]",
-                    institutionId, tenantId);
-            throw new BusinessRuleViolationException(
-                    "GO_LIVE_BLOCKED",
-                    "Principal's-leave approver not set for institution " + institutionId + " [C7]"
-            );
+        if (approvalInboxService.pendingRequestFor(tenantId, "INSTITUTION", institutionId, ACTIVATION_PROCESS).isPresent()) {
+            throw new DuplicateResourceException("An activation request for institution " + institutionId + " is already pending.");
         }
+        createRequest(principal, institutionId, ACTIVATION_PROCESS);
 
-        // 3. Transition to ACTIVE
-        institution.setStatus("ACTIVE");
-        institution.setActivatedAt(Instant.now());
-        institution.setUpdatedAt(Instant.now());
-        institution.setUpdatedBy(principal.userAccountId());
-        institution.setRowVersion(institution.getRowVersion() + 1);
-
-        Institution saved = institutionRepository.save(institution);
-        log.info("Activated institution '{}' ({}) in tenant {}", institution.getInstitutionName(), institutionId, tenantId);
-
-        auditLogService.record(
-                AuditEventType.INSTITUTION_ACTIVATED,
-                null,
-                principal.userAccountId().toString(),
-                null,
-                "Activated institution " + institution.getInstitutionName() + " (" + institutionId + ") in tenant " + tenantId
-        );
-
-        return InstitutionResponse.fromEntity(saved);
+        auditLogService.record(AuditEventType.INSTITUTION_ACTIVATION_REQUESTED, null, principal.userAccountId().toString(), null,
+                "Activation requested for institution " + institution.getInstitutionName() + " (" + institutionId + ")");
+        return InstitutionResponse.fromEntity(institution);
     }
 
     /**
@@ -256,10 +248,7 @@ public class InstitutionService {
 
     /**
      * Requests to block an institution's access (INSTITUTION_BLOCK_REQUEST / Rule RL-01).
-     * Enforces:
-     * 1. Authorization: University Admin at tenant/university scope.
-     * 2. Institution must exist and currently be ACTIVE.
-     * 3. Reason for block is required.
+     * P-03: always goes through the approval chain; a second pending block is 409.
      */
     @Transactional
     public InstitutionBlockResponse requestBlock(
@@ -271,12 +260,7 @@ public class InstitutionService {
         Objects.requireNonNull(institutionId, "institutionId is required");
         Objects.requireNonNull(request, "request is required");
 
-        permissionEvaluatorService.authorize(
-                principal,
-                "INSTITUTION_BLOCK_REQUEST",
-                RbacScope.tenant(),
-                RbacTarget.of(institutionId)
-        );
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_BLOCK_REQUEST", RbacScope.tenant(), RbacTarget.of(institutionId));
 
         UUID tenantId = principal.tenantId();
         Institution institution = institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
@@ -288,42 +272,10 @@ public class InstitutionService {
                     "Only active institutions can be submitted for blocking. Current status is " + institution.getStatus() + "."
             );
         }
-
-        if (approvalRequestRepository != null && approvalStepRepository != null) {
-            UUID approvalRequestId = UUID.randomUUID();
-            String activeRole = TenantContext.currentActiveRoleCode() != null ? TenantContext.currentActiveRoleCode() : "UNIVERSITY_ADMIN";
-            ApprovalRequest approvalReq = ApprovalRequest.builder()
-                    .id(new ApprovalRequestId(tenantId, approvalRequestId))
-                    .institutionId(institutionId)
-                    .processCode("INSTITUTION_BLOCK")
-                    .status("PENDING")
-                    .subjectType("INSTITUTION")
-                    .subjectId(institutionId)
-                    .requestedByUserId(principal.userAccountId())
-                    .requesterActiveRole(activeRole)
-                    .currentStepNo((short) 1)
-                    .createdAt(Instant.now())
-                    .createdBy(principal.userAccountId())
-                    .updatedAt(Instant.now())
-                    .updatedBy(principal.userAccountId())
-                    .rowVersion(1)
-                    .build();
-            approvalRequestRepository.save(approvalReq);
-
-            ApprovalStep step = ApprovalStep.builder()
-                    .id(new ApprovalStepId(tenantId, UUID.randomUUID()))
-                    .approvalRequestId(approvalRequestId)
-                    .stepNo((short) 1)
-                    .approverRoleCode("VICE_CHANCELLOR")
-                    .decision("PENDING")
-                    .createdAt(Instant.now())
-                    .createdBy(principal.userAccountId())
-                    .updatedAt(Instant.now())
-                    .updatedBy(principal.userAccountId())
-                    .rowVersion(1)
-                    .build();
-            approvalStepRepository.save(step);
+        if (approvalInboxService.pendingRequestFor(tenantId, "INSTITUTION", institutionId, BLOCK_PROCESS).isPresent()) {
+            throw new DuplicateResourceException("A block request for institution " + institutionId + " is already pending.");
         }
+        createRequest(principal, institutionId, BLOCK_PROCESS);
 
         auditLogService.record(
                 AuditEventType.INSTITUTION_BLOCK_REQUESTED,
@@ -347,11 +299,10 @@ public class InstitutionService {
     }
 
     /**
-     * Approves or rejects an institution block request (INSTITUTION_BLOCK_APPROVE / Rule WF-15).
-     * Enforces:
-     * 1. Authorization: Vice Chancellor at tenant/university scope.
-     * 2. When approved: promotes status to BLOCKED, stamps blocked_at, logs executive audit.
-     * 3. When rejected: keeps institution ACTIVE with decision notes.
+     * Approves or rejects the pending block request (INSTITUTION_BLOCK_APPROVE / Rule WF-15).
+     * P-03: the decision is the approval step itself - it needs an existing pending request (422),
+     * the decider cannot be the requester (403) and must be the step's approver; there is no
+     * direct block. Approval blocks the institution (inbox side effect), rejection keeps it ACTIVE.
      */
     @Transactional
     public InstitutionBlockResponse decideBlock(
@@ -363,79 +314,72 @@ public class InstitutionService {
         Objects.requireNonNull(institutionId, "institutionId is required");
         Objects.requireNonNull(decisionRequest, "decisionRequest is required");
 
-        permissionEvaluatorService.authorize(
-                principal,
-                "INSTITUTION_BLOCK_APPROVE",
-                RbacScope.tenant(),
-                RbacTarget.of(institutionId)
-        );
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_BLOCK_APPROVE", RbacScope.tenant(), RbacTarget.NONE);
 
         UUID tenantId = principal.tenantId();
         Institution institution = institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found."));
+        ApprovalRequest pending = approvalInboxService.pendingRequestFor(tenantId, "INSTITUTION", institutionId, BLOCK_PROCESS)
+                .orElseThrow(() -> new BusinessRuleViolationException("NO_PENDING_REQUEST",
+                        "Institution " + institutionId + " has no pending block request to decide."));
 
-        if (Boolean.TRUE.equals(decisionRequest.approved())) {
-            if ("BLOCKED".equalsIgnoreCase(institution.getStatus())) {
-                return new InstitutionBlockResponse(
-                        institutionId,
-                        institution.getInstitutionCode(),
-                        institution.getInstitutionName(),
-                        "BLOCKED",
-                        institution.getBlockedAt(),
-                        "Institution is already blocked."
-                );
-            }
+        boolean approved = Boolean.TRUE.equals(decisionRequest.approved());
+        approvalInboxService.decideApproval(tenantId, pending.getId().getApprovalRequestId(),
+                new DecideApprovalRequestDto(pending.getCurrentStepNo(), approved ? "APPROVED" : "REJECTED",
+                        decisionRequest.decisionNotes(), null),
+                principal.userAccountId());
 
-            Instant now = Instant.now();
-            institution.setStatus("BLOCKED");
-            institution.setBlockedAt(now);
-            institution.setUpdatedAt(now);
-            institution.setUpdatedBy(principal.userAccountId());
-            institution.setRowVersion(institution.getRowVersion() + 1);
-
-            institutionRepository.save(institution);
-
-            auditLogService.record(
-                    AuditEventType.INSTITUTION_BLOCKED,
-                    null,
-                    principal.userAccountId().toString(),
-                    null,
-                    "Institution " + institution.getInstitutionName() + " (" + institutionId + ") blocked by Vice Chancellor. Notes: " + decisionRequest.decisionNotes()
-            );
-
-            log.info("Institution '{}' ({}) BLOCKED by VC in tenant {}",
-                    institution.getInstitutionName(), institutionId, tenantId);
-
-            return new InstitutionBlockResponse(
-                    institutionId,
-                    institution.getInstitutionCode(),
-                    institution.getInstitutionName(),
-                    "BLOCKED",
-                    now,
-                    "Institution blocked successfully by executive approval."
-            );
-        } else {
-            auditLogService.record(
-                    AuditEventType.INSTITUTION_BLOCK_REJECTED,
-                    null,
-                    principal.userAccountId().toString(),
-                    null,
-                    "Block request for institution " + institution.getInstitutionName() + " (" + institutionId + ") was rejected by Vice Chancellor. Notes: " + decisionRequest.decisionNotes()
-            );
-
-            log.info("Institution '{}' ({}) block request REJECTED by VC in tenant {}",
-                    institution.getInstitutionName(), institutionId, tenantId);
-
-            return new InstitutionBlockResponse(
-                    institutionId,
-                    institution.getInstitutionCode(),
-                    institution.getInstitutionName(),
-                    institution.getStatus(),
-                    institution.getBlockedAt(),
-                    "Institution block request was rejected by Vice Chancellor: " +
-                            (decisionRequest.decisionNotes() != null ? decisionRequest.decisionNotes() : "No notes provided.")
-            );
+        if (!approved) {
+            auditLogService.record(AuditEventType.INSTITUTION_BLOCK_REJECTED, null, principal.userAccountId().toString(), null,
+                    "Block request for institution " + institution.getInstitutionName() + " (" + institutionId
+                            + ") was rejected. Notes: " + decisionRequest.decisionNotes());
         }
+        Institution after = institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId).orElse(institution);
+        return new InstitutionBlockResponse(
+                institutionId,
+                after.getInstitutionCode(),
+                after.getInstitutionName(),
+                after.getStatus(),
+                after.getBlockedAt(),
+                approved ? "Institution blocked successfully by executive approval."
+                        : "Institution block request was rejected: "
+                                + (decisionRequest.decisionNotes() != null ? decisionRequest.decisionNotes() : "No notes provided.")
+        );
+    }
+
+    /** The request and its single Vice Chancellor step; the requester role is the caller's active role. */
+    private void createRequest(RbacPrincipal principal, UUID institutionId, String processCode) {
+        String activeRole = TenantContext.currentActiveRoleCode();
+        if (activeRole == null) {
+            throw new UnauthorizedException("No active role: choose an active role before raising an approval request.");
+        }
+        UUID tenantId = principal.tenantId();
+        UUID approvalRequestId = UUID.randomUUID();
+        Instant now = Instant.now();
+        approvalRequestRepository.save(ApprovalRequest.builder()
+                .id(new ApprovalRequestId(tenantId, approvalRequestId))
+                .institutionId(institutionId)
+                .processCode(processCode)
+                .status("PENDING")
+                .subjectType("INSTITUTION")
+                .subjectId(institutionId)
+                .requestedByUserId(principal.userAccountId())
+                .requesterActiveRole(activeRole)
+                .currentStepNo((short) 1)
+                .createdAt(now).createdBy(principal.userAccountId())
+                .updatedAt(now).updatedBy(principal.userAccountId())
+                .rowVersion(1)
+                .build());
+        approvalStepRepository.save(ApprovalStep.builder()
+                .id(new ApprovalStepId(tenantId, UUID.randomUUID()))
+                .approvalRequestId(approvalRequestId)
+                .stepNo((short) 1)
+                .approverRoleCode("VICE_CHANCELLOR")
+                .decision("PENDING")
+                .createdAt(now).createdBy(principal.userAccountId())
+                .updatedAt(now).updatedBy(principal.userAccountId())
+                .rowVersion(1)
+                .build());
     }
 
     private void enforcePlanLimits(UUID tenantId) {

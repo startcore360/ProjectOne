@@ -35,7 +35,7 @@ class PlatformAuditLogControllerTest {
 
     @Mock private PlatformAuditOutboxEventRepository auditOutboxEventRepository;
 
-    private final PlatformPermissionService platformPermissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+    private final PlatformPermissionService platformPermissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
     private PlatformAuditLogController controller() {
         return new PlatformAuditLogController(platformPermissionService, auditOutboxEventRepository);

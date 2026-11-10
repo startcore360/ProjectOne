@@ -106,6 +106,12 @@ public class RoleAssignmentService {
         // 4. Resolve RoleDefinition (from existing tenant role or standard role template)
         RoleDefinition roleDefinition = resolveRoleDefinition(tenantId, principal.userAccountId(), request);
 
+        // Q-02 (DB-A11): a DRAFT, INACTIVE, RETIRED or ARCHIVED role cannot be given to anyone.
+        if (roleDefinition.getStatus() != null && roleDefinition.getStatus() != RoleDefinitionStatus.ACTIVE) {
+            throw new BusinessRuleViolationException("ROLE_NOT_ACTIVE",
+                    "Role " + roleDefinition.getRoleCode() + " is " + roleDefinition.getStatus() + "; only an ACTIVE role can be assigned.");
+        }
+
         // 4b. Rule MX-04 enforcement for non-sensitive role assigners (IT Admin / School IT Support)
         if (actingAsNonSensitive) {
             if (request.scopeType() == ScopeType.TENANT) {
@@ -114,7 +120,7 @@ public class RoleAssignmentService {
                         "Rule MX-04: Non-sensitive role assigners can only assign roles within an institution scope."
                 );
             }
-            if (isSensitiveRole(roleDefinition.getRoleCode())) {
+            if (roleDefinition.isSensitiveRole()) {
                 log.warn("Rule MX-04 violation: user {} attempted to assign sensitive role {} under ROLE_ASSIGN_NON_SENSITIVE in tenant {}",
                         principal.userAccountId(), roleDefinition.getRoleCode(), tenantId);
                 throw new BusinessRuleViolationException(
@@ -220,7 +226,7 @@ public class RoleAssignmentService {
             RoleDefinition targetRole = roleDefinitionRepository
                     .findById(new RoleDefinitionId(tenantId, assignment.getRoleDefinitionId()))
                     .orElse(null);
-            if (targetRole != null && isSensitiveRole(targetRole.getRoleCode())) {
+            if (targetRole != null && targetRole.isSensitiveRole()) {
                 log.warn("Rule MX-04 violation: user {} attempted to end sensitive role assignment {} ({}) under ROLE_ASSIGN_NON_SENSITIVE in tenant {}",
                         principal.userAccountId(), assignmentId, targetRole.getRoleCode(), tenantId);
                 throw new BusinessRuleViolationException(
@@ -256,8 +262,19 @@ public class RoleAssignmentService {
         return UserRoleAssignmentResponse.from(saved, role);
     }
 
+    /** D5 listRoleAssignments x-action-codes (any one, at the caller's own active scope). */
+    private static final List<String> LIST_ASSIGNMENTS_ACTIONS =
+            List.of("USER_VIEW", "ROLE_ASSIGN", "ROLE_ASSIGN_NON_SENSITIVE", "TENANT_OVERSIGHT_VIEW");
+
+    /** D5 listRoles x-action-codes (any one, at the caller's own active scope). */
+    private static final List<String> LIST_ROLES_ACTIONS =
+            List.of("ROLE_CUSTOM_MANAGE", "ROLE_ASSIGN", "ROLE_ASSIGN_NON_SENSITIVE", "RBAC_MAPPING_CHECK", "TENANT_OVERSIGHT_VIEW");
+
     /**
-     * Lists role assignments for a specific user.
+     * Lists role assignments for a specific user (A-04, BS-18). The caller may always read their
+     * own. For anyone else the caller needs one of D5 listRoleAssignments' actions at their own
+     * active scope (403 otherwise), and the target must be a user of the tenant who holds an
+     * active assignment inside that scope; a user outside it looks missing (404).
      */
     @Transactional(readOnly = true)
     public List<UserRoleAssignmentResponse> listUserRoleAssignments(RbacPrincipal principal, UUID targetUserId) {
@@ -267,6 +284,19 @@ public class RoleAssignmentService {
         UUID tenantId = principal.tenantId();
         List<UserRoleAssignment> assignments = userRoleAssignmentRepository
                 .findByIdTenantIdAndUserAccountId(tenantId, targetUserId);
+
+        if (!targetUserId.equals(principal.userAccountId())) {
+            RbacScope ownScope = permissionEvaluatorService.ownScope(principal);
+            authorizeAny(principal, LIST_ASSIGNMENTS_ACTIONS, ownScope, RbacTarget.of(targetUserId));
+
+            userAccountRepository.findById(new UserAccountId(tenantId, targetUserId))
+                    .orElseThrow(() -> new ResourceNotFoundException("User " + targetUserId + " was not found."));
+            boolean inScope = ownScope.scopeType() == ScopeType.TENANT
+                    || assignments.stream().anyMatch(a -> a.getStatus() == AssignmentStatus.ACTIVE && within(a, ownScope));
+            if (!inScope) {
+                throw new ResourceNotFoundException("User " + targetUserId + " was not found.");
+            }
+        }
 
         List<UserRoleAssignmentResponse> responses = new ArrayList<>();
         for (UserRoleAssignment assignment : assignments) {
@@ -279,22 +309,57 @@ public class RoleAssignmentService {
     }
 
     /**
-     * Lists all role definitions available in this tenant.
-     * If tenant has not had roles copied from standard catalog yet, bootstraps standard roles.
+     * Lists the roles of this tenant (A-04, D5 listRoles): needs one of D5's listRoles actions at
+     * the caller's own active scope, and writes nothing. Roles already in app.role_definition are
+     * listed as they are; standard roles not yet copied into the tenant are listed from
+     * ref.standard_role with no roleDefinitionId (they are copied when first assigned).
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public List<RoleDefinitionResponse> listRoles(RbacPrincipal principal) {
         Objects.requireNonNull(principal, "principal is required");
         UUID tenantId = principal.tenantId();
 
-        List<RoleDefinition> existing = roleDefinitionRepository.findByIdTenantId(tenantId);
-        if (existing.isEmpty()) {
-            existing = bootstrapStandardRolesForTenant(tenantId, principal.userAccountId());
-        }
+        authorizeAny(principal, LIST_ROLES_ACTIONS, permissionEvaluatorService.ownScope(principal), RbacTarget.NONE);
 
-        return existing.stream()
-                .map(RoleDefinitionResponse::from)
-                .toList();
+        List<RoleDefinition> existing = roleDefinitionRepository.findByIdTenantId(tenantId);
+        List<RoleDefinitionResponse> result = new ArrayList<>(existing.stream().map(RoleDefinitionResponse::from).toList());
+        java.util.Set<String> copied = new java.util.HashSet<>();
+        existing.forEach(r -> copied.add(r.getRoleCode()));
+        for (StandardRole sr : standardRoleRepository.findAll()) {
+            if (sr.getRoleLevel() != RoleLevel.PLATFORM && !copied.contains(sr.getRoleCode())) {
+                result.add(new RoleDefinitionResponse(null, tenantId, sr.getRoleCode(), sr.getRoleName(),
+                        sr.getRoleLevel(), RoleOrigin.STANDARD, false, RoleDefinitionStatus.ACTIVE));
+            }
+        }
+        return result;
+    }
+
+    /** Passes when any one of the actions is allowed; a missing role choice is a 409, otherwise 403. */
+    private void authorizeAny(RbacPrincipal principal, List<String> actions, RbacScope scope, RbacTarget target) {
+        PermissionDecision last = null;
+        for (String action : actions) {
+            PermissionDecision decision = permissionEvaluatorService.can(principal, action, scope, target);
+            if (decision != null && decision.allowed()) {
+                return;
+            }
+            if (decision != null) {
+                last = decision;
+            }
+        }
+        // Re-run the last action through authorize(...) so the denial takes its standard form
+        // (409 ACTIVE_ROLE_REQUIRED or 403) without duplicating that mapping here.
+        permissionEvaluatorService.authorize(principal, actions.get(actions.size() - 1), scope, target);
+        throw new UnauthorizedException(last != null ? last.message() : "Not allowed.");
+    }
+
+    private static boolean within(UserRoleAssignment a, RbacScope scope) {
+        if (scope.scopeType() == ScopeType.INSTITUTION) {
+            return Objects.equals(a.getInstitutionId(), scope.institutionId());
+        }
+        if (scope.scopeType() == ScopeType.DEPARTMENT) {
+            return Objects.equals(a.getDepartmentId(), scope.departmentId());
+        }
+        return true;
     }
 
     private RoleDefinition resolveRoleDefinition(UUID tenantId, UUID actorUserId, AssignRoleRequest request) {
@@ -357,16 +422,6 @@ public class RoleAssignmentService {
         return saved;
     }
 
-    private List<RoleDefinition> bootstrapStandardRolesForTenant(UUID tenantId, UUID actorUserId) {
-        List<StandardRole> standardRoles = standardRoleRepository.findAll();
-        List<RoleDefinition> created = new ArrayList<>();
-        for (StandardRole sr : standardRoles) {
-            RoleDefinition rd = createRoleDefinitionFromStandard(tenantId, actorUserId, sr.getRoleCode());
-            created.add(rd);
-        }
-        return created;
-    }
-
     private RbacScope resolveActingScope(AssignRoleRequest request) {
         if (request.scopeType() == ScopeType.TENANT) {
             return RbacScope.tenant();
@@ -396,7 +451,29 @@ public class RoleAssignmentService {
         return RbacScope.tenant();
     }
 
+    /**
+     * B3 / I-01 (REG-I01-6): keeps Keycloak's mfa_required attribute in line with the user's
+     * roles after every assign/end. Field-injected and optional so this class's constructor (and
+     * its tests) stay unchanged; if Keycloak is unreachable the sign-in check in AuthService
+     * corrects the attribute before any token is issued.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.edu360.api.auth.MfaRequirementService mfaRequirementService;
+
+    private void syncTwoStepRequirement(UUID tenantId, UUID userId) {
+        if (mfaRequirementService == null) {
+            return;
+        }
+        try {
+            mfaRequirementService.syncTenantUser(tenantId, userId);
+        } catch (Exception ex) {
+            log.warn("Two-step login flag not updated for user {} in tenant {} (corrected at next sign-in): {}",
+                    userId, tenantId, ex.getMessage());
+        }
+    }
+
     private void revokeUserSessions(UUID tenantId, UUID userId) {
+        syncTwoStepRequirement(tenantId, userId);
         try {
             userIdentityLinkRepository
                     .findFirstByIdTenantIdAndUserAccountIdAndStatus(tenantId, userId, IdentityLinkStatus.ACTIVE)

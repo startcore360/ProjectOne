@@ -162,4 +162,67 @@ class TermLockControllerTest {
         assertThrows(UnauthorizedException.class, () ->
                 controller.lockTerm(otherTenant, INSTITUTION_ID, request, authFor(TENANT_ID, USER_ID)));
     }
+
+    @Test
+    void H12_listTermLocks_authorizesPermission() {
+        when(termLockRepository.findByIdTenantIdAndInstitutionId(TENANT_ID, INSTITUTION_ID))
+                .thenReturn(List.of());
+
+        ResponseEntity<List<TermLockResponse>> response = controller.listTermLocks(
+                TENANT_ID, INSTITUTION_ID, authFor(TENANT_ID, USER_ID));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(permissionEvaluatorService).authorize(
+                eq(new RbacPrincipal(TENANT_ID, USER_ID)),
+                eq("TERM_LOCK"),
+                eq(RbacScope.institution(INSTITUTION_ID)),
+                eq(RbacTarget.NONE)
+        );
+    }
+
+    @Test
+    void H12_repeatedReunlockWhileActive_isProhibited() {
+        TermLock termLock = TermLock.builder()
+                .id(new TermLockId(TENANT_ID, TERM_LOCK_ID))
+                .institutionId(INSTITUTION_ID)
+                .academicSessionId(SESSION_ID)
+                .lockState("TEMP_UNLOCKED")
+                .unlockUntil(Instant.now().plusSeconds(3600))
+                .rowVersion(1)
+                .build();
+
+        when(termLockRepository.findByIdTenantIdAndIdTermLockId(TENANT_ID, TERM_LOCK_ID))
+                .thenReturn(Optional.of(termLock));
+
+        UnlockTermRequest request = new UnlockTermRequest("Extend unlock duration", 48);
+
+        BusinessRuleViolationException ex = assertThrows(BusinessRuleViolationException.class, () ->
+                controller.unlockTerm(TENANT_ID, INSTITUTION_ID, TERM_LOCK_ID, null, request, authFor(TENANT_ID, USER_ID)));
+
+        assertEquals("ALREADY_UNLOCKED", ex.getErrorCode());
+    }
+
+    @Test
+    void H12_unlockWithoutInstitutionId_loadsFromEntity() {
+        TermLock termLock = TermLock.builder()
+                .id(new TermLockId(TENANT_ID, TERM_LOCK_ID))
+                .institutionId(INSTITUTION_ID)
+                .academicSessionId(SESSION_ID)
+                .lockState("LOCKED")
+                .rowVersion(1)
+                .build();
+
+        when(termLockRepository.findByIdTenantIdAndIdTermLockId(TENANT_ID, TERM_LOCK_ID))
+                .thenReturn(Optional.of(termLock));
+        when(termLockRepository.save(any(TermLock.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(termLockEventRepository.save(any(TermLockEvent.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UnlockTermRequest request = new UnlockTermRequest("Administrative audit", 24);
+
+        ResponseEntity<TermLockResponse> response = controller.unlockTerm(
+                TENANT_ID, null, TERM_LOCK_ID, null, request, authFor(TENANT_ID, USER_ID));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(INSTITUTION_ID, response.getBody().institutionId());
+    }
 }

@@ -60,6 +60,10 @@ public class PlatformAuditOutboxEvent {
     @Column(nullable = false)
     private String operation;
 
+    /** Named event, e.g. TENANT_DELETION_APPROVED (sql/22). */
+    @Column(name = "event_type")
+    private String eventType;
+
     @Column(name = "action_code")
     private String actionCode;
 

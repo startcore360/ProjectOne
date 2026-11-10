@@ -70,7 +70,8 @@ $backendCmd = @"
 `$env:SPRING_DATASOURCE_USERNAME = 'edu_app'
 `$env:SPRING_DATASOURCE_PASSWORD = '$eduAppPassword'
 `$env:PLATFORM_ADMIN_DATASOURCE_PASSWORD = '$eduPlatformPassword'
-.\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath '$backendLog'
+`$env:SPRING_PROFILES_ACTIVE = 'dev'
+.\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=dev' 2>&1 | Tee-Object -FilePath '$backendLog'
 "@
 $backendProc = Start-Process powershell -ArgumentList '-NoExit', '-Command', $backendCmd -WorkingDirectory (Join-Path $root 'api') -PassThru
 Start-Sleep -Seconds 3

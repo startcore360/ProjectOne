@@ -84,7 +84,6 @@ import com.edu360.api.platformops.support.SupportAccessGrantRepository;
 import com.edu360.api.platformops.support.SupportTicket;
 import com.edu360.api.platformops.support.SupportTicketRepository;
 import com.edu360.api.platformops.support.TenantSupportController;
-import com.edu360.api.platformops.support.dto.AssumeSupportSessionResponse;
 import com.edu360.api.platformops.support.dto.CreateSupportTicketRequest;
 import com.edu360.api.platformops.support.dto.GrantSupportAccessRequest;
 import com.edu360.api.platformops.support.dto.SupportAccessGrantResponse;
@@ -109,6 +108,7 @@ class PlatformActionTest {
     // Mocks & Services
     private PlatformPermissionService permissionService;
     private AuditLogService auditLogService;
+    private com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
     private TenantRepository tenantRepository;
     private PlanRepository planRepository;
     private KeycloakAdminClient keycloakAdminClient;
@@ -155,11 +155,12 @@ class PlatformActionTest {
     private SecurityIncidentRepository incidentRepository;
     private PlatformSettingValueRepository settingValueRepository;
     private PlatformSecurityPolicyController securityPolicyController;
-
     @BeforeEach
     void setUp() {
-        permissionService = new PlatformPermissionService(PlatformAccessLookup.standardRolesOnly());
         auditLogService = mock(AuditLogService.class);
+        platformAuditWriter = mock(com.edu360.api.platformops.role.PlatformAuditWriter.class);
+        permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(PlatformAccessLookup.standardRolesOnly(), platformAuditWriter);
+        invoiceRepository = mock(InvoiceRepository.class);
         tenantRepository = mock(TenantRepository.class);
         planRepository = mock(PlanRepository.class);
         keycloakAdminClient = mock(KeycloakAdminClient.class);
@@ -167,34 +168,34 @@ class PlatformActionTest {
         institutionRepository = mock(InstitutionRepository.class);
 
         tenantManagementService = new TenantManagementService(
-                tenantRepository, planRepository, keycloakAdminClient, auditLogService,
-                leaveApproverSettingRepository, institutionRepository
+                tenantRepository, planRepository, keycloakAdminClient,
+                leaveApproverSettingRepository, institutionRepository,
+                null, null, null, null, null, null, null, invoiceRepository, platformAuditWriter
         );
         tenantController = new PlatformTenantController(permissionService, tenantManagementService);
 
         planEntitlementRepository = mock(PlanEntitlementRepository.class);
         tenantEntitlementRepository = mock(TenantEntitlementRepository.class);
         featureToggleController = new PlatformFeatureToggleController(
-                permissionService, auditLogService, planEntitlementRepository, tenantEntitlementRepository, null
+                permissionService, planEntitlementRepository, tenantEntitlementRepository, platformAuditWriter
         );
 
-        invoiceRepository = mock(InvoiceRepository.class);
-        billingService = new PlatformBillingService(invoiceRepository, auditLogService);
+        billingService = new PlatformBillingService(invoiceRepository, platformAuditWriter);
         billingController = new PlatformBillingController(billingService, permissionService);
 
         ticketRepository = mock(SupportTicketRepository.class);
         grantRepository = mock(SupportAccessGrantRepository.class);
-        supportService = new PlatformSupportService(ticketRepository, grantRepository, auditLogService);
+        supportService = new PlatformSupportService(ticketRepository, grantRepository, platformAuditWriter, auditLogService);
         supportController = new PlatformSupportController(supportService, permissionService);
         permissionEvaluatorService = mock(PermissionEvaluatorService.class);
         tenantSupportController = new TenantSupportController(supportService, permissionEvaluatorService);
 
         releaseRepository = mock(PlatformReleaseRepository.class);
-        releaseService = new PlatformReleaseService(releaseRepository, auditLogService);
+        releaseService = new PlatformReleaseService(releaseRepository, platformAuditWriter);
         releaseController = new PlatformReleaseController(releaseService, permissionService);
 
         integrationTypeRepository = mock(IntegrationTypeRepository.class);
-        integrationTypeController = new IntegrationTypeController(permissionService, integrationTypeRepository);
+        integrationTypeController = new IntegrationTypeController(permissionService, integrationTypeRepository, platformAuditWriter);
 
         auditOutboxEventRepository = mock(PlatformAuditOutboxEventRepository.class);
         auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository);
@@ -211,7 +212,7 @@ class PlatformActionTest {
         reportController = new PlatformReportController(permissionService, invoiceRepository, ticketRepository, grantRepository, tenantRepository);
         incidentRepository = mock(SecurityIncidentRepository.class);
         settingValueRepository = mock(PlatformSettingValueRepository.class);
-        securityPolicyController = new PlatformSecurityPolicyController(permissionService, auditLogService, incidentRepository, settingValueRepository, null, null);
+        securityPolicyController = new PlatformSecurityPolicyController(permissionService, incidentRepository, settingValueRepository, platformAuditWriter, null);
     }
 
     private Authentication auth(PlatformRole role) {
@@ -307,6 +308,7 @@ class PlatformActionTest {
         Plan plan = Plan.builder().planId(planId).status("ACTIVE").build();
         when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
         when(tenantRepository.findBySubdomain("dps-delhi")).thenReturn(Optional.empty());
+        when(keycloakAdminClient.provisionUser(any(), any(), any(), any(), eq(true))).thenReturn("kc-admin-sub");
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {
             Tenant t = inv.getArgument(0);
             t.setTenantId(tenantId);
@@ -356,6 +358,7 @@ class PlatformActionTest {
     @DisplayName("ACT-TENANT_ACTIVATE-ALLOW: Product Owner activates tenant with leave approver set")
     void actTenantActivate_allow() {
         Tenant tenant = Tenant.builder().tenantId(tenantId).tenantType("STANDALONE_SCHOOL").state(TenantState.TRIAL).build();
+        when(invoiceRepository.existsByTenantIdAndStatus(tenantId, "PAID")).thenReturn(true);
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
         when(institutionRepository.findByIdTenantIdAndStatusIn(eq(tenantId), any())).thenReturn(List.of());
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -387,6 +390,7 @@ class PlatformActionTest {
     @DisplayName("ACT-TENANT_ACTIVATE-GUARD: Rule C7 enforces Principal leave approver before go-live")
     void actTenantActivate_guard() {
         Tenant tenant = Tenant.builder().tenantId(tenantId).tenantType("STANDALONE_SCHOOL").state(TenantState.TRIAL).build();
+        when(invoiceRepository.existsByTenantIdAndStatus(tenantId, "PAID")).thenReturn(true);
         UUID instId = UUID.randomUUID();
         Institution inst = new Institution();
         inst.setId(new InstitutionId(tenantId, instId));
@@ -825,9 +829,10 @@ class PlatformActionTest {
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(eq(ticketId), any())).thenReturn(Optional.of(grant));
 
-        ResponseEntity<AssumeSupportSessionResponse> res = supportController.assumeSupportSession(ticketId, auth(PlatformRole.SUPPORT_MANAGER));
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody().accessMode()).isEqualTo("READ_ONLY");
+        // L-03 / R7: the made-up session token is gone. With a live grant the answer is an honest "not available yet" (501).
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, auth(PlatformRole.SUPPORT_MANAGER)))
+                .isInstanceOfSatisfying(com.edu360.api.exception.FeatureNotAvailableException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("SUPPORT_SESSION_NOT_AVAILABLE"));
     }
 
     @Test

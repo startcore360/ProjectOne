@@ -8,8 +8,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.edu360.api.audit.AuditEventType;
-import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.DuplicateResourceException;
@@ -24,22 +22,15 @@ import lombok.RequiredArgsConstructor;
 public class PlatformReleaseService {
 
     private final PlatformReleaseRepository releaseRepository;
-    private final AuditLogService auditLogService;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformReleaseService(
             PlatformReleaseRepository releaseRepository,
-            AuditLogService auditLogService,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
     ) {
         this.releaseRepository = releaseRepository;
-        this.auditLogService = auditLogService;
         this.platformAuditWriter = platformAuditWriter;
-    }
-
-    public PlatformReleaseService(PlatformReleaseRepository releaseRepository, AuditLogService auditLogService) {
-        this(releaseRepository, auditLogService, null);
     }
 
     private static final Set<String> VALID_STATUSES = Set.of("UPLOADED", "STAGING_TESTED", "DEPLOYED", "ROLLED_BACK");
@@ -66,11 +57,7 @@ public class PlatformReleaseService {
                 .build();
 
         PlatformRelease saved = releaseRepository.save(release);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "RELEASE_CREATED", "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Release created: " + req.versionLabel());
+        platformAuditWriter.record(principal, "RELEASE_CREATED", "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
         return ReleaseResponse.fromEntity(saved);
     }
 
@@ -96,11 +83,7 @@ public class PlatformReleaseService {
         release.setUpdatedBy(principal.platformUserId());
 
         PlatformRelease saved = releaseRepository.save(release);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "RELEASE_TRANSITIONED_" + target, "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Release " + release.getVersionLabel() + " transitioned to " + target);
+        platformAuditWriter.record(principal, "RELEASE_TRANSITIONED_" + target, "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
         return ReleaseResponse.fromEntity(saved);
     }
 
@@ -116,11 +99,7 @@ public class PlatformReleaseService {
         release.setUpdatedBy(principal.platformUserId());
 
         PlatformRelease saved = releaseRepository.save(release);
-        if (platformAuditWriter != null) {
-            platformAuditWriter.record(principal, "RELEASE_UPDATED", "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
-        }
-        auditLogService.record(AuditEventType.TENANT_SETTINGS_UPDATED, null, principal.platformUserId().toString(), null,
-                "Release " + release.getVersionLabel() + " updated");
+        platformAuditWriter.record(principal, "RELEASE_UPDATED", "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
         return ReleaseResponse.fromEntity(saved);
     }
 

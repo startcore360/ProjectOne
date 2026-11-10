@@ -27,7 +27,7 @@ public class UserGovernanceGuard {
             "REGISTRAR",
             "MANAGEMENT",
             "PRINCIPAL_COLLEGE",
-            "PRINCIPAL_SCHOOL"
+            "SCHOOL_PRINCIPAL"
     );
 
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;

@@ -14,4 +14,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     List<Invoice> findAllByOrderByCreatedAtDesc();
     List<Invoice> findByStatus(String status);
     List<Invoice> findByStatusIn(List<String> statuses);
+    boolean existsByTenantIdAndStatus(UUID tenantId, String status);
 }

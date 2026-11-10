@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
-import com.edu360.api.platformops.support.dto.AssumeSupportSessionResponse;
 import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
 
@@ -59,13 +58,14 @@ public class PlatformSupportController {
     }
 
     @PostMapping("/support-sessions")
-    public ResponseEntity<AssumeSupportSessionResponse> assumeSupportSession(
+    public ResponseEntity<Void> assumeSupportSession(
             @RequestParam UUID ticketId,
             Authentication auth
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "SUPPORT_ACCESS_USE");
-        return ResponseEntity.ok(supportService.assumeSupportSession(ticketId, principal));
+        supportService.assumeSupportSession(ticketId, principal); // always ends in 501 until L-03 is built
+        return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_IMPLEMENTED).build();
     }
 
     @GetMapping("/support-access-grants")

@@ -32,3 +32,60 @@ foreach ($realm in $realms) {
         -Body ($profile | ConvertTo-Json -Depth 10) | Out-Null
     Write-Host "Enabled unmanaged attributes (must_change_password) for realm '$realm'."
 }
+
+# Ensure edu360-identity-events confidential client and identity-events:write role exist in edu360-platform realm (M-03 / PD-2)
+try {
+    $platformRealm = "edu360-platform"
+    $clients = Invoke-RestMethod -Method Get -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/clients?clientId=edu360-identity-events" `
+        -Headers @{ Authorization = "Bearer $token" }
+    $clientUuid = $null
+    if (-not $clients -or $clients.Count -eq 0) {
+        $clientBody = @{
+            clientId = "edu360-identity-events"
+            enabled = $true
+            publicClient = $false
+            protocol = "openid-connect"
+            secret = "dev-identity-events-secret"
+            serviceAccountsEnabled = $true
+            standardFlowEnabled = $false
+            directAccessGrantsEnabled = $false
+            clientAuthenticatorType = "client-secret"
+        } | ConvertTo-Json
+        Invoke-RestMethod -Method Post -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/clients" `
+            -Headers @{ Authorization = "Bearer $token" } -ContentType "application/json" -Body $clientBody | Out-Null
+        $clients = Invoke-RestMethod -Method Get -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/clients?clientId=edu360-identity-events" `
+            -Headers @{ Authorization = "Bearer $token" }
+    }
+    if ($clients -and $clients.Count -gt 0) {
+        $clientUuid = $clients[0].id
+    }
+
+    # Ensure identity-events:write realm role exists
+    $roles = Invoke-RestMethod -Method Get -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/roles" `
+        -Headers @{ Authorization = "Bearer $token" }
+    $hasRole = $false
+    foreach ($r in $roles) {
+        if ($r.name -eq "identity-events:write") { $hasRole = $true; break }
+    }
+    if (-not $hasRole) {
+        $roleBody = @{ name = "identity-events:write"; description = "EDU 360 platform: identity events webhook" } | ConvertTo-Json
+        Invoke-RestMethod -Method Post -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/roles" `
+            -Headers @{ Authorization = "Bearer $token" } -ContentType "application/json" -Body $roleBody | Out-Null
+    }
+
+    # Assign role to service account user
+    if ($clientUuid) {
+        $saUser = Invoke-RestMethod -Method Get -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/clients/$clientUuid/service-account-user" `
+            -Headers @{ Authorization = "Bearer $token" }
+        if ($saUser -and $saUser.id) {
+            $roleObj = Invoke-RestMethod -Method Get -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/roles/identity-events:write" `
+                -Headers @{ Authorization = "Bearer $token" }
+            $assignBody = "[$($roleObj | ConvertTo-Json -Compress)]"
+            Invoke-RestMethod -Method Post -Uri "$keycloakBaseUrl/admin/realms/$platformRealm/users/$($saUser.id)/role-mappings/realm" `
+                -Headers @{ Authorization = "Bearer $token" } -ContentType "application/json" -Body $assignBody | Out-Null
+        }
+    }
+    Write-Host "Configured edu360-identity-events client and role in '$platformRealm'."
+} catch {
+    Write-Warning "Could not configure edu360-identity-events client: $_"
+}

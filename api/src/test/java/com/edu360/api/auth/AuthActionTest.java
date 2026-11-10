@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -82,7 +84,11 @@ public class AuthActionTest {
     @Mock private UserRoleAssignmentRepository userRoleAssignmentRepository;
     @Mock private RoleDefinitionRepository roleDefinitionRepository;
     @Mock private FileObjectRepository fileObjectRepository;
+    @Mock private com.edu360.api.selfservice.UserDeviceRepository userDeviceRepository;
+    @Mock private com.edu360.api.platformops.session.PlatformUserDeviceRepository platformUserDeviceRepository;
     @Mock private LocalFileStorage fileStorage;
+    @Mock private com.edu360.api.config.keycloak.KeycloakRealmSecurityService realmSecurityService;
+    @Mock private com.edu360.api.identity.StudentLoginLookup studentLoginLookup;
 
     private AuthService authService;
     private SessionService sessionService;
@@ -94,6 +100,15 @@ public class AuthActionTest {
 
     @BeforeEach
     void setUp() {
+        sessionService = new SessionService(
+                tenantRepository,
+                keycloakProperties,
+                keycloakAdminClient,
+                auditLogService,
+                userDeviceRepository,
+                platformUserDeviceRepository
+        );
+
         authService = new AuthService(
                 loginTenantResolver,
                 tenantRepository,
@@ -108,14 +123,13 @@ public class AuthActionTest {
                 auditLogService,
                 userRoleAssignmentRepository,
                 roleDefinitionRepository,
-                fileObjectRepository
-        );
-
-        sessionService = new SessionService(
-                tenantRepository,
-                keycloakProperties,
-                keycloakAdminClient,
-                auditLogService
+                fileObjectRepository,
+                sessionService,
+                new PasswordPolicyService(new com.edu360.api.platformops.security.SecurityPolicyService(null)),
+                new MfaRequirementService(keycloakAdminClient, userIdentityLinkRepository, userRoleAssignmentRepository, roleDefinitionRepository),
+                realmSecurityService,
+                new com.edu360.api.platformops.security.SecurityPolicyService(null),
+                studentLoginLookup
         );
 
         profileService = new ProfileService(
@@ -125,6 +139,21 @@ public class AuthActionTest {
                 fileStorage,
                 auditLogService
         );
+    }
+
+    /** B3: password proven via the password-check client, account found in Keycloak. */
+    private void passwordProven(String realm, String username, String kcId, boolean mfaAttribute,
+                                List<KeycloakAdminClient.CredentialInfo> credentials) {
+        when(keycloakAuthClient.verifyPassword(eq(realm), eq(username), anyString(), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
+        when(keycloakAdminClient.findUser(realm, username)).thenReturn(Optional.of(
+                new KeycloakAdminClient.KeycloakUser(kcId, username, true,
+                        mfaAttribute ? java.util.Map.of("mfa_required", List.of("true")) : java.util.Map.of(), List.of())));
+        lenient().when(keycloakAdminClient.listCredentials(realm, kcId)).thenReturn(credentials);
+    }
+
+    private static List<KeycloakAdminClient.CredentialInfo> passwordSetHoursAgo() {
+        return List.of(new KeycloakAdminClient.CredentialInfo("password", Instant.now().minus(2, ChronoUnit.HOURS)));
     }
 
     // ==========================================
@@ -137,6 +166,7 @@ public class AuthActionTest {
         HttpServletRequest request = mock(HttpServletRequest.class);
         Tenant tenant = Tenant.builder().tenantId(TENANT_ID).keycloakRealm(REALM).build();
         when(loginTenantResolver.resolve(request)).thenReturn(new LoginTenantResolver.TenantLogin(tenant));
+        passwordProven(REALM, "admin@school.edu", "kc-sub-1", false, passwordSetHoursAgo());
         when(keycloakAuthClient.login(REALM, "admin@school.edu", "validPassword123!"))
                 .thenReturn(new KeycloakAuthClient.TokenResult("access-token-123", "refresh-token-123", 300, "kc-sub-1", false));
 
@@ -156,28 +186,30 @@ public class AuthActionTest {
     }
 
     @Test
-    @DisplayName("ACT-AUTH_LOGIN-DENY: Invalid credentials throws InvalidCredentialsException and locks after 5 attempts")
+    @DisplayName("ACT-AUTH_LOGIN-DENY: Wrong password is 401; once Keycloak has locked the account the answer is 423 LOCKED")
     void ACT_AUTH_LOGIN_DENY() {
+        // I-03: the failure count and the lock live in Keycloak brute-force protection, not in
+        // this process. The API reports what Keycloak says after each refused attempt.
         HttpServletRequest request = mock(HttpServletRequest.class);
         Tenant tenant = Tenant.builder().tenantId(TENANT_ID).keycloakRealm(REALM).build();
         when(loginTenantResolver.resolve(request)).thenReturn(new LoginTenantResolver.TenantLogin(tenant));
-        when(keycloakAuthClient.login(REALM, "wrong@school.edu", "wrongPass"))
-                .thenThrow(new InvalidCredentialsException("Invalid user credentials"));
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("wrong@school.edu"), eq("wrongPass"), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.INVALID);
+        when(keycloakAdminClient.findUser(REALM, "wrong@school.edu")).thenReturn(Optional.of(
+                new KeycloakAdminClient.KeycloakUser("kc-wrong", "wrong@school.edu", true, java.util.Map.of(), List.of())));
+        when(keycloakAdminClient.isBruteForceLocked(REALM, "kc-wrong")).thenReturn(false, false, false, false, true);
 
-        // Fail 4 times
         for (int i = 0; i < 4; i++) {
             assertThatThrownBy(() -> authService.login(request, "wrong@school.edu", "wrongPass", "127.0.0.1"))
-                    .isInstanceOf(InvalidCredentialsException.class);
+                    .isInstanceOfSatisfying(com.edu360.api.exception.AuthChallengeException.class,
+                            ex -> assertThat(ex.getStatus()).isEqualTo(401));
         }
-
-        // 5th attempt triggers lockout
         assertThatThrownBy(() -> authService.login(request, "wrong@school.edu", "wrongPass", "127.0.0.1"))
-                .isInstanceOf(InvalidCredentialsException.class);
-
-        // 6th attempt is blocked by 15-minute brute-force lockout rule
-        assertThatThrownBy(() -> authService.login(request, "wrong@school.edu", "wrongPass", "127.0.0.1"))
-                .isInstanceOf(InvalidCredentialsException.class)
-                .hasMessageContaining("temporarily locked");
+                .isInstanceOfSatisfying(com.edu360.api.exception.AuthChallengeException.class, ex -> {
+                    assertThat(ex.getStatus()).isEqualTo(423);
+                    assertThat(ex.getCode()).isEqualTo("LOCKED");
+                });
+        verify(keycloakAuthClient, never()).login(any(), any(), any());
     }
 
     @Test
@@ -185,23 +217,24 @@ public class AuthActionTest {
     void ACT_AUTH_LOGIN_SCOPE() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(loginTenantResolver.resolve(request)).thenReturn(new LoginTenantResolver.PlatformLogin("platform"));
-        when(keycloakAuthClient.login("platform", "super@platform.local", "secret"))
-                .thenThrow(new InvalidCredentialsException("Credentials error"));
+        when(keycloakAuthClient.verifyPassword(eq("platform"), eq("super@platform.local"), eq("secret"), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.INVALID);
 
         assertThatThrownBy(() -> authService.login(request, "super@platform.local", "secret", "127.0.0.1"))
-                .isInstanceOf(InvalidCredentialsException.class);
+                .isInstanceOf(com.edu360.api.exception.AuthChallengeException.class);
 
-        verify(keycloakAuthClient).login("platform", "super@platform.local", "secret");
+        // The realm checked is the one resolved from the Host, never one from the request body.
+        verify(keycloakAuthClient).verifyPassword(eq("platform"), eq("super@platform.local"), eq("secret"), any());
     }
 
     @Test
-    @DisplayName("ACT-AUTH_LOGIN-GUARD: Platform principals and privileged roles require MFA")
+    @DisplayName("ACT-AUTH_LOGIN-GUARD: A two-step role with the right password but no code gets MFA_REQUIRED and no token")
     void ACT_AUTH_LOGIN_GUARD() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(loginTenantResolver.resolve(request)).thenReturn(new LoginTenantResolver.PlatformLogin("platform"));
-        when(keycloakAuthClient.login("platform", "platform@edu360.local", "pass"))
-                .thenReturn(new KeycloakAuthClient.TokenResult("token", "ref", 300, "plt-sub", false));
-
+        passwordProven("platform", "platform@edu360.local", "plt-sub", true, List.of(
+                new KeycloakAdminClient.CredentialInfo("password", Instant.now()),
+                new KeycloakAdminClient.CredentialInfo("otp", Instant.now())));
         PlatformUser platformUser = PlatformUser.builder()
                 .platformUserId(UUID.randomUUID())
                 .platformRole(PlatformRole.PLATFORM_ADMIN)
@@ -210,8 +243,11 @@ public class AuthActionTest {
                 .build();
         when(platformUserRepository.findByIdentitySubject("plt-sub")).thenReturn(Optional.of(platformUser));
 
-        AuthTokenResponse response = authService.login(request, "platform@edu360.local", "pass", "127.0.0.1");
-        assertThat(response.user().mfaRequired()).isTrue();
+        assertThatThrownBy(() -> authService.login(request, "platform@edu360.local", "pass", "127.0.0.1"))
+                .isInstanceOfSatisfying(com.edu360.api.exception.AuthChallengeException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("MFA_REQUIRED"));
+        verify(keycloakAuthClient, never()).login(any(), any(), any());
+        verify(keycloakAuthClient, never()).login(any(), any(), any(), any());
     }
 
     // ==========================================
@@ -238,6 +274,8 @@ public class AuthActionTest {
                         .usernameKind(UsernameKind.EMAIL)
                         .build()));
 
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("student@college.edu"), eq("OldTemp123!"), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
         AuthUserResponse response = authService.changeTenantPassword(principal, "sub-123", "OldTemp123!", "NewSecure123!", "127.0.0.1");
         assertThat(response.mustChangePassword()).isFalse();
         verify(keycloakAdminClient).resetPassword(REALM, "sub-123", "NewSecure123!");
@@ -249,8 +287,7 @@ public class AuthActionTest {
         HttpServletRequest request = mock(HttpServletRequest.class);
         Tenant tenant = Tenant.builder().tenantId(TENANT_ID).keycloakRealm(REALM).build();
         when(loginTenantResolver.resolve(request)).thenReturn(new LoginTenantResolver.TenantLogin(tenant));
-        when(keycloakAuthClient.login(REALM, "student@school.edu", "tempPass123"))
-                .thenReturn(new KeycloakAuthClient.TokenResult("token", "ref", 300, "kc-stud-1", true));
+        passwordProven(REALM, "student@school.edu", "kc-stud-1", false, passwordSetHoursAgo());
 
         // Account created > 7 days ago with credential expired
         UserAccount expiredAccount = UserAccount.builder()
@@ -265,6 +302,8 @@ public class AuthActionTest {
         assertThatThrownBy(() -> authService.login(request, "student@school.edu", "tempPass123", "127.0.0.1"))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("Rule R2-35");
+        // Refused before Keycloak issues any token (no orphaned session).
+        verify(keycloakAuthClient, never()).login(any(), any(), any());
     }
 
     @Test
@@ -298,6 +337,8 @@ public class AuthActionTest {
                         .usernameKind(UsernameKind.EMAIL)
                         .build()));
 
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("student@college.edu"), eq("current123"), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
         AuthUserResponse response = authService.changeTenantPassword(principal, "sub-123", "current123", "newPass2026!", "127.0.0.1");
         assertThat(response.mustChangePassword()).isFalse();
     }
@@ -325,6 +366,8 @@ public class AuthActionTest {
                         .usernameKind(UsernameKind.EMAIL)
                         .build()));
 
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("staff@college.edu"), eq("OldPass123!"), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
         AuthUserResponse response = authService.changeTenantPassword(principal, "sub-staff", "OldPass123!", "RobustNewPass2026#", "127.0.0.1");
         assertThat(response).isNotNull();
         verify(keycloakAdminClient).resetPassword(REALM, "sub-staff", "RobustNewPass2026#");
@@ -379,6 +422,8 @@ public class AuthActionTest {
                         .usernameKind(UsernameKind.EMAIL)
                         .build()));
 
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("staff@college.edu"), eq("old"), any()))
+                .thenReturn(KeycloakAuthClient.PasswordCheck.VERIFIED);
         authService.changeTenantPassword(principal, "sub", "old", "ValidPass2026#", "127.0.0.1");
         verify(auditLogService).record(eq(AuditEventType.PASSWORD_CHANGED), any(), eq("staff@college.edu"), eq("127.0.0.1"), any());
     }
@@ -388,18 +433,27 @@ public class AuthActionTest {
     // ==========================================
 
     @Test
-    @DisplayName("ACT-AUTH_DEVICES_MANAGE-ALLOW: Lists active session device for authenticated caller")
+    @DisplayName("ACT-AUTH_DEVICES_MANAGE-ALLOW: Lists every live session of the caller, this device first")
     void ACT_AUTH_DEVICES_MANAGE_ALLOW() {
         Jwt jwt = mock(Jwt.class);
         when(jwt.getClaimAsString("sid")).thenReturn("session-abc-123");
-        when(jwt.getIssuedAt()).thenReturn(Instant.now());
+        when(jwt.getSubject()).thenReturn("kc-sub-1");
         when(jwt.getExpiresAt()).thenReturn(Instant.now().plus(1, ChronoUnit.HOURS));
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ID, UserType.STAFF, "Staff User", false);
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).keycloakRealm(REALM).build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        long now = System.currentTimeMillis();
+        when(keycloakAdminClient.listUserSessions(REALM, "kc-sub-1")).thenReturn(List.of(
+                new KeycloakAdminClient.UserSessionInfo("session-phone", "10.0.0.9", now - 60_000, now - 5_000),
+                new KeycloakAdminClient.UserSessionInfo("session-abc-123", "10.0.0.9", now - 120_000, now - 1_000)));
 
-        List<SessionResponse> sessions = sessionService.listCurrentSessions(jwt);
-        assertThat(sessions).hasSize(1);
+        List<SessionResponse> sessions = sessionService.listSessions(principal, jwt);
+        assertThat(sessions).hasSize(2);
         assertThat(sessions.get(0).sessionId()).isEqualTo("session-abc-123");
         assertThat(sessions.get(0).current()).isTrue();
-        assertThat(sessions.get(0).revocable()).isTrue();
+        assertThat(sessions.get(1).sessionId()).isEqualTo("session-phone");
+        assertThat(sessions.get(1).current()).isFalse();
+        assertThat(sessions).allMatch(SessionResponse::revocable);
     }
 
     @Test
@@ -415,24 +469,37 @@ public class AuthActionTest {
     }
 
     @Test
-    @DisplayName("ACT-AUTH_DEVICES_MANAGE-SCOPE: Only revokes session inside caller's tenant realm")
+    @DisplayName("ACT-AUTH_DEVICES_MANAGE-SCOPE: Never signs out a session that is not the caller's own")
     void ACT_AUTH_DEVICES_MANAGE_SCOPE() {
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaimAsString("sid")).thenReturn("session-mine");
+        when(jwt.getSubject()).thenReturn("kc-sub-1");
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ID, UserType.STAFF, "Staff User", false);
         Tenant tenant = Tenant.builder().tenantId(TENANT_ID).keycloakRealm(REALM).build();
         when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        when(keycloakAdminClient.listUserSessions(REALM, "kc-sub-1")).thenReturn(List.of(
+                new KeycloakAdminClient.UserSessionInfo("session-mine", null, null, null)));
 
-        sessionService.revokeSession(principal, "session-xyz");
-        verify(keycloakAdminClient).logoutSession(REALM, "session-xyz");
+        assertThatThrownBy(() -> sessionService.revokeSession(principal, "someone-elses-session", jwt))
+                .isInstanceOf(com.edu360.api.exception.ResourceNotFoundException.class);
+        verify(keycloakAdminClient, never()).logoutSession(any(), eq("someone-elses-session"));
     }
 
     @Test
-    @DisplayName("ACT-AUTH_DEVICES_MANAGE-GUARD: Session revocation triggers SESSION_REVOKED audit log")
+    @DisplayName("ACT-AUTH_DEVICES_MANAGE-GUARD: Signing out another own device ends it and is audited")
     void ACT_AUTH_DEVICES_MANAGE_GUARD() {
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaimAsString("sid")).thenReturn("session-mine");
+        when(jwt.getSubject()).thenReturn("kc-sub-1");
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ID, UserType.STAFF, "Staff User", false);
         Tenant tenant = Tenant.builder().tenantId(TENANT_ID).keycloakRealm(REALM).build();
         when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        when(keycloakAdminClient.listUserSessions(REALM, "kc-sub-1")).thenReturn(List.of(
+                new KeycloakAdminClient.UserSessionInfo("session-mine", null, null, null),
+                new KeycloakAdminClient.UserSessionInfo("session-xyz", null, null, null)));
 
-        sessionService.revokeSession(principal, "session-xyz");
+        sessionService.revokeSession(principal, "session-xyz", jwt);
+        verify(keycloakAdminClient).logoutSession(REALM, "session-xyz");
         verify(auditLogService).record(eq(AuditEventType.SESSION_REVOKED), any(), eq("Staff User"), any(), any());
     }
 
@@ -493,8 +560,11 @@ public class AuthActionTest {
     }
 
     @Test
-    @DisplayName("ACT-PROFILE_EDIT_OWN-GUARD: Parent mobile update dispatches alert to old number")
+    @DisplayName("ACT-PROFILE_EDIT_OWN-GUARD: Parent mobile change is refused while no SMS provider exists; nothing saved, audit tells the truth")
     void ACT_PROFILE_EDIT_OWN_GUARD() {
+        // I-08: the earlier version of this test asserted an audit line claiming "Alert sent to
+        // old number" although nothing was sent and any code was accepted. That is the defect
+        // I-08 removes, so the test now asserts the honest behaviour.
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ID, UserType.GUARDIAN, "Parent User", false);
         UserAccount parentAccount = UserAccount.builder()
                 .id(new UserAccountId(TENANT_ID, USER_ID))
@@ -503,15 +573,16 @@ public class AuthActionTest {
                 .userType(UserType.GUARDIAN)
                 .build();
         when(userAccountRepository.findById(new UserAccountId(TENANT_ID, USER_ID))).thenReturn(Optional.of(parentAccount));
-        when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ProfileUpdateRequest update = new ProfileUpdateRequest();
         update.setMobile("+919999888877");
         update.setOtpCode("123456");
 
-        profileService.updateTenantProfile(principal, update);
-
-        verify(auditLogService).record(eq(AuditEventType.PROFILE_UPDATED), any(), eq("Parent User"), any(),
-                org.mockito.ArgumentMatchers.contains("Alert sent to old number"));
+        assertThatThrownBy(() -> profileService.updateTenantProfile(principal, update))
+                .isInstanceOfSatisfying(BusinessRuleViolationException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo("PHONE_VERIFICATION_UNAVAILABLE"));
+        verify(userAccountRepository, never()).save(any(UserAccount.class));
+        verify(auditLogService, never()).record(any(), any(), any(), any(),
+                org.mockito.ArgumentMatchers.contains("Alert sent"));
     }
 }

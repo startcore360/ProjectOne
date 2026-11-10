@@ -3,6 +3,7 @@ package com.edu360.api.platformops;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,7 @@ import com.edu360.api.institution.LeaveApproverSettingRepository;
 import com.edu360.api.platform.Plan;
 import com.edu360.api.platform.PlanRepository;
 import com.edu360.api.platform.PlatformRole;
+import com.edu360.api.platformops.billing.InvoiceRepository;
 import com.edu360.api.platformops.dto.CreatePlanRequest;
 import com.edu360.api.platformops.dto.PlanResponse;
 import com.edu360.api.platformops.dto.TenantActivationRequest;
@@ -44,6 +46,7 @@ import com.edu360.api.platformops.dto.TenantResponse;
 import com.edu360.api.platformops.dto.TenantSettingsResponse;
 import com.edu360.api.platformops.dto.UpdatePlanRequest;
 import com.edu360.api.platformops.dto.UpdateTenantSettingsRequest;
+import com.edu360.api.platformops.role.PlatformAuditWriter;
 import com.edu360.api.tenant.IsolationMode;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantRepository;
@@ -65,6 +68,8 @@ class PlatformTenantControllerTest {
     private AuditLogService auditLogService;
     private LeaveApproverSettingRepository leaveApproverSettingRepository;
     private InstitutionRepository institutionRepository;
+    private InvoiceRepository invoiceRepository;
+    private PlatformAuditWriter platformAuditWriter;
     private PlatformPermissionService platformPermissionService;
     private TenantManagementService tenantManagementService;
     private PlatformTenantController controller;
@@ -77,18 +82,23 @@ class PlatformTenantControllerTest {
         tenantRepository = mock(TenantRepository.class);
         planRepository = mock(PlanRepository.class);
         keycloakAdminClient = mock(KeycloakAdminClient.class);
+        when(keycloakAdminClient.provisionUser(any(), any(), any(), any(), anyBoolean())).thenReturn("kc-admin-sub");
         auditLogService = mock(AuditLogService.class);
         leaveApproverSettingRepository = mock(LeaveApproverSettingRepository.class);
         institutionRepository = mock(InstitutionRepository.class);
-        platformPermissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+        invoiceRepository = mock(InvoiceRepository.class);
+        org.mockito.Mockito.lenient().when(invoiceRepository.existsByTenantIdAndStatus(any(), eq("PAID"))).thenReturn(true);
+        platformAuditWriter = mock(PlatformAuditWriter.class);
+        platformPermissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
         tenantManagementService = new TenantManagementService(
                 tenantRepository,
                 planRepository,
                 keycloakAdminClient,
-                auditLogService,
                 leaveApproverSettingRepository,
-                institutionRepository
+                institutionRepository,
+                null, null, null, null, null, null, null, invoiceRepository,
+                platformAuditWriter
         );
 
         controller = new PlatformTenantController(platformPermissionService, tenantManagementService);
@@ -181,9 +191,10 @@ class PlatformTenantControllerTest {
         when(assignRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         TenantManagementService serviceWithAdmin = new TenantManagementService(
-                tenantRepository, planRepository, keycloakAdminClient, auditLogService,
+                tenantRepository, planRepository, keycloakAdminClient,
                 leaveApproverSettingRepository, institutionRepository,
-                userRepo, linkRepo, roleDefRepo, stdRoleRepo, stdActionRepo, roleActionRepo, assignRepo
+                userRepo, linkRepo, roleDefRepo, stdRoleRepo, stdActionRepo, roleActionRepo, assignRepo,
+                null, platformAuditWriter
         );
         PlatformTenantController testController = new PlatformTenantController(platformPermissionService, serviceWithAdmin);
 
@@ -330,7 +341,7 @@ class PlatformTenantControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().state()).isEqualTo(TenantState.ACTIVE);
 
-        verify(auditLogService).record(eq(AuditEventType.TENANT_ACTIVATED), any(), eq("Delhi World Public School"), any(), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_ACTIVATED"), eq("TENANT_ACTIVATE"), eq("TENANT"), eq(tenantId));
     }
 
     @Test
@@ -424,7 +435,7 @@ class PlatformTenantControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().planName()).isEqualTo("Custom High School Plan");
         assertThat(response.getBody().priceAmount()).isEqualTo(new BigDecimal("650.00"));
-        verify(auditLogService).record(eq(AuditEventType.PLAN_CREATED), any(), any(), any(), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq("CREATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(response.getBody().planId()));
     }
 
     @Test
@@ -472,7 +483,7 @@ class PlatformTenantControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().planName()).isEqualTo("Updated Standard Plan");
         assertThat(response.getBody().userLimit()).isEqualTo(2000);
-        verify(auditLogService).record(eq(AuditEventType.PLAN_UPDATED), any(), any(), any(), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq("UPDATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
     }
 
     @Test
@@ -522,14 +533,14 @@ class PlatformTenantControllerTest {
                 tenantId, new TenantLifecycleActionRequest("Overdue fee settlement"), authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(suspendRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(suspendRes.getBody().state()).isEqualTo(TenantState.SUSPENDED);
-        verify(auditLogService).record(eq(AuditEventType.TENANT_SUSPENDED), any(), any(), any(), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SUSPENDED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
 
         // Reactivate
         ResponseEntity<TenantResponse> reactivateRes = controller.reactivateTenant(
                 tenantId, authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(reactivateRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(reactivateRes.getBody().state()).isEqualTo(TenantState.ACTIVE);
-        verify(auditLogService).record(eq(AuditEventType.TENANT_REACTIVATED), any(), any(), any(), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_REACTIVATED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
     }
 
     @Test
@@ -553,7 +564,7 @@ class PlatformTenantControllerTest {
                 tenantId, new TenantLifecycleActionRequest("Institution merger closed"), authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(archiveRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(archiveRes.getBody().state()).isEqualTo(TenantState.ARCHIVED);
-        verify(auditLogService).record(eq(AuditEventType.TENANT_ARCHIVED), any(), any(), any(), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_ARCHIVED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
     }
 
     @Test
@@ -593,7 +604,7 @@ class PlatformTenantControllerTest {
         assertThat(response.getBody().analyticsOptOut()).isTrue();
         assertThat(response.getBody().customDomain()).isEqualTo("portal.northbridge.edu");
         assertThat(response.getBody().userLimit()).isEqualTo(800);
-        verify(auditLogService).record(eq(AuditEventType.TENANT_SETTINGS_UPDATED), any(), any(), any(), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SETTINGS_UPDATED"), eq("TENANT_SETTINGS"), eq("TENANT"), eq(tenantId));
     }
 
     @Test

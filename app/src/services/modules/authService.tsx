@@ -1,4 +1,5 @@
 import api from "../axios";
+import { getBrowserId } from "../browserId";
 // The network calls behind sign-in/out and account management. login() posts straight to
 // this app's own /api/auth/login - Keycloak checks the password behind the scenes
 // (KeycloakAuthClient on the backend), but this SPA's code only ever talks to this API.
@@ -38,8 +39,16 @@ export type AuthTokenResponse = {
   user: AuthUserResponse;
 };
 export const authService = {
-  login: (email: string, password: string) =>
-    api.post<AuthTokenResponse>("/auth/login", { email, password }),
+  // X-Browser-Id (SES-01): lets the server replace THIS browser's previous session on a new
+  // sign-in while keeping the user's other devices signed in.
+  login: (email: string, password: string, totp?: string) => {
+    const browserId = getBrowserId();
+    return api.post<AuthTokenResponse>(
+      "/auth/login",
+      totp ? { email, password, totp } : { email, password },
+      browserId ? { headers: { "X-Browser-Id": browserId } } : undefined,
+    );
+  },
   refresh: (refreshToken: string) =>
     api.post<AuthTokenResponse>("/auth/refresh", { refreshToken }),
   changePassword: (currentPassword: string, newPassword: string) =>

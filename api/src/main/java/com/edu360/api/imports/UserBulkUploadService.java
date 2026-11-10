@@ -126,7 +126,7 @@ public class UserBulkUploadService {
         FileObject fileObject = FileObject.builder()
                 .id(new FileObjectId(tenantId, fileId))
                 .institutionId(request.institutionId())
-                .purpose("USER_IMPORT")
+                .purpose("IMPORT_SOURCE")
                 .storageKey(storageKey)
                 .originalFilename("user_import.csv")
                 .contentType("text/csv")
@@ -312,6 +312,8 @@ public class UserBulkUploadService {
         ImportJob job = importJobRepository.findByIdTenantIdAndIdImportJobId(tenantId, importJobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Import job not found: " + importJobId));
 
+        verifyJobAccess(principal, job);
+
         return ImportJobResponse.from(job);
     }
 
@@ -322,13 +324,25 @@ public class UserBulkUploadService {
     public List<ImportRowErrorResponse> listImportErrors(RbacPrincipal principal, UUID tenantId, UUID importJobId) {
         verifyTenantAccess(principal, tenantId);
 
-        importJobRepository.findByIdTenantIdAndIdImportJobId(tenantId, importJobId)
+        ImportJob job = importJobRepository.findByIdTenantIdAndIdImportJobId(tenantId, importJobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Import job not found: " + importJobId));
+
+        verifyJobAccess(principal, job);
 
         return importRowErrorRepository.findByIdTenantIdAndImportJobIdOrderByRowNumberAsc(tenantId, importJobId)
                 .stream()
                 .map(ImportRowErrorResponse::from)
                 .toList();
+    }
+
+    private void verifyJobAccess(RbacPrincipal principal, ImportJob job) {
+        if (principal != null && principal.userAccountId() != null && principal.userAccountId().equals(job.getUploadedBy())) {
+            return;
+        }
+        RbacScope actingScope = job.getInstitutionId() != null
+                ? RbacScope.institution(job.getInstitutionId())
+                : RbacScope.tenant();
+        permissionEvaluatorService.authorize(principal, "USER_BULK_UPLOAD", actingScope, RbacTarget.NONE);
     }
 
     /**

@@ -86,6 +86,16 @@ public class TenantIssuerAuthenticationManagerResolver implements Authentication
         return managersByIssuer.computeIfAbsent(issuer, this::buildManagerOrRejectClosed);
     }
 
+    public void evictTenantIssuer(String realm) {
+        if (realm != null) {
+            managersByIssuer.remove(trustedIssuerUrl(realm));
+        }
+    }
+
+    public void evictAll() {
+        managersByIssuer.clear();
+    }
+
     private AuthenticationManager buildManagerOrRejectClosed(String issuer) {
         String realm = extractKnownRealmOrNull(issuer);
         if (realm == null) {
@@ -141,6 +151,17 @@ public class TenantIssuerAuthenticationManagerResolver implements Authentication
      * and handed to TenantContext.set(...).
      */
     private AbstractAuthenticationToken convertVerifiedTenantJwt(Tenant tenant, String realm, Jwt jwt) {
+        // BS-26: Verify token azp / aud to reject tokens issued to admin-cli or unauthorized clients
+        validateClientAudience(jwt);
+
+        // C5: Real-time tenant state check so suspended/archived tenants lose access immediately without process restart
+        tenantRepository.findById(tenant.getTenantId())
+                .filter(t -> t.getState() == TenantState.ACTIVE || t.getState() == TenantState.TRIAL)
+                .orElseThrow(() -> {
+                    evictTenantIssuer(realm);
+                    return new InvalidBearerTokenException("Tenant is suspended, archived, or inactive");
+                });
+
         TenantUserLookup.ResolvedUser resolved;
         try {
             resolved = tenantUserLookup.resolveActiveUser(tenant, realm, jwt.getSubject());
@@ -173,6 +194,8 @@ public class TenantIssuerAuthenticationManagerResolver implements Authentication
     }
 
     private AbstractAuthenticationToken convertVerifiedPlatformJwt(Jwt jwt) {
+        validateClientAudience(jwt);
+
         // Deliberately no TenantContext.set(...) call anywhere in this method - a platform
         // login must never gain tenant RLS access just by existing (see TenantContext's class
         // comment: with nothing set, every app.* row is correctly invisible).
@@ -184,5 +207,22 @@ public class TenantIssuerAuthenticationManagerResolver implements Authentication
         PlatformPrincipal principal = new PlatformPrincipal(
                 user.getPlatformUserId(), user.getPlatformRole(), user.getEmail(), mustChangePassword);
         return new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+    }
+
+    private void validateClientAudience(Jwt jwt) {
+        String azp = jwt.getClaimAsString("azp");
+        if ("admin-cli".equalsIgnoreCase(azp) || "account".equalsIgnoreCase(azp)) {
+            throw new InvalidBearerTokenException("Tokens issued to internal/admin clients are not allowed for user API access");
+        }
+        String expectedClient = keycloakProperties.getFrontendClientId();
+        if (expectedClient != null && !expectedClient.isBlank()) {
+            Object aud = jwt.getClaim("aud");
+            boolean matchesAzp = expectedClient.equals(azp);
+            boolean matchesAud = (aud instanceof List<?> l && l.contains(expectedClient))
+                    || (aud instanceof String s && expectedClient.equals(s));
+            if (!matchesAzp && !matchesAud && azp != null) {
+                throw new InvalidBearerTokenException("Token audience/azp does not match configured frontend client");
+            }
+        }
     }
 }

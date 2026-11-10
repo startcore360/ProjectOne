@@ -41,8 +41,8 @@ public class PromotionController {
             @PathVariable UUID id,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        return ResponseEntity.ok(promotionService.getPromotionRun(tenantId, id));
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(promotionService.getPromotionRun(tenantId, principal, id));
     }
 
     @PostMapping({"/v1/tenants/{tenantId}/promotion-runs/{id}/submission", "/api/tenants/{tenantId}/promotion-runs/{id}/submission"})

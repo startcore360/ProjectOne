@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class TenantUsageController {
 
     private final TenantUsageMonthlyRepository usageRepository;
+    private final com.edu360.api.tenant.TenantRepository tenantRepository;
     private final PlatformPermissionService permissionService;
 
     public record TenantUsageMonthlyResponse(
@@ -43,6 +44,13 @@ public class TenantUsageController {
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "USAGE_COUNTS_VIEW");
+
+        // L-06: an analytics opt-out means this tenant's usage is not reported at all (404, as for an unknown tenant).
+        com.edu360.api.tenant.Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new com.edu360.api.exception.ResourceNotFoundException("Tenant not found: " + tenantId));
+        if (tenant.isAnalyticsOptOut()) {
+            return ResponseEntity.ok(List.of());
+        }
 
         List<TenantUsageMonthly> records = usageRepository.findByTenantIdOrderByUsageMonthDesc(tenantId);
         return ResponseEntity.ok(records.stream()
