@@ -49,6 +49,10 @@ export const authService = {
       browserId ? { headers: { "X-Browser-Id": browserId } } : undefined,
     );
   },
+  // Finishes the in-app authenticator set-up started by a MFA_ENROLMENT_REQUIRED sign-in answer.
+  // The password is sent again on purpose: the server re-proves it before attaching anything.
+  enrolMfa: (body: { email: string; password: string; enrolmentId: string; code: string; deviceName?: string }) =>
+    api.post<{ status: "ENROLLED"; message: string }>("/auth/mfa/enrol", body),
   refresh: (refreshToken: string) =>
     api.post<AuthTokenResponse>("/auth/refresh", { refreshToken }),
   changePassword: (currentPassword: string, newPassword: string) =>

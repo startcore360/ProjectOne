@@ -418,6 +418,87 @@ public class KeycloakAdminClient {
     public record CredentialInfo(String type, java.time.Instant createdAt) {
     }
 
+    // ------------------------------------------------- in-app authenticator set-up (MFA-ENROL)
+
+    /** A started authenticator set-up: shown once to the user as a QR code + typed secret. */
+    public record OtpEnrolment(String enrolmentId, String qrCode, String secret, int expiresInSeconds) {
+    }
+
+    public enum OtpConfirmOutcome { CONFIRMED, INVALID_CODE, TOO_MANY_ATTEMPTS, NOT_FOUND, ALREADY_ENROLLED }
+
+    public record OtpConfirmResult(OtpConfirmOutcome outcome, int attemptsLeft) {
+    }
+
+    private static final String OTP_EXTENSION_PATH = "/edu360-otp";
+
+    /**
+     * Starts an authenticator set-up through the EDU 360 Keycloak extension
+     * (keycloak/edu360-otp-extension): POST /realms/{realm}/edu360-otp/enrolment. The secret is
+     * kept inside Keycloak for 10 minutes. Empty when the extension is not installed or the user
+     * already has an authenticator - the caller then falls back to Keycloak's own set-up page.
+     */
+    @SuppressWarnings("unchecked")
+    public java.util.Optional<OtpEnrolment> startOtpEnrolment(String realm, String username) {
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            Map<String, Object> body = restClient.post()
+                    .uri(properties.getBaseUrl() + "/realms/" + realm + OTP_EXTENSION_PATH + "/enrolment")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(Map.of("username", username))
+                    .retrieve()
+                    .body(Map.class);
+            if (body == null || body.get("enrolmentId") == null) {
+                return java.util.Optional.empty();
+            }
+            int expires = body.get("expiresInSeconds") instanceof Number n ? n.intValue() : 600;
+            return java.util.Optional.of(new OtpEnrolment(body.get("enrolmentId").toString(),
+                    String.valueOf(body.get("qrCode")), String.valueOf(body.get("secret")), expires));
+        } catch (RuntimeException ex) {
+            log.warn("In-app authenticator set-up unavailable for realm {}: {}", realm, ex.getMessage());
+            return java.util.Optional.empty();
+        }
+    }
+
+    /** Confirms a set-up with the user's first code: POST .../enrolment/{id}/confirm. */
+    @SuppressWarnings("unchecked")
+    public OtpConfirmResult confirmOtpEnrolment(String realm, String username, String enrolmentId, String code,
+                                                String deviceName) {
+        String adminToken = fetchMasterAdminAccessToken();
+        Map<String, Object> request = new HashMap<>();
+        request.put("username", username);
+        request.put("code", code);
+        if (deviceName != null && !deviceName.isBlank()) {
+            request.put("deviceName", deviceName);
+        }
+        try {
+            restClient.post()
+                    .uri(properties.getBaseUrl() + "/realms/" + realm + OTP_EXTENSION_PATH + "/enrolment/"
+                            + java.net.URLEncoder.encode(enrolmentId, java.nio.charset.StandardCharsets.UTF_8) + "/confirm")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .toBodilessEntity();
+            return new OtpConfirmResult(OtpConfirmOutcome.CONFIRMED, 0);
+        } catch (HttpClientErrorException ex) {
+            Map<String, Object> body;
+            try {
+                body = ex.getResponseBodyAs(Map.class);
+            } catch (RuntimeException parse) {
+                body = Map.of();
+            }
+            String error = body == null || body.get("error") == null ? "" : body.get("error").toString();
+            int left = body != null && body.get("attemptsLeft") instanceof Number n ? n.intValue() : 0;
+            return switch (error) {
+                case "invalid_code" -> new OtpConfirmResult(OtpConfirmOutcome.INVALID_CODE, left);
+                case "too_many_attempts" -> new OtpConfirmResult(OtpConfirmOutcome.TOO_MANY_ATTEMPTS, 0);
+                case "already_enrolled" -> new OtpConfirmResult(OtpConfirmOutcome.ALREADY_ENROLLED, 0);
+                default -> new OtpConfirmResult(OtpConfirmOutcome.NOT_FOUND, 0);
+            };
+        }
+    }
+
     /**
      * Finds an account by what the user typed: Keycloak username first (staff: email; college
      * student: student ID), then exact email. Empty when no such account exists.

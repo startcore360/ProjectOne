@@ -239,3 +239,13 @@ Check all of these on a real staging environment that matches production:
 
 - **Frontend:** `app/vite.config.ts` allows every `.edu360.local` address.
 - **New tenant:** run `.\docker\dev-hosts-setup.ps1` as Administrator. It adds an entry for every ACTIVE or TRIAL tenant. The hosts file doesn't support wildcards, so this step is local-only and doesn't exist in production. `dev-up.ps1` warns about any missing entries.
+
+## Keycloak extension (in-app authenticator set-up)
+
+Production Keycloak must include the EDU 360 extension, or two-step-role users fall back to Keycloak's own set-up page.
+
+- **Build it:** `cd api && ./mvnw -f ../keycloak/edu360-otp-extension/pom.xml package`. This writes `docker/keycloak/providers/edu360-otp-extension.jar`.
+- **Install it:** copy the jar into `/opt/keycloak/providers/` of the production Keycloak image, then run `kc.sh build` before `kc.sh start`. Production mode doesn't auto-build the way `start-dev` does.
+- **Keep versions in step:** the extension is built against Keycloak 26.0.8 (`keycloak.version` in its `pom.xml`). Rebuild it whenever Keycloak is upgraded. It uses an SPI that Keycloak marks internal, so re-test after every upgrade.
+- **Admin access:** the API calls the extension with its Keycloak admin token. With a client-credentials admin client in production, that service account needs `manage-users` on each tenant realm's management client in master (or master `admin`).
+- [ ] Check: a two-step-role user with no authenticator sees the QR code inside EDU 360 and can sign in afterwards.

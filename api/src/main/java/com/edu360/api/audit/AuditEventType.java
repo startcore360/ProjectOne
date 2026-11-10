@@ -16,6 +16,9 @@ public enum AuditEventType {
     /** AUTH_DEVICES_MANAGE (selfservice/SessionService): the authenticated principal revoked
      *  the session it was currently using. */
     SESSION_REVOKED,
+    /** MFA-ENROL: the user set up their authenticator app in the EDU 360 sign-in screen
+     *  (auth/AuthService.confirmMfaEnrolment, via the Keycloak edu360-otp extension). */
+    MFA_ENROLLED,
     INSTITUTION_CREATED_DRAFT,
     INSTITUTION_ACTIVATED,
     INSTITUTION_ACTIVATION_REQUESTED,

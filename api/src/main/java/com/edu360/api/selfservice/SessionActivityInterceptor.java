@@ -27,9 +27,9 @@ import jakarta.servlet.http.HttpServletResponse;
  *    out from another device (or replaced by a newer sign-in on the same browser) could keep
  *    using its unexpired access token for a few minutes. If the session's device row is
  *    revoked, the call is refused with 401. The SPA then tries to renew, Keycloak refuses (the
- *    session is gone), and the device lands on the login page. "Still active" answers are cached
- *    for CHECK_CACHE_MS, so a sign-out takes effect within that window; "signed out" answers
- *    are remembered for good (a session never comes back).
+ *    session is gone), and the device lands on the login page. Checked on EVERY request, so a
+ *    sign-out takes effect on the next call; "signed out" answers are remembered in memory for
+ *    good (a session never comes back), so a signed-out device costs no further lookups.
  *
  * 2. ACTIVITY ("Active now" in My sessions). At most one last-seen write per session per minute.
  *
@@ -39,13 +39,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SessionActivityInterceptor implements HandlerInterceptor {
 
     static final long THROTTLE_MS = 60_000;
-    static final long CHECK_CACHE_MS = 15_000;
     private static final int MAX_TRACKED = 20_000;
 
     private final SessionService sessionService;
     private final Clock clock;
     private final Map<String, Long> lastWrite = new ConcurrentHashMap<>();
-    private final Map<String, Long> lastActiveCheck = new ConcurrentHashMap<>();
     private final Set<String> signedOut = ConcurrentHashMap.newKeySet();
 
     @Autowired
@@ -71,7 +69,7 @@ public class SessionActivityInterceptor implements HandlerInterceptor {
         }
         long now = clock.millis();
 
-        if (isSignedOut(auth.getPrincipal(), sid, now)) {
+        if (isSignedOut(auth.getPrincipal(), sid)) {
             refuse(response);
             return false;
         }
@@ -85,24 +83,19 @@ public class SessionActivityInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    private boolean isSignedOut(Object principal, String sid, long now) {
+    /** Asked on every request - no "still active" cache, so a sign-out applies to the very next
+     *  call (security requirement). One indexed lookup per request (ux_user_device_session). */
+    private boolean isSignedOut(Object principal, String sid) {
         if (signedOut.contains(sid)) {
             return true;
-        }
-        Long checked = lastActiveCheck.get(sid);
-        if (checked != null && now - checked < CHECK_CACHE_MS) {
-            return false;
         }
         if (sessionService.isSessionSignedOut(principal, sid)) {
             if (signedOut.size() > MAX_TRACKED) {
                 signedOut.clear();
             }
             signedOut.add(sid);
-            lastActiveCheck.remove(sid);
             return true;
         }
-        prune(lastActiveCheck, now, CHECK_CACHE_MS);
-        lastActiveCheck.put(sid, now);
         return false;
     }
 

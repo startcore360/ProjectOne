@@ -154,6 +154,51 @@ public class AuthService {
         return response;
     }
 
+    /**
+     * POST /api/auth/mfa/enrol - finishes an in-app authenticator set-up (MFA_ENROLMENT_REQUIRED).
+     * The password is proven again (through the same password-check client, so wrong guesses
+     * count towards Keycloak's lockout exactly like sign-in), then Keycloak's extension checks
+     * the code against the secret it holds and saves the authenticator. No tokens are issued
+     * here: the screen then asks for the NEXT code and signs in normally, because Keycloak does
+     * not accept the same code twice.
+     */
+    public void confirmMfaEnrolment(HttpServletRequest httpRequest, String identifier, String password,
+                                    String enrolmentId, String code, String deviceName, String ipAddress) {
+        Resolution resolution = loginTenantResolver.resolve(httpRequest);
+        String realm = realmOf(resolution);
+        String username = keycloakUsernameFor(resolution, identifier);
+
+        PasswordCheck check = keycloakAuthClient.verifyPassword(realm, username, password,
+                realmSecurityService.passwordCheckSecret(realm));
+        if (check != PasswordCheck.VERIFIED) {
+            throw refused(realm, username, identifier, ipAddress, false);
+        }
+
+        KeycloakAdminClient.OtpConfirmResult result =
+                keycloakAdminClient.confirmOtpEnrolment(realm, username, enrolmentId, code, deviceName);
+        switch (result.outcome()) {
+            case CONFIRMED -> auditLogService.record(AuditEventType.MFA_ENROLLED, null, identifier, ipAddress,
+                    "Authenticator app set up in the EDU 360 sign-in screen");
+            case INVALID_CODE -> {
+                auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress,
+                        "Authenticator set-up: wrong code");
+                int left = result.attemptsLeft();
+                throw new AuthChallengeException(400, "INVALID_ENROLMENT_CODE",
+                        "That code didn't match. Check the time on your phone and enter the current code"
+                                + (left > 0 ? " (" + left + " attempt" + (left == 1 ? "" : "s") + " left)." : "."),
+                        Map.of("attemptsLeft", left));
+            }
+            case ALREADY_ENROLLED -> throw new AuthChallengeException(409, "ALREADY_ENROLLED",
+                    "An authenticator is already set up for this account. Sign in with its code.");
+            case TOO_MANY_ATTEMPTS, NOT_FOUND -> {
+                auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress,
+                        "Authenticator set-up expired or too many wrong codes");
+                throw new AuthChallengeException(410, "ENROLMENT_EXPIRED",
+                        "This set-up has expired or had too many wrong codes. Sign in again to start over.");
+            }
+        }
+    }
+
     // --------------------------------------------------------------------- sign-in steps
 
     private KeycloakAuthClient.TokenResult signInWithoutCode(Resolution resolution, String realm, String identifier,
@@ -171,7 +216,7 @@ public class AuthService {
             if (!state.hasOtp()) {
                 auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress,
                         "Two-step login required; no authenticator set up yet (MFA_ENROLMENT_REQUIRED)");
-                throw enrolmentRequired(realm);
+                throw enrolmentRequired(realm, username);
             }
             auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress,
                     "Password accepted; authenticator code required (MFA_REQUIRED)");
@@ -184,7 +229,7 @@ public class AuthService {
         } catch (AccountSetupRequiredException ex) {
             // The password is proven but Keycloak still holds a required step for this account
             // (the attribute was set by another path after inspectAndCorrect read it).
-            throw enrolmentRequired(realm);
+            throw enrolmentRequired(realm, username);
         }
     }
 
@@ -211,7 +256,7 @@ public class AuthService {
             // Keycloak issued this token without the second step (the flag was missing until
             // just now). Never hand it out: end the session and ask again.
             endSessionQuietly(realm, tokens.sessionId());
-            throw state.hasOtp() ? AuthChallengeException.mfaRequired() : enrolmentRequired(realm);
+            throw state.hasOtp() ? AuthChallengeException.mfaRequired() : enrolmentRequired(realm, username);
         }
         if (state.rotationDue() && !tokens.mustChangePassword() && tokens.refreshToken() != null) {
             // must_change_password was just set; a refreshed token carries it.
@@ -295,8 +340,24 @@ public class AuthService {
         return withCode ? AuthChallengeException.invalidCode() : AuthChallengeException.invalidCredentials();
     }
 
-    private AuthChallengeException enrolmentRequired(String realm) {
+    /**
+     * MFA_ENROLMENT_REQUIRED (401). Preferred: an in-app set-up started through the EDU 360
+     * Keycloak extension - the answer carries the QR code, the typed secret and a one-time
+     * enrolmentId, and the login screen finishes it via POST /api/auth/mfa/enrol. Fallback when
+     * the extension is unavailable: enrolmentUrl, Keycloak's own account page.
+     * Only ever sent after the password was proven (signInWithoutCode / signInWithCode).
+     */
+    private AuthChallengeException enrolmentRequired(String realm, String username) {
         Map<String, Object> details = new HashMap<>();
+        java.util.Optional<KeycloakAdminClient.OtpEnrolment> enrolment = keycloakAdminClient.startOtpEnrolment(realm, username);
+        if (enrolment.isPresent()) {
+            details.put("enrolmentId", enrolment.get().enrolmentId());
+            details.put("qrCode", enrolment.get().qrCode());
+            details.put("secret", enrolment.get().secret());
+            details.put("expiresInSeconds", enrolment.get().expiresInSeconds());
+            return new AuthChallengeException(401, "MFA_ENROLMENT_REQUIRED",
+                    "Two-step login is required for your role. Set up your authenticator app to continue.", details);
+        }
         String publicBase = keycloakProperties.getPublicBaseUrl();
         String message;
         if (publicBase != null && !publicBase.isBlank()) {

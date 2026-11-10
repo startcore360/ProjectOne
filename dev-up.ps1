@@ -3,6 +3,16 @@
 $root = $PSScriptRoot
 
 Set-Location $root
+
+# Keycloak extension (in-app authenticator set-up): build the jar into docker/keycloak/providers
+# before Keycloak starts, so the container picks it up. Skipped quietly if the build fails -
+# sign-in still works, the login screen just falls back to Keycloak's own set-up page.
+Write-Host "Building the EDU 360 Keycloak extension..."
+Push-Location (Join-Path $root 'api')
+.\mvnw.cmd -q -f ..\keycloak\edu360-otp-extension\pom.xml package -DskipTests
+if ($LASTEXITCODE -ne 0) { Write-Warning "Keycloak extension build failed; in-app authenticator set-up will be unavailable." }
+Pop-Location
+
 docker compose up -d
 
 Write-Host "Waiting for Postgres to accept connections..."

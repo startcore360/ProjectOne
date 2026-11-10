@@ -72,22 +72,19 @@ class SessionActivityInterceptorTest {
         SessionActivityInterceptor interceptor = new SessionActivityInterceptor(sessionService, clock);
 
         call(interceptor, new MockHttpServletResponse());
-        clock.now += 10 * SessionActivityInterceptor.CHECK_CACHE_MS;
         assertThat(call(interceptor, new MockHttpServletResponse())).isFalse();
 
         verify(sessionService, times(1)).isSessionSignedOut(principal, "sid-gone");
     }
 
     @Test
-    void activeSession_isRecheckedAfterTheCacheWindow_soASignOutTakesEffect() throws Exception {
+    void signOutTakesEffectOnTheVeryNextRequest_noCacheWindow() throws Exception {
         signIn("sid-1");
         when(sessionService.isSessionSignedOut(principal, "sid-1")).thenReturn(false, true);
         SessionActivityInterceptor interceptor = new SessionActivityInterceptor(sessionService, clock);
 
         assertThat(call(interceptor, new MockHttpServletResponse())).isTrue();
-        clock.now += 1_000; // within the cache window: not asked again
-        assertThat(call(interceptor, new MockHttpServletResponse())).isTrue();
-        clock.now += SessionActivityInterceptor.CHECK_CACHE_MS; // signed out elsewhere meanwhile
+        // Signed out from another device; the next call - same millisecond - is already refused.
         MockHttpServletResponse response = new MockHttpServletResponse();
         assertThat(call(interceptor, response)).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);

@@ -1,5 +1,7 @@
 package com.edu360.api.auth;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,6 +18,7 @@ import com.edu360.api.auth.dto.AuthTokenResponse;
 import com.edu360.api.auth.dto.AuthUserResponse;
 import com.edu360.api.auth.dto.ChangePasswordRequest;
 import com.edu360.api.auth.dto.LoginRequest;
+import com.edu360.api.auth.dto.MfaEnrolRequest;
 import com.edu360.api.auth.dto.RefreshRequest;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.TenantPrincipal;
@@ -59,6 +62,16 @@ public class AuthController {
         AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(), request.getTotp(),
                 httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/mfa/enrol")
+    @Operation(summary = "Finish setting up the authenticator app from the sign-in screen (after MFA_ENROLMENT_REQUIRED)")
+    public ResponseEntity<Map<String, String>> confirmMfaEnrolment(@Valid @RequestBody MfaEnrolRequest request,
+                                                                   HttpServletRequest httpRequest) {
+        authService.confirmMfaEnrolment(httpRequest, request.getEmail(), request.getPassword(),
+                request.getEnrolmentId(), request.getCode(), request.getDeviceName(), httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(Map.of("status", "ENROLLED",
+                "message", "Authenticator added. Enter the next code from your app to sign in."));
     }
 
     @PostMapping({"/internal/identity-events", "/v1/internal/identity-events"})

@@ -471,4 +471,78 @@ class RegB3SignInTest {
                         ex -> assertThat(ex.getErrorCode()).isEqualTo("PRINTED_PASSWORD_EXPIRED"));
         verify(keycloakAuthClient, never()).login(anyString(), anyString(), anyString());
     }
+
+    // ------------------------------------------------------------------ MFA-ENROL: in-app set-up
+
+    @Test
+    @DisplayName("MFA-ENROL-1: with the Keycloak extension, set-up required carries the QR code, not a Keycloak link")
+    void mfaEnrol1_setUpRequiredCarriesQrCode() {
+        holdsRole("COLLEGE_ADMIN");
+        accountResolves(account(UserType.STAFF, null));
+        passwordVerified("ca@abc.test", passwordOnly());
+        when(keycloakAdminClient.startOtpEnrolment(REALM, "ca@abc.test"))
+                .thenReturn(Optional.of(new KeycloakAdminClient.OtpEnrolment("a1b2c3d4e5f60718", "iVBORw0KGgo=", "ABCD EFGH", 600)));
+
+        AuthChallengeException ex = challenge(catchThrowable(() -> authService.login(httpRequest, "ca@abc.test", "pw", "127.0.0.1")));
+
+        assertThat(ex.getCode()).isEqualTo("MFA_ENROLMENT_REQUIRED");
+        assertThat(ex.getDetails()).containsEntry("enrolmentId", "a1b2c3d4e5f60718")
+                .containsEntry("qrCode", "iVBORw0KGgo=").containsEntry("secret", "ABCD EFGH")
+                .doesNotContainKey("enrolmentUrl");
+    }
+
+    @Test
+    @DisplayName("MFA-ENROL-2: confirming with the right code saves the authenticator and is audited")
+    void mfaEnrol2_confirmSuccess() {
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("ca@abc.test"), eq("pw"), any())).thenReturn(PasswordCheck.VERIFIED);
+        when(keycloakAdminClient.confirmOtpEnrolment(REALM, "ca@abc.test", "a1b2c3d4e5f60718", "123456", "My phone"))
+                .thenReturn(new KeycloakAdminClient.OtpConfirmResult(KeycloakAdminClient.OtpConfirmOutcome.CONFIRMED, 0));
+
+        authService.confirmMfaEnrolment(httpRequest, "ca@abc.test", "pw", "a1b2c3d4e5f60718", "123456", "My phone", "127.0.0.1");
+
+        verify(auditLogService).record(eq(com.edu360.api.audit.AuditEventType.MFA_ENROLLED), any(), eq("ca@abc.test"), any(), any());
+    }
+
+    @Test
+    @DisplayName("MFA-ENROL-3: a wrong password never reaches the authenticator set-up")
+    void mfaEnrol3_wrongPasswordRefusedFirst() {
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("ca@abc.test"), eq("bad"), any())).thenReturn(PasswordCheck.INVALID);
+
+        AuthChallengeException ex = challenge(catchThrowable(() -> authService.confirmMfaEnrolment(
+                httpRequest, "ca@abc.test", "bad", "a1b2c3d4e5f60718", "123456", null, "127.0.0.1")));
+
+        assertThat(ex.getStatus()).isEqualTo(401);
+        verify(keycloakAdminClient, never()).confirmOtpEnrolment(anyString(), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("MFA-ENROL-4: a wrong code answers 400 with the attempts left")
+    void mfaEnrol4_wrongCode() {
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("ca@abc.test"), eq("pw"), any())).thenReturn(PasswordCheck.VERIFIED);
+        when(keycloakAdminClient.confirmOtpEnrolment(REALM, "ca@abc.test", "a1b2c3d4e5f60718", "000000", null))
+                .thenReturn(new KeycloakAdminClient.OtpConfirmResult(KeycloakAdminClient.OtpConfirmOutcome.INVALID_CODE, 3));
+
+        AuthChallengeException ex = challenge(catchThrowable(() -> authService.confirmMfaEnrolment(
+                httpRequest, "ca@abc.test", "pw", "a1b2c3d4e5f60718", "000000", null, "127.0.0.1")));
+
+        assertThat(ex.getStatus()).isEqualTo(400);
+        assertThat(ex.getCode()).isEqualTo("INVALID_ENROLMENT_CODE");
+        assertThat(ex.getDetails()).containsEntry("attemptsLeft", 3);
+        assertThat(ex.getMessage()).contains("3 attempts left");
+    }
+
+    @Test
+    @DisplayName("MFA-ENROL-5: an expired or used-up set-up answers 410; an existing authenticator 409")
+    void mfaEnrol5_expiredAndAlreadyEnrolled() {
+        when(keycloakAuthClient.verifyPassword(eq(REALM), eq("ca@abc.test"), eq("pw"), any())).thenReturn(PasswordCheck.VERIFIED);
+        when(keycloakAdminClient.confirmOtpEnrolment(eq(REALM), eq("ca@abc.test"), eq("aaaaaaaaaaaaaaaa"), anyString(), any()))
+                .thenReturn(new KeycloakAdminClient.OtpConfirmResult(KeycloakAdminClient.OtpConfirmOutcome.TOO_MANY_ATTEMPTS, 0));
+        when(keycloakAdminClient.confirmOtpEnrolment(eq(REALM), eq("ca@abc.test"), eq("bbbbbbbbbbbbbbbb"), anyString(), any()))
+                .thenReturn(new KeycloakAdminClient.OtpConfirmResult(KeycloakAdminClient.OtpConfirmOutcome.ALREADY_ENROLLED, 0));
+
+        assertThat(challenge(catchThrowable(() -> authService.confirmMfaEnrolment(
+                httpRequest, "ca@abc.test", "pw", "aaaaaaaaaaaaaaaa", "123456", null, "127.0.0.1"))).getStatus()).isEqualTo(410);
+        assertThat(challenge(catchThrowable(() -> authService.confirmMfaEnrolment(
+                httpRequest, "ca@abc.test", "pw", "bbbbbbbbbbbbbbbb", "123456", null, "127.0.0.1"))).getStatus()).isEqualTo(409);
+    }
 }
