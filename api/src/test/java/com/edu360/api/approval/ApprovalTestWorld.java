@@ -63,6 +63,7 @@ final class ApprovalTestWorld {
     final Map<UUID, Institution> institutions = new LinkedHashMap<>();
     final Map<UUID, StudentProfile> students = new LinkedHashMap<>();
     final Map<UUID, StudentGuardianLink> links = new LinkedHashMap<>();
+    final Map<UUID, GuardianProfile> profiles = new LinkedHashMap<>();
     final Map<UUID, PromotionRun> runs = new LinkedHashMap<>();
     final List<RoleRolldownOverride> overrides = new ArrayList<>();
     final List<RoleRolldownDefault> rolldownDefaults = new ArrayList<>();
@@ -154,9 +155,15 @@ final class ApprovalTestWorld {
                 links.values().stream().filter(l -> l.getStudentProfileId().equals(inv.getArgument(1))).toList());
         lenient().when(linkRepository.countByIdTenantIdAndStudentProfileId(any(), any())).thenAnswer(inv ->
                 links.values().stream().filter(l -> l.getStudentProfileId().equals(inv.getArgument(1))).count());
-        lenient().when(profileRepository.findByIdTenantIdAndMobile(any(), any())).thenReturn(Optional.empty());
-        lenient().when(profileRepository.findByIdTenantIdAndIdGuardianProfileId(any(), any())).thenReturn(Optional.empty());
-        lenient().when(profileRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(profileRepository.findByIdTenantIdAndMobile(any(), any())).thenAnswer(inv ->
+                profiles.values().stream().filter(p -> Objects.equals(p.getMobile(), inv.getArgument(1))).findFirst());
+        lenient().when(profileRepository.findByIdTenantIdAndIdGuardianProfileId(any(), any())).thenAnswer(inv ->
+                Optional.ofNullable(profiles.get((UUID) inv.getArgument(1))));
+        lenient().when(profileRepository.save(any())).thenAnswer(inv -> {
+            GuardianProfile p = inv.getArgument(0);
+            profiles.put(p.getGuardianProfileId(), p);
+            return p;
+        });
         lenient().when(promotionRunRepository.findByIdTenantIdAndIdPromotionRunId(any(), any())).thenAnswer(inv ->
                 Optional.ofNullable(runs.get((UUID) inv.getArgument(1))));
         lenient().when(promotionRunRepository.save(any())).thenAnswer(inv -> {
@@ -187,7 +194,7 @@ final class ApprovalTestWorld {
                 institutionRepository, promotionRunRepository, w.evaluator, routing, leaveRepository);
         delegation = new ApprovalDelegationService(delegationRepository, batchRepository, w.evaluator,
                 w.auditLogService, w.userAccountRepository, requestRepository, inbox);
-        guardian = new GuardianLinkService(linkRepository, profileRepository, w.evaluator, w.auditLogService,
+        guardian = new GuardianLinkService(linkRepository, profileRepository, w.userAccountRepository, w.evaluator, w.auditLogService,
                 requestRepository, stepRepository, studentRepository, institutionRepository, inbox);
         institutionService = new InstitutionService(institutionRepository, leaveRepository,
                 mock(com.edu360.api.tenant.TenantRepository.class), mock(com.edu360.api.platform.PlanRepository.class),
@@ -224,6 +231,10 @@ final class ApprovalTestWorld {
         s.setInstitutionId(institutionId);
         students.put(s.getStudentProfileId(), s);
         return s;
+    }
+
+    GuardianProfile guardianProfileFor(UUID guardianProfileId) {
+        return profiles.get(guardianProfileId);
     }
 
     StudentGuardianLink link(UUID studentId) {

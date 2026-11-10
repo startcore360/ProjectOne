@@ -138,7 +138,7 @@ public class ApprovalDelegationService {
         // BS-16: the delegator holds the delegated right, at their own active scope
         if (request.processCode() != null && !request.processCode().isBlank() && !"ALL".equalsIgnoreCase(request.processCode())) {
             var decision = permissionEvaluatorService.can(delegator, request.processCode(), delegatorScope, RbacTarget.NONE);
-            if (decision != null && !decision.allowed()) {
+            if (decision == null || !decision.allowed()) {
                 throw new BusinessRuleViolationException("DELEGATOR_LACKS_ACTION",
                         "Delegator does not hold permission " + request.processCode() + " to delegate.");
             }
@@ -177,14 +177,31 @@ public class ApprovalDelegationService {
         return DelegationResponse.from(saved);
     }
 
-    /** True when the user holds an ACTIVE assignment inside (or above) the scope. */
+    /** True only when the delegate has a current assignment inside (or above) the delegator's scope. */
     private boolean inScope(UUID tenantId, UUID userId, RbacScope scope) {
+        List<com.edu360.api.rbac.UserRoleAssignment> assignments =
+                permissionEvaluatorService.heldAssignments(new RbacPrincipal(tenantId, userId));
+        if (assignments.isEmpty()) {
+            return false;
+        }
         if (scope.scopeType() == ScopeType.TENANT) {
             return true;
         }
-        return permissionEvaluatorService.heldAssignments(new RbacPrincipal(tenantId, userId)).stream()
-                .anyMatch(a -> a.getScopeType() == ScopeType.TENANT
-                        || Objects.equals(a.getInstitutionId(), scope.institutionId()));
+        return assignments.stream().anyMatch(a -> {
+            if (a.getScopeType() == ScopeType.TENANT) {
+                return true;
+            }
+            if (!Objects.equals(a.getInstitutionId(), scope.institutionId())) {
+                return false;
+            }
+            if (scope.scopeType() == ScopeType.INSTITUTION) {
+                return true;
+            }
+            return scope.scopeType() == ScopeType.DEPARTMENT
+                    && (a.getScopeType() == ScopeType.INSTITUTION
+                            || (a.getScopeType() == ScopeType.DEPARTMENT
+                                    && Objects.equals(a.getDepartmentId(), scope.departmentId())));
+        });
     }
 
     @Transactional

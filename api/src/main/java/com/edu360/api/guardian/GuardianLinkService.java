@@ -2,6 +2,7 @@ package com.edu360.api.guardian;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -31,6 +32,9 @@ import com.edu360.api.guardian.dto.GuardianLinkResponse;
 import com.edu360.api.guardian.dto.LinkGuardianRequest;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
+import com.edu360.api.identity.UserAccount;
+import com.edu360.api.identity.UserAccountRepository;
+import com.edu360.api.identity.UserAccountStatus;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
@@ -59,6 +63,7 @@ public class GuardianLinkService {
 
     private final StudentGuardianLinkRepository linkRepository;
     private final GuardianProfileRepository profileRepository;
+    private final UserAccountRepository userAccountRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
     private final ApprovalRequestRepository approvalRequestRepository;
@@ -70,6 +75,7 @@ public class GuardianLinkService {
     public GuardianLinkService(
             StudentGuardianLinkRepository linkRepository,
             GuardianProfileRepository profileRepository,
+            UserAccountRepository userAccountRepository,
             PermissionEvaluatorService permissionEvaluatorService,
             AuditLogService auditLogService,
             ApprovalRequestRepository approvalRequestRepository,
@@ -79,6 +85,7 @@ public class GuardianLinkService {
             ApprovalInboxService approvalInboxService) {
         this.linkRepository = linkRepository;
         this.profileRepository = profileRepository;
+        this.userAccountRepository = Objects.requireNonNull(userAccountRepository);
         this.permissionEvaluatorService = permissionEvaluatorService;
         this.auditLogService = auditLogService;
         this.approvalRequestRepository = Objects.requireNonNull(approvalRequestRepository);
@@ -134,10 +141,14 @@ public class GuardianLinkService {
         // Matched by mobile to avoid duplicates (Rule WF-22)
         GuardianProfile profile = profileRepository.findByIdTenantIdAndMobile(tenantId, request.mobile())
                 .orElseGet(() -> {
+                    UserAccount account = userAccountRepository.findByIdTenantIdAndMobile(tenantId, request.mobile())
+                            .filter(a -> a.getStatus() != UserAccountStatus.DEACTIVATED)
+                            .orElseThrow(() -> new BusinessRuleViolationException("GUARDIAN_ACCOUNT_NOT_PROVISIONED",
+                                    "A real guardian user account for this mobile must be provisioned before linking; synthetic account IDs are not created."));
                     UUID newProfileId = UUID.randomUUID();
                     GuardianProfile newProfile = GuardianProfile.builder()
                             .id(new GuardianProfileId(tenantId, newProfileId))
-                            .userAccountId(UUID.randomUUID())
+                            .userAccountId(account.getId().getUserAccountId())
                             .fullName(request.fullName())
                             .mobile(request.mobile())
                             .email(request.email())
@@ -205,11 +216,16 @@ public class GuardianLinkService {
             throw new DuplicateResourceException("A change request for guardian link " + linkId + " is already pending.");
         }
 
-        // The approver follows the institution type: School Principal for a school, Principal for a college.
-        String approverRole = institutionId != null && institutionRepository
-                .findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
-                .map(i -> "SCHOOL".equalsIgnoreCase(i.getInstitutionType())).orElse(false)
-                ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE";
+        // The approver follows the actual institution type; unknown types fail closed.
+        String institutionType = institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
+                .map(i -> i.getInstitutionType())
+                .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " not found"));
+        String approverRole = switch (institutionType == null ? "" : institutionType.toUpperCase(Locale.ROOT)) {
+            case "SCHOOL" -> "SCHOOL_PRINCIPAL";
+            case "COLLEGE" -> "PRINCIPAL_COLLEGE";
+            default -> throw new BusinessRuleViolationException("UNSUPPORTED_INSTITUTION_TYPE",
+                    "Cannot resolve guardian-change approver for institution type: " + institutionType);
+        };
 
         UUID approvalRequestId = UUID.randomUUID();
         Instant now = Instant.now();

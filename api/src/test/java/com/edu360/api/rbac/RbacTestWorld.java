@@ -227,6 +227,10 @@ public final class RbacTestWorld {
             UserAccountId id = inv.getArgument(0);
             return tenantId.equals(id.getTenantId()) ? Optional.ofNullable(accounts.get(id.getUserAccountId())) : Optional.empty();
         });
+        lenient().when(userAccountRepository.findByIdTenantIdAndMobile(any(), any())).thenAnswer(inv ->
+                tenantId.equals(inv.getArgument(0))
+                        ? accounts.values().stream().filter(a -> Objects.equals(a.getMobile(), inv.getArgument(1))).findFirst()
+                        : Optional.empty());
         lenient().when(userAccountRepository.save(any())).thenAnswer(inv -> {
             UserAccount a = inv.getArgument(0);
             accounts.put(a.getId().getUserAccountId(), a);

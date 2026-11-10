@@ -29,6 +29,7 @@ import com.edu360.api.guardian.GuardianLinkController;
 import com.edu360.api.guardian.StudentGuardianLink;
 import com.edu360.api.guardian.dto.GuardianChangeDecisionRequest;
 import com.edu360.api.guardian.dto.GuardianChangeRequestDto;
+import com.edu360.api.guardian.dto.LinkGuardianRequest;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.institution.InstitutionController;
 import com.edu360.api.institution.dto.BlockDecisionRequest;
@@ -96,6 +97,32 @@ class GuardianInstitutionPromotionB2Test {
                 .isInstanceOf(ResourceNotFoundException.class);
         assertThatThrownBy(() -> t.guardian.listGuardianLinks(t.tenantId, UUID.randomUUID(), p))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("REG-P02-3: a new guardian profile uses the existing real user account matched by mobile")
+    void reg_P02_3() {
+        UUID guardianAccountId = t.w.user("Parent");
+        String mobile = "+919876543210";
+        t.w.accounts.get(guardianAccountId).setMobile(mobile);
+
+        var linked = t.guardian.linkGuardian(t.tenantId, collegeStudent.getStudentProfileId(), t.as(adminCollege),
+                new LinkGuardianRequest("Parent", mobile, null, "FATHER", true));
+
+        var profile = t.guardianProfileFor(linked.guardianProfileId());
+        assertThat(profile.getUserAccountId()).isEqualTo(guardianAccountId);
+        assertThat(t.links).hasSize(1);
+        assertThat(t.audited("Linked guardian")).isTrue();
+    }
+
+    @Test
+    @DisplayName("REG-P02-4: linking without a provisioned guardian account fails without synthetic identity or saved link")
+    void reg_P02_4() {
+        assertThatThrownBy(() -> t.guardian.linkGuardian(t.tenantId, collegeStudent.getStudentProfileId(), t.as(adminCollege),
+                new LinkGuardianRequest("Unprovisioned Parent", "+919876543211", null, "MOTHER", true)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("synthetic account IDs are not created");
+        assertThat(t.links).isEmpty();
     }
 
     @Test
@@ -285,6 +312,27 @@ class GuardianInstitutionPromotionB2Test {
                 assertThat(pm.value()).doesNotContain("/{institutionId}/block");
             }
         }
+    }
+
+    @Test
+    @DisplayName("REG-P03-2: the block-request audit records the real active requester role")
+    void reg_P03_2() {
+        UUID ua = universityAdmin();
+        t.as(ua);
+        String activeRole = TenantContext.currentActiveRoleCode();
+
+        t.institutionService.requestBlock(new RbacPrincipal(t.tenantId, ua), college,
+                new BlockInstitutionRequest("Governance review"));
+
+        ApprovalRequest request = t.requests.values().stream()
+                .filter(r -> "INSTITUTION_BLOCK".equals(r.getProcessCode()))
+                .findFirst().orElseThrow();
+        assertThat(activeRole).isEqualTo("UNIVERSITY_ADMIN");
+        assertThat(request.getRequesterActiveRole()).isEqualTo(activeRole);
+        assertThat(t.w.auditRows).anySatisfy(a -> {
+            assertThat(a.getDetails()).contains("Block requested");
+            assertThat(a.getActorRoleCode()).isEqualTo(activeRole);
+        });
     }
 
     @Test

@@ -432,6 +432,24 @@ class ApprovalEngineB2Test {
     }
 
     @Test
+    @DisplayName("REG-P07-2: a delegate in another department of the same institution is out of scope")
+    void reg_P07_2() {
+        UUID departmentA = UUID.randomUUID();
+        UUID departmentB = UUID.randomUUID();
+        UUID hod = t.w.user("HOD A");
+        t.w.assign(hod, "HEAD_OF_DEPARTMENT", ScopeType.DEPARTMENT, instA, departmentA);
+        UUID professorB = t.w.user("Professor B");
+        t.w.assign(professorB, "PROFESSOR", ScopeType.DEPARTMENT, instA, departmentB);
+
+        TenantPrincipal p = t.as(hod);
+        assertThatThrownBy(() -> t.delegation.createDelegation(t.tenantId, p,
+                delegationTo(professorB, "MARKS_APPROVE_HOD")))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("does not work in the delegator's institution or department");
+        assertThat(t.delegations).isEmpty();
+    }
+
+    @Test
     @DisplayName("ACT-APPROVAL_DELEGATE-GUARD: inactive delegate, re-delegation, merit list, other canceller, own request")
     void actApprovalDelegate_guard() {
         UUID vp = t.staff("Vice Principal", "VICE_PRINCIPAL_COLLEGE", ScopeType.INSTITUTION, instA);

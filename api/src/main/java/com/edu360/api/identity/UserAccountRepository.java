@@ -1,6 +1,7 @@
 package com.edu360.api.identity;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UserAc
     boolean existsByIdTenantIdAndEmail(UUID tenantId, String email);
 
     boolean existsByIdTenantIdAndMobile(UUID tenantId, String mobile);
+
+    Optional<UserAccount> findByIdTenantIdAndMobile(UUID tenantId, String mobile);
 
     long countByIdTenantIdAndStatusNot(UUID tenantId, UserAccountStatus status);
 }
