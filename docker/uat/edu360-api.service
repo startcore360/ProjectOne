@@ -19,7 +19,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
-ReadWritePaths=/var/log/edu360
+ReadWritePaths=/var/log/edu360 /var/lib/edu360/uploads
 
 [Install]
 WantedBy=multi-user.target
