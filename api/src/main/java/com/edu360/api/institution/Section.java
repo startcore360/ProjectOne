@@ -7,20 +7,22 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * WHAT: a mapping of app.section - a section of a semester (college, semesterId set) or of a
- * class (school, classId set); ck_section_r1 guarantees exactly one of the two is set. Used by
- * MENTOR_ASSIGN (college sections) and CLASS_TEACHER_ASSIGN (school sections, per the table
- * comment's OD-24 note - see ClassTeacherAssignmentService javadoc for that open decision).
+ * Mapping of app.section - a section of a semester (college, semesterId set) or of a
+ * class (school, classId set); ck_section_r1 guarantees exactly one of the two is set.
  */
 @Entity
 @Table(schema = "app", name = "section")
 @Getter
 @Setter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class Section {
 
@@ -49,10 +51,17 @@ public class Section {
     private String sectionName;
 
     @Column(name = "status", nullable = false)
-    private String status;
+    @Builder.Default
+    private String status = "ACTIVE";
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(name = "created_by", nullable = false)
+    private UUID createdBy;
+
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private Instant updatedAt;
 
     @Column(name = "updated_by", nullable = false)
     private UUID updatedBy;

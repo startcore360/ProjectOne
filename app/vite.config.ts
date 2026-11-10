@@ -13,11 +13,9 @@ export default defineConfig({
   host: "0.0.0.0",
   port: 5173,
   strictPort: true,
-  allowedHosts: [
-    "abc.edu360.local",
-    "xyz.edu360.local",
-    "platform.edu360.local",
-  ],
+  // The leading dot allows every subdomain, so a new tenant needs no change here.
+  // Dev server only. Production is covered in docker/PRODUCTION_TENANT_ROUTING.txt.
+  allowedHosts: [".edu360.local"],
 },
   test: {
     environment: "jsdom",

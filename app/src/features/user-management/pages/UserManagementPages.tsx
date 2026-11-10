@@ -1,119 +1,71 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Badge, Button, EmptyState, ErrorState, PageHeader, Spinner } from "../../../components";
-import { Kicker, TextField } from "../../../design-system/components";
+import {
+  Button,
+  ConfirmDialog as DsConfirmDialog,
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Modal,
+  Notice,
+  PageHeader,
+  Panel,
+  SearchBox,
+  Spinner,
+  StatusBadge,
+  TextField,
+} from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { getApiErrorMessage, type ApiError } from "../../../services/apiHelper";
 import {
   userManagementService,
   type ActingScope,
+  type CreateUserResponse,
   type ScopeType,
-  type UserAccountStatus,
+  type TopUserResponse,
   type UserSummary,
 } from "../api/userManagementService";
+import {
+  ScopeFields,
+  CreateUserCheckModal,
+  CreateUserModal,
+  CreatedCredentialsModal,
+  CreateTopUserModal,
+  BulkUploadModal,
+  StudentStatusPanel,
+  GuardianManagementPanel,
+} from "../components";
 
-// WHAT: the tenant-side "Users & roles" register (USER_VIEW), a user's detail view with edit
-// (USER_EDIT), deactivate (USER_DEACTIVATE) and password-reset/unlock (USER_PASSWORD_RESET_UNLOCK)
-// actions, per api/src/main/java/com/edu360/api/rbac/*Controller.java.
-//
-// WHY every screen here asks the caller to state an "acting scope" (scopeType + optionally
-// institutionId/departmentId) instead of just showing data: PermissionEvaluatorService has no
-// column recording "the one scope a user operates in" - a principal can hold several differently
-// scoped role assignments, so every one of these endpoints needs to be told exactly which one
-// this request means (see UserViewController's own javadoc). This is NOT a filter on which users
-// are shown; it is which of the caller's own grants is being exercised.
-//
-// WHY there is no client-side role gate on this route: AuthUser (store/slices/authSlice.ts) only
-// carries tenantId/userType/platformRole - there is no tenant role name exposed to the frontend
-// yet. Per CLAUDE.md, this screen is reachable by any authenticated tenant user and relies
-// entirely on the backend's 403 (via PermissionEvaluatorService) for real enforcement. A 403 is
-// shown as a clean "permission denied" state below, never a crash.
+export {
+  ScopeFields,
+  CreateUserCheckModal,
+  CreateUserModal,
+  CreatedCredentialsModal,
+  CreateTopUserModal,
+  BulkUploadModal,
+  StudentStatusPanel,
+  GuardianManagementPanel,
+};
 
 type LoadState = "idle" | "loading" | "loaded" | "denied" | "error";
 
 function isForbidden(error: unknown): boolean {
-  return !!(error && typeof error === "object" && "isAxiosError" in error && (error as ApiError).response?.status === 403);
-}
-
-function statusTone(status: UserAccountStatus): "success" | "warning" | "danger" {
-  if (status === "ACTIVE") return "success";
-  if (status === "PENDING_ACTIVATION") return "warning";
-  return "danger";
-}
-
-function StatusBadge({ status }: { status: UserAccountStatus }) {
-  return <Badge tone={statusTone(status)}>{status.replace("_", " ")}</Badge>;
-}
-
-function Panel({ title, description, action, children }: { title: string; description?: string; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="platform-panel">
-      <header className="platform-panel__header">
-        <div>
-          <h2>{title}</h2>
-          {description && <p>{description}</p>}
-        </div>
-        {action}
-      </header>
-      {children}
-    </section>
+  return !!(
+    error &&
+    typeof error === "object" &&
+    "isAxiosError" in error &&
+    (error as ApiError).response?.status === 403
   );
 }
 
-// The "acting scope" picker shared by the list screen and the detail screen's view/edit calls.
-// institutionId/departmentId only appear once they are actually needed by the chosen scopeType,
-// so nothing asks for a department when the caller is asserting a tenant-wide grant.
-function ScopeFields({
-  scope,
-  onChange,
-  idPrefix,
-}: {
-  scope: ActingScope;
-  onChange: (next: ActingScope) => void;
-  idPrefix: string;
-}) {
-  return (
-    <div className="platform-form-grid">
-      <label className="platform-form-field">
-        Acting scope
-        <select
-          value={scope.scopeType}
-          onChange={(e) => onChange({ ...scope, scopeType: e.target.value as ScopeType })}
-        >
-          <option value="TENANT">Tenant (university-wide)</option>
-          <option value="INSTITUTION">Institution</option>
-          <option value="DEPARTMENT">Department</option>
-        </select>
-      </label>
-      {scope.scopeType !== "TENANT" && (
-        <TextField
-          id={`${idPrefix}-institution-id`}
-          label="Institution ID"
-          required
-          value={scope.institutionId ?? ""}
-          onChange={(e) => onChange({ ...scope, institutionId: e.target.value })}
-          placeholder="UUID of the institution"
-        />
-      )}
-      {scope.scopeType === "DEPARTMENT" && (
-        <TextField
-          id={`${idPrefix}-department-id`}
-          label="Department ID"
-          required
-          value={scope.departmentId ?? ""}
-          onChange={(e) => onChange({ ...scope, departmentId: e.target.value })}
-          placeholder="UUID of the department"
-        />
-      )}
-    </div>
-  );
-}
+// Re-export aliases for tests and backward compatibility
+export const CreateUserCheckDialog = CreateUserCheckModal;
+export const CreateUserDialog = CreateUserModal;
+export const CreateGovernanceUserDialog = CreateTopUserModal;
+export const BulkUploadUsersDialog = BulkUploadModal;
+export const OneTimePasswordModal = CreatedCredentialsModal;
 
-// A small "are you sure" step reused by deactivate/reset/unlock - same platform-modal pattern
-// already used for the tenant-creation dialog on PlatformPages.tsx, so this introduces no new
-// visual pattern.
-function ConfirmDialog({
-  titleId,
+export function ConfirmDialog({
   title,
   description,
   confirmLabel,
@@ -122,7 +74,7 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
 }: {
-  titleId: string;
+  titleId?: string;
   title: string;
   description: string;
   confirmLabel: string;
@@ -132,76 +84,16 @@ function ConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <div className="platform-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <header>
-          <div>
-            <Kicker>CONFIRM</Kicker>
-            <h2 id={titleId}>{title}</h2>
-            <p>{description}</p>
-          </div>
-          <button className="platform-icon-button" onClick={onCancel} aria-label="Close">×</button>
-        </header>
-        <footer>
-          <Button variant="secondary" onClick={onCancel} disabled={busy}>Cancel</Button>
-          <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} loading={busy}>{confirmLabel}</Button>
-        </footer>
-      </section>
-    </div>
-  );
-}
-
-// A minimal create-user authorization check (USER_CREATE). Deliberately labeled as a check, not
-// a creation: UserCreationController.java is a proof-of-integration endpoint only ("no user was
-// created" per its own javadoc) - there is no real USER_CREATE story (Keycloak provisioning,
-// app.user_account insert, audit entry) behind it yet.
-function CreateUserCheckDialog({ tenantId, onClose }: { tenantId: string; onClose: () => void }) {
-  const [scope, setScope] = useState<ActingScope>({ scopeType: "TENANT" });
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  const runCheck = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setResult(null);
-    try {
-      const { data } = await userManagementService.checkCreateUserAuthorization(tenantId, scope);
-      setResult({ ok: true, message: data.message });
-    } catch (error) {
-      setResult({ ok: false, message: getApiErrorMessage(error) });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="platform-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="create-check-title">
-        <header>
-          <div>
-            <Kicker>USER_CREATE</Kicker>
-            <h2 id="create-check-title">Check if I can create a user</h2>
-            <p>This only checks whether you are authorized to create a user in the chosen scope. It does not create an account - the backend endpoint behind this check is a proof-of-integration authorization check only.</p>
-          </div>
-          <button className="platform-icon-button" onClick={onClose} aria-label="Close">×</button>
-        </header>
-        <form onSubmit={runCheck}>
-          <ScopeFields scope={scope} onChange={setScope} idPrefix="create-check" />
-          {result && (
-            <div className={result.ok ? "platform-inline-notice" : "auth-message auth-message--error"} role="status">
-              {result.message}
-            </div>
-          )}
-          <div className="platform-modal-note">
-            No account is created by this dialog, regardless of the result shown above.
-          </div>
-          <footer>
-            <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
-            <Button type="submit" loading={busy}>Check authorization</Button>
-          </footer>
-        </form>
-      </section>
-    </div>
+    <DsConfirmDialog
+      isOpen={true}
+      title={title}
+      message={description}
+      confirmLabel={confirmLabel}
+      confirmTone={danger ? "danger" : "primary"}
+      busy={busy}
+      onConfirm={onConfirm}
+      onClose={onCancel}
+    />
   );
 }
 
@@ -213,12 +105,19 @@ export function UserListPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [query, setQuery] = useState("");
   const [showCreateCheck, setShowCreateCheck] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showGovernanceModal, setShowGovernanceModal] = useState(false);
+  const [createdUser, setCreatedUser] = useState<CreateUserResponse | TopUserResponse | null>(null);
 
   if (!tenantId) {
     return (
       <div className="platform-page">
         <PageHeader title="Users & roles" description="User account management (USER_VIEW)." />
-        <ErrorState title="Not available" message="This screen is for tenant accounts. No tenant is associated with your sign-in." />
+        <ErrorState
+          title="Not available"
+          message="This screen is for tenant accounts. No tenant is associated with your sign-in."
+        />
       </div>
     );
   }
@@ -252,7 +151,7 @@ export function UserListPage() {
   };
 
   const filtered = users.filter((u) =>
-    (u.displayName + " " + u.email).toLowerCase().includes(query.toLowerCase()),
+    (u.displayName + " " + u.email).toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -260,84 +159,164 @@ export function UserListPage() {
       <PageHeader
         title="Users & roles"
         description="View and manage tenant user accounts in a chosen scope (USER_VIEW)."
-        actions={<Button variant="secondary" onClick={() => setShowCreateCheck(true)}>Check if I can create a user</Button>}
+        actions={
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <Button variant="secondary" onClick={() => setShowCreateCheck(true)}>
+              Check if I can create a user
+            </Button>
+            <Button variant="secondary" onClick={() => setShowBulkModal(true)}>
+              Bulk import users
+            </Button>
+            <Button variant="secondary" onClick={() => setShowGovernanceModal(true)}>
+              Create governance user
+            </Button>
+            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+              Create user
+            </Button>
+          </div>
+        }
       />
 
-      <Panel title="Choose a scope" description="State the scope your own role assignment is acting in, then load the register.">
+      <Panel
+        title="Choose a scope"
+        description="State the scope your own role assignment is acting in, then load the register."
+      >
         <form
           className="platform-toolbar"
           style={{ flexDirection: "column", alignItems: "stretch" }}
-          onSubmit={(e) => { e.preventDefault(); void load(); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void load();
+          }}
         >
           <ScopeFields scope={scope} onChange={setScope} idPrefix="list" />
           <div>
-            <Button type="submit" loading={state === "loading"}>Load users</Button>
+            <Button type="submit" busy={state === "loading"}>
+              Load users
+            </Button>
           </div>
         </form>
       </Panel>
 
       {state === "denied" && (
-        <ErrorState title="Permission denied" message={errorMessage || "You do not have permission to view users in this scope."} />
+        <ErrorState
+          title="Permission denied"
+          message={errorMessage || "You do not have permission to view users in this scope."}
+        />
       )}
       {state === "error" && (
-        <ErrorState title="Could not load users" message={errorMessage} action={<Button variant="secondary" onClick={() => void load()}>Try again</Button>} />
+        <ErrorState
+          title="Could not load users"
+          message={errorMessage}
+          action={
+            <Button variant="secondary" onClick={() => void load()}>
+              Try again
+            </Button>
+          }
+        />
       )}
       {state === "loading" && <Spinner label="Loading users" />}
 
       {state === "loaded" && (
-        <Panel title="User register" description={`${filtered.length} of ${users.length} user${users.length === 1 ? "" : "s"} in this scope`}>
+        <Panel
+          title="User register"
+          description={`${filtered.length} of ${users.length} user${users.length === 1 ? "" : "s"} in this scope`}
+        >
           <div className="platform-toolbar">
-            <label className="platform-search">
-              <span aria-hidden="true">⌕</span>
-              <span className="visually-hidden">Search</span>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or email" />
-            </label>
+            <SearchBox
+              value={query}
+              onChange={setQuery}
+              placeholder="Search name or email"
+            />
           </div>
           {filtered.length === 0 ? (
-            <EmptyState title="No users match" description="No user accounts were found for this scope or search." />
+            <EmptyState
+              title="No users match"
+              description="No user accounts were found for this scope or search."
+            />
           ) : (
-            <div className="platform-table-wrap">
-              <table className="platform-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Mobile</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((u) => (
-                    <tr key={u.userAccountId}>
-                      <td><strong>{u.displayName}</strong></td>
-                      <td>{u.email}</td>
-                      <td>{u.mobile}</td>
-                      <td>{u.userType}</td>
-                      <td><StatusBadge status={u.status} /></td>
-                      <td>
-                        <Link
-                          className="eds-link-button"
-                          to={`/tenants/users/${u.userAccountId}?scopeType=${scope.scopeType}${scope.institutionId ? `&institutionId=${scope.institutionId}` : ""}${scope.departmentId ? `&departmentId=${scope.departmentId}` : ""}`}
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              headers={["Name", "Email", "Mobile", "Type", "Status", "Action"]}
+            >
+              {filtered.map((u) => (
+                <tr key={u.userAccountId}>
+                  <td>
+                    <strong>{u.displayName}</strong>
+                  </td>
+                  <td>{u.email}</td>
+                  <td>{u.mobile}</td>
+                  <td>{u.userType}</td>
+                  <td>
+                    <StatusBadge status={u.status} />
+                  </td>
+                  <td>
+                    <Link
+                      className="eds-link-button"
+                      to={`/tenants/users/${u.userAccountId}?scopeType=${scope.scopeType}${
+                        scope.institutionId ? `&institutionId=${scope.institutionId}` : ""
+                      }${scope.departmentId ? `&departmentId=${scope.departmentId}` : ""}`}
+                    >
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
           )}
         </Panel>
       )}
 
       {state === "idle" && (
-        <EmptyState title="No users loaded yet" description="Choose a scope above and select Load users to view the register." />
+        <EmptyState
+          title="No users loaded yet"
+          description="Choose a scope above and select Load users to view the register."
+        />
       )}
 
-      {showCreateCheck && <CreateUserCheckDialog tenantId={tenantId} onClose={() => setShowCreateCheck(false)} />}
+      <CreateUserCheckModal
+        tenantId={tenantId}
+        isOpen={showCreateCheck}
+        onClose={() => setShowCreateCheck(false)}
+      />
+
+      <BulkUploadModal
+        tenantId={tenantId}
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onImportComplete={() => {
+          void load();
+        }}
+      />
+
+      <CreateTopUserModal
+        tenantId={tenantId}
+        isOpen={showGovernanceModal}
+        onClose={() => setShowGovernanceModal(false)}
+        onCreated={(topUser) => {
+          setShowGovernanceModal(false);
+          setCreatedUser(topUser);
+          void load();
+        }}
+      />
+
+      <CreateUserModal
+        tenantId={tenantId}
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={(newUsr) => {
+          setShowCreateModal(false);
+          setCreatedUser(newUsr);
+          void load();
+        }}
+      />
+
+      {createdUser && (
+        <CreatedCredentialsModal
+          user={createdUser}
+          isOpen={true}
+          onClose={() => setCreatedUser(null)}
+        />
+      )}
     </div>
   );
 }
@@ -389,9 +368,6 @@ export function UserDetailPage() {
     }
   };
 
-  // Load immediately when the list page already supplied a scope via the URL; otherwise wait
-  // for the caller to state one below (e.g. someone opened this page directly by URL). Runs once
-  // on mount only - re-fetching on an edited scope happens explicitly via submitScope/actions.
   useEffect(() => {
     if (initialScopeType) void load(scope);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -401,7 +377,10 @@ export function UserDetailPage() {
     return (
       <div className="platform-page">
         <PageHeader title="User detail" description="User account management (USER_VIEW)." />
-        <ErrorState title="Not available" message="This screen is for tenant accounts with a valid user ID." />
+        <ErrorState
+          title="Not available"
+          message="This screen is for tenant accounts with a valid user ID."
+        />
       </div>
     );
   }
@@ -421,7 +400,10 @@ export function UserDetailPage() {
       setUser(data);
       setSaveBanner({ tone: "success", message: "Changes saved." });
     } catch (error) {
-      setSaveBanner({ tone: isForbidden(error) ? "danger" : "danger", message: getApiErrorMessage(error) });
+      setSaveBanner({
+        tone: isForbidden(error) ? "danger" : "danger",
+        message: getApiErrorMessage(error),
+      });
     } finally {
       setSaving(false);
     }
@@ -431,7 +413,11 @@ export function UserDetailPage() {
     setActionBusy(true);
     setActionBanner(null);
     try {
-      const { data } = await userManagementService.deactivateUser(tenantId, userId, actionInstitutionId);
+      const { data } = await userManagementService.deactivateUser(
+        tenantId,
+        userId,
+        actionInstitutionId
+      );
       if (data.reasonCode === "ALREADY_DEACTIVATED") {
         setActionBanner({ tone: "info", message: data.message });
       } else {
@@ -450,7 +436,11 @@ export function UserDetailPage() {
     setActionBusy(true);
     setActionBanner(null);
     try {
-      const { data } = await userManagementService.resetPassword(tenantId, userId, actionInstitutionId);
+      const { data } = await userManagementService.resetPassword(
+        tenantId,
+        userId,
+        actionInstitutionId
+      );
       setTemporaryPassword(data.temporaryPassword);
       setConfirming(null);
     } catch (error) {
@@ -464,7 +454,11 @@ export function UserDetailPage() {
     setActionBusy(true);
     setActionBanner(null);
     try {
-      const { data } = await userManagementService.unlockUser(tenantId, userId, actionInstitutionId);
+      const { data } = await userManagementService.unlockUser(
+        tenantId,
+        userId,
+        actionInstitutionId
+      );
       setActionBanner({ tone: "success", message: data.message });
       setConfirming(null);
     } catch (error) {
@@ -489,30 +483,62 @@ export function UserDetailPage() {
       <PageHeader
         title="User detail"
         description="View, edit and manage a single user account (USER_VIEW / USER_EDIT / USER_DEACTIVATE / USER_PASSWORD_RESET_UNLOCK)."
-        actions={<Button variant="secondary" onClick={() => navigate("/tenants/users")}>Back to register</Button>}
+        actions={
+          <Button variant="secondary" onClick={() => navigate("/tenants/users")}>
+            Back to register
+          </Button>
+        }
       />
 
       {needsScope && (
-        <Panel title="Choose a scope" description="State the scope your own role assignment is acting in, then load this user.">
-          <form className="platform-toolbar" style={{ flexDirection: "column", alignItems: "stretch" }} onSubmit={submitScope}>
+        <Panel
+          title="Choose a scope"
+          description="State the scope your own role assignment is acting in, then load this user."
+        >
+          <form
+            className="platform-toolbar"
+            style={{ flexDirection: "column", alignItems: "stretch" }}
+            onSubmit={submitScope}
+          >
             <ScopeFields scope={scope} onChange={setScope} idPrefix="detail" />
-            <div><Button type="submit">Load user</Button></div>
+            <div>
+              <Button type="submit">Load user</Button>
+            </div>
           </form>
         </Panel>
       )}
 
       {!needsScope && state === "loading" && <Spinner label="Loading user" />}
       {!needsScope && state === "denied" && (
-        <ErrorState title="Permission denied" message={errorMessage || "You do not have permission to view this user in this scope."} />
+        <ErrorState
+          title="Permission denied"
+          message={errorMessage || "You do not have permission to view this user in this scope."}
+        />
       )}
       {!needsScope && state === "error" && (
-        <ErrorState title="Could not load user" message={errorMessage} action={<Button variant="secondary" onClick={() => void load(scope)}>Try again</Button>} />
+        <ErrorState
+          title="Could not load user"
+          message={errorMessage}
+          action={
+            <Button variant="secondary" onClick={() => void load(scope)}>
+              Try again
+            </Button>
+          }
+        />
       )}
 
       {!needsScope && state === "loaded" && user && (
         <>
-          <Panel title={user.displayName} description={`${user.userType} · ${user.email}`} action={<StatusBadge status={user.status} />}>
-            <form className="platform-form-grid" style={{ padding: "0 var(--space-5) var(--space-5)" }} onSubmit={saveEdit}>
+          <Panel
+            title={user.displayName}
+            description={`${user.userType} · ${user.email}`}
+            action={<StatusBadge status={user.status} />}
+          >
+            <form
+              className="platform-form-grid"
+              style={{ padding: "0 var(--space-5) var(--space-5)" }}
+              onSubmit={saveEdit}
+            >
               <TextField
                 id="edit-display-name"
                 label="Display name"
@@ -537,20 +563,21 @@ export function UserDetailPage() {
               />
               {user.status === "DEACTIVATED" ? (
                 <div className="platform-modal-note" style={{ gridColumn: "1 / -1" }}>
-                  This account is deactivated. Deactivation is permanent in this system (no reactivate), so it can no longer be edited.
+                  This account is deactivated. Deactivation is permanent in this system (no
+                  reactivate), so it can no longer be edited.
                 </div>
               ) : (
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <Button type="submit" loading={saving}>Save changes</Button>
+                  <Button type="submit" busy={saving}>
+                    Save changes
+                  </Button>
                 </div>
               )}
               {saveBanner && (
-                <div
-                  className={saveBanner.tone === "success" ? "platform-inline-notice" : "auth-message auth-message--error"}
-                  role="status"
-                  style={{ gridColumn: "1 / -1" }}
-                >
-                  {saveBanner.message}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <Notice tone={saveBanner.tone === "success" ? "success" : "danger"}>
+                    {saveBanner.message}
+                  </Notice>
                 </div>
               )}
             </form>
@@ -569,7 +596,14 @@ export function UserDetailPage() {
                 onChange={(e) => setActionInstitutionId(e.target.value)}
                 placeholder="UUID of your institution"
               />
-              <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginTop: "var(--space-4)" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "var(--space-2)",
+                  flexWrap: "wrap",
+                  marginTop: "var(--space-4)",
+                }}
+              >
                 <Button
                   variant="danger"
                   disabled={!actionInstitutionId || user.status === "DEACTIVATED"}
@@ -577,10 +611,18 @@ export function UserDetailPage() {
                 >
                   Deactivate user
                 </Button>
-                <Button variant="secondary" disabled={!actionInstitutionId} onClick={() => setConfirming("reset")}>
+                <Button
+                  variant="secondary"
+                  disabled={!actionInstitutionId}
+                  onClick={() => setConfirming("reset")}
+                >
                   Reset password
                 </Button>
-                <Button variant="secondary" disabled={!actionInstitutionId} onClick={() => setConfirming("unlock")}>
+                <Button
+                  variant="secondary"
+                  disabled={!actionInstitutionId}
+                  onClick={() => setConfirming("unlock")}
+                >
                   Unlock account
                 </Button>
               </div>
@@ -588,16 +630,25 @@ export function UserDetailPage() {
                 <p className="platform-empty-inline">This user is already deactivated.</p>
               )}
               {actionBanner && (
-                <div
-                  className={actionBanner.tone === "danger" ? "auth-message auth-message--error" : "platform-inline-notice"}
-                  role="status"
-                  style={{ marginTop: "var(--space-3)" }}
-                >
-                  {actionBanner.message}
+                <div style={{ marginTop: "var(--space-3)" }}>
+                  <Notice tone={actionBanner.tone === "danger" ? "danger" : "success"}>
+                    {actionBanner.message}
+                  </Notice>
                 </div>
               )}
             </div>
           </Panel>
+
+          {user.userType === "STUDENT" && (
+            <>
+              <StudentStatusPanel tenantId={tenantId} studentId={userId!} />
+              <GuardianManagementPanel
+                tenantId={tenantId}
+                studentId={userId!}
+                institutionId={actionInstitutionId}
+              />
+            </>
+          )}
         </>
       )}
 
@@ -636,36 +687,64 @@ export function UserDetailPage() {
         />
       )}
 
-      {temporaryPassword && (
-        <div className="platform-modal-backdrop" role="presentation">
-          <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="temp-password-title">
-            <header>
-              <div>
-                <Kicker>ONE-TIME DISPLAY</Kicker>
-                <h2 id="temp-password-title">Copy this password now</h2>
-                <p>This temporary password will not be shown again after you close this dialog. It is not stored anywhere in this browser.</p>
-              </div>
-            </header>
-            <div className="eds-field">
-              <label htmlFor="temp-password-value">Temporary password</label>
-              <input id="temp-password-value" readOnly value={temporaryPassword} onFocus={(e) => e.target.select()} />
-            </div>
-            {copyNotice && <p className="platform-empty-inline">{copyNotice}</p>}
-            <footer>
-              <Button variant="secondary" onClick={() => void copyTempPassword()}>Copy to clipboard</Button>
-              <Button
-                onClick={() => {
-                  setActionBanner({ tone: "success", message: "Password reset for this user. The temporary password was shown once and is no longer available." });
-                  setTemporaryPassword(null);
-                  setCopyNotice("");
-                }}
-              >
-                I've copied it, close
-              </Button>
-            </footer>
-          </section>
+      <Modal
+        isOpen={!!temporaryPassword}
+        onClose={() => {
+          setActionBanner({
+            tone: "success",
+            message:
+              "Password reset for this user. The temporary password was shown once and is no longer available.",
+          });
+          setTemporaryPassword(null);
+          setCopyNotice("");
+        }}
+        kicker="ONE-TIME DISPLAY"
+        title="Copy this password now"
+        titleId="temp-password-title"
+        description="This temporary password will not be shown again after you close this dialog. It is not stored anywhere in this browser."
+        size="sm"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", width: "100%" }}>
+            <Button variant="secondary" onClick={() => void copyTempPassword()}>
+              Copy to clipboard
+            </Button>
+            <Button
+              onClick={() => {
+                setActionBanner({
+                  tone: "success",
+                  message:
+                    "Password reset for this user. The temporary password was shown once and is no longer available.",
+                });
+                setTemporaryPassword(null);
+                setCopyNotice("");
+              }}
+            >
+              I've copied it, close
+            </Button>
+          </div>
+        }
+      >
+        <div className="eds-field">
+          <label htmlFor="temp-password-value">Temporary password</label>
+          <input
+            id="temp-password-value"
+            readOnly
+            value={temporaryPassword ?? ""}
+            onFocus={(e) => e.target.select()}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "1.1rem",
+              padding: "0.5rem",
+              borderRadius: "4px",
+              border: "1px solid var(--color-border, #cbd5e1)",
+              width: "100%",
+            }}
+          />
         </div>
-      )}
+        {copyNotice && <p className="platform-empty-inline" style={{ marginTop: "8px" }}>{copyNotice}</p>}
+      </Modal>
     </div>
   );
 }
+
+export default UserListPage;

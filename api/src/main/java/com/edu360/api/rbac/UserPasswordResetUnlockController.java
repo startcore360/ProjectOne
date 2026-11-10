@@ -4,6 +4,8 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.exception.ResourceNotFoundException;
@@ -27,37 +31,13 @@ import com.edu360.api.tenant.TenantRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 /**
- * WHAT: "Reset a password or unlock an account" (USER_PASSWORD_RESET_UNLOCK) -
- * POST /api/tenants/{tenantId}/users/{userId}/password-reset and
- * POST /api/tenants/{tenantId}/users/{userId}/unlock. Per the spec (sql/05_ref_data.sql rows
- * 455-459) granted "Own institution" only to University/College/School Admin, IT Administrator
- * and School IT Support - always INSTITUTION-scoped, same InstitutionScopeRequest shape as
- * USER_DEACTIVATE.
- *
- * HOW this reaches Keycloak: reuses the existing KeycloakAdminClient exactly the way
- * AuthService.changeTenantPassword already does for a SELF password change - realm from
- * TenantRepository.findById(tenantId).getKeycloakRealm(), target Keycloak user id ("subject")
- * from the target user's own ACTIVE UserIdentityLink (identity/, read-only reference for this
- * task; both repositories are used as-is, not extended). No second Keycloak client is built
- * here, per the brief's explicit instruction.
- *
- * GAP CLOSED: /unlock now calls KeycloakAdminClient.clearBruteForceLockout(realm, keycloakUserId)
- * - DELETE /admin/realms/{realm}/attack-detection/brute-force/users/{id} - in addition to issuing
- * a fresh temporary credential via resetPassword, so it both restores the ability to log in AND
- * actually clears Keycloak's own brute-force failure-count record if that subsystem is enabled.
- * (Previously this endpoint only reused resetPassword and left a comment flagging the missing
- * admin call; see git history for that version if useful context.)
- *
- * SECURITY NOTE: the freshly generated temporary password is returned in the /password-reset
- * response body - see PasswordResetResponse's own javadoc for why, and why that is a
- * proof-of-integration simplification that should not ship to production as-is.
+ * Controller for USER_PASSWORD_RESET_UNLOCK: resets passwords and unlocks accounts.
+ * Enforces T01 (institution scope boundary) and T02 (hierarchy boundary) protection.
  */
 @RestController
 @RequestMapping("/api/tenants/{tenantId}/users")
-@RequiredArgsConstructor
 @Tag(name = "Users", description = "USER_PASSWORD_RESET_UNLOCK - reset a password or unlock an account")
 public class UserPasswordResetUnlockController {
 
@@ -67,6 +47,37 @@ public class UserPasswordResetUnlockController {
     private final TenantRepository tenantRepository;
     private final UserIdentityLinkRepository userIdentityLinkRepository;
     private final KeycloakAdminClient keycloakAdminClient;
+    private final AuditLogService auditLogService;
+    private final UserGovernanceGuard userGovernanceGuard;
+
+    /** B3 / I-05 (R2-35): restarts the 7-day window of a student's printed password on reset. */
+    @Autowired(required = false)
+    private com.edu360.api.auth.PrintedPasswordPolicy printedPasswordPolicy;
+
+    @Autowired
+    public UserPasswordResetUnlockController(
+            PermissionEvaluatorService permissionEvaluatorService,
+            TenantRepository tenantRepository,
+            UserIdentityLinkRepository userIdentityLinkRepository,
+            KeycloakAdminClient keycloakAdminClient,
+            AuditLogService auditLogService,
+            @Autowired(required = false) UserGovernanceGuard userGovernanceGuard) {
+        this.permissionEvaluatorService = permissionEvaluatorService;
+        this.tenantRepository = tenantRepository;
+        this.userIdentityLinkRepository = userIdentityLinkRepository;
+        this.keycloakAdminClient = keycloakAdminClient;
+        this.auditLogService = auditLogService;
+        this.userGovernanceGuard = userGovernanceGuard;
+    }
+
+    public UserPasswordResetUnlockController(
+            PermissionEvaluatorService permissionEvaluatorService,
+            TenantRepository tenantRepository,
+            UserIdentityLinkRepository userIdentityLinkRepository,
+            KeycloakAdminClient keycloakAdminClient,
+            AuditLogService auditLogService) {
+        this(permissionEvaluatorService, tenantRepository, userIdentityLinkRepository, keycloakAdminClient, auditLogService, null);
+    }
 
     @PostMapping("/{userId}/password-reset")
     @Operation(summary = "Reset a user's Keycloak password (USER_PASSWORD_RESET_UNLOCK)")
@@ -76,18 +87,31 @@ public class UserPasswordResetUnlockController {
             @Valid @RequestBody InstitutionScopeRequest request,
             Authentication authentication) {
 
-        authorize(authentication, tenantId, userId, request);
+        TenantPrincipal principal = authorize(authentication, tenantId, userId, request);
 
         String keycloakUserId = activeKeycloakSubjectFor(tenantId, userId);
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found"));
 
         String temporaryPassword = generateTemporaryPassword();
-        keycloakAdminClient.resetPassword(tenant.getKeycloakRealm(), keycloakUserId, temporaryPassword);
+        keycloakAdminClient.resetPassword(tenant.getKeycloakRealm(), keycloakUserId, temporaryPassword, true);
+        keycloakAdminClient.logoutUser(tenant.getKeycloakRealm(), keycloakUserId);
+        if (printedPasswordPolicy != null) {
+            printedPasswordPolicy.markIssued(tenantId, userId);
+        }
 
-        return ResponseEntity.ok(new PasswordResetResponse(
-                "USER_PASSWORD_RESET_UNLOCK", "ALLOWED",
-                "Password reset in Keycloak for user " + userId + ".", temporaryPassword));
+        auditLogService.record(
+                AuditEventType.USER_PASSWORD_RESET,
+                null,
+                keycloakUserId,
+                "0.0.0.0",
+                "Password reset for user " + userId + " by admin " + principal.userAccountId());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(new PasswordResetResponse(
+                        "USER_PASSWORD_RESET_UNLOCK", "ALLOWED",
+                        "Password reset in Keycloak for user " + userId + ".", temporaryPassword));
     }
 
     @PostMapping("/{userId}/unlock")
@@ -98,21 +122,27 @@ public class UserPasswordResetUnlockController {
             @Valid @RequestBody InstitutionScopeRequest request,
             Authentication authentication) {
 
-        authorize(authentication, tenantId, userId, request);
+        TenantPrincipal principal = authorize(authentication, tenantId, userId, request);
 
         String keycloakUserId = activeKeycloakSubjectFor(tenantId, userId);
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found"));
 
-        // Both halves of a real "unlock": a fresh credential (resetPassword, so the user is not
-        // left stuck on a password they may not know) AND clearing Keycloak's own brute-force
-        // failure-count record (clearBruteForceLockout) - see this class's javadoc.
-        keycloakAdminClient.resetPassword(tenant.getKeycloakRealm(), keycloakUserId, generateTemporaryPassword());
         keycloakAdminClient.clearBruteForceLockout(tenant.getKeycloakRealm(), keycloakUserId);
+        keycloakAdminClient.logoutUser(tenant.getKeycloakRealm(), keycloakUserId);
 
-        return ResponseEntity.ok(new CreateUserCheckResponse(
-                "USER_PASSWORD_RESET_UNLOCK", "ALLOWED",
-                "User " + userId + " unlocked: Keycloak credential reset and brute-force lockout cleared."));
+        auditLogService.record(
+                AuditEventType.USER_UNLOCKED,
+                null,
+                keycloakUserId,
+                "0.0.0.0",
+                "Brute-force lockout cleared for user " + userId + " by admin " + principal.userAccountId());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(new CreateUserCheckResponse(
+                        "USER_PASSWORD_RESET_UNLOCK", "ALLOWED",
+                        "User " + userId + " unlocked: Keycloak brute-force lockout cleared."));
     }
 
     private TenantPrincipal authorize(Authentication authentication, UUID tenantId, UUID userId,
@@ -123,6 +153,11 @@ public class UserPasswordResetUnlockController {
         permissionEvaluatorService.authorize(
                 new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
                 "USER_PASSWORD_RESET_UNLOCK", scope, RbacTarget.of(userId));
+
+        if (userGovernanceGuard != null) {
+            userGovernanceGuard.checkTargetUserAuthority(tenantId, principal.userAccountId(), userId, request.institutionId());
+        }
+
         return principal;
     }
 

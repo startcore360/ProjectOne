@@ -31,10 +31,10 @@ class IntegrationTypeControllerTest {
 
     @Mock private IntegrationTypeRepository integrationTypeRepository;
 
-    private final PlatformPermissionService platformPermissionService = new PlatformPermissionService();
+    private final PlatformPermissionService platformPermissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
     private IntegrationTypeController controller() {
-        return new IntegrationTypeController(platformPermissionService, integrationTypeRepository);
+        return new IntegrationTypeController(platformPermissionService, integrationTypeRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
     }
 
     private Authentication authFor(PlatformRole role, UUID platformUserId) {

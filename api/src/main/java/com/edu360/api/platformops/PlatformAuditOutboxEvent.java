@@ -60,6 +60,10 @@ public class PlatformAuditOutboxEvent {
     @Column(nullable = false)
     private String operation;
 
+    /** Named event, e.g. TENANT_DELETION_APPROVED (sql/22). */
+    @Column(name = "event_type")
+    private String eventType;
+
     @Column(name = "action_code")
     private String actionCode;
 
@@ -74,4 +78,13 @@ public class PlatformAuditOutboxEvent {
 
     @Column(name = "correlation_id", nullable = false)
     private String correlationId;
+
+    @Column(name = "payload_hash", nullable = false, length = 64)
+    private String payloadHash;
+
+    @Column(name = "created_by", nullable = false)
+    private UUID createdBy;
+
+    @Column(name = "updated_by", nullable = false)
+    private UUID updatedBy;
 }

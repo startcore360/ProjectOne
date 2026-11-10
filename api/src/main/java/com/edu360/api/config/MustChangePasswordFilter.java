@@ -32,7 +32,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class MustChangePasswordFilter extends OncePerRequestFilter {
 
     private static final Set<String> ALLOWED_PATHS = Set.of(
-            "/api/auth/me", "/api/auth/change-password", "/api/auth/logout");
+            "/api/auth/me", "/api/auth/change-password", "/api/auth/logout", "/api/auth/session-settings");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,

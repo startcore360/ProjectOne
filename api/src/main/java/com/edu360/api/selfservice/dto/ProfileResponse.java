@@ -19,6 +19,11 @@ import lombok.Builder;
  *
  * roles/platformRole are included READ-ONLY (no setter exposed by ProfileUpdateRequest - see
  * that class) precisely so the screen can show them without being able to change them.
+ *
+ * photoUrl: null if this principal has no active profile photo, otherwise the path the frontend
+ * can GET to stream it (ProfilePhotoController). Always null for a platform principal -
+ * app.file_object is tenant-scoped (tenant_id NOT NULL), so a platform account literally has
+ * nowhere in this schema to own a stored file; see ProfileService's class comment.
  */
 @Builder
 public record ProfileResponse(
@@ -29,9 +34,10 @@ public record ProfileResponse(
         PlatformRole platformRole,
         String displayName,
         String email,
-        String mobile) {
+        String mobile,
+        String photoUrl) {
 
-    public static ProfileResponse fromTenant(TenantPrincipal principal, UserAccount account) {
+    public static ProfileResponse fromTenant(TenantPrincipal principal, UserAccount account, String photoUrl) {
         return ProfileResponse.builder()
                 .tenantId(principal.tenantId())
                 .userAccountId(principal.userAccountId())
@@ -39,6 +45,7 @@ public record ProfileResponse(
                 .displayName(account.getDisplayName())
                 .email(account.getEmail())
                 .mobile(account.getMobile())
+                .photoUrl(photoUrl)
                 .build();
     }
 

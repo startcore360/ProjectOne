@@ -3,6 +3,7 @@ package com.edu360.api.rbac;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -19,13 +20,20 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 
+import com.edu360.api.audit.AuditLogService;
+import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.identity.IdentityLinkStatus;
+import com.edu360.api.identity.UserIdentityLink;
+import com.edu360.api.identity.UserIdentityLinkId;
+import com.edu360.api.identity.UsernameKind;
 import com.edu360.api.identity.UserIdentityLinkRepository;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.rbac.dto.InstitutionScopeRequest;
+import com.edu360.api.rbac.dto.PasswordResetResponse;
+import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantRepository;
 
 /**
@@ -47,7 +55,9 @@ class UserPasswordResetUnlockActionTest {
     @Mock private TenantRepository tenantRepository;
     @Mock private UserIdentityLinkRepository userIdentityLinkRepository;
     @Mock private KeycloakAdminClient keycloakAdminClient;
+    @Mock private AuditLogService auditLogService;
     @Mock private Authentication authentication;
+    @Mock private Tenant tenant;
 
     private static final String ACTION_CODE = "USER_PASSWORD_RESET_UNLOCK";
     private static final UUID TENANT_ID = UUID.randomUUID();
@@ -160,7 +170,7 @@ class UserPasswordResetUnlockActionTest {
                 .thenReturn(Optional.empty());
 
         UserPasswordResetUnlockController controller = new UserPasswordResetUnlockController(
-                realEvaluator, tenantRepository, userIdentityLinkRepository, keycloakAdminClient);
+                realEvaluator, tenantRepository, userIdentityLinkRepository, keycloakAdminClient, auditLogService);
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF, "Admin", false);
         when(authentication.getPrincipal()).thenReturn(principal);
 
@@ -171,5 +181,63 @@ class UserPasswordResetUnlockActionTest {
 
         verifyNoInteractions(keycloakAdminClient);
         verify(tenantRepository, never()).findById(any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("REG-I05-1 / REG-I05-2: reset response is no-store; the temporary password is in no log line or audit row")
+    void passwordReset_allowsAndRevokesSessionsAndAudits() {
+        PermissionEvaluatorService realEvaluator = evaluator();
+        when(actionCatalogRepository.findById(ACTION_CODE)).thenReturn(Optional.of(action()));
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, ScopeType.INSTITUTION, INSTITUTION_ID, null, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(activeAssignment(INSTITUTION_ID)));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(TENANT_ID, ROLE_DEFINITION_ID, ACTION_CODE))
+                .thenReturn(true);
+
+        UserIdentityLink activeLink = UserIdentityLink.builder()
+                .id(new UserIdentityLinkId(TENANT_ID, UUID.randomUUID()))
+                .userAccountId(TARGET_USER_ID)
+                .identityRealm("test-realm")
+                .identitySubject("kc-target-subject")
+                .usernameKind(UsernameKind.EMAIL)
+                .status(IdentityLinkStatus.ACTIVE)
+                .build();
+        when(userIdentityLinkRepository.findFirstByIdTenantIdAndUserAccountIdAndStatus(
+                TENANT_ID, TARGET_USER_ID, IdentityLinkStatus.ACTIVE))
+                .thenReturn(Optional.of(activeLink));
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        when(tenant.getKeycloakRealm()).thenReturn("test-realm");
+
+        UserPasswordResetUnlockController controller = new UserPasswordResetUnlockController(
+                realEvaluator, tenantRepository, userIdentityLinkRepository, keycloakAdminClient, auditLogService);
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF, "Admin", false);
+        when(authentication.getPrincipal()).thenReturn(principal);
+
+        InstitutionScopeRequest request = new InstitutionScopeRequest(INSTITUTION_ID);
+
+        ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> captured = new ch.qos.logback.core.read.ListAppender<>();
+        captured.start();
+        root.addAppender(captured);
+        org.springframework.http.ResponseEntity<com.edu360.api.rbac.dto.PasswordResetResponse> response;
+        try {
+            response = controller.resetPassword(TENANT_ID, TARGET_USER_ID, request, authentication);
+        } finally {
+            root.detachAppender(captured);
+        }
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().reasonCode()).isEqualTo("ALLOWED");
+        assertThat(response.getBody().temporaryPassword()).isNotBlank();
+        assertThat(response.getHeaders().getFirst("Cache-Control")).isEqualTo("no-store");
+
+        verify(keycloakAdminClient).resetPassword(eq("test-realm"), eq("kc-target-subject"), any(), eq(true));
+        verify(keycloakAdminClient).logoutUser("test-realm", "kc-target-subject");
+        org.mockito.ArgumentCaptor<String> auditDetail = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(auditLogService).record(eq(AuditEventType.USER_PASSWORD_RESET), any(), eq("kc-target-subject"), any(), auditDetail.capture());
+        String temporaryPassword = response.getBody().temporaryPassword();
+        assertThat(auditDetail.getValue()).doesNotContain(temporaryPassword);
+        assertThat(captured.list).extracting(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
+                .noneMatch(message -> message.contains(temporaryPassword));
     }
 }

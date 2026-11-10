@@ -3,6 +3,7 @@ package com.edu360.api.config;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -14,15 +15,17 @@ import org.springframework.stereotype.Component;
 
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.config.keycloak.KeycloakProperties;
+import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platform.PlatformUserRepository;
 
 import lombok.RequiredArgsConstructor;
 
 /**
- * Automatically creates one default PLATFORM_ADMIN account when the app starts, but only for
- * local development. Dev-only bootstrap: without this, a fresh database has no platform
- * identity at all to sign in with. Never runs outside the dev profile; production must
- * provision its first platform admin through a real process.
+ * Automatically creates one default PLATFORM_ADMIN and one default PRODUCT_OWNER account when the
+ * app starts, but only for local development. Dev-only bootstrap: without this, a fresh database
+ * has no platform identity at all to sign in with, and nobody who can add platform staff
+ * (PLATFORM_USER_MANAGE is Product Owner only). Never runs outside the dev profile; production
+ * must provision its first platform users through a real process.
  *
  * Scope note: this seeds ONLY the platform realm/platform_user row, same as before the V4.0
  * identity migration - it does not seed any tenant or tenant user. Seeding a usable demo tenant
@@ -44,9 +47,24 @@ import lombok.RequiredArgsConstructor;
 public class DevAdminSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevAdminSeeder.class);
-    private static final String DEFAULT_EMAIL = "admin@edu360-platform.local";
-    private static final String DEFAULT_NAME = "Platform Admin";
-    private static final String DEFAULT_PASSWORD = "ChangeMe123!";
+    /**
+     * B3 / I-06: every realm now refuses common passwords (Keycloak passwordBlacklist and the
+     * API's PasswordPolicyService share security/common-passwords.txt), and the old fixed seed
+     * password "ChangeMe123!" is on that list - Keycloak refuses to create the account with it.
+     * A fresh random password is generated per seeded account instead and printed once in the
+     * log line below, as before. Accounts that already exist are never touched.
+     */
+    private static String newSeedPassword() {
+        byte[] bytes = new byte[12];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return "Dev-" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes) + "-9";
+    }
+    private static final List<DevAccount> DEFAULT_ACCOUNTS = List.of(
+            new DevAccount("admin@edu360-platform.local", "Platform Admin", PlatformRole.PLATFORM_ADMIN),
+            new DevAccount("owner@edu360-platform.local", "Product Owner", PlatformRole.PRODUCT_OWNER));
+
+    private record DevAccount(String email, String name, PlatformRole role) {
+    }
 
     private final PlatformUserRepository platformUserRepository;
     private final KeycloakAdminClient keycloakAdminClient;
@@ -63,37 +81,43 @@ public class DevAdminSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (platformUserRepository.findByEmail(DEFAULT_EMAIL).isPresent()) {
-            return;
+        for (DevAccount account : DEFAULT_ACCOUNTS) {
+            if (platformUserRepository.findByEmail(account.email()).isEmpty()) {
+                seed(account);
+            }
         }
+    }
 
+    private void seed(DevAccount account) throws Exception {
         String realm = keycloakProperties.getPlatformRealm();
         // Unlike a real admin-created account, this dev convenience login should not force a
         // password change - it is never a real account.
+        String seedPassword = newSeedPassword();
         String keycloakSubject = keycloakAdminClient.provisionUser(
-                realm, DEFAULT_NAME, DEFAULT_EMAIL, DEFAULT_PASSWORD, false);
+                realm, account.name(), account.email(), seedPassword, false);
 
         UUID platformUserId = UUID.randomUUID();
-        insertPlatformUser(platformUserId, keycloakSubject);
+        insertPlatformUser(account, platformUserId, keycloakSubject);
 
-        log.warn("Seeded default dev PLATFORM_ADMIN account in realm '{}' -> email: {}, password: {}. "
+        log.warn("Seeded default dev {} account in realm '{}' -> email: {}, password: {}. "
                 + "Dev only; this account must never exist in a deployed environment.",
-                realm, DEFAULT_EMAIL, DEFAULT_PASSWORD);
+                account.role(), realm, account.email(), seedPassword);
     }
 
-    private void insertPlatformUser(UUID platformUserId, String keycloakSubject) throws Exception {
+    private void insertPlatformUser(DevAccount account, UUID platformUserId, String keycloakSubject) throws Exception {
         String sql = "INSERT INTO platform.platform_user "
                 + "(platform_user_id, email, full_name, platform_role, status, mfa_required, "
                 + "identity_subject, created_by, updated_by) "
-                + "VALUES (?, ?, ?, 'PLATFORM_ADMIN', 'ACTIVE', true, ?, ?, ?)";
+                + "VALUES (?, ?, ?, ?, 'ACTIVE', true, ?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(jdbcUrl, platformAdminUsername, platformAdminPassword);
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, platformUserId);
-            ps.setString(2, DEFAULT_EMAIL);
-            ps.setString(3, DEFAULT_NAME);
-            ps.setString(4, keycloakSubject);
-            ps.setObject(5, platformUserId);
+            ps.setString(2, account.email());
+            ps.setString(3, account.name());
+            ps.setString(4, account.role().name());
+            ps.setString(5, keycloakSubject);
             ps.setObject(6, platformUserId);
+            ps.setObject(7, platformUserId);
             ps.executeUpdate();
         }
     }

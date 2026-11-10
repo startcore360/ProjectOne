@@ -1,5 +1,6 @@
 package com.edu360.api.tenant;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -8,30 +9,38 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
- * WHAT: a read-only view of platform.tenant - the tenant directory. Only the columns the
- * bootstrap resolver and routing layer actually need are mapped; this entity is never used to
- * create or edit a tenant (that is TENANT_CREATE/TENANT_ACTIVATE, a separate Platform epic
- * story, not part of this identity migration).
- *
- * WHY this table has no tenant_id column of its own and no RLS: it IS the tenant directory -
- * platform.tenant is deliberately outside the app schema's RLS, because you have to be able to
- * look a tenant up BEFORE you know which tenant's RLS context to apply. This is the one query
- * in the whole system allowed to run with no tenant context set at all, and it is restricted
- * to exactly the columns below - never anything that looks like a different tenant's data.
+ * Entity mapping platform.tenant — the tenant directory and configuration.
+ * Used both for runtime routing/JWKS resolver and for platform tenant lifecycle
+ * operations (TENANT_CREATE, TENANT_ACTIVATE, TENANT_SETTINGS).
  */
 @Entity
 @Table(schema = "platform", name = "tenant")
 @Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Tenant {
 
     @Id
     @Column(name = "tenant_id")
     private UUID tenantId;
+
+    @Column(name = "tenant_name", nullable = false)
+    private String tenantName;
+
+    @Column(name = "tenant_type", nullable = false)
+    private String tenantType;
+
+    @Column(name = "plan_id", nullable = false)
+    private UUID planId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -41,18 +50,78 @@ public class Tenant {
     @Column(name = "isolation_mode", nullable = false)
     private IsolationMode isolationMode;
 
-    /** Vault/Secrets-Manager reference, never a credential itself (schema comment) - only
-     *  present when isolationMode = ISOLATED. See TenantSecretsResolver. */
+    /** Vault/Secrets-Manager reference — only present when isolationMode = ISOLATED. */
     @Column(name = "db_connection_ref")
     private String dbConnectionRef;
 
-    /** Unique per tenant; the local-dev hostname resolver strips ".edu360.local" from the
-     *  request Host header and matches what remains against this column. */
-    @Column(nullable = false)
+    /** Unique per tenant; matched against request Host header in subdomain routing. */
+    @Column(nullable = false, unique = true)
     private String subdomain;
 
-    /** Unique per tenant (DB constraint uq_tenant_keycloak_realm) - the one thing the bootstrap
-     *  resolver trusts to pick which issuer/JWKS to validate an incoming token against. */
-    @Column(name = "keycloak_realm")
+    @Column(name = "custom_domain", unique = true)
+    private String customDomain;
+
+    @Column(name = "time_zone", nullable = false)
+    @Builder.Default
+    private String timeZone = "Asia/Kolkata";
+
+    @Column(name = "data_region", nullable = false)
+    @Builder.Default
+    private String dataRegion = "IN";
+
+    @Column(name = "trial_ends_at")
+    private Instant trialEndsAt;
+
+    @Column(name = "user_limit")
+    private Integer userLimit;
+
+    @Column(name = "storage_limit_gb")
+    private Integer storageLimitGb;
+
+    @Column(name = "sms_limit")
+    private Integer smsLimit;
+
+    @Column(name = "api_limit")
+    private Integer apiLimit;
+
+    @Column(name = "branding_logo_file_ref")
+    private UUID brandingLogoFileRef;
+
+    /** Unique per tenant — used by bootstrap resolver to validate issuer JWKS. */
+    @Column(name = "keycloak_realm", unique = true)
     private String keycloakRealm;
+
+    @Column(name = "analytics_opt_out", nullable = false)
+    @Builder.Default
+    private boolean analyticsOptOut = false;
+
+    @Column(name = "activated_at")
+    private Instant activatedAt;
+
+    @Column(name = "suspended_at")
+    private Instant suspendedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "created_at", nullable = false)
+    @Builder.Default
+    private Instant createdAt = Instant.now();
+
+    @Column(name = "created_by", nullable = false)
+    private UUID createdBy;
+
+    @Column(name = "updated_at", nullable = false)
+    @Builder.Default
+    private Instant updatedAt = Instant.now();
+
+    @Column(name = "updated_by", nullable = false)
+    private UUID updatedBy;
+
+    @Column(name = "row_version", nullable = false)
+    @Builder.Default
+    private Integer rowVersion = 1;
 }

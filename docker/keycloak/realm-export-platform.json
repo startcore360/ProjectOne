@@ -6,12 +6,34 @@
   "loginTheme": "edu360",
   "roles": {
     "realm": [
-      { "name": "PRODUCT_OWNER", "description": "EDU 360 platform: product owner" },
-      { "name": "PLATFORM_ADMIN", "description": "EDU 360 platform: platform admin" },
-      { "name": "BILLING_MANAGER", "description": "EDU 360 platform: billing manager" },
-      { "name": "SUPPORT_MANAGER", "description": "EDU 360 platform: support manager" },
-      { "name": "RELEASE_MANAGER", "description": "EDU 360 platform: release manager" },
-      { "name": "DATA_PROTECTION_OFFICER", "description": "EDU 360 platform: data protection officer" }
+      {
+        "name": "PRODUCT_OWNER",
+        "description": "EDU 360 platform: product owner"
+      },
+      {
+        "name": "PLATFORM_ADMIN",
+        "description": "EDU 360 platform: platform admin"
+      },
+      {
+        "name": "BILLING_MANAGER",
+        "description": "EDU 360 platform: billing manager"
+      },
+      {
+        "name": "SUPPORT_MANAGER",
+        "description": "EDU 360 platform: support manager"
+      },
+      {
+        "name": "RELEASE_MANAGER",
+        "description": "EDU 360 platform: release manager"
+      },
+      {
+        "name": "DATA_PROTECTION_OFFICER",
+        "description": "EDU 360 platform: data protection officer"
+      },
+      {
+        "name": "identity-events:write",
+        "description": "EDU 360 platform: identity events webhook"
+      }
     ]
   },
   "clients": [
@@ -22,8 +44,14 @@
       "protocol": "openid-connect",
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://platform.edu360.local:5173/*", "http://localhost:5173/*"],
-      "webOrigins": ["http://platform.edu360.local:5173", "http://localhost:5173"],
+      "redirectUris": [
+        "http://platform.edu360.local:5173/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://platform.edu360.local:5173",
+        "http://localhost:5173"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -53,6 +81,32 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "edu360-identity-events",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "secret": "dev-identity-events-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "edu360-password-check",
+      "name": "EDU 360 password check (API only)",
+      "description": "Confidential; direct grant bound to edu360-password-check, which never issues a token",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "authenticationFlowBindingOverrides": {
+        "direct_grant": "e0360c30-0000-4000-8000-000000000003"
+      }
     }
   ],
   "users": [
@@ -61,8 +115,143 @@
       "enabled": true,
       "serviceAccountClientId": "edu360-admin-cli",
       "clientRoles": {
-        "realm-management": ["manage-users", "view-users", "query-users", "view-realm"]
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users",
+          "view-realm"
+        ]
       }
+    },
+    {
+      "username": "service-account-edu360-identity-events",
+      "enabled": true,
+      "serviceAccountClientId": "edu360-identity-events",
+      "realmRoles": [
+        "identity-events:write"
+      ]
+    }
+  ],
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 900,
+  "maxFailureWaitSeconds": 900,
+  "maxDeltaTimeSeconds": 900,
+  "passwordPolicy": "length(8) and notUsername(undefined) and passwordBlacklist(edu360-common-passwords.txt)",
+  "ssoSessionIdleTimeout": 1800,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "otpPolicyLookAheadWindow": 1,
+  "directGrantFlow": "edu360-direct-grant",
+  "authenticatorConfig": [
+    {
+      "alias": "edu360-mfa-required-attribute",
+      "config": {
+        "attribute_name": "mfa_required",
+        "attribute_expected_value": "true",
+        "not": "false",
+        "regex": "false",
+        "include_group_attributes": "false"
+      }
+    },
+    {
+      "alias": "edu360-password-verified",
+      "config": {
+        "denyErrorMessage": "edu360_password_verified"
+      }
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "id": "e0360c30-0000-4000-8000-000000000001",
+      "alias": "edu360-direct-grant",
+      "description": "EDU 360: password, then authenticator code for accounts with mfa_required=true (PD-8)",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "direct-grant-validate-username",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "direct-grant-validate-password",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "flowAlias": "edu360-direct-grant-two-step",
+          "requirement": "CONDITIONAL",
+          "priority": 30,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "id": "e0360c30-0000-4000-8000-000000000002",
+      "alias": "edu360-direct-grant-two-step",
+      "description": "Asks for the authenticator code when the account has mfa_required=true",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticatorConfig": "edu360-mfa-required-attribute",
+          "authenticator": "conditional-user-attribute",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "direct-grant-validate-otp",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "id": "e0360c30-0000-4000-8000-000000000003",
+      "alias": "edu360-password-check",
+      "description": "EDU 360: verifies a password without creating a session",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "direct-grant-validate-username",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "direct-grant-validate-password",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorConfig": "edu360-password-verified",
+          "authenticator": "deny-access-authenticator",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 30,
+          "userSetupAllowed": false
+        }
+      ]
     }
   ]
 }

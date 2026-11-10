@@ -1,0 +1,241 @@
+# EDU 360: Production Tenant Routing
+
+**Status: not implemented. Required before the first production deployment.**
+**Written:** 2026-11-07, from reading the code. None of this has been run in a production setup.
+
+**Goal:** creating a tenant should need no frontend change, no DNS change and no redeploy. The tenant opens at `<subdomain>.edu360.com` straight away.
+
+`edu360.com` is a placeholder in this document. Replace it with the real domain, which hasn't been chosen.
+
+## Why this matters
+
+The backend picks the tenant from the web address (`tenant/LoginTenantResolver`), and the frontend sends its API calls based on that address (`app/src/services/axios.ts`). That works locally with `.edu360.local`, but production isn't configured for it. **If deployed as it stands, no tenant could log in.**
+
+## What to build
+
+| # | Item | Where | Why it's needed |
+|---|---|---|---|
+| P1 | Wildcard DNS and HTTPS | Infrastructure | So new tenants need no DNS or certificate work |
+| P2 | Serve the app and API from the same address | Reverse proxy | So the browser and backend agree on the tenant |
+| P3 | Same-origin API calls | `app/src/services/axios.ts` | The API is hard-coded to port 8080 |
+| P4 | Tenant domain suffix in configuration | `KeycloakProperties`, `LoginTenantResolver`, prod properties | Otherwise `abc.edu360.com` is looked up as the full name, and login fails |
+| P5 | No wildcard CORS | `application-prod.properties` | Same-origin calls don't need CORS |
+| P6 | Reserved subdomains | `TenantCreateRequest` or `TenantManagementService` | A tenant named `platform` could never log in |
+| P7 | Keycloak client addresses from configuration | `KeycloakAdminClient` | New realms get dev-only redirect addresses |
+| P8 | Tenant address shown from the real domain | `TenantsView.tsx` | Done on 2026-11-07: see the note under P8 |
+| P9 | Custom domain login | `TenantRepository`, `LoginTenantResolver` | Custom domains are saved but can't be used |
+| P10 | Token's tenant must match the address | Security filter | D4 §2.4 check, not yet verified |
+
+Build them in this order. P1 to P7 and P10 are required for go-live. P9 is required only when a customer on a higher plan needs a custom domain.
+
+The code below is a starting point and hasn't been compiled. Follow the normal `CLAUDE.md` workflow when building it.
+
+## P1. Wildcard DNS and HTTPS
+
+```text
+*.edu360.com   A/CNAME   <load balancer or server>
+Certificate:   *.edu360.com  (DNS-01 validation is needed for wildcard certificates)
+```
+
+## P2. Same address for the app and API
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name *.edu360.com;
+
+    ssl_certificate     /etc/ssl/edu360/fullchain.pem;
+    ssl_certificate_key /etc/ssl/edu360/privkey.pem;
+
+    # The built frontend (app/dist).
+    root /var/www/edu360;
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location ~ ^/(api|v1)/ {
+        proxy_pass http://edu360-api:8080;
+        # Essential: the backend picks the tenant from this header.
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+Keep the backend's port 8080 private, so only the proxy can reach it. Otherwise a caller could send any `Host` header directly. Also add these in production:
+- Block `/swagger-ui` and `/v3/api-docs`, unless you decide to publish them.
+- Keep `/h2-console` closed. It's already disabled in the prod profile.
+
+## P3. Same-origin API calls
+
+In `app/src/services/axios.ts`:
+
+```ts
+// Local dev: the API runs on port 8080 of the same hostname.
+// Production: the reverse proxy serves /api on the same address as the app.
+const inferredBaseUrl = import.meta.env.DEV
+  ? `${window.location.protocol}//${window.location.hostname}:8080/api`
+  : `${window.location.origin}/api`;
+```
+
+**Don't set one fixed `VITE_API_BASE_URL` in production.** Every tenant would then send the same address, and the backend couldn't tell them apart.
+
+## P4. Tenant domain suffix
+
+Today the setting is called `local-dev-host-suffix`, and it's blank in production. Rename it, because it's no longer dev-only.
+
+In `KeycloakProperties`, rename `localDevHostSuffix` to `tenantHostSuffix`.
+
+In `application-dev.properties` and `application-test.properties`:
+
+```properties
+app.keycloak.tenant-host-suffix=${TENANT_HOST_SUFFIX:.edu360.local}
+```
+
+In `application-prod.properties`, with no default so a missing value stops startup:
+
+```properties
+app.keycloak.tenant-host-suffix=${TENANT_HOST_SUFFIX}
+app.keycloak.platform-host-label=${PLATFORM_HOST_LABEL:platform}
+```
+
+In `LoginTenantResolver`:
+
+```java
+public Resolution resolve(HttpServletRequest request) {
+    String host = request.getServerName().toLowerCase(Locale.ROOT);
+    String suffix = keycloakProperties.getTenantHostSuffix();
+
+    if (host.endsWith(suffix)) {
+        String label = host.substring(0, host.length() - suffix.length());
+        if (label.equals(keycloakProperties.getPlatformHostLabel())) {
+            return new PlatformLogin(keycloakProperties.getPlatformRealm());
+        }
+        return activeTenant(tenantRepository.findBySubdomain(label));
+    }
+    // A host outside the suffix can only be a custom domain (P9). Until P9 is built, refuse it.
+    throw new InvalidCredentialsException("Unknown sign-in address");
+}
+```
+
+Refuse `a.b.edu360.com` too: the label must be a single part, and `ck_tenant_subdomain` doesn't allow dots, so the lookup already finds nothing. Add a test for it.
+
+## P5. CORS
+
+With P2 and P3 the app and API share an address, so browsers don't apply CORS and production needs no pattern. Leave `app.cors.allowed-origin-patterns` blank in production, as `SecurityConfig` expects. Set `CORS_ALLOWED_ORIGIN` to the real platform address, so the `localhost:5173` default never applies.
+
+If the API must ever move to a separate address, come back and decide this again. A wildcard origin is a security decision, so it needs review.
+
+## P6. Reserved subdomains
+
+The code only checks that a subdomain is unique. In `TenantManagementService.createTenant`:
+
+```java
+private static final Set<String> RESERVED_SUBDOMAINS =
+        Set.of("platform", "www", "api", "admin", "auth", "keycloak", "mail", "static", "status");
+
+if (RESERVED_SUBDOMAINS.contains(normalizedSubdomain)) {
+    throw new IllegalArgumentException("The subdomain '" + normalizedSubdomain + "' is reserved.");
+}
+```
+
+The list is a proposal, because the documents don't define one. Confirm it, and include the real platform label if it changes. Do this early, because a tenant created before the rule exists would have to be renamed.
+
+## P7. Keycloak client addresses
+
+`KeycloakAdminClient.provisionRealm` creates each realm's client with hard-coded dev addresses:
+
+```java
+"redirectUris", List.of("http://*.edu360.local:5173/*", "http://localhost:5173/*")
+```
+
+Make it configuration:
+
+```java
+// In KeycloakProperties, with the dev value in application-dev.properties:
+// app.keycloak.frontend-redirect-uris=http://*.edu360.local:5173/*,http://localhost:5173/*
+// and in application-prod.properties:
+// app.keycloak.frontend-redirect-uris=${KEYCLOAK_FRONTEND_REDIRECT_URIS}
+private List<String> frontendRedirectUris = List.of();
+
+"redirectUris", properties.getFrontendRedirectUris()
+```
+
+Also confirm that existing realms get corrected, not only new ones, and that `KEYCLOAK_BASE_URL` produces the same issuer as the tokens' `iss` claim. `TenantIssuerAuthenticationManagerResolver` rebuilds the issuer from it, so a mismatch rejects every token.
+
+## P8. Tenant address on screen
+
+**Done on 2026-11-07.** `TenantsView.tsx` now builds the tenant's address from the current domain instead of hard-coding `.edu360.local`. Recheck it on the real domain at go-live.
+
+## P9. Custom domains
+
+`platform.tenant.custom_domain` exists and can be saved, but login never reads it. `TENANT_SETTINGS` limits custom domains to higher plans.
+
+```java
+// TenantRepository
+Optional<Tenant> findByCustomDomain(String customDomain);
+
+// LoginTenantResolver, replacing the final throw in P4
+return activeTenant(tenantRepository.findByCustomDomain(host));
+```
+
+Also needed:
+- **HTTPS per domain:** the wildcard certificate won't cover customer domains, so the proxy needs automatic certificates for them.
+- **Proof of ownership:** without it, one tenant could claim another organisation's domain and log its users in to the wrong place. The documents don't define how to do this, so **it needs a decision** before building.
+
+## P10. Token must match the address
+
+`TenantIssuerAuthenticationManagerResolver` picks the tenant from the token. Nothing I found compares that with the address the request arrived on, so a valid token for `abc` might work when sent to `xyz.edu360.com`, and still act on `abc`'s data. RLS should keep the tenants' data separate, so this is about consistency rather than a known data leak.
+
+`docs/SPRINT1_GAP_VALIDATION.md` lists this as still to check against D4 §2.4. Check D4, then add a filter that returns 403 when they differ, and a test for it.
+
+## P11. Keycloak admin login for creating tenants
+
+**Required for go-live.** `application-prod.properties` sets `app.keycloak.admin-client-id` and `admin-client-secret`, but `KeycloakAdminClient` signs in with `master-admin-username` and `master-admin-password`, which only the dev and test profiles set. As written, creating a tenant or user in production would fail.
+
+Don't simply copy the dev approach, because a master-realm password in production has very wide power. Prefer a dedicated service account using the client credentials that production already expects, limited to the rights it needs. Change `fetchMasterAdminAccessToken` to use `grant_type=client_credentials`.
+
+## P12. Keycloak service account for identity events
+
+**Required for go-live (M-03 / C4 / D3 / PD-2).** The internal `/v1/internal/identity-events` endpoint requires a service token issued to `edu360-identity-events` in the platform realm with role `identity-events:write`. In production, set `app.keycloak.identity-events-client-id=${KEYCLOAK_IDENTITY_EVENTS_CLIENT_ID}` and `app.keycloak.identity-events-client-secret=${KEYCLOAK_IDENTITY_EVENTS_CLIENT_SECRET}` without defaults. Normal user tokens (even Product Owner) and tokens from other clients or without the required role are strictly refused with 401.
+
+## Normal running in production
+
+Creating a tenant needs no restart. A restart or redeploy happens only when releasing new code, with a rolling deployment so users aren't interrupted.
+
+Tenants created before a release don't pick up changes to how realms are set up. When such a change ships, it needs a one-time migration of existing realms as part of that release. The forced password change fix is one example: production has no tenants yet, so it needs no migration if it ships before the first one.
+
+## Environment settings for production
+
+Add these to the deployment configuration and `CLAUDE.md`'s production list:
+
+| Setting | Example |
+|---|---|
+| `TENANT_HOST_SUFFIX` | `.edu360.com` |
+| `PLATFORM_HOST_LABEL` | `platform` |
+| `KEYCLOAK_FRONTEND_REDIRECT_URIS` | `https://*.edu360.com/*` |
+| `CORS_ALLOWED_ORIGIN` | `https://platform.edu360.com` |
+| `KEYCLOAK_IDENTITY_EVENTS_CLIENT_ID` | `edu360-identity-events` |
+| `KEYCLOAK_IDENTITY_EVENTS_CLIENT_SECRET` | `<from secret store>` |
+
+## Done when
+
+Check all of these on a real staging environment that matches production:
+
+- [ ] Create a tenant from the platform console. With no DNS, frontend, config or deployment change, `<subdomain>.edu360.com` opens over HTTPS.
+- [ ] Its first admin can log in.
+- [ ] Two tenants at the same time each see only their own data.
+- [ ] `platform.edu360.com` opens the platform login.
+- [ ] Unknown, suspended and archived tenant addresses are refused with "Unknown sign-in address".
+- [ ] `a.b.edu360.com` and a bare IP address are refused.
+- [ ] A reserved subdomain can't be created.
+- [ ] A token for one tenant, sent to another tenant's address, is refused.
+- [ ] Port 8080 can't be reached from outside.
+- [ ] The browser's network tab shows API calls going to the same address, with no CORS errors.
+- [ ] If P9 is built: a verified custom domain logs in, and an unverified one doesn't.
+
+## Local development (already working)
+
+- **Frontend:** `app/vite.config.ts` allows every `.edu360.local` address.
+- **New tenant:** run `.\docker\dev-hosts-setup.ps1` as Administrator. It adds an entry for every ACTIVE or TRIAL tenant. The hosts file doesn't support wildcards, so this step is local-only and doesn't exist in production. `dev-up.ps1` warns about any missing entries.

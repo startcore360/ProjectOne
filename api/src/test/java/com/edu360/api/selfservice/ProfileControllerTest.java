@@ -14,14 +14,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.selfservice.dto.ProfileResponse;
@@ -133,5 +138,70 @@ class ProfileControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isSameAs(expected);
         verify(profileService, never()).updateTenantProfile(any(), any());
+    }
+
+    // ------------------------------------------------------------------------------------ photo
+
+    @Test
+    void uploadPhoto_tenantPrincipal_callsUploadTenantPhoto() {
+        controller = controller();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Test User", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+        MultipartFile file = new MockMultipartFile("file", "me.jpg", "image/jpeg", new byte[]{1});
+        ProfileResponse expected = ProfileResponse.builder().photoUrl("/me/profile/photo").build();
+        when(profileService.uploadTenantPhoto(principal, file)).thenReturn(expected);
+
+        ResponseEntity<ProfileResponse> response = controller.uploadPhoto(file, authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(expected);
+    }
+
+    @Test
+    void uploadPhoto_platformPrincipal_rejectedWithoutCallingService() {
+        controller = controller();
+        PlatformPrincipal principal = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.PLATFORM_ADMIN,
+                "admin@edu360-platform.local", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+        MultipartFile file = new MockMultipartFile("file", "me.jpg", "image/jpeg", new byte[]{1});
+
+        assertThatThrownBy(() -> controller.uploadPhoto(file, authentication))
+                .isInstanceOf(UnauthorizedException.class);
+        verify(profileService, never()).uploadTenantPhoto(any(), any());
+    }
+
+    @Test
+    void getPhoto_noAuthentication_returns401() {
+        controller = controller();
+        ResponseEntity<byte[]> response = controller.getPhoto(null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void getPhoto_tenantPrincipal_streamsStoredPhoto() {
+        controller = controller();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Test User", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+        when(profileService.getTenantPhoto(principal))
+                .thenReturn(new ProfileService.StoredPhoto(new byte[]{1, 2}, "image/jpeg"));
+
+        ResponseEntity<byte[]> response = controller.getPhoto(authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsExactly(1, 2);
+    }
+
+    @Test
+    void getPhoto_platformPrincipal_rejectedWithoutCallingService() {
+        controller = controller();
+        PlatformPrincipal principal = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.PLATFORM_ADMIN,
+                "admin@edu360-platform.local", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+
+        assertThatThrownBy(() -> controller.getPhoto(authentication))
+                .isInstanceOf(UnauthorizedException.class);
+        verify(profileService, never()).getTenantPhoto(any());
     }
 }

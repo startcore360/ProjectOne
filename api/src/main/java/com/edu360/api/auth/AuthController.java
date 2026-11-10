@@ -26,6 +26,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.web.bind.annotation.RequestHeader;
+import com.edu360.api.auth.dto.IdentityEventRequest;
+
 /**
  * Account sign-in operations, all kept in this app's own API so the frontend's sign-in form
  * never leaves this app's UI. Keycloak still checks the password and issues the tokens -
@@ -41,20 +44,43 @@ import lombok.RequiredArgsConstructor;
  * correctly - local dev seeding is DevAdminSeeder's job instead.
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/v1/auth"})
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "Login/refresh/logout; Keycloak verifies credentials behind the scenes")
 public class AuthController {
     private final AuthService authService;
     private final AuditLogService auditLogService;
+    private final IdentityEventTokenValidator identityEventTokenValidator;
 
-    @PostMapping("/login")
+    @PostMapping({"/login", "/sign-in"})
     @Operation(summary = "Sign in - which tenant or the platform is resolved from the request's hostname")
     public ResponseEntity<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request,
                                                      HttpServletRequest httpRequest) {
-        AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(),
+        AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(), request.getTotp(),
                 httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping({"/internal/identity-events", "/v1/internal/identity-events"})
+    @Operation(summary = "Internal Keycloak identity event webhook with Keycloak service token guard")
+    public ResponseEntity<Void> handleIdentityEvent(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) IdentityEventRequest event) {
+        if (!identityEventTokenValidator.isValidServiceToken(authHeader)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (event != null && event.eventType() != null) {
+            String eventType = event.eventType().toUpperCase();
+            if (eventType.contains("LOGIN_ERROR") || eventType.contains("FAILURE")) {
+                auditLogService.record(AuditEventType.LOGIN_FAILURE, null, event.userId(), event.ipAddress(), event.details());
+            } else if (eventType.contains("LOGIN")) {
+                authService.clearLockout(event.userId());
+                auditLogService.record(AuditEventType.LOGIN_SUCCESS, null, event.userId(), event.ipAddress(), event.details());
+            } else if (eventType.contains("PASSWORD")) {
+                auditLogService.record(AuditEventType.PASSWORD_CHANGED, null, event.userId(), event.ipAddress(), event.details());
+            }
+        }
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/refresh")
@@ -95,7 +121,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         AuthUserResponse response = switch (authentication.getPrincipal()) {
-            case TenantPrincipal tenant -> AuthUserResponse.fromTenant(tenant, tenant.displayName());
+            case TenantPrincipal tenant -> authService.currentTenantUser(tenant);
             case PlatformPrincipal platform -> AuthUserResponse.fromPlatform(platform);
             case null, default -> null;
         };
@@ -106,9 +132,14 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Record sign-out for audit")
+    @Operation(summary = "Sign out: end this browser's Keycloak session and record it for audit")
     public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest httpRequest) {
         if (authentication != null) {
+            // Previously audit-only, which left the Keycloak session alive - it would then keep
+            // showing as an active device in "My sessions" (SES-01) until it timed out.
+            if (authentication.getCredentials() instanceof Jwt jwt) {
+                authService.endSession(authentication.getPrincipal(), jwt);
+            }
             String actor = switch (authentication.getPrincipal()) {
                 case TenantPrincipal tenant -> tenant.displayName();
                 case PlatformPrincipal platform -> platform.email();

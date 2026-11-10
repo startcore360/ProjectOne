@@ -40,7 +40,7 @@ import lombok.RequiredArgsConstructor;
  * number.
  */
 @RestController
-@RequestMapping("/api/platform/usage-counts")
+@RequestMapping({"/v1/platform/usage-counts", "/api/platform/usage-counts"})
 @RequiredArgsConstructor
 @Tag(name = "Platform Ops", description = "Platform Admin / Product Owner read-mostly operations")
 public class UsageCountsController {
@@ -60,6 +60,10 @@ public class UsageCountsController {
         platformPermissionService.authorize(principal, "USAGE_COUNTS_VIEW");
 
         long totalTenantCount = tenantRepository.count();
+        // L-06 / R2-13 / PV-07: a tenant that opted out of analytics is counted in the directory total but
+        // never in the analytics numbers, and the response says how many were left out.
+        long tenantsOptedOut = tenantRepository.countByAnalyticsOptOut(true);
+        long tenantsInAnalytics = tenantRepository.countByAnalyticsOptOut(false);
 
         List<UsageMetricSnapshot> metrics = METRIC_CODES.stream()
                 .map(code -> usageMetricDailyRepository.findFirstByMetricCodeOrderByUsageDateDesc(code)
@@ -72,6 +76,6 @@ public class UsageCountsController {
                 + "RLS-scoped data from a platform request would break tenant isolation by design. "
                 + "Flagged as an open gap rather than estimated.";
 
-        return ResponseEntity.ok(new UsageCountsResponse(totalTenantCount, metrics, totalUserCountGap));
+        return ResponseEntity.ok(new UsageCountsResponse(totalTenantCount, tenantsInAnalytics, tenantsOptedOut, metrics, totalUserCountGap));
     }
 }

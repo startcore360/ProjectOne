@@ -3,9 +3,11 @@ package com.edu360.api.selfservice;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,12 +15,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
 import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.files.FileObject;
+import com.edu360.api.files.FileObjectId;
+import com.edu360.api.files.FileObjectRepository;
+import com.edu360.api.files.LocalFileStorage;
 import com.edu360.api.identity.UserAccount;
 import com.edu360.api.identity.UserAccountId;
 import com.edu360.api.identity.UserAccountRepository;
@@ -40,6 +47,8 @@ class ProfileServiceTest {
 
     @Mock private UserAccountRepository userAccountRepository;
     @Mock private PlatformUserRepository platformUserRepository;
+    @Mock private FileObjectRepository fileObjectRepository;
+    @Mock private LocalFileStorage fileStorage;
     @Mock private AuditLogService auditLogService;
 
     private ProfileService profileService;
@@ -49,7 +58,8 @@ class ProfileServiceTest {
     private static final UUID PLATFORM_USER_ID = UUID.randomUUID();
 
     private ProfileService service() {
-        return new ProfileService(userAccountRepository, platformUserRepository, auditLogService);
+        return new ProfileService(userAccountRepository, platformUserRepository, fileObjectRepository,
+                fileStorage, auditLogService);
     }
 
     private UserAccount mockTenantAccount() {
@@ -213,5 +223,119 @@ class ProfileServiceTest {
 
         assertThatThrownBy(() -> profileService.getPlatformProfile(principal))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // --------------------------------------------------------------------------------- photo
+
+    @Test
+    void uploadTenantPhoto_validJpeg_storesEndsAnyPreviousAndReturnsPhotoUrl() {
+        profileService = service();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Original Name", false);
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, USER_ACCOUNT_ID)))
+                .thenReturn(Optional.of(mockTenantAccount()));
+        when(fileStorage.store(eq(TENANT_ID), any(), any())).thenReturn("tenant/stored-key.jpg");
+
+        FileObject previousActive = FileObject.builder()
+                .id(new FileObjectId(TENANT_ID, UUID.randomUUID()))
+                .purpose("PROFILE_PHOTO").status("ACTIVE").scanStatus("CLEAN")
+                .storageKey("old-key").originalFilename("old.jpg").contentType("image/jpeg")
+                .sizeBytes(10).sha256("x").uploadedBy(USER_ACCOUNT_ID).build();
+        when(fileObjectRepository.findByIdTenantIdAndUploadedByAndPurpose(TENANT_ID, USER_ACCOUNT_ID, "PROFILE_PHOTO"))
+                .thenReturn(List.of(previousActive));
+        when(fileObjectRepository.save(any(FileObject.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(fileObjectRepository.findFirstByIdTenantIdAndUploadedByAndPurposeAndStatusAndScanStatus(
+                TENANT_ID, USER_ACCOUNT_ID, "PROFILE_PHOTO", "ACTIVE", "CLEAN"))
+                .thenReturn(Optional.of(FileObject.builder().status("ACTIVE").scanStatus("CLEAN").build()));
+
+        MockMultipartFile file = new MockMultipartFile("file", "me.jpg", "image/jpeg", new byte[]{1, 2, 3});
+
+        ProfileResponse response = profileService.uploadTenantPhoto(principal, file);
+
+        assertThat(response.photoUrl()).isEqualTo("/me/profile/photo");
+        assertThat(previousActive.getStatus()).isEqualTo("DELETED");
+        verify(auditLogService).record(AuditEventType.PROFILE_UPDATED, null, "Original Name", null, null);
+    }
+
+    @Test
+    void uploadTenantPhoto_disallowedContentType_rejectedBeforeAnyStorageCall() {
+        profileService = service();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Original Name", false);
+        MockMultipartFile file = new MockMultipartFile("file", "me.gif", "image/gif", new byte[]{1});
+
+        assertThatThrownBy(() -> profileService.uploadTenantPhoto(principal, file))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(fileObjectRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void uploadTenantPhoto_tooLarge_rejected() {
+        profileService = service();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Original Name", false);
+        byte[] tooBig = new byte[2 * 1024 * 1024 + 1];
+        MockMultipartFile file = new MockMultipartFile("file", "me.jpg", "image/jpeg", tooBig);
+
+        assertThatThrownBy(() -> profileService.uploadTenantPhoto(principal, file))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void getTenantPhoto_noActivePhoto_throwsResourceNotFound() {
+        profileService = service();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Original Name", false);
+        when(fileObjectRepository.findFirstByIdTenantIdAndUploadedByAndPurposeAndStatusAndScanStatus(
+                TENANT_ID, USER_ACCOUNT_ID, "PROFILE_PHOTO", "ACTIVE", "CLEAN"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> profileService.getTenantPhoto(principal))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getTenantPhoto_activePhoto_streamsStoredBytesAndContentType() {
+        profileService = service();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF,
+                "Original Name", false);
+        FileObject stored = FileObject.builder()
+                .id(new FileObjectId(TENANT_ID, UUID.randomUUID()))
+                .status("ACTIVE").scanStatus("CLEAN").storageKey("tenant/stored-key.jpg")
+                .contentType("image/jpeg").build();
+        when(fileObjectRepository.findFirstByIdTenantIdAndUploadedByAndPurposeAndStatusAndScanStatus(
+                TENANT_ID, USER_ACCOUNT_ID, "PROFILE_PHOTO", "ACTIVE", "CLEAN"))
+                .thenReturn(Optional.of(stored));
+        when(fileStorage.read("tenant/stored-key.jpg")).thenReturn(new byte[]{9, 9, 9});
+
+        ProfileService.StoredPhoto photo = profileService.getTenantPhoto(principal);
+
+        assertThat(photo.content()).containsExactly(9, 9, 9);
+        assertThat(photo.contentType()).isEqualTo("image/jpeg");
+    }
+
+    // ------------------------------------------------------------------------ I-08 parent phone change
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("REG-I08-3: a parent's mobile change is refused and the audit says exactly that (no code checked, no alert sent)")
+    void updateTenantProfile_guardianMobileChange_refusedAndAuditIsHonest() {
+        profileService = service();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.GUARDIAN, "Parent", false);
+        UserAccount parent = UserAccount.builder()
+                .id(new UserAccountId(TENANT_ID, USER_ACCOUNT_ID)).userType(UserType.GUARDIAN)
+                .displayName("Parent").mobile("+10000000000").build();
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, USER_ACCOUNT_ID))).thenReturn(Optional.of(parent));
+        ProfileUpdateRequest request = new ProfileUpdateRequest();
+        request.setMobile("+19999999999");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> profileService.updateTenantProfile(principal, request))
+                .isInstanceOfSatisfying(com.edu360.api.exception.BusinessRuleViolationException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo("PHONE_VERIFICATION_UNAVAILABLE"));
+
+        assertThat(parent.getMobile()).isEqualTo("+10000000000");
+        verify(userAccountRepository, org.mockito.Mockito.never()).save(any(UserAccount.class));
+        verify(auditLogService).record(AuditEventType.DENIED_ATTEMPT, null, "Parent", null,
+                ProfileService.PARENT_MOBILE_CHANGE_REFUSED_AUDIT);
+        assertThat(ProfileService.PARENT_MOBILE_CHANGE_REFUSED_AUDIT).contains("no SMS provider").contains("no alert was sent");
     }
 }

@@ -13,4 +13,8 @@ public interface TenantRepository extends JpaRepository<Tenant, java.util.UUID> 
     /** Used by local-dev hostname-based tenant resolution (abc.edu360.local -> subdomain "abc")
      *  and, in production, by real subdomain-based routing before login even starts. */
     Optional<Tenant> findBySubdomain(String subdomain);
+
+    long countByState(TenantState state);
+
+    long countByAnalyticsOptOut(boolean analyticsOptOut);
 }

@@ -70,7 +70,8 @@ $backendCmd = @"
 `$env:SPRING_DATASOURCE_USERNAME = 'edu_app'
 `$env:SPRING_DATASOURCE_PASSWORD = '$eduAppPassword'
 `$env:PLATFORM_ADMIN_DATASOURCE_PASSWORD = '$eduPlatformPassword'
-.\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath '$backendLog'
+`$env:SPRING_PROFILES_ACTIVE = 'dev'
+.\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=dev' 2>&1 | Tee-Object -FilePath '$backendLog'
 "@
 $backendProc = Start-Process powershell -ArgumentList '-NoExit', '-Command', $backendCmd -WorkingDirectory (Join-Path $root 'api') -PassThru
 Start-Sleep -Seconds 3
@@ -83,6 +84,14 @@ $frontendProc = Start-Process powershell -ArgumentList '-NoExit', '-Command', $f
 Start-Sleep -Seconds 3
 if ($frontendProc.HasExited) {
     Write-Warning "Frontend window closed immediately (exit code $($frontendProc.ExitCode)); check the app/ setup."
+}
+
+# A tenant created since the last hosts update can't be opened until it has an entry there.
+$hostsFile = "$env:SystemRoot\System32\drivers\etc\hosts"
+$tenantSubdomains = docker compose -f (Join-Path $root "docker-compose.yml") exec -T -e PGPASSWORD=edu360 postgres psql -h localhost -U edu360 -d edu360db -tAc "SELECT subdomain FROM platform.tenant WHERE state IN ('ACTIVE', 'TRIAL')" 2>$null
+$missingHosts = @($tenantSubdomains | Where-Object { $_ -and ((Get-Content $hostsFile) -notcontains "127.0.0.1 $_.edu360.local") })
+if ($missingHosts.Count -gt 0) {
+    Write-Warning "$($missingHosts.Count) tenant address(es) aren't in your hosts file. To open them, run as Administrator: .\docker\dev-hosts-setup.ps1"
 }
 
 Write-Host "Postgres + Keycloak running in Docker; backend and frontend starting in new windows."

@@ -6,13 +6,18 @@ PSQL=${PSQL:-psql}; D=$(cd "$(dirname "$0")" && pwd); OUT=${OUT:-$D/run_results.
 run(){ $PSQL -q -v ON_ERROR_STOP=1 -d "$1" -f "$D/$2"; }
 : > "$OUT"
 echo "# EDU 360 V4.0 database build and test run — $(date -u +%FT%TZ)" >> "$OUT"
-$PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_test" -qc "CREATE DATABASE edu360_v4_test"
-$PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_ref"  -qc "CREATE DATABASE edu360_v4_ref"
+$PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_test WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_test"
+$PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_ref WITH (FORCE)"  -qc "CREATE DATABASE edu360_v4_ref"
 # A. acceptance tests (tests seed their own minimal reference rows)
-for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 04_tests.sql; do run edu360_v4_test $f > /dev/null; done
+for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 04_tests.sql; do run edu360_v4_test $f > /dev/null; done
 $PSQL -q -d edu360_v4_test -f "$D/07_tests_extra.sql" > /dev/null      # new connection: settings never set (DB-55..59)
 $PSQL -q -d edu360_v4_test -f "$D/09_tests_v40.sql"  > /dev/null      # V4.0 tests DB-60..79
 $PSQL -q -d edu360_v4_test -f "$D/11_tests_rolldown.sql" > /dev/null  # V4.0 role roll-down tests DB-80..97
+$PSQL -q -d edu360_v4_test -f "$D/13_tests_platform_roles.sql" > /dev/null  # V4.1 platform role tests DB-98..112
+$PSQL -q -d edu360_v4_test -f "$D/17_tests_tenant_top_post.sql" > /dev/null  # V4.1 tenant top post tests DB-113..125
+$PSQL -q -d edu360_v4_test -f "$D/19_tests_user_sessions.sql" > /dev/null  # V4.1 multi-device session tests DB-126..137 (SES-01)
+$PSQL -q -d edu360_v4_test -f "$D/21_tests_audit_guard_v41.sql" > /dev/null  # V4.1 B6 tests DB-150..201 (Q-01 tenant audit, Q-04 never-allowed, Q-05 files 14-16)
+$PSQL -q -d edu360_v4_test -f "$D/22t_tests_platform_b4.sql" > /dev/null  # V4.1 B4 tests DB-210..212 (file 22)
 $PSQL -At -d edu360_v4_test -c "SELECT test_id||' | '||outcome||' | '||rule||' | '||detail FROM public.test_result ORDER BY id" >> "$OUT"
 $PSQL -At -d edu360_v4_test -c "SELECT 'SUMMARY | '||outcome||' | '||count(*) FROM public.test_result GROUP BY outcome" >> "$OUT"
 # B. full V3.3 reference data and count checks (AC-S5), plus idempotent second load
@@ -47,4 +52,40 @@ SELECT 'CATALOGUE | FKs without a covering index (AC-S4) | '||count(*) FROM pg_c
 SELECT 'CATALOGUE | FKs with CASCADE / SET NULL (AC-R2) | '||count(*) FROM pg_constraint WHERE contype='f' AND confdeltype IN ('c','n','d') AND connamespace::regnamespace::text IN ('app','platform','ref');
 SELECT 'CATALOGUE | edu_ roles with superuser or bypassrls (AC-I3) | '||count(*) FROM pg_roles WHERE rolname LIKE 'edu\_%' AND (rolsuper OR rolbypassrls);
 SQL
-grep -q "SUMMARY | FAIL" "$OUT" && { echo "TESTS FAILED — see $OUT"; exit 1; } || echo "All tests passed — see $OUT"
+# C. V4.1 platform roles on the full reference data, plus an idempotent second load of the templates
+for f in 12_v41_platform_roles.sql 12d_v41_platform_role_templates.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 24d_v41_action_module_map.sql; do run edu360_v4_ref $f > /dev/null; done
+$PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | platform role templates | '||count(*)||' | 5' FROM platform.platform_role_template" >> "$OUT"
+$PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | platform template actions with a reserved action outside the locked template | '||count(*)||' | 0' FROM platform.platform_role_template_action a JOIN platform.platform_role_template t USING (platform_role_template_id) WHERE NOT t.is_locked AND a.action_code IN ('TENANT_EXPORT_APPROVE','TENANT_DELETION_APPROVE','RETENTION_CHANGE_APPROVE','APPROVAL_DELEGATE','PLATFORM_USER_MANAGE','TENANT_DELETION_CONFIRM')" >> "$OUT"
+before=$($PSQL -At -d edu360_v4_ref -c "SELECT count(*) FROM platform.platform_role_template_action")
+run edu360_v4_ref 12d_v41_platform_role_templates.sql > /dev/null
+after=$($PSQL -At -d edu360_v4_ref -c "SELECT count(*) FROM platform.platform_role_template_action")
+echo "REFCHECK | second load of 12d inserted rows | $((after-before)) | 0" >> "$OUT"
+# Q-04: the never-allowed guard must not contradict the register (05_ref_data.sql).
+$PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | tenant-level standard roles holding a DATA_PROTECTION action | '||count(*)||' | 0' FROM ref.standard_role_action s JOIN ref.standard_role r USING (role_code) WHERE r.role_level <> 'PLATFORM' AND app.fn_never_allowed_class(s.action_code) = 'DATA_PROTECTION'" >> "$OUT"
+# D. Q-03 / Q-06: V4.1 migrations are idempotent and their rollbacks round-trip (third throw-away database).
+$PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_rb WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_rb"
+V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql"
+for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql $V41; do run edu360_v4_rb $f > /dev/null; done
+for f in $V41; do run edu360_v4_rb $f > /dev/null; done                      # second apply: idempotent
+echo "RBCHECK | apply V4.1 files twice | OK" >> "$OUT"
+# Step-in evidence must stop the 16 rollback (DB-A12) until the operator confirms the export.
+$PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_rb > /dev/null <<'SQL'
+INSERT INTO app.tenant_local (tenant_id, tenant_type) VALUES ('00000000-0000-0000-0000-00000000c601', 'STANDALONE_SCHOOL');
+INSERT INTO app.user_account (tenant_id, user_account_id, user_type, display_name, email, status, created_by, updated_by)
+VALUES ('00000000-0000-0000-0000-00000000c601', '00000000-0000-0000-0000-00000000c611', 'STAFF', 'Rollback Tester', 'rb@example.test', 'ACTIVE', '00000000-0000-0000-0000-00000000c611', '00000000-0000-0000-0000-00000000c611');
+INSERT INTO ref.action_catalog (action_code, action_no, module_name, phase, description) VALUES ('B6_RB_ACTION', 950, 'Academic', 1, 'Rollback test action');
+INSERT INTO app.tenant_step_in (tenant_id, step_in_id, actor_user_id, action_code, reason, expires_at)
+VALUES ('00000000-0000-0000-0000-00000000c601', '00000000-0000-0000-0000-00000000c621', '00000000-0000-0000-0000-00000000c611', 'B6_RB_ACTION', 'Rollback evidence row', now() + interval '5 minutes');
+SQL
+for f in 22r_v41_platform_audit_event_type_rollback.sql 20r_v41_never_allowed_guard_rollback.sql 18r_v41_user_sessions_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
+if run edu360_v4_rb 16r_v41_tenant_top_post_authority_rollback.sql > /dev/null 2>&1; then r=MISMATCH; else r=OK; fi
+echo "RBCHECK | 16r refuses while step-in rows exist (DB-A12) | $r" >> "$OUT"
+$PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_rb -c "SET edu360.rollback_discard_step_ins = 'on'" -f "$D/16r_v41_tenant_top_post_authority_rollback.sql" > /dev/null
+for f in 15r_v41_user_active_role_rollback.sql 14r_v41_audit_foundation_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
+$PSQL -At -d edu360_v4_rb -c "SELECT 'RBCHECK | rolled back: V4.1 objects left | '||CASE WHEN count(*) = 0 THEN 'OK' ELSE 'MISMATCH '||string_agg(o, ',') END FROM (VALUES (to_regclass('app.tenant_step_in')::text), (to_regclass('app.tenant_role_template')::text), (to_regclass('app.user_active_role')::text), (to_regprocedure('app.fn_never_allowed_class(text)')::text), (to_regprocedure('public.fn_audit_logs_guard()')::text)) v(o) WHERE o IS NOT NULL" >> "$OUT"
+$PSQL -At -d edu360_v4_rb -c "SELECT 'RBCHECK | rolled back: role_definition status CHECK restored | '||CASE WHEN pg_get_constraintdef(oid) LIKE '%RETIRED%' AND pg_get_constraintdef(oid) NOT LIKE '%DRAFT%' THEN 'OK' ELSE 'MISMATCH' END FROM pg_constraint WHERE conname = 'ck_role_definition_status'" >> "$OUT"
+for f in $V41; do run edu360_v4_rb $f > /dev/null; done                      # re-apply after rollback
+$PSQL -At -d edu360_v4_rb -c "SELECT 'RBCHECK | re-applied: V4.1 objects present | '||CASE WHEN count(*) = 5 THEN 'OK' ELSE 'MISMATCH '||count(*) END FROM (VALUES (to_regclass('app.tenant_step_in')::text), (to_regclass('app.tenant_role_template')::text), (to_regclass('app.user_active_role')::text), (to_regprocedure('app.fn_never_allowed_class(text)')::text), (to_regprocedure('public.fn_audit_logs_guard()')::text)) v(o) WHERE o IS NOT NULL" >> "$OUT"
+$PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_rb WITH (FORCE)"
+grep -q "SUMMARY | FAIL" "$OUT" && { echo "TESTS FAILED — see $OUT"; exit 1; } || true
+grep -q "^RBCHECK | .* | MISMATCH" "$OUT" && { echo "ROLLBACK CHECKS FAILED — see $OUT"; exit 1; } || echo "All tests passed — see $OUT"

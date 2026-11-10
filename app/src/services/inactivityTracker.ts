@@ -4,7 +4,7 @@ export const SESSION_IDLE_LIMIT_MS = 30 * 60 * 1000;
 // Watches for any sign the user is still around (clicking, typing, scrolling, touching
 // the screen) and keeps pushing the "you've been idle too long" timer back. If none of
 // those happen for SESSION_IDLE_LIMIT_MS, it calls onIdle so the app can log them out.
-export const startInactivityTracker = (onIdle: () => void) => {
+export const startInactivityTracker = (onIdle: () => void, limitMs: number = SESSION_IDLE_LIMIT_MS) => {
   let timeoutId: number | undefined;
 
   const reset = () => {
@@ -12,7 +12,7 @@ export const startInactivityTracker = (onIdle: () => void) => {
       window.clearTimeout(timeoutId);
     }
 
-    timeoutId = window.setTimeout(onIdle, SESSION_IDLE_LIMIT_MS);
+    timeoutId = window.setTimeout(onIdle, limitMs);
   };
 
   const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];

@@ -1,9 +1,10 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button, Kicker, LinkButton, PasswordField } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
-import { changePassword, logout } from "../../../services/authManager";
+import { changePassword, idleLogout, logout } from "../../../services/authManager";
+import { startInactivityTracker } from "../../../services/inactivityTracker";
 // Used both when a new account's admin-set password must be replaced before anything else is
 // usable (MustChangePasswordFilter enforces this server-side too, not just this redirect), and
 // later as an ordinary "change my password" screen - same form, same endpoint either way.
@@ -16,6 +17,8 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => startInactivityTracker(() => { void idleLogout(); }), []);
+
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -23,8 +26,8 @@ export default function ChangePasswordPage() {
       setError("Fill in all three fields.");
       return;
     }
-    if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters.");
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -83,7 +86,7 @@ export default function ChangePasswordPage() {
             autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters"
             required
           />
           <PasswordField
@@ -105,7 +108,7 @@ export default function ChangePasswordPage() {
         )}
       </section>
       <footer className="auth-footer">
-        EDU 360 <span>·</span> A clearer view of learning
+        EDU 360 <span>·</span> One Platform. Every Institution. One Connected Ecosystem.
       </footer>
     </main>
   );

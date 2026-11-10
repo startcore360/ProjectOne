@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface TenantBackupStatusRepository extends JpaRepository<TenantBackupStatus, UUID> {
 
     List<TenantBackupStatus> findAllByOrderByTenantId();
+
+    java.util.Optional<TenantBackupStatus> findFirstByTenantId(UUID tenantId);
 }

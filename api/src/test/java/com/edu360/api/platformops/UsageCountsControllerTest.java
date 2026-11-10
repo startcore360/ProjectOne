@@ -30,7 +30,7 @@ class UsageCountsControllerTest {
     @Mock private TenantRepository tenantRepository;
     @Mock private UsageMetricDailyRepository usageMetricDailyRepository;
 
-    private final PlatformPermissionService platformPermissionService = new PlatformPermissionService();
+    private final PlatformPermissionService platformPermissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
     private UsageCountsController controller() {
         return new UsageCountsController(platformPermissionService, tenantRepository, usageMetricDailyRepository);

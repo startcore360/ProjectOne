@@ -1,22 +1,9 @@
-import type { HTMLAttributes } from "react";
-import { cn } from "../../lib/utils";
+import { Badge as DsBadge, type BadgeProps } from "../../design-system/components/Badge";
 
-// A small colored label pill (e.g. "Active", "Failed"). The color is picked
-// by "tone" instead of writing CSS classes everywhere it's used.
-type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info";
+export type { BadgeProps };
 
-const tones: Record<BadgeTone, string> = {
-  neutral: "eds-badge--neutral",
-  success: "eds-badge--success",
-  warning: "eds-badge--warning",
-  danger: "eds-badge--danger",
-  info: "eds-badge--info",
-};
-
-export function Badge({
-  tone = "neutral",
-  className,
-  ...props
-}: HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone }) {
-  return <span {...props} className={cn("eds-badge", tones[tone], className)} />;
+export function Badge(props: BadgeProps) {
+  return <DsBadge {...props} />;
 }
+
+export default Badge;
