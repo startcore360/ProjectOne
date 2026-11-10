@@ -29,7 +29,7 @@ docker compose --env-file "$ENV_FILE" -f "$ROOT/docker-compose.yml" config --qui
 docker compose --env-file "$ENV_FILE" -f "$ROOT/docker-compose.yml" up -d
 
 cd "$ROOT/api"
-mvn --batch-mode --no-transfer-progress clean verify
+./mvnw --batch-mode --no-transfer-progress clean verify
 cd "$ROOT/app"
 npm ci
 npm run lint
