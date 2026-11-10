@@ -3,33 +3,15 @@ services:
     image: quay.io/keycloak/keycloak:26.0
     command: start-dev --import-realm
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: kcadmin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: kcadmin
-      # Reload theme files on every request instead of caching, so edits to
-      # themes/edu360/ show up on a browser refresh without restarting the container.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-kcadmin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-kcadmin}
       KC_SPI_THEME_STATIC_MAX_AGE: "-1"
       KC_SPI_THEME_CACHE_THEMES: "false"
       KC_SPI_THEME_CACHE_TEMPLATES: "false"
+    # Test-server only. UAT must supply a unique password in its protected env file.
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     volumes:
-      # Named volume for Keycloak's own embedded dev DB (/opt/keycloak/data), so a container
-      # restart/recreate (docker-compose down && up, a Docker Desktop restart, a reboot) keeps
-      # every realm change made through the admin API or console - users created by hand,
-      # password resets, everything. Without this, Keycloak's dev-mode H2 DB lives only in the
-      # container's writable layer, so any `down` (even without -v) throws it away and
-      # --import-realm silently re-creates just the three realms below with zero users in them -
-      # this was the exact cause of two different "login that worked yesterday is now 401" cases.
-      # Keycloak's own realm import is idempotent per realm (skips a realm that already exists),
-      # so this volume and the JSON imports below coexist fine: first boot ever imports from
-      # JSON, every boot after that just reuses what's already in the volume.
-      #
-      # Three separate realms, one per login identity space, matching the DB schema's own split:
-      # - abc-university / xyz-university: tenant realms (platform.tenant.keycloak_realm)
-      # - edu360-platform: platform staff (platform.platform_user has no tenant_id at all -
-      #   it is a genuinely separate identity space, never mixed with a tenant's users)
-      # Keycloak's --import-realm flag imports every *.json file found under this folder, so
-      # dropping a new file here is enough to add another realm - no code change needed.
       - keycloak_data:/opt/keycloak/data
       - ./realm-export-abc.json:/opt/keycloak/data/import/realm-export-abc.json:ro
       - ./realm-export-xyz.json:/opt/keycloak/data/import/realm-export-xyz.json:ro

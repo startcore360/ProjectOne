@@ -3,10 +3,11 @@ services:
     image: postgres:16-bookworm
     environment:
       POSTGRES_USER: edu360
-      POSTGRES_PASSWORD: edu360
+      POSTGRES_PASSWORD: ${POSTGRES_BOOTSTRAP_PASSWORD:-edu360}
       POSTGRES_DB: edu360db
+    # Internal-only: Caddy/API are the public ingress path, never PostgreSQL.
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
 

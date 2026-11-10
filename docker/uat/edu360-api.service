@@ -1,0 +1,25 @@
+[Unit]
+Description=EDU 360 API (UAT test server)
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=edu360
+Group=edu360
+WorkingDirectory=/opt/edu360/ProjectOne
+EnvironmentFile=/etc/edu360/edu360.env
+Environment=SPRING_PROFILES_ACTIVE=dev
+ExecStart=/usr/bin/java -jar /opt/edu360/ProjectOne/api/target/api-0.0.1-SNAPSHOT.jar
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=143
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/log/edu360
+
+[Install]
+WantedBy=multi-user.target
