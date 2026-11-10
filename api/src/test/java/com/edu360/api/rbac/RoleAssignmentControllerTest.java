@@ -427,6 +427,7 @@ class RoleAssignmentControllerTest {
                 .roleName("College Accountant")
                 .roleOrigin(RoleOrigin.STANDARD)
                 .roleLevel(RoleLevel.COLLEGE)
+                .sensitiveRole(true)
                 .status(RoleDefinitionStatus.ACTIVE)
                 .build();
         when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID)))
@@ -463,11 +464,47 @@ class RoleAssignmentControllerTest {
                 .id(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID))
                 .roleCode("HEAD_OF_DEPARTMENT")
                 .roleName("Head of Department")
+                .sensitiveRole(true)
                 .build();
         when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID)))
                 .thenReturn(Optional.of(sensitiveRole));
 
         assertThatThrownBy(() -> controller.endRoleAssignment(TENANT_ID, ASSIGNMENT_ID, auth))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .satisfies(ex -> {
+                    BusinessRuleViolationException bre = (BusinessRuleViolationException) ex;
+                    assertThat(bre.getErrorCode()).isEqualTo("MX_04_SENSITIVE_ROLE_PROHIBITED");
+                });
+    }
+
+    @Test
+    @DisplayName("H11: Custom role with benign name but sensitive permissions is detected via roleDefinition.isSensitiveRole()")
+    void actRoleAssignNonSensitive_guard_customBenignNameSensitiveRoleProhibited() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID);
+        AssignRoleRequest request = new AssignRoleRequest(
+                ROLE_DEF_ID, null, ScopeType.INSTITUTION, INSTITUTION_ID, null, null, null
+        );
+
+        when(permissionEvaluatorService.can(any(), eq("ROLE_ASSIGN"), any(), any()))
+                .thenReturn(PermissionDecision.deny("DENIED", "No ROLE_ASSIGN"));
+
+        UserAccount targetAccount = mock(UserAccount.class);
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, TARGET_USER_ID)))
+                .thenReturn(Optional.of(targetAccount));
+
+        RoleDefinition customSensitiveRole = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID))
+                .roleCode("OFFICE_HELPER")
+                .roleName("Office Helper")
+                .roleOrigin(RoleOrigin.CUSTOM)
+                .roleLevel(RoleLevel.COLLEGE)
+                .sensitiveRole(true)
+                .status(RoleDefinitionStatus.ACTIVE)
+                .build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID)))
+                .thenReturn(Optional.of(customSensitiveRole));
+
+        assertThatThrownBy(() -> controller.assignRole(TENANT_ID, TARGET_USER_ID, request, auth))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .satisfies(ex -> {
                     BusinessRuleViolationException bre = (BusinessRuleViolationException) ex;

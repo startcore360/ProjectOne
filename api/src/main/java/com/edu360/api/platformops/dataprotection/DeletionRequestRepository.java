@@ -9,4 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface DeletionRequestRepository extends JpaRepository<DeletionRequest, UUID> {
     List<DeletionRequest> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     Optional<DeletionRequest> findFirstByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+    boolean existsByTenantIdAndStatusIn(UUID tenantId, java.util.Collection<String> statuses);
 }

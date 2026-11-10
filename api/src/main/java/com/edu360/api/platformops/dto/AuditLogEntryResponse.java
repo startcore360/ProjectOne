@@ -17,7 +17,8 @@ public record AuditLogEntryResponse(
         String entityType,
         UUID entityId,
         String outcome,
-        String correlationId) {
+        String correlationId,
+        String eventType) {
 
     public static AuditLogEntryResponse from(PlatformAuditOutboxEvent event) {
         return new AuditLogEntryResponse(
@@ -31,6 +32,7 @@ public record AuditLogEntryResponse(
                 event.getEntityType(),
                 event.getEntityId(),
                 event.getOutcome(),
-                event.getCorrelationId());
+                event.getCorrelationId(),
+                event.getEventType());
     }
 }

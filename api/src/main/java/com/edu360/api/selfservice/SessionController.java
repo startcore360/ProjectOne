@@ -31,7 +31,7 @@ import java.util.Map;
 @RestController
 @RequestMapping({"/api/me/sessions", "/v1/tenants/{tenantId}/me/devices", "/api/tenants/{tenantId}/me/devices"})
 @RequiredArgsConstructor
-@Tag(name = "Self-service", description = "See your own active session(s) and log them out")
+@Tag(name = "Self-service", description = "See the devices you are signed in on and sign any of them out")
 public class SessionController {
 
     private final SessionService sessionService;
@@ -43,7 +43,11 @@ public class SessionController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         Jwt jwt = (Jwt) authentication.getCredentials();
-        return ResponseEntity.ok(sessionService.listCurrentSessions(jwt));
+        return switch (authentication.getPrincipal()) {
+            case TenantPrincipal tenant -> ResponseEntity.ok(sessionService.listSessions(tenant, jwt));
+            case PlatformPrincipal platform -> ResponseEntity.ok(sessionService.listSessions(platform, jwt));
+            case null, default -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        };
     }
 
     @DeleteMapping({"/current"})
@@ -53,7 +57,7 @@ public class SessionController {
     }
 
     @DeleteMapping({"/{sessionId}"})
-    @Operation(summary = "Revoke session by ID")
+    @Operation(summary = "Sign out one of your own sessions (any device); 404 if it is not yours")
     public ResponseEntity<Void> revokeSession(@PathVariable(required = false) String sessionId,
                                               Authentication authentication) {
         if (authentication == null) {
@@ -67,14 +71,14 @@ public class SessionController {
         switch (authentication.getPrincipal()) {
             case TenantPrincipal tenant -> {
                 if (targetSessionId != null) {
-                    sessionService.revokeSession(tenant, targetSessionId);
+                    sessionService.revokeSession(tenant, targetSessionId, jwt);
                 } else {
                     sessionService.revokeCurrentSession(tenant, jwt);
                 }
             }
             case PlatformPrincipal platform -> {
                 if (targetSessionId != null) {
-                    sessionService.revokeSession(platform, targetSessionId);
+                    sessionService.revokeSession(platform, targetSessionId, jwt);
                 } else {
                     sessionService.revokeCurrentSession(platform, jwt);
                 }

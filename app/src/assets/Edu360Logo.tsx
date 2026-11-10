@@ -5,7 +5,19 @@ type LogoStyle = CSSProperties & {
   "--edu360-word-fill": string;
 };
 
-export default function Edu360Logo(props: SVGProps<SVGSVGElement>) {
+type Edu360LogoProps = SVGProps<SVGSVGElement> & {
+  /**
+   * "full" (default): emblem + "EDU 360" wordmark + tagline, used on the auth screens.
+   * "mark": the emblem alone, cropped to its bounds, for compact spots such as the app
+   * sidebar. It keeps the people/cap/analytics glyphs inside the panels so it matches the
+   * login logo, and is decorative (aria-hidden) because it always sits next to visible
+   * "EDU 360" text that names the link.
+   */
+  variant?: "full" | "mark";
+};
+
+export default function Edu360Logo({ variant = "full", ...props }: Edu360LogoProps) {
+  const isMark = variant === "mark";
   const id = useId().replace(/:/g, "");
   const titleId = `${id}-logoTitle`;
   const descId = `${id}-logoDesc`;
@@ -20,17 +32,22 @@ export default function Edu360Logo(props: SVGProps<SVGSVGElement>) {
     <svg
       {...props}
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 536 465"
-      role="img"
-      aria-labelledby={`${titleId} ${descId}`}
-      className={`edu360-logo${props.className ? ` ${props.className}` : ""}`}
+      viewBox={isMark ? "68 24 380 304" : "0 0 536 465"}
+      {...(isMark
+        ? { "aria-hidden": true, focusable: false }
+        : { role: "img", "aria-labelledby": `${titleId} ${descId}` })}
+      className={`edu360-logo${isMark ? " edu360-logo--mark" : ""}${props.className ? ` ${props.className}` : ""}`}
       style={{ ...logoStyle, ...props.style }}
     >
-      <title id={titleId}>EDU 360</title>
-      <desc id={descId}>
-        EDU 360 Education Management Platform logo. Open book, crescent, people,
-        graduation cap and analytics.
-      </desc>
+      {!isMark && (
+        <>
+          <title id={titleId}>EDU 360</title>
+          <desc id={descId}>
+            EDU 360 logo, Education Driven by Unity. Open book, crescent, people,
+            graduation cap and analytics.
+          </desc>
+        </>
+      )}
       <defs>
         <linearGradient id={greenCrescentId} x1={0} y1={0} x2={1} y2={1}>
           <stop offset="0%" stopColor="var(--color-action-primary)" />
@@ -252,6 +269,7 @@ export default function Edu360Logo(props: SVGProps<SVGSVGElement>) {
         <rect className="pixel-mid" x={417} y={87} width={22} height={22} rx={6} />
         <rect className="pixel-light" x={395} y={111} width={22} height={22} rx={6} />
       </g>
+      {!isMark && (<>
       <text
         className="brand-type word-main"
         x={268}
@@ -275,9 +293,10 @@ export default function Edu360Logo(props: SVGProps<SVGSVGElement>) {
           y={447}
           textAnchor="middle"
         >
-          Education Management Platform
+          Education Driven by Unity
         </text>
       </g>
+      </>)}
     </svg>
   );
 }

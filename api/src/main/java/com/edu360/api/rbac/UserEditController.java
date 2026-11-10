@@ -2,6 +2,7 @@ package com.edu360.api.rbac;
 
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +24,6 @@ import com.edu360.api.rbac.dto.UserSummaryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 /**
  * WHAT: "Edit a user account" (USER_EDIT) - PATCH /api/tenants/{tenantId}/users/{userId}. Per
@@ -46,12 +46,28 @@ import lombok.RequiredArgsConstructor;
  */
 @RestController
 @RequestMapping("/api/tenants/{tenantId}/users")
-@RequiredArgsConstructor
 @Tag(name = "Users", description = "USER_EDIT - edit a user account")
 public class UserEditController {
 
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final UserAccountRepository userAccountRepository;
+    private final UserGovernanceGuard userGovernanceGuard;
+
+    public UserEditController(
+            PermissionEvaluatorService permissionEvaluatorService,
+            UserAccountRepository userAccountRepository) {
+        this(permissionEvaluatorService, userAccountRepository, null);
+    }
+
+    @Autowired
+    public UserEditController(
+            PermissionEvaluatorService permissionEvaluatorService,
+            UserAccountRepository userAccountRepository,
+            @Autowired(required = false) UserGovernanceGuard userGovernanceGuard) {
+        this.permissionEvaluatorService = permissionEvaluatorService;
+        this.userAccountRepository = userAccountRepository;
+        this.userGovernanceGuard = userGovernanceGuard;
+    }
 
     @PatchMapping("/{userId}")
     @Operation(summary = "Edit a user account's own fields (USER_EDIT)")
@@ -68,6 +84,10 @@ public class UserEditController {
         permissionEvaluatorService.authorize(
                 new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
                 "USER_EDIT", scope, RbacTarget.of(userId));
+
+        if (userGovernanceGuard != null) {
+            userGovernanceGuard.checkTargetUserAuthority(tenantId, principal.userAccountId(), userId, request.institutionId());
+        }
 
         UserAccount account = userAccountRepository.findById(new UserAccountId(tenantId, userId))
                 .orElseThrow(() -> new ResourceNotFoundException("User " + userId + " was not found"));

@@ -12,8 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.edu360.api.audit.AuditEventType;
-import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platformops.PlatformPermissionService;
@@ -29,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 public class PlatformFeatureToggleController {
 
     private final PlatformPermissionService permissionService;
-    private final AuditLogService auditLogService;
     private final PlanEntitlementRepository planEntitlementRepository;
     private final TenantEntitlementRepository tenantEntitlementRepository;
     private final PlatformAuditWriter auditWriter;
@@ -37,23 +34,14 @@ public class PlatformFeatureToggleController {
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformFeatureToggleController(
             PlatformPermissionService permissionService,
-            AuditLogService auditLogService,
             @org.springframework.beans.factory.annotation.Autowired(required = false) PlanEntitlementRepository planEntitlementRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) TenantEntitlementRepository tenantEntitlementRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) PlatformAuditWriter auditWriter
+            PlatformAuditWriter auditWriter
     ) {
         this.permissionService = permissionService;
-        this.auditLogService = auditLogService;
         this.planEntitlementRepository = planEntitlementRepository;
         this.tenantEntitlementRepository = tenantEntitlementRepository;
         this.auditWriter = auditWriter;
-    }
-
-    public PlatformFeatureToggleController(
-            PlatformPermissionService permissionService,
-            AuditLogService auditLogService
-    ) {
-        this(permissionService, auditLogService, null, null, null);
     }
 
     public record EntitlementsUpdateRequest(
@@ -104,9 +92,7 @@ public class PlatformFeatureToggleController {
             }
         }
 
-        if (auditWriter != null) {
-            auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "PLAN", id);
-        }
+        auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "PLAN", id);
 
         return ResponseEntity.ok(new EntitlementsResponse(id, "PLAN", req.features()));
     }
@@ -149,9 +135,7 @@ public class PlatformFeatureToggleController {
             }
         }
 
-        if (auditWriter != null) {
-            auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "TENANT", id);
-        }
+        auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "TENANT", id);
 
         return ResponseEntity.ok(new EntitlementsResponse(id, "TENANT", req.features()));
     }

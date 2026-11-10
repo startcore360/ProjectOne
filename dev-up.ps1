@@ -3,6 +3,16 @@
 $root = $PSScriptRoot
 
 Set-Location $root
+
+# Keycloak extension (in-app authenticator set-up): build the jar into docker/keycloak/providers
+# before Keycloak starts, so the container picks it up. Skipped quietly if the build fails -
+# sign-in still works, the login screen just falls back to Keycloak's own set-up page.
+Write-Host "Building the EDU 360 Keycloak extension..."
+Push-Location (Join-Path $root 'api')
+.\mvnw.cmd -q -f ..\keycloak\edu360-otp-extension\pom.xml package -DskipTests
+if ($LASTEXITCODE -ne 0) { Write-Warning "Keycloak extension build failed; in-app authenticator set-up will be unavailable." }
+Pop-Location
+
 docker compose up -d
 
 Write-Host "Waiting for Postgres to accept connections..."
@@ -70,7 +80,8 @@ $backendCmd = @"
 `$env:SPRING_DATASOURCE_USERNAME = 'edu_app'
 `$env:SPRING_DATASOURCE_PASSWORD = '$eduAppPassword'
 `$env:PLATFORM_ADMIN_DATASOURCE_PASSWORD = '$eduPlatformPassword'
-.\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath '$backendLog'
+`$env:SPRING_PROFILES_ACTIVE = 'dev'
+.\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=dev' 2>&1 | Tee-Object -FilePath '$backendLog'
 "@
 $backendProc = Start-Process powershell -ArgumentList '-NoExit', '-Command', $backendCmd -WorkingDirectory (Join-Path $root 'api') -PassThru
 Start-Sleep -Seconds 3

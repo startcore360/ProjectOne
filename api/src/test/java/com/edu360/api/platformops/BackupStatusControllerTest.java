@@ -26,7 +26,7 @@ class BackupStatusControllerTest {
 
     @Mock private TenantBackupStatusRepository tenantBackupStatusRepository;
 
-    private final PlatformPermissionService platformPermissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+    private final PlatformPermissionService platformPermissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
     private BackupStatusController controller() {
         return new BackupStatusController(platformPermissionService, tenantBackupStatusRepository);

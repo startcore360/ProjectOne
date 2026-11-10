@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RetentionChangeRequestRepository extends JpaRepository<RetentionChangeRequest, UUID> {
     List<RetentionChangeRequest> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+    List<RetentionChangeRequest> findAllByOrderByCreatedAtDesc();
 }

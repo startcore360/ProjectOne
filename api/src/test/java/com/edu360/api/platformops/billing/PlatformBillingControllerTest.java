@@ -45,8 +45,8 @@ class PlatformBillingControllerTest {
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
         auditLogService = mock(AuditLogService.class);
-        permissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
-        billingService = new PlatformBillingService(invoiceRepository, auditLogService);
+        permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+        billingService = new PlatformBillingService(invoiceRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
         controller = new PlatformBillingController(billingService, permissionService);
     }
 

@@ -40,7 +40,8 @@ import {
 } from "../components";
 
 export function InstitutionsPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const user = useAppSelector((state) => state.auth.user);
+  const tenantId = user?.tenantId || "00000000-0000-0000-0000-000000000001";
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,18 @@ export function InstitutionsPage() {
     tone: "success" | "danger" | "info";
     message: string;
   } | null>(null);
+
+  // Check if role is restricted from creating/managing institutions
+  const isNonAdminRole =
+    user?.roleCode === "SCHOOL_ADMIN" ||
+    user?.roleCode === "COLLEGE_ADMIN" ||
+    user?.roleCode === "STUDENT_COLLEGE" ||
+    user?.roleCode === "STUDENT_SCHOOL" ||
+    user?.roleCode === "PARENT_COLLEGE" ||
+    user?.roleCode === "PARENT_SCHOOL" ||
+    user?.roleCode === "CLASS_TEACHER" ||
+    user?.roleCode === "SUBJECT_TEACHER";
+  const canManageInstitutions = !isNonAdminRole;
 
   // Leave Approver state (Stories #45 & #46)
   const [goLiveCheck, setGoLiveCheck] = useState<GoLiveCheckResponse | null>(null);
@@ -133,20 +146,47 @@ export function InstitutionsPage() {
         title="Institutions"
         description="Register colleges and schools within this tenant. Institutions begin as Draft and require Vice Chancellor approval before going live [WF-16, C7]."
         actions={
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <Button
-              variant="secondary"
-              onClick={() => setVcModalOpen(true)}
-              title="Configure Vice-Chancellor leave approver [Rule C6, VC_LEAVE_APPROVER_SET]"
-            >
-              Set VC Approver
-            </Button>
-            <Button onClick={() => setModalOpen(true)}>
-              <span aria-hidden="true">+ </span>Register institution (Draft)
-            </Button>
-          </div>
+          canManageInstitutions ? (
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <Button
+                variant="secondary"
+                onClick={() => setVcModalOpen(true)}
+                title="Configure Vice-Chancellor leave approver [Rule C6, VC_LEAVE_APPROVER_SET]"
+              >
+                Set VC Approver
+              </Button>
+              <Button onClick={() => setModalOpen(true)}>
+                <span aria-hidden="true">+ </span>Register institution (Draft)
+              </Button>
+            </div>
+          ) : (
+            <Badge tone="neutral">Scope: Read-only View</Badge>
+          )
         }
       />
+
+      {!canManageInstitutions && (
+        <div
+          role="status"
+          style={{
+            padding: "var(--space-3) var(--space-4)",
+            marginBottom: "var(--space-4)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--eds-color-info-border, #bfdbfe)",
+            backgroundColor: "var(--eds-color-info-bg, #eff6ff)",
+            color: "var(--eds-color-info-text, #1e40af)",
+            fontSize: "0.875rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+          }}
+        >
+          <span aria-hidden="true">ℹ</span>
+          <span>
+            <strong>Read-only institution register:</strong> Institution creation (colleges &amp; schools) and executive approvals are restricted to University Administrators [Rule INSTITUTION_CREATE_DRAFT]. As a {user?.roleName || "College / School Administrator"}, your assigned institutions are listed below.
+          </span>
+        </div>
+      )}
 
       {goLiveCheck && !goLiveCheck.ready && (
         <div
@@ -300,45 +340,51 @@ export function InstitutionsPage() {
                       <StateBadge status={institution.status} />
                     </td>
                     <td>
-                      <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-                        {institution.status === "DRAFT" && (
-                          <Button
-                            onClick={() => handleActivate(institution)}
-                            disabled={activatingId === institution.institutionId}
-                            title="Vice Chancellor approval required to activate [WF-16]"
-                          >
-                            {activatingId === institution.institutionId ? "Activating..." : "Activate"}
-                          </Button>
-                        )}
-                        <Button
-                          variant="secondary"
-                          onClick={() => setApproverModalItem(institution)}
-                          title="Configure Principal's leave approver [Rule C7, PRINCIPAL_LEAVE_APPROVER_SET]"
-                        >
-                          Approver
-                        </Button>
-                        {institution.status === "ACTIVE" && (
+                      {!canManageInstitutions ? (
+                        <span style={{ fontSize: "0.8125rem", color: "var(--color-muted)" }}>
+                          {institution.status === "ACTIVE" ? "Active" : institution.status}
+                        </span>
+                      ) : (
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                          {institution.status === "DRAFT" && (
+                            <Button
+                              onClick={() => handleActivate(institution)}
+                              disabled={activatingId === institution.institutionId}
+                              title="Vice Chancellor approval required to activate [WF-16]"
+                            >
+                              {activatingId === institution.institutionId ? "Activating..." : "Activate"}
+                            </Button>
+                          )}
                           <Button
                             variant="secondary"
-                            onClick={() => setBlockModalItem(institution)}
-                            title="Ask to block this institution's access [WF-15, RL-01]"
+                            onClick={() => setApproverModalItem(institution)}
+                            title="Configure Principal's leave approver [Rule C7, PRINCIPAL_LEAVE_APPROVER_SET]"
                           >
-                            Block
+                            Approver
                           </Button>
-                        )}
-                        <Button
-                          variant="secondary"
-                          onClick={() => setDecideModalItem(institution)}
-                          title="Executive review of institution block [WF-15, INSTITUTION_BLOCK_APPROVE]"
-                        >
-                          Review Block Decision
-                        </Button>
-                        {institution.status !== "DRAFT" && institution.status !== "ACTIVE" && (
-                          <span style={{ fontSize: "0.8125rem", color: "var(--color-muted)" }}>
-                            {institution.status}
-                          </span>
-                        )}
-                      </div>
+                          {institution.status === "ACTIVE" && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => setBlockModalItem(institution)}
+                              title="Ask to block this institution's access [WF-15, RL-01]"
+                            >
+                              Block
+                            </Button>
+                          )}
+                          <Button
+                            variant="secondary"
+                            onClick={() => setDecideModalItem(institution)}
+                            title="Executive review of institution block [WF-15, INSTITUTION_BLOCK_APPROVE]"
+                          >
+                            Review Block Decision
+                          </Button>
+                          {institution.status !== "DRAFT" && institution.status !== "ACTIVE" && (
+                            <span style={{ fontSize: "0.8125rem", color: "var(--color-muted)" }}>
+                              {institution.status}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -524,7 +570,7 @@ export function RolesPermissionsPage() {
   const displayRows = useMemo(() => {
     if (roles.length > 0) {
       return roles.map((r) => ({
-        id: r.roleDefinitionId,
+        id: r.roleDefinitionId ?? r.roleCode,
         raw: r,
         name: r.roleName,
         code: r.roleCode,
@@ -735,8 +781,8 @@ export function MissingRolesPage() {
     setLoading(true);
     try {
       const [mapData, overrideData] = await Promise.all([
-        rolldownService.getRolldownMap(tenantId).catch(() => []),
-        rolldownService.getOverrides(tenantId).catch(() => []),
+        rolldownService.getRolldownMap(tenantId),
+        rolldownService.getOverrides(tenantId),
       ]);
       setEntries(mapData);
       setOverrides(overrideData);

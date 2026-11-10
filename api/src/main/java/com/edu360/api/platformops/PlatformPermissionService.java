@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.platformops.role.PlatformAuditWriter;
 import com.edu360.api.platform.PlatformRole;
 
 /**
@@ -56,29 +57,39 @@ public class PlatformPermissionService {
             // Data protection approvals stay with a separate person (TPA-04, D2 action 198).
             Map.entry("TENANT_EXPORT_APPROVE", DPO),
             Map.entry("TENANT_DELETION_APPROVE", DPO),
-            Map.entry("RETENTION_CHANGE_APPROVE", Set.of(PlatformRole.DATA_PROTECTION_OFFICER, PlatformRole.PRODUCT_OWNER)),
+            Map.entry("RETENTION_CHANGE_APPROVE", DPO),
             Map.entry("APPROVAL_DELEGATE", DPO)
     );
 
     private final PlatformAccessLookup accessLookup;
+    private final PlatformAuditWriter auditWriter;
 
-    public PlatformPermissionService(PlatformAccessLookup accessLookup) {
+    public PlatformPermissionService(PlatformAccessLookup accessLookup, PlatformAuditWriter auditWriter) {
         this.accessLookup = accessLookup;
+        this.auditWriter = auditWriter;
+    }
+
+    /** L-07: a refusal is itself an audited event (outcome DENIED), written before the refusal is raised. */
+    private UnauthorizedException deny(PlatformPrincipal principal, String actionCode, String message) {
+        if (principal != null && principal.platformUserId() != null) {
+            auditWriter.recordDenied(principal, (actionCode != null && ALLOWED_ROLES.containsKey(actionCode)) ? actionCode : null);
+        }
+        return new UnauthorizedException(message);
     }
 
     public void authorize(PlatformPrincipal principal, String actionCode) {
         if (!ALLOWED_ROLES.containsKey(actionCode)) {
-            throw new UnauthorizedException("Action " + actionCode + " is not a recognized platform action.");
+            throw deny(principal, actionCode, "Action " + actionCode + " is not a recognized platform action.");
         }
         if (principal == null) {
             throw new UnauthorizedException(actionCode + " requires an authenticated platform principal.");
         }
         if (!holds(principal, actionCode)) {
-            throw new UnauthorizedException(
+            throw deny(principal, actionCode,
                     "Platform role " + principal.platformRole() + " does not hold action " + actionCode + ".");
         }
         if (requiresStepIn(principal, actionCode)) {
-            throw new UnauthorizedException(
+            throw deny(principal, actionCode,
                     "STEP_IN_REQUIRED: " + actionCode + " has been handed over. Step in on the Platform roles page, with a reason, to act on it.");
         }
     }
@@ -92,7 +103,7 @@ public class PlatformPermissionService {
                 && holds(principal, action)
                 && !requiresStepIn(principal, action));
         if (!allowed) {
-            throw new UnauthorizedException(
+            throw deny(principal, null,
                     "Platform role " + principal.platformRole() + " holds none of " + actionCodes + ".");
         }
     }

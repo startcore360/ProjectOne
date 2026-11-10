@@ -10,7 +10,8 @@ import {
   PageHeader,
   ErrorState,
 } from "../../../design-system/components";
-import { useAppSelector } from "../../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
+import { profileUpdated } from "../../../store/slices/authSlice";
 import { profileService, type ProfileResponse } from "../api/profileService";
 import { ProfileAvatarSection } from "../components";
 
@@ -45,6 +46,7 @@ export default function ProfilePage() {
   // the backend). Read from the store, matching how AppLayout already branches on the same
   // fields, rather than re-deriving it from this screen's own fetch.
   const authUser = useAppSelector((state) => state.auth.user);
+  const dispatch = useAppDispatch();
   const isPlatform = !!authUser?.platformRole;
 
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
@@ -180,6 +182,7 @@ export default function ProfilePage() {
       setMobile(data.mobile ?? "");
       setFieldErrors({});
       setSuccess(true);
+      dispatch(profileUpdated({ displayName: data.displayName }));
     } catch (err) {
       const backendErrors = backendFieldErrors(err);
       if (backendErrors) {
@@ -214,6 +217,8 @@ export default function ProfilePage() {
     try {
       const { data } = await profileService.uploadPhoto(file);
       setProfile(data);
+      // Tell the app shell, so the sidebar / mobile-menu avatar re-fetches the new photo.
+      dispatch(profileUpdated({ photoUrl: data.photoUrl, photoChanged: true }));
       await loadPhoto(!!data.photoUrl);
       setPhotoSuccess(true);
     } catch (err) {

@@ -17,4 +17,6 @@ public interface PlatformUserRepository extends JpaRepository<PlatformUser, UUID
     Optional<PlatformUser> findByEmail(String email);
 
     long countByPlatformRoleIdAndStatus(UUID platformRoleId, PlatformUserStatus status);
+
+    long countByPlatformRoleAndStatus(PlatformRole platformRole, PlatformUserStatus status);
 }

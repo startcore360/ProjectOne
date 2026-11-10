@@ -15,4 +15,6 @@ public interface TenantRepository extends JpaRepository<Tenant, java.util.UUID> 
     Optional<Tenant> findBySubdomain(String subdomain);
 
     long countByState(TenantState state);
+
+    long countByAnalyticsOptOut(boolean analyticsOptOut);
 }

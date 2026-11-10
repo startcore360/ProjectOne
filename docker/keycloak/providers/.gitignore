@@ -1,0 +1,3 @@
+# Built Keycloak extensions (see keycloak/edu360-otp-extension). Mounted at /opt/keycloak/providers.
+# The jar is a build output: dev-up.ps1 builds it; never commit it.
+*.jar

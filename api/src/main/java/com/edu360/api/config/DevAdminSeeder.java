@@ -47,7 +47,18 @@ import lombok.RequiredArgsConstructor;
 public class DevAdminSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevAdminSeeder.class);
-    private static final String DEFAULT_PASSWORD = "ChangeMe123!";
+    /**
+     * B3 / I-06: every realm now refuses common passwords (Keycloak passwordBlacklist and the
+     * API's PasswordPolicyService share security/common-passwords.txt), and the old fixed seed
+     * password "ChangeMe123!" is on that list - Keycloak refuses to create the account with it.
+     * A fresh random password is generated per seeded account instead and printed once in the
+     * log line below, as before. Accounts that already exist are never touched.
+     */
+    private static String newSeedPassword() {
+        byte[] bytes = new byte[12];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return "Dev-" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes) + "-9";
+    }
     private static final List<DevAccount> DEFAULT_ACCOUNTS = List.of(
             new DevAccount("admin@edu360-platform.local", "Platform Admin", PlatformRole.PLATFORM_ADMIN),
             new DevAccount("owner@edu360-platform.local", "Product Owner", PlatformRole.PRODUCT_OWNER));
@@ -81,15 +92,16 @@ public class DevAdminSeeder implements CommandLineRunner {
         String realm = keycloakProperties.getPlatformRealm();
         // Unlike a real admin-created account, this dev convenience login should not force a
         // password change - it is never a real account.
+        String seedPassword = newSeedPassword();
         String keycloakSubject = keycloakAdminClient.provisionUser(
-                realm, account.name(), account.email(), DEFAULT_PASSWORD, false);
+                realm, account.name(), account.email(), seedPassword, false);
 
         UUID platformUserId = UUID.randomUUID();
         insertPlatformUser(account, platformUserId, keycloakSubject);
 
         log.warn("Seeded default dev {} account in realm '{}' -> email: {}, password: {}. "
                 + "Dev only; this account must never exist in a deployed environment.",
-                account.role(), realm, account.email(), DEFAULT_PASSWORD);
+                account.role(), realm, account.email(), seedPassword);
     }
 
     private void insertPlatformUser(DevAccount account, UUID platformUserId, String keycloakSubject) throws Exception {

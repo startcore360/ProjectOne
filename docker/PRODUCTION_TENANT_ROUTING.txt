@@ -196,6 +196,10 @@ Also needed:
 
 Don't simply copy the dev approach, because a master-realm password in production has very wide power. Prefer a dedicated service account using the client credentials that production already expects, limited to the rights it needs. Change `fetchMasterAdminAccessToken` to use `grant_type=client_credentials`.
 
+## P12. Keycloak service account for identity events
+
+**Required for go-live (M-03 / C4 / D3 / PD-2).** The internal `/v1/internal/identity-events` endpoint requires a service token issued to `edu360-identity-events` in the platform realm with role `identity-events:write`. In production, set `app.keycloak.identity-events-client-id=${KEYCLOAK_IDENTITY_EVENTS_CLIENT_ID}` and `app.keycloak.identity-events-client-secret=${KEYCLOAK_IDENTITY_EVENTS_CLIENT_SECRET}` without defaults. Normal user tokens (even Product Owner) and tokens from other clients or without the required role are strictly refused with 401.
+
 ## Normal running in production
 
 Creating a tenant needs no restart. A restart or redeploy happens only when releasing new code, with a rolling deployment so users aren't interrupted.
@@ -212,6 +216,8 @@ Add these to the deployment configuration and `CLAUDE.md`'s production list:
 | `PLATFORM_HOST_LABEL` | `platform` |
 | `KEYCLOAK_FRONTEND_REDIRECT_URIS` | `https://*.edu360.com/*` |
 | `CORS_ALLOWED_ORIGIN` | `https://platform.edu360.com` |
+| `KEYCLOAK_IDENTITY_EVENTS_CLIENT_ID` | `edu360-identity-events` |
+| `KEYCLOAK_IDENTITY_EVENTS_CLIENT_SECRET` | `<from secret store>` |
 
 ## Done when
 
@@ -233,3 +239,13 @@ Check all of these on a real staging environment that matches production:
 
 - **Frontend:** `app/vite.config.ts` allows every `.edu360.local` address.
 - **New tenant:** run `.\docker\dev-hosts-setup.ps1` as Administrator. It adds an entry for every ACTIVE or TRIAL tenant. The hosts file doesn't support wildcards, so this step is local-only and doesn't exist in production. `dev-up.ps1` warns about any missing entries.
+
+## Keycloak extension (in-app authenticator set-up)
+
+Production Keycloak must include the EDU 360 extension, or two-step-role users fall back to Keycloak's own set-up page.
+
+- **Build it:** `cd api && ./mvnw -f ../keycloak/edu360-otp-extension/pom.xml package`. This writes `docker/keycloak/providers/edu360-otp-extension.jar`.
+- **Install it:** copy the jar into `/opt/keycloak/providers/` of the production Keycloak image, then run `kc.sh build` before `kc.sh start`. Production mode doesn't auto-build the way `start-dev` does.
+- **Keep versions in step:** the extension is built against Keycloak 26.0.8 (`keycloak.version` in its `pom.xml`). Rebuild it whenever Keycloak is upgraded. It uses an SPI that Keycloak marks internal, so re-test after every upgrade.
+- **Admin access:** the API calls the extension with its Keycloak admin token. With a client-credentials admin client in production, that service account needs `manage-users` on each tenant realm's management client in master (or master `admin`).
+- [ ] Check: a two-step-role user with no authenticator sees the QR code inside EDU 360 and can sign in afterwards.

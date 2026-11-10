@@ -188,11 +188,6 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async getTenantBackupStatus(tenantId: string): Promise<BackupStatusItem[]> {
-    const res = await api.get<BackupStatusItem[]>(`/tenants/${tenantId}/backup-status`);
-    return res.data;
-  },
-
   // Billing & Invoices
   async listInvoices(tenantId?: string): Promise<InvoiceItem[]> {
     const query = tenantId ? `?tenantId=${tenantId}` : "";

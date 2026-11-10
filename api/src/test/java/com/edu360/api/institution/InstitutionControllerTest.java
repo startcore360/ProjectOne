@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,12 @@ import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
 import com.edu360.api.tenant.Tenant;
+import com.edu360.api.approval.ApprovalInboxService;
+import com.edu360.api.approval.ApprovalRequest;
+import com.edu360.api.approval.ApprovalRequestId;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.tenant.IsolationMode;
+import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.tenant.TenantRepository;
 
 /**
@@ -63,6 +71,7 @@ class InstitutionControllerTest {
     private PlanRepository planRepository;
     private PermissionEvaluatorService permissionEvaluatorService;
     private AuditLogService auditLogService;
+    private ApprovalInboxService approvalInboxService;
     private InstitutionService institutionService;
     private InstitutionController controller;
 
@@ -79,6 +88,7 @@ class InstitutionControllerTest {
         planRepository = mock(PlanRepository.class);
         permissionEvaluatorService = mock(PermissionEvaluatorService.class);
         auditLogService = mock(AuditLogService.class);
+        approvalInboxService = mock(ApprovalInboxService.class);
 
         institutionService = new InstitutionService(
                 institutionRepository,
@@ -86,10 +96,19 @@ class InstitutionControllerTest {
                 tenantRepository,
                 planRepository,
                 permissionEvaluatorService,
-                auditLogService
+                auditLogService,
+                mock(com.edu360.api.approval.ApprovalRequestRepository.class),
+                mock(com.edu360.api.approval.ApprovalStepRepository.class),
+                approvalInboxService
         );
 
         controller = new InstitutionController(institutionService);
+        TenantContext.set(TENANT_ID, IsolationMode.SHARED, null, "ALL", java.util.Set.of(), "UNIVERSITY_ADMIN", ScopeType.TENANT);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
     private Authentication authenticatedTenantUser(UUID tenantId, UUID userId) {
@@ -237,6 +256,22 @@ class InstitutionControllerTest {
                 .thenReturn(true);
         when(institutionRepository.save(any(Institution.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        UUID activationRequestId = UUID.randomUUID();
+        ApprovalRequest activationRequest = ApprovalRequest.builder()
+                .id(new ApprovalRequestId(TENANT_ID, activationRequestId))
+                .currentStepNo((short) 1)
+                .status("PENDING")
+                .processCode("INSTITUTION_ACTIVATION")
+                .build();
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATION"))
+                .thenReturn(Optional.of(activationRequest));
+        doAnswer(inv -> {
+            draftInstitution.setStatus("ACTIVE");
+            draftInstitution.setActivatedAt(Instant.now());
+            draftInstitution.setRowVersion(2);
+            return null;
+        }).when(approvalInboxService).decideApproval(eq(TENANT_ID), eq(activationRequestId), any(), any(UUID.class));
+
         ResponseEntity<InstitutionResponse> response = controller.activateInstitution(TENANT_ID, INSTITUTION_ID, auth);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -296,6 +331,19 @@ class InstitutionControllerTest {
         when(leaveApproverSettingRepository.existsByIdTenantIdAndSubjectRoleAndInstitutionIdAndStatus(
                 TENANT_ID, "PRINCIPAL", INSTITUTION_ID, "ACTIVE"))
                 .thenReturn(false);
+
+        UUID activationRequestId = UUID.randomUUID();
+        ApprovalRequest activationRequest = ApprovalRequest.builder()
+                .id(new ApprovalRequestId(TENANT_ID, activationRequestId))
+                .currentStepNo((short) 1)
+                .status("PENDING")
+                .processCode("INSTITUTION_ACTIVATION")
+                .build();
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATION"))
+                .thenReturn(Optional.of(activationRequest));
+        doThrow(new BusinessRuleViolationException("GO_LIVE_BLOCKED",
+                "Principal's-leave approver not set for institution " + INSTITUTION_ID + " [C7]"))
+                .when(approvalInboxService).decideApproval(eq(TENANT_ID), eq(activationRequestId), any(), any(UUID.class));
 
         assertThatThrownBy(() -> controller.activateInstitution(TENANT_ID, INSTITUTION_ID, auth))
                 .isInstanceOf(BusinessRuleViolationException.class)
@@ -421,6 +469,23 @@ class InstitutionControllerTest {
         when(institutionRepository.findByIdTenantIdAndIdInstitutionId(TENANT_ID, INSTITUTION_ID))
                 .thenReturn(Optional.of(activeInst));
 
+        UUID blockRequestId = UUID.randomUUID();
+        ApprovalRequest blockRequest = ApprovalRequest.builder()
+                .id(new ApprovalRequestId(TENANT_ID, blockRequestId))
+                .currentStepNo((short) 1)
+                .status("PENDING")
+                .processCode("INSTITUTION_BLOCK")
+                .build();
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_BLOCK"))
+                .thenReturn(Optional.of(blockRequest));
+        doAnswer(inv -> {
+            activeInst.setStatus("BLOCKED");
+            activeInst.setBlockedAt(Instant.now());
+            activeInst.setRowVersion(2);
+            auditLogService.record(AuditEventType.INSTITUTION_BLOCKED, null, USER_ID.toString(), null, "blocked");
+            return null;
+        }).when(approvalInboxService).decideApproval(eq(TENANT_ID), eq(blockRequestId), any(), any(UUID.class));
+
         ResponseEntity<InstitutionBlockResponse> response = controller.decideBlock(TENANT_ID, INSTITUTION_ID, decision, auth);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -434,7 +499,7 @@ class InstitutionControllerTest {
                 eq(new RbacPrincipal(TENANT_ID, USER_ID)),
                 eq("INSTITUTION_BLOCK_APPROVE"),
                 eq(RbacScope.tenant()),
-                eq(RbacTarget.of(INSTITUTION_ID))
+                eq(RbacTarget.NONE)
         );
 
         verify(auditLogService).record(
@@ -490,6 +555,17 @@ class InstitutionControllerTest {
 
         when(institutionRepository.findByIdTenantIdAndIdInstitutionId(TENANT_ID, INSTITUTION_ID))
                 .thenReturn(Optional.of(activeInst));
+
+        UUID blockRequestId = UUID.randomUUID();
+        ApprovalRequest blockRequest = ApprovalRequest.builder()
+                .id(new ApprovalRequestId(TENANT_ID, blockRequestId))
+                .currentStepNo((short) 1)
+                .status("PENDING")
+                .processCode("INSTITUTION_BLOCK")
+                .build();
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_BLOCK"))
+                .thenReturn(Optional.of(blockRequest));
+
 
         ResponseEntity<InstitutionBlockResponse> response = controller.decideBlock(TENANT_ID, INSTITUTION_ID, decision, auth);
 

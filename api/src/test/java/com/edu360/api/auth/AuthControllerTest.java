@@ -47,6 +47,7 @@ class AuthControllerTest {
 
     @Mock private AuthService authService;
     @Mock private AuditLogService auditLogService;
+    @Mock private IdentityEventTokenValidator identityEventTokenValidator;
     @Mock private HttpServletRequest httpServletRequest;
     @Mock private Jwt jwt;
 
@@ -56,7 +57,7 @@ class AuthControllerTest {
     private static final UUID USER_ACCOUNT_ID = UUID.randomUUID();
 
     private AuthController controller() {
-        return new AuthController(authService, auditLogService);
+        return new AuthController(authService, auditLogService, identityEventTokenValidator);
     }
 
     // ------------------------------------------------------------------------------- login/refresh
@@ -69,7 +70,7 @@ class AuthControllerTest {
         request.setPassword("pw");
         when(httpServletRequest.getRemoteAddr()).thenReturn("10.0.0.5");
         AuthTokenResponse expected = AuthTokenResponse.builder().accessToken("at").build();
-        when(authService.login(httpServletRequest, "teacher1", "pw", "10.0.0.5")).thenReturn(expected);
+        when(authService.login(httpServletRequest, "teacher1", "pw", null, "10.0.0.5")).thenReturn(expected);
 
         ResponseEntity<AuthTokenResponse> response = controller.login(request, httpServletRequest);
 
@@ -215,5 +216,41 @@ class AuthControllerTest {
         controller.logout(authentication, httpServletRequest);
 
         verify(auditLogService).record(AuditEventType.LOGOUT, null, "Test User", "10.0.0.5", null);
+    }
+
+    // ------------------------------------------------------------- identity-events (C4 / D3 / M-03)
+
+    @Test
+    void handleIdentityEvent_missingSecret_returns401() {
+        controller = controller();
+        when(identityEventTokenValidator.isValidServiceToken(null)).thenReturn(false);
+        ResponseEntity<Void> response = controller.handleIdentityEvent(null, null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void handleIdentityEvent_randomSecret_returns401() {
+        controller = controller();
+        ResponseEntity<Void> response = controller.handleIdentityEvent("random-attacker-token", null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void handleIdentityEvent_validSecret_returns200() {
+        controller = controller();
+        when(identityEventTokenValidator.isValidServiceToken("Bearer valid-service-token")).thenReturn(true);
+        ResponseEntity<Void> response = controller.handleIdentityEvent("Bearer valid-service-token", null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void handleIdentityEvent_validBearerSecret_clearsLockout() {
+        controller = controller();
+        when(identityEventTokenValidator.isValidServiceToken("Bearer valid-service-token")).thenReturn(true);
+        var event = new com.edu360.api.auth.dto.IdentityEventRequest("LOGIN", "realm-1", "user-123", "127.0.0.1", "Successful login", java.util.Map.of(), java.time.Instant.now());
+        ResponseEntity<Void> response = controller.handleIdentityEvent("Bearer valid-service-token", event);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(authService).clearLockout("user-123");
+        verify(auditLogService).record(eq(AuditEventType.LOGIN_SUCCESS), any(), eq("user-123"), eq("127.0.0.1"), eq("Successful login"));
     }
 }

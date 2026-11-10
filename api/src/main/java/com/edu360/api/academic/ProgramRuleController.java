@@ -30,8 +30,8 @@ public class ProgramRuleController {
             @PathVariable UUID tenantId,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        return ResponseEntity.ok(programRuleService.listRuleSets(tenantId));
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(programRuleService.listRuleSets(tenantId, principal));
     }
 
     @GetMapping({"/v1/tenants/{tenantId}/program-rule-sets/{id}", "/api/tenants/{tenantId}/program-rule-sets/{id}"})
@@ -41,8 +41,8 @@ public class ProgramRuleController {
             @PathVariable UUID id,
             Authentication authentication
     ) {
-        extractPrincipal(authentication, tenantId);
-        return ResponseEntity.ok(programRuleService.getRuleSet(tenantId, id));
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(programRuleService.getRuleSet(tenantId, principal, id));
     }
 
     @PostMapping({"/v1/tenants/{tenantId}/program-rule-sets", "/api/tenants/{tenantId}/program-rule-sets"})

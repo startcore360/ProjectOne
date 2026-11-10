@@ -4,10 +4,11 @@ export type ScopeType = "TENANT" | "INSTITUTION" | "DEPARTMENT";
 export type AssignmentStatus = "ACTIVE" | "ENDED";
 export type RoleOrigin = "STANDARD" | "CUSTOM";
 export type RoleLevel = "TENANT" | "COLLEGE" | "SCHOOL" | "DEPARTMENT" | "GOVERNANCE";
-export type RoleDefinitionStatus = "ACTIVE" | "RETIRED";
+export type RoleDefinitionStatus = "DRAFT" | "ACTIVE" | "INACTIVE" | "RETIRED" | "ARCHIVED";
 
 export type RoleDefinitionItem = {
-  roleDefinitionId: string;
+  // null for a standard role not yet copied into this tenant (it is copied when first assigned).
+  roleDefinitionId: string | null;
   tenantId: string;
   roleCode: string;
   roleName: string;

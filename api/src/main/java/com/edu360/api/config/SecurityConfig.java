@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -41,6 +43,8 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
     private final TenantIssuerAuthenticationManagerResolver tenantIssuerAuthenticationManagerResolver;
     private final MustChangePasswordFilter mustChangePasswordFilter;
+    private final TrialReadOnlyFilter trialReadOnlyFilter;
+    private final Environment environment;
 
     @Value("${app.cors.allowed-origin:http://localhost:5173}")
     private String allowedOrigin;
@@ -52,7 +56,27 @@ public class SecurityConfig {
     private String allowedOriginPatterns;
 
     @Bean
+    @Order(1)
+    public SecurityFilterChain identityEventsSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher(
+                        "/internal/identity-events/**",
+                        "/v1/internal/identity-events/**",
+                        "/api/auth/internal/identity-events/**",
+                        "/v1/auth/internal/identity-events/**",
+                        "/api/v1/auth/internal/identity-events/**"
+                )
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        boolean isDevOrTest = environment != null && (environment.matchesProfiles("dev") || environment.matchesProfiles("test"));
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // Bearer tokens travel in an explicit Authorization header the browser never
@@ -60,20 +84,28 @@ public class SecurityConfig {
                 // for CSRF to exploit here.
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // login/refresh/change-password/me/logout are all handled inside
-                        // AuthController itself - there is no self-service sign-up, and the
-                        // realm/tenant for each is resolved from the Host header or the already-
-                        // verified principal (see LoginTenantResolver), never a request field.
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated())
-                .headers(headers -> headers.frameOptions(fo -> fo.disable()))
+                .authorizeHttpRequests(auth -> {
+                    // BS-27: Both /api/auth/** and /v1/auth/** permitted consistently, plus identity-events webhooks (M-03)
+                    auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/internal/identity-events", "/v1/internal/identity-events").permitAll();
+                    // BS-25: Swagger and H2 console only open in dev or test profiles
+                    if (isDevOrTest) {
+                        auth.requestMatchers("/h2-console/**").permitAll();
+                        auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
+                .headers(headers -> {
+                    if (isDevOrTest) {
+                        headers.frameOptions(fo -> fo.sameOrigin());
+                    } else {
+                        headers.frameOptions(fo -> fo.deny());
+                    }
+                })
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(
                                 new JwtIssuerAuthenticationManagerResolver(tenantIssuerAuthenticationManagerResolver)))
-                .addFilterAfter(mustChangePasswordFilter, BearerTokenAuthenticationFilter.class);
+                .addFilterAfter(mustChangePasswordFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(trialReadOnlyFilter, MustChangePasswordFilter.class);
         return http.build();
     }
 
@@ -93,7 +125,9 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of(
                 "Authorization", "Content-Type", "Accept", "X-Requested-With",
-                "X-Correlation-ID", "x-correlation-id", "If-Match", "If-None-Match", "serviceAuth"
+                "X-Correlation-ID", "x-correlation-id", "If-Match", "If-None-Match", "serviceAuth",
+                // SES-01: random per-browser id sent on sign-in (see AuthService.BROWSER_ID_HEADER).
+                "X-Browser-Id"
         ));
         config.setExposedHeaders(List.of("X-Correlation-ID", "ETag", "Location"));
         var source = new UrlBasedCorsConfigurationSource();

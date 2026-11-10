@@ -46,10 +46,15 @@ public final class TenantContext {
     private final Set<UUID> institutionIds;
     private final String activeRoleCode;
     private final ScopeType activeScopeType;
+    /** A-02: user_role_assignment_id of the active role (the saved choice, or the only one). */
+    private final UUID activeAssignmentId;
+    /** A-02: true when the user holds several active assignments and has chosen none. */
+    private final boolean activeRoleRequired;
 
     private TenantContext(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef,
                           String institutionScope, Set<UUID> institutionIds,
-                          String activeRoleCode, ScopeType activeScopeType) {
+                          String activeRoleCode, ScopeType activeScopeType,
+                          UUID activeAssignmentId, boolean activeRoleRequired) {
         this.tenantId = tenantId;
         this.isolationMode = isolationMode;
         this.dbConnectionRef = dbConnectionRef;
@@ -57,6 +62,8 @@ public final class TenantContext {
         this.institutionIds = institutionIds == null ? Set.of() : Set.copyOf(institutionIds);
         this.activeRoleCode = activeRoleCode;
         this.activeScopeType = activeScopeType;
+        this.activeAssignmentId = activeAssignmentId;
+        this.activeRoleRequired = activeRoleRequired;
     }
 
     public static void set(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef) {
@@ -72,8 +79,17 @@ public final class TenantContext {
     public static void set(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef,
                            String institutionScope, Set<UUID> institutionIds,
                            String activeRoleCode, ScopeType activeScopeType) {
+        set(tenantId, isolationMode, dbConnectionRef, institutionScope, institutionIds,
+                activeRoleCode, activeScopeType, null, false);
+    }
+
+    public static void set(UUID tenantId, IsolationMode isolationMode, String dbConnectionRef,
+                           String institutionScope, Set<UUID> institutionIds,
+                           String activeRoleCode, ScopeType activeScopeType,
+                           UUID activeAssignmentId, boolean activeRoleRequired) {
         CURRENT.set(new TenantContext(tenantId, isolationMode, dbConnectionRef,
-                institutionScope, institutionIds, activeRoleCode, activeScopeType));
+                institutionScope, institutionIds, activeRoleCode, activeScopeType,
+                activeAssignmentId, activeRoleRequired));
     }
 
     /** MUST be called at the end of every request, success or failure (see
@@ -124,6 +140,19 @@ public final class TenantContext {
     public static ScopeType currentActiveScopeType() {
         TenantContext ctx = CURRENT.get();
         return ctx == null ? null : ctx.activeScopeType;
+    }
+
+    /** A-02: the active role assignment chosen for this request, or null when none is known. */
+    public static UUID currentActiveAssignmentId() {
+        TenantContext ctx = CURRENT.get();
+        return ctx == null ? null : ctx.activeAssignmentId;
+    }
+
+    /** A-02: true when the signed-in user holds several active roles and has not chosen one;
+     *  ActiveRoleRequiredFilter then answers 409 ACTIVE_ROLE_REQUIRED. */
+    public static boolean isActiveRoleRequired() {
+        TenantContext ctx = CURRENT.get();
+        return ctx != null && ctx.activeRoleRequired;
     }
 
     public static boolean isSet() {

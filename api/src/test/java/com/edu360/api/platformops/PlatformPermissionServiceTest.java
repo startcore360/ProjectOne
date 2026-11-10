@@ -17,7 +17,7 @@ import com.edu360.api.platform.PlatformRole;
 
 class PlatformPermissionServiceTest {
 
-    private final PlatformPermissionService service = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+    private final PlatformPermissionService service = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
     private PlatformPrincipal principal(PlatformRole role) {
         return new PlatformPrincipal(UUID.randomUUID(), role, "someone@edu360.test", false);
@@ -99,7 +99,7 @@ class PlatformPermissionServiceTest {
     }
 
     private PlatformPermissionService withLookup(PlatformAccessLookup lookup) {
-        return new PlatformPermissionService(lookup);
+        return com.edu360.api.platformops.PlatformTestSupport.permissions(lookup);
     }
 
     private static class StubLookup implements PlatformAccessLookup {

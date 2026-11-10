@@ -24,7 +24,6 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platformops.PlatformPermissionService;
-import com.edu360.api.platformops.support.dto.AssumeSupportSessionResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
 
 class PlatformSupportControllerTest {
@@ -44,8 +43,8 @@ class PlatformSupportControllerTest {
         ticketRepository = mock(SupportTicketRepository.class);
         grantRepository = mock(SupportAccessGrantRepository.class);
         auditLogService = mock(AuditLogService.class);
-        permissionService = new PlatformPermissionService(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
-        supportService = new PlatformSupportService(ticketRepository, grantRepository, auditLogService);
+        permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
+        supportService = new PlatformSupportService(ticketRepository, grantRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), auditLogService);
         controller = new PlatformSupportController(supportService, permissionService);
     }
 
@@ -92,10 +91,10 @@ class PlatformSupportControllerTest {
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(any(), any()))
                 .thenReturn(Optional.of(grant));
 
-        ResponseEntity<AssumeSupportSessionResponse> res = controller.assumeSupportSession(ticketId, authFor(PlatformRole.SUPPORT_MANAGER));
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody().accessMode()).isEqualTo("READ_ONLY");
-        assertThat(res.getBody().sessionToken()).startsWith("supp_token_");
+        // L-03 / R7: the made-up session token is gone. With a live grant the answer is an honest "not available yet" (501).
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.assumeSupportSession(ticketId, authFor(PlatformRole.SUPPORT_MANAGER)))
+                .isInstanceOfSatisfying(com.edu360.api.exception.FeatureNotAvailableException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("SUPPORT_SESSION_NOT_AVAILABLE"));
     }
 
     @Test

@@ -22,8 +22,11 @@ CREATE TABLE IF NOT EXISTS app.tenant_role_template (
   CONSTRAINT ck_tenant_role_template_name CHECK (char_length(template_name) BETWEEN 2 AND 100),
   CONSTRAINT ck_tenant_role_template_status CHECK (status IN ('ACTIVE', 'ARCHIVED')),
   CONSTRAINT ck_tenant_role_template_owner_level CHECK (owner_level IN ('TENANT', 'UNIVERSITY', 'COLLEGE', 'SCHOOL')),
-  CONSTRAINT fk_tenant_role_template_tenant FOREIGN KEY (tenant_id) REFERENCES app.tenant_local (tenant_id) ON DELETE RESTRICT
+  CONSTRAINT fk_tenant_role_template_tenant FOREIGN KEY (tenant_id) REFERENCES app.tenant_local (tenant_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_tenant_role_template_base_role FOREIGN KEY (base_role_code) REFERENCES ref.standard_role (role_code)
 );
+
+CREATE INDEX IF NOT EXISTS ix_tenant_role_template_base_role ON app.tenant_role_template (base_role_code);
 
 COMMENT ON TABLE app.tenant_role_template IS 'Starting suggestions for tenant custom roles [TPA-01..TPA-04].';
 
@@ -56,6 +59,7 @@ CREATE TABLE IF NOT EXISTS app.tenant_role_template_action (
 );
 
 CREATE INDEX IF NOT EXISTS ix_tenant_role_template_action_code ON app.tenant_role_template_action (tenant_id, action_code);
+CREATE INDEX IF NOT EXISTS ix_tenant_role_template_action_action_code ON app.tenant_role_template_action (action_code);
 
 ALTER TABLE app.tenant_role_template_action ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app.tenant_role_template_action FORCE ROW LEVEL SECURITY;
@@ -74,6 +78,22 @@ END $$;
 -- 3. Enhance app.role_definition for custom role lifecycle and hierarchy
 ALTER TABLE app.role_definition ADD COLUMN IF NOT EXISTS owner_level text DEFAULT 'TENANT';
 ALTER TABLE app.role_definition ADD COLUMN IF NOT EXISTS owner_institution_id uuid;
+
+ALTER TABLE app.role_definition DROP CONSTRAINT IF EXISTS ck_role_definition_owner_level;
+ALTER TABLE app.role_definition ADD CONSTRAINT ck_role_definition_owner_level CHECK (owner_level IS NULL OR owner_level IN ('TENANT', 'UNIVERSITY', 'COLLEGE', 'SCHOOL'));
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_role_definition_owner_institution'
+  ) THEN
+    ALTER TABLE app.role_definition
+      ADD CONSTRAINT fk_role_definition_owner_institution
+      FOREIGN KEY (tenant_id, owner_institution_id) REFERENCES app.institution (tenant_id, institution_id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS ix_role_definition_owner_institution ON app.role_definition (tenant_id, owner_institution_id);
 
 ALTER TABLE app.role_definition DROP CONSTRAINT IF EXISTS ck_role_definition_status;
 ALTER TABLE app.role_definition ADD CONSTRAINT ck_role_definition_status CHECK (status IN ('DRAFT', 'ACTIVE', 'INACTIVE', 'RETIRED', 'ARCHIVED'));
@@ -96,12 +116,15 @@ CREATE TABLE IF NOT EXISTS app.tenant_step_in (
   CONSTRAINT pk_tenant_step_in PRIMARY KEY (tenant_id, step_in_id),
   CONSTRAINT fk_tenant_step_in_actor FOREIGN KEY (tenant_id, actor_user_id) REFERENCES app.user_account (tenant_id, user_account_id) ON DELETE RESTRICT,
   CONSTRAINT fk_tenant_step_in_action FOREIGN KEY (action_code) REFERENCES ref.action_catalog (action_code),
+  CONSTRAINT fk_tenant_step_in_target_role FOREIGN KEY (tenant_id, target_role_definition_id) REFERENCES app.role_definition (tenant_id, role_definition_id),
   CONSTRAINT ck_tenant_step_in_reason CHECK (char_length(btrim(reason)) BETWEEN 5 AND 500),
-  CONSTRAINT ck_tenant_step_in_window CHECK (expires_at > started_at AND expires_at <= started_at + interval '60 minutes')
+  CONSTRAINT ck_tenant_step_in_window CHECK (expires_at > started_at AND expires_at <= started_at + interval '30 minutes')
 );
 
 COMMENT ON TABLE app.tenant_step_in IS 'Recorded time-limited step-in on a handed-over action [TPA-02, TPA-04]. Append-only.';
 CREATE INDEX IF NOT EXISTS ix_tenant_step_in_actor_action ON app.tenant_step_in (tenant_id, actor_user_id, action_code, expires_at);
+CREATE INDEX IF NOT EXISTS ix_tenant_step_in_action_code ON app.tenant_step_in (action_code);
+CREATE INDEX IF NOT EXISTS ix_tenant_step_in_target_role ON app.tenant_step_in (tenant_id, target_role_definition_id);
 
 ALTER TABLE app.tenant_step_in ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app.tenant_step_in FORCE ROW LEVEL SECURITY;

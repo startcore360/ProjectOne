@@ -1,5 +1,6 @@
 import { store } from "../store";
 import { clearUser, setUser, type AuthUser } from "../store/slices/authSlice";
+import { setPlatformPermissions } from "../store/slices/platformPermissionsSlice";
 import { authService, type AuthUserResponse } from "./modules/authService";
 import { setLogoutReason } from "./logoutNotice";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./tokenStorage";
@@ -25,13 +26,22 @@ const toAuthUser = (data: AuthUserResponse): AuthUser => ({
   mustChangePassword: data.mustChangePassword,
 });
 
-export const login = async (email: string, password: string) => {
-  const { data } = await authService.login(email, password);
+export const login = async (email: string, password: string, totp?: string) => {
+  const { data } = await authService.login(email, password, totp);
   setTokens(data.accessToken, data.refreshToken);
   const user = toAuthUser(data.user);
   store.dispatch(setUser(user));
   return user;
 };
+// I-10: shown on the sign-in page after the idle timer ends a session (REG-I10-2).
+export const IDLE_LOGOUT_MESSAGE = "You were signed out after inactivity. Please sign in again.";
+
+// Used by every idle timer (workspace and change-password screen) so the sign-in page can say why.
+export const idleLogout = async () => {
+  setLogoutReason(IDLE_LOGOUT_MESSAGE);
+  await logout();
+};
+
 export const logout = async () => {
   try {
     await authService.logout();
@@ -41,6 +51,7 @@ export const logout = async () => {
     // from the user's point of view.
     clearTokens();
     store.dispatch(clearUser());
+    store.dispatch(setPlatformPermissions(null));
     window.location.replace("/login");
   }
 };
@@ -49,6 +60,7 @@ export const logout = async () => {
 export const hydrateAuth = async () => {
   if (!getAccessToken()) {
     store.dispatch(clearUser());
+    store.dispatch(setPlatformPermissions(null));
     return null;
   }
   try {
@@ -59,6 +71,7 @@ export const hydrateAuth = async () => {
   } catch {
     clearTokens();
     store.dispatch(clearUser());
+    store.dispatch(setPlatformPermissions(null));
     return null;
   }
 };
@@ -80,6 +93,7 @@ export const changePassword = async (currentPassword: string, newPassword: strin
     setLogoutReason("Your password was changed. Please sign in with your new password.");
     clearTokens();
     store.dispatch(clearUser());
+    store.dispatch(setPlatformPermissions(null));
     window.location.replace("/login");
     return null;
   }

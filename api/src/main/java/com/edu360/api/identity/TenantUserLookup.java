@@ -15,6 +15,7 @@ import com.edu360.api.rbac.RoleDefinitionRepository;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.UserRoleAssignmentRepository;
+import com.edu360.api.selfservice.UserActiveRoleRepository;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantContext;
 
@@ -37,16 +38,28 @@ public class TenantUserLookup {
     private final UserAccountRepository userAccountRepository;
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final RoleDefinitionRepository roleDefinitionRepository;
+    private final UserActiveRoleRepository userActiveRoleRepository;
 
     public TenantUserLookup(
             UserIdentityLinkRepository userIdentityLinkRepository,
             UserAccountRepository userAccountRepository,
             @Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
             @Autowired(required = false) RoleDefinitionRepository roleDefinitionRepository) {
+        this(userIdentityLinkRepository, userAccountRepository, userRoleAssignmentRepository, roleDefinitionRepository, null);
+    }
+
+    @Autowired
+    public TenantUserLookup(
+            UserIdentityLinkRepository userIdentityLinkRepository,
+            UserAccountRepository userAccountRepository,
+            @Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
+            @Autowired(required = false) RoleDefinitionRepository roleDefinitionRepository,
+            @Autowired(required = false) UserActiveRoleRepository userActiveRoleRepository) {
         this.userIdentityLinkRepository = userIdentityLinkRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleAssignmentRepository = userRoleAssignmentRepository;
         this.roleDefinitionRepository = roleDefinitionRepository;
+        this.userActiveRoleRepository = userActiveRoleRepository;
     }
 
     public record ResolvedUser(UserAccount account, UserIdentityLink link) {
@@ -70,42 +83,72 @@ public class TenantUserLookup {
         Set<UUID> institutionIds = Set.of();
         String activeRoleCode = null;
         ScopeType activeScopeType = null;
+        UUID activeAssignmentId = null;
+        boolean activeRoleRequired = false;
 
         if (userRoleAssignmentRepository != null) {
             List<UserRoleAssignment> assignments = userRoleAssignmentRepository
                     .findByIdTenantIdAndUserAccountIdAndStatus(
-                            tenant.getTenantId(), account.getId().getUserAccountId(), AssignmentStatus.ACTIVE);
+                            tenant.getTenantId(), account.getId().getUserAccountId(), AssignmentStatus.ACTIVE)
+                    .stream()
+                    .filter(TenantUserLookup::isCurrentlyEffective)
+                    .toList();
 
             if (!assignments.isEmpty()) {
-                // Prioritize TENANT scope if user has multiple active assignments
-                UserRoleAssignment primary = assignments.stream()
-                        .filter(a -> a.getScopeType() == ScopeType.TENANT)
-                        .findFirst()
-                        .orElse(assignments.get(0));
-
-                activeScopeType = primary.getScopeType();
-                if (activeScopeType == ScopeType.TENANT) {
-                    institutionScope = "ALL";
-                } else {
-                    institutionScope = "LIST";
-                    if (primary.getInstitutionId() != null) {
-                        institutionIds = Set.of(primary.getInstitutionId());
-                    }
+                UserRoleAssignment chosen = null;
+                if (userActiveRoleRepository != null) {
+                    chosen = userActiveRoleRepository
+                            .findByIdTenantIdAndIdUserAccountId(tenant.getTenantId(), account.getId().getUserAccountId())
+                            .flatMap(active -> assignments.stream()
+                                    .filter(a -> a.getId().getUserRoleAssignmentId().equals(active.getUserRoleAssignmentId()))
+                                    .findFirst())
+                            .orElse(null);
                 }
 
-                if (roleDefinitionRepository != null) {
-                    activeRoleCode = roleDefinitionRepository
-                            .findById(new RoleDefinitionId(tenant.getTenantId(), primary.getRoleDefinitionId()))
-                            .map(RoleDefinition::getRoleCode)
-                            .orElse(null);
+                // If no chosen active role in DB, default only if there is exactly one active assignment
+                if (chosen == null && assignments.size() == 1) {
+                    chosen = assignments.get(0);
+                }
+
+                // A-02: several active roles and no saved choice: no role is active, and every
+                // request except role switching and self-service reads gets 409 ACTIVE_ROLE_REQUIRED.
+                activeRoleRequired = chosen == null;
+
+                if (chosen != null) {
+                    activeAssignmentId = chosen.getId().getUserRoleAssignmentId();
+                    activeScopeType = chosen.getScopeType();
+                    if (activeScopeType == ScopeType.TENANT) {
+                        institutionScope = "ALL";
+                    } else {
+                        institutionScope = "LIST";
+                        if (chosen.getInstitutionId() != null) {
+                            institutionIds = Set.of(chosen.getInstitutionId());
+                        }
+                    }
+
+                    if (roleDefinitionRepository != null) {
+                        activeRoleCode = roleDefinitionRepository
+                                .findById(new RoleDefinitionId(tenant.getTenantId(), chosen.getRoleDefinitionId()))
+                                .map(RoleDefinition::getRoleCode)
+                                .orElse(null);
+                    }
                 }
             }
         }
 
         // Set the full authenticated tenant context with real institution scope and role
         TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef(),
-                institutionScope, institutionIds, activeRoleCode, activeScopeType);
+                institutionScope, institutionIds, activeRoleCode, activeScopeType,
+                activeAssignmentId, activeRoleRequired);
 
         return new ResolvedUser(account, link);
+    }
+
+    private static boolean isCurrentlyEffective(UserRoleAssignment assignment) {
+        java.time.Instant now = java.time.Instant.now();
+        if (assignment.getEffectiveFrom() != null && assignment.getEffectiveFrom().isAfter(now)) {
+            return false;
+        }
+        return assignment.getEffectiveTo() == null || assignment.getEffectiveTo().isAfter(now);
     }
 }

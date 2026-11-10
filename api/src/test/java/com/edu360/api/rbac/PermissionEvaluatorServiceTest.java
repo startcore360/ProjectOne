@@ -121,6 +121,18 @@ class PermissionEvaluatorServiceTest {
     }
 
     @Test
+    void can_deniesWhenNoUserIsSupplied() {
+        init();
+        when(actionCatalogRepository.findById(USER_CREATE)).thenReturn(Optional.of(action(USER_CREATE, false)));
+
+        PermissionDecision decision = evaluator.can(
+                new RbacPrincipal(TENANT_ID, null), USER_CREATE, RbacScope.tenant(), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.reasonCode()).isEqualTo("NO_PRINCIPAL");
+    }
+
+    @Test
     void can_deniesUnknownActionCode() {
         init();
         when(actionCatalogRepository.findById("NOT_A_REAL_ACTION")).thenReturn(Optional.empty());

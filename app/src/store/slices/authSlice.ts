@@ -23,6 +23,10 @@ export type AuthUser = {
   roleCode: string | null;
   roleName: string | null;
   photoUrl: string | null;
+  // Bumped on every successful photo upload in this session. photoUrl is the same fixed path
+  // ("/me/profile/photo") before and after a replacement, so it alone cannot tell the sidebar
+  // avatar to re-fetch; useProfilePhoto keys on (photoUrl, photoRevision). Absent = 0.
+  photoRevision?: number;
   mustChangePassword: boolean;
 };
 
@@ -67,8 +71,20 @@ const authSlice = createSlice({
         state.user.roleName = action.payload.roleName;
       }
     },
+    // The profile page saved the caller's own profile: keep the signed-in identity shown in the
+    // app shell (sidebar / mobile menu name and avatar) in step without a re-login.
+    profileUpdated: (
+      state,
+      action: PayloadAction<{ displayName?: string; photoUrl?: string | null; photoChanged?: boolean }>
+    ) => {
+      if (!state.user) return;
+      const { displayName, photoUrl, photoChanged } = action.payload;
+      if (displayName !== undefined) state.user.displayName = displayName;
+      if (photoUrl !== undefined) state.user.photoUrl = photoUrl;
+      if (photoChanged) state.user.photoRevision = (state.user.photoRevision ?? 0) + 1;
+    },
   },
 });
 
-export const { setUser, setLoading, clearUser, switchActiveRole } = authSlice.actions;
+export const { setUser, setLoading, clearUser, switchActiveRole, profileUpdated } = authSlice.actions;
 export default authSlice.reducer;

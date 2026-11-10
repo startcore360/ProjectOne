@@ -118,7 +118,7 @@ public class StructureService {
 
     @Transactional
     public DepartmentResponse createDepartment(RbacPrincipal principal, UUID institutionId, CreateDepartmentRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         Institution institution = institutionRepository.findById(new InstitutionId(principal.tenantId(), institutionId))
                 .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found"));
@@ -162,7 +162,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<DepartmentResponse> listDepartments(RbacPrincipal principal, UUID institutionId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         return departmentRepository.findByTenantIdAndInstitutionId(principal.tenantId(), institutionId)
                 .stream()
                 .map(this::mapDepartment)
@@ -171,7 +171,7 @@ public class StructureService {
 
     @Transactional
     public ProgramResponse createProgram(RbacPrincipal principal, UUID institutionId, CreateProgramRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         institutionRepository.findById(new InstitutionId(principal.tenantId(), institutionId))
                 .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found"));
@@ -220,7 +220,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<ProgramResponse> listPrograms(RbacPrincipal principal, UUID institutionId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         return programRepository.findByTenantIdAndInstitutionId(principal.tenantId(), institutionId)
                 .stream()
                 .map(this::mapProgram)
@@ -229,7 +229,7 @@ public class StructureService {
 
     @Transactional
     public ProgramYearResponse createProgramYear(RbacPrincipal principal, UUID institutionId, UUID programId, CreateProgramYearRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         Program program = programRepository.findByTenantIdAndProgramId(principal.tenantId(), programId)
                 .orElseThrow(() -> new ResourceNotFoundException("Program " + programId + " was not found"));
@@ -274,7 +274,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<ProgramYearResponse> listProgramYears(RbacPrincipal principal, UUID institutionId, UUID programId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (programYearRepository == null) return List.of();
         return programYearRepository.findByTenantIdAndProgramIdOrderByYearNumberAsc(principal.tenantId(), programId)
                 .stream()
@@ -284,7 +284,7 @@ public class StructureService {
 
     @Transactional
     public SemesterResponse createSemester(RbacPrincipal principal, UUID institutionId, UUID programYearId, CreateSemesterRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         ProgramYear py = programYearRepository != null
                 ? programYearRepository.findByTenantIdAndProgramYearId(principal.tenantId(), programYearId)
@@ -323,7 +323,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<SemesterResponse> listSemesters(RbacPrincipal principal, UUID institutionId, UUID programYearId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (semesterRepository == null) return List.of();
         return semesterRepository.findByTenantIdAndProgramYearIdOrderBySemesterNumberAsc(principal.tenantId(), programYearId)
                 .stream()
@@ -333,7 +333,7 @@ public class StructureService {
 
     @Transactional
     public SchoolClassResponse createSchoolClass(RbacPrincipal principal, UUID institutionId, CreateSchoolClassRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         Institution institution = institutionRepository.findById(new InstitutionId(principal.tenantId(), institutionId))
                 .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found"));
@@ -377,7 +377,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<SchoolClassResponse> listSchoolClasses(RbacPrincipal principal, UUID institutionId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (schoolClassRepository == null) return List.of();
         return schoolClassRepository.findByTenantIdAndInstitutionIdOrderByDisplayOrderAsc(principal.tenantId(), institutionId)
                 .stream()
@@ -387,7 +387,7 @@ public class StructureService {
 
     @Transactional
     public SectionResponse createSection(RbacPrincipal principal, UUID institutionId, CreateSectionRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         boolean hasSem = request.semesterId() != null;
         boolean hasClass = request.classId() != null;
@@ -435,7 +435,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<SectionResponse> listSections(RbacPrincipal principal, UUID institutionId, UUID academicSessionId, UUID semesterId, UUID classId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (sectionRepository == null) return List.of();
 
         List<Section> list;
@@ -456,7 +456,7 @@ public class StructureService {
 
     @Transactional
     public SubjectResponse createSubject(RbacPrincipal principal, UUID institutionId, CreateSubjectRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         String code = request.subjectCode().trim().toUpperCase();
         if (subjectRepository != null && subjectRepository.existsByTenantIdAndInstitutionIdAndSubjectCode(principal.tenantId(), institutionId, code)) {
@@ -493,7 +493,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<SubjectResponse> listSubjects(RbacPrincipal principal, UUID institutionId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (subjectRepository == null) return List.of();
         return subjectRepository.findByTenantIdAndInstitutionId(principal.tenantId(), institutionId)
                 .stream()
@@ -503,7 +503,7 @@ public class StructureService {
 
     @Transactional
     public CourseOfferingResponse createCourseOffering(RbacPrincipal principal, UUID institutionId, CreateCourseOfferingRequest request) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
 
         boolean hasSem = request.semesterId() != null;
         boolean hasClass = request.classId() != null;
@@ -549,7 +549,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<CourseOfferingResponse> listCourseOfferings(RbacPrincipal principal, UUID institutionId, UUID academicSessionId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (courseOfferingRepository == null) return List.of();
 
         List<CourseOffering> list = academicSessionId != null
@@ -563,7 +563,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<AcademicSessionResponse> listAcademicSessions(RbacPrincipal principal, UUID institutionId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (academicSessionRepository == null) return List.of();
 
         List<AcademicSession> sessions = academicSessionRepository.findByTenantIdAndInstitutionIdOrderByAcademicYearDesc(principal.tenantId(), institutionId);
@@ -583,7 +583,7 @@ public class StructureService {
 
     @Transactional(readOnly = true)
     public List<ProgramRuleSetResponse> listProgramRuleSets(RbacPrincipal principal, UUID institutionId) {
-        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
         if (programRuleSetRepository == null) return List.of();
 
         return programRuleSetRepository.findByIdTenantIdAndInstitutionId(principal.tenantId(), institutionId)
@@ -612,5 +612,17 @@ public class StructureService {
                 p.getDurationYears(),
                 p.getSemestersPerYear(),
                 p.getStatus());
+    }
+
+    /**
+     * A-05: STRUCTURE_MANAGE is checked at the scope D3 gives the caller's active role - the
+     * Registrar (and other university-level holders) at the university, a College/School Admin or
+     * Principal at the target institution. Falls back to the institution scope only if the
+     * evaluator gives none.
+     */
+    private RbacScope structureScope(RbacPrincipal principal, UUID institutionId) {
+        return java.util.Objects.requireNonNullElse(
+                permissionEvaluatorService.targetScope(principal, institutionId, null),
+                RbacScope.institution(institutionId));
     }
 }

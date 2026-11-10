@@ -43,10 +43,10 @@ export default function SelfServicePage() {
         selfServiceApi.getLeaveRequests(tenantId).catch(() => []),
         selfServiceApi.getNotices(tenantId).catch(() => []),
       ]);
-      setNotifications(notifs);
-      setBalances(bals);
-      setRequests(reqs);
-      setNotices(nots);
+      setNotifications(Array.isArray(notifs) ? notifs : []);
+      setBalances(Array.isArray(bals) ? bals : []);
+      setRequests(Array.isArray(reqs) ? reqs : []);
+      setNotices(Array.isArray(nots) ? nots : []);
     } catch {
       setError("Failed to load self-service records. Please retry.");
     } finally {
@@ -95,7 +95,7 @@ export default function SelfServicePage() {
 
           {activeTab === "notices" && (
             <div className="space-y-4">
-              {notices.length === 0 ? (
+              {!Array.isArray(notices) || notices.length === 0 ? (
                 <EmptyState
                   title="No published notices found."
                   description="Check back later for university-wide announcements."
@@ -128,7 +128,7 @@ export default function SelfServicePage() {
               <div>
                 <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">Leave Balances</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {balances.length === 0 ? (
+                  {!Array.isArray(balances) || balances.length === 0 ? (
                     <div className="col-span-3">
                       <EmptyState
                         title="No leave balance records found."
@@ -176,7 +176,7 @@ export default function SelfServicePage() {
 
           {activeTab === "notifications" && (
             <div className="space-y-3">
-              {notifications.length === 0 ? (
+              {!Array.isArray(notifications) || notifications.length === 0 ? (
                 <EmptyState
                   title="No notifications."
                   description="You are all caught up."

@@ -34,6 +34,14 @@ public class KeycloakProperties {
     private String masterAdminUsername;
     private String masterAdminPassword;
 
+    /** Confidential client credentials for admin access (BS-23, preferred in production). */
+    private String adminClientId;
+    private String adminClientSecret;
+
+    /** Confidential client credentials for identity events webhook (M-03 / PD-2). */
+    private String identityEventsClientId = "edu360-identity-events";
+    private String identityEventsClientSecret;
+
     /** The public client end users authenticate as (Direct Grant/ROPC). Same client ID by
      *  convention in every realm (see the three realm-export-*.json files) - no secret, since
      *  it is a public client. */
@@ -81,6 +89,22 @@ public class KeycloakProperties {
         this.masterAdminPassword = masterAdminPassword;
     }
 
+    public String getAdminClientId() {
+        return adminClientId;
+    }
+
+    public void setAdminClientId(String adminClientId) {
+        this.adminClientId = adminClientId;
+    }
+
+    public String getAdminClientSecret() {
+        return adminClientSecret;
+    }
+
+    public void setAdminClientSecret(String adminClientSecret) {
+        this.adminClientSecret = adminClientSecret;
+    }
+
     public String getFrontendClientId() {
         return frontendClientId;
     }
@@ -103,5 +127,52 @@ public class KeycloakProperties {
 
     public void setPlatformHostLabel(String platformHostLabel) {
         this.platformHostLabel = platformHostLabel;
+    }
+
+    /**
+     * I-01: Keycloak's address as the user's BROWSER reaches it (the authenticator set-up page
+     * is a Keycloak page). Differs from baseUrl wherever the API reaches Keycloak on an internal
+     * address. No fallback: when unset, the enrolment hand-off says it is not available.
+     */
+    private String publicBaseUrl;
+
+    /**
+     * I-06: name of the common-password file Keycloak reads from its data/password-blacklists
+     * folder (docker/keycloak/docker-compose.yml mounts api/src/main/resources/security/
+     * common-passwords.txt there). Empty = Keycloak's own denylist step is not configured; the
+     * API still refuses those passwords itself (PasswordPolicyService).
+     */
+    private String passwordDenylistName;
+
+    public String getPublicBaseUrl() {
+        return publicBaseUrl;
+    }
+
+    public void setPublicBaseUrl(String publicBaseUrl) {
+        this.publicBaseUrl = publicBaseUrl;
+    }
+
+    public String getPasswordDenylistName() {
+        return passwordDenylistName;
+    }
+
+    public void setPasswordDenylistName(String passwordDenylistName) {
+        this.passwordDenylistName = passwordDenylistName;
+    }
+
+    public String getIdentityEventsClientId() {
+        return identityEventsClientId;
+    }
+
+    public void setIdentityEventsClientId(String identityEventsClientId) {
+        this.identityEventsClientId = identityEventsClientId;
+    }
+
+    public String getIdentityEventsClientSecret() {
+        return identityEventsClientSecret;
+    }
+
+    public void setIdentityEventsClientSecret(String identityEventsClientSecret) {
+        this.identityEventsClientSecret = identityEventsClientSecret;
     }
 }

@@ -46,4 +46,15 @@ public interface UserRoleAssignmentRepository extends Repository<UserRoleAssignm
      */
     List<UserRoleAssignment> findByIdTenantIdAndInstitutionIdAndStatus(
             UUID tenantId, UUID institutionId, AssignmentStatus status);
+
+    /**
+     * A-02: every assignment in this status that the user holds in this tenant, used by
+     * PermissionEvaluatorService to find the caller's one active role.
+     */
+    List<UserRoleAssignment> findAllByIdTenantIdAndUserAccountIdAndStatusOrderByEffectiveFromAsc(
+            UUID tenantId, UUID userAccountId, AssignmentStatus status);
+
+    /** P-09: every assignment of one role definition (is anyone holding the role at all?). */
+    List<UserRoleAssignment> findByIdTenantIdAndRoleDefinitionIdAndStatus(
+            UUID tenantId, UUID roleDefinitionId, AssignmentStatus status);
 }

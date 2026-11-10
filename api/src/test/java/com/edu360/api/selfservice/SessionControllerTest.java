@@ -59,7 +59,7 @@ class SessionControllerTest {
                 "Test User", false);
         Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
         List<SessionResponse> expected = List.of(SessionResponse.builder().sessionId("s-1").build());
-        when(sessionService.listCurrentSessions(jwt)).thenReturn(expected);
+        when(sessionService.listSessions(principal, jwt)).thenReturn(expected);
 
         ResponseEntity<List<SessionResponse>> response = controller.listSessions(authentication);
 
@@ -104,5 +104,18 @@ class SessionControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(sessionService).revokeCurrentSession(principal, jwt);
         verify(sessionService, never()).revokeCurrentSession(any(TenantPrincipal.class), any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("ACT-SESSION_REVOKE-ALLOW (controller): revoking one of your own other sessions answers 204")
+    void revokeSession_ownOtherSession_answers204() {
+        controller = controller();
+        TenantPrincipal principal = new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF, "Test User", false);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, jwt, List.of());
+
+        ResponseEntity<Void> response = controller.revokeSession("sid-phone", authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(sessionService).revokeSession(principal, "sid-phone", jwt);
     }
 }

@@ -10,7 +10,10 @@ import { profileService } from "../api/profileService";
 // photo, go fetch it" (see ProfileResponse.photoUrl's own comment) - it is always exactly
 // "/me/profile/photo" today, but the hook re-fetches whenever its identity changes rather than
 // assuming that, so it stays correct if that ever becomes per-photo.
-export function useProfilePhoto(photoUrl: string | null | undefined): string | null {
+//
+// revision: bumped by the profile page after each upload (AuthUser.photoRevision). The path
+// stays identical when a photo is replaced, so without it the avatar kept the old picture.
+export function useProfilePhoto(photoUrl: string | null | undefined, revision = 0): string | null {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const liveUrlRef = useRef<string | null>(null);
 
@@ -43,7 +46,7 @@ export function useProfilePhoto(photoUrl: string | null | undefined): string | n
         setObjectUrl(null);
       }
     };
-  }, [photoUrl]);
+  }, [photoUrl, revision]);
 
   return objectUrl;
 }

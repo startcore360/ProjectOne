@@ -17,6 +17,15 @@ const api = axios.create({
 const apiOrigin = new URL(configuredBaseUrl, window.location.origin).origin;
 
 api.interceptors.request.use((config) => {
+  // Normalize URL path to prevent duplicate /api/api or /api/v1 prefixes when combined with baseURL
+  if (config.url) {
+    if (config.url.startsWith("/api/")) {
+      config.url = config.url.substring(4);
+    } else if (config.url.startsWith("/v1/")) {
+      config.url = config.url.substring(3);
+    }
+  }
+
   // Never attach an EDU 360 bearer token to an absolute URL on another origin.
   // Axios accepts absolute request URLs even when a baseURL is configured.
   const requestUrl = new URL(config.url ?? "", config.baseURL ?? configuredBaseUrl);

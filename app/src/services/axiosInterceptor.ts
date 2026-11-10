@@ -2,7 +2,9 @@ import api from "./axios";
 import { store } from "../store";
 import { clearUser } from "../store/slices/authSlice";
 import { authService } from "./modules/authService";
+import { getLogoutReason, setLogoutReason } from "./logoutNotice";
 import { clearTokens, getRefreshToken, setTokens } from "./tokenStorage";
+import { announceActiveRoleRequired, isActiveRoleRequired } from "./activeRoleRequired";
 
 type RetriableRequest = {
   _retried?: boolean;
@@ -13,6 +15,7 @@ export const setupAxiosInterceptors = () => {
   let refreshInFlight: Promise<string | null> | null = null;
 
   const signOutLocally = () => {
+    if (!getLogoutReason()) setLogoutReason("Your session has ended. Please sign in again.");
     clearTokens();
     store.dispatch(clearUser());
     if (window.location.pathname !== "/login") window.location.replace("/login");
@@ -69,6 +72,11 @@ export const setupAxiosInterceptors = () => {
         window.location.pathname !== "/change-password"
       ) {
         window.location.replace("/change-password");
+      }
+
+      // A-02: several roles and none chosen - send the user to the role switcher.
+      if (isActiveRoleRequired(error?.response?.status, error?.response?.data)) {
+        announceActiveRoleRequired();
       }
       return Promise.reject(error);
     },

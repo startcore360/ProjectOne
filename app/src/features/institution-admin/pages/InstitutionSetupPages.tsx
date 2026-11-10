@@ -23,6 +23,7 @@ import {
   type ProgramItem,
   type AcademicSessionItem,
   type MasterCalendarEventItem,
+  type InstitutionItem,
 } from "../api/institutionService";
 import { termLockService, type TermLockItem } from "../api/termLockService";
 import {
@@ -980,8 +981,10 @@ export function WeeklyOffRulesPage() {
 // --- 7. Academic structure management (STRUCTURE_MANAGE) -------------------------------------
 
 export function AcademicStructurePage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const user = useAppSelector((state) => state.auth.user);
+  const tenantId = user?.tenantId;
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [programs, setPrograms] = useState<ProgramItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -996,10 +999,22 @@ export function AcademicStructurePage() {
   const [progSubmitting, setProgSubmitting] = useState(false);
   const [progError, setProgError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!tenantId || import.meta.env.MODE === "test") return;
+    institutionService
+      .listInstitutions(tenantId)
+      .then((res) => {
+        if (res?.items?.length) {
+          setInstitutions(res.items);
+        }
+      })
+      .catch(() => {});
+  }, [tenantId]);
+
   if (!tenantId) return <NoTenantNotice />;
 
-  const loadStructure = async () => {
-    if (!isValidUuid(institutionId)) {
+  const loadStructureFor = async (id: string) => {
+    if (!isValidUuid(id)) {
       setError("Please enter a valid institution UUID.");
       return;
     }
@@ -1007,8 +1022,8 @@ export function AcademicStructurePage() {
     setError(null);
     try {
       const [deptRes, progRes] = await Promise.all([
-        institutionService.listDepartments(tenantId, institutionId),
-        institutionService.listPrograms(tenantId, institutionId),
+        institutionService.listDepartments(tenantId, id),
+        institutionService.listPrograms(tenantId, id),
       ]);
       setDepartments(deptRes);
       setPrograms(progRes);
@@ -1019,6 +1034,13 @@ export function AcademicStructurePage() {
     }
   };
 
+  const loadStructure = async () => {
+    await loadStructureFor(institutionId);
+  };
+
+  const selectedInst = institutions.find((i) => i.institutionId === institutionId);
+  const isSchool = selectedInst?.institutionType === "SCHOOL" || user?.roleCode === "SCHOOL_ADMIN";
+
   return (
     <div className="platform-page">
       <PageHeader
@@ -1026,7 +1048,40 @@ export function AcademicStructurePage() {
         description="Create and manage academic departments and degree programs (STRUCTURE_MANAGE)."
       />
 
-      <Panel title="Select institution" description="Enter the institution ID to view and manage its academic hierarchy.">
+      <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
+        {institutions.length > 0 && (
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <label htmlFor="quick-inst-select" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
+              Choose from registered institutions
+            </label>
+            <select
+              id="quick-inst-select"
+              value={institutionId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInstitutionId(val);
+                if (val && isValidUuid(val)) {
+                  void loadStructureFor(val);
+                }
+              }}
+              style={{
+                width: "100%",
+                maxWidth: "480px",
+                padding: "var(--space-2)",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--color-border)",
+                fontSize: "0.875rem",
+              }}
+            >
+              <option value="">-- Select an institution --</option>
+              {institutions.map((inst, idx) => (
+                <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
+                  {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="platform-toolbar" style={{ alignItems: "flex-end", gap: "1rem" }}>
           <div style={{ flex: 1 }}>
             <IdField
@@ -1047,6 +1102,62 @@ export function AcademicStructurePage() {
           </div>
         )}
       </Panel>
+
+      {isSchool && institutionId && (
+        <div
+          role="status"
+          style={{
+            marginTop: "var(--space-4)",
+            padding: "var(--space-4)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--eds-color-info-border, #bfdbfe)",
+            backgroundColor: "var(--eds-color-info-bg, #eff6ff)",
+            color: "var(--eds-color-info-text, #1e40af)",
+            fontSize: "0.875rem",
+          }}
+        >
+          <strong style={{ display: "block", marginBottom: "4px" }}>
+            School Structure &amp; Curriculum (Rule HI-12)
+          </strong>
+          <p style={{ margin: "0 0 var(--space-3) 0" }}>
+            Schools organise learners into Classes and Sections rather than academic departments.
+            Use the dedicated school configuration tools below to assign teachers and calendar rules:
+          </p>
+          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <a
+              href="/university/setup/class-teacher"
+              style={{
+                display: "inline-block",
+                padding: "6px 14px",
+                borderRadius: "var(--radius-md)",
+                backgroundColor: "#2563eb",
+                color: "#ffffff",
+                fontWeight: 500,
+                textDecoration: "none",
+                fontSize: "0.8125rem",
+              }}
+            >
+              Assign Class Teachers →
+            </a>
+            <a
+              href="/university/setup/weekly-off"
+              style={{
+                display: "inline-block",
+                padding: "6px 14px",
+                borderRadius: "var(--radius-md)",
+                backgroundColor: "#ffffff",
+                color: "#1e40af",
+                border: "1px solid #bfdbfe",
+                fontWeight: 500,
+                textDecoration: "none",
+                fontSize: "0.8125rem",
+              }}
+            >
+              Configure Weekly Off &amp; Calendar →
+            </a>
+          </div>
+        </div>
+      )}
 
       {institutionId && (
         <>
@@ -1210,6 +1321,7 @@ export function AcademicStructurePage() {
 export function TermLockPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [semesterId, setSemesterId] = useState("");
   const [lockNotes, setLockNotes] = useState("");
@@ -1217,6 +1329,18 @@ export function TermLockPage() {
   const [loading, setLoading] = useState(false);
   const [locking, setLocking] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!tenantId || import.meta.env.MODE === "test") return;
+    institutionService
+      .listInstitutions(tenantId)
+      .then((res) => {
+        if (res?.items?.length) {
+          setInstitutions(res.items);
+        }
+      })
+      .catch(() => {});
+  }, [tenantId]);
 
   // Unlock modal state
   const [unlockModalItem, setUnlockModalItem] = useState<TermLockItem | null>(null);
@@ -1292,6 +1416,37 @@ export function TermLockPage() {
 
       <Panel title="Lock academic term" description="Principal authority to lock a term upon final marks/attendance submission [Rule R2-08].">
         <form onSubmit={handleLockSubmit} className="platform-form">
+          {institutions.length > 0 && (
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <label htmlFor="quick-lock-inst-select" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
+                Choose registered institution
+              </label>
+              <select
+                id="quick-lock-inst-select"
+                value={institutionId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInstitutionId(val);
+                  if (isValidUuid(val)) fetchLocks(val);
+                }}
+                style={{
+                  width: "100%",
+                  maxWidth: "480px",
+                  padding: "var(--space-2)",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--color-border)",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <option value="">-- Select an institution --</option>
+                {institutions.map((inst, idx) => (
+                  <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
+                    {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
             <IdField
               id="term-lock-inst-id"

@@ -58,7 +58,7 @@ public class InstitutionController {
     }
 
     @PostMapping("/{institutionId}/activation")
-    @Operation(summary = "Approve and activate a Draft institution (INSTITUTION_ACTIVATE)")
+    @Operation(summary = "Approve the pending activation request of an institution (INSTITUTION_ACTIVATE)")
     public ResponseEntity<InstitutionResponse> activateInstitution(
             @PathVariable UUID tenantId,
             @PathVariable UUID institutionId,
@@ -69,7 +69,7 @@ public class InstitutionController {
     }
 
     @PostMapping("/{institutionId}/activation-requests")
-    @Operation(summary = "Request and approve institution activation (INSTITUTION_ACTIVATE)")
+    @Operation(summary = "Request activation of a Draft or Blocked institution; decided in the approvals inbox")
     public ResponseEntity<InstitutionResponse> requestActivation(
             @PathVariable UUID tenantId,
             @PathVariable UUID institutionId,
@@ -77,7 +77,7 @@ public class InstitutionController {
 
         RbacPrincipal principal = extractTenantPrincipal(tenantId, authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(institutionService.activateInstitution(principal, institutionId));
+                .body(institutionService.requestActivation(principal, institutionId));
     }
 
     @GetMapping
@@ -113,7 +113,7 @@ public class InstitutionController {
         return ResponseEntity.ok(institutionService.requestBlock(principal, institutionId, request));
     }
 
-    @PostMapping({"/{institutionId}/block-decisions", "/{institutionId}/block"})
+    @PostMapping("/{institutionId}/block-decisions")
     @Operation(summary = "Approve or reject an institution block (INSTITUTION_BLOCK_APPROVE / Rule WF-15)")
     public ResponseEntity<InstitutionBlockResponse> decideBlock(
             @PathVariable UUID tenantId,

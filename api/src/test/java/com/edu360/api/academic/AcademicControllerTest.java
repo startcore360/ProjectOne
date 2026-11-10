@@ -15,10 +15,14 @@ import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.tenant.IsolationMode;
+import com.edu360.api.tenant.TenantContext;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -85,6 +89,12 @@ class AcademicControllerTest {
                 false
         );
         auth = new UsernamePasswordAuthenticationToken(principal, null);
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", java.util.Set.of(institutionId), "PRINCIPAL_COLLEGE", ScopeType.INSTITUTION);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
     // ---------------------------------------------------------------------------------------------

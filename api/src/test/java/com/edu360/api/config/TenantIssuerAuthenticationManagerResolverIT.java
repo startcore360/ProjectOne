@@ -333,6 +333,16 @@ class TenantIssuerAuthenticationManagerResolverIT {
                 .getResultList();
         for (Object row : existing) {
             Object tenantId = row;
+            entityManager.createNativeQuery("DELETE FROM app.user_active_role WHERE tenant_id = ?1")
+                    .setParameter(1, tenantId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM app.user_role_assignment WHERE tenant_id = ?1")
+                    .setParameter(1, tenantId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM app.file_object WHERE tenant_id = ?1")
+                    .setParameter(1, tenantId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM app.role_action WHERE tenant_id = ?1")
+                    .setParameter(1, tenantId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM app.role_definition WHERE tenant_id = ?1")
+                    .setParameter(1, tenantId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM app.user_identity_link WHERE tenant_id = ?1")
                     .setParameter(1, tenantId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM app.user_account WHERE tenant_id = ?1")

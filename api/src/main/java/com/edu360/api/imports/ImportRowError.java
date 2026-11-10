@@ -44,7 +44,8 @@ public class ImportRowError {
     @Column(name = "error_message", nullable = false)
     private String errorMessage;
 
-    @Column(name = "row_data", columnDefinition = "text")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "row_data", columnDefinition = "jsonb")
     private String rowData;
 
     @Column(name = "fixed_at")

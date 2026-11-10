@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.tenant.IsolationMode;
+import com.edu360.api.tenant.TenantContext;
 
 import com.edu360.api.academic.ChangeStudentStatusRequest;
 import com.edu360.api.academic.CreateGradingSchemeRequest;
@@ -250,6 +255,12 @@ class InstitutionSetupActionTest {
                 permissionEvaluatorService,
                 auditLogService
         );
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", java.util.Set.of(institutionId), "PRINCIPAL_COLLEGE", ScopeType.INSTITUTION);
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
     private RbacPrincipal principal() {
@@ -338,7 +349,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Forbidden")).when(permissionEvaluatorService)
                 .authorize(any(), eq("PROGRAM_RULES_SET"), any(), any());
 
-        assertThatThrownBy(() -> programRuleService.listRuleSets(tenantId))
+        assertThatThrownBy(() -> programRuleService.listRuleSets(tenantId, tenantPrincipal()))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -349,7 +360,7 @@ class InstitutionSetupActionTest {
         when(programRuleSetRepository.findByIdTenantIdAndIdProgramRuleSetId(tenantId, otherRuleSetId))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> programRuleService.getRuleSet(tenantId, otherRuleSetId))
+        assertThatThrownBy(() -> programRuleService.getRuleSet(tenantId, tenantPrincipal(), otherRuleSetId))
                 .isInstanceOf(BusinessRuleViolationException.class);
     }
 
@@ -581,7 +592,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Forbidden")).when(permissionEvaluatorService)
                 .authorize(any(), eq("GRADING_SCHEME_SET"), any(), any());
 
-        assertThatThrownBy(() -> gradingSchemeService.listGradingSchemes(tenantId, institutionId))
+        assertThatThrownBy(() -> gradingSchemeService.listGradingSchemes(tenantId, tenantPrincipal(), institutionId))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -707,7 +718,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Denied")).when(permissionEvaluatorService)
                 .authorize(any(), eq("SUBJECT_ALLOCATE"), any(), any());
 
-        assertThatThrownBy(() -> subjectAllocationService.listAllocations(tenantId, institutionId))
+        assertThatThrownBy(() -> subjectAllocationService.listAllocations(tenantId, tenantPrincipal(), institutionId))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -935,7 +946,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Denied")).when(permissionEvaluatorService)
                 .authorize(any(), eq("PROMOTION_RUN"), any(), any());
 
-        assertThatThrownBy(() -> promotionService.getPromotionRun(tenantId, runId))
+        assertThatThrownBy(() -> promotionService.getPromotionRun(tenantId, tenantPrincipal(), runId))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -946,7 +957,7 @@ class InstitutionSetupActionTest {
         when(promotionRunRepository.findByIdTenantIdAndIdPromotionRunId(tenantId, unknown))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> promotionService.getPromotionRun(tenantId, unknown))
+        assertThatThrownBy(() -> promotionService.getPromotionRun(tenantId, tenantPrincipal(), unknown))
                 .isInstanceOf(BusinessRuleViolationException.class);
     }
 
@@ -1054,7 +1065,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Denied")).when(permissionEvaluatorService)
                 .authorize(any(), eq("STUDENT_STATUS_CHANGE"), any(), any());
 
-        assertThatThrownBy(() -> studentStatusService.getStudent(tenantId, studentId))
+        assertThatThrownBy(() -> studentStatusService.getStudent(tenantId, tenantPrincipal(), studentId))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -1064,7 +1075,7 @@ class InstitutionSetupActionTest {
         UUID studentId = UUID.randomUUID();
         when(studentProfileRepository.findById(studentId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> studentStatusService.getStudent(tenantId, studentId))
+        assertThatThrownBy(() -> studentStatusService.getStudent(tenantId, tenantPrincipal(), studentId))
                 .isInstanceOf(BusinessRuleViolationException.class);
     }
 

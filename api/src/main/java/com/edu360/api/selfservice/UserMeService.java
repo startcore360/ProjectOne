@@ -8,7 +8,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -67,9 +66,6 @@ public class UserMeService {
     private final UserActiveRoleRepository userActiveRoleRepository;
     private final RoleActionRepository roleActionRepository;
 
-    // In-memory record of current active assignment selection per user session
-    private final Map<UUID, UUID> activeAssignmentByUser = new ConcurrentHashMap<>();
-
     public UserMeService(
             UserAccountRepository userAccountRepository,
             UserRoleAssignmentRepository userRoleAssignmentRepository,
@@ -118,15 +114,13 @@ public class UserMeService {
         Instant now = Instant.now();
 
         List<UserRoleOption> roleOptions = new ArrayList<>();
-        UUID activeAssignmentId = activeAssignmentByUser.get(userId);
-        if (activeAssignmentId == null && userActiveRoleRepository != null) {
+        // A-02: the saved choice in app.user_active_role is the only source (no in-memory copy).
+        UUID activeAssignmentId = null;
+        if (userActiveRoleRepository != null) {
             activeAssignmentId = userActiveRoleRepository
                     .findByIdTenantIdAndIdUserAccountId(tenantId, userId)
                     .map(UserActiveRole::getUserRoleAssignmentId)
                     .orElse(null);
-            if (activeAssignmentId != null) {
-                activeAssignmentByUser.put(userId, activeAssignmentId);
-            }
         }
         UserRoleAssignment activeAssignment = null;
 
@@ -182,8 +176,13 @@ public class UserMeService {
             ));
         }
 
-        // If no explicit selection yet, default to the first valid assignment
-        if (activeAssignment == null && !roleOptions.isEmpty()) {
+        // A-02: with no valid saved choice, a single role is active by default. With several roles
+        // and no choice, no role is active: the screen sends the user to the role switcher and the
+        // server answers 409 ACTIVE_ROLE_REQUIRED until one is chosen.
+        if (activeAssignment == null) {
+            activeAssignmentId = null;
+        }
+        if (activeAssignment == null && roleOptions.size() == 1) {
             UserRoleOption first = roleOptions.get(0);
             activeAssignmentId = first.userRoleAssignmentId();
             roleOptions.set(0, new UserRoleOption(
@@ -279,9 +278,6 @@ public class UserMeService {
         String roleCode = roleDef != null ? roleDef.getRoleCode() : "UNKNOWN";
         String roleName = roleDef != null ? roleDef.getRoleName() : "Unknown Role";
 
-        // Record selection
-        activeAssignmentByUser.put(userId, targetAssignmentId);
-
         if (userActiveRoleRepository != null) {
             UserAccountId key = new UserAccountId(tenantId, userId);
             Instant nowTs = Instant.now();
@@ -296,7 +292,19 @@ public class UserMeService {
             userActiveRoleRepository.save(activeRole);
         }
 
-        // Audit log
+        // A-02: from here on this request runs as the chosen role, so the audit row below (and any
+        // later one in this request) records the role the user just chose, not the previous one.
+        if (com.edu360.api.tenant.TenantContext.isSet()
+                && tenantId.equals(com.edu360.api.tenant.TenantContext.currentTenantId())) {
+            boolean tenantWide = assignment.getScopeType() == com.edu360.api.rbac.ScopeType.TENANT;
+            com.edu360.api.tenant.TenantContext.set(tenantId,
+                    com.edu360.api.tenant.TenantContext.currentIsolationMode(),
+                    com.edu360.api.tenant.TenantContext.currentDbConnectionRef(),
+                    tenantWide ? "ALL" : "LIST",
+                    tenantWide || assignment.getInstitutionId() == null ? Set.of() : Set.of(assignment.getInstitutionId()),
+                    roleCode, assignment.getScopeType(), targetAssignmentId, false);
+        }
+
         auditLogService.record(
                 AuditEventType.ROLE_SWITCHED,
                 null,
@@ -347,8 +355,15 @@ public class UserMeService {
             );
         }
 
+        // Q-02 (DB-A11): only an ACTIVE role definition grants actions, so a DRAFT, INACTIVE,
+        // RETIRED or ARCHIVED role shows none (the menu is built from this list, D9 P2).
+        boolean roleActive = roleDefinitionRepository
+                .findById(new RoleDefinitionId(tenantId, assignment.getRoleDefinitionId()))
+                .map(rd -> rd.getStatus() == null || rd.getStatus() == com.edu360.api.rbac.RoleDefinitionStatus.ACTIVE)
+                .orElse(false);
+
         Set<String> actions = Set.of();
-        if (roleActionRepository != null) {
+        if (roleActionRepository != null && roleActive) {
             actions = roleActionRepository.findByIdTenantIdAndRoleDefinitionId(tenantId, assignment.getRoleDefinitionId())
                     .stream()
                     .map(RoleAction::getActionCode)
