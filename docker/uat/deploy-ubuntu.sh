@@ -36,7 +36,7 @@ npm run lint
 npm test
 npm run build
 
-install -d -o edu360 -g edu360 /srv/edu360
+sudo install -d -o edu360 -g edu360 -m 0755 /srv/edu360
 rsync -a --delete "$ROOT/app/dist/" /srv/edu360/dist/
 
 sudo systemctl daemon-reload
