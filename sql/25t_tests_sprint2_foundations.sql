@@ -35,6 +35,8 @@ SELECT public.expect_ok('S2-DB-04','HOD requester may self-approve only their ow
  corr uuid:='a0000000-0000-0000-0000-000000000d31'; req uuid:='a0000000-0000-0000-0000-000000000e31';
  step uuid:='a0000000-0000-0000-0000-000000000f31';
  BEGIN
+  INSERT INTO app.attendance_session(tenant_id,attendance_session_id,institution_id,section_id,session_kind,attendance_date,academic_year,marked_by_user_id,marked_as,created_by,updated_by)
+  VALUES(t,ses,i,'a0000000-0000-0000-0000-000000000504','PERIOD','2026-10-22',2026,u,'ASSIGNED',u,u);
   INSERT INTO app.approval_request(tenant_id,approval_request_id,institution_id,process_code,subject_type,subject_id,requested_by_user_id,requester_active_role,created_by,updated_by)
   VALUES(t,req,i,'ATTENDANCE_CORRECTION_COLLEGE','ATTENDANCE_CORRECTION_REQUEST',corr,u,'HEAD_OF_DEPARTMENT',u,u);
   INSERT INTO app.attendance_correction_request(tenant_id,attendance_correction_request_id,institution_id,attendance_session_id,requested_by_user_id,reason,approval_request_id,status,created_by,updated_by)
