@@ -39,7 +39,7 @@ public class CalendarDayStatusService {
    academicSessionRepository.findByTenantIdAndInstitutionIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenantId,institutionId,date,date).stream(),
    academicSessionRepository.findByTenantIdAndInstitutionIdIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenantId,date,date).stream())
    .map(AcademicSession::getAcademicSessionId).distinct().toList();
-  return new CalendarDayStatus(institutionId,date,sessions,holiday,weeklyOff,examDay,
+  return new CalendarDayStatus(institutionId,date,sessions,holiday,weeklyOff,false,
    events.stream().map(AcademicCalendarEvent::getAcademicCalendarEventId).toList(),
    events.stream().map(AcademicCalendarEvent::getEventType).distinct().sorted().toList());
  }

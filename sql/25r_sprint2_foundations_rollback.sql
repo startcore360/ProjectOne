@@ -9,9 +9,17 @@ BEGIN
   RAISE EXCEPTION 'Rollback refused: attendance partition rows exist; retain or export them.';
  END IF;
 END$$;
+-- The base schema's correction FK references the partitioned parent. PostgreSQL installs
+-- dependent constraints on its partitions, so temporarily remove and restore that FK around
+-- the partition drops. This preserves the base-schema relationship after rollback.
+ALTER TABLE app.attendance_correction DROP CONSTRAINT IF EXISTS fk_attendance_correction_entry;
 DROP TABLE IF EXISTS app.attendance_entry_y2030;
 DROP TABLE IF EXISTS app.attendance_entry_y2029;
 DROP TABLE IF EXISTS app.attendance_entry_y2028;
+ALTER TABLE app.attendance_correction
+ ADD CONSTRAINT fk_attendance_correction_entry
+ FOREIGN KEY (tenant_id, attendance_entry_id, academic_year)
+ REFERENCES app.attendance_entry (tenant_id, attendance_entry_id, academic_year);
 ALTER TABLE app.idempotency_key DROP COLUMN IF EXISTS response_body;
 DELETE FROM ref.setting_definition WHERE source_ref='Sprint 2 DEC-5';
 DELETE FROM ref.standard_role_action WHERE action_code='SYLLABUS_VIEW'

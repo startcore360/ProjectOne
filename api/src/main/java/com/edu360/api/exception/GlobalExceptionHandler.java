@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuditFailureException.class)
     public ResponseEntity<Map<String, Object>> handleAuditFailure(AuditFailureException ex, HttpServletRequest request) {
         log.error("Required audit write failed; transaction will roll back", ex);
-        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "AUDIT_WRITE_FAILED", "The required audit record could not be stored; no change was committed.", request);
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "AUDIT_UNAVAILABLE", "The required audit record could not be stored; no change was committed.", request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
