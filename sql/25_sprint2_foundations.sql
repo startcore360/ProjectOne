@@ -71,7 +71,7 @@ WITH desired(role_code,limited_to) AS (VALUES
 INSERT INTO ref.standard_role_action(standard_role_action_id,role_code,action_code,limited_to)
 SELECT id,role_code,'SYLLABUS_VIEW',limited_to FROM numbered;
 
-DO $
+DO $sprint2$
 DECLARE missing text; missing_grants text;
 BEGIN
  SELECT string_agg(x.code,', ' ORDER BY x.code) INTO missing FROM (VALUES
@@ -94,7 +94,7 @@ BEGIN
  ('STAFF_DOCUMENT_VERIFY'),('STAFF_RECORD_VIEW')) x(code)
  WHERE NOT EXISTS(SELECT 1 FROM ref.standard_role_action a WHERE a.action_code=x.code);
  IF missing_grants IS NOT NULL THEN RAISE EXCEPTION 'SPRINT2_ACTION_GRANTS_INCOMPLETE: %',missing_grants; END IF;
-END$;
+END $sprint2$;
 
 -- Operations: before each academic year, create app.attendance_entry_yYYYY for the next year,
 -- verify it is attached to app.attendance_entry, and retain a rollback script that refuses to drop nonempty partitions.

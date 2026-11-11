@@ -1,5 +1,10 @@
 -- Minimal reference fixture for applying the Sprint 2 migration in the isolated acceptance-test database.
 -- The full V3.3 reference load is deliberately not used here because 04_tests.sql owns its own seed rows.
+INSERT INTO ref.approval_process VALUES
+ ('ATTENDANCE_CORRECTION_COLLEGE','Attendance correction (college)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture'),
+ ('ATTENDANCE_CORRECTION_SCHOOL','Attendance correction (school)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture')
+ON CONFLICT(process_code) DO NOTHING;
+
 INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_version,requires_two_step_login,is_staff) VALUES
  ('PROFESSOR','Professor','COLLEGE','4.0',false,true),
  ('ASSOCIATE_PROFESSOR','Associate Professor','COLLEGE','4.0',false,true),

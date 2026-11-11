@@ -326,7 +326,7 @@ public class ApprovalInboxService {
                 && "APPROVED".equals(decision)) {
             auditLogService.record(new AuditEntry(AuditEventType.ATTENDANCE_CORRECTION_SELF_APPROVED,
                     "ATTENDANCE_CORRECTION_APPROVE", "ATTENDANCE_CORRECTION_REQUEST", request.getSubjectId(),
-                    request.getInstitutionId(), Map.of("status", "PENDING"), Map.of("status", "APPROVED"),
+                    request.getInstitutionId(), Map.of("approval_status", "PENDING"), Map.of("approval_status", "APPROVED"),
                     1, "P", "SUCCESS"));
         } else {
             auditLogService.record(AuditEventType.APPROVAL, null, request.getSubjectId().toString(), null,
