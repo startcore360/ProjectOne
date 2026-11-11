@@ -245,7 +245,7 @@ class ActiveRoleA02Test {
         world.signIn(user);
         allocateInDeptA(user);
         AuditLog actionRow = world.auditRows.get(world.auditRows.size() - 1);
-        assertThat(actionRow.getEventType()).isEqualTo(AuditEventType.ROLE_ASSIGNED);
+        assertThat(actionRow.getEventType()).isEqualTo(AuditEventType.SUBJECT_ALLOCATION_CREATED);
         assertThat(actionRow.getActorRoleCode()).isEqualTo("HEAD_OF_DEPARTMENT");
         assertThat(actionRow.getScopeType()).isEqualTo("DEPARTMENT");
     }
