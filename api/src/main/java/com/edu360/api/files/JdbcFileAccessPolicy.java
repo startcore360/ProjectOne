@@ -85,14 +85,13 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
               JOIN app.staff_profile p
                 ON p.tenant_id = d.tenant_id AND p.staff_profile_id = d.staff_profile_id
               WHERE d.tenant_id = ? AND d.file_id = ?
-                AND (d.created_by = ? OR p.user_account_id = ?)
             )
             """;
     private static final String ATTENDANCE_UPLOAD = """
             SELECT EXISTS (
               SELECT 1 FROM app.import_job j
               WHERE j.tenant_id = ? AND j.source_file_id = ?
-                AND j.import_kind = 'ATTENDANCE' AND j.uploaded_by = ?
+                AND j.import_kind = 'ATTENDANCE'
             )
             """;
 
@@ -111,8 +110,8 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
             case STUDY_MATERIAL -> exists(STUDY_MATERIAL, tenantId, fileId, userId, userId);
             case ASSIGNMENT_SUBMISSION -> exists(ASSIGNMENT_SUBMISSION, tenantId, fileId, userId, userId, userId);
             case SYLLABUS -> exists(SYLLABUS, tenantId, fileId);
-            case STAFF_DOCUMENT -> exists(STAFF_DOCUMENT, tenantId, fileId, userId, userId);
-            case ATTENDANCE_UPLOAD -> exists(ATTENDANCE_UPLOAD, tenantId, fileId, userId);
+            case STAFF_DOCUMENT -> exists(STAFF_DOCUMENT, tenantId, fileId);
+            case ATTENDANCE_UPLOAD -> exists(ATTENDANCE_UPLOAD, tenantId, fileId);
         };
     }
 

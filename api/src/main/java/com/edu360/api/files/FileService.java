@@ -137,8 +137,18 @@ public class FileService {
                 }
             }
             case SYLLABUS -> permissions.authorize(caller, "SYLLABUS_VIEW", scope, RbacTarget.NONE);
-            case STAFF_DOCUMENT -> permissions.authorize(caller, "STAFF_RECORD_VIEW", scope, RbacTarget.NONE);
-            case ATTENDANCE_UPLOAD -> permissions.authorize(caller, "ATTENDANCE_VIEW", scope, RbacTarget.NONE);
+            case STAFF_DOCUMENT -> {
+                if (!permissions.can(caller, "STAFF_RECORD_VIEW", scope, RbacTarget.NONE).allowed()
+                        && !permissions.can(caller, "STAFF_RECORD_MANAGE", scope, RbacTarget.NONE).allowed()) {
+                    throw new UnauthorizedException("The active role cannot view staff documents.");
+                }
+            }
+            case ATTENDANCE_UPLOAD -> {
+                if (!permissions.can(caller, "ATTENDANCE_VIEW", scope, RbacTarget.NONE).allowed()
+                        && !permissions.can(caller, "ATTENDANCE_BULK_UPLOAD", scope, RbacTarget.NONE).allowed()) {
+                    throw new UnauthorizedException("The active role cannot view attendance imports.");
+                }
+            }
         }
         return new StoredFile(storage.openRead(file.getStorageKey()), file.getOriginalFilename(), file.getContentType());
     }

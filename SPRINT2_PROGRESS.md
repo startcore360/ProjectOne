@@ -124,8 +124,7 @@
 - Backend: `LocalFileStorageTest` — read/write and path traversal containment.
 - Backend: `InAppNotifierTest` — dedupe and persistence failure isolation.
 - Frontend: tenant permission slice, login/hydration permission bootstrap, ActionGate denied/allowed state, guardian ACTIVE-child selection, DateField and the eight generic reusable controls.
-- CI run `43028733605` on commit `9f6409c56256f1c3044ee17c20e01f49187b2a2a`: frontend lint passed, all 168 frontend tests passed, frontend type-check/production build passed, and PostgreSQL migration validation passed. Backend verify ran 807 tests but failed on one Mockito `UnnecessaryStubbingException` in `FileServiceTest.S2_27_rejectsExecutableRenamedWithPdfSuffix`; the test helper has been corrected in the next unpushed patch. The Maven dependency audit and CodeQL were still running when this progress note was prepared.
-- The corrected backend test, storage symlink-containment test and full suite must receive a fresh CI run before this chunk can be marked Tested. Do not claim local execution; no local build runner was available in this session.
+- CI run `43029231137` on commit `ce2afd38d3d05e31fa2e52da9960becc1de0a058`: Spring Boot `clean verify` passed (808 tests, 0 failures/errors); PostgreSQL migration validation passed; frontend lint passed; frontend unit suite passed (168 tests across 22 files); frontend type-check and production build passed. The symlink containment test is included in the successful backend run. OWASP Maven Dependency-Check and CodeQL analysis were still in progress at the time of this note; do not infer their outcome. Do not claim local execution; validation ran in GitHub Actions.
 
 ### Open items before Chunk 2 can be marked Tested
 
