@@ -23,7 +23,7 @@ SELECT public.expect_ok('S2-DB-11','student login enforces school switch and cur
   school_user uuid := 'a0000000-0000-0000-0000-00000000aa02';
   school_inst uuid := 'a0000000-0000-0000-0000-00000000b201';
   school_session uuid := 'a0000000-0000-0000-0000-00000000b301';
-  school_class uuid := 'a0000000-0000-0000-0000-00000000b401';
+  school_class_id uuid := 'a0000000-0000-0000-0000-00000000b401';
   school_section uuid := 'a0000000-0000-0000-0000-00000000b501';
   school_profile uuid := 'a0000000-0000-0000-0000-00000000b601';
  BEGIN
@@ -49,7 +49,7 @@ SELECT public.expect_ok('S2-DB-11','student login enforces school switch and cur
   INSERT INTO app.academic_session(tenant_id,academic_session_id,institution_id,session_label,start_date,end_date,academic_year,status,created_by,updated_by)
    VALUES(t,school_session,school_inst,'A8 School Session','2026-06-01','2027-05-31',2026,'ACTIVE',actor,actor);
   INSERT INTO app.school_class(tenant_id,class_id,institution_id,class_name,student_login_enabled,status,created_by,updated_by)
-   VALUES(t,school_class,school_inst,'Grade 8',false,'ACTIVE',actor,actor);
+   VALUES(t,school_class_id,school_inst,'Grade 8',false,'ACTIVE',actor,actor);
   INSERT INTO app.section(tenant_id,section_id,institution_id,academic_session_id,class_id,section_name,status,created_by,updated_by)
    VALUES(t,school_section,school_inst,school_session,school_class,'A','ACTIVE',actor,actor);
   INSERT INTO app.student_profile(tenant_id,student_profile_id,user_account_id,institution_id,student_code,full_name,status,created_by,updated_by)
@@ -61,7 +61,7 @@ SELECT public.expect_ok('S2-DB-11','student login enforces school switch and cur
    RAISE EXCEPTION 'SCHOOL_LOGIN_ALLOWED_WHEN_CLASS_SWITCH_DISABLED';
   END IF;
   UPDATE app.school_class SET student_login_enabled=true
-   WHERE tenant_id=t AND class_id=school_class;
+   WHERE tenant_id=t AND class_id=school_class_id;
   IF app.fn_student_login_account('SCH-A8-0001') IS DISTINCT FROM school_user THEN
    RAISE EXCEPTION 'SCHOOL_LOGIN_DENIED_WHEN_CLASS_SWITCH_ENABLED';
   END IF;
