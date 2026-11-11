@@ -104,7 +104,7 @@ export default function AppLayout() {
   const name = user?.displayName?.trim() || "Account";
   const dispatch = useAppDispatch();
   const { canAny, customRoleName } = usePlatformAccess();
-  const { canAny: canTenantAny, loading: tenantPermissionsLoading, permissions: tenantPermissions } = useTenantAccess();
+  const { canAny: canTenantAny, loading: tenantPermissionsLoading, error: tenantPermissionsError, permissions: tenantPermissions } = useTenantAccess();
 
   // Role / Level detection
   const previewRoleCode = location.pathname.startsWith("/role-preview/")
@@ -162,11 +162,11 @@ export default function AppLayout() {
   // Bootstrap also runs after refresh/hydrate; login and role-switch flows dispatch the same
   // permission load. Tenant/user mismatches are never allowed to reuse a previous scope.
   useEffect(() => {
-    if (!user?.tenantId || user.platformRole || tenantPermissionsLoading) return;
+    if (!user?.tenantId || user.platformRole || tenantPermissionsLoading || tenantPermissionsError) return;
     if (tenantPermissions?.tenantId !== user.tenantId || tenantPermissions?.userAccountId !== user.id) {
       void tenantPermissionsService.reload();
     }
-  }, [user?.tenantId, user?.id, user?.platformRole, tenantPermissionsLoading, tenantPermissions?.tenantId, tenantPermissions?.userAccountId]);
+  }, [user?.tenantId, user?.id, user?.platformRole, tenantPermissionsLoading, tenantPermissionsError, tenantPermissions?.tenantId, tenantPermissions?.userAccountId]);
 
   const scopeLabel = isPlatformConsole
     ? "PLATFORM"

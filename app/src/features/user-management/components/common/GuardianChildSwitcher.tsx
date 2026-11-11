@@ -21,7 +21,9 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
   useEffect(() => {
     let active = true;
     api.get<GuardianChild[]>("/guardian/children")
-      .then(({ data }) => { if (active) setChildren(data.filter((child) => child.status === "ACTIVE")); })
+      .then(({ data }) => {
+        if (active) setChildren(data.filter((child) => child.status === "ACTIVE"));
+      })
       .catch(() => { if (active) setError("Linked children could not be loaded."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -30,12 +32,21 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
   if (loading) return <p role="status">Loading linked children…</p>;
   if (error) return <p role="alert">{error}</p>;
   if (children.length === 0) return <p>No active linked children are available.</p>;
-  return <label>
-    <span>Child</span>
-    <select aria-label="Choose child" value={value} onChange={(event) => onChange(event.target.value)}>
-      <option value="" disabled>Select a child</option>
-      {children.map((child) => <option key={child.studentProfileId} value={child.studentProfileId}>{child.studentCode}</option>)}
-    </select>
-    <span className="sr-only">Child information is read-only.</span>
-  </label>;
+
+  const selected = children.find((child) => child.studentProfileId === value);
+  return <div>
+    <label>
+      <span>Child</span>
+      <select aria-label="Choose child" value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="" disabled>Select a child</option>
+        {children.map((child) => <option key={child.studentProfileId} value={child.studentProfileId}>{child.studentCode}</option>)}
+      </select>
+    </label>
+    {selected && <section aria-label="Selected child details">
+      <p>Student code: {selected.studentCode}</p>
+      <p>Status: {selected.status}</p>
+      <p>Institution: {selected.institutionId}</p>
+      <p>Child information is read-only.</p>
+    </section>}
+  </div>;
 }
