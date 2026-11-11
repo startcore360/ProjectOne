@@ -39,6 +39,7 @@ import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLog;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.Department;
@@ -220,6 +221,41 @@ class ScopeA05Test {
         assertThatThrownBy(() -> allocationService.allocateSubject(world.tenantId, tp(hod),
                 new CreateSubjectAllocationRequest(collegeB, offeringInA1, UUID.randomUUID(), null, UUID.randomUUID())))
                 .isInstanceOf(UnauthorizedException.class);
+        assertThat(allocations).isEmpty();
+    }
+
+
+    @Test
+    @DisplayName("ACT-SUBJECT_ALLOCATE-GUARD: staff assignment from another institution is rejected")
+    void actSubjectAllocateRejectsForeignStaffAssignment() {
+        UUID hod = world.user("HOD A1");
+        world.assign(hod, "HEAD_OF_DEPARTMENT", ScopeType.DEPARTMENT, collegeA, deptA1);
+        world.signIn(hod);
+        UUID staffId = UUID.randomUUID();
+        StaffAssignment foreign = new StaffAssignment();
+        foreign.setTenantId(world.tenantId); foreign.setStaffAssignmentId(staffId);
+        foreign.setInstitutionId(collegeB); foreign.setStatus("ACTIVE");
+        org.mockito.Mockito.when(staffAssignments.findByTenantIdAndStaffAssignmentId(world.tenantId, staffId))
+                .thenReturn(Optional.of(foreign));
+        assertThatThrownBy(() -> allocationService.allocateSubject(world.tenantId, tp(hod),
+                new CreateSubjectAllocationRequest(collegeA, offeringInA1, UUID.randomUUID(), null, staffId)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Staff assignment does not belong");
+        assertThat(allocations).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ACT-SUBJECT_ALLOCATE-DENY: staff assignment outside tenant is not found")
+    void actSubjectAllocateRejectsMissingStaffAssignment() {
+        UUID hod = world.user("HOD A1");
+        world.assign(hod, "HEAD_OF_DEPARTMENT", ScopeType.DEPARTMENT, collegeA, deptA1);
+        world.signIn(hod);
+        UUID missingId = UUID.randomUUID();
+        org.mockito.Mockito.when(staffAssignments.findByTenantIdAndStaffAssignmentId(world.tenantId, missingId))
+                .thenReturn(Optional.empty());
+        assertThatThrownBy(() -> allocationService.allocateSubject(world.tenantId, tp(hod),
+                new CreateSubjectAllocationRequest(collegeA, offeringInA1, UUID.randomUUID(), null, missingId)))
+                .isInstanceOf(ResourceNotFoundException.class);
         assertThat(allocations).isEmpty();
     }
 
