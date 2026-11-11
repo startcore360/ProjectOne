@@ -33,7 +33,7 @@ public class IdempotencyService {
    return new Claim(id,true,status==null?null:status.intValue(),response);
   }catch(ApiException ex){throw ex;}catch(DataAccessException|JsonProcessingException ex){throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE,"IDEMPOTENCY_STORE_UNAVAILABLE","The idempotency store is temporarily unavailable.");}
  }
- @Transactional(propagation=Propagation.REQUIRES_NEW) public void complete(UUID tenant,UUID caller,UUID keyId,int status,Object body){
+ @Transactional public void complete(UUID tenant,UUID caller,UUID keyId,int status,Object body){
   if(!tenant.equals(TenantContext.currentTenantId()))throw new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","The requested resource was not found.");
   try{String json=mapper.writeValueAsString(body);int n=jdbc.update("""
    UPDATE app.idempotency_key SET status='COMPLETED',response_status=?,response_body=CAST(? AS jsonb),completed_at=now(),updated_by=?

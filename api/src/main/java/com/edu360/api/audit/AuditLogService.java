@@ -105,7 +105,7 @@ public class AuditLogService {
    String key=String.valueOf(e.getKey()).toLowerCase(java.util.Locale.ROOT).replace("_","").replace("-","");
    if(key.equals("name")||key.endsWith("name")||key.contains("email")||key.contains("phone")||key.contains("mobile")
     ||key.contains("contact")||key.contains("address")||key.contains("joinlink")||key.contains("meetingurl")
-    ||key.contains("filecontent")||key.contains("password")||key.contains("token")||key.contains("secret"))
+    ||key.contains("file")&&key.contains("content")||key.contains("bytes")||key.contains("binary")||key.contains("link")||key.contains("url")||key.contains("password")||key.contains("token")||key.contains("secret"))
     throw new IllegalArgumentException("Sensitive personal or secret fields are not permitted in audit values.");
    validateSafeValues(e.getValue());
   }}else if(value instanceof Iterable<?> values){for(Object item:values)validateSafeValues(item);}
@@ -118,7 +118,7 @@ public class AuditLogService {
   if(details==null||details.isBlank())return null;
   String lower=details.toLowerCase(java.util.Locale.ROOT);
   if(lower.contains("student")||lower.contains("guardian")||lower.contains("parent")||lower.contains("child")
-   ||lower.contains("http://")||lower.contains("https://")||lower.contains("@")
+   ||lower.contains("http://")||lower.contains("https://")||lower.contains("join link")||lower.contains("meeting link")||lower.contains("file content")||lower.contains("file bytes")||lower.contains("@")
    ||lower.matches(".*[0-9][0-9 ()+.-]{7,}[0-9].*"))return null;
   return details;
  }

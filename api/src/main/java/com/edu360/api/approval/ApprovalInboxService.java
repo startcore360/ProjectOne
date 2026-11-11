@@ -389,11 +389,12 @@ public class ApprovalInboxService {
         }
         if ("ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subjectType)
                 || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subjectType)
-                || (processCode != null && processCode.startsWith("ATTENDANCE_CORRECTION_"))) {
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(processCode)
+                || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_CORRECTION_"))) {
             return "ATTENDANCE_CORRECTION_APPROVE";
         }
         if ("ATTENDANCE_BULK_UPLOAD".equalsIgnoreCase(subjectType)
-                || (processCode != null && processCode.startsWith("ATTENDANCE_BULK_UPLOAD_"))) {
+                || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"))) {
             return "ATTENDANCE_BULK_UPLOAD_APPROVE";
         }
         return null;
