@@ -2,7 +2,7 @@ package com.edu360.api.idempotency;
 import java.security.MessageDigest;import java.security.NoSuchAlgorithmException;import java.util.HexFormat;import java.util.List;import java.util.Map;import java.util.UUID;
 import javax.sql.DataSource;
 import com.fasterxml.jackson.core.JsonProcessingException;import com.fasterxml.jackson.databind.JsonNode;import com.fasterxml.jackson.databind.ObjectMapper;import com.fasterxml.jackson.databind.SerializationFeature;
-import org.springframework.beans.factory.annotation.Autowired;import org.springframework.dao.DataAccessException;import org.springframework.http.HttpStatus;import org.springframework.jdbc.core.JdbcTemplate;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;import org.springframework.dao.DataAccessException;import org.springframework.http.HttpStatus;import org.springframework.jdbc.core.JdbcTemplate;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Transactional;import org.springframework.transaction.annotation.Propagation;
 import com.edu360.api.exception.ApiException;import com.edu360.api.tenant.TenantContext;
 /** Claims and replays D5 idempotency keys in app.idempotency_key. */
 @Service
@@ -11,7 +11,7 @@ public class IdempotencyService {
  @Autowired public IdempotencyService(DataSource ds){this(new JdbcTemplate(ds));}
  public IdempotencyService(JdbcTemplate jdbc){this.jdbc=jdbc;}
  public record Claim(UUID id,boolean replay,Integer responseStatus,JsonNode responseBody){}
- @Transactional public Claim claim(UUID tenant,UUID caller,String scope,String key,Object body){
+ @Transactional(propagation=Propagation.REQUIRES_NEW) public Claim claim(UUID tenant,UUID caller,String scope,String key,Object body){
   if(tenant==null||caller==null||scope==null||scope.isBlank())throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_QUERY","Idempotency scope and caller are required.");
   if(key==null||key.length()<8||key.length()>100)throw new ApiException(HttpStatus.BAD_REQUEST,"IDEMPOTENCY_KEY_REQUIRED","Idempotency-Key must contain 8-100 characters.");
   if(!tenant.equals(TenantContext.currentTenantId()))throw new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","The requested resource was not found.");
@@ -33,7 +33,7 @@ public class IdempotencyService {
    return new Claim(id,true,status==null?null:status.intValue(),response);
   }catch(ApiException ex){throw ex;}catch(DataAccessException|JsonProcessingException ex){throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE,"IDEMPOTENCY_STORE_UNAVAILABLE","The idempotency store is temporarily unavailable.");}
  }
- @Transactional public void complete(UUID tenant,UUID caller,UUID keyId,int status,Object body){
+ @Transactional(propagation=Propagation.REQUIRES_NEW) public void complete(UUID tenant,UUID caller,UUID keyId,int status,Object body){
   if(!tenant.equals(TenantContext.currentTenantId()))throw new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","The requested resource was not found.");
   try{String json=mapper.writeValueAsString(body);int n=jdbc.update("""
    UPDATE app.idempotency_key SET status='COMPLETED',response_status=?,response_body=CAST(? AS jsonb),completed_at=now(),updated_by=?
@@ -42,7 +42,7 @@ public class IdempotencyService {
    if(n!=1)throw inProgress();
   }catch(JsonProcessingException ex){throw new IllegalArgumentException("Response cannot be serialized for idempotent replay.",ex);}
  }
- @Transactional public void release(UUID tenant,UUID caller,UUID keyId){
+ @Transactional(propagation=Propagation.REQUIRES_NEW) public void release(UUID tenant,UUID caller,UUID keyId){
   jdbc.update("DELETE FROM app.idempotency_key WHERE tenant_id=? AND idempotency_key_id=? AND caller_user_id=? AND status='IN_PROGRESS'",tenant,keyId,caller);
  }
  static String requestHash(Object body){

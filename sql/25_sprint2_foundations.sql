@@ -20,7 +20,7 @@ BEGIN
     WHERE cr.tenant_id=NEW.tenant_id
       AND cr.attendance_correction_request_id=(SELECT subject_id FROM app.approval_request
        WHERE tenant_id=NEW.tenant_id AND approval_request_id=NEW.approval_request_id);
-   v_exception := v_marked_by=NEW.acted_by_user_id;
+   v_exception := COALESCE(v_marked_by=NEW.acted_by_user_id,false);
   END IF;
   IF NEW.acted_by_user_id=v_req AND NOT v_exception THEN
    RAISE EXCEPTION 'SELF_APPROVAL: requester cannot decide own request [AP-04, PQ-18, D-002]' USING ERRCODE='23514';
@@ -70,8 +70,8 @@ WITH desired(role_code,limited_to) AS (VALUES
 INSERT INTO ref.standard_role_action(standard_role_action_id,role_code,action_code,limited_to)
 SELECT id,role_code,'SYLLABUS_VIEW',limited_to FROM numbered;
 
-DO $$
-DECLARE missing text;
+DO $
+DECLARE missing text; missing_grants text;
 BEGIN
  SELECT string_agg(x.code,', ' ORDER BY x.code) INTO missing FROM (VALUES
  ('TIMETABLE_BUILD'),('ONLINE_PERIOD_SET'),('TIMETABLE_VIEW'),('SYLLABUS_VIEW'),('SYLLABUS_MANAGE'),('ATTENDANCE_MARK'),('ATTENDANCE_NOT_HELD'),
@@ -83,7 +83,17 @@ BEGIN
  ('STAFF_DOCUMENT_VERIFY'),('STAFF_RECORD_VIEW')) x(code)
  WHERE NOT EXISTS(SELECT 1 FROM ref.action_catalog a WHERE a.action_code=x.code);
  IF missing IS NOT NULL THEN RAISE EXCEPTION 'SPRINT2_ACTION_CATALOG_INCOMPLETE: %',missing; END IF;
-END$$;
+ SELECT string_agg(x.code,', ' ORDER BY x.code) INTO missing_grants FROM (VALUES
+ ('TIMETABLE_BUILD'),('ONLINE_PERIOD_SET'),('TIMETABLE_VIEW'),('SYLLABUS_VIEW'),('SYLLABUS_MANAGE'),('ATTENDANCE_MARK'),('ATTENDANCE_NOT_HELD'),
+ ('SUBSTITUTE_ASSIGN'),('ATTENDANCE_CORRECTION_REQUEST'),('ATTENDANCE_CORRECTION_APPROVE'),
+ ('ATTENDANCE_BULK_UPLOAD'),('ATTENDANCE_BULK_UPLOAD_APPROVE'),('ATTENDANCE_RULES_SET'),
+ ('ATTENDANCE_VIEW'),('ATTENDANCE_VIEW_OWN'),('ASSIGNMENT_CREATE'),('ASSIGNMENT_CLOSE'),
+ ('STUDY_MATERIAL_UPLOAD'),('ASSIGNMENT_SUBMIT'),('ASSIGNMENT_EVALUATE'),('HOMEWORK_STATUS_MARK'),
+ ('ASSIGNMENT_VIEW_OWN'),('HOMEWORK_COMPLIANCE_VIEW'),('STAFF_RECORD_MANAGE'),
+ ('STAFF_DOCUMENT_VERIFY'),('STAFF_RECORD_VIEW')) x(code)
+ WHERE NOT EXISTS(SELECT 1 FROM ref.standard_role_action a WHERE a.action_code=x.code);
+ IF missing_grants IS NOT NULL THEN RAISE EXCEPTION 'SPRINT2_ACTION_GRANTS_INCOMPLETE: %',missing_grants; END IF;
+END$;
 
 -- Operations: before each academic year, create app.attendance_entry_yYYYY for the next year,
 -- verify it is attached to app.attendance_entry, and retain a rollback script that refuses to drop nonempty partitions.
