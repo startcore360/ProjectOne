@@ -75,17 +75,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessRuleViolationException.class)
     public ResponseEntity<Map<String, Object>> handleBusinessRuleViolation(BusinessRuleViolationException ex, HttpServletRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now().toString());
-        body.put("status", HttpStatus.UNPROCESSABLE_ENTITY.value());
-        body.put("error", ex.getMessage());
-        body.put("errorCode", ex.getErrorCode());
-        body.put("code", ex.getErrorCode());
-        body.put("message", ex.getMessage());
-        if (request != null) {
-            body.put("path", request.getRequestURI());
-        }
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body);
+        HttpStatus status = businessRuleStatus(ex.getErrorCode());
+        return buildResponse(status, ex.getErrorCode(), ex.getMessage(), request);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
@@ -178,6 +169,18 @@ public class GlobalExceptionHandler {
         return mapDatabaseFailure(ex, request);
     }
 
+    private HttpStatus businessRuleStatus(String code) {
+        if (code == null) return HttpStatus.UNPROCESSABLE_ENTITY;
+        return switch (code) {
+            case "TERM_LOCKED", "ATTENDANCE_ALREADY_SUBMITTED", "ASSIGNMENT_CLOSED",
+                 "VERSION_CONFLICT", "FILE_NOT_AVAILABLE" -> HttpStatus.CONFLICT;
+            case "PAYLOAD_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case "IF_MATCH_REQUIRED", "IDEMPOTENCY_KEY_REQUIRED", "INVALID_CURSOR",
+                 "INVALID_QUERY" -> HttpStatus.BAD_REQUEST;
+            default -> HttpStatus.UNPROCESSABLE_ENTITY;
+        };
+    }
+
     private ResponseEntity<Map<String, Object>> mapDatabaseFailure(Throwable ex, HttpServletRequest request) {
         String message = ex.getMessage();
         Throwable cause = ex.getCause();
@@ -185,8 +188,8 @@ public class GlobalExceptionHandler {
         String msg = message == null ? "" : message.toLowerCase(java.util.Locale.ROOT);
         if (msg.contains("self_approval")) return buildResponse(HttpStatus.FORBIDDEN,"SELF_APPROVAL","You cannot approve this request.",request);
         if (msg.contains("approval_immutable")) return buildResponse(HttpStatus.CONFLICT,"APPROVAL_IMMUTABLE","A decided approval step cannot be changed.",request);
-        if (msg.contains("term_locked")) return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"TERM_LOCKED","The term is locked for this date.",request);
-        if (msg.contains("correction_locked")) return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"CORRECTION_LOCKED","Attendance corrections are locked for this period.",request);
+        if (msg.contains("term_locked")) return buildResponse(HttpStatus.CONFLICT,"TERM_LOCKED","The term is locked for this date.",request);
+        if (msg.contains("correction_locked")) return buildResponse(HttpStatus.CONFLICT,"CORRECTION_LOCKED","Attendance corrections are locked for this period.",request);
         if (msg.contains("not_held_mismatch")) return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"NOT_HELD_MISMATCH","Attendance status must match the session held status.",request);
         if (msg.contains("partition_year_mismatch") || msg.contains("no partition of relation") || msg.contains("partition of relation"))
             return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"ATTENDANCE_PARTITION_MISSING","The academic-year attendance partition is not provisioned.",request);
