@@ -341,14 +341,15 @@ public class ApprovalInboxService {
 
     /** DEC-10: only a HOD requester correcting the attendance session they personally marked may self-approve. */
     private boolean isHodSelfApprovalForOwnMarkedSession(UUID tenantId, ApprovalRequest request, String activeRole, UUID userId) {
-        if (!"HEAD_OF_DEPARTMENT".equals(activeRole) || jdbcTemplate == null || request.getInstitutionId() == null) return false;
+        if (!"HEAD_OF_DEPARTMENT".equalsIgnoreCase(activeRole) || jdbcTemplate == null || request.getInstitutionId() == null) return false;
         String process = request.getProcessCode();
         String subject = request.getSubjectType();
         boolean attendanceCorrection =
-                "ATTENDANCE_CORRECTION_COLLEGE".equals(process)
-                || "ATTENDANCE_CORRECTION_SCHOOL".equals(process)
-                || "ATTENDANCE_CORRECTION_REQUEST".equals(subject)
-                || "ATTENDANCE_CORRECTION".equals(subject);
+                "ATTENDANCE_CORRECTION_COLLEGE".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION_SCHOOL".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subject)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subject);
         if (!attendanceCorrection) return false;
         try {
             UUID markedBy = jdbcTemplate.queryForObject("""
@@ -463,16 +464,16 @@ public class ApprovalInboxService {
     private static boolean isAttendanceCorrectionRequest(ApprovalRequest request) {
         String subject = request.getSubjectType();
         String process = request.getProcessCode();
-        return "ATTENDANCE_CORRECTION_REQUEST".equals(subject) || "ATTENDANCE_CORRECTION".equals(subject)
-                || "ATTENDANCE_CORRECTION_COLLEGE".equals(process) || "ATTENDANCE_CORRECTION_SCHOOL".equals(process);
+        return "ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subject) || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subject)
+                || "ATTENDANCE_CORRECTION_COLLEGE".equalsIgnoreCase(process) || "ATTENDANCE_CORRECTION_SCHOOL".equalsIgnoreCase(process);
     }
 
     private static boolean isAttendanceProcess(ApprovalRequest request) {
         String subject = request.getSubjectType();
         String process = request.getProcessCode();
         return isAttendanceCorrectionRequest(request)
-                || "ATTENDANCE_BULK_UPLOAD".equals(subject)
-                || (process != null && process.startsWith("ATTENDANCE_BULK_UPLOAD_"));
+                || "ATTENDANCE_BULK_UPLOAD".equalsIgnoreCase(subject)
+                || (process != null && process.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"));
     }
 
     private static ResourceNotFoundException notFound(UUID approvalRequestId) {
