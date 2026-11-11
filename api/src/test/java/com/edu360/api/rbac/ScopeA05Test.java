@@ -47,6 +47,8 @@ import com.edu360.api.institution.Institution;
 import com.edu360.api.institution.InstitutionId;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.OfferingDepartmentResolver;
+import com.edu360.api.institution.StaffAssignment;
+import com.edu360.api.institution.StaffAssignmentRepository;
 import com.edu360.api.institution.ProgramRepository;
 import com.edu360.api.institution.StructureService;
 import com.edu360.api.institution.dto.CreateDepartmentRequest;
@@ -74,6 +76,7 @@ class ScopeA05Test {
     private SubjectAllocationService allocationService;
     private final Map<UUID, SubjectAllocation> allocations = new HashMap<>();
     private final OfferingDepartmentResolver departments = mock(OfferingDepartmentResolver.class);
+    private final StaffAssignmentRepository staffAssignments = mock(StaffAssignmentRepository.class);
     private final UUID offeringInA1 = UUID.randomUUID();
     private final UUID offeringInA2 = UUID.randomUUID();
 
@@ -102,7 +105,12 @@ class ScopeA05Test {
         });
         lenient().when(allocationRepository.findByIdTenantIdAndIdSubjectAllocationId(any(), any())).thenAnswer(inv ->
                 world.tenantId.equals(inv.getArgument(0)) ? Optional.ofNullable(allocations.get((UUID) inv.getArgument(1))) : Optional.empty());
-        allocationService = new SubjectAllocationService(allocationRepository, world.evaluator, world.auditLogService);
+        lenient().when(staffAssignments.findByTenantIdAndStaffAssignmentId(any(), any())).thenAnswer(inv -> {
+            StaffAssignment staff = new StaffAssignment();
+            staff.setTenantId(world.tenantId); staff.setStaffAssignmentId(inv.getArgument(1));
+            staff.setInstitutionId(collegeA); staff.setStatus("ACTIVE"); return Optional.of(staff);
+        });
+        allocationService = new SubjectAllocationService(allocationRepository, world.evaluator, world.auditLogService, null, staffAssignments);
         allocationService.setOfferingDepartmentResolver(departments);
         lenient().when(departments.departmentOf(world.tenantId, offeringInA1)).thenReturn(Optional.of(deptA1));
         lenient().when(departments.departmentOf(world.tenantId, offeringInA2)).thenReturn(Optional.of(deptA2));

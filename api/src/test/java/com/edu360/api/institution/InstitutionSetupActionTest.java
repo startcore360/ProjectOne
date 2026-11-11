@@ -212,7 +212,9 @@ class InstitutionSetupActionTest {
         subjectAllocationService = new SubjectAllocationService(
                 subjectAllocationRepository,
                 permissionEvaluatorService,
-                auditLogService
+                auditLogService,
+                sectionRepository,
+                staffAssignmentRepository
         );
 
         mentorAssignmentService = new MentorAssignmentService(
