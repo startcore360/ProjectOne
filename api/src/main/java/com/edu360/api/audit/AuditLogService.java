@@ -71,7 +71,7 @@ public class AuditLogService {
  }
  private TenantAuditEvent legacyEvent(TenantPrincipal actor,AuditEventType type,String details,String role,String scope,UUID institution,String correlation){
   UUID id=UUID.randomUUID();Instant now=Instant.now();String operation=operationOf(type),outcome=outcomeOf(type),corr=bound(correlation);
-  Map<String,Object> values=new LinkedHashMap<>();values.put("event_type",type.name());values.put("scope_type",scope);values.put("details",details);
+  Map<String,Object> values=new LinkedHashMap<>();values.put("event_type",type.name());values.put("scope_type",scope);
   String newJson=json(values);String hash=sha(String.join("|",actor.tenantId().toString(),id.toString(),now.toString(),actor.userAccountId().toString(),role,operation,type.name(),outcome,corr,String.valueOf(newJson)));
   return new TenantAuditEvent(actor.tenantId(),id,institution,now,actor.userAccountId(),role,operation,null,type.name(),null,null,null,outcome,null,newJson,corr,hash);
  }

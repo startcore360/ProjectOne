@@ -38,6 +38,7 @@ run edu360_v4_ref 05_ref_data.sql > /dev/null; run edu360_v4_ref 10d_v40_rolldow
 after=$($PSQL -At -d edu360_v4_ref -c "$CNT")
 echo "REFCHECK | reference rows after first load | $before" >> "$OUT"
 echo "REFCHECK | second load of 05_ref_data.sql + 10d inserted rows | $((after-before)) | 0" >> "$OUT"
+run edu360_v4_ref 25_sprint2_foundations.sql > /dev/null  # Sprint 2 foundation defaults and role grants
 # C. catalogue counts
 $PSQL -At -d edu360_v4_ref >> "$OUT" <<'SQL'
 SELECT 'CATALOGUE | parent tables | '||count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE relkind IN ('r','p') AND NOT relispartition AND nspname IN ('app','platform','ref');
