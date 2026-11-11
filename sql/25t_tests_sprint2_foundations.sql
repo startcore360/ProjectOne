@@ -31,7 +31,7 @@ $q$);
 
 SELECT public.expect_ok('S2-DB-04','HOD requester may self-approve only their own marked attendance session',$q$
  DO $d$ DECLARE t uuid:='a0000000-0000-0000-0000-000000000000'; u uuid:='a0000000-0000-0000-0000-000000000101';
- i uuid:='a0000000-0000-0000-0000-000000000201'; ses uuid:='a0000000-0000-0000-0000-000000000c01';
+ i uuid:='a0000000-0000-0000-0000-000000000201'; ses uuid:='a0000000-0000-0000-0000-000000000c31';
  corr uuid:='a0000000-0000-0000-0000-000000000d31'; req uuid:='a0000000-0000-0000-0000-000000000e31';
  step uuid:='a0000000-0000-0000-0000-000000000f31';
  BEGIN
@@ -98,9 +98,13 @@ SELECT public.expect_fail('S2-DB-07','non-attendance process cannot use HOD exce
 $q$,'SELF_APPROVAL');
 
 SELECT public.expect_fail('S2-DB-08','decided step remains immutable after the HOD exception',$q$
- UPDATE app.approval_step SET remark='attempted mutation'
- WHERE tenant_id='a0000000-0000-0000-0000-000000000000'
- AND approval_step_id='a0000000-0000-0000-0000-000000000f31'
+ DO $d$ DECLARE n int; BEGIN
+  UPDATE app.approval_step SET remark='attempted mutation'
+  WHERE tenant_id='a0000000-0000-0000-0000-000000000000'
+    AND approval_step_id='a0000000-0000-0000-0000-000000000f31';
+  GET DIAGNOSTICS n=ROW_COUNT;
+  IF n=0 THEN RAISE EXCEPTION 'DECIDED_STEP_FIXTURE_MISSING'; END IF;
+ END $d$
 $q$,'APPROVAL_IMMUTABLE');
 
 SELECT public.expect_fail('S2-DB-09','HOD requester cannot reject their own correction request',$q$
