@@ -26,8 +26,8 @@ class IdempotencyServiceTest {
  @Test void firstClaimCreatesAnInProgressRecord(){
   JdbcTemplate jdbc=mock(JdbcTemplate.class);UUID tenant=UUID.randomUUID(),caller=UUID.randomUUID();tenant(tenant);
   AtomicReference<UUID> insertedId=new AtomicReference<>();
-  when(jdbc.update(anyString(),any(),any(),any(),any(),any(),any(),any(),any())).thenAnswer(inv->{insertedId.set(inv.getArgument(2));return 1;});
-  when(jdbc.queryForList(anyString(),any(),any(),any(),any())).thenAnswer(inv->{
+  when(jdbc.update(anyString(),any(Object[].class))).thenAnswer(inv->{insertedId.set(inv.getArgument(2));return 1;});
+  when(jdbc.queryForList(anyString(),any(Object[].class))).thenAnswer(inv->{
    Map<String,Object> row=new HashMap<>();row.put("idempotency_key_id",insertedId.get());row.put("request_hash",IdempotencyService.requestHash(Map.of("v",1)));
    row.put("status","IN_PROGRESS");row.put("response_status",null);row.put("response_body",null);return List.of(row);
   });
@@ -36,8 +36,8 @@ class IdempotencyServiceTest {
  }
  @Test void completedClaimReplaysStoredResponse(){
   JdbcTemplate jdbc=mock(JdbcTemplate.class);UUID tenant=UUID.randomUUID(),caller=UUID.randomUUID(),id=UUID.randomUUID();tenant(tenant);
-  when(jdbc.update(anyString(),any(),any(),any(),any(),any(),any(),any(),any())).thenReturn(0);
-  when(jdbc.queryForList(anyString(),any(),any(),any(),any())).thenReturn(List.of(Map.of(
+  when(jdbc.update(anyString(),any(Object[].class))).thenReturn(0);
+  when(jdbc.queryForList(anyString(),any(Object[].class))).thenReturn(List.of(Map.of(
    "idempotency_key_id",id,"request_hash",IdempotencyService.requestHash(Map.of("v",1)),
    "status","COMPLETED","response_status",201,"response_body","{\"result\":\"created\"}")));
   var claim=new IdempotencyService(jdbc).claim(tenant,caller,"ATTENDANCE_UPLOAD","upload-key-0002",Map.of("v",1));
