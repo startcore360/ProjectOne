@@ -2,36 +2,36 @@
 
 | Action code | Chunk | Status |
 |---|---:|---|
-| TIMETABLE_BUILD | 1 | In progress |
-| ONLINE_PERIOD_SET | 1 | In progress |
-| TIMETABLE_VIEW | 1 | In progress |
-| SYLLABUS_VIEW | 1 | In progress |
-| SYLLABUS_MANAGE | 1 | In progress |
-| ATTENDANCE_MARK | 1 | In progress |
-| ATTENDANCE_NOT_HELD | 1 | In progress |
-| SUBSTITUTE_ASSIGN | 1 | In progress |
-| ATTENDANCE_CORRECTION_REQUEST | 1 | In progress |
-| ATTENDANCE_CORRECTION_APPROVE | 1 | In progress |
-| ATTENDANCE_BULK_UPLOAD | 1 | In progress |
-| ATTENDANCE_BULK_UPLOAD_APPROVE | 1 | In progress |
-| ATTENDANCE_RULES_SET | 1 | In progress |
-| ATTENDANCE_VIEW | 1 | In progress |
-| ATTENDANCE_VIEW_OWN | 1 | In progress |
-| ASSIGNMENT_CREATE | 1 | In progress |
-| ASSIGNMENT_CLOSE | 1 | In progress |
-| STUDY_MATERIAL_UPLOAD | 1 | In progress |
-| ASSIGNMENT_SUBMIT | 1 | In progress |
-| ASSIGNMENT_EVALUATE | 1 | In progress |
-| HOMEWORK_STATUS_MARK | 1 | In progress |
-| ASSIGNMENT_VIEW_OWN | 1 | In progress |
-| HOMEWORK_COMPLIANCE_VIEW | 1 | In progress |
-| STAFF_RECORD_MANAGE | 1 | In progress |
-| STAFF_DOCUMENT_VERIFY | 1 | In progress |
-| STAFF_RECORD_VIEW | 1 | In progress |
+| TIMETABLE_BUILD | 1 | Tested |
+| ONLINE_PERIOD_SET | 1 | Tested |
+| TIMETABLE_VIEW | 1 | Tested |
+| SYLLABUS_VIEW | 1 | Tested |
+| SYLLABUS_MANAGE | 1 | Tested |
+| ATTENDANCE_MARK | 1 | Tested |
+| ATTENDANCE_NOT_HELD | 1 | Tested |
+| SUBSTITUTE_ASSIGN | 1 | Tested |
+| ATTENDANCE_CORRECTION_REQUEST | 1 | Tested |
+| ATTENDANCE_CORRECTION_APPROVE | 1 | Tested |
+| ATTENDANCE_BULK_UPLOAD | 1 | Tested |
+| ATTENDANCE_BULK_UPLOAD_APPROVE | 1 | Tested |
+| ATTENDANCE_RULES_SET | 1 | Tested |
+| ATTENDANCE_VIEW | 1 | Tested |
+| ATTENDANCE_VIEW_OWN | 1 | Tested |
+| ASSIGNMENT_CREATE | 1 | Tested |
+| ASSIGNMENT_CLOSE | 1 | Tested |
+| STUDY_MATERIAL_UPLOAD | 1 | Tested |
+| ASSIGNMENT_SUBMIT | 1 | Tested |
+| ASSIGNMENT_EVALUATE | 1 | Tested |
+| HOMEWORK_STATUS_MARK | 1 | Tested |
+| ASSIGNMENT_VIEW_OWN | 1 | Tested |
+| HOMEWORK_COMPLIANCE_VIEW | 1 | Tested |
+| STAFF_RECORD_MANAGE | 1 | Tested |
+| STAFF_DOCUMENT_VERIFY | 1 | Tested |
+| STAFF_RECORD_VIEW | 1 | Tested |
 
 ## Chunk 1 — Foundations
 
-**Status:** In progress. Changes are committed to `sprint-2-development`; build and database execution gates remain open.
+**Status:** Tested (not Accepted). The core application and database gates passed in GitHub Actions run [42797436612](https://github.com/startcore360/ProjectOne/actions/runs/42797436612): Spring Boot/Java 21 verify, PostgreSQL migration/SQL validation, frontend lint, 154 frontend tests, TypeScript and production build. The overall workflow still reported separate dependency/security configuration findings (Dependency Review requires the repository dependency graph; OWASP Dependency-Check had no NVD API key; npm audit reported seven moderate minimatch findings).
 
 ### Part A — Sprint 1 dependency audit
 
@@ -81,3 +81,35 @@
 - Cursor helper is implemented but no new list endpoints exist in Chunk 1 to consume it.
 - A3 is explicitly carried forward by decision; A4 exam-day is deferred pending requirements. A6 assignment service regression suites pass on CI, with broader effective-date and overlap edge coverage still to be confirmed. A8 behavioural login-path SQL coverage is added; future academic own-data API enforcement remains open. A9 code changes and focused tests are present but integration/build regression is not yet executed; no claim is made that all Sprint 1 dependencies are fully validated.
 - No story is marked Accepted. Highest status remains In progress until build and SQL gates pass.
+
+
+## Chunk 2 — Platform files and frontend shell
+
+**Status:** In progress. Implementation has been prepared against the live `sprint-2-development` branch; CI validation is pending the branch update.
+
+| Work item | Status | Notes |
+|---|---|---|
+| B5 File upload endpoint | In progress | Purpose-based action authorization, 10 MiB limit, safe-list content inspection, filename sanitization, SHA-256, PENDING scanner contract. |
+| B5 File download | In progress | Streaming response, attachment disposition, nosniff, tenant isolation, status checks and environment-gated PENDING downloads. Owning-record policy remains fail-closed until domain record associations and role/scope policies are registered. |
+| B5 Local storage containment | In progress | Storage keys are normalized and resolved-path containment is checked before reads; traversal tests added. |
+| B6 In-app notification persistence | In progress | Entity maps app.notification audit, entity and dedupe columns; independent transaction prevents notification failure from marking the caller transaction rollback-only. |
+| B6 Notification event wiring | In progress | Timetable, assignment, absence and HOD self-approval publishers are not yet present in the branch; notifier is a reusable service, not yet called by those domain events. |
+| B7 Tenant permissions | In progress | Redux slice/service reloads on tenant login and active-role switch; useTenantAccess exposes can/canAny. |
+| B7 Action gate and navigation | In progress | Neutral ActionGate and action-filtered existing tenant navigation added. Future academic pages are not registered as placeholders. |
+| B7 Reusable components | In progress | PersonPicker, SectionPicker, SubjectAllocationPicker, DateField, WeekGrid, StatusToggleRoster, FileDrop, WarningsPanel and DiffTable added. |
+| B7 Parent child switcher | In progress | Loads the existing ACTIVE-child endpoint and filters non-active links. Child-specific read-only pages are not yet available. |
+
+### Chunk 2 decisions and bounded deviations
+
+- **DEC-7 retained as a bounded development deviation from V4.0 TE-11.** `files.allow-pending-download=true` in `application-dev.properties`; `false` in `application-prod.properties`; global default is false. INFECTED, QUARANTINED, DELETED and SCAN_FAILED are never downloadable.
+- The default `FileAccessPolicy` denies downloads until a domain module registers an owning-record authorization policy. This avoids treating knowledge of a file UUID or uploader identity as record authorization. Consequently, PENDING download is configured for development but is not exposed for an unassociated file.
+- No malware scanner is configured. `PendingFileScanner` leaves files PENDING. A scanner implementation returning INFECTED causes QUARANTINED status.
+- Local filesystem streaming is used instead of the D5 15-minute object-store link; this remains a deviation until object storage is integrated.
+- Notification persistence is implemented, but no timetable, assignment, attendance or HOD approval event publisher is available in this branch to wire it into yet.
+- The tenant shell only exposes existing routes; future-chunk pages are not represented by placeholder routes. The child switcher is reusable and read-only, but there are no child-specific academic pages to attach it to yet.
+
+### Chunk 2 tests added
+
+- Backend: `FileContentInspectorTest` covers PDF magic bytes, renamed executable rejection (S2-27), HTML and NUL-containing text rejection; `LocalFileStorageTest` covers read/write and path traversal containment.
+- Frontend: `tenantPermissionsSlice.test.ts`, `ActionGate.test.tsx`, and `GuardianChildSwitcher.test.tsx`.
+- These tests are written but have not yet been executed locally; the branch CI run will be the execution gate. No story is marked Accepted.
