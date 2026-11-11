@@ -99,7 +99,7 @@ public class FileService {
         auditLog.record(new AuditEntry(AuditEventType.FILE_UPLOADED, purpose.actionCode(), "FILE_OBJECT",
                 fileId, institutionId, null,
                 Map.of("purpose", purpose.name(), "size", content.length,
-                        "sha256", checksum, "scan_status", scan.name()),
+                        "sha256", checksum, "scan_status", scan.name(), "file_status", scan == FileScanner.ScanResult.INFECTED ? "QUARANTINED" : "ACTIVE"),
                 1, "P", "SUCCESS"));
         return FileUploadResponse.from(saved);
     }

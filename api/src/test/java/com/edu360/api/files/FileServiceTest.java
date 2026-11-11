@@ -47,11 +47,15 @@ class FileServiceTest {
         service = new FileService(repository, storage, permissions, inspector, scanner, accessPolicy, auditLog, true);
     }
 
-    private void allowUpload() {
+    private void allowPermission() {
         UserRoleAssignment active = mock(UserRoleAssignment.class);
         when(active.getScopeType()).thenReturn(ScopeType.INSTITUTION);
         when(active.getInstitutionId()).thenReturn(UUID.randomUUID());
         when(permissions.activeAssignment(any())).thenReturn(Optional.of(active));
+    }
+
+    private void allowUpload() {
+        allowPermission();
         when(scanner.scan(any())).thenReturn(FileScanner.ScanResult.PENDING);
         when(storage.store(eq(tenantId), any(UUID.class), any())).thenReturn("tenants/file.pdf");
         when(repository.save(any(FileObject.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -59,7 +63,7 @@ class FileServiceTest {
 
     @Test
     void S2_27_rejectsExecutableRenamedWithPdfSuffix() {
-        allowUpload();
+        allowPermission();
         MockMultipartFile upload = new MockMultipartFile("file", "report.pdf.exe",
                 "application/x-msdownload", new byte[]{0x4d, 0x5a, 0, 0});
         assertThatThrownBy(() -> service.upload(principal, upload, "STUDY_MATERIAL", null))

@@ -38,11 +38,17 @@ public class LocalFileStorage {
             throw new IllegalArgumentException("Invalid tenant storage path.");
         }
         try {
+            Files.createDirectories(baseDir);
             Files.createDirectories(tenantDir);
-            Path target = tenantDir.resolve(fileId.toString()).normalize();
-            if (!target.startsWith(tenantDir)) throw new IllegalArgumentException("Invalid file storage path.");
+            Path realBase = baseDir.toRealPath();
+            Path realTenantDir = tenantDir.toRealPath();
+            if (!realTenantDir.startsWith(realBase)) {
+                throw new IllegalArgumentException("Tenant storage directory escapes the storage root.");
+            }
+            Path target = realTenantDir.resolve(fileId.toString()).normalize();
+            if (!target.startsWith(realTenantDir)) throw new IllegalArgumentException("Invalid file storage path.");
             Files.copy(content, target);
-            return baseDir.relativize(target).toString().replace('\\', '/');
+            return baseDir.relativize(tenantDir.resolve(fileId.toString())).toString().replace('\\', '/');
         } catch (IOException ex) {
             throw new UncheckedFileStorageException("Could not store uploaded file", ex);
         }

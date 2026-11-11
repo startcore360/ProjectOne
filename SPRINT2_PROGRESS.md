@@ -124,8 +124,8 @@
 - Backend: `LocalFileStorageTest` — read/write and path traversal containment.
 - Backend: `InAppNotifierTest` — dedupe and persistence failure isolation.
 - Frontend: tenant permission slice, login/hydration permission bootstrap, ActionGate denied/allowed state, guardian ACTIVE-child selection, DateField and the eight generic reusable controls.
-- These new correction tests are not yet executed. Latest completed baseline CI run on commit `a6bfb089103a0f00a89024300f14772bf803d82d`: Spring Boot verify, PostgreSQL migration validation, frontend lint, complete frontend unit suite, frontend type-check/production build and CodeQL passed. The overall workflow failed in OWASP Dependency-Check because dependencies were reported with CVEs at/above the configured CVSS 7 threshold. This is a dependency-risk finding, not an NVD-key configuration failure.
-- The current correction commit must receive a fresh full CI run before this chunk can be marked Tested. Do not claim local execution; no local build runner was available in this session.
+- CI run `43028733605` on commit `9f6409c56256f1c3044ee17c20e01f49187b2a2a`: frontend lint passed, all 168 frontend tests passed, frontend type-check/production build passed, and PostgreSQL migration validation passed. Backend verify ran 807 tests but failed on one Mockito `UnnecessaryStubbingException` in `FileServiceTest.S2_27_rejectsExecutableRenamedWithPdfSuffix`; the test helper has been corrected in the next unpushed patch. The Maven dependency audit and CodeQL were still running when this progress note was prepared.
+- The corrected backend test, storage symlink-containment test and full suite must receive a fresh CI run before this chunk can be marked Tested. Do not claim local execution; no local build runner was available in this session.
 
 ### Open items before Chunk 2 can be marked Tested
 

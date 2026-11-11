@@ -22,6 +22,20 @@ class LocalFileStorageTest {
     }
 
     @Test
+    void refusesTenantDirectorySymlinkThatEscapesStorageRoot() throws Exception {
+        Path tenants = tempDir.resolve("tenants");
+        Path outside = tempDir.getParent();
+        UUID tenant = UUID.randomUUID();
+        java.nio.file.Files.createDirectories(tenants);
+        java.nio.file.Files.createSymbolicLink(tenants.resolve(tenant.toString()), outside);
+        LocalFileStorage storage = new LocalFileStorage(tempDir.toString());
+        assertThatThrownBy(() -> storage.store(tenant, UUID.randomUUID(),
+                new java.io.ByteArrayInputStream(new byte[]{1})))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("escapes");
+    }
+
+    @Test
     void rejectsPathTraversalStorageKeys() {
         LocalFileStorage storage = new LocalFileStorage(tempDir.toString());
         assertThatThrownBy(() -> storage.read("../../etc/passwd"))
