@@ -1,6 +1,7 @@
 package com.edu360.api.academic;
 
 import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditEntry;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
@@ -148,13 +149,20 @@ public class SubjectAllocationService {
 
         allocation = repository.save(allocation);
 
-        auditLogService.record(
-                AuditEventType.ROLE_ASSIGNED,
+        auditLogService.record(new AuditEntry(
+                AuditEventType.SUBJECT_ALLOCATION_CREATED,
+                "SUBJECT_ALLOCATE",
+                "SUBJECT_ALLOCATION",
+                allocationId,
+                request.institutionId(),
                 null,
-                principal.userAccountId().toString(),
-                tenantId.toString(),
-                "Subject allocated: allocation " + allocationId + " to teacher " + request.staffAssignmentId()
-        );
+                java.util.Map.of(
+                        "staff_assignment_id", request.staffAssignmentId().toString(),
+                        "course_offering_id", request.courseOfferingId().toString(),
+                        "status", "ACTIVE"),
+                1,
+                "P",
+                "SUCCESS"));
 
         return SubjectAllocationResponse.from(allocation);
     }
@@ -180,13 +188,17 @@ public class SubjectAllocationService {
         allocation.setUpdatedBy(principal.userAccountId());
         allocation = repository.save(allocation);
 
-        auditLogService.record(
-                AuditEventType.ROLE_ASSIGNMENT_ENDED,
-                null,
-                principal.userAccountId().toString(),
-                tenantId.toString(),
-                "Subject allocation ended: " + allocationId
-        );
+        auditLogService.record(new AuditEntry(
+                AuditEventType.SUBJECT_ALLOCATION_ENDED,
+                "SUBJECT_ALLOCATE",
+                "SUBJECT_ALLOCATION",
+                allocationId,
+                allocation.getInstitutionId(),
+                java.util.Map.of("status", "ACTIVE"),
+                java.util.Map.of("status", "ENDED"),
+                1,
+                "P",
+                "SUCCESS"));
 
         return SubjectAllocationResponse.from(allocation);
     }

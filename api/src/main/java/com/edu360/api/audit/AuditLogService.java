@@ -49,10 +49,24 @@ public class AuditLogService {
     throw new IllegalArgumentException("Structured audit requires event type, action code, entity type and entity id.");
    if(entry.sensitivityClass()!=null&&!SENSITIVITY.contains(entry.sensitivityClass()))throw new IllegalArgumentException("Invalid sensitivity class.");
    if(entry.recordCount()!=null&&entry.recordCount()<0)throw new IllegalArgumentException("Record count cannot be negative.");
-   String role=TenantContext.currentActiveRoleCode(); TenantPrincipal actor=tenantActor(role);
+   String role=TenantContext.currentActiveRoleCode();
+   UUID institution=entry.institutionId();
+   if(institution==null){Set<UUID> ids=TenantContext.currentInstitutionIds();institution=ids.isEmpty()?null:ids.iterator().next();}
+   if(tenant==null){
+    Map<String,Object> fallback=new LinkedHashMap<>();
+    fallback.put("action_code",entry.actionCode());fallback.put("entity_type",entry.entityType());
+    fallback.put("entity_id",entry.entityId().toString());fallback.put("old_values",entry.oldValues());
+    fallback.put("new_values",entry.newValues());fallback.put("record_count",entry.recordCount());
+    fallback.put("sensitivity_class",entry.sensitivityClass());fallback.put("outcome",entry.outcome());
+    legacy.save(AuditLog.builder().eventType(entry.eventType()).actorRoleCode(role)
+      .scopeType(TenantContext.currentActiveScopeType()==null?null:TenantContext.currentActiveScopeType().name())
+      .institutionId(institution).correlationId(bound(CorrelationContext.get()))
+      .details(json(fallback)).build());
+    return;
+   }
+   TenantPrincipal actor=tenantActor(role);
    if(actor==null)throw new IllegalStateException("Structured audit requires an authenticated tenant actor with active role.");
    UUID event=UUID.randomUUID(); Instant now=Instant.now(); String correlation=bound(CorrelationContext.get());
-   UUID institution=entry.institutionId(); if(institution==null){Set<UUID> ids=TenantContext.currentInstitutionIds();institution=ids.isEmpty()?null:ids.iterator().next();}
    String oldJson=json(entry.oldValues()),newJson=json(entry.newValues());
    String operation=operationOf(entry.eventType()),outcome=entry.outcome()==null?"SUCCESS":entry.outcome();
    String hash=sha(String.join("|",actor.tenantId().toString(),event.toString(),now.toString(),actor.userAccountId().toString(),

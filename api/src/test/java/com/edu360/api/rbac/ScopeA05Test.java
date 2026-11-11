@@ -267,7 +267,7 @@ class ScopeA05Test {
         allocationService.endAllocation(world.tenantId, tp(admin), allocation.getId().getSubjectAllocationId());
 
         assertThat(allocation.getStatus()).isEqualTo("ENDED");
-        assertThat(lastAudit().getEventType()).isEqualTo(AuditEventType.ROLE_ASSIGNMENT_ENDED);
+        assertThat(lastAudit().getEventType()).isEqualTo(AuditEventType.SUBJECT_ALLOCATION_ENDED);
         assertThat(lastAudit().getActorRoleCode()).isEqualTo("COLLEGE_ADMIN");
     }
 
