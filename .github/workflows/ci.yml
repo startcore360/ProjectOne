@@ -88,14 +88,12 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: Audit Maven dependencies
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           # Do not pass an empty nvdApiKey: Dependency-Check treats it as an invalid credential.
           if [ -n "$NVD_API_KEY" ]; then
-            mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey="$NVD_API_KEY"
-          else
             mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+          else
+            env -u NVD_API_KEY mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
           fi
       - name: Scan repository for secrets
         uses: gitleaks/gitleaks-action@v2

@@ -111,7 +111,10 @@ public class AuditLogService {
     throw new IllegalArgumentException("Sensitive personal or secret fields are not permitted in audit values.");
    validateSafeValues(e.getValue());
   }}else if(value instanceof Iterable<?> values){for(Object item:values)validateSafeValues(item);}
-  else if(value instanceof String text){String lower=text.toLowerCase(java.util.Locale.ROOT);
+  else if(value instanceof String text){
+   // UUID identifiers are not contact details; do not misclassify their digit/hyphen groups as phone numbers.
+   if(text.matches("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))return;
+   String lower=text.toLowerCase(java.util.Locale.ROOT);
    if(lower.contains("http://")||lower.contains("https://")||lower.matches(".*[\\w.+-]+@[\\w.-]+\\.[a-z]{2,}.*")||lower.matches(".*[0-9][0-9 ()+.-]{7,}[0-9].*"))
     throw new IllegalArgumentException("Links and contact details are not permitted in audit values.");
   }

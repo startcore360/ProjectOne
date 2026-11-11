@@ -93,5 +93,5 @@ $PSQL -At -d edu360_v4_rb -c "SELECT 'RBCHECK | rolled back: role_definition sta
 for f in $V41; do run edu360_v4_rb $f > /dev/null; done                      # re-apply after rollback
 $PSQL -At -d edu360_v4_rb -c "SELECT 'RBCHECK | re-applied: V4.1 objects present | '||CASE WHEN count(*) = 5 THEN 'OK' ELSE 'MISMATCH '||count(*) END FROM (VALUES (to_regclass('app.tenant_step_in')::text), (to_regclass('app.tenant_role_template')::text), (to_regclass('app.user_active_role')::text), (to_regprocedure('app.fn_never_allowed_class(text)')::text), (to_regprocedure('public.fn_audit_logs_guard()')::text)) v(o) WHERE o IS NOT NULL" >> "$OUT"
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_rb WITH (FORCE)"
-grep -q "SUMMARY | FAIL" "$OUT" && { echo "TESTS FAILED — see $OUT"; exit 1; } || true
-grep -q "^RBCHECK | .* | MISMATCH" "$OUT" && { echo "ROLLBACK CHECKS FAILED — see $OUT"; exit 1; } || echo "All tests passed — see $OUT"
+grep -q "SUMMARY | FAIL" "$OUT" && { echo "TESTS FAILED — see $OUT"; cat "$OUT"; exit 1; } || true
+grep -q "^RBCHECK | .* | MISMATCH" "$OUT" && { echo "ROLLBACK CHECKS FAILED — see $OUT"; cat "$OUT"; exit 1; } || echo "All tests passed — see $OUT"
