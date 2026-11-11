@@ -1,11 +1,14 @@
 package com.edu360.api.institution;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.HodAssignRequest;
 import com.edu360.api.institution.dto.HodAssignResponse;
@@ -13,6 +16,7 @@ import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
+import com.edu360.api.time.TenantClock;
 
 import lombok.RequiredArgsConstructor;
 
@@ -40,6 +44,12 @@ public class HodAssignmentService {
     private final DepartmentRepository departmentRepository;
     private final StaffAssignmentRepository staffAssignmentRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
+    private TenantClock tenantClock;
+
+    @Autowired(required = false)
+    public void setTenantClock(TenantClock clock) { this.tenantClock = clock; }
+
+    private LocalDate today(UUID tenantId) { return tenantClock != null ? tenantClock.today(tenantId) : LocalDate.now(TenantClock.DEFAULT_ZONE); }
 
     @Transactional
     public HodAssignResponse assignHod(RbacPrincipal principal, UUID departmentId, HodAssignRequest request) {
@@ -62,6 +72,14 @@ public class HodAssignmentService {
             throw new UnauthorizedException(
                     "Staff assignment " + target.getStaffAssignmentId()
                             + " is not a faculty member of department " + departmentId + ".");
+        }
+        if (!department.getInstitutionId().equals(target.getInstitutionId())) {
+            throw new UnauthorizedException("Staff assignment does not belong to the department institution.");
+        }
+        LocalDate today = today(principal.tenantId());
+        if (target.getEffectiveFrom() == null || target.getEffectiveFrom().isAfter(today)
+                || (target.getEffectiveTo() != null && target.getEffectiveTo().isBefore(today))) {
+            throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_NOT_EFFECTIVE", "Staff assignment is not effective on the allocation date.");
         }
 
         department.setHodStaffAssignmentId(target.getStaffAssignmentId());
