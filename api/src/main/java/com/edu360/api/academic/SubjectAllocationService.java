@@ -1,6 +1,7 @@
 package com.edu360.api.academic;
 
 import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditEntry;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
@@ -9,12 +10,16 @@ import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
 import com.edu360.api.institution.SectionRepository;
-import com.edu360.api.rbac.UserRoleAssignmentRepository;
+import com.edu360.api.institution.StaffAssignment;
+import com.edu360.api.institution.StaffAssignmentRepository;
+import com.edu360.api.time.TenantClock;
+import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.institution.OfferingDepartmentResolver;
 import java.util.Objects;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +35,8 @@ public class SubjectAllocationService {
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
     private final SectionRepository sectionRepository;
-    private final UserRoleAssignmentRepository userRoleAssignmentRepository;
+    private final StaffAssignmentRepository staffAssignmentRepository;
+    private TenantClock tenantClock;
 
     public SubjectAllocationService(
             SubjectAllocationRepository repository,
@@ -45,13 +51,16 @@ public class SubjectAllocationService {
             PermissionEvaluatorService permissionEvaluatorService,
             AuditLogService auditLogService,
             @Autowired(required = false) SectionRepository sectionRepository,
-            @Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository) {
+            @Autowired(required = false) StaffAssignmentRepository staffAssignmentRepository) {
         this.repository = repository;
         this.permissionEvaluatorService = permissionEvaluatorService;
         this.auditLogService = auditLogService;
         this.sectionRepository = sectionRepository;
-        this.userRoleAssignmentRepository = userRoleAssignmentRepository;
+        this.staffAssignmentRepository = staffAssignmentRepository;
     }
+
+    @Autowired(required = false)
+    public void setTenantClock(TenantClock tenantClock) { this.tenantClock = tenantClock; }
 
     /** A-05: resolves the department of a course offering (HOD acts at department scope). */
     @Autowired(required = false)
@@ -110,21 +119,30 @@ public class SubjectAllocationService {
         }
 
         // BS-20: verify that section and staff belong to the institution
-        if (sectionRepository != null && request.sectionId() != null) {
-            sectionRepository.findByTenantIdAndSectionId(tenantId, request.sectionId()).ifPresent(sec -> {
-                if (request.institutionId() != null && sec.getInstitutionId() != null && !request.institutionId().equals(sec.getInstitutionId())) {
-                    throw new BusinessRuleViolationException("SECTION_INSTITUTION_MISMATCH",
-                            "Section does not belong to the specified institution.");
-                }
-            });
+        if (request.sectionId() != null && sectionRepository != null) {
+            var section = sectionRepository.findByTenantIdAndSectionId(tenantId, request.sectionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
+            if (!request.institutionId().equals(section.getInstitutionId())) {
+                throw new BusinessRuleViolationException("SECTION_INSTITUTION_MISMATCH",
+                        "Section does not belong to the specified institution.");
+            }
         }
-        if (userRoleAssignmentRepository != null && request.staffAssignmentId() != null) {
-            userRoleAssignmentRepository.findByIdTenantIdAndIdUserRoleAssignmentId(tenantId, request.staffAssignmentId()).ifPresent(staff -> {
-                if (request.institutionId() != null && staff.getInstitutionId() != null && !request.institutionId().equals(staff.getInstitutionId())) {
-                    throw new BusinessRuleViolationException("STAFF_INSTITUTION_MISMATCH",
-                            "Staff assignment does not belong to the specified institution.");
+        if (request.staffAssignmentId() != null) {
+            if (staffAssignmentRepository == null) throw new IllegalStateException("StaffAssignmentRepository is required.");
+            StaffAssignment staff = staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, request.staffAssignmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff assignment not found"));
+            if (!"ACTIVE".equals(staff.getStatus())) throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_INACTIVE",
+                    "Only an active staff assignment can receive a subject allocation.");
+            if (!request.institutionId().equals(staff.getInstitutionId())) throw new BusinessRuleViolationException("STAFF_INSTITUTION_MISMATCH",
+                    "Staff assignment does not belong to the specified institution.");
+            if (tenantClock != null) {
+                LocalDate today = tenantClock.today(tenantId);
+                if (staff.getEffectiveFrom() == null || staff.getEffectiveFrom().isAfter(today)
+                        || (staff.getEffectiveTo() != null && staff.getEffectiveTo().isBefore(today))) {
+                    throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_NOT_EFFECTIVE",
+                            "Staff assignment is not effective on the allocation date.");
                 }
-            });
+            }
         }
 
         UUID allocationId = UUID.randomUUID();
@@ -145,13 +163,20 @@ public class SubjectAllocationService {
 
         allocation = repository.save(allocation);
 
-        auditLogService.record(
-                AuditEventType.ROLE_ASSIGNED,
+        auditLogService.record(new AuditEntry(
+                AuditEventType.SUBJECT_ALLOCATION_CREATED,
+                "SUBJECT_ALLOCATE",
+                "SUBJECT_ALLOCATION",
+                allocationId,
+                request.institutionId(),
                 null,
-                principal.userAccountId().toString(),
-                tenantId.toString(),
-                "Subject allocated: allocation " + allocationId + " to teacher " + request.staffAssignmentId()
-        );
+                java.util.Map.of(
+                        "staff_assignment_id", request.staffAssignmentId().toString(),
+                        "course_offering_id", request.courseOfferingId().toString(),
+                        "status", "ACTIVE"),
+                1,
+                "P",
+                "SUCCESS"));
 
         return SubjectAllocationResponse.from(allocation);
     }
@@ -177,13 +202,17 @@ public class SubjectAllocationService {
         allocation.setUpdatedBy(principal.userAccountId());
         allocation = repository.save(allocation);
 
-        auditLogService.record(
-                AuditEventType.ROLE_ASSIGNMENT_ENDED,
-                null,
-                principal.userAccountId().toString(),
-                tenantId.toString(),
-                "Subject allocation ended: " + allocationId
-        );
+        auditLogService.record(new AuditEntry(
+                AuditEventType.SUBJECT_ALLOCATION_ENDED,
+                "SUBJECT_ALLOCATE",
+                "SUBJECT_ALLOCATION",
+                allocationId,
+                allocation.getInstitutionId(),
+                java.util.Map.of("status", "ACTIVE"),
+                java.util.Map.of("status", "ENDED"),
+                1,
+                "P",
+                "SUCCESS"));
 
         return SubjectAllocationResponse.from(allocation);
     }

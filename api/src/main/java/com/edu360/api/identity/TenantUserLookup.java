@@ -3,6 +3,7 @@ package com.edu360.api.identity;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -28,7 +29,7 @@ import com.edu360.api.tenant.TenantContext;
  *
  * Scopes: Reads user's active role assignment(s) and computes real institution scope:
  * - TENANT scope: institutionScope = "ALL" (per D4 §2.2 reserved for tenant-wide roles)
- * - INSTITUTION / DEPARTMENT scope: institutionScope = "LIST", institutionIds = {institutionId}
+ * - INSTITUTION / DEPARTMENT scope: institutionScope = "LIST", institutionIds = all active institutions for the selected role
  * - No active assignment: institutionScope = "NONE", institutionIds = {}
  */
 @Component
@@ -121,9 +122,15 @@ public class TenantUserLookup {
                         institutionScope = "ALL";
                     } else {
                         institutionScope = "LIST";
-                        if (chosen.getInstitutionId() != null) {
-                            institutionIds = Set.of(chosen.getInstitutionId());
-                        }
+                        // Keep the selected active role, but include its active institution assignments.
+                        UUID selectedRoleId = chosen.getRoleDefinitionId();
+                        ScopeType selectedScopeType = activeScopeType;
+                        institutionIds = assignments.stream()
+                                .filter(a -> a.getRoleDefinitionId().equals(selectedRoleId))
+                                .filter(a -> a.getScopeType() == selectedScopeType)
+                                .map(UserRoleAssignment::getInstitutionId)
+                                .filter(java.util.Objects::nonNull)
+                                .collect(Collectors.toUnmodifiableSet());
                     }
 
                     if (roleDefinitionRepository != null) {

@@ -20,6 +20,7 @@ import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
+import com.edu360.api.time.TenantClock;
 
 @ExtendWith(MockitoExtension.class)
 class MentorAssignmentServiceTest {
@@ -90,6 +91,7 @@ class MentorAssignmentServiceTest {
         sa.setDepartmentId(departmentId);
         sa.setDesignation("Assistant Professor");
         sa.setStatus(status);
+        sa.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).minusYears(1));
         return sa;
     }
 
@@ -103,7 +105,7 @@ class MentorAssignmentServiceTest {
         MentorAssignment current = new MentorAssignment();
         current.setMentorAssignmentId(UUID.randomUUID());
         current.setSectionId(SECTION_ID);
-        current.setEffectiveFrom(LocalDate.now().minusMonths(6));
+        current.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).minusMonths(6));
         when(mentorAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(TENANT_ID, SECTION_ID))
                 .thenReturn(Optional.of(current));
         when(mentorAssignmentRepository.save(any(MentorAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -112,7 +114,7 @@ class MentorAssignmentServiceTest {
 
         assertThat(response.sectionId()).isEqualTo(SECTION_ID);
         assertThat(response.staffAssignmentId()).isEqualTo(STAFF_ASSIGNMENT_ID);
-        assertThat(current.getEffectiveTo()).isEqualTo(LocalDate.now());
+        assertThat(current.getEffectiveTo()).isEqualTo(LocalDate.now(TenantClock.DEFAULT_ZONE));
         org.mockito.Mockito.verify(permissionEvaluatorService).authorize(
                 principal, "MENTOR_ASSIGN", RbacScope.department(INSTITUTION_ID, DEPARTMENT_ID), RbacTarget.NONE);
     }

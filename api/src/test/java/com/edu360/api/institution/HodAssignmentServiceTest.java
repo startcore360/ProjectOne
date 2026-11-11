@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,6 +23,7 @@ import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
+import com.edu360.api.time.TenantClock;
 
 @ExtendWith(MockitoExtension.class)
 class HodAssignmentServiceTest {
@@ -62,6 +64,7 @@ class HodAssignmentServiceTest {
         sa.setDepartmentId(departmentId);
         sa.setDesignation("Associate Professor");
         sa.setStatus(status);
+        sa.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).minusYears(1));
         return sa;
     }
 

@@ -11,9 +11,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 /**
- * I-02 (D1 §8.1, story 1): "College students use Student ID and password". Finds the ACTIVE
+ * I-02 / A8 (D1 §8.1, story 1): "College students use Student ID and password"; school students are enabled per class. Finds the ACTIVE
  * login account that owns a student code in the tenant already set in TenantContext, through
- * app.fn_student_login_account (sql/24_v41_sign_in_security.sql) - a narrow SECURITY DEFINER
+ * app.fn_student_login_account (sql/26_v41_student_login_switch_guard.sql) - a narrow SECURITY DEFINER
  * function, because the profile row is institution-scoped under RLS and nobody is signed in yet.
  * Answers nothing but the account id; never widens the session's institution scope.
  */

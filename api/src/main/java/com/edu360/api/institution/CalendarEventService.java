@@ -43,7 +43,7 @@ public class CalendarEventService {
     @org.springframework.beans.factory.annotation.Autowired
     public CalendarEventService(AcademicCalendarEventRepository academicCalendarEventRepository,
                                 PermissionEvaluatorService permissionEvaluatorService,
-                                @org.springframework.beans.factory.annotation.Autowired(required = false) AcademicSessionRepository academicSessionRepository) {
+                                AcademicSessionRepository academicSessionRepository) {
         this.academicCalendarEventRepository = academicCalendarEventRepository;
         this.permissionEvaluatorService = permissionEvaluatorService;
         this.academicSessionRepository = academicSessionRepository;
@@ -67,10 +67,13 @@ public class CalendarEventService {
             throw new IllegalArgumentException("endDate must not be before startDate.");
         }
 
-        // T06: Validate academicSessionId exists in DB, 404 if missing
-        if (academicSessionRepository != null) {
-            academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), request.academicSessionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Academic session not found: " + request.academicSessionId()));
+        // T06: the session must belong to this institution or be the tenant-wide master session.
+        if (academicSessionRepository == null) throw new IllegalStateException("AcademicSessionRepository is required.");
+        AcademicSession session = academicSessionRepository
+                .findByTenantIdAndAcademicSessionId(principal.tenantId(), request.academicSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Academic session not found: " + request.academicSessionId()));
+        if (session.getInstitutionId() != null && !request.institutionId().equals(session.getInstitutionId())) {
+            throw new ResourceNotFoundException("Academic session not found for this institution.");
         }
 
         // Exam conflict check: holidays on exam days are blocked with a warning

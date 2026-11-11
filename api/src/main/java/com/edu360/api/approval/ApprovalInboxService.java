@@ -9,10 +9,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.academic.PromotionRunRepository;
@@ -22,6 +26,7 @@ import com.edu360.api.approval.dto.ApprovalSummaryDto;
 import com.edu360.api.approval.dto.DecideApprovalRequestDto;
 import com.edu360.api.approval.dto.DecideApprovalResponseDto;
 import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditEntry;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
@@ -64,6 +69,8 @@ public class ApprovalInboxService {
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final ApprovalRouting approvalRouting;
     private final LeaveApproverSettingRepository leaveApproverSettingRepository;
+    private List<ApprovalOutcomeHandler> outcomeHandlers = List.of();
+    private JdbcTemplate jdbcTemplate;
 
     public ApprovalInboxService(
             ApprovalRequestRepository approvalRequestRepository,
@@ -85,6 +92,14 @@ public class ApprovalInboxService {
         this.approvalRouting = Objects.requireNonNull(approvalRouting);
         this.leaveApproverSettingRepository = Objects.requireNonNull(leaveApproverSettingRepository);
     }
+
+    @Autowired(required = false)
+    public void setOutcomeHandlers(List<ApprovalOutcomeHandler> handlers) {
+        this.outcomeHandlers = handlers == null ? List.of() : List.copyOf(handlers);
+    }
+
+    @Autowired(required = false)
+    public void setDataSource(DataSource dataSource) { this.jdbcTemplate = new JdbcTemplate(dataSource); }
 
     /** P-05: tenant-wide callers see every institution, others only their own, no context sees nothing. */
     public static boolean inCallerScope(UUID institutionId) {
@@ -203,8 +218,12 @@ public class ApprovalInboxService {
                     "Approval request is not in PENDING state (status=" + request.getStatus() + ")");
         }
 
-        // Rule 11: self-approval prohibited
-        if (request.getRequestedByUserId().equals(userId)) {
+        // Rule 11: self-approval is prohibited except an APPROVED DEC-10 HOD correction for the session the HOD marked.
+        String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
+        String decision = requestDto.decision().trim().toUpperCase();
+        if (request.getRequestedByUserId().equals(userId)
+                && !("APPROVED".equals(decision)
+                    && isHodSelfApprovalForOwnMarkedSession(tenantId, request, activeRole, userId))) {
             log.warn("Security violation: user {} attempted to decide their own approval request {}", userId, approvalRequestId);
             throw new SelfApprovalForbiddenException("A principal may not approve or decide their own request (Addendum rule 11).");
         }
@@ -232,14 +251,12 @@ public class ApprovalInboxService {
             throw new UnauthorizedException("Separation of duties: A user cannot act at multiple steps of the same approval request (Addendum rule 12).");
         }
 
-        String decision = requestDto.decision().trim().toUpperCase();
         if ("REJECTED".equals(decision) && (requestDto.remark() == null || requestDto.remark().isBlank())) {
             throw new BusinessRuleViolationException("REJECTION_REMARK_REQUIRED",
                     "A remark is mandatory when rejecting an approval request.");
         }
 
         // P-01 / P-04: the audit and the step record the real active role, never a fallback.
-        String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
         if (activeRole == null) {
             throw new UnauthorizedException("No active role: choose an active role before deciding an approval.");
         }
@@ -305,13 +322,52 @@ public class ApprovalInboxService {
             case ROLLDOWN -> " (acting for " + route.actingForRole() + " by roll-down, no holder)";
             default -> "";
         };
-        auditLogService.record(AuditEventType.APPROVAL, null, request.getSubjectId().toString(), null,
-                "Approval request " + approvalRequestId + " step " + stepNo + " decided as " + decision
-                        + " by " + activeRole + actingFor);
+        if (isAttendanceCorrectionRequest(request) && request.getRequestedByUserId().equals(userId)
+                && "APPROVED".equals(decision)) {
+            auditLogService.record(new AuditEntry(AuditEventType.ATTENDANCE_CORRECTION_SELF_APPROVED,
+                    "ATTENDANCE_CORRECTION_APPROVE", "ATTENDANCE_CORRECTION_REQUEST", request.getSubjectId(),
+                    request.getInstitutionId(), Map.of("approval_status", "PENDING"), Map.of("approval_status", "APPROVED"),
+                    1, "P", "SUCCESS"));
+        } else {
+            auditLogService.record(AuditEventType.APPROVAL, null, request.getSubjectId().toString(), null,
+                    "Approval request " + approvalRequestId + " step " + stepNo + " decided as " + decision
+                            + " by " + activeRole + actingFor);
+        }
 
         List<ApprovalStep> allSteps = approvalStepRepository
                 .findByIdTenantIdAndApprovalRequestIdOrderByStepNoAsc(tenantId, approvalRequestId);
         return new DecideApprovalResponseDto(toSummaryDto(request, allSteps), subjectNewStatus, List.of());
+    }
+
+    /** DEC-10: only a HOD requester correcting the attendance session they personally marked may self-approve. */
+    private boolean isHodSelfApprovalForOwnMarkedSession(UUID tenantId, ApprovalRequest request, String activeRole, UUID userId) {
+        if (!"HEAD_OF_DEPARTMENT".equalsIgnoreCase(activeRole) || jdbcTemplate == null || request.getInstitutionId() == null) return false;
+        String process = request.getProcessCode();
+        String subject = request.getSubjectType();
+        boolean attendanceCorrection =
+                "ATTENDANCE_CORRECTION_COLLEGE".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION_SCHOOL".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subject)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subject);
+        if (!attendanceCorrection) return false;
+        try {
+            UUID markedBy = jdbcTemplate.queryForObject("""
+                    SELECT s.marked_by_user_id
+                    FROM app.attendance_correction_request cr
+                    JOIN app.attendance_session s
+                      ON s.tenant_id = cr.tenant_id
+                     AND s.institution_id = cr.institution_id
+                     AND s.attendance_session_id = cr.attendance_session_id
+                     AND s.session_kind = 'PERIOD'
+                    WHERE cr.tenant_id = ?
+                      AND cr.institution_id = ?
+                      AND cr.attendance_correction_request_id = ?
+                    """, UUID.class, tenantId, request.getInstitutionId(), request.getSubjectId());
+            return userId.equals(markedBy);
+        } catch (EmptyResultDataAccessException ex) {
+            return false;
+        }
     }
 
     /** Which action an approval process needs; null when the process is unknown (deny). */
@@ -332,6 +388,16 @@ public class ApprovalInboxService {
         }
         if ("STUDENT_GUARDIAN_LINK".equalsIgnoreCase(subjectType) || "GUARDIAN_CHANGE".equalsIgnoreCase(processCode)) {
             return "GUARDIAN_CHANGE_APPROVE";
+        }
+        if ("ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subjectType)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subjectType)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(processCode)
+                || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_CORRECTION_"))) {
+            return "ATTENDANCE_CORRECTION_APPROVE";
+        }
+        if ("ATTENDANCE_BULK_UPLOAD".equalsIgnoreCase(subjectType)
+                || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"))) {
+            return "ATTENDANCE_BULK_UPLOAD_APPROVE";
         }
         return null;
     }
@@ -387,7 +453,28 @@ public class ApprovalInboxService {
                 run.setUpdatedBy(actor);
                 promotionRunRepository.save(run);
             });
+        } else if (isAttendanceProcess(request)) {
+            ApprovalOutcomeHandler handler = outcomeHandlers.stream().filter(candidate -> candidate.supports(request))
+                    .findFirst().orElseThrow(() -> new BusinessRuleViolationException(
+                            "APPROVAL_HANDLER_NOT_REGISTERED",
+                            "No outcome handler is registered for approval process " + request.getProcessCode() + "."));
+            handler.apply(tenantId, request, approved, actor);
         }
+    }
+
+    private static boolean isAttendanceCorrectionRequest(ApprovalRequest request) {
+        String subject = request.getSubjectType();
+        String process = request.getProcessCode();
+        return "ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subject) || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subject)
+                || "ATTENDANCE_CORRECTION_COLLEGE".equalsIgnoreCase(process) || "ATTENDANCE_CORRECTION_SCHOOL".equalsIgnoreCase(process);
+    }
+
+    private static boolean isAttendanceProcess(ApprovalRequest request) {
+        String subject = request.getSubjectType();
+        String process = request.getProcessCode();
+        return isAttendanceCorrectionRequest(request)
+                || "ATTENDANCE_BULK_UPLOAD".equalsIgnoreCase(subject)
+                || (process != null && process.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"));
     }
 
     private static ResourceNotFoundException notFound(UUID approvalRequestId) {

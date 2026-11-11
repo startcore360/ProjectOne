@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -137,6 +138,46 @@ class AuditLogServiceTest {
         assertThat(row.entityType()).isEqualTo("ROLE_ASSIGNED");
         assertThat(row.payloadHash()).matches("[0-9a-f]{64}");
         assertThat(row.newValuesJson()).contains("\"details\":\"Assigned \\\"HOD\\\" role\"");
+    }
+
+
+    @Test
+    void regQ01_structuredAttendanceAuditCarriesRequiredFields() {
+        List<TenantAuditEvent> rows = new ArrayList<>();
+        AuditLogService service = new AuditLogService(
+                createRepository(new AtomicReference<>(), new AtomicBoolean(false)), rows::add);
+        UUID tenantId = UUID.randomUUID(), userId = UUID.randomUUID(), institutionId = UUID.randomUUID(), sessionId = UUID.randomUUID();
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "LIST", Set.of(institutionId), "PROFESSOR", ScopeType.INSTITUTION);
+        signIn(tenantId, userId);
+        service.record(new AuditEntry(AuditEventType.ATTENDANCE_MARKED, "ATTENDANCE_MARK", "ATTENDANCE_SESSION",
+                sessionId, institutionId, Map.of("status", "ABSENT"), Map.of("status", "PRESENT"),
+                24, "P", "SUCCESS"));
+        assertThat(rows).hasSize(1);
+        TenantAuditEvent row = rows.get(0);
+        assertThat(row.actionCode()).isEqualTo("ATTENDANCE_MARK");
+        assertThat(row.entityType()).isEqualTo("ATTENDANCE_SESSION");
+        assertThat(row.entityId()).isEqualTo(sessionId);
+        assertThat(row.recordCount()).isEqualTo(24);
+        assertThat(row.sensitivityClass()).isEqualTo("P");
+        assertThat(row.oldValuesJson()).contains("ABSENT");
+        assertThat(row.newValuesJson()).contains("PRESENT");
+        assertThat(row.activeRoleCode()).isEqualTo("PROFESSOR");
+        assertThat(row.correlationId()).isNotBlank();
+    }
+
+    @Test
+    void regQ01_structuredAuditRejectsSensitiveFields() {
+        List<TenantAuditEvent> rows = new ArrayList<>();
+        AuditLogService service = new AuditLogService(
+                createRepository(new AtomicReference<>(), new AtomicBoolean(false)), rows::add);
+        UUID tenantId = UUID.randomUUID(), userId = UUID.randomUUID(), sessionId = UUID.randomUUID();
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), "PROFESSOR", ScopeType.TENANT);
+        signIn(tenantId, userId);
+        assertThatThrownBy(() -> service.record(new AuditEntry(AuditEventType.ATTENDANCE_MARKED,
+                "ATTENDANCE_MARK", "ATTENDANCE_SESSION", sessionId, null, null,
+                Map.of("studentName", "Not allowed"), 1, "P", "SUCCESS")))
+                .isInstanceOf(AuditFailureException.class);
+        assertThat(rows).isEmpty();
     }
 
     @Test
