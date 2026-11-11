@@ -93,9 +93,8 @@ public class MentorAssignmentService {
         if (!section.getInstitutionId().equals(target.getInstitutionId())) {
             throw new UnauthorizedException("Staff assignment does not belong to the section institution.");
         }
-        requireEffective(target, today(principal.tenantId()));
-
         LocalDate today = today(principal.tenantId());
+        requireEffective(target, today);
         mentorAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(principal.tenantId(), sectionId)
                 .ifPresent(current -> {
                     current.setEffectiveTo(today);

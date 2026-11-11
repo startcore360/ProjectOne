@@ -112,10 +112,11 @@ public class MasterCalendarService {
                 .findByTenantIdAndAcademicSessionId(principal.tenantId(), academicSessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session not found: " + academicSessionId));
 
-        RbacScope scope = session.getInstitutionId() == null
-                ? RbacScope.tenant()
-                : RbacScope.institution(session.getInstitutionId());
-
+        if (session.getInstitutionId() != null) {
+            throw new BusinessRuleViolationException("UNIVERSITY_EVENT_REQUIRES_TENANT_SESSION",
+                    "A university master calendar event must use a tenant-wide academic session.");
+        }
+        RbacScope scope = RbacScope.tenant();
         permissionEvaluatorService.authorize(principal, "CALENDAR_MASTER_SET", scope, RbacTarget.NONE);
 
         return toSessionResponse(session);
@@ -133,7 +134,7 @@ public class MasterCalendarService {
 
         permissionEvaluatorService.authorize(principal, "CALENDAR_MASTER_SET", scope, RbacTarget.NONE);
 
-        if (request.endDate().isBefore(request.startDate())) {
+        if (!request.endDate().isAfter(request.startDate())) {
             throw new BusinessRuleViolationException("INVALID_DATE_RANGE", "endDate must not be before startDate.");
         }
 

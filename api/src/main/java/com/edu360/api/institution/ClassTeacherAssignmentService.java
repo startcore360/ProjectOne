@@ -87,9 +87,8 @@ public class ClassTeacherAssignmentService {
                     "Staff assignment " + target.getStaffAssignmentId()
                             + " does not belong to institution " + section.getInstitutionId() + ".");
         }
-        requireEffective(target, today(principal.tenantId()));
-
         LocalDate today = today(principal.tenantId());
+        requireEffective(target, today);
         classTeacherAssignmentRepository
                 .findByTenantIdAndSectionIdAndEffectiveToIsNull(principal.tenantId(), sectionId)
                 .ifPresent(current -> {
