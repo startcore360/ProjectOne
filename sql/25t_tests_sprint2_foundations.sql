@@ -100,3 +100,19 @@ SELECT public.expect_fail('S2-DB-08','decided step remains immutable after the H
  WHERE tenant_id='a0000000-0000-0000-0000-000000000000'
  AND approval_step_id='a0000000-0000-0000-0000-000000000f31'
 $q$,'APPROVAL_IMMUTABLE');
+
+SELECT public.expect_fail('S2-DB-09','HOD requester cannot reject their own correction request',$q$
+ DO $d$ DECLARE t uuid:='a0000000-0000-0000-0000-000000000000'; u uuid:='a0000000-0000-0000-0000-000000000101';
+ i uuid:='a0000000-0000-0000-0000-000000000201'; corr uuid:='a0000000-0000-0000-0000-000000000d39';
+ req uuid:='a0000000-0000-0000-0000-000000000e39'; step uuid:='a0000000-0000-0000-0000-000000000f39';
+ BEGIN
+  INSERT INTO app.approval_request(tenant_id,approval_request_id,institution_id,process_code,subject_type,subject_id,requested_by_user_id,requester_active_role,created_by,updated_by)
+  VALUES(t,req,i,'ATTENDANCE_CORRECTION_COLLEGE','ATTENDANCE_CORRECTION_REQUEST',corr,u,'HEAD_OF_DEPARTMENT',u,u);
+  INSERT INTO app.attendance_correction_request(tenant_id,attendance_correction_request_id,institution_id,attendance_session_id,requested_by_user_id,reason,approval_request_id,status,created_by,updated_by)
+  VALUES(t,corr,i,'a0000000-0000-0000-0000-000000000c01',u,'S2 self rejection',req,'REQUESTED',u,u);
+  INSERT INTO app.approval_step(tenant_id,approval_step_id,approval_request_id,step_no,approver_role_code,created_by,updated_by)
+  VALUES(t,step,req,1,'HEAD_OF_DEPARTMENT',u,u);
+  UPDATE app.approval_step SET decision='REJECTED',acted_by_user_id=u,acted_active_role='HEAD_OF_DEPARTMENT',decided_at=now()
+   WHERE tenant_id=t AND approval_step_id=step;
+ END $d$
+$q$,'SELF_APPROVAL');

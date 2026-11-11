@@ -43,7 +43,7 @@
 | A4 Calendar and weekly off | Existing `CalendarEventService` and `WeeklyOffRuleService` plus tests are present. Institution/date query coverage not rerun. | Open validation item. |
 | A5 Term lock | SQL `app.is_term_locked(tenant, section, date)` exists in `sql/02_rules.sql`; Java service previously had lock/unlock only. | Added shared `TermLockService.isLocked(tenantId, sectionId, date)` delegating to the SQL function. |
 | A6 Class teacher, mentor, HOD | `ClassTeacherAssignmentService`, `MentorAssignmentService`, and `HodAssignmentService` exist. Their full effective-date and scope regression was not rerun. | Open validation item. |
-| A7 Approval routing | `ApprovalInboxService.resolveApprovalAction` recognised institution, promotion and guardian processes; attendance process codes were absent. | Added correction and bulk-upload action resolution and a fail-closed `ApprovalOutcomeHandler` extension point. |
+| A7 Approval routing | `ApprovalInboxService.resolveApprovalAction` recognised institution, promotion and guardian processes; attendance process codes were absent. | Added correction and bulk-upload action resolution, the narrow Java-side HOD self-approval check against the correction's marked session, a dedicated self-approval audit event, and a fail-closed `ApprovalOutcomeHandler` extension point. |
 | A8 Student login switch | `StudentLoginSwitchService` and its tests exist. Full policy regression not rerun. | Open validation item. |
 | A9 Guardian links | `GuardianLinkService` and guardian-link repository/tests exist. Active-link/child lookup regression not rerun. | Open validation item. |
 | A10 HTTP and database errors | `GlobalExceptionHandler` already returns field-level Bean Validation errors. Database trigger errors previously fell through to generic handling. | Added typed `ApiException`, audit failure response, and known term/correction/not-held/self-approval/partition/unique/foreign-key mappings. |
@@ -65,7 +65,7 @@
 - Added `CursorPageTest.defaultLimitAndStableSortAreApplied`, `CursorPageTest.rejectsUnknownSortAndOversizedLimit`, `CursorPageTest.cursorRoundTripsAndRejectsTampering`.
 - Added `TenantClockTest.usesTenantTimeZoneForBusinessDate`.
 - Added `IdempotencyServiceTest.requestHashIsDeterministicForMapKeyOrder` and `IdempotencyServiceTest.requestHashChangesWhenBodyChanges`.
-- Added SQL checks `S2-DB-01` through `S2-DB-08`, including HOD own-marked-session allowance, other-teacher denial, other-role denial, non-attendance denial and decided-step immutability.
+- Added SQL checks `S2-DB-01` through `S2-DB-09`, including HOD own-marked-session allowance, other-teacher denial, other-role denial, non-attendance denial and decided-step immutability.
 - `./mvnw clean verify`: not executed; remote GitHub editing connection does not provide a local checkout/build runner.
 - `npm run lint`, `npm test`, `npm run build`: not executed; no frontend files were changed in this chunk.
 - `sql/run_all.sh`: not executed; PostgreSQL runtime is not available through the repository connection.

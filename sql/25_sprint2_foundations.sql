@@ -10,7 +10,8 @@ BEGIN
  IF NEW.decision IN ('APPROVED','REJECTED','FORWARDED') THEN
   SELECT requested_by_user_id,process_code,subject_type INTO v_req,v_process,v_subject
    FROM app.approval_request WHERE tenant_id=NEW.tenant_id AND approval_request_id=NEW.approval_request_id;
-  IF NEW.acted_by_user_id=v_req
+  IF NEW.decision='APPROVED'
+    AND NEW.acted_by_user_id=v_req
     AND (v_process IN ('ATTENDANCE_CORRECTION_COLLEGE','ATTENDANCE_CORRECTION_SCHOOL') OR v_subject='ATTENDANCE_CORRECTION_REQUEST')
     AND NEW.acted_active_role='HEAD_OF_DEPARTMENT' THEN
    SELECT s.marked_by_user_id INTO v_marked_by
