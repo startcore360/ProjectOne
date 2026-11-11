@@ -270,7 +270,7 @@ export default function AppLayout() {
     </nav>
     {moreOpen && <div className="platform-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setMoreOpen(false); }}>
       <section className="app-more-drawer" role="dialog" aria-modal="true" aria-label="Menu">
-        <header><h2>Menu</h2><button className="platform-icon-button" onClick={() => setMoreOpen(false)} aria-label="Close"><Icon name="x-circle" size={18}/></button></header>
+        <header><h2>Menu</h2><button className="platform-icon-button" onClick={() => setMoreOpen(false)} aria-label="Close"><Icon name="x" size={16}/></button></header>
         {/* Mobile has no sidebar, so the signed-in identity + profile link live here too. */}
         <NavLink to="/profile" className="app-user app-user--drawer" onClick={() => setMoreOpen(false)}>
           {avatar}

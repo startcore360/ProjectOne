@@ -5,7 +5,8 @@ export type IconName =
   | "x-circle" | "search" | "bell" | "user" | "users" | "chart" | "book"
   | "wallet" | "upload" | "download" | "lock" | "shield" | "clock" | "eye"
   | "edit" | "send" | "return" | "archive" | "ban" | "refresh" | "printer"
-  | "wifi-off" | "more" | "help" | "sun" | "moon" | "chevron-down" | "monitor" | "smartphone";
+  | "wifi-off" | "more" | "help" | "sun" | "moon" | "chevron-down" | "monitor" | "smartphone"
+  | "x" | "close";
 
 const paths: Record<IconName, ReactNode> = {
   home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1Z"/></>,
@@ -42,7 +43,9 @@ const paths: Record<IconName, ReactNode> = {
   moon: <><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></>,
   "chevron-down": <><path d="m6 9 6 6 6-6"/></>,
   monitor: <><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></>,
-  smartphone: <><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></>
+  smartphone: <><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></>,
+  x: <><path d="M18 6 6 18M6 6l12 12"/></>,
+  close: <><path d="M18 6 6 18M6 6l12 12"/></>,
 };
 
 export function Icon({ name, size = 20, ...props }: SVGProps<SVGSVGElement> & { name: IconName; size?: number }) {

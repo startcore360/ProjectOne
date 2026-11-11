@@ -56,7 +56,7 @@ export function CreateTenantModal({
             <p>New tenants begin in Trial state with a 30-day evaluation period. Activation occurs upon plan payment.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>

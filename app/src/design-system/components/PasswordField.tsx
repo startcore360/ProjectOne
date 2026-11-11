@@ -9,11 +9,12 @@ export type PasswordFieldProps = InputHTMLAttributes<HTMLInputElement> & {
 
 export default function PasswordField({ label, id, required, ...rest }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  const hasAsterisk = label.includes("*");
 
   return (
     <div className="eds-field">
       <label htmlFor={id}>
-        {label} {required && <span>Required</span>}
+        {label} {required && !hasAsterisk && <span>(Required)</span>}
       </label>
       <div className="auth-password">
         <input id={id} type={visible ? "text" : "password"} required={required} {...rest} />

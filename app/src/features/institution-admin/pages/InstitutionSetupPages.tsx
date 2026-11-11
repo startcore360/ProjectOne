@@ -5,7 +5,16 @@ import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui";
-import { Button, TextField, Panel } from "../../../design-system/components";
+import {
+  Button,
+  TextField,
+  SelectField,
+  TextAreaField,
+  DateField,
+  DateTimeField,
+  Panel,
+  EmptyState,
+} from "../../../design-system/components";
 import {
   AddAcademicSessionModal,
   AddMasterEventModal,
@@ -73,21 +82,15 @@ function IdField({
   hint?: string;
 }) {
   return (
-    <div className="eds-field">
-      <label htmlFor={id}>
-        {label} <span>Required</span>
-      </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Paste the ID (UUID)"
-        aria-describedby={`${id}-hint`}
-      />
-      <p id={`${id}-hint`} className="platform-sample-note" style={{ marginTop: "var(--space-1)" }}>
-        <span aria-hidden="true">ⓘ</span> {hint ?? "There is no list or picker for this yet — paste the ID directly."}
-      </p>
-    </div>
+    <TextField
+      id={id}
+      label={label}
+      required
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Paste the ID (UUID)"
+      hint={hint ?? "There is no list or picker for this yet — paste the ID directly."}
+    />
   );
 }
 
@@ -620,25 +623,39 @@ export function CalendarEventsPage() {
           </Panel>
 
           <Panel title="Choose institution" description="There is no institution picker yet; paste the institution ID.">
-            <IdField id="cal-institution-id" label="Institution ID" value={institutionId} onChange={setInstitutionId} />
-            <Button type="button" variant="secondary" onClick={() => void loadEvents()} busy={listStatus === "busy"}>
-              {listStatus === "busy" ? "Loading…" : "Load events"}
-            </Button>
+            <div className="eds-field" style={{ marginTop: 0 }}>
+              <label htmlFor="cal-institution-id">
+                Institution ID <span>(Required)</span>
+              </label>
+              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+                <input
+                  id="cal-institution-id"
+                  value={institutionId}
+                  onChange={(e) => setInstitutionId(e.target.value)}
+                  placeholder="Paste the ID (UUID)"
+                  style={{ flex: 1 }}
+                />
+                <Button type="button" variant="secondary" onClick={() => void loadEvents()} busy={listStatus === "busy"}>
+                  {listStatus === "busy" ? "Loading…" : "Load events"}
+                </Button>
+              </div>
+            </div>
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
 
           <Panel title="Local events" description="Only LOCAL_HOLIDAY and LOCAL_EVENT rows for this institution.">
             {events === null ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No events loaded yet.</strong>
-                <p>Enter an institution ID above and choose "Load events".</p>
-              </div>
+              <EmptyState
+                title="No events loaded yet"
+                description="Enter an institution ID above and choose Load events."
+                icon="calendar"
+              />
             ) : events.length === 0 ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No local events are recorded for this institution.</strong>
-              </div>
+              <EmptyState
+                title="No local events recorded"
+                description="No local events are recorded for this institution."
+                icon="calendar"
+              />
             ) : (
               <div className="platform-table-wrap">
                 <table className="platform-table">
@@ -679,13 +696,16 @@ export function CalendarEventsPage() {
                 value={academicSessionId}
                 onChange={setAcademicSessionId}
               />
-              <label className="platform-form-field">
-                Event type
-                <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
-                  <option value="LOCAL_HOLIDAY">Local holiday</option>
-                  <option value="LOCAL_EVENT">Local event</option>
-                </select>
-              </label>
+              <SelectField
+                id="cal-event-type"
+                label="Event type"
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value)}
+                options={[
+                  { value: "LOCAL_HOLIDAY", label: "Local holiday" },
+                  { value: "LOCAL_EVENT", label: "Local event" },
+                ]}
+              />
               <TextField
                 id="cal-title"
                 label="Title"
@@ -695,14 +715,20 @@ export function CalendarEventsPage() {
                 placeholder="e.g. Founder's Day"
               />
               <div className="platform-form-grid">
-                <label className="platform-form-field">
-                  Start date
-                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-                </label>
-                <label className="platform-form-field">
-                  End date
-                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
-                </label>
+                <DateField
+                  id="cal-start-date"
+                  label="Start date"
+                  required
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <DateField
+                  id="cal-end-date"
+                  label="End date"
+                  required
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
               </div>
               <ResultBanner status={status} message={message} />
               <Button type="submit" busy={status === "busy"}>
@@ -882,25 +908,39 @@ export function WeeklyOffRulesPage() {
       ) : (
         <>
           <Panel title="Choose institution" description="There is no institution picker yet; paste the institution ID.">
-            <IdField id="wo-institution-id" label="Institution ID" value={institutionId} onChange={setInstitutionId} />
-            <Button type="button" variant="secondary" onClick={() => void loadRules()} busy={listStatus === "busy"}>
-              {listStatus === "busy" ? "Loading…" : "Load rules"}
-            </Button>
+            <div className="eds-field" style={{ marginTop: 0 }}>
+              <label htmlFor="wo-institution-id">
+                Institution ID <span>(Required)</span>
+              </label>
+              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+                <input
+                  id="wo-institution-id"
+                  value={institutionId}
+                  onChange={(e) => setInstitutionId(e.target.value)}
+                  placeholder="Paste the ID (UUID)"
+                  style={{ flex: 1 }}
+                />
+                <Button type="button" variant="secondary" onClick={() => void loadRules()} busy={listStatus === "busy"}>
+                  {listStatus === "busy" ? "Loading…" : "Load rules"}
+                </Button>
+              </div>
+            </div>
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
 
           <Panel title="Current weekly-off rules">
             {rules === null ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No rules loaded yet.</strong>
-                <p>Enter an institution ID above and choose "Load rules".</p>
-              </div>
+              <EmptyState
+                title="No rules loaded yet"
+                description="Enter an institution ID above and choose Load rules."
+                icon="clock"
+              />
             ) : rules.length === 0 ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No weekly-off rules are recorded for this institution.</strong>
-              </div>
+              <EmptyState
+                title="No weekly-off rules recorded"
+                description="No weekly-off rules are recorded for this institution."
+                icon="clock"
+              />
             ) : (
               <div className="platform-table-wrap">
                 <table className="platform-table">
@@ -1049,58 +1089,59 @@ export function AcademicStructurePage() {
       />
 
       <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
-        {institutions.length > 0 && (
-          <div style={{ marginBottom: "var(--space-3)" }}>
-            <label htmlFor="quick-inst-select" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-              Choose from registered institutions
-            </label>
-            <select
-              id="quick-inst-select"
-              value={institutionId}
-              onChange={(e) => {
-                const val = e.target.value;
-                setInstitutionId(val);
-                if (val && isValidUuid(val)) {
-                  void loadStructureFor(val);
-                }
-              }}
-              style={{
-                width: "100%",
-                maxWidth: "480px",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--color-border)",
-                fontSize: "0.875rem",
-              }}
-            >
-              <option value="">-- Select an institution --</option>
-              {institutions.map((inst, idx) => (
-                <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
-                  {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
-                </option>
-              ))}
-            </select>
+        <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
+          {institutions.length > 0 && (
+            <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+              <SelectField
+                id="quick-inst-select"
+                label="Choose from registered institutions"
+                value={institutionId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInstitutionId(val);
+                  if (val && isValidUuid(val)) {
+                    void loadStructureFor(val);
+                  }
+                }}
+              >
+                <option value="">-- Select an institution --</option>
+                {institutions.map((inst, idx) => (
+                  <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
+                    {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          )}
+          <div style={{ marginTop: institutions.length > 0 ? "var(--space-3)" : 0 }}>
+            <div className="eds-field" style={{ marginTop: 0 }}>
+              <label htmlFor="structure-institution-id">
+                Institution ID <span>(Required)</span>
+              </label>
+              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+                <input
+                  id="structure-institution-id"
+                  value={institutionId}
+                  onChange={(e) => setInstitutionId(e.target.value)}
+                  placeholder="Paste the ID (UUID)"
+                  aria-describedby="structure-institution-id-hint"
+                  style={{ flex: 1 }}
+                />
+                <Button type="button" onClick={() => void loadStructure()} busy={loading}>
+                  {loading ? "Loading…" : "Load structure"}
+                </Button>
+              </div>
+              <p id="structure-institution-id-hint" className="platform-sample-note" style={{ marginTop: "var(--space-2)" }}>
+                <span aria-hidden="true">ⓘ</span> UUID of the college or school
+              </p>
+            </div>
           </div>
-        )}
-        <div className="platform-toolbar" style={{ alignItems: "flex-end", gap: "1rem" }}>
-          <div style={{ flex: 1 }}>
-            <IdField
-              id="structure-institution-id"
-              label="Institution ID"
-              value={institutionId}
-              onChange={setInstitutionId}
-              hint="UUID of the college or school"
-            />
-          </div>
-          <Button type="button" onClick={() => void loadStructure()} busy={loading}>
-            {loading ? "Loading…" : "Load structure"}
-          </Button>
+          {error && (
+            <div className="platform-inline-error" style={{ marginTop: "1rem" }}>
+              {error}
+            </div>
+          )}
         </div>
-        {error && (
-          <div className="platform-inline-error" style={{ marginTop: "1rem" }}>
-            {error}
-          </div>
-        )}
       </Panel>
 
       {isSchool && institutionId && (
@@ -1417,25 +1458,15 @@ export function TermLockPage() {
       <Panel title="Lock academic term" description="Principal authority to lock a term upon final marks/attendance submission [Rule R2-08].">
         <form onSubmit={handleLockSubmit} className="platform-form">
           {institutions.length > 0 && (
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="quick-lock-inst-select" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Choose registered institution
-              </label>
-              <select
+            <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+              <SelectField
                 id="quick-lock-inst-select"
+                label="Choose registered institution"
                 value={institutionId}
                 onChange={(e) => {
                   const val = e.target.value;
                   setInstitutionId(val);
                   if (isValidUuid(val)) fetchLocks(val);
-                }}
-                style={{
-                  width: "100%",
-                  maxWidth: "480px",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                  fontSize: "0.875rem",
                 }}
               >
                 <option value="">-- Select an institution --</option>
@@ -1444,7 +1475,7 @@ export function TermLockPage() {
                     {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
           )}
           <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
@@ -1467,26 +1498,24 @@ export function TermLockPage() {
             />
           </div>
           <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
-            <div className="eds-field">
-              <label htmlFor="term-lock-sem-id">Semester ID (Optional)</label>
-              <input
-                id="term-lock-sem-id"
-                value={semesterId}
-                onChange={(e) => setSemesterId(e.target.value)}
-                placeholder="Optional semester UUID for colleges"
-              />
-            </div>
-            <div className="eds-field">
-              <label htmlFor="term-lock-notes">Lock Notes / Justification</label>
-              <input
-                id="term-lock-notes"
-                value={lockNotes}
-                onChange={(e) => setLockNotes(e.target.value)}
-                placeholder="e.g. End of term marks finalised"
-              />
-            </div>
+            <TextField
+              id="term-lock-sem-id"
+              label="Semester ID (Optional)"
+              value={semesterId}
+              onChange={(e) => setSemesterId(e.target.value)}
+              placeholder="Optional semester UUID for colleges"
+              hint="Optional semester UUID for colleges"
+            />
+            <TextField
+              id="term-lock-notes"
+              label="Lock Notes / Justification"
+              value={lockNotes}
+              onChange={(e) => setLockNotes(e.target.value)}
+              placeholder="e.g. End of term marks finalised"
+              hint="Statutory justification for freezing records"
+            />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
             <Button type="submit" disabled={locking || !isValidUuid(institutionId) || !isValidUuid(sessionId)}>
               {locking ? "Locking term..." : "Lock Term [Rule R2-08]"}
             </Button>
@@ -1497,7 +1526,11 @@ export function TermLockPage() {
       <Panel title="Active term locks" description="Review locked terms. Principals can temporarily unlock for grievances or corrections.">
         {loading && <p className="platform-empty-note">Loading locks...</p>}
         {locks.length === 0 ? (
-          <p className="platform-empty-note">No active term locks recorded for this institution.</p>
+          <EmptyState
+            title="No active term locks"
+            description="No active term locks recorded for this institution."
+            icon="lock"
+          />
         ) : (
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -1754,176 +1787,103 @@ export function DelegationsApprovalsPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-        {/* Delegation Form */}
-        <Panel
-          title="Delegate approval authority"
-          description="Hand over own approvals to a peer or deputy for set dates [APPROVAL_DELEGATE / Rule 11]."
-        >
-          <form onSubmit={handleCreateDelegation}>
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="delegate-user-id" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Delegate User Account ID (UUID) *
-              </label>
-              <input
-                id="delegate-user-id"
-                type="text"
-                required
-                placeholder="Paste delegate user account UUID"
-                value={delegateUserId}
-                onChange={(e) => setDelegateUserId(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                  fontFamily: "monospace",
-                }}
-              />
-            </div>
+      {/* Delegation Form */}
+      <Panel
+        title="Delegate approval authority"
+        description="Hand over own approvals to a peer or deputy for set dates [APPROVAL_DELEGATE / Rule 11]."
+      >
+        <form onSubmit={handleCreateDelegation} className="platform-form">
+          <TextField
+            id="delegate-user-id"
+            label="Delegate User Account ID (UUID) *"
+            required
+            placeholder="Paste delegate user account UUID"
+            value={delegateUserId}
+            onChange={(e) => setDelegateUserId(e.target.value)}
+            style={{ fontFamily: "monospace" }}
+          />
 
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="delegation-basis" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Delegation Basis
-              </label>
-              <select
-                id="delegation-basis"
-                value={delegationBasis}
-                onChange={(e) => setDelegationBasis(e.target.value as "SAME_OR_HIGHER" | "DESIGNATED_DEPUTY")}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <option value="SAME_OR_HIGHER">Same or higher role ranking [OD-17]</option>
-                <option value="DESIGNATED_DEPUTY">Designated Deputy (e.g. Principal &rarr; Vice Principal) [D-001]</option>
-              </select>
-            </div>
+          <SelectField
+            id="delegation-basis"
+            label="Delegation Basis"
+            value={delegationBasis}
+            onChange={(e) => setDelegationBasis(e.target.value as "SAME_OR_HIGHER" | "DESIGNATED_DEPUTY")}
+            options={[
+              { value: "SAME_OR_HIGHER", label: "Same or higher role ranking [OD-17]" },
+              { value: "DESIGNATED_DEPUTY", label: "Designated Deputy (e.g. Principal → Vice Principal) [D-001]" },
+            ]}
+          />
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-              <div>
-                <label htmlFor="delegation-start" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                  Effective From *
-                </label>
-                <input
-                  id="delegation-start"
-                  type="datetime-local"
-                  required
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "var(--space-2)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="delegation-end" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                  Effective Until *
-                </label>
-                <input
-                  id="delegation-end"
-                  type="datetime-local"
-                  required
-                  value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "var(--space-2)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                />
-              </div>
-            </div>
+          <div className="platform-form-grid">
+            <DateTimeField
+              id="delegation-start"
+              label="Effective From *"
+              required
+              value={startsAt}
+              onChange={(e) => setStartsAt(e.target.value)}
+            />
+            <DateTimeField
+              id="delegation-end"
+              label="Effective Until *"
+              required
+              value={endsAt}
+              onChange={(e) => setEndsAt(e.target.value)}
+            />
+          </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" disabled={creating || !isValidUuid(delegateUserId) || !startsAt || !endsAt}>
-                {creating ? "Delegating..." : "Create Delegation [Rule 11]"}
-              </Button>
-            </div>
-          </form>
-        </Panel>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
+            <Button type="submit" disabled={creating || !isValidUuid(delegateUserId) || !startsAt || !endsAt}>
+              {creating ? "Delegating..." : "Create Delegation [Rule 11]"}
+            </Button>
+          </div>
+        </form>
+      </Panel>
 
-        {/* Bulk Approvals Form */}
-        <Panel
-          title="Bulk approval decision"
-          description="Approve several requests at once with an optional comment [APPROVAL_BULK / Rule AP-25]."
-        >
-          <form onSubmit={handleBulkDecision}>
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="bulk-request-ids" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Approval Request IDs (comma-separated UUIDs) *
-              </label>
-              <textarea
-                id="bulk-request-ids"
-                rows={3}
-                required
-                placeholder="UUID1, UUID2, UUID3..."
-                value={bulkIds}
-                onChange={(e) => setBulkIds(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                  fontFamily: "monospace",
-                  fontSize: "0.875rem",
-                }}
-              />
-            </div>
+      {/* Bulk Approvals Form */}
+      <Panel
+        title="Bulk approval decision"
+        description="Approve several requests at once with an optional comment [APPROVAL_BULK / Rule AP-25]."
+      >
+        <form onSubmit={handleBulkDecision} className="platform-form">
+          <TextAreaField
+            id="bulk-request-ids"
+            label="Approval Request IDs (comma-separated UUIDs) *"
+            rows={3}
+            required
+            placeholder="UUID1, UUID2, UUID3..."
+            value={bulkIds}
+            onChange={(e) => setBulkIds(e.target.value)}
+            style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+          />
 
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="bulk-decision-type" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Decision
-              </label>
-              <select
-                id="bulk-decision-type"
-                value={bulkDecision}
-                onChange={(e) => setBulkDecision(e.target.value as "APPROVED" | "REJECTED")}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <option value="APPROVED">Approve all selected requests</option>
-                <option value="REJECTED">Reject all selected requests</option>
-              </select>
-            </div>
+          <div className="platform-form-grid">
+            <SelectField
+              id="bulk-decision-type"
+              label="Decision"
+              value={bulkDecision}
+              onChange={(e) => setBulkDecision(e.target.value as "APPROVED" | "REJECTED")}
+              options={[
+                { value: "APPROVED", label: "Approve all selected requests" },
+                { value: "REJECTED", label: "Reject all selected requests" },
+              ]}
+            />
 
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="bulk-comment" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Batch Comment (Optional)
-              </label>
-              <input
-                id="bulk-comment"
-                type="text"
-                placeholder="e.g. Moderated marks verified and approved by Dean"
-                value={bulkComment}
-                onChange={(e) => setBulkComment(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                }}
-              />
-            </div>
+            <TextField
+              id="bulk-comment"
+              label="Batch Comment (Optional)"
+              placeholder="e.g. Moderated marks verified and approved by Dean"
+              value={bulkComment}
+              onChange={(e) => setBulkComment(e.target.value)}
+            />
+          </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" disabled={bulkSubmitting || !bulkIds.trim()}>
-                {bulkSubmitting ? "Processing..." : `Bulk ${bulkDecision === "APPROVED" ? "Approve" : "Reject"} [Rule AP-25]`}
-              </Button>
-            </div>
-          </form>
-        </Panel>
-      </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
+            <Button type="submit" disabled={bulkSubmitting || !bulkIds.trim()}>
+              {bulkSubmitting ? "Processing..." : `Bulk ${bulkDecision === "APPROVED" ? "Approve" : "Reject"} [Rule AP-25]`}
+            </Button>
+          </div>
+        </form>
+      </Panel>
 
       <div style={{ marginTop: "var(--space-4)" }}>
         <Panel
@@ -1932,7 +1892,11 @@ export function DelegationsApprovalsPage() {
         >
           {inboxLoading && <p className="platform-empty-note">Loading pending approvals...</p>}
           {!inboxLoading && inboxItems.length === 0 ? (
-            <p className="platform-empty-note">No pending approval requests in your inbox.</p>
+            <EmptyState
+              title="No pending approvals"
+              description="No pending approval requests in your inbox."
+              icon="check-circle"
+            />
           ) : (
             <div className="platform-table-wrap">
               <table className="platform-table">
@@ -1982,7 +1946,11 @@ export function DelegationsApprovalsPage() {
         <Panel title="My active delegations" description="Review delegations you have granted. Self-approval is strictly prohibited under Rule 11.">
           {loading && <p className="platform-empty-note">Loading delegations...</p>}
           {delegations.length === 0 ? (
-            <p className="platform-empty-note">No active delegations created.</p>
+            <EmptyState
+              title="No active delegations"
+              description="No active delegations created."
+              icon="user"
+            />
           ) : (
             <div className="platform-table-wrap">
               <table className="platform-table">

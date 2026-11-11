@@ -54,7 +54,7 @@ export function TenantSettingsModal({
             <p>Configure operational limits, custom domains, and platform analytics opt-out [TENANT_SETTINGS, Action #205].</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         {loadingSettings ? (
