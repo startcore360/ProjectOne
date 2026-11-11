@@ -12,12 +12,14 @@ import com.edu360.api.rbac.RbacTarget;
 import com.edu360.api.institution.SectionRepository;
 import com.edu360.api.institution.StaffAssignment;
 import com.edu360.api.institution.StaffAssignmentRepository;
+import com.edu360.api.time.TenantClock;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.institution.OfferingDepartmentResolver;
 import java.util.Objects;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class SubjectAllocationService {
     private final AuditLogService auditLogService;
     private final SectionRepository sectionRepository;
     private final StaffAssignmentRepository staffAssignmentRepository;
+    private TenantClock tenantClock;
 
     public SubjectAllocationService(
             SubjectAllocationRepository repository,
@@ -55,6 +58,9 @@ public class SubjectAllocationService {
         this.sectionRepository = sectionRepository;
         this.staffAssignmentRepository = staffAssignmentRepository;
     }
+
+    @Autowired(required = false)
+    public void setTenantClock(TenantClock tenantClock) { this.tenantClock = tenantClock; }
 
     /** A-05: resolves the department of a course offering (HOD acts at department scope). */
     @Autowired(required = false)
@@ -129,6 +135,14 @@ public class SubjectAllocationService {
                     "Only an active staff assignment can receive a subject allocation.");
             if (!request.institutionId().equals(staff.getInstitutionId())) throw new BusinessRuleViolationException("STAFF_INSTITUTION_MISMATCH",
                     "Staff assignment does not belong to the specified institution.");
+            if (tenantClock != null) {
+                LocalDate today = tenantClock.today(tenantId);
+                if (staff.getEffectiveFrom() == null || staff.getEffectiveFrom().isAfter(today)
+                        || (staff.getEffectiveTo() != null && staff.getEffectiveTo().isBefore(today))) {
+                    throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_NOT_EFFECTIVE",
+                            "Staff assignment is not effective on the allocation date.");
+                }
+            }
         }
 
         UUID allocationId = UUID.randomUUID();
