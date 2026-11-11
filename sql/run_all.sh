@@ -9,7 +9,9 @@ echo "# EDU 360 V4.0 database build and test run — $(date -u +%FT%TZ)" >> "$OU
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_test WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_test"
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_ref WITH (FORCE)"  -qc "CREATE DATABASE edu360_v4_ref"
 # A. acceptance tests (tests seed their own minimal reference rows)
-for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 05_ref_data.sql 25_sprint2_foundations.sql 04_tests.sql; do run edu360_v4_test $f > /dev/null; done
+for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 04_tests.sql; do run edu360_v4_test $f > /dev/null; done
+$PSQL -q -d edu360_v4_test -f "$D/25t_seed_sprint2_refs.sql" > /dev/null  # Minimal reference fixture for Sprint 2 migration checks
+run edu360_v4_test 25_sprint2_foundations.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/07_tests_extra.sql" > /dev/null      # new connection: settings never set (DB-55..59)
 $PSQL -q -d edu360_v4_test -f "$D/09_tests_v40.sql"  > /dev/null      # V4.0 tests DB-60..79
 $PSQL -q -d edu360_v4_test -f "$D/11_tests_rolldown.sql" > /dev/null  # V4.0 role roll-down tests DB-80..97
