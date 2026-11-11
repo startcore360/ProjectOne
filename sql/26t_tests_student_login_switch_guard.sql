@@ -51,7 +51,7 @@ SELECT public.expect_ok('S2-DB-11','student login enforces school switch and cur
   INSERT INTO app.school_class(tenant_id,class_id,institution_id,class_name,student_login_enabled,status,created_by,updated_by)
    VALUES(t,school_class_id,school_inst,'Grade 8',false,'ACTIVE',actor,actor);
   INSERT INTO app.section(tenant_id,section_id,institution_id,academic_session_id,class_id,section_name,status,created_by,updated_by)
-   VALUES(t,school_section,school_inst,school_session,school_class,'A','ACTIVE',actor,actor);
+   VALUES(t,school_section,school_inst,school_session,school_class_id,'A','ACTIVE',actor,actor);
   INSERT INTO app.student_profile(tenant_id,student_profile_id,user_account_id,institution_id,student_code,full_name,status,created_by,updated_by)
    VALUES(t,school_profile,school_user,school_inst,'SCH-A8-0001','School Login Test','ACTIVE',actor,actor);
   INSERT INTO app.student_enrollment(tenant_id,enrollment_id,student_profile_id,institution_id,academic_session_id,section_id,started_on,outcome,created_by,updated_by)
