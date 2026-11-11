@@ -48,8 +48,8 @@ public class MasterCalendarService {
 
         permissionEvaluatorService.authorize(principal, "CALENDAR_MASTER_SET", scope, RbacTarget.NONE);
 
-        if (!request.endDate().isAfter(request.startDate())) {
-            throw new BusinessRuleViolationException("INVALID_DATE_RANGE", "endDate must be after startDate for academic session");
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BusinessRuleViolationException("INVALID_DATE_RANGE", "endDate must be on or after startDate for academic session");
         }
 
         String status = (request.status() == null || request.status().isBlank()) ? "PLANNED" : request.status().trim().toUpperCase();
