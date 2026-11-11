@@ -9,7 +9,7 @@ echo "# EDU 360 V4.0 database build and test run — $(date -u +%FT%TZ)" >> "$OU
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_test WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_test"
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_ref WITH (FORCE)"  -qc "CREATE DATABASE edu360_v4_ref"
 # A. acceptance tests (tests seed their own minimal reference rows)
-for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 04_tests.sql; do run edu360_v4_test $f > /dev/null; done
+for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 25_sprint2_foundations.sql 04_tests.sql; do run edu360_v4_test $f > /dev/null; done
 $PSQL -q -d edu360_v4_test -f "$D/07_tests_extra.sql" > /dev/null      # new connection: settings never set (DB-55..59)
 $PSQL -q -d edu360_v4_test -f "$D/09_tests_v40.sql"  > /dev/null      # V4.0 tests DB-60..79
 $PSQL -q -d edu360_v4_test -f "$D/11_tests_rolldown.sql" > /dev/null  # V4.0 role roll-down tests DB-80..97
@@ -18,10 +18,11 @@ $PSQL -q -d edu360_v4_test -f "$D/17_tests_tenant_top_post.sql" > /dev/null  # V
 $PSQL -q -d edu360_v4_test -f "$D/19_tests_user_sessions.sql" > /dev/null  # V4.1 multi-device session tests DB-126..137 (SES-01)
 $PSQL -q -d edu360_v4_test -f "$D/21_tests_audit_guard_v41.sql" > /dev/null  # V4.1 B6 tests DB-150..201 (Q-01 tenant audit, Q-04 never-allowed, Q-05 files 14-16)
 $PSQL -q -d edu360_v4_test -f "$D/22t_tests_platform_b4.sql" > /dev/null  # V4.1 B4 tests DB-210..212 (file 22)
+$PSQL -q -d edu360_v4_test -f "$D/25t_tests_sprint2_foundations.sql" > /dev/null  # Sprint 2 Chunk 1 SQL checks
 $PSQL -At -d edu360_v4_test -c "SELECT test_id||' | '||outcome||' | '||rule||' | '||detail FROM public.test_result ORDER BY id" >> "$OUT"
 $PSQL -At -d edu360_v4_test -c "SELECT 'SUMMARY | '||outcome||' | '||count(*) FROM public.test_result GROUP BY outcome" >> "$OUT"
 # B. full V3.3 reference data and count checks (AC-S5), plus idempotent second load
-for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 05_ref_data.sql; do run edu360_v4_ref $f > /dev/null; done
+for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 05_ref_data.sql 25_sprint2_foundations.sql; do run edu360_v4_ref $f > /dev/null; done
 $PSQL -At -d edu360_v4_ref -f "$D/06_ref_checks.sql" | sed 's/^/REFCHECK | /' >> "$OUT"   # V3.3 baseline counts
 run edu360_v4_ref 10d_v40_rolldown_ref.sql > /dev/null                                          # V4.0 additions
 $PSQL -At -d edu360_v4_ref >> "$OUT" <<'SQL'
@@ -64,7 +65,7 @@ echo "REFCHECK | second load of 12d inserted rows | $((after-before)) | 0" >> "$
 $PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | tenant-level standard roles holding a DATA_PROTECTION action | '||count(*)||' | 0' FROM ref.standard_role_action s JOIN ref.standard_role r USING (role_code) WHERE r.role_level <> 'PLATFORM' AND app.fn_never_allowed_class(s.action_code) = 'DATA_PROTECTION'" >> "$OUT"
 # D. Q-03 / Q-06: V4.1 migrations are idempotent and their rollbacks round-trip (third throw-away database).
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_rb WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_rb"
-V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql"
+V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 25_sprint2_foundations.sql"
 for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql $V41; do run edu360_v4_rb $f > /dev/null; done
 for f in $V41; do run edu360_v4_rb $f > /dev/null; done                      # second apply: idempotent
 echo "RBCHECK | apply V4.1 files twice | OK" >> "$OUT"
@@ -77,7 +78,7 @@ INSERT INTO ref.action_catalog (action_code, action_no, module_name, phase, desc
 INSERT INTO app.tenant_step_in (tenant_id, step_in_id, actor_user_id, action_code, reason, expires_at)
 VALUES ('00000000-0000-0000-0000-00000000c601', '00000000-0000-0000-0000-00000000c621', '00000000-0000-0000-0000-00000000c611', 'B6_RB_ACTION', 'Rollback evidence row', now() + interval '5 minutes');
 SQL
-for f in 22r_v41_platform_audit_event_type_rollback.sql 20r_v41_never_allowed_guard_rollback.sql 18r_v41_user_sessions_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
+for f in 25r_sprint2_foundations_rollback.sql 22r_v41_platform_audit_event_type_rollback.sql 20r_v41_never_allowed_guard_rollback.sql 18r_v41_user_sessions_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
 if run edu360_v4_rb 16r_v41_tenant_top_post_authority_rollback.sql > /dev/null 2>&1; then r=MISMATCH; else r=OK; fi
 echo "RBCHECK | 16r refuses while step-in rows exist (DB-A12) | $r" >> "$OUT"
 $PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_rb -c "SET edu360.rollback_discard_step_ins = 'on'" -f "$D/16r_v41_tenant_top_post_authority_rollback.sql" > /dev/null

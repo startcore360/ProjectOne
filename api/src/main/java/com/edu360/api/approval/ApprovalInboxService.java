@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.academic.PromotionRunRepository;
@@ -64,6 +65,7 @@ public class ApprovalInboxService {
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final ApprovalRouting approvalRouting;
     private final LeaveApproverSettingRepository leaveApproverSettingRepository;
+    private List<ApprovalOutcomeHandler> outcomeHandlers = List.of();
 
     public ApprovalInboxService(
             ApprovalRequestRepository approvalRequestRepository,
@@ -84,6 +86,11 @@ public class ApprovalInboxService {
         this.permissionEvaluatorService = Objects.requireNonNull(permissionEvaluatorService);
         this.approvalRouting = Objects.requireNonNull(approvalRouting);
         this.leaveApproverSettingRepository = Objects.requireNonNull(leaveApproverSettingRepository);
+    }
+
+    @Autowired(required = false)
+    public void setOutcomeHandlers(List<ApprovalOutcomeHandler> handlers) {
+        this.outcomeHandlers = handlers == null ? List.of() : List.copyOf(handlers);
     }
 
     /** P-05: tenant-wide callers see every institution, others only their own, no context sees nothing. */
@@ -333,6 +340,15 @@ public class ApprovalInboxService {
         if ("STUDENT_GUARDIAN_LINK".equalsIgnoreCase(subjectType) || "GUARDIAN_CHANGE".equalsIgnoreCase(processCode)) {
             return "GUARDIAN_CHANGE_APPROVE";
         }
+        if ("ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subjectType)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subjectType)
+                || (processCode != null && processCode.startsWith("ATTENDANCE_CORRECTION_"))) {
+            return "ATTENDANCE_CORRECTION_APPROVE";
+        }
+        if ("ATTENDANCE_BULK_UPLOAD".equalsIgnoreCase(subjectType)
+                || (processCode != null && processCode.startsWith("ATTENDANCE_BULK_UPLOAD_"))) {
+            return "ATTENDANCE_BULK_UPLOAD_APPROVE";
+        }
         return null;
     }
 
@@ -387,7 +403,20 @@ public class ApprovalInboxService {
                 run.setUpdatedBy(actor);
                 promotionRunRepository.save(run);
             });
+        } else if (isAttendanceProcess(request)) {
+            ApprovalOutcomeHandler handler = outcomeHandlers.stream().filter(candidate -> candidate.supports(request))
+                    .findFirst().orElseThrow(() -> new BusinessRuleViolationException(
+                            "APPROVAL_HANDLER_NOT_REGISTERED",
+                            "No outcome handler is registered for approval process " + request.getProcessCode() + "."));
+            handler.apply(tenantId, request, approved, actor);
         }
+    }
+
+    private static boolean isAttendanceProcess(ApprovalRequest request) {
+        String subject = request.getSubjectType();
+        String process = request.getProcessCode();
+        return (subject != null && (subject.startsWith("ATTENDANCE_CORRECTION") || subject.equals("ATTENDANCE_BULK_UPLOAD")))
+                || (process != null && (process.startsWith("ATTENDANCE_CORRECTION_") || process.startsWith("ATTENDANCE_BULK_UPLOAD_")));
     }
 
     private static ResourceNotFoundException notFound(UUID approvalRequestId) {
