@@ -45,7 +45,7 @@
 | A6 Class teacher, mentor, HOD | `ClassTeacherAssignmentService`, `MentorAssignmentService`, and `HodAssignmentService` exist. Their full effective-date and scope regression was not rerun. | Open validation item. |
 | A7 Approval routing | `ApprovalInboxService.resolveApprovalAction` recognised institution, promotion and guardian processes; attendance process codes were absent. | Added correction and bulk-upload action resolution, the narrow Java-side HOD self-approval check against the correction's marked session (APPROVED only), a dedicated self-approval audit event, and a fail-closed `ApprovalOutcomeHandler` extension point. Self-rejection/forwarding remains blocked. |
 | A8 Student login switch | `StudentLoginSwitchService` and its tests exist. Full policy regression not rerun. | Open validation item. |
-| A9 Guardian links | `GuardianLinkService` and guardian-link repository/tests exist. Active-link/child lookup regression not rerun. | Open validation item. |
+| A9 Guardian links | No ACTIVE-child lookup existed; guardian profile creation generated a random account UUID despite the composite FK to `app.user_account`; Java guardian count included BLOCKED rows unlike the database guard. | Added account lookup by tenant/mobile/GUARDIAN type, removed random account IDs, excluded BLOCKED links from guardian cap, and added tenant/account-scoped ACTIVE-child lookup plus `/guardian/children`. Regression tests added; SQL/runtime validation remains open. |
 | A10 HTTP and database errors | `GlobalExceptionHandler` already returns field-level Bean Validation errors. Database trigger errors previously fell through to generic handling. | Added typed `ApiException`, audit failure response, and known term/correction/not-held/self-approval/partition/unique/foreign-key mappings. |
 
 ### Built
@@ -64,6 +64,7 @@
 
 - Added `CursorPageTest.defaultLimitAndStableSortAreApplied`, `CursorPageTest.rejectsUnknownSortAndOversizedLimit`, `CursorPageTest.cursorRoundTripsAndRejectsTampering`.
 - Added `TenantClockTest.usesTenantTimeZoneForBusinessDate`.
+- Added `GuardianLinkControllerTest.scope_guardianSeesOwnActiveChildren` and `GuardianLinkControllerTest.deny_nonGuardianCannotListChildren`.
 - Added `IdempotencyServiceTest.requestHashIsDeterministicForMapKeyOrder` and `IdempotencyServiceTest.requestHashChangesWhenBodyChanges`.
 - Added SQL checks `S2-DB-01` through `S2-DB-09`, including HOD own-marked-session allowance, other-teacher denial, other-role denial, non-attendance denial and decided-step immutability.
 - `./mvnw clean verify`: not executed; remote GitHub editing connection does not provide a local checkout/build runner.
@@ -76,5 +77,5 @@
 - Approval handlers are an extension point; no attendance outcome handler is registered yet. Final approval is denied and the transaction fails closed until a later attendance chunk registers one.
 - Idempotency helper is implemented but is not wired to attendance upload/correction/syllabus endpoints, which are implemented in later chunks.
 - Cursor helper is implemented but no new list endpoints exist in Chunk 1 to consume it.
-- A3, A4, A6, A8 and A9 remain open for deeper regression; no claim is made that all Sprint 1 dependencies are fully validated.
+- A3, A4, A6 and A8 remain open for deeper regression. A9 code changes are present but its integration/build regression is not yet executed; no claim is made that all Sprint 1 dependencies are fully validated.
 - No story is marked Accepted. Highest status remains In progress until build and SQL gates pass.
