@@ -88,11 +88,11 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: Audit Maven dependencies
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          # Dependency-Check 13.0.0 has a no-key regression (DependencyCheck #8715).
-          # Pin the latest pre-regression release until a fixed 13.x release is available.
-          unset NVD_API_KEY
-          mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:12.2.2:check -DfailBuildOnCVSS=7
+          # Read the key from the environment without placing its value in Maven arguments.
+          mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:12.2.2:check -DfailBuildOnCVSS=7 -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
       - name: Scan repository for secrets
         uses: gitleaks/gitleaks-action@v2
         env:
