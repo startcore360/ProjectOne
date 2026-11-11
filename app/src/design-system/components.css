@@ -404,9 +404,13 @@ a {
 .eds-field {
   margin-top: 20px;
 }
+.eds-field:first-child {
+  margin-top: 0;
+}
 .eds-field label {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
   margin-bottom: 8px;
   color: var(--color-text);
   font-size: var(--fs-label);
@@ -417,7 +421,8 @@ a {
   font-size: var(--fs-caption);
   font-weight: 400;
 }
-.eds-field input {
+.eds-field input,
+.eds-field select {
   width: 100%;
   min-height: var(--control-height);
   padding: 0 14px;
@@ -427,26 +432,92 @@ a {
   color: var(--color-text);
   font: 400 var(--fs-input) var(--font-body);
 }
-.eds-field input::placeholder {
+.eds-field select {
+  padding-right: 34px;
+}
+.eds-field textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  font: 400 var(--fs-input) var(--font-body);
+  box-sizing: border-box;
+  resize: vertical;
+}
+.eds-field input::placeholder,
+.eds-field textarea::placeholder {
   color: var(--color-text-disabled);
 }
-/* Every state a text field can be in - not just its default appearance. Previously only the
-   separate error-text line below indicated an invalid field; the input itself looked identical
-   whether valid or not. */
-.eds-field input:focus-visible {
+/* Every state a form field can be in - not just its default appearance. */
+.eds-field input:focus-visible,
+.eds-field select:focus-visible,
+.eds-field textarea:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 1px;
 }
-.eds-field input:disabled {
+.eds-field input:disabled,
+.eds-field select:disabled,
+.eds-field textarea:disabled {
   background: var(--color-bg-subtle);
   color: var(--color-text-disabled);
   cursor: not-allowed;
 }
-.eds-field input[aria-invalid="true"] {
+.eds-field input[aria-invalid="true"],
+.eds-field select[aria-invalid="true"],
+.eds-field textarea[aria-invalid="true"] {
   border-color: var(--color-status-danger-border);
 }
-.eds-field input[aria-invalid="true"]:focus-visible {
+.eds-field input[aria-invalid="true"]:focus-visible,
+.eds-field select[aria-invalid="true"]:focus-visible,
+.eds-field textarea[aria-invalid="true"]:focus-visible {
   outline-color: var(--color-status-danger-border);
+}
+.eds-field__hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--fs-caption);
+}
+.eds-field__hint span {
+  color: inherit;
+}
+.eds-field__error {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-status-danger-text, #ef4444);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium, 500);
+}
+.eds-field--checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  cursor: pointer;
+}
+.eds-field--checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 2px 0 0 0;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  accent-color: var(--color-action-primary, #059669);
+  cursor: pointer;
+}
+.eds-field--checkbox label {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: var(--fs-body-sm, 0.875rem);
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
 }
 .auth-password {
   position: relative;
@@ -1142,10 +1213,54 @@ a {
 .platform-modal-backdrop { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; overflow-y: auto; padding: var(--space-4); background: var(--color-overlay); }
 .platform-modal { width: min(100%, 560px); max-height: min(90vh, 760px); overflow-y: auto; padding: var(--space-6); border: 1px solid var(--color-border-divider); border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--elevation-3); }
 .platform-modal > header { display: flex; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 .platform-modal > header h2 { font: var(--fw-bold) var(--fs-h2)/var(--lh-h2) var(--font-display); }
 .platform-modal > header p { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--fs-body-sm); }
-.platform-icon-button { width: 40px; height: 40px; flex: 0 0 40px; border: 1px solid var(--color-border-divider); border-radius: 50%; background: var(--color-bg-surface); color: var(--color-text-muted); font-size: 24px; cursor: pointer; }
-.platform-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.platform-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid var(--color-border-divider);
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  transition: background-color var(--duration-fast, 150ms), color var(--duration-fast, 150ms), border-color var(--duration-fast, 150ms);
+}
+.platform-icon-button:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.platform-icon-button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+.platform-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); }
+.platform-form-grid .eds-field,
+.platform-form .eds-field:first-child { margin-top: 0; }
+.platform-form,
+.platform-panel > form { padding: 0 var(--space-5) var(--space-5); }
+.platform-panel > .platform-empty-state { margin: 0 var(--space-5) var(--space-5); }
 .platform-form-field { display: grid; gap: var(--space-2); margin-top: var(--space-5); color: var(--color-text); font-size: var(--fs-label); font-weight: var(--fw-semibold); }
 .platform-form-field select { width: 100%; }
 .platform-field-hint { margin: 0; color: var(--color-text-muted); font-size: var(--fs-caption); font-weight: var(--fw-regular); }

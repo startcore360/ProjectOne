@@ -29,7 +29,7 @@ export function EmptyState({
         borderRadius: "var(--radius-lg, 8px)",
         border: "1px dashed var(--color-border, #E2E8F0)",
         background: "var(--color-bg-subtle, #F8FAFC)",
-        margin: "var(--space-4, 16px) 0",
+        margin: "0 var(--space-5, 20px) var(--space-5, 20px)",
       }}
     >
       <div

@@ -160,7 +160,8 @@ describe("SessionsPage (AUTH_DEVICES_MANAGE, SES-01)", () => {
     expect(within(legacyCard).getByText("Idle")).toBeInTheDocument();
     // Summary: 2 of the 3 signed-in devices are active now.
     const summary = screen.getByRole("region", { name: "Active devices summary" });
-    expect(within(summary).getByText("Active now").previousElementSibling).toHaveTextContent("2");
+    const activeKpi = within(summary).getByText("Active now").closest<HTMLElement>(".kpi");
+    expect(activeKpi ? within(activeKpi).getByText("2") : within(summary).getByText("Active now").previousElementSibling).toHaveTextContent("2");
   });
 
   it("signs out all other devices at once and keeps this device", async () => {

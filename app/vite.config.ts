@@ -15,7 +15,9 @@ export default defineConfig({
   strictPort: true,
   // The leading dot allows every subdomain, so a new tenant needs no change here.
   // Dev server only. Production is covered in docker/PRODUCTION_TENANT_ROUTING.txt.
-  allowedHosts: [".edu360.local"],
+  // ".duckdns.org" covers abc-edu360.duckdns.org (one DuckDNS name per tenant, for testing from
+  // outside this machine).
+  allowedHosts: [".edu360.local", ".duckdns.org"],
 },
   test: {
     environment: "jsdom",

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, CheckboxField, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   institutionService,
@@ -94,47 +94,27 @@ export function CreateInstitutionModal({
       )}
 
       <form onSubmit={handleCreate}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "var(--space-4)",
-            marginBottom: "var(--space-3)",
-          }}
-        >
-          <div>
-            <label
-              htmlFor="inst-type"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-            >
-              Institution Kind *
-            </label>
-            <select
-              id="inst-type"
-              value={instType}
-              onChange={(e) => setInstType(e.target.value as InstitutionType)}
-              style={{
-                width: "100%",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md, 4px)",
-                border: "1px solid var(--color-border, #ccc)",
-              }}
-            >
-              <option value="COLLEGE">College</option>
-              <option value="SCHOOL">School</option>
-            </select>
-          </div>
+        <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
+          <SelectField
+            id="inst-type"
+            label="Institution Kind *"
+            required
+            value={instType}
+            onChange={(e) => setInstType(e.target.value as InstitutionType)}
+            options={[
+              { value: "COLLEGE", label: "College" },
+              { value: "SCHOOL", label: "School" },
+            ]}
+          />
 
-          <div>
-            <TextField
-              id="inst-code"
-              label="Institution Code *"
-              required
-              value={instCode}
-              onChange={(e) => setInstCode(e.target.value)}
-              placeholder="e.g. NBC-01"
-            />
-          </div>
+          <TextField
+            id="inst-code"
+            label="Institution Code *"
+            required
+            value={instCode}
+            onChange={(e) => setInstCode(e.target.value)}
+            placeholder="e.g. NBC-01"
+          />
         </div>
 
         <div style={{ marginBottom: "var(--space-3)" }}>
@@ -201,14 +181,12 @@ export function CreateInstitutionModal({
         </div>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "0.875rem", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={externalUni}
-              onChange={(e) => setExternalUni(e.target.checked)}
-            />
-            External University Affiliation Mode (Operates under outside syllabus body)
-          </label>
+          <CheckboxField
+            id="inst-external-uni"
+            checked={externalUni}
+            onChange={(e) => setExternalUni(e.target.checked)}
+            label="External University Affiliation Mode (Operates under outside syllabus body)"
+          />
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>

@@ -46,7 +46,7 @@ export function ActivateTenantModal({
             <p>Verify payment and confirm statutory go-live readiness [TENANT_ACTIVATE, Action #203].</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>

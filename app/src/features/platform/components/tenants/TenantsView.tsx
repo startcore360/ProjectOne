@@ -24,6 +24,7 @@ import { SuspendTenantModal, ArchiveTenantModal } from "./TenantLifecycleModals"
 import { TenantSettingsModal, type TenantSettingsDraft } from "./TenantSettingsModal";
 import { TenantDataProtectionModal } from "./TenantDataProtectionModal";
 import { TenantUsageModal } from "./TenantUsageModal";
+import { tenantLoginAddress } from "./tenantAddress";
 
 export function TenantsView() {
   const { can } = usePlatformAccess();
@@ -171,9 +172,7 @@ export function TenantsView() {
       });
 
       const newTenant = response.data;
-      const rootDomain = window.location.hostname.split(".").slice(1).join(".");
-      const port = window.location.port ? `:${window.location.port}` : "";
-      const loginAddress = `${window.location.protocol}//${newTenant.subdomain}.${rootDomain}${port}`;
+      const loginAddress = tenantLoginAddress(newTenant.subdomain, window.location);
       setMessage(`Tenant "${newTenant.tenantName}" created successfully in TRIAL state.`);
       setCreatedCredentials(
         newTenant.firstAdminTemporaryPassword
