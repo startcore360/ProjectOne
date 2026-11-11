@@ -359,6 +359,7 @@ public class ApprovalInboxService {
                       ON s.tenant_id = cr.tenant_id
                      AND s.institution_id = cr.institution_id
                      AND s.attendance_session_id = cr.attendance_session_id
+                     AND s.session_kind = 'PERIOD'
                     WHERE cr.tenant_id = ?
                       AND cr.institution_id = ?
                       AND cr.attendance_correction_request_id = ?

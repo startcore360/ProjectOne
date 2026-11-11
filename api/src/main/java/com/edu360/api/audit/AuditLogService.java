@@ -25,6 +25,7 @@ import com.edu360.api.tenant.TenantContext;
 public class AuditLogService {
  private static final Logger log=LoggerFactory.getLogger(AuditLogService.class);
  private static final Set<String> SENSITIVITY=Set.of("N","P","F","H","K");
+ private static final Set<String> OUTCOMES=Set.of("SUCCESS","DENIED","FAILED");
  private final AuditLogRepository legacy; private final TenantAuditStore tenant;
  private final ObjectMapper mapper=new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS,true);
  @Autowired public AuditLogService(AuditLogRepository legacy,TenantAuditStore tenant){this.legacy=legacy;this.tenant=tenant;}
@@ -48,6 +49,7 @@ public class AuditLogService {
    if(entry==null||entry.eventType()==null||blank(entry.actionCode())||blank(entry.entityType())||entry.entityId()==null)
     throw new IllegalArgumentException("Structured audit requires event type, action code, entity type and entity id.");
    if(entry.sensitivityClass()!=null&&!SENSITIVITY.contains(entry.sensitivityClass()))throw new IllegalArgumentException("Invalid sensitivity class.");
+   if(entry.outcome()!=null&&!OUTCOMES.contains(entry.outcome()))throw new IllegalArgumentException("Invalid audit outcome.");
    if(entry.recordCount()!=null&&entry.recordCount()<0)throw new IllegalArgumentException("Record count cannot be negative.");
    String role=TenantContext.currentActiveRoleCode();
    UUID institution=entry.institutionId();
@@ -110,7 +112,7 @@ public class AuditLogService {
    validateSafeValues(e.getValue());
   }}else if(value instanceof Iterable<?> values){for(Object item:values)validateSafeValues(item);}
   else if(value instanceof String text){String lower=text.toLowerCase(java.util.Locale.ROOT);
-   if(lower.contains("http://")||lower.contains("https://")||lower.matches(".*[\\w.+-]+@[\\w.-]+\\.[a-z]{2,}.*"))
+   if(lower.contains("http://")||lower.contains("https://")||lower.matches(".*[\\w.+-]+@[\\w.-]+\\.[a-z]{2,}.*")||lower.matches(".*[0-9][0-9 ()+.-]{7,}[0-9].*"))
     throw new IllegalArgumentException("Links and contact details are not permitted in audit values.");
   }
  }
