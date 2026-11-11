@@ -9,11 +9,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.academic.PromotionRunRepository;
@@ -66,6 +69,7 @@ public class ApprovalInboxService {
     private final ApprovalRouting approvalRouting;
     private final LeaveApproverSettingRepository leaveApproverSettingRepository;
     private List<ApprovalOutcomeHandler> outcomeHandlers = List.of();
+    private JdbcTemplate jdbcTemplate;
 
     public ApprovalInboxService(
             ApprovalRequestRepository approvalRequestRepository,
@@ -92,6 +96,9 @@ public class ApprovalInboxService {
     public void setOutcomeHandlers(List<ApprovalOutcomeHandler> handlers) {
         this.outcomeHandlers = handlers == null ? List.of() : List.copyOf(handlers);
     }
+
+    @Autowired(required = false)
+    public void setDataSource(DataSource dataSource) { this.jdbcTemplate = new JdbcTemplate(dataSource); }
 
     /** P-05: tenant-wide callers see every institution, others only their own, no context sees nothing. */
     public static boolean inCallerScope(UUID institutionId) {
@@ -210,8 +217,10 @@ public class ApprovalInboxService {
                     "Approval request is not in PENDING state (status=" + request.getStatus() + ")");
         }
 
-        // Rule 11: self-approval prohibited
-        if (request.getRequestedByUserId().equals(userId)) {
+        // Rule 11: self-approval is prohibited except DEC-10's narrowly bounded HOD correction case.
+        String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
+        if (request.getRequestedByUserId().equals(userId)
+                && !isHodSelfApprovalForOwnMarkedSession(tenantId, request, activeRole, userId)) {
             log.warn("Security violation: user {} attempted to decide their own approval request {}", userId, approvalRequestId);
             throw new SelfApprovalForbiddenException("A principal may not approve or decide their own request (Addendum rule 11).");
         }
@@ -246,7 +255,6 @@ public class ApprovalInboxService {
         }
 
         // P-01 / P-04: the audit and the step record the real active role, never a fallback.
-        String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
         if (activeRole == null) {
             throw new UnauthorizedException("No active role: choose an active role before deciding an approval.");
         }
@@ -319,6 +327,35 @@ public class ApprovalInboxService {
         List<ApprovalStep> allSteps = approvalStepRepository
                 .findByIdTenantIdAndApprovalRequestIdOrderByStepNoAsc(tenantId, approvalRequestId);
         return new DecideApprovalResponseDto(toSummaryDto(request, allSteps), subjectNewStatus, List.of());
+    }
+
+    /** DEC-10: only a HOD requester correcting the attendance session they personally marked may self-approve. */
+    private boolean isHodSelfApprovalForOwnMarkedSession(UUID tenantId, ApprovalRequest request, String activeRole, UUID userId) {
+        if (!"HEAD_OF_DEPARTMENT".equals(activeRole) || jdbcTemplate == null || request.getInstitutionId() == null) return false;
+        String process = request.getProcessCode();
+        String subject = request.getSubjectType();
+        boolean attendanceCorrection =
+                "ATTENDANCE_CORRECTION_COLLEGE".equals(process)
+                || "ATTENDANCE_CORRECTION_SCHOOL".equals(process)
+                || "ATTENDANCE_CORRECTION_REQUEST".equals(subject)
+                || "ATTENDANCE_CORRECTION".equals(subject);
+        if (!attendanceCorrection) return false;
+        try {
+            UUID markedBy = jdbcTemplate.queryForObject("""
+                    SELECT s.marked_by_user_id
+                    FROM app.attendance_correction_request cr
+                    JOIN app.attendance_session s
+                      ON s.tenant_id = cr.tenant_id
+                     AND s.institution_id = cr.institution_id
+                     AND s.attendance_session_id = cr.attendance_session_id
+                    WHERE cr.tenant_id = ?
+                      AND cr.institution_id = ?
+                      AND cr.attendance_correction_request_id = ?
+                    """, UUID.class, tenantId, request.getInstitutionId(), request.getSubjectId());
+            return userId.equals(markedBy);
+        } catch (EmptyResultDataAccessException ex) {
+            return false;
+        }
     }
 
     /** Which action an approval process needs; null when the process is unknown (deny). */
