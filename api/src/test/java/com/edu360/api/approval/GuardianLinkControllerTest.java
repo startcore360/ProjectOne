@@ -18,6 +18,8 @@ import com.edu360.api.guardian.GuardianLinkController;
 import com.edu360.api.guardian.dto.GuardianChangeRequestDto;
 import com.edu360.api.guardian.dto.LinkGuardianRequest;
 import com.edu360.api.identity.StudentProfile;
+import com.edu360.api.identity.UserType;
+import com.edu360.api.guardian.dto.GuardianChildResponse;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.tenant.TenantContext;
 
@@ -45,7 +47,27 @@ class GuardianLinkControllerTest {
     }
 
     private LinkGuardianRequest guardian(String mobile) {
+        t.guardianAccount(mobile);
         return new LinkGuardianRequest("Guardian", mobile, null, "FATHER", false);
+    }
+
+    @Test
+    @DisplayName("SCOPE: guardian child switcher returns only the authenticated guardian's active children")
+    void scope_guardianSeesOwnActiveChildren() {
+        StudentProfile child = t.student(inst);
+        child.setStudentCode("STU-001");
+        t.activeChildren.add(child);
+        TenantPrincipal guardian = new TenantPrincipal(t.tenantId, UUID.randomUUID(), UserType.GUARDIAN, "Parent", false);
+        var response = controller.listActiveChildren(t.tenantId, t.auth(guardian));
+        assertThat(response.getBody()).containsExactly(new GuardianChildResponse(
+                child.getStudentProfileId(), inst, "STU-001", "ACTIVE"));
+    }
+
+    @Test
+    @DisplayName("DENY: non-guardian account cannot enumerate linked children")
+    void deny_nonGuardianCannotListChildren() {
+        assertThatThrownBy(() -> controller.listActiveChildren(t.tenantId, t.auth(t.as(admin))))
+                .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test

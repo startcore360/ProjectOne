@@ -17,6 +17,7 @@ import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.guardian.dto.GuardianChangeDecisionRequest;
 import com.edu360.api.guardian.dto.GuardianChangeRequestDto;
 import com.edu360.api.guardian.dto.GuardianLinkResponse;
+import com.edu360.api.guardian.dto.GuardianChildResponse;
 import com.edu360.api.guardian.dto.LinkGuardianRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +31,17 @@ import lombok.RequiredArgsConstructor;
 public class GuardianLinkController {
 
     private final GuardianLinkService guardianLinkService;
+
+    @GetMapping({
+            "/v1/tenants/{tenantId}/guardian/children",
+            "/api/tenants/{tenantId}/guardian/children"
+    })
+    @Operation(summary = "List this guardian account's ACTIVE linked children")
+    public ResponseEntity<List<GuardianChildResponse>> listActiveChildren(
+            @PathVariable UUID tenantId, Authentication authentication) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(guardianLinkService.listActiveChildren(tenantId, principal));
+    }
 
     @GetMapping({
             "/v1/tenants/{tenantId}/students/{studentId}/guardian-links",
