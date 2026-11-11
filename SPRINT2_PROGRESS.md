@@ -40,7 +40,7 @@
 | A1 Tenant/institution scope | `api/src/main/java/com/edu360/api/identity/TenantUserLookup.java` resolves one active role assignment and previously exposed only its institution. | Updated institution scope to include active assignments for the same selected role definition and scope type. Regression test still required. |
 | A2 Subject allocation | `SubjectAllocationService.java` was querying `UserRoleAssignmentRepository` using a staff-assignment id. Schema FK `fk_subject_allocation_staff_assignment_id` points to `app.staff_assignment`; Java mapping/repository exist in `institution/StaffAssignment.java` and `StaffAssignmentRepository.java`. | Updated to validate a same-tenant staff assignment, ACTIVE status, matching institution and tenant-local effective dates. |
 | A3 Academic structure PATCH | Existing structure APIs are present; full If-Match/row_version and parent-scope review not completed in this chunk. | Open validation item. |
-| A4 Calendar and weekly off | Existing `CalendarEventService` and `WeeklyOffRuleService` plus tests are present. Institution/date query coverage not rerun. | Open validation item. |
+| A4 Calendar and weekly off | Calendar events are institution/date scoped; weekly-off patterns support `ALL`, `ODD`, `EVEN`. The committed event-type constraint has no exam-day event type or exam calendar relation. | Added date-scoped holiday, weekly-off and academic-session lookup. Exam-day remains explicitly unsupported; title-text inference was removed rather than guessing. |
 | A5 Term lock | SQL `app.is_term_locked(tenant, section, date)` exists in `sql/02_rules.sql`; Java service previously had lock/unlock only. | Added shared `TermLockService.isLocked(tenantId, sectionId, date)` delegating to the SQL function. |
 | A6 Class teacher, mentor, HOD | `ClassTeacherAssignmentService`, `MentorAssignmentService`, and `HodAssignmentService` exist. Their full effective-date and scope regression was not rerun. | Open validation item. |
 | A7 Approval routing | `ApprovalInboxService.resolveApprovalAction` recognised institution, promotion and guardian processes; attendance process codes were absent. | Added correction and bulk-upload action resolution, the narrow Java-side HOD self-approval check against the correction's marked session (APPROVED only), a dedicated self-approval audit event, and a fail-closed `ApprovalOutcomeHandler` extension point. Self-rejection/forwarding remains blocked. |
@@ -64,7 +64,8 @@
 
 - Added `CursorPageTest.defaultLimitAndStableSortAreApplied`, `CursorPageTest.rejectsUnknownSortAndOversizedLimit`, `CursorPageTest.cursorRoundTripsAndRejectsTampering`.
 - Added `TenantClockTest.usesTenantTimeZoneForBusinessDate`.
-- Added `GuardianLinkControllerTest.scope_guardianSeesOwnActiveChildren` and `GuardianLinkControllerTest.deny_nonGuardianCannotListChildren`.
+- Added `GuardianLinkControllerTest.scope_guardianSeesOwnActiveChildren`, `GuardianLinkControllerTest.deny_nonGuardianCannotListChildren`, `GuardianLinkControllerTest.guard_missingGuardianAccount`, and `GuardianLinkControllerTest.guard_blockedLinksDoNotConsumeGuardianLimit`.
+- Added `CalendarDayStatusServiceTest.returnsLocalAndUniversityHolidayExamAndWeeklyOffForRequestedDate`, `CalendarDayStatusServiceTest.appliesOddAndEvenOccurrenceToAlternateWeekends`, and `CalendarDayStatusServiceTest.refusesForeignTenantCalendarScope` (exam-day explicitly false because the schema has no exam-day representation).
 - Added `IdempotencyServiceTest.requestHashIsDeterministicForMapKeyOrder` and `IdempotencyServiceTest.requestHashChangesWhenBodyChanges`.
 - Added SQL checks `S2-DB-01` through `S2-DB-09`, including HOD own-marked-session allowance, other-teacher denial, other-role denial, non-attendance denial and decided-step immutability.
 - `./mvnw clean verify`: not executed; remote GitHub editing connection does not provide a local checkout/build runner.
@@ -77,5 +78,5 @@
 - Approval handlers are an extension point; no attendance outcome handler is registered yet. Final approval is denied and the transaction fails closed until a later attendance chunk registers one.
 - Idempotency helper is implemented but is not wired to attendance upload/correction/syllabus endpoints, which are implemented in later chunks.
 - Cursor helper is implemented but no new list endpoints exist in Chunk 1 to consume it.
-- A3, A4, A6 and A8 remain open for deeper regression. A9 code changes are present but its integration/build regression is not yet executed; no claim is made that all Sprint 1 dependencies are fully validated.
+- A3, A6 and A8 remain open for deeper regression. A4 date queries are implemented, but exam-day requires a schema/product decision. A9 code changes and focused tests are present but integration/build regression is not yet executed; no claim is made that all Sprint 1 dependencies are fully validated.
 - No story is marked Accepted. Highest status remains In progress until build and SQL gates pass.

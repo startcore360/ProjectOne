@@ -32,7 +32,7 @@ class CalendarDayStatusServiceTest {
   when(sessions.findByTenantIdAndInstitutionIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenant,institution,date,date)).thenReturn(List.of(session));
   when(sessions.findByTenantIdAndInstitutionIdIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenant,date,date)).thenReturn(List.of());
   var status=service.forDate(tenant,institution,date);
-  assertThat(status.holiday()).isTrue();assertThat(status.weeklyOff()).isTrue();assertThat(status.examDay()).isTrue();
+  assertThat(status.holiday()).isTrue();assertThat(status.weeklyOff()).isTrue();assertThat(status.examDay()).isFalse();
   assertThat(status.academicSessionIds()).containsExactly(session.getAcademicSessionId());assertThat(status.calendarEventIds()).hasSize(2);
  }
  @Test void appliesOddAndEvenOccurrenceToAlternateWeekends(){

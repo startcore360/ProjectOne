@@ -83,6 +83,26 @@ class GuardianLinkControllerTest {
     }
 
     @Test
+    @DisplayName("GUARD: a guardian profile cannot be created without its provisioned guardian account")
+    void guard_missingGuardianAccount() {
+        Authentication auth = t.auth(t.as(admin));
+        assertThatThrownBy(() -> controller.linkGuardian(t.tenantId, student.getStudentProfileId(),
+                new LinkGuardianRequest("Guardian", "+919876543210", null, "FATHER", false), auth))
+                .isInstanceOf(BusinessRuleViolationException.class);
+        assertThat(t.links).isEmpty();
+    }
+
+    @Test
+    @DisplayName("GUARD: blocked links do not consume the three-guardian limit")
+    void guard_blockedLinksDoNotConsumeGuardianLimit() {
+        Authentication auth = t.auth(t.as(admin));
+        for (int i = 0; i < 3; i++) t.link(student.getStudentProfileId()).setStatus("BLOCKED");
+        var response = controller.linkGuardian(t.tenantId, student.getStudentProfileId(), guardian("+919876543210"), auth);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(t.links).hasSize(4);
+    }
+
+    @Test
     @DisplayName("GUARD: more than three guardians is prohibited")
     void guard_maxThree() {
         Authentication auth = t.auth(t.as(admin));

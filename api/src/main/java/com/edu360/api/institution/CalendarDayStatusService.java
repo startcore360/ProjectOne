@@ -1,7 +1,6 @@
 package com.edu360.api.institution;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -28,8 +27,8 @@ public class CalendarDayStatusService {
   List<AcademicCalendarEvent> university=eventRepository.findByTenantIdAndInstitutionIdIsNullAndSourceLevelAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenantId,"UNIVERSITY",date,date);
   List<AcademicCalendarEvent> events=java.util.stream.Stream.concat(local.stream(),university.stream()).toList();
   boolean holiday=events.stream().anyMatch(e->HOLIDAY_TYPES.contains(e.getEventType()));
-  // The current schema has no EXAM_DAY event type; the committed calendar rule identifies exam ranges by title.
-  boolean examDay=events.stream().anyMatch(e->e.getTitle()!=null&&e.getTitle().toUpperCase(Locale.ROOT).contains("EXAM"));
+  // No exam-day event type or exam-calendar relation exists in the committed schema.
+  // Do not infer an exam from free-text titles; expose false until the model is defined.
   int day=date.getDayOfWeek().getValue(),occurrence=(date.getDayOfMonth()-1)/7+1;
   boolean weeklyOff=weeklyOffRuleRepository.findByTenantIdAndInstitutionIdOrderByDayOfWeekAsc(tenantId,institutionId).stream()
    .filter(r->r.getDayOfWeek()!=null&&r.getDayOfWeek()==day)
