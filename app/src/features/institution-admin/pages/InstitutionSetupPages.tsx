@@ -5,7 +5,7 @@ import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui";
-import { Button, TextField, Panel } from "../../../design-system/components";
+import { Button, TextField, Panel, DateField } from "../../../design-system/components";
 import {
   AddAcademicSessionModal,
   AddMasterEventModal,
@@ -695,14 +695,8 @@ export function CalendarEventsPage() {
                 placeholder="e.g. Founder's Day"
               />
               <div className="platform-form-grid">
-                <label className="platform-form-field">
-                  Start date
-                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-                </label>
-                <label className="platform-form-field">
-                  End date
-                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
-                </label>
+                <DateField id="academic-session-start-date" label="Start date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+                <DateField id="academic-session-end-date" label="End date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
               </div>
               <ResultBanner status={status} message={message} />
               <Button type="submit" busy={status === "busy"}>
@@ -952,19 +946,8 @@ export function WeeklyOffRulesPage() {
                 </select>
               </label>
               <div className="platform-form-grid">
-                <label className="platform-form-field">
-                  Effective from
-                  <input
-                    type="date"
-                    value={effectiveFrom}
-                    onChange={(e) => setEffectiveFrom(e.target.value)}
-                    required
-                  />
-                </label>
-                <label className="platform-form-field">
-                  Effective to (optional)
-                  <input type="date" value={effectiveTo} onChange={(e) => setEffectiveTo(e.target.value)} />
-                </label>
+                <DateField id="weekly-off-effective-from" label="Effective from" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} required />
+                <DateField id="weekly-off-effective-to" label="Effective to (optional)" value={effectiveTo} onChange={(e) => setEffectiveTo(e.target.value)} />
               </div>
               <ResultBanner status={status} message={message} />
               <Button type="submit" busy={status === "busy"}>

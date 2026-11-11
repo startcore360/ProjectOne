@@ -19,6 +19,7 @@ import lombok.Setter;
 public class UserNotification {
     @EmbeddedId
     private UserNotificationId id;
+
     @Column(name = "recipient_user_id", nullable = false)
     private UUID recipientUserId;
     @Column(name = "institution_id")
@@ -53,15 +54,6 @@ public class UserNotification {
     private UUID updatedBy;
     @Column(name = "row_version", insertable = false, updatable = false)
     private Integer rowVersion;
-
-    /** Backward-compatible constructor used by existing self-service notification fixtures. */
-    @Deprecated
-    public UserNotification(UUID tenantId, UUID notificationId, UUID recipientUserId,
-            String triggerCode, String title, String body, String priorityClass) {
-        this(tenantId, notificationId, recipientUserId, null, triggerCode, title, body,
-                null, null, recipientUserId, priorityClass, null);
-        this.createdAt = Instant.now();
-    }
 
     public UserNotification(UUID tenantId, UUID notificationId, UUID recipientUserId,
             UUID institutionId, String triggerCode, String title, String body,

@@ -49,6 +49,7 @@ import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole } from "../features/platf
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
+import ActionGate from "./ActionGate";
 
 // AuthUserResponse (api/.../auth/dto/AuthUserResponse.java) only ever populates platformRole
 // for a platform identity, or tenantId+userType for a tenant identity - never a generic "role"
@@ -87,18 +88,18 @@ export default function AppRoutes() {
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route element={<UniversityAdminRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/university/institutions" element={<InstitutionsPage />} />
-            <Route path="/university/users" element={<UserListPage />} />
-            <Route path="/university/roles" element={<RolesPermissionsPage />} />
-            <Route path="/university/missing-roles" element={<MissingRolesPage />} />
+            <Route path="/university/institutions" element={<ActionGate anyOf={["INSTITUTION_CREATE_DRAFT", "INSTITUTION_ACTIVATE"]}><InstitutionsPage /></ActionGate>} />
+            <Route path="/university/users" element={<ActionGate anyOf={["USER_VIEW", "USER_CREATE", "USER_EDIT", "USER_DEACTIVATE"]}><UserListPage /></ActionGate>} />
+            <Route path="/university/roles" element={<ActionGate anyOf={["ROLE_ASSIGN", "ROLE_CUSTOM_MANAGE"]}><RolesPermissionsPage /></ActionGate>} />
+            <Route path="/university/missing-roles" element={<ActionGate anyOf={["USER_VIEW", "ROLE_ASSIGN"]}><MissingRolesPage /></ActionGate>} />
             <Route path="/university/setup/hod" element={<HodAssignmentPage />} />
             <Route path="/university/setup/mentor" element={<MentorAssignmentPage />} />
             <Route path="/university/setup/class-teacher" element={<ClassTeacherAssignmentPage />} />
             <Route path="/university/setup/student-login" element={<StudentLoginSwitchPage />} />
             <Route path="/university/setup/calendar-events" element={<CalendarEventsPage />} />
             <Route path="/university/setup/weekly-off" element={<WeeklyOffRulesPage />} />
-            <Route path="/university/setup/structure" element={<AcademicStructurePage />} />
-            <Route path="/university/setup/term-lock" element={<TermLockPage />} />
+            <Route path="/university/setup/structure" element={<ActionGate anyOf={["SUBJECT_ALLOCATE", "PROGRAM_RULES_SET"]}><AcademicStructurePage /></ActionGate>} />
+            <Route path="/university/setup/term-lock" element={<ActionGate anyOf={["TERM_LOCK", "TERM_UNLOCK"]}><TermLockPage /></ActionGate>} />
             <Route path="/university/setup/delegations" element={<DelegationsApprovalsPage />} />
             <Route path="/university/setup/academic-governance" element={<AcademicGovernancePage />} />
             <Route path="/tenants/users" element={<UserListPage />} />
@@ -156,7 +157,7 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/self-service" element={<SelfServicePage />} />
+          <Route path="/self-service" element={<ActionGate anyOf={["SELF_SERVICE_VIEW"]}><SelfServicePage /></ActionGate>} />
           <Route path="/sessions" element={<SessionsPage />} />
         </Route>
       </Route>

@@ -17,6 +17,12 @@ class FileContentInspectorTest {
     }
 
     @Test
+    void acceptsValidPdfWhenBrowserUsesGenericOctetStreamType() {
+        byte[] pdf = "%PDF-1.7".getBytes(StandardCharsets.US_ASCII);
+        assertThat(inspector.inspect("report.pdf", "application/octet-stream", pdf)).isEqualTo("application/pdf");
+    }
+
+    @Test
     void S2_27_rejectsExecutableRenamedAsPdf() {
         byte[] executable = new byte[]{0x4d, 0x5a, 0, 0, 0, 0};
         assertThatThrownBy(() -> inspector.inspect("report.pdf.exe", "application/x-msdownload", executable))

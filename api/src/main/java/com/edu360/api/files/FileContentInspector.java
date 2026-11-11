@@ -28,8 +28,12 @@ public class FileContentInspector {
             detected = switch (extension) { case "docx", "xlsx", "pptx" -> extension; default -> reject(); };
         } else if ("txt".equals(extension) && isUtf8Text(bytes) && !looksLikeMarkup(bytes)) detected = "txt";
         else throw new IllegalArgumentException("FILE_TYPE_NOT_ALLOWED: File content is not on the safe list.");
-        if (!sameType(extension, detected) || !mimeFor(detected).equalsIgnoreCase(declaredType == null ? "" : declaredType.trim())) reject();
-        return mimeFor(detected);
+
+        String expected = mimeFor(detected);
+        boolean browserGenericType = declaredType == null || declaredType.isBlank()
+                || "application/octet-stream".equalsIgnoreCase(declaredType.trim());
+        if (!sameType(extension, detected) || (!browserGenericType && !expected.equalsIgnoreCase(declaredType.trim()))) reject();
+        return expected;
     }
 
     /** Reads ZIP central-directory filenames only; no entry is opened or inflated. */
@@ -45,7 +49,7 @@ public class FileContentInspector {
         if (centralOffset + centralSize > eocd || centralSize > Integer.MAX_VALUE) return false;
         int end = (int) (centralOffset + centralSize);
         byte[] marker = "[Content_Types].xml".getBytes(StandardCharsets.US_ASCII);
-        for (int i = (int) centralOffset; i <= end - 46; ) {
+        for (int i = (int) centralOffset; i <= end - 46;) {
             if (i + 46 > end || littleInt(bytes, i) != ZIP_CENTRAL_SIGNATURE) return false;
             int nameLength = littleShort(bytes, i + 28);
             int extraLength = littleShort(bytes, i + 30);

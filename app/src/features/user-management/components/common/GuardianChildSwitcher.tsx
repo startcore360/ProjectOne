@@ -21,7 +21,7 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
   useEffect(() => {
     let active = true;
     api.get<GuardianChild[]>("/guardian/children")
-      .then(({ data }) => { if (active) setChildren(data); })
+      .then(({ data }) => { if (active) setChildren(data.filter((child) => child.status === "ACTIVE")); })
       .catch(() => { if (active) setError("Linked children could not be loaded."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };

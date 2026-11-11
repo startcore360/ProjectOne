@@ -38,3 +38,6 @@ export { ErrorState } from "./ErrorState";
 export type { ErrorStateProps } from "./ErrorState";
 export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";
+
+export { default as DateField } from "./DateField";
+export type { DateFieldProps } from "./DateField";

@@ -9,6 +9,20 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+/**
+ * WHAT: stores a file's bytes on local disk and returns the relative path to record as
+ * app.file_object.storage_key. This is a deliberate interim implementation, not the real
+ * object-store the V4.0 schema's own comment on file_object.storage_key describes ("Object-store
+ * key prefixed tenants/{tenant_id}/") - there is no S3/equivalent configured anywhere in this
+ * codebase yet. The key remains server-side and is never returned by an API.
+ *
+ * HOW: tenant files are isolated below tenants/{tenant_id}/ and identified by random UUIDs.
+ * Every read normalizes the key, checks lexical containment, resolves symlinks, and checks the
+ * real target remains beneath the real storage root before opening it.
+ *
+ * WHY: the interim local implementation preserves tenant partitioning and prevents path traversal
+ * while object storage and expiring download links remain a later integration.
+ */
 @Component
 public class LocalFileStorage {
     private final Path baseDir;
@@ -20,14 +34,18 @@ public class LocalFileStorage {
     public String store(UUID tenantId, UUID fileId, InputStream content) {
         Path tenantsDir = baseDir.resolve("tenants").normalize();
         Path tenantDir = tenantsDir.resolve(tenantId.toString()).normalize();
-        if (!tenantDir.startsWith(tenantsDir) || !tenantsDir.startsWith(baseDir)) throw new IllegalArgumentException("Invalid tenant storage path.");
+        if (!tenantDir.startsWith(tenantsDir) || !tenantsDir.startsWith(baseDir)) {
+            throw new IllegalArgumentException("Invalid tenant storage path.");
+        }
         try {
             Files.createDirectories(tenantDir);
             Path target = tenantDir.resolve(fileId.toString()).normalize();
             if (!target.startsWith(tenantDir)) throw new IllegalArgumentException("Invalid file storage path.");
             Files.copy(content, target);
             return baseDir.relativize(target).toString().replace('\\', '/');
-        } catch (IOException ex) { throw new UncheckedFileStorageException("Could not store uploaded file", ex); }
+        } catch (IOException ex) {
+            throw new UncheckedFileStorageException("Could not store uploaded file", ex);
+        }
     }
 
     public InputStream openRead(String storageKey) {
@@ -36,14 +54,21 @@ public class LocalFileStorage {
         try {
             Path realBase = baseDir.toRealPath();
             Path realTarget = target.toRealPath();
-            if (!realTarget.startsWith(realBase) || !Files.isRegularFile(realTarget)) throw new IllegalArgumentException("Invalid storage key.");
+            if (!realTarget.startsWith(realBase) || !Files.isRegularFile(realTarget)) {
+                throw new IllegalArgumentException("Invalid storage key.");
+            }
             return Files.newInputStream(realTarget);
-        } catch (IOException ex) { throw new UncheckedFileStorageException("Could not read stored file", ex); }
+        } catch (IOException ex) {
+            throw new UncheckedFileStorageException("Could not read stored file", ex);
+        }
     }
 
     public byte[] read(String storageKey) {
-        try (InputStream input = openRead(storageKey)) { return input.readAllBytes(); }
-        catch (IOException ex) { throw new UncheckedFileStorageException("Could not read stored file", ex); }
+        try (InputStream input = openRead(storageKey)) {
+            return input.readAllBytes();
+        } catch (IOException ex) {
+            throw new UncheckedFileStorageException("Could not read stored file", ex);
+        }
     }
 
     public static class UncheckedFileStorageException extends RuntimeException {
