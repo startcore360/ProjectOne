@@ -27,8 +27,7 @@ public class CalendarDayStatusService {
   List<AcademicCalendarEvent> university=eventRepository.findByTenantIdAndInstitutionIdIsNullAndSourceLevelAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenantId,"UNIVERSITY",date,date);
   List<AcademicCalendarEvent> events=java.util.stream.Stream.concat(local.stream(),university.stream()).toList();
   boolean holiday=events.stream().anyMatch(e->HOLIDAY_TYPES.contains(e.getEventType()));
-  // No exam-day event type or exam-calendar relation exists in the committed schema.
-  // Do not infer an exam from free-text titles; expose false until the model is defined.
+  boolean examDay=events.stream().anyMatch(e->"EXAM_DAY".equals(e.getEventType()));
   int day=date.getDayOfWeek().getValue(),occurrence=(date.getDayOfMonth()-1)/7+1;
   boolean weeklyOff=weeklyOffRuleRepository.findByTenantIdAndInstitutionIdOrderByDayOfWeekAsc(tenantId,institutionId).stream()
    .filter(r->r.getDayOfWeek()!=null&&r.getDayOfWeek()==day)
@@ -39,7 +38,7 @@ public class CalendarDayStatusService {
    academicSessionRepository.findByTenantIdAndInstitutionIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenantId,institutionId,date,date).stream(),
    academicSessionRepository.findByTenantIdAndInstitutionIdIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenantId,date,date).stream())
    .map(AcademicSession::getAcademicSessionId).distinct().toList();
-  return new CalendarDayStatus(institutionId,date,sessions,holiday,weeklyOff,false,
+  return new CalendarDayStatus(institutionId,date,sessions,holiday,weeklyOff,examDay,
    events.stream().map(AcademicCalendarEvent::getAcademicCalendarEventId).toList(),
    events.stream().map(AcademicCalendarEvent::getEventType).distinct().sorted().toList());
  }
