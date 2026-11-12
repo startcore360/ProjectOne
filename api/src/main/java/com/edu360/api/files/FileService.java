@@ -124,7 +124,20 @@ public class FileService {
         RbacScope scope = file.getInstitutionId() == null
                 ? permissions.ownScope(caller)
                 : permissions.targetScope(caller, file.getInstitutionId(), null);
-        switch (FilePurpose.valueOf(file.getPurpose())) {
+        FilePurpose purpose = FilePurpose.valueOf(file.getPurpose());
+        if ("PENDING".equals(file.getScanStatus())
+                && !principal.userAccountId().equals(file.getUploadedBy())) {
+            boolean authorizedForPending = permissions.can(caller, purpose.actionCode(),
+                    scope, RbacTarget.NONE).allowed();
+            if (!authorizedForPending && purpose == FilePurpose.ASSIGNMENT_SUBMISSION) {
+                authorizedForPending = permissions.can(caller, "ASSIGNMENT_EVALUATE",
+                        scope, RbacTarget.NONE).allowed();
+            }
+            if (!authorizedForPending) {
+                throw new UnauthorizedException("Pending files are available only to the uploader or an authorized role.");
+            }
+        }
+        switch (purpose) {
             case STUDY_MATERIAL -> permissions.authorize(caller, "STUDY_MATERIAL_VIEW", scope, RbacTarget.NONE);
             case ASSIGNMENT_SUBMISSION -> {
                 if (!permissions.can(caller, "ASSIGNMENT_VIEW_OWN", scope, RbacTarget.NONE).allowed()
