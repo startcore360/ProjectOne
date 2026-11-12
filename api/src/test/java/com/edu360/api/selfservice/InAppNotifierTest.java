@@ -52,6 +52,7 @@ class InAppNotifierTest {
         TransactionStatus status = mock(TransactionStatus.class);
         when(transactionManager.getTransaction(any(TransactionDefinition.class))).thenReturn(status);
         when(repository.countUnreadDeliverable(any(), any(), any(java.time.Instant.class))).thenReturn(3L);
+        when(repository.save(any(UserNotification.class))).thenAnswer(invocation -> invocation.getArgument(0));
         LiveEventPublisher liveEvents = mock(LiveEventPublisher.class);
         InAppNotifier notifier = new InAppNotifier(repository, transactionManager);
         notifier.setLiveEventPublisher(liveEvents);
