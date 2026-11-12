@@ -15,6 +15,7 @@ run edu360_v4_test 25_sprint2_foundations.sql > /dev/null
 run edu360_v4_test 26_v41_student_login_switch_guard.sql > /dev/null
 run edu360_v4_test 27_v41_notification_read_state.sql > /dev/null
 run edu360_v4_test 28_v41_study_material_view.sql > /dev/null
+run edu360_v4_test 29_v41_institution_code_formats.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/07_tests_extra.sql" > /dev/null      # new connection: settings never set (DB-55..59)
 $PSQL -q -d edu360_v4_test -f "$D/09_tests_v40.sql"  > /dev/null      # V4.0 tests DB-60..79
 $PSQL -q -d edu360_v4_test -f "$D/11_tests_rolldown.sql" > /dev/null  # V4.0 role roll-down tests DB-80..97
