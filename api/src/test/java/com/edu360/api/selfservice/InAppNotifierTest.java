@@ -11,6 +11,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 
+import com.edu360.api.live.LiveEventPublisher;
+
 class InAppNotifierTest {
     @Test
     void notificationPersistenceFailureDoesNotEscapeCaller() {
