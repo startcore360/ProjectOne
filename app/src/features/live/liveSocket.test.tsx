@@ -25,7 +25,11 @@ class FakeWebSocket {
   onmessage: ((event: MessageEvent) => void) | null = null;
   send = vi.fn();
   close = vi.fn();
-  constructor(public url: string) { FakeWebSocket.instances.push(this); }
+  url: string;
+  constructor(url: string) {
+    this.url = url;
+    FakeWebSocket.instances.push(this);
+  }
   open() { this.readyState = FakeWebSocket.OPEN; this.onopen?.(new Event("open")); }
   closeWith(code: number) {
     this.readyState = 3;
