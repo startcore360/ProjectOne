@@ -179,6 +179,13 @@ public class PlatformSupportService {
     }
 
     @Transactional(readOnly = true)
+    public List<SupportTicketResponse> listTicketsRaisedBy(UUID tenantId, UUID raisedByUserId) {
+        return ticketRepository.findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(tenantId, raisedByUserId).stream()
+                .map(SupportTicketResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<SupportTicketResponse> listTickets(UUID tenantId) {
         List<SupportTicket> list = (tenantId != null)
                 ? ticketRepository.findByTenantIdOrderByCreatedAtDesc(tenantId)
