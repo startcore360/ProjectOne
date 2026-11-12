@@ -41,6 +41,9 @@ public class NotificationService {
         UserNotification notification = notifications
                 .findByIdTenantIdAndIdNotificationIdAndRecipientUserId(tenantId, notificationId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found."));
+        if (notification.getDeliverAfter() != null && notification.getDeliverAfter().isAfter(Instant.now())) {
+            throw new ResourceNotFoundException("Notification not found.");
+        }
         if (notification.getReadAt() == null) {
             notification.setReadAt(Instant.now());
             notification.setUpdatedBy(userId);
