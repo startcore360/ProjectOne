@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -46,9 +47,8 @@ class StaffDirectoryAuthorizationTest {
     @Test
     void staffRecordViewDenialStopsBeforeQueryingProfiles() {
         Fixture f = fixture();
-        when(f.permissions().authorize(eq(f.actor()), eq("STAFF_RECORD_VIEW"),
-                eq(RbacScope.tenant()), eq(RbacTarget.NONE)))
-                .thenThrow(new UnauthorizedException("Denied"));
+        doThrow(new UnauthorizedException("Denied")).when(f.permissions())
+                .authorize(eq(f.actor()), eq("STAFF_RECORD_VIEW"), eq(RbacScope.tenant()), eq(RbacTarget.NONE));
 
         assertThatThrownBy(() -> f.service().list(f.actor(), null, 50))
                 .isInstanceOf(UnauthorizedException.class);
@@ -60,9 +60,8 @@ class StaffDirectoryAuthorizationTest {
     @Test
     void staffRecordManageDenialStopsBeforeCreatingProfile() {
         Fixture f = fixture();
-        when(f.permissions().authorize(eq(f.actor()), eq("STAFF_RECORD_MANAGE"),
-                eq(RbacScope.tenant()), eq(RbacTarget.NONE)))
-                .thenThrow(new UnauthorizedException("Denied"));
+        doThrow(new UnauthorizedException("Denied")).when(f.permissions())
+                .authorize(eq(f.actor()), eq("STAFF_RECORD_MANAGE"), eq(RbacScope.tenant()), eq(RbacTarget.NONE));
 
         assertThatThrownBy(() -> f.service().create(f.actor(), null))
                 .isInstanceOf(UnauthorizedException.class);
