@@ -213,7 +213,7 @@ INSERT INTO ref.action_catalog VALUES ('ASSIGNMENT_EVALUATE',83,'Assignments and
 INSERT INTO ref.action_catalog VALUES ('HOMEWORK_STATUS_MARK',84,'Assignments and homework',1,'Mark school homework status',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('ASSIGNMENT_VIEW_OWN',85,'Assignments and homework',1,'See assignments, status and feedback',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('HOMEWORK_COMPLIANCE_VIEW',86,'Assignments and homework',1,'See homework compliance',false,NULL,NULL) ON CONFLICT DO NOTHING;
-INSERT INTO ref.action_catalog VALUES ('STUDY_MATERIAL_VIEW',280,'Assignments and homework',1,'View study material for assigned subjects or own active enrollment/children',false,NULL,'Sprint 2 B5') ON CONFLICT DO NOTHING;
+INSERT INTO ref.action_catalog VALUES ('STUDY_MATERIAL_VIEW',281,'Assignments and homework',1,'View study material for assigned subjects or own active enrollment/children',false,NULL,'Sprint 2 B5') ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('FEE_POLICY_SET',87,'Fees',1,'Set the fee policy (heads, ranges, schemes, penalty policy)',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('FEE_POLICY_DATA_ENTER',88,'Fees',1,'Enter fee policy data for the Finance Director',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('FEE_STRUCTURE_CREATE',89,'Fees',1,'Build a fee structure',false,NULL,NULL) ON CONFLICT DO NOTHING;

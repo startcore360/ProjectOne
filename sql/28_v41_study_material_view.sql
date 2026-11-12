@@ -2,7 +2,7 @@
 INSERT INTO ref.action_catalog
     (action_code, action_no, module_name, phase, description, is_approval_action, sensitive_class, changed_in)
 VALUES
-    ('STUDY_MATERIAL_VIEW', 280, 'Assignments and homework', 1,
+    ('STUDY_MATERIAL_VIEW', 281, 'Assignments and homework', 1,
      'View study material for assigned subjects or own active enrollment/children',
      false, NULL, 'Sprint 2 B5')
 ON CONFLICT (action_code) DO NOTHING;

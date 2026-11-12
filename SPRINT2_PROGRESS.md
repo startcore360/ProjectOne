@@ -163,3 +163,5 @@ The OWASP Maven findings are a **pre-existing baseline failure**: the same depen
 - SQL checks `S2-B5-01/02` and a backend authorization regression test were added. CI verification is pending; this item is not marked Tested until the pipeline completes.
 
 - CI follow-up found an action-number collision: `ROLLDOWN_VIEW` owns action number 279 in the V4.0 reference seed. `STUDY_MATERIAL_VIEW` is now assigned 280 in both the reference catalogue and migration 28; the next SQL pipeline run will verify the corrected seed order.
+
+- The next CI run identified a second collision in the V4.0 reference seed: `ROLLDOWN_OVERRIDE_SET` uses action number 280. The study-material view action has been moved to 281 in both reference data and migration 28; a fresh pipeline is required to verify the correction.
