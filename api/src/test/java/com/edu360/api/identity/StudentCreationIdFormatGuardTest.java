@@ -17,6 +17,7 @@ import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.institution.*;
+import com.edu360.api.rbac.PermissionEvaluatorService;
 
 class StudentCreationIdFormatGuardTest {
     @Test
@@ -57,7 +58,8 @@ class StudentCreationIdFormatGuardTest {
                         "Set the Student ID format in Institution settings before creating students."));
 
         StudentCreationService service = new StudentCreationService(students, institutions, sessions,
-                sections, schoolClasses, idFormats, enrollments, accounts, audit);
+                sections, schoolClasses, idFormats, enrollments, accounts, audit,
+                mock(PermissionEvaluatorService.class));
         ReflectionTestUtils.setField(service, "entityManager", mock(EntityManager.class));
 
         assertThatThrownBy(() -> service.create(actor, new StudentCreateRequest(institutionId,
