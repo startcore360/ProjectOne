@@ -41,6 +41,7 @@ class UserAccountStudentProvisioningTest {
         when(tenant.getPlanId()).thenReturn(null);
         when(tenants.findById(tenantId)).thenReturn(Optional.of(tenant));
         when(accounts.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED)).thenReturn(0L);
+        when(accounts.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(keycloak.provisionStudentUser(eq("tenant-realm"), eq("Asha Rao"), eq("COL-2026-001"), anyString(), eq(true)))
                 .thenReturn("kc-student-1");
 
