@@ -26,7 +26,10 @@ import com.edu360.api.institution.SchoolClass;
 import com.edu360.api.institution.SchoolClassRepository;
 import com.edu360.api.institution.Section;
 import com.edu360.api.institution.SectionRepository;
+import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
+import com.edu360.api.rbac.RbacScope;
+import com.edu360.api.rbac.RbacTarget;
 import com.edu360.api.rbac.dto.CreateUserResponse;
 
 @Service
@@ -40,6 +43,7 @@ public class StudentCreationService {
     private final StudentEnrollmentService enrollments;
     private final UserAccountService accounts;
     private final AuditLogService audit;
+    private final PermissionEvaluatorService permissions;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -47,7 +51,7 @@ public class StudentCreationService {
     public StudentCreationService(StudentProfileRepository students, InstitutionRepository institutions,
             AcademicSessionRepository sessions, SectionRepository sections, SchoolClassRepository schoolClasses,
             InstitutionIdFormatService idFormats, StudentEnrollmentService enrollments,
-            UserAccountService accounts, AuditLogService audit) {
+            UserAccountService accounts, AuditLogService audit, PermissionEvaluatorService permissions) {
         this.students = students;
         this.institutions = institutions;
         this.sessions = sessions;
@@ -57,6 +61,7 @@ public class StudentCreationService {
         this.enrollments = enrollments;
         this.accounts = accounts;
         this.audit = audit;
+        this.permissions = permissions;
     }
 
     @Transactional
@@ -74,6 +79,8 @@ public class StudentCreationService {
             throw new BusinessRuleViolationException("INSTITUTION_NOT_ACTIVE",
                     "Students can only be created in an active institution.");
         }
+        RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
+        permissions.authorize(principal, "USER_CREATE", RbacScope.institution(institutionId), RbacTarget.NONE);
 
         Section section = sections.findByTenantIdAndSectionId(tenantId, request.sectionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Section not found."));
@@ -115,7 +122,6 @@ public class StudentCreationService {
         UUID userAccountId = null;
         String temporaryPassword = null;
         if (createLogin) {
-            RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
             CreateUserResponse account = accounts.createStudentAccount(principal,
                     request.fullName(), studentCode, institutionId);
             userAccountId = account.userAccountId();
