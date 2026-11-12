@@ -404,9 +404,13 @@ a {
 .eds-field {
   margin-top: 20px;
 }
+.eds-field:first-child {
+  margin-top: 0;
+}
 .eds-field label {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
   margin-bottom: 8px;
   color: var(--color-text);
   font-size: var(--fs-label);
@@ -417,7 +421,8 @@ a {
   font-size: var(--fs-caption);
   font-weight: 400;
 }
-.eds-field input {
+.eds-field input,
+.eds-field select {
   width: 100%;
   min-height: var(--control-height);
   padding: 0 14px;
@@ -427,26 +432,92 @@ a {
   color: var(--color-text);
   font: 400 var(--fs-input) var(--font-body);
 }
-.eds-field input::placeholder {
+.eds-field select {
+  padding-right: 34px;
+}
+.eds-field textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  font: 400 var(--fs-input) var(--font-body);
+  box-sizing: border-box;
+  resize: vertical;
+}
+.eds-field input::placeholder,
+.eds-field textarea::placeholder {
   color: var(--color-text-disabled);
 }
-/* Every state a text field can be in - not just its default appearance. Previously only the
-   separate error-text line below indicated an invalid field; the input itself looked identical
-   whether valid or not. */
-.eds-field input:focus-visible {
+/* Every state a form field can be in - not just its default appearance. */
+.eds-field input:focus-visible,
+.eds-field select:focus-visible,
+.eds-field textarea:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 1px;
 }
-.eds-field input:disabled {
+.eds-field input:disabled,
+.eds-field select:disabled,
+.eds-field textarea:disabled {
   background: var(--color-bg-subtle);
   color: var(--color-text-disabled);
   cursor: not-allowed;
 }
-.eds-field input[aria-invalid="true"] {
+.eds-field input[aria-invalid="true"],
+.eds-field select[aria-invalid="true"],
+.eds-field textarea[aria-invalid="true"] {
   border-color: var(--color-status-danger-border);
 }
-.eds-field input[aria-invalid="true"]:focus-visible {
+.eds-field input[aria-invalid="true"]:focus-visible,
+.eds-field select[aria-invalid="true"]:focus-visible,
+.eds-field textarea[aria-invalid="true"]:focus-visible {
   outline-color: var(--color-status-danger-border);
+}
+.eds-field__hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--fs-caption);
+}
+.eds-field__hint span {
+  color: inherit;
+}
+.eds-field__error {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-status-danger-text, #ef4444);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium, 500);
+}
+.eds-field--checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  cursor: pointer;
+}
+.eds-field--checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 2px 0 0 0;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  accent-color: var(--color-action-primary, #059669);
+  cursor: pointer;
+}
+.eds-field--checkbox label {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: var(--fs-body-sm, 0.875rem);
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
 }
 .auth-password {
   position: relative;
@@ -1142,10 +1213,54 @@ a {
 .platform-modal-backdrop { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; overflow-y: auto; padding: var(--space-4); background: var(--color-overlay); }
 .platform-modal { width: min(100%, 560px); max-height: min(90vh, 760px); overflow-y: auto; padding: var(--space-6); border: 1px solid var(--color-border-divider); border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--elevation-3); }
 .platform-modal > header { display: flex; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 .platform-modal > header h2 { font: var(--fw-bold) var(--fs-h2)/var(--lh-h2) var(--font-display); }
 .platform-modal > header p { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--fs-body-sm); }
-.platform-icon-button { width: 40px; height: 40px; flex: 0 0 40px; border: 1px solid var(--color-border-divider); border-radius: 50%; background: var(--color-bg-surface); color: var(--color-text-muted); font-size: 24px; cursor: pointer; }
-.platform-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.platform-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid var(--color-border-divider);
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  transition: background-color var(--duration-fast, 150ms), color var(--duration-fast, 150ms), border-color var(--duration-fast, 150ms);
+}
+.platform-icon-button:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.platform-icon-button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+.platform-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); }
+.platform-form-grid .eds-field,
+.platform-form .eds-field:first-child { margin-top: 0; }
+.platform-form,
+.platform-panel > form { padding: 0 var(--space-5) var(--space-5); }
+.platform-panel > .platform-empty-state { margin: 0 var(--space-5) var(--space-5); }
 .platform-form-field { display: grid; gap: var(--space-2); margin-top: var(--space-5); color: var(--color-text); font-size: var(--fs-label); font-weight: var(--fw-semibold); }
 .platform-form-field select { width: 100%; }
 .platform-field-hint { margin: 0; color: var(--color-text-muted); font-size: var(--fs-caption); font-weight: var(--fw-regular); }
@@ -1458,3 +1573,79 @@ progress.progress::-moz-progress-bar { background: var(--color-action-primary); 
 progress.progress--thin { height: 4px; }
 @media (max-width: 980px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+/* Notification bell. Tokens only; works in light and dark. Phones get a bottom sheet (same
+   pattern as .app-more-drawer, D10 openMore); larger screens get a panel under the top bar. */
+.notif-bell__button { position: relative; }
+.notif-bell__badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+  border-radius: var(--radius-pill);
+  background: var(--color-text-brand); color: var(--color-text-on-brand);
+  font-size: 11px; font-weight: var(--fw-bold); line-height: 18px; text-align: center;
+}
+.notif-bell__backdrop { position: fixed; inset: 0; z-index: var(--z-modal); background: transparent; }
+.notif-bell__panel {
+  position: fixed; top: 56px; right: clamp(16px, 3vw, 32px);
+  display: flex; flex-direction: column; box-sizing: border-box;
+  width: min(400px, calc(100vw - 2 * var(--space-4))); max-height: min(70vh, 560px);
+  border: 1px solid var(--color-border-divider); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); box-shadow: var(--elevation-raised); overflow: hidden;
+}
+.notif-bell__panel:focus { outline: none; }
+.notif-bell__grip { display: none; }
+.notif-bell__head, .notif-bell__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.notif-bell__head { border-bottom: 1px solid var(--color-border-divider); }
+.notif-bell__head h2 { margin: 0; font: var(--fw-bold) var(--fs-h4) var(--font-display); }
+.notif-bell__head-actions { display: flex; align-items: center; gap: var(--space-2); }
+.notif-bell__close { display: none; }
+.notif-bell__body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.notif-bell__foot { border-top: 1px solid var(--color-border-divider); font-size: var(--fs-body-sm); }
+.notif-bell__foot a { color: var(--color-text-brand); font-weight: var(--fw-semibold); }
+.notif-bell__foot a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.notif-bell__list { margin: 0; padding: 0; list-style: none; }
+.notif-bell__item {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-divider);
+}
+.notif-bell__item:last-child { border-bottom: 0; }
+.notif-bell__item.is-unread { background: var(--color-bg-brand-soft); }
+.notif-bell__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-body-sm); }
+.notif-bell__text strong { color: var(--color-text); overflow-wrap: anywhere; }
+.notif-bell__text span { color: var(--color-text-muted); overflow-wrap: anywhere; }
+.notif-bell__text small { color: var(--color-text-muted); font-size: var(--fs-caption); }
+.notif-bell__tag {
+  margin-right: var(--space-2); padding: 1px var(--space-2);
+  border: 1px solid var(--color-status-danger-border); border-radius: var(--radius-pill);
+  background: var(--color-status-danger-bg); color: var(--color-status-danger-fg); text-transform: capitalize;
+}
+.notif-bell__link {
+  flex: 0 0 auto; padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--color-text-brand); cursor: pointer;
+  font: var(--fw-semibold) var(--fs-body-sm) var(--font-body);
+}
+.notif-bell__link:hover { background: var(--color-bg-subtle); }
+.notif-bell__link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.notif-bell__state {
+  display: flex; align-items: center; gap: var(--space-2); margin: 0;
+  padding: var(--space-5) var(--space-4); color: var(--color-text-muted); font-size: var(--fs-body-sm);
+}
+.notif-bell__state--error { color: var(--color-status-danger-fg); }
+@media (max-width: 640px) {
+  .notif-bell__button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; flex-basis: 44px; }
+  .notif-bell__backdrop { background: var(--color-overlay); }
+  .notif-bell__panel {
+    inset: auto 0 0 0; width: 100%; max-height: 85dvh; max-height: 85vh;
+    border-width: 1px 0 0; border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--elevation-3);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .notif-bell__grip { display: block; width: 40px; height: 4px; margin: var(--space-2) auto 0; border-radius: var(--radius-pill); background: var(--color-border-divider); }
+  .notif-bell__close { display: inline-flex; width: 44px; height: 44px; min-width: 44px; min-height: 44px; flex-basis: 44px; }
+  .notif-bell__link { min-height: 44px; padding-inline: var(--space-3); }
+  .notif-bell__item { min-height: 56px; padding-block: var(--space-3); }
+  .notif-bell__foot { min-height: 48px; }
+  .notif-bell__foot a { display: inline-flex; align-items: center; min-height: 44px; }
+}

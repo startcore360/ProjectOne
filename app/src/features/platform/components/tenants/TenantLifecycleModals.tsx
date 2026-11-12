@@ -40,7 +40,7 @@ export function SuspendTenantModal({
             <p>Suspends institution login access immediately [TENANT_SUSPEND_ARCHIVE, Action #204].</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>
@@ -105,7 +105,7 @@ export function ArchiveTenantModal({
             <p>Archives tenancy records and prevents all operational logins [TENANT_SUSPEND_ARCHIVE, Action #204].</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>

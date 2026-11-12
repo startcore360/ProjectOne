@@ -7,6 +7,7 @@ import {
   PageHeader,
   EmptyState,
   ErrorState,
+  MetricCard,
 } from "../../../design-system/components";
 import { clearTokens } from "../../../services/tokenStorage";
 import { useAppDispatch } from "../../../store/hooks";
@@ -201,29 +202,32 @@ export default function SessionsPage() {
 
       {ready && sessions.length > 0 && (
         <>
-          {/* Current active devices at a glance. */}
-          <section className="sessions-summary" aria-label="Active devices summary">
-            <div className="sessions-summary__item sessions-summary__item--total">
-              <span className="sessions-summary__value">
-                <span className="session-status__dot session-status__dot--live" aria-hidden="true" />
-                {activeNow}
-              </span>
-              <span className="sessions-summary__label">Active now</span>
-            </div>
-            <div className="sessions-summary__item">
-              <span className="sessions-summary__value">{sessions.length}</span>
-              <span className="sessions-summary__label">
-                Signed-in device{sessions.length === 1 ? "" : "s"}
-              </span>
-            </div>
-            <div className="sessions-summary__item">
-              <span className="sessions-summary__value">{computers}</span>
-              <span className="sessions-summary__label">Computer{computers === 1 ? "" : "s"}</span>
-            </div>
-            <div className="sessions-summary__item">
-              <span className="sessions-summary__value">{phones}</span>
-              <span className="sessions-summary__label">Phone{phones === 1 ? "" : "s"} / tablet{phones === 1 ? "" : "s"}</span>
-            </div>
+          {/* Current active devices at a glance - uses design system MetricCard / kpi-grid */}
+          <section className="kpi-grid" aria-label="Active devices summary">
+            <MetricCard
+              label="Active now"
+              value={activeNow}
+              icon="check-circle"
+              context="Currently active"
+            />
+            <MetricCard
+              label={sessions.length === 1 ? "Signed-in device" : "Signed-in devices"}
+              value={sessions.length}
+              icon="lock"
+              context="All signed-in sessions"
+            />
+            <MetricCard
+              label={computers === 1 ? "Computer" : "Computers"}
+              value={computers}
+              icon="monitor"
+              context="Desktop & laptop browsers"
+            />
+            <MetricCard
+              label={phones === 1 ? "Phone / tablet" : "Phones / tablets"}
+              value={phones}
+              icon="smartphone"
+              context="Mobile browsers"
+            />
           </section>
 
           {notice && (

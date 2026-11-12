@@ -5,7 +5,8 @@ export type IconName =
   | "x-circle" | "search" | "bell" | "user" | "users" | "chart" | "book"
   | "wallet" | "upload" | "download" | "lock" | "shield" | "clock" | "eye"
   | "edit" | "send" | "return" | "archive" | "ban" | "refresh" | "printer"
-  | "wifi-off" | "more" | "help" | "sun" | "moon" | "chevron-down" | "monitor" | "smartphone";
+  | "wifi-off" | "more" | "help" | "sun" | "moon" | "chevron-down" | "monitor" | "smartphone"
+  | "x" | "close";
 
 const paths: Record<IconName, ReactNode> = {
   home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1Z"/></>,
@@ -16,7 +17,7 @@ const paths: Record<IconName, ReactNode> = {
   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></>,
   "x-circle": <><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></>,
   search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></>,
-  bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
+  bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>,
   user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
   users: <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
   chart: <><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/></>,
@@ -42,7 +43,9 @@ const paths: Record<IconName, ReactNode> = {
   moon: <><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></>,
   "chevron-down": <><path d="m6 9 6 6 6-6"/></>,
   monitor: <><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></>,
-  smartphone: <><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></>
+  smartphone: <><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></>,
+  x: <><path d="M18 6 6 18M6 6l12 12"/></>,
+  close: <><path d="M18 6 6 18M6 6l12 12"/></>,
 };
 
 export function Icon({ name, size = 20, ...props }: SVGProps<SVGSVGElement> & { name: IconName; size?: number }) {

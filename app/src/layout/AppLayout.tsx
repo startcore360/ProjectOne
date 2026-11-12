@@ -13,6 +13,7 @@ import { Icon } from "../components/ui/Icon";
 import Edu360Logo from "../assets/Edu360Logo";
 import { ThemeToggle } from "../components/ui";
 import { RoleSwitcher } from "../components/layout/RoleSwitcher";
+import { NotificationBell } from "../features/notifications/components/NotificationBell";
 import { SESSION_IDLE_LIMIT_MS, startInactivityTracker } from "../services/inactivityTracker";
 import api from "../services/axios";
 import { useProfilePhoto } from "../features/profile/hooks/useProfilePhoto";
@@ -296,7 +297,7 @@ export default function AppLayout() {
     </nav>
     {moreOpen && <div className="platform-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setMoreOpen(false); }}>
       <section className="app-more-drawer" role="dialog" aria-modal="true" aria-label="Menu">
-        <header><h2>Menu</h2><button className="platform-icon-button" onClick={() => setMoreOpen(false)} aria-label="Close"><Icon name="x-circle" size={18}/></button></header>
+        <header><h2>Menu</h2><button className="platform-icon-button" onClick={() => setMoreOpen(false)} aria-label="Close"><Icon name="x" size={16}/></button></header>
         {/* Mobile has no sidebar, so the signed-in identity + profile link live here too. */}
         <NavLink to="/profile" className="app-user app-user--drawer" onClick={() => setMoreOpen(false)}>
           {avatar}
@@ -318,6 +319,7 @@ export default function AppLayout() {
       <div className="app-topbar">
         <div className="app-topbar__context"><span>EDU 360</span><span aria-hidden="true">/</span><strong>{contextLabel}</strong></div>
         <div className="app-topbar__tools">
+          {!isPlatformConsole && <NotificationBell />}
           <div className="app-topbar__role"><RoleSwitcher /></div>
           <ThemeToggle variant="inline" />
           {/* Mobile only (CSS): who is signed in, always visible, one tap to the profile. */}

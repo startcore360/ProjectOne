@@ -50,8 +50,20 @@ public class KeycloakProperties {
     /** Local-dev-only hostname suffix stripped from the Host header to find a tenant's
      *  subdomain (see LoginTenantResolver) - e.g. ".edu360.local". Blank in production, where
      *  real subdomain/custom-domain routing is not built yet: see
-     *  docker/PRODUCTION_TENANT_ROUTING.txt, P4. */
+     *  docker/PRODUCTION_TENANT_ROUTING.txt, P4. May be a comma-separated list so several address
+     *  styles work at once, e.g. ".edu360.local,-edu360.duckdns.org". */
     private String localDevHostSuffix = "";
+
+    /** localDevHostSuffix split into its non-blank, lower-cased endings. */
+    public java.util.List<String> getLocalDevHostSuffixes() {
+        if (localDevHostSuffix == null || localDevHostSuffix.isBlank()) {
+            return java.util.List.of();
+        }
+        return java.util.Arrays.stream(localDevHostSuffix.split(","))
+                .map(s -> s.trim().toLowerCase(java.util.Locale.ROOT))
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
 
     /** The one hostname label that means "this is a platform login, not a tenant login" (e.g.
      *  "platform" for platform.edu360.local) - see LoginTenantResolver. */

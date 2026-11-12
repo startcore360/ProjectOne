@@ -73,7 +73,7 @@ export function CreatePlatformUserModal({
             <p>Creates a two-step-login account in the platform realm. The temporary password is shown once after creation.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>

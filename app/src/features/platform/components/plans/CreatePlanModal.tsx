@@ -51,7 +51,7 @@ export function CreatePlanModal({
             <p>Platform Admins can configure limits and modules; Product Owner configures pricing [Rule F-4].</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>

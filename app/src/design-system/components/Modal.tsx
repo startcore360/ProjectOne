@@ -123,7 +123,7 @@ export function Modal({
               onClick={onClose}
               aria-label="Close"
             >
-              <Icon name="x-circle" size={18} />
+              <Icon name="x" size={16} />
             </button>
           </header>
         )}

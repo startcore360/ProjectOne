@@ -3,9 +3,21 @@ import axios from "axios";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
+import { useFormErrors } from "../../../hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui";
-import { Button, TextField, Panel, DateField } from "../../../design-system/components";
+import {
+  Button,
+  TextField,
+  SelectField,
+  TextAreaField,
+  DateField,
+  DateTimeField,
+  Panel,
+  EmptyState,
+  Toast,
+  toast,
+} from "../../../design-system/components";
 import {
   AddAcademicSessionModal,
   AddMasterEventModal,
@@ -65,29 +77,26 @@ function IdField({
   value,
   onChange,
   hint,
+  error,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   hint?: string;
+  error?: string;
 }) {
   return (
-    <div className="eds-field">
-      <label htmlFor={id}>
-        {label} <span>Required</span>
-      </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Paste the ID (UUID)"
-        aria-describedby={`${id}-hint`}
-      />
-      <p id={`${id}-hint`} className="platform-sample-note" style={{ marginTop: "var(--space-1)" }}>
-        <span aria-hidden="true">ⓘ</span> {hint ?? "There is no list or picker for this yet — paste the ID directly."}
-      </p>
-    </div>
+    <TextField
+      id={id}
+      label={label}
+      required
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Paste the ID (UUID)"
+      hint={hint ?? "There is no list or picker for this yet — paste the ID directly."}
+      error={error}
+    />
   );
 }
 
@@ -620,25 +629,39 @@ export function CalendarEventsPage() {
           </Panel>
 
           <Panel title="Choose institution" description="There is no institution picker yet; paste the institution ID.">
-            <IdField id="cal-institution-id" label="Institution ID" value={institutionId} onChange={setInstitutionId} />
-            <Button type="button" variant="secondary" onClick={() => void loadEvents()} busy={listStatus === "busy"}>
-              {listStatus === "busy" ? "Loading…" : "Load events"}
-            </Button>
+            <div className="eds-field" style={{ marginTop: 0 }}>
+              <label htmlFor="cal-institution-id">
+                Institution ID <span>(Required)</span>
+              </label>
+              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+                <input
+                  id="cal-institution-id"
+                  value={institutionId}
+                  onChange={(e) => setInstitutionId(e.target.value)}
+                  placeholder="Paste the ID (UUID)"
+                  style={{ flex: 1 }}
+                />
+                <Button type="button" variant="secondary" onClick={() => void loadEvents()} busy={listStatus === "busy"}>
+                  {listStatus === "busy" ? "Loading…" : "Load events"}
+                </Button>
+              </div>
+            </div>
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
 
           <Panel title="Local events" description="Only LOCAL_HOLIDAY and LOCAL_EVENT rows for this institution.">
             {events === null ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No events loaded yet.</strong>
-                <p>Enter an institution ID above and choose "Load events".</p>
-              </div>
+              <EmptyState
+                title="No events loaded yet"
+                description="Enter an institution ID above and choose Load events."
+                icon="calendar"
+              />
             ) : events.length === 0 ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No local events are recorded for this institution.</strong>
-              </div>
+              <EmptyState
+                title="No local events recorded"
+                description="No local events are recorded for this institution."
+                icon="calendar"
+              />
             ) : (
               <div className="platform-table-wrap">
                 <table className="platform-table">
@@ -679,13 +702,16 @@ export function CalendarEventsPage() {
                 value={academicSessionId}
                 onChange={setAcademicSessionId}
               />
-              <label className="platform-form-field">
-                Event type
-                <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
-                  <option value="LOCAL_HOLIDAY">Local holiday</option>
-                  <option value="LOCAL_EVENT">Local event</option>
-                </select>
-              </label>
+              <SelectField
+                id="cal-event-type"
+                label="Event type"
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value)}
+                options={[
+                  { value: "LOCAL_HOLIDAY", label: "Local holiday" },
+                  { value: "LOCAL_EVENT", label: "Local event" },
+                ]}
+              />
               <TextField
                 id="cal-title"
                 label="Title"
@@ -695,8 +721,20 @@ export function CalendarEventsPage() {
                 placeholder="e.g. Founder's Day"
               />
               <div className="platform-form-grid">
-                <DateField id="academic-session-start-date" label="Start date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-                <DateField id="academic-session-end-date" label="End date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+                <DateField
+                  id="cal-start-date"
+                  label="Start date"
+                  required
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <DateField
+                  id="cal-end-date"
+                  label="End date"
+                  required
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
               </div>
               <ResultBanner status={status} message={message} />
               <Button type="submit" busy={status === "busy"}>
@@ -876,25 +914,39 @@ export function WeeklyOffRulesPage() {
       ) : (
         <>
           <Panel title="Choose institution" description="There is no institution picker yet; paste the institution ID.">
-            <IdField id="wo-institution-id" label="Institution ID" value={institutionId} onChange={setInstitutionId} />
-            <Button type="button" variant="secondary" onClick={() => void loadRules()} busy={listStatus === "busy"}>
-              {listStatus === "busy" ? "Loading…" : "Load rules"}
-            </Button>
+            <div className="eds-field" style={{ marginTop: 0 }}>
+              <label htmlFor="wo-institution-id">
+                Institution ID <span>(Required)</span>
+              </label>
+              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+                <input
+                  id="wo-institution-id"
+                  value={institutionId}
+                  onChange={(e) => setInstitutionId(e.target.value)}
+                  placeholder="Paste the ID (UUID)"
+                  style={{ flex: 1 }}
+                />
+                <Button type="button" variant="secondary" onClick={() => void loadRules()} busy={listStatus === "busy"}>
+                  {listStatus === "busy" ? "Loading…" : "Load rules"}
+                </Button>
+              </div>
+            </div>
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
 
           <Panel title="Current weekly-off rules">
             {rules === null ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No rules loaded yet.</strong>
-                <p>Enter an institution ID above and choose "Load rules".</p>
-              </div>
+              <EmptyState
+                title="No rules loaded yet"
+                description="Enter an institution ID above and choose Load rules."
+                icon="clock"
+              />
             ) : rules.length === 0 ? (
-              <div className="platform-admin-empty">
-                <span aria-hidden="true">♙</span>
-                <strong>No weekly-off rules are recorded for this institution.</strong>
-              </div>
+              <EmptyState
+                title="No weekly-off rules recorded"
+                description="No weekly-off rules are recorded for this institution."
+                icon="clock"
+              />
             ) : (
               <div className="platform-table-wrap">
                 <table className="platform-table">
@@ -1032,113 +1084,104 @@ export function AcademicStructurePage() {
       />
 
       <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
-        {institutions.length > 0 && (
-          <div style={{ marginBottom: "var(--space-3)" }}>
-            <label htmlFor="quick-inst-select" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-              Choose from registered institutions
-            </label>
-            <select
-              id="quick-inst-select"
-              value={institutionId}
-              onChange={(e) => {
-                const val = e.target.value;
-                setInstitutionId(val);
-                if (val && isValidUuid(val)) {
-                  void loadStructureFor(val);
-                }
-              }}
-              style={{
-                width: "100%",
-                maxWidth: "480px",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--color-border)",
-                fontSize: "0.875rem",
-              }}
-            >
-              <option value="">-- Select an institution --</option>
-              {institutions.map((inst, idx) => (
-                <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
-                  {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
-                </option>
-              ))}
-            </select>
+        <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
+          {institutions.length > 0 && (
+            <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+              <SelectField
+                id="quick-inst-select"
+                label="Choose from registered institutions"
+                value={institutionId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInstitutionId(val);
+                  if (val && isValidUuid(val)) {
+                    void loadStructureFor(val);
+                  }
+                }}
+              >
+                <option value="">-- Select an institution --</option>
+                {institutions.map((inst, idx) => (
+                  <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
+                    {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          )}
+          <div style={{ marginTop: institutions.length > 0 ? "var(--space-3)" : 0 }}>
+            <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  id="structure-institution-id"
+                  label="Institution ID *"
+                  value={institutionId}
+                  onChange={(e) => setInstitutionId(e.target.value)}
+                  placeholder="Paste the ID (UUID)"
+                  hint="UUID of the college or school"
+                />
+              </div>
+              <div style={{ paddingTop: "1.75rem" }}>
+                <Button type="button" onClick={() => void loadStructure()} busy={loading}>
+                  {loading ? "Loading…" : "Load structure"}
+                </Button>
+              </div>
+            </div>
           </div>
-        )}
-        <div className="platform-toolbar" style={{ alignItems: "flex-end", gap: "1rem" }}>
-          <div style={{ flex: 1 }}>
-            <IdField
-              id="structure-institution-id"
-              label="Institution ID"
-              value={institutionId}
-              onChange={setInstitutionId}
-              hint="UUID of the college or school"
-            />
-          </div>
-          <Button type="button" onClick={() => void loadStructure()} busy={loading}>
-            {loading ? "Loading…" : "Load structure"}
-          </Button>
+          {error && (
+            <div style={{ marginTop: "var(--space-4)" }}>
+              <Toast variant="error" description={error} />
+            </div>
+          )}
         </div>
-        {error && (
-          <div className="platform-inline-error" style={{ marginTop: "1rem" }}>
-            {error}
-          </div>
-        )}
       </Panel>
 
       {isSchool && institutionId && (
-        <div
-          role="status"
-          style={{
-            marginTop: "var(--space-4)",
-            padding: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--eds-color-info-border, #bfdbfe)",
-            backgroundColor: "var(--eds-color-info-bg, #eff6ff)",
-            color: "var(--eds-color-info-text, #1e40af)",
-            fontSize: "0.875rem",
-          }}
-        >
-          <strong style={{ display: "block", marginBottom: "4px" }}>
-            School Structure &amp; Curriculum (Rule HI-12)
-          </strong>
-          <p style={{ margin: "0 0 var(--space-3) 0" }}>
-            Schools organise learners into Classes and Sections rather than academic departments.
-            Use the dedicated school configuration tools below to assign teachers and calendar rules:
-          </p>
-          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-            <a
-              href="/university/setup/class-teacher"
-              style={{
-                display: "inline-block",
-                padding: "6px 14px",
-                borderRadius: "var(--radius-md)",
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
-                fontWeight: 500,
-                textDecoration: "none",
-                fontSize: "0.8125rem",
-              }}
-            >
-              Assign Class Teachers →
-            </a>
-            <a
-              href="/university/setup/weekly-off"
-              style={{
-                display: "inline-block",
-                padding: "6px 14px",
-                borderRadius: "var(--radius-md)",
-                backgroundColor: "#ffffff",
-                color: "#1e40af",
-                border: "1px solid #bfdbfe",
-                fontWeight: 500,
-                textDecoration: "none",
-                fontSize: "0.8125rem",
-              }}
-            >
-              Configure Weekly Off &amp; Calendar →
-            </a>
-          </div>
+        <div style={{ marginTop: "var(--space-4)" }}>
+          <Toast
+            variant="info"
+            title="School Structure & Curriculum (Rule HI-12)"
+            content={
+              <div>
+                <p style={{ margin: "0 0 var(--space-3) 0" }}>
+                  Schools organise learners into Classes and Sections rather than academic departments.
+                  Use the dedicated school configuration tools below to assign teachers and calendar rules:
+                </p>
+                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                  <a
+                    href="/university/setup/class-teacher"
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 14px",
+                      borderRadius: "var(--radius-md)",
+                      backgroundColor: "var(--color-brand-primary, #2563eb)",
+                      color: "#ffffff",
+                      fontWeight: 500,
+                      textDecoration: "none",
+                      fontSize: "0.8125rem",
+                    }}
+                  >
+                    Assign Class Teachers →
+                  </a>
+                  <a
+                    href="/university/setup/weekly-off"
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 14px",
+                      borderRadius: "var(--radius-md)",
+                      backgroundColor: "var(--color-bg-surface, #ffffff)",
+                      color: "var(--color-brand-primary, #1e40af)",
+                      border: "1px solid var(--color-border-divider, #bfdbfe)",
+                      fontWeight: 500,
+                      textDecoration: "none",
+                      fontSize: "0.8125rem",
+                    }}
+                  >
+                    Configure Weekly Off &amp; Calendar →
+                  </a>
+                </div>
+              </div>
+            }
+          />
         </div>
       )}
 
@@ -1312,6 +1355,7 @@ export function TermLockPage() {
   const [loading, setLoading] = useState(false);
   const [locking, setLocking] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const { fieldErrors, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
 
   useEffect(() => {
     if (!tenantId || import.meta.env.MODE === "test") return;
@@ -1341,28 +1385,39 @@ export function TermLockPage() {
 
   const handleLockSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Client-side UUID check — show inline errors directly on the fields
+    if (!isValidUuid(institutionId)) {
+      clearLockFieldError("institutionId"); // reset first to force re-render
+      setTimeout(() => clearLockFieldError("institutionId"), 0);
+    }
     if (!isValidUuid(institutionId) || !isValidUuid(sessionId)) {
-      setFeedback({ tone: "danger", message: "Valid Institution ID and Academic Session ID (UUID) are required." });
+      const msg = "Valid Institution ID and Academic Session ID (UUID) are required.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
     setLocking(true);
+    clearLockAll();
     try {
       const res = await termLockService.lockTerm(tenantId, institutionId.trim(), {
         academicSessionId: sessionId.trim(),
         semesterId: semesterId.trim() ? semesterId.trim() : undefined,
         notes: lockNotes.trim() || undefined,
       });
-      setFeedback({ tone: "success", message: `Term locked successfully [Rule R2-08]. Attendance and marks cannot change.` });
+      const msg = `Term locked successfully [Rule R2-08]. Attendance and marks cannot change.`;
+      setFeedback({ tone: "success", message: msg });
+      toast.success("Term locked successfully [Rule R2-08]", "Attendance and marks cannot change.");
       setLocks((prev) => [res, ...prev.filter((l) => l.termLockId !== res.termLockId)]);
       setLockNotes("");
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      handleLockApiError(err);
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to lock term", msg);
     } finally {
       setLocking(false);
     }
   };
-
-
 
   return (
     <div className="platform-page">
@@ -1372,53 +1427,26 @@ export function TermLockPage() {
       />
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{feedback.message}</span>
-          <button
-            onClick={() => setFeedback(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ×
-          </button>
-        </div>
+        <Toast
+          variant={feedback.tone === "danger" ? "error" : "success"}
+          description={feedback.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
       )}
 
       <Panel title="Lock academic term" description="Principal authority to lock a term upon final marks/attendance submission [Rule R2-08].">
         <form onSubmit={handleLockSubmit} className="platform-form">
           {institutions.length > 0 && (
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="quick-lock-inst-select" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Choose registered institution
-              </label>
-              <select
+            <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+              <SelectField
                 id="quick-lock-inst-select"
+                label="Choose registered institution"
                 value={institutionId}
                 onChange={(e) => {
                   const val = e.target.value;
                   setInstitutionId(val);
                   if (isValidUuid(val)) fetchLocks(val);
-                }}
-                style={{
-                  width: "100%",
-                  maxWidth: "480px",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                  fontSize: "0.875rem",
                 }}
               >
                 <option value="">-- Select an institution --</option>
@@ -1427,7 +1455,7 @@ export function TermLockPage() {
                     {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
           )}
           <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
@@ -1437,39 +1465,42 @@ export function TermLockPage() {
               value={institutionId}
               onChange={(val) => {
                 setInstitutionId(val);
+                clearLockFieldError("institutionId");
                 if (isValidUuid(val)) fetchLocks(val);
               }}
               hint="Paste college or school UUID"
+              error={fieldErrors.institutionId}
             />
             <IdField
               id="term-lock-session-id"
               label="Academic Session ID"
               value={sessionId}
-              onChange={setSessionId}
+              onChange={(val) => { setSessionId(val); clearLockFieldError("academicSessionId"); }}
               hint="Paste academic session UUID"
+              error={fieldErrors.academicSessionId}
             />
           </div>
           <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
-            <div className="eds-field">
-              <label htmlFor="term-lock-sem-id">Semester ID (Optional)</label>
-              <input
-                id="term-lock-sem-id"
-                value={semesterId}
-                onChange={(e) => setSemesterId(e.target.value)}
-                placeholder="Optional semester UUID for colleges"
-              />
-            </div>
-            <div className="eds-field">
-              <label htmlFor="term-lock-notes">Lock Notes / Justification</label>
-              <input
-                id="term-lock-notes"
-                value={lockNotes}
-                onChange={(e) => setLockNotes(e.target.value)}
-                placeholder="e.g. End of term marks finalised"
-              />
-            </div>
+            <TextField
+              id="term-lock-sem-id"
+              label="Semester ID (Optional)"
+              value={semesterId}
+              onChange={(e) => { setSemesterId(e.target.value); clearLockFieldError("semesterId"); }}
+              placeholder="Optional semester UUID for colleges"
+              hint="Optional semester UUID for colleges"
+              error={fieldErrors.semesterId}
+            />
+            <TextField
+              id="term-lock-notes"
+              label="Lock Notes / Justification"
+              value={lockNotes}
+              onChange={(e) => { setLockNotes(e.target.value); clearLockFieldError("notes"); }}
+              placeholder="e.g. End of term marks finalised"
+              hint="Statutory justification for freezing records"
+              error={fieldErrors.notes}
+            />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
             <Button type="submit" disabled={locking || !isValidUuid(institutionId) || !isValidUuid(sessionId)}>
               {locking ? "Locking term..." : "Lock Term [Rule R2-08]"}
             </Button>
@@ -1480,7 +1511,11 @@ export function TermLockPage() {
       <Panel title="Active term locks" description="Review locked terms. Principals can temporarily unlock for grievances or corrections.">
         {loading && <p className="platform-empty-note">Loading locks...</p>}
         {locks.length === 0 ? (
-          <p className="platform-empty-note">No active term locks recorded for this institution.</p>
+          <EmptyState
+            title="No active term locks"
+            description="No active term locks recorded for this institution."
+            icon="lock"
+          />
         ) : (
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -1565,6 +1600,8 @@ export function DelegationsApprovalsPage() {
   const [delegations, setDelegations] = useState<DelegationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const { fieldErrors: delegFieldErrors, handleApiError: handleDelegApiError, clearFieldError: clearDelegFieldError, clearAll: clearDelegAll } = useFormErrors();
+  const { fieldErrors: bulkFieldErrors, handleApiError: handleBulkApiError, clearFieldError: clearBulkFieldError, clearAll: clearBulkAll } = useFormErrors();
 
   // New delegation state
   const [delegateUserId, setDelegateUserId] = useState("");
@@ -1634,14 +1671,19 @@ export function DelegationsApprovalsPage() {
   const handleCreateDelegation = async (e: FormEvent) => {
     e.preventDefault();
     if (!isValidUuid(delegateUserId)) {
-      setFeedback({ tone: "danger", message: "Valid Delegate User Account ID (UUID) is required." });
+      const msg = "Valid Delegate User Account ID (UUID) is required.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
     if (!startsAt || !endsAt) {
-      setFeedback({ tone: "danger", message: "Start and end dates are required for time-bounded delegation." });
+      const msg = "Start and end dates are required for time-bounded delegation.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
     setCreating(true);
+    clearDelegAll();
     try {
       const res = await approvalDelegationService.createDelegation(tenantId, {
         delegateUserId: delegateUserId.trim(),
@@ -1649,14 +1691,19 @@ export function DelegationsApprovalsPage() {
         startsAt: new Date(startsAt).toISOString(),
         endsAt: new Date(endsAt).toISOString(),
       });
+      const msg = `Approval authority successfully delegated [APPROVAL_DELEGATE / Rule 11]. Self-approval prohibited.`;
       setFeedback({
         tone: "success",
-        message: `Approval authority successfully delegated [APPROVAL_DELEGATE / Rule 11]. Self-approval prohibited.`,
+        message: msg,
       });
+      toast.success("Approval authority delegated [Rule 11]", "Self-approval prohibited.");
       setDelegations((prev) => [res, ...prev]);
       setDelegateUserId("");
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      handleDelegApiError(err);
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to delegate approval", msg);
     } finally {
       setCreating(false);
     }
@@ -1665,10 +1712,14 @@ export function DelegationsApprovalsPage() {
   const handleCancelDelegation = async (delegationId: string) => {
     try {
       const res = await approvalDelegationService.cancelDelegation(tenantId, delegationId);
-      setFeedback({ tone: "success", message: `Delegation cancelled successfully.` });
+      const msg = `Delegation cancelled successfully.`;
+      setFeedback({ tone: "success", message: msg });
+      toast.success("Delegation cancelled");
       setDelegations((prev) => prev.map((d) => (d.delegationId === res.delegationId ? res : d)));
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to cancel delegation", msg);
     }
   };
 
@@ -1680,25 +1731,33 @@ export function DelegationsApprovalsPage() {
       .filter((s) => isValidUuid(s));
 
     if (ids.length === 0) {
-      setFeedback({ tone: "danger", message: "Please provide at least one valid approval request UUID." });
+      const msg = "Please provide at least one valid approval request UUID.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
 
     setBulkSubmitting(true);
+    clearBulkAll();
     try {
       const res = await approvalDelegationService.bulkDecide(tenantId, {
         approvalRequestIds: ids,
         decision: bulkDecision,
         comment: bulkComment.trim() || undefined,
       });
+      const msg = `Bulk decision applied: ${res.succeeded} items processed successfully [APPROVAL_BULK / Rule AP-25].`;
       setFeedback({
         tone: "success",
-        message: `Bulk decision applied: ${res.succeeded} items processed successfully [APPROVAL_BULK / Rule AP-25].`,
+        message: msg,
       });
+      toast.success("Bulk decision applied [Rule AP-25]", `${res.succeeded} items processed successfully.`);
       setBulkIds("");
       setBulkComment("");
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      handleBulkApiError(err);
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to apply bulk decision", msg);
     } finally {
       setBulkSubmitting(false);
     }
@@ -1712,201 +1771,116 @@ export function DelegationsApprovalsPage() {
       />
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{feedback.message}</span>
-          <button
-            onClick={() => setFeedback(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ×
-          </button>
-        </div>
+        <Toast
+          variant={feedback.tone === "danger" ? "error" : "success"}
+          description={feedback.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-        {/* Delegation Form */}
-        <Panel
-          title="Delegate approval authority"
-          description="Hand over own approvals to a peer or deputy for set dates [APPROVAL_DELEGATE / Rule 11]."
-        >
-          <form onSubmit={handleCreateDelegation}>
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="delegate-user-id" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Delegate User Account ID (UUID) *
-              </label>
-              <input
-                id="delegate-user-id"
-                type="text"
-                required
-                placeholder="Paste delegate user account UUID"
-                value={delegateUserId}
-                onChange={(e) => setDelegateUserId(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                  fontFamily: "monospace",
-                }}
-              />
-            </div>
+      {/* Delegation Form */}
+      <Panel
+        title="Delegate approval authority"
+        description="Hand over own approvals to a peer or deputy for set dates [APPROVAL_DELEGATE / Rule 11]."
+      >
+        <form onSubmit={handleCreateDelegation} className="platform-form">
+          <TextField
+            id="delegate-user-id"
+            label="Delegate User Account ID (UUID) *"
+            required
+            placeholder="Paste delegate user account UUID"
+            value={delegateUserId}
+            onChange={(e) => { setDelegateUserId(e.target.value); clearDelegFieldError("delegateUserId"); }}
+            style={{ fontFamily: "monospace" }}
+            error={delegFieldErrors.delegateUserId}
+          />
 
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="delegation-basis" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Delegation Basis
-              </label>
-              <select
-                id="delegation-basis"
-                value={delegationBasis}
-                onChange={(e) => setDelegationBasis(e.target.value as "SAME_OR_HIGHER" | "DESIGNATED_DEPUTY")}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <option value="SAME_OR_HIGHER">Same or higher role ranking [OD-17]</option>
-                <option value="DESIGNATED_DEPUTY">Designated Deputy (e.g. Principal &rarr; Vice Principal) [D-001]</option>
-              </select>
-            </div>
+          <SelectField
+            id="delegation-basis"
+            label="Delegation Basis"
+            value={delegationBasis}
+            onChange={(e) => setDelegationBasis(e.target.value as "SAME_OR_HIGHER" | "DESIGNATED_DEPUTY")}
+            options={[
+              { value: "SAME_OR_HIGHER", label: "Same or higher role ranking [OD-17]" },
+              { value: "DESIGNATED_DEPUTY", label: "Designated Deputy (e.g. Principal → Vice Principal) [D-001]" },
+            ]}
+          />
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-              <div>
-                <label htmlFor="delegation-start" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                  Effective From *
-                </label>
-                <input
-                  id="delegation-start"
-                  type="datetime-local"
-                  required
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "var(--space-2)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="delegation-end" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                  Effective Until *
-                </label>
-                <input
-                  id="delegation-end"
-                  type="datetime-local"
-                  required
-                  value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "var(--space-2)",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                />
-              </div>
-            </div>
+          <div className="platform-form-grid">
+            <DateTimeField
+              id="delegation-start"
+              label="Effective From *"
+              required
+              value={startsAt}
+              onChange={(e) => { setStartsAt(e.target.value); clearDelegFieldError("startsAt"); }}
+              error={delegFieldErrors.startsAt}
+            />
+            <DateTimeField
+              id="delegation-end"
+              label="Effective Until *"
+              required
+              value={endsAt}
+              onChange={(e) => { setEndsAt(e.target.value); clearDelegFieldError("endsAt"); }}
+              error={delegFieldErrors.endsAt}
+            />
+          </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" disabled={creating || !isValidUuid(delegateUserId) || !startsAt || !endsAt}>
-                {creating ? "Delegating..." : "Create Delegation [Rule 11]"}
-              </Button>
-            </div>
-          </form>
-        </Panel>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
+            <Button type="submit" disabled={creating || !isValidUuid(delegateUserId) || !startsAt || !endsAt}>
+              {creating ? "Delegating..." : "Create Delegation [Rule 11]"}
+            </Button>
+          </div>
+        </form>
+      </Panel>
 
-        {/* Bulk Approvals Form */}
-        <Panel
-          title="Bulk approval decision"
-          description="Approve several requests at once with an optional comment [APPROVAL_BULK / Rule AP-25]."
-        >
-          <form onSubmit={handleBulkDecision}>
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="bulk-request-ids" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Approval Request IDs (comma-separated UUIDs) *
-              </label>
-              <textarea
-                id="bulk-request-ids"
-                rows={3}
-                required
-                placeholder="UUID1, UUID2, UUID3..."
-                value={bulkIds}
-                onChange={(e) => setBulkIds(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                  fontFamily: "monospace",
-                  fontSize: "0.875rem",
-                }}
-              />
-            </div>
+      {/* Bulk Approvals Form */}
+      <Panel
+        title="Bulk approval decision"
+        description="Approve several requests at once with an optional comment [APPROVAL_BULK / Rule AP-25]."
+      >
+        <form onSubmit={handleBulkDecision} className="platform-form">
+          <TextAreaField
+            id="bulk-request-ids"
+            label="Approval Request IDs (comma-separated UUIDs) *"
+            rows={3}
+            required
+            placeholder="UUID1, UUID2, UUID3..."
+            value={bulkIds}
+            onChange={(e) => { setBulkIds(e.target.value); clearBulkFieldError("approvalRequestIds"); }}
+            style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+            error={bulkFieldErrors.approvalRequestIds}
+          />
 
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="bulk-decision-type" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Decision
-              </label>
-              <select
-                id="bulk-decision-type"
-                value={bulkDecision}
-                onChange={(e) => setBulkDecision(e.target.value as "APPROVED" | "REJECTED")}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                }}
-              >
-                <option value="APPROVED">Approve all selected requests</option>
-                <option value="REJECTED">Reject all selected requests</option>
-              </select>
-            </div>
+          <div className="platform-form-grid">
+            <SelectField
+              id="bulk-decision-type"
+              label="Decision"
+              value={bulkDecision}
+              onChange={(e) => setBulkDecision(e.target.value as "APPROVED" | "REJECTED")}
+              options={[
+                { value: "APPROVED", label: "Approve all selected requests" },
+                { value: "REJECTED", label: "Reject all selected requests" },
+              ]}
+            />
 
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <label htmlFor="bulk-comment" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-                Batch Comment (Optional)
-              </label>
-              <input
-                id="bulk-comment"
-                type="text"
-                placeholder="e.g. Moderated marks verified and approved by Dean"
-                value={bulkComment}
-                onChange={(e) => setBulkComment(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "var(--space-2)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--color-border)",
-                }}
-              />
-            </div>
+            <TextField
+              id="bulk-comment"
+              label="Batch Comment (Optional)"
+              placeholder="e.g. Moderated marks verified and approved by Dean"
+              value={bulkComment}
+              onChange={(e) => { setBulkComment(e.target.value); clearBulkFieldError("comment"); }}
+              error={bulkFieldErrors.comment}
+            />
+          </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" disabled={bulkSubmitting || !bulkIds.trim()}>
-                {bulkSubmitting ? "Processing..." : `Bulk ${bulkDecision === "APPROVED" ? "Approve" : "Reject"} [Rule AP-25]`}
-              </Button>
-            </div>
-          </form>
-        </Panel>
-      </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
+            <Button type="submit" disabled={bulkSubmitting || !bulkIds.trim()}>
+              {bulkSubmitting ? "Processing..." : `Bulk ${bulkDecision === "APPROVED" ? "Approve" : "Reject"} [Rule AP-25]`}
+            </Button>
+          </div>
+        </form>
+      </Panel>
 
       <div style={{ marginTop: "var(--space-4)" }}>
         <Panel
@@ -1915,7 +1889,11 @@ export function DelegationsApprovalsPage() {
         >
           {inboxLoading && <p className="platform-empty-note">Loading pending approvals...</p>}
           {!inboxLoading && inboxItems.length === 0 ? (
-            <p className="platform-empty-note">No pending approval requests in your inbox.</p>
+            <EmptyState
+              title="No pending approvals"
+              description="No pending approval requests in your inbox."
+              icon="check-circle"
+            />
           ) : (
             <div className="platform-table-wrap">
               <table className="platform-table">
@@ -1965,7 +1943,11 @@ export function DelegationsApprovalsPage() {
         <Panel title="My active delegations" description="Review delegations you have granted. Self-approval is strictly prohibited under Rule 11.">
           {loading && <p className="platform-empty-note">Loading delegations...</p>}
           {delegations.length === 0 ? (
-            <p className="platform-empty-note">No active delegations created.</p>
+            <EmptyState
+              title="No active delegations"
+              description="No active delegations created."
+              icon="user"
+            />
           ) : (
             <div className="platform-table-wrap">
               <table className="platform-table">
@@ -2168,20 +2150,12 @@ export function AcademicGovernancePage() {
       </div>
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-          }}
-        >
-          {feedback.message}
-        </div>
+        <Toast
+          variant={feedback.tone === "danger" ? "error" : "success"}
+          description={feedback.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
       )}
 
       {loading && <p className="platform-empty-note">Loading academic configuration...</p>}

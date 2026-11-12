@@ -45,7 +45,7 @@ export function CreateIntegrationTypeModal({
             <p>Adds a new allowed category to the platform catalogue.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>

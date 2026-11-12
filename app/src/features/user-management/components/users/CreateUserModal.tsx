@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Button, Kicker, Modal, Notice, TextField } from "../../../../design-system/components";
-import { getApiErrorMessage } from "../../../../services/apiHelper";
+import { Button, Kicker, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
 import {
   userManagementService,
   type ActingScope,
@@ -30,12 +30,19 @@ export function CreateUserModal({
   const [initialRoleCode, setInitialRoleCode] = useState("");
   const [scope, setScope] = useState<ActingScope>({ scopeType: "TENANT" });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const {
+    fieldErrors,
+    formError,
+    handleApiError,
+    clearFieldError,
+    clearAll,
+  } = useFormErrors();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
+    clearAll();
     try {
       const { data } = await userManagementService.createUser(tenantId, {
         displayName: displayName.trim(),
@@ -50,7 +57,7 @@ export function CreateUserModal({
       });
       onCreated(data);
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }
@@ -73,50 +80,59 @@ export function CreateUserModal({
             label="Full name"
             required
             value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
+            onChange={(e) => { setDisplayName(e.target.value); clearFieldError("displayName"); }}
             placeholder="e.g. Dr. Anita Sharma"
+            error={fieldErrors.displayName}
           />
-          <label className="platform-form-field">
-            User type
-            <select value={userType} onChange={(e) => setUserType(e.target.value as UserType)}>
-              <option value="STAFF">Staff (Faculty / Admin)</option>
-              <option value="STUDENT">Student</option>
-              <option value="GUARDIAN">Guardian / Parent</option>
-              <option value="APPLICANT">Applicant</option>
-              <option value="GOVERNANCE">Governance / Board</option>
-            </select>
-          </label>
+          <SelectField
+            id="create-user-type"
+            label="User type"
+            value={userType}
+            onChange={(e) => setUserType(e.target.value as UserType)}
+            options={[
+              { value: "STAFF", label: "Staff (Faculty / Admin)" },
+              { value: "STUDENT", label: "Student" },
+              { value: "GUARDIAN", label: "Guardian / Parent" },
+              { value: "APPLICANT", label: "Applicant" },
+              { value: "GOVERNANCE", label: "Governance / Board" },
+            ]}
+            error={fieldErrors.userType}
+          />
           <TextField
             id="create-email"
             label="Email address"
             type="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
             placeholder="e.g. anita.sharma@northbridge.edu.in"
+            error={fieldErrors.email}
           />
           <TextField
             id="create-mobile"
             label="Mobile number (E.164)"
             required
             value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
+            onChange={(e) => { setMobile(e.target.value); clearFieldError("mobile"); }}
             placeholder="+919876543210"
+            error={fieldErrors.mobile}
           />
           <TextField
             id="create-national-id"
             label="Aadhaar / National ID (Last 4 digits only)"
             value={nationalIdLast4}
             maxLength={4}
-            onChange={(e) => setNationalIdLast4(e.target.value.replace(/\D/g, ""))}
+            onChange={(e) => { setNationalIdLast4(e.target.value.replace(/\D/g, "")); clearFieldError("nationalIdLast4"); }}
             placeholder="e.g. 5678"
+            error={fieldErrors.nationalIdLast4}
           />
           <TextField
             id="create-initial-role"
             label="Initial role code (optional)"
             value={initialRoleCode}
-            onChange={(e) => setInitialRoleCode(e.target.value)}
+            onChange={(e) => { setInitialRoleCode(e.target.value); clearFieldError("initialRoleCode"); }}
             placeholder="e.g. TEACHER, STUDENT, REGISTRAR"
+            error={fieldErrors.initialRoleCode}
           />
         </div>
 
@@ -133,13 +149,13 @@ export function CreateUserModal({
             color: "var(--color-text-secondary, #64748b)",
           }}
         >
-          Statutory Notice: Indian DPDP Act 2023 & UIDAI Guidelines [R2-34] prohibit storing full
+          Statutory Notice: Indian DPDP Act 2023 &amp; UIDAI Guidelines [R2-34] prohibit storing full
           Aadhaar numbers. Only the last 4 digits are accepted for identity masking.
         </div>
 
-        {error && (
+        {formError && (
           <div style={{ marginTop: "0.75rem" }}>
-            <Notice tone="danger">{error}</Notice>
+            <Notice tone="danger">{formError}</Notice>
           </div>
         )}
 

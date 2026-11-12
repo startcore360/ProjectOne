@@ -60,7 +60,7 @@ export function EditIntegrationTypeModal({
             <p>Updates apply immediately to the platform catalogue.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x-circle" size={18} />
+            <Icon name="x" size={16} />
           </button>
         </header>
         <form onSubmit={onSubmit}>

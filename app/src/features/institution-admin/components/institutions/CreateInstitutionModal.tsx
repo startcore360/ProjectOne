@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
-import { getApiErrorMessage } from "../../../../services/apiHelper";
+import { Button, CheckboxField, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
 import {
   institutionService,
   type InstitutionItem,
@@ -29,8 +29,16 @@ export function CreateInstitutionModal({
   const [stateName, setStateName] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [principalEmail, setPrincipalEmail] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const {
+    fieldErrors,
+    formError,
+    handleApiError,
+    clearFieldError,
+    clearAll,
+    setFormError,
+  } = useFormErrors();
 
   const resetForm = () => {
     setInstType("COLLEGE");
@@ -42,17 +50,18 @@ export function CreateInstitutionModal({
     setStateName("");
     setPostalCode("");
     setPrincipalEmail("");
-    setFormError(null);
+    clearAll();
   };
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
+    // Client-side required check
     if (!instCode.trim() || !instName.trim()) {
       setFormError("Institution Code and Name are required.");
       return;
     }
     setSubmitting(true);
-    setFormError(null);
+    clearAll();
     try {
       const res = await institutionService.createDraftInstitution(tenantId, {
         institutionCode: instCode.trim(),
@@ -69,7 +78,7 @@ export function CreateInstitutionModal({
       onCreated(res);
       onClose();
     } catch (err: unknown) {
-      setFormError(getApiErrorMessage(err));
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }
@@ -94,47 +103,29 @@ export function CreateInstitutionModal({
       )}
 
       <form onSubmit={handleCreate}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "var(--space-4)",
-            marginBottom: "var(--space-3)",
-          }}
-        >
-          <div>
-            <label
-              htmlFor="inst-type"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-            >
-              Institution Kind *
-            </label>
-            <select
-              id="inst-type"
-              value={instType}
-              onChange={(e) => setInstType(e.target.value as InstitutionType)}
-              style={{
-                width: "100%",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md, 4px)",
-                border: "1px solid var(--color-border, #ccc)",
-              }}
-            >
-              <option value="COLLEGE">College</option>
-              <option value="SCHOOL">School</option>
-            </select>
-          </div>
+        <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
+          <SelectField
+            id="inst-type"
+            label="Institution Kind *"
+            required
+            value={instType}
+            onChange={(e) => setInstType(e.target.value as InstitutionType)}
+            options={[
+              { value: "COLLEGE", label: "College" },
+              { value: "SCHOOL", label: "School" },
+            ]}
+            error={fieldErrors.institutionType}
+          />
 
-          <div>
-            <TextField
-              id="inst-code"
-              label="Institution Code *"
-              required
-              value={instCode}
-              onChange={(e) => setInstCode(e.target.value)}
-              placeholder="e.g. NBC-01"
-            />
-          </div>
+          <TextField
+            id="inst-code"
+            label="Institution Code *"
+            required
+            value={instCode}
+            onChange={(e) => { setInstCode(e.target.value); clearFieldError("institutionCode"); }}
+            placeholder="e.g. NBC-01"
+            error={fieldErrors.institutionCode}
+          />
         </div>
 
         <div style={{ marginBottom: "var(--space-3)" }}>
@@ -143,8 +134,9 @@ export function CreateInstitutionModal({
             label="Institution Name *"
             required
             value={instName}
-            onChange={(e) => setInstName(e.target.value)}
+            onChange={(e) => { setInstName(e.target.value); clearFieldError("institutionName"); }}
             placeholder="e.g. Northbridge College of Engineering"
+            error={fieldErrors.institutionName}
           />
         </div>
 
@@ -153,8 +145,9 @@ export function CreateInstitutionModal({
             id="inst-address"
             label="Primary Address"
             value={addressLine}
-            onChange={(e) => setAddressLine(e.target.value)}
+            onChange={(e) => { setAddressLine(e.target.value); clearFieldError("addressLine"); }}
             placeholder="Campus address"
+            error={fieldErrors.addressLine}
           />
         </div>
 
@@ -170,22 +163,25 @@ export function CreateInstitutionModal({
             id="inst-city"
             label="City"
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={(e) => { setCity(e.target.value); clearFieldError("city"); }}
             placeholder="Bengaluru"
+            error={fieldErrors.city}
           />
           <TextField
             id="inst-state"
             label="State"
             value={stateName}
-            onChange={(e) => setStateName(e.target.value)}
+            onChange={(e) => { setStateName(e.target.value); clearFieldError("stateName"); }}
             placeholder="Karnataka"
+            error={fieldErrors.stateName}
           />
           <TextField
             id="inst-postal"
             label="Postal Code"
             value={postalCode}
-            onChange={(e) => setPostalCode(e.target.value)}
+            onChange={(e) => { setPostalCode(e.target.value); clearFieldError("postalCode"); }}
             placeholder="560001"
+            error={fieldErrors.postalCode}
           />
         </div>
 
@@ -195,20 +191,19 @@ export function CreateInstitutionModal({
             label="Principal / Head Email"
             type="email"
             value={principalEmail}
-            onChange={(e) => setPrincipalEmail(e.target.value)}
+            onChange={(e) => { setPrincipalEmail(e.target.value); clearFieldError("principalInviteEmail"); }}
             placeholder="principal@northbridge.edu.in"
+            error={fieldErrors.principalInviteEmail}
           />
         </div>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "0.875rem", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={externalUni}
-              onChange={(e) => setExternalUni(e.target.checked)}
-            />
-            External University Affiliation Mode (Operates under outside syllabus body)
-          </label>
+          <CheckboxField
+            id="inst-external-uni"
+            checked={externalUni}
+            onChange={(e) => setExternalUni(e.target.checked)}
+            label="External University Affiliation Mode (Operates under outside syllabus body)"
+          />
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
@@ -223,7 +218,7 @@ export function CreateInstitutionModal({
             Cancel
           </Button>
           <Button type="submit" busy={submitting}>
-            Submit & create draft
+            Submit &amp; create draft
           </Button>
         </div>
       </form>

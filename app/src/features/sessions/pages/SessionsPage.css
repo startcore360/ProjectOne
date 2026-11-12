@@ -15,37 +15,6 @@
   box-shadow: var(--elevation-card);
 }
 
-/* Current active devices at a glance. */
-.sessions-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-3);
-}
-.sessions-summary__item {
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--color-border-divider);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
-  box-shadow: var(--elevation-card);
-}
-.sessions-summary__item--total {
-  border-color: var(--color-status-success-border);
-  background: var(--color-bg-brand-soft);
-}
-.sessions-summary__value {
-  color: var(--color-text);
-  font: var(--fw-bold) var(--fs-h2) / 1.1 var(--font-display);
-}
-.sessions-summary__item--total .sessions-summary__value {
-  color: var(--color-text-brand-strong);
-}
-.sessions-summary__label {
-  color: var(--color-text-muted);
-  font-size: var(--fs-body-sm);
-}
-
 .sessions-message {
   padding: var(--space-3);
   border-radius: var(--radius-md);
