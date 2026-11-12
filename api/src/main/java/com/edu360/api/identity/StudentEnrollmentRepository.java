@@ -12,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 /** Tenant-qualified roster queries; historical and ended placements are never returned. */
 public interface StudentEnrollmentRepository extends JpaRepository<StudentEnrollment, StudentEnrollmentId> {
 
+    Optional<StudentEnrollment> findFirstByIdTenantIdAndStudentProfileIdAndOutcome(
+            UUID tenantId, UUID studentProfileId, String outcome);
+
     @Query(value = """
             SELECT e.*
               FROM app.student_enrollment e
