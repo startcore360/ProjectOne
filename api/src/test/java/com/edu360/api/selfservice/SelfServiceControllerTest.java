@@ -148,8 +148,6 @@ class SelfServiceControllerTest {
     @DisplayName("B9: mark-all-read only persists notifications belonging to the current recipient")
     void markAllOwnNotificationsRead() {
         doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
-        UserNotification notification = new UserNotification(tenantId, UUID.randomUUID(), userId,
-                "SYSTEM", "Hello", "Welcome", "NORMAL");
         service.markAllNotificationsRead(tenantId, userId);
 
         verify(notificationRepository).markAllDeliveredRead(eq(tenantId), eq(userId), any(Instant.class));
