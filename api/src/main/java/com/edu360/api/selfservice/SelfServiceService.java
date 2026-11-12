@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.edu360.api.live.LiveEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -47,9 +48,8 @@ public class SelfServiceService {
             throw new com.edu360.api.exception.BusinessRuleViolationException(
                     "VALIDATION_FAILED", "Notification limit must be between 1 and 200.");
         }
-        return notificationRepository.findByIdTenantIdAndRecipientUserIdOrderByCreatedAtDesc(tenantId, userId)
+        return notificationRepository.findDeliverable(tenantId, userId, Instant.now(), PageRequest.of(0, limit))
                 .stream()
-                .limit(limit)
                 .map(n -> new NotificationDto(
                         n.getId().getNotificationId(),
                         n.getTriggerCode(),
@@ -68,7 +68,7 @@ public class SelfServiceService {
     public com.edu360.api.selfservice.dto.NotificationSummaryDto getNotificationSummary(UUID tenantId, UUID userId) {
         authorizeSelfService(tenantId, userId);
         return new com.edu360.api.selfservice.dto.NotificationSummaryDto(
-                notificationRepository.countByIdTenantIdAndRecipientUserIdAndReadAtIsNull(tenantId, userId));
+                notificationRepository.countUnreadDeliverable(tenantId, userId, Instant.now()));
     }
 
     @Transactional
@@ -77,6 +77,9 @@ public class SelfServiceService {
         UserNotification notification = notificationRepository
                 .findByIdTenantIdAndIdNotificationIdAndRecipientUserId(tenantId, notificationId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+        if (notification.getDeliverAfter() != null && notification.getDeliverAfter().isAfter(Instant.now())) {
+            throw new ResourceNotFoundException("Notification not found");
+        }
         if (notification.getReadAt() == null) {
             notification.setReadAt(Instant.now());
             notification.setUpdatedBy(userId);
@@ -88,25 +91,13 @@ public class SelfServiceService {
     @Transactional
     public void markAllNotificationsRead(UUID tenantId, UUID userId) {
         authorizeSelfService(tenantId, userId);
-        List<UserNotification> unread = notificationRepository
-                .findByIdTenantIdAndRecipientUserIdOrderByCreatedAtDesc(tenantId, userId)
-                .stream()
-                .filter(notification -> notification.getReadAt() == null)
-                .toList();
-        if (!unread.isEmpty()) {
-            Instant readAt = Instant.now();
-            unread.forEach(notification -> {
-                notification.setReadAt(readAt);
-                notification.setUpdatedBy(userId);
-            });
-            notificationRepository.saveAll(unread);
-        }
+        notificationRepository.markAllDeliveredRead(tenantId, userId, Instant.now());
         publishUnreadCount(tenantId, userId);
     }
 
     private void publishUnreadCount(UUID tenantId, UUID userId) {
         if (liveEvents != null) {
-            long unread = notificationRepository.countByIdTenantIdAndRecipientUserIdAndReadAtIsNull(tenantId, userId);
+            long unread = notificationRepository.countUnreadDeliverable(tenantId, userId, Instant.now());
             liveEvents.publishToUser(tenantId, userId, "UNREAD_COUNT", java.util.Map.of("unreadCount", unread));
         }
     }
