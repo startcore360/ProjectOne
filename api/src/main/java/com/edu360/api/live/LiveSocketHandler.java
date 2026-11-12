@@ -43,9 +43,9 @@ public class LiveSocketHandler extends TextWebSocketHandler {
     private final ConcurrentHashMap<String, Connection> connections = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UserKey, CopyOnWriteArrayList<Connection>> byUser = new ConcurrentHashMap<>();
 
-    public LiveSocketHandler(TenantIssuerAuthenticationManagerResolver managers, ObjectMapper mapper) {
+    public LiveSocketHandler(TenantIssuerAuthenticationManagerResolver managers) {
         this.managers = managers;
-        this.mapper = mapper;
+        this.mapper = new ObjectMapper();
     }
 
     @Override
