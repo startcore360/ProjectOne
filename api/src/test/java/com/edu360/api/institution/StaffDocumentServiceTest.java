@@ -1,7 +1,10 @@
 package com.edu360.api.institution;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +20,11 @@ import com.edu360.api.files.FileAccessPolicy;
 import com.edu360.api.files.FileObjectRepository;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.RbacPrincipal;
+import com.edu360.api.rbac.RbacScope;
+import com.edu360.api.rbac.RbacTarget;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.rbac.UserRoleAssignment;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 class StaffDocumentServiceTest {
