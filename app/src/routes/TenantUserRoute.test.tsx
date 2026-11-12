@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import TenantUserRoute from "./TenantUserRoute";
 
-const auth = vi.hoisted(() => ({ tenantId: "tenant-1", userType: "STUDENT" }));
+const auth = vi.hoisted((): { tenantId: string | null; userType: string } => ({ tenantId: "tenant-1", userType: "STUDENT" }));
 vi.mock("../store/hooks", () => ({
   useAppSelector: (selector: (state: { auth: { user: { tenantId: string | null; userType: string } } }) => unknown) =>
     selector({ auth: { user: { tenantId: auth.tenantId, userType: auth.userType } } }),
