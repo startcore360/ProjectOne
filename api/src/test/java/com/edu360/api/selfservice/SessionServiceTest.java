@@ -62,7 +62,7 @@ class SessionServiceTest {
     private static final String PLATFORM_REALM = "edu360-platform";
     private static final String CHROME_WINDOWS =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
-    private static final String TEST_BROWSER_ID = "test-browser-id";
+    private static final String TEST_BROWSER_ID = "0b6f3c1e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
 
     private final TenantPrincipal tenantUser =
             new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF, "Test User", false);
