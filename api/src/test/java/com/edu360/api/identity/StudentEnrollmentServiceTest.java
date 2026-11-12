@@ -62,12 +62,12 @@ class StudentEnrollmentServiceTest {
                 AcademicSession.builder().academicSessionId(sessionId).tenantId(tenantId)
                         .institutionId(institutionId).sessionLabel("2026-27")
                         .startDate(sessionStart).endDate(sessionEnd).academicYear(2026).status("ACTIVE").build()));
-        when(enrollments.save(any(StudentEnrollment.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
     void enrolsActiveStudentIntoMatchingActiveSectionAndSession() {
         arrangeValidRecords();
+        when(enrollments.save(any(StudentEnrollment.class))).thenAnswer(invocation -> invocation.getArgument(0));
         LocalDate startedOn = LocalDate.of(2026, 6, 15);
 
         StudentEnrollment result = service.enrolExistingStudent(actor, studentId, institutionId,
