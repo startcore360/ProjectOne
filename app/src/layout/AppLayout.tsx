@@ -14,6 +14,7 @@ import Edu360Logo from "../assets/Edu360Logo";
 import { ThemeToggle } from "../components/ui";
 import { RoleSwitcher } from "../components/layout/RoleSwitcher";
 import { NotificationBell } from "../features/notifications/components/NotificationBell";
+import { useLiveSocket } from "../features/live/liveSocket";
 import { SESSION_IDLE_LIMIT_MS, startInactivityTracker } from "../services/inactivityTracker";
 import api from "../services/axios";
 import { useProfilePhoto } from "../features/profile/hooks/useProfilePhoto";
@@ -91,6 +92,7 @@ const studentNavigation = [
 
 export default function AppLayout() {
   const user = useAppSelector((s) => s.auth.user);
+  useLiveSocket(user?.tenantId ?? null, Boolean(user?.platformRole));
   const navigate = useNavigate();
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
