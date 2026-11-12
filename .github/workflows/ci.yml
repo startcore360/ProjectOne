@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: edu360-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   frontend:
@@ -94,6 +94,7 @@ jobs:
           # Read the key from the environment without placing its value in Maven arguments.
           mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:12.2.2:check -DfailBuildOnCVSS=7 -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
       - name: Scan repository for secrets
+        if: always()
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
