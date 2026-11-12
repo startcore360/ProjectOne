@@ -12,8 +12,6 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import com.edu360.api.live.LiveEventPublisher;
 
-import com.edu360.api.live.LiveEventPublisher;
-
 class InAppNotifierTest {
     @Test
     void notificationPersistenceFailureDoesNotEscapeCaller() {
@@ -53,7 +51,7 @@ class InAppNotifierTest {
         PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
         TransactionStatus status = mock(TransactionStatus.class);
         when(transactionManager.getTransaction(any(TransactionDefinition.class))).thenReturn(status);
-        when(repository.countByIdTenantIdAndRecipientUserIdAndReadAtIsNull(any(), any())).thenReturn(3L);
+        when(repository.countUnreadDeliverable(any(), any(), any(java.time.Instant.class))).thenReturn(3L);
         LiveEventPublisher liveEvents = mock(LiveEventPublisher.class);
         InAppNotifier notifier = new InAppNotifier(repository, transactionManager);
         notifier.setLiveEventPublisher(liveEvents);
