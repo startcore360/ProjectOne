@@ -104,4 +104,18 @@ class StudentCreationServiceTest {
         verify(enrollments).enrolExistingStudent(eq(actor), any(UUID.class), eq(institutionId),
                 eq(sectionId), eq(sessionId), isNull(), eq(LocalDate.of(2026, 6, 1)));
     }
+    @Test
+    void rejectsAdmissionOutsideSessionBeforeProvisioningAccount() {
+        arrangeCollege();
+
+        assertThatThrownBy(() -> service.create(actor, new StudentCreateRequest(
+                institutionId, "A Student", null, LocalDate.of(2027, 4, 1),
+                sectionId, sessionId, null)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("admissionDate must fall within");
+        verifyNoInteractions(accounts);
+        verify(students, never()).saveAndFlush(any(StudentProfile.class));
+        verifyNoInteractions(idFormats);
+    }
+
 }
