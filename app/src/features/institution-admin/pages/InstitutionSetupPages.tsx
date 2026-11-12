@@ -3,6 +3,7 @@ import axios from "axios";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
+import { useFormErrors } from "../../../hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui";
 import {
@@ -14,6 +15,8 @@ import {
   DateTimeField,
   Panel,
   EmptyState,
+  Toast,
+  toast,
 } from "../../../design-system/components";
 import {
   AddAcademicSessionModal,
@@ -74,12 +77,14 @@ function IdField({
   value,
   onChange,
   hint,
+  error,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   hint?: string;
+  error?: string;
 }) {
   return (
     <TextField
@@ -90,6 +95,7 @@ function IdField({
       onChange={(e) => onChange(e.target.value)}
       placeholder="Paste the ID (UUID)"
       hint={hint ?? "There is no list or picker for this yet — paste the ID directly."}
+      error={error}
     />
   );
 }
@@ -1114,89 +1120,79 @@ export function AcademicStructurePage() {
             </div>
           )}
           <div style={{ marginTop: institutions.length > 0 ? "var(--space-3)" : 0 }}>
-            <div className="eds-field" style={{ marginTop: 0 }}>
-              <label htmlFor="structure-institution-id">
-                Institution ID <span>(Required)</span>
-              </label>
-              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
-                <input
+            <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+              <div style={{ flex: 1 }}>
+                <TextField
                   id="structure-institution-id"
+                  label="Institution ID *"
                   value={institutionId}
                   onChange={(e) => setInstitutionId(e.target.value)}
                   placeholder="Paste the ID (UUID)"
-                  aria-describedby="structure-institution-id-hint"
-                  style={{ flex: 1 }}
+                  hint="UUID of the college or school"
                 />
+              </div>
+              <div style={{ paddingTop: "1.75rem" }}>
                 <Button type="button" onClick={() => void loadStructure()} busy={loading}>
                   {loading ? "Loading…" : "Load structure"}
                 </Button>
               </div>
-              <p id="structure-institution-id-hint" className="platform-sample-note" style={{ marginTop: "var(--space-2)" }}>
-                <span aria-hidden="true">ⓘ</span> UUID of the college or school
-              </p>
             </div>
           </div>
           {error && (
-            <div className="platform-inline-error" style={{ marginTop: "1rem" }}>
-              {error}
+            <div style={{ marginTop: "var(--space-4)" }}>
+              <Toast variant="error" description={error} />
             </div>
           )}
         </div>
       </Panel>
 
       {isSchool && institutionId && (
-        <div
-          role="status"
-          style={{
-            marginTop: "var(--space-4)",
-            padding: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--eds-color-info-border, #bfdbfe)",
-            backgroundColor: "var(--eds-color-info-bg, #eff6ff)",
-            color: "var(--eds-color-info-text, #1e40af)",
-            fontSize: "0.875rem",
-          }}
-        >
-          <strong style={{ display: "block", marginBottom: "4px" }}>
-            School Structure &amp; Curriculum (Rule HI-12)
-          </strong>
-          <p style={{ margin: "0 0 var(--space-3) 0" }}>
-            Schools organise learners into Classes and Sections rather than academic departments.
-            Use the dedicated school configuration tools below to assign teachers and calendar rules:
-          </p>
-          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-            <a
-              href="/university/setup/class-teacher"
-              style={{
-                display: "inline-block",
-                padding: "6px 14px",
-                borderRadius: "var(--radius-md)",
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
-                fontWeight: 500,
-                textDecoration: "none",
-                fontSize: "0.8125rem",
-              }}
-            >
-              Assign Class Teachers →
-            </a>
-            <a
-              href="/university/setup/weekly-off"
-              style={{
-                display: "inline-block",
-                padding: "6px 14px",
-                borderRadius: "var(--radius-md)",
-                backgroundColor: "#ffffff",
-                color: "#1e40af",
-                border: "1px solid #bfdbfe",
-                fontWeight: 500,
-                textDecoration: "none",
-                fontSize: "0.8125rem",
-              }}
-            >
-              Configure Weekly Off &amp; Calendar →
-            </a>
-          </div>
+        <div style={{ marginTop: "var(--space-4)" }}>
+          <Toast
+            variant="info"
+            title="School Structure & Curriculum (Rule HI-12)"
+            content={
+              <div>
+                <p style={{ margin: "0 0 var(--space-3) 0" }}>
+                  Schools organise learners into Classes and Sections rather than academic departments.
+                  Use the dedicated school configuration tools below to assign teachers and calendar rules:
+                </p>
+                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                  <a
+                    href="/university/setup/class-teacher"
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 14px",
+                      borderRadius: "var(--radius-md)",
+                      backgroundColor: "var(--color-brand-primary, #2563eb)",
+                      color: "#ffffff",
+                      fontWeight: 500,
+                      textDecoration: "none",
+                      fontSize: "0.8125rem",
+                    }}
+                  >
+                    Assign Class Teachers →
+                  </a>
+                  <a
+                    href="/university/setup/weekly-off"
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 14px",
+                      borderRadius: "var(--radius-md)",
+                      backgroundColor: "var(--color-bg-surface, #ffffff)",
+                      color: "var(--color-brand-primary, #1e40af)",
+                      border: "1px solid var(--color-border-divider, #bfdbfe)",
+                      fontWeight: 500,
+                      textDecoration: "none",
+                      fontSize: "0.8125rem",
+                    }}
+                  >
+                    Configure Weekly Off &amp; Calendar →
+                  </a>
+                </div>
+              </div>
+            }
+          />
         </div>
       )}
 
@@ -1370,6 +1366,7 @@ export function TermLockPage() {
   const [loading, setLoading] = useState(false);
   const [locking, setLocking] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const { fieldErrors, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
 
   useEffect(() => {
     if (!tenantId || import.meta.env.MODE === "test") return;
@@ -1399,28 +1396,44 @@ export function TermLockPage() {
 
   const handleLockSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Client-side UUID check — show inline errors directly on the fields
+    let hasClientError = false;
+    if (!isValidUuid(institutionId)) {
+      clearLockFieldError("institutionId"); // reset first to force re-render
+      setTimeout(() => clearLockFieldError("institutionId"), 0);
+      hasClientError = true;
+    }
+    if (!isValidUuid(sessionId)) {
+      hasClientError = true;
+    }
     if (!isValidUuid(institutionId) || !isValidUuid(sessionId)) {
-      setFeedback({ tone: "danger", message: "Valid Institution ID and Academic Session ID (UUID) are required." });
+      const msg = "Valid Institution ID and Academic Session ID (UUID) are required.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
     setLocking(true);
+    clearLockAll();
     try {
       const res = await termLockService.lockTerm(tenantId, institutionId.trim(), {
         academicSessionId: sessionId.trim(),
         semesterId: semesterId.trim() ? semesterId.trim() : undefined,
         notes: lockNotes.trim() || undefined,
       });
-      setFeedback({ tone: "success", message: `Term locked successfully [Rule R2-08]. Attendance and marks cannot change.` });
+      const msg = `Term locked successfully [Rule R2-08]. Attendance and marks cannot change.`;
+      setFeedback({ tone: "success", message: msg });
+      toast.success("Term locked successfully [Rule R2-08]", "Attendance and marks cannot change.");
       setLocks((prev) => [res, ...prev.filter((l) => l.termLockId !== res.termLockId)]);
       setLockNotes("");
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      handleLockApiError(err);
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to lock term", msg);
     } finally {
       setLocking(false);
     }
   };
-
-
 
   return (
     <div className="platform-page">
@@ -1430,29 +1443,12 @@ export function TermLockPage() {
       />
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{feedback.message}</span>
-          <button
-            onClick={() => setFeedback(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ×
-          </button>
-        </div>
+        <Toast
+          variant={feedback.tone === "danger" ? "error" : "success"}
+          description={feedback.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
       )}
 
       <Panel title="Lock academic term" description="Principal authority to lock a term upon final marks/attendance submission [Rule R2-08].">
@@ -1485,16 +1481,19 @@ export function TermLockPage() {
               value={institutionId}
               onChange={(val) => {
                 setInstitutionId(val);
+                clearLockFieldError("institutionId");
                 if (isValidUuid(val)) fetchLocks(val);
               }}
               hint="Paste college or school UUID"
+              error={fieldErrors.institutionId}
             />
             <IdField
               id="term-lock-session-id"
               label="Academic Session ID"
               value={sessionId}
-              onChange={setSessionId}
+              onChange={(val) => { setSessionId(val); clearLockFieldError("academicSessionId"); }}
               hint="Paste academic session UUID"
+              error={fieldErrors.academicSessionId}
             />
           </div>
           <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
@@ -1502,17 +1501,19 @@ export function TermLockPage() {
               id="term-lock-sem-id"
               label="Semester ID (Optional)"
               value={semesterId}
-              onChange={(e) => setSemesterId(e.target.value)}
+              onChange={(e) => { setSemesterId(e.target.value); clearLockFieldError("semesterId"); }}
               placeholder="Optional semester UUID for colleges"
               hint="Optional semester UUID for colleges"
+              error={fieldErrors.semesterId}
             />
             <TextField
               id="term-lock-notes"
               label="Lock Notes / Justification"
               value={lockNotes}
-              onChange={(e) => setLockNotes(e.target.value)}
+              onChange={(e) => { setLockNotes(e.target.value); clearLockFieldError("notes"); }}
               placeholder="e.g. End of term marks finalised"
               hint="Statutory justification for freezing records"
+              error={fieldErrors.notes}
             />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
@@ -1615,6 +1616,8 @@ export function DelegationsApprovalsPage() {
   const [delegations, setDelegations] = useState<DelegationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const { fieldErrors: delegFieldErrors, handleApiError: handleDelegApiError, clearFieldError: clearDelegFieldError, clearAll: clearDelegAll } = useFormErrors();
+  const { fieldErrors: bulkFieldErrors, handleApiError: handleBulkApiError, clearFieldError: clearBulkFieldError, clearAll: clearBulkAll } = useFormErrors();
 
   // New delegation state
   const [delegateUserId, setDelegateUserId] = useState("");
@@ -1684,14 +1687,19 @@ export function DelegationsApprovalsPage() {
   const handleCreateDelegation = async (e: FormEvent) => {
     e.preventDefault();
     if (!isValidUuid(delegateUserId)) {
-      setFeedback({ tone: "danger", message: "Valid Delegate User Account ID (UUID) is required." });
+      const msg = "Valid Delegate User Account ID (UUID) is required.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
     if (!startsAt || !endsAt) {
-      setFeedback({ tone: "danger", message: "Start and end dates are required for time-bounded delegation." });
+      const msg = "Start and end dates are required for time-bounded delegation.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
     setCreating(true);
+    clearDelegAll();
     try {
       const res = await approvalDelegationService.createDelegation(tenantId, {
         delegateUserId: delegateUserId.trim(),
@@ -1699,14 +1707,19 @@ export function DelegationsApprovalsPage() {
         startsAt: new Date(startsAt).toISOString(),
         endsAt: new Date(endsAt).toISOString(),
       });
+      const msg = `Approval authority successfully delegated [APPROVAL_DELEGATE / Rule 11]. Self-approval prohibited.`;
       setFeedback({
         tone: "success",
-        message: `Approval authority successfully delegated [APPROVAL_DELEGATE / Rule 11]. Self-approval prohibited.`,
+        message: msg,
       });
+      toast.success("Approval authority delegated [Rule 11]", "Self-approval prohibited.");
       setDelegations((prev) => [res, ...prev]);
       setDelegateUserId("");
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      handleDelegApiError(err);
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to delegate approval", msg);
     } finally {
       setCreating(false);
     }
@@ -1715,10 +1728,14 @@ export function DelegationsApprovalsPage() {
   const handleCancelDelegation = async (delegationId: string) => {
     try {
       const res = await approvalDelegationService.cancelDelegation(tenantId, delegationId);
-      setFeedback({ tone: "success", message: `Delegation cancelled successfully.` });
+      const msg = `Delegation cancelled successfully.`;
+      setFeedback({ tone: "success", message: msg });
+      toast.success("Delegation cancelled");
       setDelegations((prev) => prev.map((d) => (d.delegationId === res.delegationId ? res : d)));
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to cancel delegation", msg);
     }
   };
 
@@ -1730,25 +1747,33 @@ export function DelegationsApprovalsPage() {
       .filter((s) => isValidUuid(s));
 
     if (ids.length === 0) {
-      setFeedback({ tone: "danger", message: "Please provide at least one valid approval request UUID." });
+      const msg = "Please provide at least one valid approval request UUID.";
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Validation error", msg);
       return;
     }
 
     setBulkSubmitting(true);
+    clearBulkAll();
     try {
       const res = await approvalDelegationService.bulkDecide(tenantId, {
         approvalRequestIds: ids,
         decision: bulkDecision,
         comment: bulkComment.trim() || undefined,
       });
+      const msg = `Bulk decision applied: ${res.succeeded} items processed successfully [APPROVAL_BULK / Rule AP-25].`;
       setFeedback({
         tone: "success",
-        message: `Bulk decision applied: ${res.succeeded} items processed successfully [APPROVAL_BULK / Rule AP-25].`,
+        message: msg,
       });
+      toast.success("Bulk decision applied [Rule AP-25]", `${res.succeeded} items processed successfully.`);
       setBulkIds("");
       setBulkComment("");
     } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      handleBulkApiError(err);
+      const msg = getApiErrorMessage(err);
+      setFeedback({ tone: "danger", message: msg });
+      toast.error("Failed to apply bulk decision", msg);
     } finally {
       setBulkSubmitting(false);
     }
@@ -1762,29 +1787,12 @@ export function DelegationsApprovalsPage() {
       />
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{feedback.message}</span>
-          <button
-            onClick={() => setFeedback(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ×
-          </button>
-        </div>
+        <Toast
+          variant={feedback.tone === "danger" ? "error" : "success"}
+          description={feedback.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
       )}
 
       {/* Delegation Form */}
@@ -1799,8 +1807,9 @@ export function DelegationsApprovalsPage() {
             required
             placeholder="Paste delegate user account UUID"
             value={delegateUserId}
-            onChange={(e) => setDelegateUserId(e.target.value)}
+            onChange={(e) => { setDelegateUserId(e.target.value); clearDelegFieldError("delegateUserId"); }}
             style={{ fontFamily: "monospace" }}
+            error={delegFieldErrors.delegateUserId}
           />
 
           <SelectField
@@ -1820,14 +1829,16 @@ export function DelegationsApprovalsPage() {
               label="Effective From *"
               required
               value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
+              onChange={(e) => { setStartsAt(e.target.value); clearDelegFieldError("startsAt"); }}
+              error={delegFieldErrors.startsAt}
             />
             <DateTimeField
               id="delegation-end"
               label="Effective Until *"
               required
               value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
+              onChange={(e) => { setEndsAt(e.target.value); clearDelegFieldError("endsAt"); }}
+              error={delegFieldErrors.endsAt}
             />
           </div>
 
@@ -1852,8 +1863,9 @@ export function DelegationsApprovalsPage() {
             required
             placeholder="UUID1, UUID2, UUID3..."
             value={bulkIds}
-            onChange={(e) => setBulkIds(e.target.value)}
+            onChange={(e) => { setBulkIds(e.target.value); clearBulkFieldError("approvalRequestIds"); }}
             style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+            error={bulkFieldErrors.approvalRequestIds}
           />
 
           <div className="platform-form-grid">
@@ -1873,7 +1885,8 @@ export function DelegationsApprovalsPage() {
               label="Batch Comment (Optional)"
               placeholder="e.g. Moderated marks verified and approved by Dean"
               value={bulkComment}
-              onChange={(e) => setBulkComment(e.target.value)}
+              onChange={(e) => { setBulkComment(e.target.value); clearBulkFieldError("comment"); }}
+              error={bulkFieldErrors.comment}
             />
           </div>
 
@@ -2008,6 +2021,7 @@ export function AcademicGovernancePage() {
   const [activeTab, setActiveTab] = useState<"rules" | "grading" | "allocation" | "promotion">("rules");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const { fieldErrors, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
 
   // Program rules state (Story #30: PROGRAM_RULES_SET)
   const [rules, setRules] = useState<ProgramRuleSetItem[]>([]);
@@ -2153,20 +2167,12 @@ export function AcademicGovernancePage() {
       </div>
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-          }}
-        >
-          {feedback.message}
-        </div>
+        <Toast
+          variant={feedback.tone === "danger" ? "error" : "success"}
+          description={feedback.message}
+          onDismiss={() => setFeedback(null)}
+          className="mb-4"
+        />
       )}
 
       {loading && <p className="platform-empty-note">Loading academic configuration...</p>}

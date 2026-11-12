@@ -5,6 +5,8 @@ export type ApiErrorResponse = {
   error?: string;
   details?: string;
   errors?: Record<string, string>;
+  /** Spring @Valid field-level errors: { fieldName: "error message" } */
+  fieldErrors?: Record<string, string>;
 };
 
 export type ApiError = AxiosError<ApiErrorResponse>;
@@ -76,3 +78,29 @@ export class ApiHelper {
 }
 
 export const getApiErrorMessage = ApiHelper.normalizeError;
+
+/**
+ * Extracts per-field validation errors from a Spring @Valid failure response.
+ * The backend sends: { code: "VALIDATION_FAILED", fieldErrors: { fieldName: "message" } }
+ *
+ * Returns an empty object when the error is not a validation failure, so callers
+ * can safely spread the result into form state without additional null-checks.
+ *
+ * Usage:
+ *   const fieldErrors = getApiFieldErrors(err);
+ *   // fieldErrors.institutionCode => "must not be blank"
+ */
+export function getApiFieldErrors(error: unknown): Record<string, string> {
+  if (error && typeof error === "object" && "isAxiosError" in error) {
+    const apiError = error as ApiError;
+    const data = apiError.response?.data;
+    if (data?.fieldErrors && typeof data.fieldErrors === "object") {
+      return data.fieldErrors as Record<string, string>;
+    }
+    // Also handle the older `errors` shape some endpoints return
+    if (data?.errors && typeof data.errors === "object") {
+      return data.errors as Record<string, string>;
+    }
+  }
+  return {};
+}
