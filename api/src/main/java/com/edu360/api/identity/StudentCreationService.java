@@ -22,7 +22,6 @@ import com.edu360.api.institution.AcademicSessionRepository;
 import com.edu360.api.institution.Institution;
 import com.edu360.api.institution.InstitutionIdFormatService;
 import com.edu360.api.institution.InstitutionRepository;
-import com.edu360.api.institution.InstitutionCodeFormatResponse;
 import com.edu360.api.institution.SchoolClass;
 import com.edu360.api.institution.SchoolClassRepository;
 import com.edu360.api.institution.Section;
