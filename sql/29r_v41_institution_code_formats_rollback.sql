@@ -18,5 +18,7 @@ BEGIN
 END;
 $$;
 
+DROP INDEX IF EXISTS app.ux_staff_profile_tenant_code;
+DROP INDEX IF EXISTS app.ux_student_profile_tenant_code;
 DROP TABLE IF EXISTS app.staff_code_sequence;
 DROP INDEX IF EXISTS app.ux_student_code_sequence_institution;

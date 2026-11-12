@@ -1,3 +1,20 @@
+-- Tenant-wide final uniqueness guards for codes generated or supplied by HR.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM app.student_profile GROUP BY tenant_id, upper(student_code) HAVING count(*) > 1) THEN
+    RAISE EXCEPTION 'STUDENT_CODE_DUPLICATES_EXIST: resolve tenant duplicates before enabling the unique code guard';
+  END IF;
+  IF EXISTS (SELECT 1 FROM app.staff_profile GROUP BY tenant_id, upper(staff_code) HAVING count(*) > 1) THEN
+    RAISE EXCEPTION 'STAFF_CODE_DUPLICATES_EXIST: resolve tenant duplicates before enabling the unique code guard';
+  END IF;
+END;
+$$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_student_profile_tenant_code
+    ON app.student_profile (tenant_id, upper(student_code));
+CREATE UNIQUE INDEX IF NOT EXISTS ux_staff_profile_tenant_code
+    ON app.staff_profile (tenant_id, upper(staff_code));
+
 -- B3.0: persist optional institution-specific staff ID formats alongside the
 -- existing app.student_code_sequence used for student formats.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_student_code_sequence_institution
