@@ -57,7 +57,14 @@ public class KeycloakAdminClient {
     public String provisionUser(String realm, String name, String email, String initialPassword,
                                  boolean mustChangePassword) {
         String adminToken = fetchMasterAdminAccessToken();
-        return createUser(adminToken, realm, name, email, initialPassword, mustChangePassword);
+        return createUser(adminToken, realm, name, email, email, initialPassword, mustChangePassword);
+    }
+
+    /** Provisions a student account whose Keycloak username is the institution-generated student code. */
+    public String provisionStudentUser(String realm, String name, String studentCode, String initialPassword,
+                                       boolean mustChangePassword) {
+        String adminToken = fetchMasterAdminAccessToken();
+        return createUser(adminToken, realm, name, studentCode, null, initialPassword, mustChangePassword);
     }
 
     /**
@@ -182,31 +189,28 @@ public class KeycloakAdminClient {
         return token.toString();
     }
 
-    private String createUser(String adminToken, String realm, String name, String email,
+    private String createUser(String adminToken, String realm, String name, String username, String email,
                                String initialPassword, boolean mustChangePassword) {
         Map<String, Object> credential = Map.of(
                 "type", "password",
                 "value", initialPassword,
                 "temporary", false);
-        // Keycloak's default "Verify Profile" required action triggers automatically - even
-        // though we never set it explicitly - whenever a managed profile field (lastName) is
-        // missing, which would reintroduce the same "account not fully set up" problem the
-        // non-temporary credential above was meant to fix. Split the single "name" field this
-        // app collects into first/last so the profile is considered complete. emailVerified is
-        // set true for the same reason: there's no email-verification flow in this app, and an
-        // account the admin just created is treated as already trusted.
+        // Split the supplied display name into both managed Keycloak name fields. Email is
+        // intentionally omitted for students: their login identity is the student code.
         String[] nameParts = name.trim().split("\\s+", 2);
         String firstName = nameParts[0];
         String lastName = nameParts.length > 1 ? nameParts[1] : nameParts[0];
-        Map<String, Object> userRepresentation = Map.of(
-                "username", email,
-                "email", email,
-                "firstName", firstName,
-                "lastName", lastName,
-                "enabled", true,
-                "emailVerified", true,
-                "credentials", List.of(credential),
-                "attributes", Map.of(MUST_CHANGE_PASSWORD_ATTRIBUTE, List.of(String.valueOf(mustChangePassword))));
+        Map<String, Object> userRepresentation = new HashMap<>();
+        userRepresentation.put("username", username);
+        userRepresentation.put("firstName", firstName);
+        userRepresentation.put("lastName", lastName);
+        userRepresentation.put("enabled", true);
+        userRepresentation.put("credentials", List.of(credential));
+        userRepresentation.put("attributes", Map.of(MUST_CHANGE_PASSWORD_ATTRIBUTE, List.of(String.valueOf(mustChangePassword))));
+        if (email != null && !email.isBlank()) {
+            userRepresentation.put("email", email);
+            userRepresentation.put("emailVerified", true);
+        }
 
         String usersUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users";
         try {
@@ -223,9 +227,8 @@ public class KeycloakAdminClient {
             }
             return location.substring(location.lastIndexOf('/') + 1);
         } catch (HttpClientErrorException ex) {
-            // BS-22: Reject account hijacking on 409 conflict. An identity cannot be silently linked.
             if (ex.getStatusCode() == HttpStatusCode.valueOf(409)) {
-                throw new DuplicateResourceException("A user with username/email '" + email + "' already exists in identity provider (BS-22).");
+                throw new DuplicateResourceException("A user with username '" + username + "' already exists in identity provider (BS-22).");
             }
             throw ex;
         }
