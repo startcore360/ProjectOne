@@ -118,4 +118,70 @@ class StudentCreationServiceTest {
         verifyNoInteractions(idFormats);
     }
 
+    @Test
+    void schoolClassLoginSwitchControlsStudentAccountCreation() {
+        UUID classId = UUID.randomUUID();
+        when(institutions.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId))
+                .thenReturn(Optional.of(Institution.builder()
+                        .id(new InstitutionId(tenantId, institutionId))
+                        .institutionType("SCHOOL").institutionCode("SCH").institutionName("School")
+                        .status("ACTIVE").build()));
+        when(sections.findByTenantIdAndSectionId(tenantId, sectionId))
+                .thenReturn(Optional.of(Section.builder().tenantId(tenantId).sectionId(sectionId)
+                        .institutionId(institutionId).academicSessionId(sessionId).classId(classId)
+                        .sectionName("A").status("ACTIVE").build()));
+        when(schoolClasses.findByTenantIdAndClassId(tenantId, classId))
+                .thenReturn(Optional.of(SchoolClass.builder().classId(classId).tenantId(tenantId)
+                        .institutionId(institutionId).className("Class 8")
+                        .studentLoginEnabled(false).status("ACTIVE").build()));
+        when(sessions.findByTenantIdAndAcademicSessionId(tenantId, sessionId))
+                .thenReturn(Optional.of(AcademicSession.builder().tenantId(tenantId)
+                        .academicSessionId(sessionId).institutionId(institutionId)
+                        .sessionLabel("2026-27").academicYear(2026)
+                        .startDate(LocalDate.of(2026, 4, 1)).endDate(LocalDate.of(2027, 3, 31))
+                        .status("ACTIVE").build()));
+        when(idFormats.nextStudentCode(tenantId, institutionId, 2026)).thenReturn("SCH/2026/001");
+        when(students.saveAndFlush(any(StudentProfile.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        StudentProfileResponse result = service.create(actor, new StudentCreateRequest(
+                institutionId, "A Student", null, LocalDate.of(2026, 6, 1),
+                sectionId, sessionId, null));
+
+        assertThat(result.userAccountId()).isNull();
+        assertThat(result.studentCode()).isEqualTo("SCH/2026/001");
+        verifyNoInteractions(accounts);
+    }
+
+    @Test
+    void explicitSchoolLoginRequestIsRejectedWhenClassSwitchIsDisabled() {
+        UUID classId = UUID.randomUUID();
+        when(institutions.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId))
+                .thenReturn(Optional.of(Institution.builder()
+                        .id(new InstitutionId(tenantId, institutionId))
+                        .institutionType("SCHOOL").institutionCode("SCH").institutionName("School")
+                        .status("ACTIVE").build()));
+        when(sections.findByTenantIdAndSectionId(tenantId, sectionId))
+                .thenReturn(Optional.of(Section.builder().tenantId(tenantId).sectionId(sectionId)
+                        .institutionId(institutionId).academicSessionId(sessionId).classId(classId)
+                        .sectionName("A").status("ACTIVE").build()));
+        when(schoolClasses.findByTenantIdAndClassId(tenantId, classId))
+                .thenReturn(Optional.of(SchoolClass.builder().classId(classId).tenantId(tenantId)
+                        .institutionId(institutionId).className("Class 8")
+                        .studentLoginEnabled(false).status("ACTIVE").build()));
+        when(sessions.findByTenantIdAndAcademicSessionId(tenantId, sessionId))
+                .thenReturn(Optional.of(AcademicSession.builder().tenantId(tenantId)
+                        .academicSessionId(sessionId).institutionId(institutionId)
+                        .sessionLabel("2026-27").academicYear(2026)
+                        .startDate(LocalDate.of(2026, 4, 1)).endDate(LocalDate.of(2027, 3, 31))
+                        .status("ACTIVE").build()));
+
+        assertThatThrownBy(() -> service.create(actor, new StudentCreateRequest(
+                institutionId, "A Student", null, LocalDate.of(2026, 6, 1),
+                sectionId, sessionId, true)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Student login is disabled");
+        verifyNoInteractions(accounts, idFormats);
+    }
+
 }
