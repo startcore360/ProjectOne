@@ -106,7 +106,7 @@ export default function TenantSupportPage() {
               <TextField id="tenant-support-subject" label="Subject" required value={subject} onChange={(e) => setSubject(e.target.value)} />
               <TextAreaField id="tenant-support-description" label="Description" required value={description} onChange={(e) => setDescription(e.target.value)} />
               <SelectField id="tenant-support-priority" label="Priority" value={priority} onChange={(e) => setPriority(e.target.value)} options={[
-                { value: "LOW", label: "Low" }, { value: "MEDIUM", label: "Medium" }, { value: "HIGH", label: "High" }, { value: "URGENT", label: "Urgent" },
+                { value: "LOW", label: "Low" }, { value: "MEDIUM", label: "Medium" }, { value: "HIGH", label: "High" }, { value: "CRITICAL", label: "Critical" },
               ]} />
               <Button type="submit" busy={submitting}>Submit ticket</Button>
             </form>
