@@ -137,4 +137,27 @@ class FileServiceTest {
         verify(permissions, never()).authorize(any(), any(), any(), any());
         verify(storage, never()).openRead(any());
     }
+    @Test
+    void infectedQuarantinedDeletedAndFailedScansAreAlwaysBlocked() {
+        assertBlockedFile("QUARANTINED", "INFECTED");
+        assertBlockedFile("DELETED", "CLEAN");
+        assertBlockedFile("ACTIVE", "INFECTED");
+        assertBlockedFile("ACTIVE", "SCAN_FAILED");
+    }
+
+    private void assertBlockedFile(String status, String scanStatus) {
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).purpose("STUDY_MATERIAL")
+                .storageKey("tenants/blocked.pdf").originalFilename("blocked.pdf")
+                .contentType("application/pdf").sizeBytes(8).sha256("hash")
+                .scanStatus(scanStatus).status(status).uploadedBy(userId)
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+
+        assertThatThrownBy(() -> service.download(principal, fileId))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("not available");
+    }
+
 }
