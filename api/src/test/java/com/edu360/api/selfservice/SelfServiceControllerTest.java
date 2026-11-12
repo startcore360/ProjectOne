@@ -150,12 +150,8 @@ class SelfServiceControllerTest {
         doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
         UserNotification notification = new UserNotification(tenantId, UUID.randomUUID(), userId,
                 "SYSTEM", "Hello", "Welcome", "NORMAL");
-        when(notificationRepository.findByIdTenantIdAndRecipientUserIdOrderByCreatedAtDesc(tenantId, userId))
-                .thenReturn(List.of(notification));
-
         service.markAllNotificationsRead(tenantId, userId);
 
-        assertThat(notification.getReadAt()).isNotNull();
         verify(notificationRepository).markAllDeliveredRead(eq(tenantId), eq(userId), any(Instant.class));
     }
 
