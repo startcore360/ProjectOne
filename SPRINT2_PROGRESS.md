@@ -138,3 +138,19 @@
 ### Status correction — staff stories
 
 The three staff action codes above belong to Chunk 3 (B4), not Chunk 1. They are **Not started** until the B4 implementation and a green CI run cover them. No story is marked Accepted. This correction changes reporting only; it does not claim implementation or test execution.
+
+
+### Latest branch validation — progress correction commit
+
+GitHub Actions run [43171144257](https://github.com/startcore360/ProjectOne/actions/runs/43171144257) for commit `dd01ef966a9a1e18a9b0a4869f9799e5f8586bf2` completed with these job results:
+
+| Job | Result | Evidence |
+|---|---|---|
+| Spring Boot quality gates | **Passed** | Run 43171144257, job 131024577601 — Verify backend and package upload succeeded. |
+| PostgreSQL migration validation | **Passed** | Run 43171144257, job 131024577670 — `sql/run_all.sh` succeeded against PostgreSQL 16. |
+| Frontend quality gates | **Passed** | Run 43171144257, job 131024577790 — `npm ci`, lint, full unit suite, type-check/build and artifact upload succeeded. |
+| CodeQL static analysis | **Passed** | Run 43171144257, job 131024577454 — initialize, autobuild and analyze succeeded. |
+| Dependency and secret checks | **Failed** | Run 43171144257, job 131024577752 — npm audit passed; OWASP Maven Dependency-Check failed on high/critical findings. Secret scan was skipped after the Maven audit failure. |
+| Pull request dependency review | **Skipped** | Run 43171144257, job 131024579427 — this was a push run, not a pull request. |
+
+The OWASP Maven findings are a **pre-existing baseline failure**: the same dependency-check step and CVE families failed on the pre-sync target commit in run [43029920181](https://github.com/startcore360/ProjectOne/actions/runs/43029920181), job 130554023543. The baseline run's Spring Boot, PostgreSQL and frontend jobs passed; CodeQL passed. The dependency failure is not attributed to the progress correction or source-sync commit. The OWASP gate remains open pending the C2-5 remediation; do not treat it as passed. Secret scanning did not execute in either failed dependency job. Dependency Review is not executed on push events.
