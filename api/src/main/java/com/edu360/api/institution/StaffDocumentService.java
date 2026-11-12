@@ -98,12 +98,15 @@ public class StaffDocumentService {
             throw new BusinessRuleViolationException("VALIDATION_FAILED",
                     "verificationStatus must be VERIFIED or REJECTED.");
         }
-        if (remark == null || remark.isBlank() || remark.trim().length() > 2000) {
-            throw new BusinessRuleViolationException("VALIDATION_FAILED",
-                    "A verification remark of 1 to 2000 characters is required.");
+        if (remark != null && remark.length() > 1000) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "remark cannot exceed 1000 characters.");
         }
         StaffDocument document = documents.findByIdTenantIdAndIdStaffDocumentId(actor.tenantId(), staffDocumentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff document not found."));
+        if (!"UPLOADED".equals(document.getVerificationStatus())) {
+            throw new BusinessRuleViolationException("DOCUMENT_ALREADY_VERIFIED",
+                    "Only an uploaded, undecided staff document can be verified.");
+        }
         if (actor.userAccountId().equals(document.getCreatedBy())) {
             throw new BusinessRuleViolationException("SELF_VERIFICATION_NOT_ALLOWED",
                     "The uploader cannot verify or reject their own document.");
@@ -121,7 +124,7 @@ public class StaffDocumentService {
         auditLog.record(new AuditEntry(AuditEventType.STAFF_DOCUMENT_VERIFIED,
                 "STAFF_DOCUMENT_VERIFY", "STAFF_DOCUMENT", staffDocumentId,
                 null, java.util.Map.of("verification_status", "UPLOADED"),
-                java.util.Map.of("verification_status", normalized), 1, "P", "SUCCESS"));
+                java.util.Map.of("verification_status", normalized, "remark", remark == null ? "" : remark.trim()), 1, "P", "SUCCESS"));
         return StaffDocumentResponse.from(saved);
     }
 
