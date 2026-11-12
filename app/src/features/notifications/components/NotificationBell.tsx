@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
@@ -8,6 +8,7 @@ import { useNotifications } from "../hooks/useNotifications";
 import { timeAgo } from "../utils/timeAgo";
 
 const MAX_VISIBLE = 10;
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Header bell for tenant users (staff, students, parents). Platform-console users have no
@@ -27,18 +28,40 @@ export function NotificationBell() {
   const panelRef = useRef<HTMLElement>(null);
   const panelId = useId();
 
-  const close = () => {
+  const close = useCallback(() => {
     setOpen(false);
     buttonRef.current?.focus();
-  };
+  }, []);
 
   useEffect(() => {
     if (!open) return undefined;
     panelRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panelRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const activeIndex = focusable.indexOf(document.activeElement as HTMLElement);
+      if (event.shiftKey && activeIndex <= 0) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (activeIndex === -1 || activeIndex === focusable.length - 1)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, close]);
 
   if (!tenantId) return null;
 
