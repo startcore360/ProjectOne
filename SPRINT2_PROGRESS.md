@@ -154,3 +154,10 @@ GitHub Actions run [43171144257](https://github.com/startcore360/ProjectOne/acti
 | Pull request dependency review | **Skipped** | Run 43171144257, job 131024579427 — this was a push run, not a pull request. |
 
 The OWASP Maven findings are a **pre-existing baseline failure**: the same dependency-check step and CVE families failed on the pre-sync target commit in run [43029920181](https://github.com/startcore360/ProjectOne/actions/runs/43029920181), job 130554023543. The baseline run's Spring Boot, PostgreSQL and frontend jobs passed; CodeQL passed. The dependency failure is not attributed to the progress correction or source-sync commit. The OWASP gate remains open pending the C2-5 remediation; do not treat it as passed. Secret scanning did not execute in either failed dependency job. Dependency Review is not executed on push events.
+
+
+### B5 study-material view access — implementation update
+
+- Added migration `28_v41_study_material_view.sql`: the approved `STUDY_MATERIAL_VIEW` action is registered and mapped to Assignments; grants are assigned to college/school students, college/school parents, and assigned teaching roles.
+- File downloads now authorize `STUDY_MATERIAL_VIEW`, not the upload action. The database-backed ownership policy requires an active study-material row and current `IN_PROGRESS` enrollment in the matching section or subject group; guardian access additionally requires an `ACTIVE` student-guardian link. All joins are tenant/institution-qualified and policy errors fail closed.
+- SQL checks `S2-B5-01/02` and a backend authorization regression test were added. CI verification is pending; this item is not marked Tested until the pipeline completes.
