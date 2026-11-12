@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.institution.dto.MentorAssignRequest;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
@@ -117,6 +118,34 @@ class MentorAssignmentServiceTest {
         assertThat(current.getEffectiveTo()).isEqualTo(LocalDate.now(TenantClock.DEFAULT_ZONE));
         org.mockito.Mockito.verify(permissionEvaluatorService).authorize(
                 principal, "MENTOR_ASSIGN", RbacScope.department(INSTITUTION_ID, DEPARTMENT_ID), RbacTarget.NONE);
+    }
+
+    @Test
+    void assignMentor_rejectsExpiredStaffAssignment() {
+        when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, SECTION_ID)).thenReturn(Optional.of(collegeSection()));
+        stubDepartmentChain();
+        StaffAssignment expired = staffAssignment(DEPARTMENT_ID, "ACTIVE");
+        expired.setEffectiveTo(LocalDate.now(TenantClock.DEFAULT_ZONE).minusDays(1));
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
+                .thenReturn(Optional.of(expired));
+
+        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("not effective");
+    }
+
+    @Test
+    void assignMentor_deniesUnauthorizedCallerBeforeReadingStaffAssignment() {
+        when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, SECTION_ID)).thenReturn(Optional.of(collegeSection()));
+        stubDepartmentChain();
+        org.mockito.Mockito.doThrow(new UnauthorizedException("denied"))
+                .when(permissionEvaluatorService)
+                .authorize(principal, "MENTOR_ASSIGN", RbacScope.department(INSTITUTION_ID, DEPARTMENT_ID), RbacTarget.NONE);
+
+        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
+                .isInstanceOf(UnauthorizedException.class);
+
+        org.mockito.Mockito.verifyNoInteractions(staffAssignmentRepository, mentorAssignmentRepository);
     }
 
     @Test
