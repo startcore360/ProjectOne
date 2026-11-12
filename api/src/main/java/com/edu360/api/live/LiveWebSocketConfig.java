@@ -1,7 +1,5 @@
 package com.edu360.api.live;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -29,7 +27,7 @@ public class LiveWebSocketConfig implements WebSocketConfigurer {
         if (allowedOriginPatterns == null || allowedOriginPatterns.isBlank()) {
             registration.setAllowedOrigins(allowedOrigin);
         } else {
-            registration.setAllowedOriginPatterns(List.of(allowedOriginPatterns.split(",")));
+            registration.setAllowedOriginPatterns(allowedOriginPatterns.split(","));
         }
     }
 }
