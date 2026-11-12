@@ -70,8 +70,8 @@ class CalendarEventServiceTest {
         var request = new CalendarEventRequest(INSTITUTION_ID, SESSION_ID, "LOCAL_HOLIDAY", "Local closure",
                 LocalDate.of(2026, 11, 12), LocalDate.of(2026, 11, 13));
         assertThatThrownBy(() -> service().addLocalEvent(principal, request))
-                .isInstanceOf(com.edu360.api.exception.BusinessRuleViolationException.class)
-                .hasMessageContaining("HOLIDAY_EXAM_CONFLICT");
+                .isInstanceOfSatisfying(com.edu360.api.exception.BusinessRuleViolationException.class,
+                        error -> assertThat(error.getErrorCode()).isEqualTo("HOLIDAY_EXAM_CONFLICT"));
         org.mockito.Mockito.verify(academicCalendarEventRepository, org.mockito.Mockito.never()).save(any());
     }
 
