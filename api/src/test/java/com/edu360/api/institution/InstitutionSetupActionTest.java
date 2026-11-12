@@ -449,7 +449,9 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(academicSessionRepository.findByTenantIdAndAcademicSessionId(tenantId, sessionId))
                 .thenReturn(Optional.of(new AcademicSession()));
-        when(academicCalendarEventRepository.findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(tenantId, sessionId, "UNIVERSITY"))
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(tenantId, "UNIVERSITY"))
+                .thenReturn(List.of());
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(tenantId, institutionId))
                 .thenReturn(List.of());
 
         CalendarEventResponse resp = calendarEventService.addLocalEvent(p,
@@ -503,15 +505,18 @@ class InstitutionSetupActionTest {
                 .thenReturn(Optional.of(new AcademicSession()));
         AcademicCalendarEvent examEvent = new AcademicCalendarEvent();
         examEvent.setTitle("Final Semester Exam");
+        examEvent.setEventType("EXAM_DAY");
         examEvent.setStartDate(LocalDate.of(2026, 10, 1));
         examEvent.setEndDate(LocalDate.of(2026, 10, 5));
-        when(academicCalendarEventRepository.findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(tenantId, sessionId, "UNIVERSITY"))
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(tenantId, "UNIVERSITY"))
                 .thenReturn(List.of(examEvent));
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(tenantId, institutionId))
+                .thenReturn(List.of());
 
         assertThatThrownBy(() -> calendarEventService.addLocalEvent(p,
                 new CalendarEventRequest(institutionId, sessionId, "LOCAL_HOLIDAY", "Local Holiday", LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 2))))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("overlaps with scheduled university exam dates");
+                .hasMessageContaining("overlaps an exam day");
     }
 
     // =========================================================================
