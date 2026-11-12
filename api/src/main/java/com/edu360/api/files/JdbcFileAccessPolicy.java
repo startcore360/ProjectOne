@@ -164,8 +164,22 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
 
     @Override
     public boolean canAttach(FileObject file, TenantPrincipal principal, String recordType, UUID recordId) {
-        // The record-attachment endpoint is not part of this chunk; no implicit attachment is allowed.
-        return false;
+        if (!"STAFF_DOCUMENT".equals(recordType) || recordId == null
+                || !"STAFF_DOCUMENT".equals(file.getPurpose())
+                || !"ACTIVE".equals(file.getStatus()) || !"CLEAN".equals(file.getScanStatus())
+                || !principal.userAccountId().equals(file.getUploadedBy())) {
+            return false;
+        }
+        return exists("""
+                SELECT EXISTS (
+                  SELECT 1 FROM app.staff_profile p
+                  JOIN app.staff_assignment a
+                    ON a.tenant_id = p.tenant_id
+                   AND a.staff_profile_id = p.staff_profile_id
+                   AND a.status = 'ACTIVE'
+                  WHERE p.tenant_id = ? AND p.staff_profile_id = ?
+                )
+                """, principal.tenantId(), recordId);
     }
 
     private boolean exists(String sql, Object... parameters) {
