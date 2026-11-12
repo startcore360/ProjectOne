@@ -15,6 +15,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,6 +33,29 @@ public class SelfServiceController {
     ) {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
         return ResponseEntity.ok(selfService.getNotifications(tenantId, principal.userAccountId()));
+    }
+
+    @PostMapping({"/v1/tenants/{tenantId}/me/notifications/{notificationId}/read", "/api/tenants/{tenantId}/me/notifications/{notificationId}/read"})
+    @Operation(summary = "Mark one of the current user notifications as read")
+    public ResponseEntity<Void> markNotificationRead(
+            @PathVariable UUID tenantId,
+            @PathVariable UUID notificationId,
+            Authentication authentication
+    ) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        selfService.markNotificationRead(tenantId, principal.userAccountId(), notificationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping({"/v1/tenants/{tenantId}/me/notifications/read-all", "/api/tenants/{tenantId}/me/notifications/read-all"})
+    @Operation(summary = "Mark all current user notifications as read")
+    public ResponseEntity<Void> markAllNotificationsRead(
+            @PathVariable UUID tenantId,
+            Authentication authentication
+    ) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        selfService.markAllNotificationsRead(tenantId, principal.userAccountId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping({"/v1/tenants/{tenantId}/me/leave-balances", "/api/tenants/{tenantId}/me/leave-balances"})

@@ -13,6 +13,7 @@ for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_ru
 $PSQL -q -d edu360_v4_test -f "$D/25t_seed_sprint2_refs.sql" > /dev/null  # Minimal reference fixture for Sprint 2 migration checks
 run edu360_v4_test 25_sprint2_foundations.sql > /dev/null
 run edu360_v4_test 26_v41_student_login_switch_guard.sql > /dev/null
+run edu360_v4_test 27_v41_notification_read_state.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/07_tests_extra.sql" > /dev/null      # new connection: settings never set (DB-55..59)
 $PSQL -q -d edu360_v4_test -f "$D/09_tests_v40.sql"  > /dev/null      # V4.0 tests DB-60..79
 $PSQL -q -d edu360_v4_test -f "$D/11_tests_rolldown.sql" > /dev/null  # V4.0 role roll-down tests DB-80..97
@@ -23,6 +24,7 @@ $PSQL -q -d edu360_v4_test -f "$D/21_tests_audit_guard_v41.sql" > /dev/null  # V
 $PSQL -q -d edu360_v4_test -f "$D/22t_tests_platform_b4.sql" > /dev/null  # V4.1 B4 tests DB-210..212 (file 22)
 $PSQL -q -d edu360_v4_test -f "$D/25t_tests_sprint2_foundations.sql" > /dev/null  # Sprint 2 Chunk 1 SQL checks
 $PSQL -q -d edu360_v4_test -f "$D/26t_tests_student_login_switch_guard.sql" > /dev/null  # Sprint 2 A8 login-switch guard
+$PSQL -q -d edu360_v4_test -f "$D/27t_tests_notification_read_state.sql" > /dev/null  # B9 notification read-state checks
 $PSQL -At -d edu360_v4_test -c "SELECT test_id||' | '||outcome||' | '||rule||' | '||detail FROM public.test_result ORDER BY id" >> "$OUT"
 $PSQL -At -d edu360_v4_test -c "SELECT 'SUMMARY | '||outcome||' | '||count(*) FROM public.test_result GROUP BY outcome" >> "$OUT"
 # B. full V3.3 reference data and count checks (AC-S5), plus idempotent second load
@@ -59,7 +61,7 @@ SELECT 'CATALOGUE | FKs with CASCADE / SET NULL (AC-R2) | '||count(*) FROM pg_co
 SELECT 'CATALOGUE | edu_ roles with superuser or bypassrls (AC-I3) | '||count(*) FROM pg_roles WHERE rolname LIKE 'edu\_%' AND (rolsuper OR rolbypassrls);
 SQL
 # C. V4.1 platform roles on the full reference data, plus an idempotent second load of the templates
-for f in 12_v41_platform_roles.sql 12d_v41_platform_role_templates.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 24d_v41_action_module_map.sql 26_v41_student_login_switch_guard.sql; do run edu360_v4_ref $f > /dev/null; done
+for f in 12_v41_platform_roles.sql 12d_v41_platform_role_templates.sql 14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 24_v41_sign_in_security.sql 24d_v41_action_module_map.sql 26_v41_student_login_switch_guard.sql 27_v41_notification_read_state.sql; do run edu360_v4_ref $f > /dev/null; done
 $PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | platform role templates | '||count(*)||' | 5' FROM platform.platform_role_template" >> "$OUT"
 $PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | platform template actions with a reserved action outside the locked template | '||count(*)||' | 0' FROM platform.platform_role_template_action a JOIN platform.platform_role_template t USING (platform_role_template_id) WHERE NOT t.is_locked AND a.action_code IN ('TENANT_EXPORT_APPROVE','TENANT_DELETION_APPROVE','RETENTION_CHANGE_APPROVE','APPROVAL_DELEGATE','PLATFORM_USER_MANAGE','TENANT_DELETION_CONFIRM')" >> "$OUT"
 before=$($PSQL -At -d edu360_v4_ref -c "SELECT count(*) FROM platform.platform_role_template_action")
@@ -70,7 +72,7 @@ echo "REFCHECK | second load of 12d inserted rows | $((after-before)) | 0" >> "$
 $PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | tenant-level standard roles holding a DATA_PROTECTION action | '||count(*)||' | 0' FROM ref.standard_role_action s JOIN ref.standard_role r USING (role_code) WHERE r.role_level <> 'PLATFORM' AND app.fn_never_allowed_class(s.action_code) = 'DATA_PROTECTION'" >> "$OUT"
 # D. Q-03 / Q-06: V4.1 migrations are idempotent and their rollbacks round-trip (third throw-away database).
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_rb WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_rb"
-V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 25_sprint2_foundations.sql 26_v41_student_login_switch_guard.sql"
+V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 25_sprint2_foundations.sql 26_v41_student_login_switch_guard.sql 27_v41_notification_read_state.sql"
 for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 05_ref_data.sql $V41; do run edu360_v4_rb $f > /dev/null; done
 for f in $V41; do run edu360_v4_rb $f > /dev/null; done                      # second apply: idempotent
 echo "RBCHECK | apply V4.1 files twice | OK" >> "$OUT"

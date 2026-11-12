@@ -43,6 +43,8 @@ public class UserNotification {
     private Instant deliverAfter;
     @Column(name = "dedupe_key")
     private String dedupeKey;
+    @Column(name = "read_at")
+    private Instant readAt;
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
     @Column(name = "created_by", nullable = false)

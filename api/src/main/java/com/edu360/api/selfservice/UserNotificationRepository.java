@@ -11,4 +11,6 @@ import org.springframework.stereotype.Repository;
 public interface UserNotificationRepository extends JpaRepository<UserNotification, UserNotificationId> {
     List<UserNotification> findByIdTenantIdAndRecipientUserIdOrderByCreatedAtDesc(UUID tenantId, UUID recipientUserId);
     Optional<UserNotification> findFirstByIdTenantIdAndDedupeKey(UUID tenantId, String dedupeKey);
+    Optional<UserNotification> findByIdTenantIdAndIdNotificationIdAndRecipientUserId(
+            UUID tenantId, UUID notificationId, UUID recipientUserId);
 }

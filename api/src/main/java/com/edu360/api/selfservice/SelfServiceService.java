@@ -1,5 +1,6 @@
 package com.edu360.api.selfservice;
 
+import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
@@ -9,6 +10,7 @@ import com.edu360.api.selfservice.dto.LeaveRequestDto;
 import com.edu360.api.selfservice.dto.NoticeDto;
 import com.edu360.api.selfservice.dto.NotificationDto;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -38,9 +40,41 @@ public class SelfServiceService {
                         n.getTitle(),
                         n.getBody(),
                         n.getPriorityClass(),
-                        n.getCreatedAt()
+                        n.getCreatedAt(),
+                        n.getReadAt()
                 ))
                 .toList();
+    }
+
+    @Transactional
+    public void markNotificationRead(UUID tenantId, UUID userId, UUID notificationId) {
+        authorizeSelfService(tenantId, userId);
+        UserNotification notification = notificationRepository
+                .findByIdTenantIdAndIdNotificationIdAndRecipientUserId(tenantId, notificationId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+        if (notification.getReadAt() == null) {
+            notification.setReadAt(Instant.now());
+            notification.setUpdatedBy(userId);
+            notificationRepository.save(notification);
+        }
+    }
+
+    @Transactional
+    public void markAllNotificationsRead(UUID tenantId, UUID userId) {
+        authorizeSelfService(tenantId, userId);
+        List<UserNotification> unread = notificationRepository
+                .findByIdTenantIdAndRecipientUserIdOrderByCreatedAtDesc(tenantId, userId)
+                .stream()
+                .filter(notification -> notification.getReadAt() == null)
+                .toList();
+        if (!unread.isEmpty()) {
+            Instant readAt = Instant.now();
+            unread.forEach(notification -> {
+                notification.setReadAt(readAt);
+                notification.setUpdatedBy(userId);
+            });
+            notificationRepository.saveAll(unread);
+        }
     }
 
     @Transactional(readOnly = true)
