@@ -187,3 +187,55 @@ This is a progress record, not an acceptance declaration. Work is continuing on 
 - Notification event invocation remains limited to publishers actually present in the repository; absent timetable, assignment, attendance and HOD approval publishers cannot be wired without those domain workflows.
 - OD-16 remains open; only SQL-defined staff fields and service-event types are used. OD-134 single-student action code follows the approved API proposal `USER_CREATE` in the current implementation; the user has directed completion without waiting for further approval.
 - Stories remain In progress / Tested only after their relevant CI gates complete. No story is marked Accepted by this note.
+
+
+## Sprint 1 gap repairs — active implementation log
+
+**Scope:** working through the Sprint 1 gap-validation register, prioritising the Chunk 3b repairs and then the remaining gaps. This is an implementation log, not an acceptance statement. The existing 26-action-code status table above is retained unchanged.
+
+### G1 — Tenant-side support
+
+**Status: Built; CI/test validation pending.**
+
+- Added tenant ticket creation authorization using `SUPPORT_TICKET_RAISE`.
+- Added `GET /v1/tenants/{tenantId}/support-tickets`; repository query is constrained by both authenticated tenant and authenticated user.
+- Added the tenant Support screen for ticket creation, own-ticket list, grant history, grant up to 24 hours, and immediate withdrawal.
+- Added a permission-filtered Support navigation item and an `ActionGate` route.
+- Added audit events for reads of own support tickets and tenant support grant history.
+- Ticket categories remain unspecified; the UI does not invent a category catalogue. Priority values follow the SQL constraint (LOW, MEDIUM, HIGH, CRITICAL).
+- Relevant commits include `4f21d6e` (ticket authorization/list endpoint) and later support UI/navigation/audit commits on this branch.
+
+### G2 — Academic structure PATCH and subject groups
+
+**Status: In progress; not yet implemented in this repair pass.**
+
+- Current controller still has create/list endpoints for academic structure; PATCH/If-Match handlers and subject-group/member endpoints remain to be built.
+- Subject-group membership is represented by `app.subject_group_member.enrollment_id` in the current schema. Subject-group operations will use `STRUCTURE_MANAGE`; `SUBJECT_ALLOCATE` remains for teacher allocation.
+- No G2 story is marked Built or Tested.
+
+### G3 — Exam-day calendar events
+
+**Status: Built; SQL/CI validation pending.**
+
+- Added `EXAM_DAY` to local and university master calendar event handling.
+- Added migration `30_v41_exam_day_event_type.sql`, guarded rollback `30r_v41_exam_day_event_type_rollback.sql`, SQL checks `30t_tests_exam_day_event_type.sql`, and registered them in `sql/run_all.sh`.
+- Added service tests for typed exam-day creation and local-holiday overlap; updated calendar-day status coverage so `examDay` is derived from typed events rather than title text.
+- Master calendar form and local calendar form expose Exam day with a distinct warning badge.
+- Product D1 §2.1 / CL-01 says local holidays on exam days are blocked with a warning. The service returns `HOLIDAY_EXAM_CONFLICT`; it does not infer exams from free-text titles.
+- Local build and PostgreSQL migration tests have not been run from this environment.
+
+### G4 — Parent/applicant one-time-code login
+
+**Status: Disabled-mode API built; full OTP lifecycle not implemented.**
+
+- Added `GET /v1/auth/otp/status` and `POST /v1/auth/otp/request`, `POST /v1/auth/otp/verify` (also under `/api/auth`).
+- Status reports `enabled:false`; request/verify fail closed with 503 `OTP_PROVIDER_NOT_CONFIGURED`; the D5 response includes `retryable:false` and `Cache-Control: no-store`.
+- Set `auth.otp.enabled=false` explicitly in base, dev, test and prod application properties.
+- Added focused controller unit tests. The mobile-code option remains absent from the login screen.
+- Not implemented: SMS sender adapter, OTP issuance/storage/expiry/rate-limits, guardian-only eligibility and Keycloak token exchange. Applicant login remains Phase 2. This is not a complete G4 implementation.
+
+### Validation and CI notes
+
+- No story is marked `Tested` in this log. This environment has GitHub repository access but no working local checkout/runtime for executing Maven, frontend or PostgreSQL commands.
+- GitHub Actions runs for intermediate commits have repeatedly been cancelled when concurrent developer commits landed on the same branch. This is not a pass or a code failure. Await a non-cancelled run on the consolidated branch head before marking any affected repair Tested.
+- Continue using `sprint-2-development` only. Refresh the branch before each write and preserve concurrent commits; never force-push.
