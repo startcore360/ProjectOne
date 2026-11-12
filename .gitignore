@@ -38,3 +38,6 @@ Thumbs.db
 
 # Private/local documentation — do not commit project docs
 /docs/
+
+# Generated Graphify index can contain copied source excerpts; do not commit it.
+/graphify-out/cache/stat-index.json

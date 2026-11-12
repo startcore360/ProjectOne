@@ -294,7 +294,7 @@ describe("UserListPage", () => {
         roleCode: "VICE_CHANCELLOR",
         userType: "STAFF",
         status: "PENDING_ACTIVATION",
-        temporaryPassword: "vc-temp-pass-1234",
+        temporaryPassword: "test-only-password",
         twoStepLoginRequired: true,
         message: "Executive account created successfully.",
       },
@@ -328,13 +328,13 @@ describe("UserListPage", () => {
         email: "vc@northbridge.edu.in",
         mobile: "+919876543210",
       });
-      expect(screen.getByDisplayValue("vc-temp-pass-1234")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("test-only-password")).toBeInTheDocument();
       expect(screen.getByText(/Security Invariant \[Rule F-12\]/i)).toBeInTheDocument();
     });
 
     // Close modal
     fireEvent.click(screen.getByRole("button", { name: /I've copied it, close/i }));
-    expect(screen.queryByDisplayValue("vc-temp-pass-1234")).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue("test-only-password")).not.toBeInTheDocument();
   });
 });
 
