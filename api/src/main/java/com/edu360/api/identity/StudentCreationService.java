@@ -91,9 +91,9 @@ public class StudentCreationService {
 
         AcademicSession session = sessions.findByTenantIdAndAcademicSessionId(tenantId, request.academicSessionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session not found."));
-        if (session.getStartDate() == null) {
+        if (session.getStartDate() == null || session.getEndDate() == null) {
             throw new BusinessRuleViolationException("ACADEMIC_SESSION_INVALID",
-                    "The academic session must have a start date to generate a student code.");
+                    "The academic session must have start and end dates before student creation.");
         }
         if (session.getInstitutionId() != null && !institutionId.equals(session.getInstitutionId())) {
             throw new ResourceNotFoundException("Academic session not found in the requested institution.");
