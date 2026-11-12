@@ -34,7 +34,7 @@ for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_ru
 $PSQL -At -d edu360_v4_ref -f "$D/06_ref_checks.sql" | sed 's/^/REFCHECK | /' >> "$OUT"   # V3.3 baseline counts
 run edu360_v4_ref 10d_v40_rolldown_ref.sql > /dev/null                                          # V4.0 additions
 $PSQL -At -d edu360_v4_ref >> "$OUT" <<'SQL'
-SELECT 'REFCHECK | V4.0 actions (278 + 2 roll-down)|'||count(*)||'|280' FROM ref.action_catalog;
+SELECT 'REFCHECK | V4.0 actions (279 + 2 roll-down)|'||count(*)||'|281' FROM ref.action_catalog;
 SELECT 'REFCHECK | V4.0 role-action pairs (1851 + 12)|'||count(*)||'|1863' FROM ref.standard_role_action;
 SELECT 'REFCHECK | roll-down default rows|'||count(*)||'|182' FROM ref.role_rolldown_default;
 SELECT 'REFCHECK | roles with a roll-down|'||count(DISTINCT missing_role_code)||'|52' FROM ref.role_rolldown_default;
