@@ -113,11 +113,13 @@ public class StudentCreationService {
         }
 
         UUID userAccountId = null;
+        String temporaryPassword = null;
         if (createLogin) {
             RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
             CreateUserResponse account = accounts.createStudentAccount(principal,
                     request.fullName(), studentCode, institutionId);
             userAccountId = account.userAccountId();
+            temporaryPassword = account.temporaryPassword();
         }
 
         UUID studentProfileId = UUID.randomUUID();
@@ -139,7 +141,7 @@ public class StudentCreationService {
                 Map.of("student_code", studentCode,
                         "user_account_id", userAccountId == null ? "" : userAccountId.toString(),
                         "section_id", request.sectionId().toString()), 1, "P", "SUCCESS"));
-        return StudentProfileResponse.from(saved);
+        return StudentProfileResponse.from(saved, temporaryPassword);
     }
 
     private boolean resolveCreateLogin(Institution institution, Section section,
