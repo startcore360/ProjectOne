@@ -165,7 +165,8 @@ public class StaffDirectoryService {
     @Transactional
     public StaffAssignmentResponse addAssignment(RbacPrincipal actor, UUID staffProfileId,
             StaffAssignmentRequest request) {
-        StaffProfile profile = findScopedProfile(actor, staffProfileId, "STAFF_RECORD_MANAGE");
+        StaffProfile profile = staffProfiles.findByIdTenantIdAndIdStaffProfileId(actor.tenantId(), staffProfileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff record not found."));
         validateAssignmentScope(actor, request.institutionId(), request.departmentId());
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED", "effectiveTo cannot precede effectiveFrom.");
@@ -312,7 +313,7 @@ public class StaffDirectoryService {
         if (departmentId != null) {
             Department department = departments.findByTenantIdAndDepartmentId(actor.tenantId(), departmentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Department not found."));
-            if (!institutionId.equals(department.getInstitutionId())) {
+            if (!institutionId.equals(department.getInstitutionId()) || !"ACTIVE".equals(department.getStatus())) {
                 throw new ResourceNotFoundException("Department not found in the requested institution.");
             }
             permissions.authorize(actor, "STAFF_RECORD_MANAGE",
