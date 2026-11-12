@@ -7,6 +7,16 @@ VALUES
      false, NULL, 'Sprint 2 B5')
 ON CONFLICT (action_code) DO NOTHING;
 
+-- The test-database migration sequence may not have loaded the reference-only
+-- 24d mapping data; ensure the shared map structure exists before registering this action.
+CREATE TABLE IF NOT EXISTS ref.action_module_map (
+    action_module_name text NOT NULL,
+    module_code text,
+    CONSTRAINT pk_action_module_map PRIMARY KEY (action_module_name),
+    CONSTRAINT fk_action_module_map_module FOREIGN KEY (module_code) REFERENCES ref.module_catalog (module_code)
+);
+GRANT SELECT ON ref.action_module_map TO edu_app;
+
 INSERT INTO ref.action_module_map(action_module_name, module_code)
 VALUES ('Assignments and homework', 'ASSIGNMENTS')
 ON CONFLICT (action_module_name) DO NOTHING;
