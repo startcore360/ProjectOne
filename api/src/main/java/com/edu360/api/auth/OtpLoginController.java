@@ -2,7 +2,6 @@ package com.edu360.api.auth;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,9 +16,6 @@ import com.edu360.api.exception.ApiException;
 @RestController
 @RequestMapping({"/api/auth/otp", "/v1/auth/otp"})
 public class OtpLoginController {
-
-    @Value("${auth.otp.enabled:false}")
-    private boolean otpEnabled;
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Boolean>> status() {
