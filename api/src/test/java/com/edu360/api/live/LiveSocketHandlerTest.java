@@ -40,4 +40,33 @@ class LiveSocketHandlerTest {
 
         verify(session).close(argThat(status -> status.getCode() == 4401));
     }
+    @Test
+    void malformedJsonClosesUnauthenticatedConnection() throws Exception {
+        TenantIssuerAuthenticationManagerResolver managers = mock(TenantIssuerAuthenticationManagerResolver.class);
+        LiveSocketHandler handler = new LiveSocketHandler(managers);
+        WebSocketSession session = mock(WebSocketSession.class);
+        when(session.getId()).thenReturn("malformed-json-session");
+        when(session.isOpen()).thenReturn(true);
+
+        handler.afterConnectionEstablished(session);
+        handler.handleMessage(session, new TextMessage("{not-json"));
+
+        verify(session).close(argThat(status -> status.getCode() == 4401));
+    }
+
+    @Test
+    void unknownClientMessageIsIgnored() throws Exception {
+        TenantIssuerAuthenticationManagerResolver managers = mock(TenantIssuerAuthenticationManagerResolver.class);
+        LiveSocketHandler handler = new LiveSocketHandler(managers);
+        WebSocketSession session = mock(WebSocketSession.class);
+        when(session.getId()).thenReturn("unknown-message-session");
+        when(session.isOpen()).thenReturn(true);
+
+        handler.afterConnectionEstablished(session);
+        handler.handleMessage(session, new TextMessage("{\"type\":\"client_unknown\"}"));
+
+        org.mockito.Mockito.verify(session, org.mockito.Mockito.never()).close(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verify(session, org.mockito.Mockito.never()).sendMessage(org.mockito.ArgumentMatchers.any());
+    }
+
 }
