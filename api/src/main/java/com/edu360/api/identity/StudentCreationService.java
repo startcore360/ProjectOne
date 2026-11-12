@@ -86,6 +86,16 @@ public class StudentCreationService {
                     "The academic session must have a start date to generate a student code.");
         }
 
+        if (!"ACTIVE".equals(section.getStatus())) {
+            throw new BusinessRuleViolationException("SECTION_NOT_ACTIVE",
+                    "Students can only be created in an active section.");
+        }
+        LocalDate admissionDate = request.admissionDate() == null ? LocalDate.now() : request.admissionDate();
+        if (admissionDate.isBefore(session.getStartDate()) || admissionDate.isAfter(session.getEndDate())) {
+            throw new BusinessRuleViolationException("ENROLLMENT_DATE_OUTSIDE_SESSION",
+                    "admissionDate must fall within the academic session.");
+        }
+
         boolean createLogin = resolveCreateLogin(institution, section, request.createLogin(), tenantId);
         String studentCode = idFormats.nextStudentCode(tenantId, institutionId, session.getStartDate().getYear());
         if (students.existsByTenantIdAndStudentCode(tenantId, studentCode)) {
@@ -101,7 +111,6 @@ public class StudentCreationService {
         }
 
         UUID studentProfileId = UUID.randomUUID();
-        LocalDate admissionDate = request.admissionDate() == null ? LocalDate.now() : request.admissionDate();
         StudentProfile profile = new StudentProfile(studentProfileId, tenantId, institutionId,
                 userAccountId, studentCode, "ACTIVE");
         profile.setFullName(request.fullName().trim());
@@ -136,6 +145,10 @@ public class StudentCreationService {
             }
             SchoolClass schoolClass = schoolClasses.findByTenantIdAndClassId(tenantId, section.getClassId())
                     .orElseThrow(() -> new ResourceNotFoundException("School class not found."));
+            if (!institution.getInstitutionId().equals(schoolClass.getInstitutionId())
+                    || !"ACTIVE".equals(schoolClass.getStatus())) {
+                throw new ResourceNotFoundException("Active school class not found in the requested institution.");
+            }
             boolean enabled = schoolClass.isStudentLoginEnabled();
             if (Boolean.TRUE.equals(requested) && !enabled) {
                 throw new BusinessRuleViolationException("STUDENT_LOGIN_DISABLED",
