@@ -45,6 +45,7 @@ import {
   WeeklyOffRulesPage,
 } from "../features/institution-admin/pages/InstitutionSetupPages";
 import { UserDetailPage, UserListPage } from "../features/user-management/pages/UserManagementPages";
+import TenantSupportPage from "../features/institution-admin/pages/TenantSupportPage";
 import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
@@ -157,6 +158,7 @@ export default function AppRoutes() {
         <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/support" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.support}><TenantSupportPage /></ActionGate>} />
           {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/self-service" element={<TenantUserRoute><SelfServicePage /></TenantUserRoute>} />
