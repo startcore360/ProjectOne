@@ -25,9 +25,9 @@
 | HOMEWORK_STATUS_MARK | 1 | Tested |
 | ASSIGNMENT_VIEW_OWN | 1 | Tested |
 | HOMEWORK_COMPLIANCE_VIEW | 1 | Tested |
-| STAFF_RECORD_MANAGE | 1 | Tested |
-| STAFF_DOCUMENT_VERIFY | 1 | Tested |
-| STAFF_RECORD_VIEW | 1 | Tested |
+| STAFF_RECORD_MANAGE | 3 | Not started |
+| STAFF_DOCUMENT_VERIFY | 3 | Not started |
+| STAFF_RECORD_VIEW | 3 | Not started |
 
 ## Chunk 1 — Foundations
 
@@ -133,3 +133,8 @@
 3. Implement file attachment to an owning domain record and audit every subsequent scan/status transition.
 4. Wire `InAppNotifier` when the relevant timetable, assignment, attendance and HOD approval publishers exist.
 5. Consume the remaining generic controls from the real feature pages when those pages and supporting APIs are delivered; do not fabricate page workflows in this chunk.
+
+
+### Status correction — staff stories
+
+The three staff action codes above belong to Chunk 3 (B4), not Chunk 1. They are **Not started** until the B4 implementation and a green CI run cover them. No story is marked Accepted. This correction changes reporting only; it does not claim implementation or test execution.
