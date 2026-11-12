@@ -129,7 +129,7 @@
 ### Open items before Chunk 2 can be marked Tested
 
 1. Execute all four required gates on the corrected branch: backend verify, PostgreSQL SQL validation, frontend lint/tests/build. Review the dependency-audit report separately and remediate or formally disposition the CVE findings.
-2. Add the approved `STUDY_MATERIAL_VIEW` action (or an explicit Product Owner rule for student/guardian material access) before enabling those downloads.
+2. `STUDY_MATERIAL_VIEW` is now in the reference catalogue and migration 28, with enrolled-student/active-guardian policy and download authorization. The migration and policy require the follow-up CI run to pass before this item can be marked Tested.
 3. Implement file attachment to an owning domain record and audit every subsequent scan/status transition.
 4. Wire `InAppNotifier` when the relevant timetable, assignment, attendance and HOD approval publishers exist.
 5. Consume the remaining generic controls from the real feature pages when those pages and supporting APIs are delivered; do not fabricate page workflows in this chunk.

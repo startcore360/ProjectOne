@@ -1,5 +1,7 @@
 -- Minimal reference fixture for applying the Sprint 2 migration in the isolated acceptance-test database.
 -- The full V3.3 reference load is deliberately not used here because 04_tests.sql owns its own seed rows.
+INSERT INTO ref.module_catalog VALUES ('ASSIGNMENTS','Assignments, homework and study material',1,true) ON CONFLICT DO NOTHING;
+
 INSERT INTO ref.approval_process VALUES
  ('ATTENDANCE_CORRECTION_COLLEGE','Attendance correction (college)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture'),
  ('ATTENDANCE_CORRECTION_SCHOOL','Attendance correction (school)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture')
