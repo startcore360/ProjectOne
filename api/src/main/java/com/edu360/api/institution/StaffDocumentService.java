@@ -91,6 +91,78 @@ public class StaffDocumentService {
         return StaffDocumentResponse.from(saved);
     }
 
+    @Transactional
+    public StaffDocumentResponse verify(TenantPrincipal actor, UUID staffDocumentId, String decision, String remark) {
+        String normalized = decision == null ? "" : decision.trim().toUpperCase(Locale.ROOT);
+        if (!List.of("VERIFIED", "REJECTED").contains(normalized)) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED",
+                    "verificationStatus must be VERIFIED or REJECTED.");
+        }
+        if (remark == null || remark.isBlank() || remark.trim().length() > 2000) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED",
+                    "A verification remark of 1 to 2000 characters is required.");
+        }
+        StaffDocument document = documents.findByIdTenantIdAndIdStaffDocumentId(actor.tenantId(), staffDocumentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff document not found."));
+        if (actor.userAccountId().equals(document.getCreatedBy())) {
+            throw new BusinessRuleViolationException("SELF_VERIFICATION_NOT_ALLOWED",
+                    "The uploader cannot verify or reject their own document.");
+        }
+        StaffProfile profile = staffProfiles.findByIdTenantIdAndIdStaffProfileId(
+                actor.tenantId(), document.getStaffProfileId())
+                .orElseThrow(() -> new ResourceNotFoundException("Staff document not found."));
+        authorizeVerificationScope(new RbacPrincipal(actor.tenantId(), actor.userAccountId()),
+                profile.getStaffProfileId());
+        document.setVerificationStatus(normalized);
+        document.setVerifiedBy(actor.userAccountId());
+        document.setVerifiedAt(java.time.Instant.now());
+        document.setUpdatedBy(actor.userAccountId());
+        StaffDocument saved = documents.save(document);
+        auditLog.record(new AuditEntry(AuditEventType.STAFF_DOCUMENT_VERIFIED,
+                "STAFF_DOCUMENT_VERIFY", "STAFF_DOCUMENT", staffDocumentId,
+                null, java.util.Map.of("verification_status", "UPLOADED"),
+                java.util.Map.of("verification_status", normalized), 1, "P", "SUCCESS"));
+        return StaffDocumentResponse.from(saved);
+    }
+
+    private void authorizeVerificationScope(RbacPrincipal caller, UUID staffProfileId) {
+        var active = permissions.activeAssignment(caller)
+                .orElseThrow(() -> new com.edu360.api.exception.UnauthorizedException(
+                        "An active staff-document verification role is required."));
+        ScopeType scopeType = active.getScopeType();
+        if (scopeType == ScopeType.TENANT) {
+            permissions.authorize(caller, "STAFF_DOCUMENT_VERIFY", RbacScope.tenant(), RbacTarget.NONE);
+            boolean exists = Boolean.TRUE.equals(jdbc.queryForObject("""
+                    SELECT EXISTS (SELECT 1 FROM app.staff_assignment
+                     WHERE tenant_id = ? AND staff_profile_id = ? AND status = 'ACTIVE')
+                    """, Boolean.class, caller.tenantId(), staffProfileId));
+            if (!exists) throw new ResourceNotFoundException("Staff document not found.");
+            return;
+        }
+        List<AssignmentScope> scopes = jdbc.query("""
+                SELECT institution_id, department_id
+                  FROM app.staff_assignment
+                 WHERE tenant_id = ? AND staff_profile_id = ?
+                   AND institution_id IS NOT NULL AND status = 'ACTIVE'
+                """, (rs, row) -> new AssignmentScope(
+                        rs.getObject("institution_id", UUID.class),
+                        rs.getObject("department_id", UUID.class)),
+                caller.tenantId(), staffProfileId);
+        for (AssignmentScope target : scopes) {
+            if (scopeType == ScopeType.INSTITUTION
+                    && !active.getInstitutionId().equals(target.institutionId())) continue;
+            if (scopeType == ScopeType.DEPARTMENT
+                    && (!active.getInstitutionId().equals(target.institutionId())
+                    || !active.getDepartmentId().equals(target.departmentId()))) continue;
+            RbacScope targetScope = scopeType == ScopeType.DEPARTMENT
+                    ? RbacScope.department(target.institutionId(), target.departmentId())
+                    : RbacScope.institution(target.institutionId());
+            permissions.authorize(caller, "STAFF_DOCUMENT_VERIFY", targetScope, RbacTarget.NONE);
+            return;
+        }
+        throw new ResourceNotFoundException("Staff document not found in the active role scope.");
+    }
+
     private void authorizeTargetAssignments(RbacPrincipal caller, UUID staffProfileId) {
         var active = permissions.activeAssignment(caller)
                 .orElseThrow(() -> new com.edu360.api.exception.UnauthorizedException(

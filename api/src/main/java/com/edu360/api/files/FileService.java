@@ -104,7 +104,7 @@ public class FileService {
         return FileUploadResponse.from(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StoredFile download(TenantPrincipal principal, UUID fileId) {
         FileObject file = repository.findById(new FileObjectId(principal.tenantId(), fileId))
                 .orElseThrow(() -> new ResourceNotFoundException("File not found."));
@@ -145,6 +145,11 @@ public class FileService {
                     throw new UnauthorizedException("The active role cannot view attendance imports.");
                 }
             }
+        }
+        if (FilePurpose.STAFF_DOCUMENT.name().equals(file.getPurpose())) {
+            auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
+                    "FILE_OBJECT", fileId, file.getInstitutionId(), null,
+                    Map.of("purpose", FilePurpose.STAFF_DOCUMENT.name()), 1, "P", "SUCCESS"));
         }
         return new StoredFile(storage.openRead(file.getStorageKey()), file.getOriginalFilename(), file.getContentType());
     }
