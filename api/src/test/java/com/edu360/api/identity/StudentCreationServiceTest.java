@@ -150,6 +150,7 @@ class StudentCreationServiceTest {
                 sectionId, sessionId, null));
 
         assertThat(result.userAccountId()).isNull();
+        assertThat(result.temporaryPassword()).isNull();
         assertThat(result.studentCode()).isEqualTo("SCH/2026/001");
         verifyNoInteractions(accounts);
     }
