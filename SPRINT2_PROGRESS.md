@@ -247,3 +247,21 @@ This is a progress record, not an acceptance declaration. Work is continuing on 
 - Student creation now validates active section/class and admission date before allocating/provisioning the student login. The new tests cover college-default login, school class switch disabled, explicit school-login denial, and admission-date rejection before external provisioning.
 - The current OpenAPI/import contract exposes the existing imports operation as a USER import; it does not define the CSV row schema or execution contract for student-code legacy imports. The student-code generation and tenant uniqueness guard are implemented, but a separate legacy-code student bulk-import execution path remains open until its contract is defined. Do not silently reinterpret USER imports as student enrolment imports.
 - The security/architecture requirements still call for a real malware scanner and object-store-backed 15-minute download links. No provider or deployment credentials are defined in the supplied project configuration. These remain explicit deployment/integration blockers; local storage and the pending scanner are not represented as production-complete.
+
+
+## Chunk 2 / Chunk 3 continuation — implementation update
+
+- The existing self-service notification endpoints were retained (no duplicate controller was left behind). Inbox listing, unread counts, mark-read and mark-all-read now exclude notifications whose `deliver_after` time has not arrived; mark-read also hides a scheduled notification by returning not-found. Bulk read uses a tenant/recipient-scoped database update, and live unread counts use the same due-only rule. Mark-read/read-all remain intentionally unaudited per the approved decision.
+- Added single-student creation at `POST /v1/tenants/{tenantId}/students` (and the legacy `/api` alias). The flow validates active institution, section and academic session, authorizes `USER_CREATE` before consuming an ID sequence, generates the tenant-unique institution student code, creates the profile and enrolment in one database transaction, and uses the approved OD-134 `USER_CREATE` action code.
+- College student login defaults on and uses the student code as Keycloak username with no email. School login follows the class-level login switch; an explicit request cannot bypass a disabled switch. The creation response returns the temporary password once for secure printing/delivery. A transaction rollback schedules cleanup of the provisioned Keycloak identity to avoid orphan accounts.
+- Added regression coverage for student-code-only Keycloak provisioning, missing ID format, school login switch, admission date bounds, staff-code normalization/uniqueness, staff document verification scope, WebSocket connection limit, heartbeat timeout and token reauthentication.
+- The CI workflow now gives each run a unique concurrency group and always runs the secret scan even if an earlier dependency step fails.
+- **Validated checkpoint:** GitHub Actions run [43235642537](https://github.com/startcore360/ProjectOne/actions/runs/43235642537), commit `536a65ac0b971b3021f38c9bbbf923ef8444a9e2`, passed Spring Boot, frontend, PostgreSQL migration, CodeQL, dependency and secret checks. Pull-request dependency review was skipped on the push event. This is an intermediate checkpoint; later commits still require a completed pipeline on the consolidated branch before final validation.
+
+### Remaining Chunk 2 / Chunk 3 gates
+
+- Student bulk import with optional legacy student codes and duplicate handling is not yet implemented end-to-end; the existing generic user import does not create student profiles/enrolments.
+- Malware scanning provider and D5 object-storage/presigned-link provider remain unselected. Local storage and PENDING scanner behavior therefore remain documented interim deviations; no provider has been invented.
+- Generic file-to-domain-record attachment and audit of subsequent scan/status transitions remain incomplete outside the existing staff-document attachment flow.
+- Notification triggers can only be connected where publisher workflows exist; timetable, assignment, attendance and HOD approval publishers are still absent from this branch.
+- B3/B4/B9 and Chunk 2 remain In progress until the latest consolidated CI run passes and the listed integration dependencies are resolved. No story is marked Accepted.
