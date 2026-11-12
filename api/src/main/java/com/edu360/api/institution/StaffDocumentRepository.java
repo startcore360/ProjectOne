@@ -10,4 +10,5 @@ public interface StaffDocumentRepository extends JpaRepository<StaffDocument, St
     List<StaffDocument> findByIdTenantIdAndStaffProfileIdOrderByCreatedAtDesc(UUID tenantId, UUID staffProfileId);
     Optional<StaffDocument> findByIdTenantIdAndIdStaffDocumentId(UUID tenantId, UUID staffDocumentId);
     boolean existsByIdTenantIdAndFileId(UUID tenantId, UUID fileId);
+    boolean existsByIdTenantIdAndStaffProfileIdAndFileId(UUID tenantId, UUID staffProfileId, UUID fileId);
 }
