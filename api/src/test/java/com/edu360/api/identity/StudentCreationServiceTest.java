@@ -79,14 +79,14 @@ class StudentCreationServiceTest {
                         .sessionLabel("2026-27").academicYear(2026)
                         .startDate(LocalDate.of(2026, 4, 1)).endDate(LocalDate.of(2027, 3, 31))
                         .status("ACTIVE").build()));
-        when(idFormats.nextStudentCode(tenantId, institutionId, 2026)).thenReturn("COL/2026/001");
-        when(students.saveAndFlush(any(StudentProfile.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
     void collegeDefaultsToStudentCodeLoginAndCreatesProfileAndEnrolment() {
         arrangeCollege();
+        when(idFormats.nextStudentCode(tenantId, institutionId, 2026)).thenReturn("COL/2026/001");
+        when(students.saveAndFlush(any(StudentProfile.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(accounts.createStudentAccount(any(RbacPrincipal.class), eq("A Student"),
                 eq("COL/2026/001"), eq(institutionId)))
                 .thenReturn(new CreateUserResponse(studentUserId, tenantId, UserType.STUDENT,
