@@ -20,6 +20,7 @@ public enum AuditEventType {
      *  (auth/AuthService.confirmMfaEnrolment, via the Keycloak edu360-otp extension). */
     MFA_ENROLLED,
     INSTITUTION_CREATED_DRAFT,
+    INSTITUTION_ID_FORMAT_UPDATED,
     INSTITUTION_ACTIVATED,
     INSTITUTION_ACTIVATION_REQUESTED,
     INSTITUTION_BLOCK_REQUESTED,

@@ -39,6 +39,18 @@ class InstitutionCodeFormatTest {
     }
 
     @Test
+    void S2_ID_format_fixedTextClashUsesLiteralPrefixes() {
+        var alpha = InstitutionCodeFormat.parse("ABC-{YY}-{SEQ:4}");
+        var longer = InstitutionCodeFormat.parse("ABCD-{YYYY}-{SEQ:4}");
+        var separate = InstitutionCodeFormat.parse("XYZ-{YY}-{SEQ:4}");
+        var withInstitution = InstitutionCodeFormat.parse("{INST}-{YY}-{SEQ:4}");
+        assertThat(alpha.clashesWith(longer)).isTrue();
+        assertThat(alpha.clashesWith(separate)).isFalse();
+        assertThat(withInstitution.includesInstitutionToken()).isTrue();
+        assertThat(alpha.includesInstitutionToken()).isFalse();
+    }
+
+    @Test
     void S2_ID_format_usesAcademicSessionStartYearAndEnforcesRenderedLength() {
         var format = InstitutionCodeFormat.parse("{INST}-{YYYY}-{SEQ:3}");
         assertThat(format.render("SCH1", 2026, 12)).isEqualTo("SCH1-2026-012");

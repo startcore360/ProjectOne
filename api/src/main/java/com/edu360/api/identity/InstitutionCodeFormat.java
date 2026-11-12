@@ -90,4 +90,20 @@ public final class InstitutionCodeFormat {
     public int sequenceWidth() {
         return sequenceWidth;
     }
+
+    /** Literal characters remaining after all supported tokens are treated as wildcards. */
+    public String fixedText() {
+        return TOKEN.matcher(source).replaceAll("");
+    }
+
+    public boolean includesInstitutionToken() {
+        return source.contains("{INST}");
+    }
+
+    public boolean clashesWith(InstitutionCodeFormat other) {
+        String left = fixedText();
+        String right = other.fixedText();
+        return !left.isBlank() && !right.isBlank()
+                && (left.startsWith(right) || right.startsWith(left));
+    }
 }
