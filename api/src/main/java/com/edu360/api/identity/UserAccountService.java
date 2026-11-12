@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
@@ -217,6 +219,23 @@ public class UserAccountService {
                 realm, displayName.trim(), studentCode.trim(), tempPassword, true);
         if (keycloakUserId == null || keycloakUserId.isBlank()) {
             throw new KeycloakProvisioningException("Keycloak created no student account id; nothing was saved.");
+        }
+        // Keycloak is outside the database transaction. If the enclosing student/profile/enrolment
+        // transaction rolls back, remove the external identity so no orphan login remains.
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                        try {
+                            keycloakAdminClient.deleteUser(realm, keycloakUserId);
+                        } catch (RuntimeException cleanupFailure) {
+                            log.error("Could not remove orphan student identity {} from realm {} after transaction rollback",
+                                    keycloakUserId, realm, cleanupFailure);
+                        }
+                    }
+                }
+            });
         }
 
         UUID userAccountId = UUID.randomUUID();
