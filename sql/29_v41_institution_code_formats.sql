@@ -42,16 +42,19 @@ CREATE TABLE IF NOT EXISTS app.staff_code_sequence (
 CREATE UNIQUE INDEX IF NOT EXISTS ux_staff_code_sequence_institution
     ON app.staff_code_sequence (tenant_id, institution_id);
 
+DROP TRIGGER IF EXISTS trg_touch ON app.staff_code_sequence;
 CREATE TRIGGER trg_touch BEFORE UPDATE ON app.staff_code_sequence
     FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
 
 ALTER TABLE app.staff_code_sequence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app.staff_code_sequence FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS p_tenant ON app.staff_code_sequence;
 CREATE POLICY p_tenant ON app.staff_code_sequence
     USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
     WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_institution ON app.staff_code_sequence;
 CREATE POLICY p_institution ON app.staff_code_sequence AS RESTRICTIVE
     USING (institution_id IS NULL OR current_setting('app.institution_scope', true) = 'ALL'
         OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))

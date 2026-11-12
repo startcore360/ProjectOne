@@ -41,7 +41,7 @@ class InstitutionCodeFormatTest {
     @Test
     void S2_ID_format_fixedTextClashUsesLiteralPrefixes() {
         var alpha = InstitutionCodeFormat.parse("ABC-{YY}-{SEQ:4}");
-        var longer = InstitutionCodeFormat.parse("ABCD-{YYYY}-{SEQ:4}");
+        var longer = InstitutionCodeFormat.parse("ABC-{YYYY}-X-{SEQ:4}");
         var separate = InstitutionCodeFormat.parse("XYZ-{YY}-{SEQ:4}");
         var withInstitution = InstitutionCodeFormat.parse("{INST}-{YY}-{SEQ:4}");
         assertThat(alpha.clashesWith(longer)).isTrue();

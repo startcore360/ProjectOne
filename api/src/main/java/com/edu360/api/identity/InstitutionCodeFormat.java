@@ -100,9 +100,14 @@ public final class InstitutionCodeFormat {
         return source.contains("{INST}");
     }
 
+    public String fixedPrefix() {
+        Matcher matcher = TOKEN.matcher(source);
+        return matcher.find() ? source.substring(0, matcher.start()) : source;
+    }
+
     public boolean clashesWith(InstitutionCodeFormat other) {
-        String left = fixedText();
-        String right = other.fixedText();
+        String left = fixedPrefix();
+        String right = other.fixedPrefix();
         return !left.isBlank() && !right.isBlank()
                 && (left.startsWith(right) || right.startsWith(left));
     }
