@@ -8,7 +8,15 @@ vi.mock("../features/profile/hooks/useTenantAccess", () => ({
 }));
 
 describe("ActionGate", () => {
-  it("shows a neutral denied state when no required action is granted", () => {
+  it("shows the design-system loading state while permissions are loading", () => {
+    access.loading = true;
+    render(<ActionGate anyOf={["TIMETABLE_VIEW"]}><p>Protected page</p></ActionGate>);
+    expect(screen.getByRole("status")).toHaveTextContent("Checking access…");
+    expect(screen.queryByText("Protected page")).not.toBeInTheDocument();
+    access.loading = false;
+  });
+
+  it("shows a neutral design-system denied state when no required action is granted", () => {
     access.loading = false;
     access.canAny.mockReturnValue(false);
     render(<ActionGate anyOf={["TIMETABLE_VIEW"]}><p>Protected page</p></ActionGate>);

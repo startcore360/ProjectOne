@@ -50,6 +50,7 @@ import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 import ActionGate from "./ActionGate";
+import TenantUserRoute from "./TenantUserRoute";
 
 // AuthUserResponse (api/.../auth/dto/AuthUserResponse.java) only ever populates platformRole
 // for a platform identity, or tenantId+userType for a tenant identity - never a generic "role"
@@ -157,7 +158,7 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/self-service" element={<ActionGate anyOf={["SELF_SERVICE_VIEW"]}><SelfServicePage /></ActionGate>} />
+          <Route path="/self-service" element={<TenantUserRoute><SelfServicePage /></TenantUserRoute>} />
           <Route path="/sessions" element={<SessionsPage />} />
         </Route>
       </Route>
