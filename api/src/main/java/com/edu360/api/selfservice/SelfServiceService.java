@@ -14,6 +14,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.edu360.api.live.LiveEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,10 @@ public class SelfServiceService {
     private final UserLeaveBalanceRepository leaveBalanceRepository;
     private final UserLeaveRequestRepository leaveRequestRepository;
     private final NoticeRepository noticeRepository;
+    private LiveEventPublisher liveEvents;
+
+    @Autowired(required = false)
+    public void setLiveEventPublisher(LiveEventPublisher liveEvents) { this.liveEvents = liveEvents; }
 
     @Transactional(readOnly = true)
     public List<NotificationDto> getNotifications(UUID tenantId, UUID userId) {
@@ -76,6 +82,7 @@ public class SelfServiceService {
             notification.setUpdatedBy(userId);
             notificationRepository.save(notification);
         }
+        publishUnreadCount(tenantId, userId);
     }
 
     @Transactional
@@ -93,6 +100,14 @@ public class SelfServiceService {
                 notification.setUpdatedBy(userId);
             });
             notificationRepository.saveAll(unread);
+        }
+        publishUnreadCount(tenantId, userId);
+    }
+
+    private void publishUnreadCount(UUID tenantId, UUID userId) {
+        if (liveEvents != null) {
+            long unread = notificationRepository.countByIdTenantIdAndRecipientUserIdAndReadAtIsNull(tenantId, userId);
+            liveEvents.publishToUser(tenantId, userId, "UNREAD_COUNT", java.util.Map.of("unreadCount", unread));
         }
     }
 
