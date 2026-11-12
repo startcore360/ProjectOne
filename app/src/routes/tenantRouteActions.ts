@@ -5,4 +5,5 @@ export const TENANT_ROUTE_ACTIONS = {
   missingRoles: ["USER_VIEW", "ROLE_ASSIGN"],
   academicStructure: ["STRUCTURE_MANAGE", "SUBJECT_ALLOCATE", "PROGRAM_RULES_SET"],
   termLock: ["TERM_LOCK", "TERM_UNLOCK"],
+  support: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"],
 } as const;
