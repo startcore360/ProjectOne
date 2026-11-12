@@ -99,6 +99,7 @@ class StudentCreationServiceTest {
 
         assertThat(result.studentCode()).isEqualTo("COL/2026/001");
         assertThat(result.userAccountId()).isEqualTo(studentUserId);
+        assertThat(result.temporaryPassword()).isEqualTo("temporary");
         verify(accounts).createStudentAccount(any(RbacPrincipal.class), eq("A Student"),
                 eq("COL/2026/001"), eq(institutionId));
         verify(enrollments).enrolExistingStudent(eq(actor), any(UUID.class), eq(institutionId),
