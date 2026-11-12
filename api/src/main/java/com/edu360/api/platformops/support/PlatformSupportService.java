@@ -173,6 +173,8 @@ public class PlatformSupportService {
 
     @Transactional(readOnly = true)
     public List<SupportAccessGrantResponse> listGrantsForTenant(UUID tenantId) {
+        tenantAuditService.record(com.edu360.api.audit.AuditEventType.SENSITIVE_VIEW, null, null, null,
+                "Viewed tenant support access grant history.");
         return grantRepository.findByTenantIdOrderByGrantedAtDesc(tenantId).stream()
                 .map(SupportAccessGrantResponse::fromEntity)
                 .toList();
@@ -180,6 +182,8 @@ public class PlatformSupportService {
 
     @Transactional(readOnly = true)
     public List<SupportTicketResponse> listTicketsRaisedBy(UUID tenantId, UUID raisedByUserId) {
+        tenantAuditService.record(com.edu360.api.audit.AuditEventType.SENSITIVE_VIEW, null, null, null,
+                "Viewed own tenant support ticket list.");
         return ticketRepository.findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(tenantId, raisedByUserId).stream()
                 .map(SupportTicketResponse::fromEntity)
                 .toList();
