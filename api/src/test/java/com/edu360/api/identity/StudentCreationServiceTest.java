@@ -22,6 +22,7 @@ import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.*;
+import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.dto.CreateUserResponse;
 import com.edu360.api.identity.UserAccountStatus;
@@ -37,6 +38,7 @@ class StudentCreationServiceTest {
     @Mock StudentEnrollmentService enrollments;
     @Mock UserAccountService accounts;
     @Mock AuditLogService audit;
+    @Mock PermissionEvaluatorService permissions;
     @Mock EntityManager entityManager;
 
     private final UUID tenantId = UUID.randomUUID();
@@ -52,7 +54,7 @@ class StudentCreationServiceTest {
     @BeforeEach
     void setUp() {
         service = new StudentCreationService(students, institutions, sessions, sections,
-                schoolClasses, idFormats, enrollments, accounts, audit);
+                schoolClasses, idFormats, enrollments, accounts, audit, permissions);
         // EntityManager is injected by the container; the unit fixture supplies the same dependency.
         try {
             var field = StudentCreationService.class.getDeclaredField("entityManager");
