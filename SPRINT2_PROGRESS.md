@@ -161,3 +161,5 @@ The OWASP Maven findings are a **pre-existing baseline failure**: the same depen
 - Added migration `28_v41_study_material_view.sql`: the approved `STUDY_MATERIAL_VIEW` action is registered and mapped to Assignments; grants are assigned to college/school students, college/school parents, and assigned teaching roles.
 - File downloads now authorize `STUDY_MATERIAL_VIEW`, not the upload action. The database-backed ownership policy requires an active study-material row and current `IN_PROGRESS` enrollment in the matching section or subject group; guardian access additionally requires an `ACTIVE` student-guardian link. All joins are tenant/institution-qualified and policy errors fail closed.
 - SQL checks `S2-B5-01/02` and a backend authorization regression test were added. CI verification is pending; this item is not marked Tested until the pipeline completes.
+
+- CI follow-up found an action-number collision: `ROLLDOWN_VIEW` owns action number 279 in the V4.0 reference seed. `STUDY_MATERIAL_VIEW` is now assigned 280 in both the reference catalogue and migration 28; the next SQL pipeline run will verify the corrected seed order.
