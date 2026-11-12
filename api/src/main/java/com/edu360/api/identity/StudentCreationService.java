@@ -62,6 +62,9 @@ public class StudentCreationService {
     @Transactional
     public StudentProfileResponse create(TenantPrincipal actor, StudentCreateRequest request) {
         if (actor == null || request == null) throw new IllegalArgumentException("Actor and request are required.");
+        if (request.fullName() == null || request.fullName().isBlank() || request.fullName().trim().length() > 150) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "fullName must contain 1 to 150 characters.");
+        }
         UUID tenantId = actor.tenantId();
         UUID institutionId = request.institutionId();
 
@@ -84,6 +87,13 @@ public class StudentCreationService {
         if (session.getStartDate() == null) {
             throw new BusinessRuleViolationException("ACADEMIC_SESSION_INVALID",
                     "The academic session must have a start date to generate a student code.");
+        }
+        if (session.getInstitutionId() != null && !institutionId.equals(session.getInstitutionId())) {
+            throw new ResourceNotFoundException("Academic session not found in the requested institution.");
+        }
+        if (!"ACTIVE".equals(session.getStatus())) {
+            throw new BusinessRuleViolationException("ACADEMIC_SESSION_NOT_ACTIVE",
+                    "Students can only be enrolled in an active academic session.");
         }
 
         if (!"ACTIVE".equals(section.getStatus())) {
