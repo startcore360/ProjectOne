@@ -19,7 +19,7 @@ describe("useNotifications polling fallback", () => {
   });
 
   it("refreshes once per 60 seconds when no live event arrives", async () => {
-    const { result, unmount } = renderHook(() => useNotifications("tenant-1"));
+    const { unmount } = renderHook(() => useNotifications("tenant-1"));
     await act(async () => { await Promise.resolve(); });
     expect(notificationsApi.list).toHaveBeenCalledTimes(1);
     expect(NOTIFICATION_REFRESH_MS).toBe(60_000);
