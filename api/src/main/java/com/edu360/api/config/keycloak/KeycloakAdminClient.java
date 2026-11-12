@@ -67,6 +67,16 @@ public class KeycloakAdminClient {
         return createUser(adminToken, realm, name, studentCode, null, initialPassword, mustChangePassword);
     }
 
+    /** Removes a just-provisioned identity when its enclosing database transaction cannot complete. */
+    public void deleteUser(String realm, String keycloakUserId) {
+        String adminToken = fetchMasterAdminAccessToken();
+        restClient.delete()
+                .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId)
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     /**
      * Provisions a new Keycloak realm and frontend client for a tenant.
      * Idempotent: if the realm or client already exists, completes without error.
