@@ -27,6 +27,7 @@ $PSQL -q -d edu360_v4_test -f "$D/25t_tests_sprint2_foundations.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/26t_tests_student_login_switch_guard.sql" > /dev/null  # Sprint 2 A8 login-switch guard
 $PSQL -q -d edu360_v4_test -f "$D/27t_tests_notification_read_state.sql" > /dev/null  # B9 notification read-state checks
 $PSQL -q -d edu360_v4_test -f "$D/28t_tests_study_material_view.sql" > /dev/null  # B5 student/guardian material access action
+$PSQL -q -d edu360_v4_test -f "$D/29t_tests_institution_code_formats.sql" > /dev/null  # B3.0 code-format storage
 $PSQL -At -d edu360_v4_test -c "SELECT test_id||' | '||outcome||' | '||rule||' | '||detail FROM public.test_result ORDER BY id" >> "$OUT"
 $PSQL -At -d edu360_v4_test -c "SELECT 'SUMMARY | '||outcome||' | '||count(*) FROM public.test_result GROUP BY outcome" >> "$OUT"
 # B. full V3.3 reference data and count checks (AC-S5), plus idempotent second load
