@@ -1,6 +1,7 @@
 package com.edu360.api.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -18,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.*;
 import com.edu360.api.rbac.RbacPrincipal;
