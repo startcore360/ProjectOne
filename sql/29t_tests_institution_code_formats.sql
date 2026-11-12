@@ -17,3 +17,12 @@ SELECT public.expect_ok('S2-ID-DB-02','student code sequence has one row per ten
    THEN RAISE EXCEPTION 'STUDENT_SEQUENCE_UNIQUE_INDEX_MISSING'; END IF;
  END $d$
 $q$);
+
+SELECT public.expect_ok('S2-ID-DB-03','non-transactional per-institution sequence helpers are installed',$q$
+ DO $d$ BEGIN
+  IF to_regprocedure('app.ensure_institution_code_sequence(uuid,uuid,text)') IS NULL
+   OR to_regprocedure('app.next_institution_code_value(uuid,uuid,text)') IS NULL
+   OR to_regprocedure('app.institution_code_format_locked(uuid,uuid,text)') IS NULL
+  THEN RAISE EXCEPTION 'INSTITUTION_CODE_SEQUENCE_FUNCTIONS_MISSING'; END IF;
+ END $d$
+$q$);

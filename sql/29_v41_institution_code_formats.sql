@@ -43,3 +43,107 @@ CREATE POLICY p_institution ON app.staff_code_sequence AS RESTRICTIVE
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON app.staff_code_sequence TO edu_app;
 GRANT SELECT ON app.staff_code_sequence TO edu_report;
+
+-- PostgreSQL sequences are deliberately used for number allocation: nextval() is
+-- non-transactional, so a rolled-back student/profile insert never reuses a code.
+-- The sequence is created when the institution saves its format, before first use.
+CREATE OR REPLACE FUNCTION app.ensure_institution_code_sequence(
+    p_tenant_id uuid, p_institution_id uuid, p_kind text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, app
+AS $$
+DECLARE
+    v_name text;
+BEGIN
+    IF p_kind = 'STUDENT' THEN
+        IF NOT EXISTS (SELECT 1 FROM app.student_code_sequence
+                       WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id) THEN
+            RAISE EXCEPTION 'STUDENT_ID_FORMAT_NOT_SET';
+        END IF;
+        v_name := 'edu_student_' || md5(p_tenant_id::text || ':' || p_institution_id::text);
+    ELSIF p_kind = 'STAFF' THEN
+        IF NOT EXISTS (SELECT 1 FROM app.staff_code_sequence
+                       WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id) THEN
+            RAISE EXCEPTION 'STAFF_ID_FORMAT_NOT_SET';
+        END IF;
+        v_name := 'edu_staff_' || md5(p_tenant_id::text || ':' || p_institution_id::text);
+    ELSE
+        RAISE EXCEPTION 'INVALID_CODE_KIND';
+    END IF;
+    EXECUTE format('CREATE SEQUENCE IF NOT EXISTS app.%I START WITH 1 INCREMENT BY 1 NO CYCLE', v_name);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION app.next_institution_code_value(
+    p_tenant_id uuid, p_institution_id uuid, p_kind text)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, app
+AS $$
+DECLARE
+    v_name text;
+    v_value bigint;
+BEGIN
+    IF p_kind = 'STUDENT' THEN
+        v_name := 'edu_student_' || md5(p_tenant_id::text || ':' || p_institution_id::text);
+        IF NOT EXISTS (SELECT 1 FROM app.student_code_sequence
+                       WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id) THEN
+            RAISE EXCEPTION 'STUDENT_ID_FORMAT_NOT_SET';
+        END IF;
+    ELSIF p_kind = 'STAFF' THEN
+        v_name := 'edu_staff_' || md5(p_tenant_id::text || ':' || p_institution_id::text);
+        IF NOT EXISTS (SELECT 1 FROM app.staff_code_sequence
+                       WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id) THEN
+            RAISE EXCEPTION 'STAFF_ID_FORMAT_NOT_SET';
+        END IF;
+    ELSE
+        RAISE EXCEPTION 'INVALID_CODE_KIND';
+    END IF;
+    EXECUTE format('SELECT nextval(%L::regclass)', 'app.' || v_name) INTO v_value;
+    IF p_kind = 'STUDENT' THEN
+        UPDATE app.student_code_sequence SET last_value=GREATEST(last_value,v_value)
+         WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id;
+    ELSE
+        UPDATE app.staff_code_sequence SET last_value=GREATEST(last_value,v_value)
+         WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id;
+    END IF;
+    RETURN v_value;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION app.institution_code_format_locked(
+    p_tenant_id uuid, p_institution_id uuid, p_kind text)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, app
+AS $$
+DECLARE
+    v_name text;
+    v_last bigint;
+BEGIN
+    IF p_kind = 'STUDENT' THEN
+        v_name := 'edu_student_' || md5(p_tenant_id::text || ':' || p_institution_id::text);
+        SELECT last_value INTO v_last FROM app.student_code_sequence
+         WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id;
+    ELSIF p_kind = 'STAFF' THEN
+        v_name := 'edu_staff_' || md5(p_tenant_id::text || ':' || p_institution_id::text);
+        SELECT last_value INTO v_last FROM app.staff_code_sequence
+         WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id;
+    ELSE
+        RAISE EXCEPTION 'INVALID_CODE_KIND';
+    END IF;
+    IF COALESCE(v_last,0) > 0 THEN RETURN true; END IF;
+    RETURN EXISTS (SELECT 1 FROM pg_sequences
+                   WHERE schemaname='app' AND sequencename=v_name
+                     AND last_value IS NOT NULL AND last_value > 0);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION app.ensure_institution_code_sequence(uuid,uuid,text) TO edu_app;
+GRANT EXECUTE ON FUNCTION app.next_institution_code_value(uuid,uuid,text) TO edu_app;
+GRANT EXECUTE ON FUNCTION app.institution_code_format_locked(uuid,uuid,text) TO edu_app;
