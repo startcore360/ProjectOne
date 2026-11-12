@@ -189,6 +189,72 @@ public class UserAccountService {
         return CreateUserResponse.from(savedAccount, tempPassword, assignedRole);
     }
 
+    /**
+     * Creates a student login using the institution-generated student code as the Keycloak
+     * username. Students do not need an email address; the identity link records STUDENT_CODE.
+     */
+    @Transactional
+    public CreateUserResponse createStudentAccount(RbacPrincipal principal, String displayName,
+            String studentCode, UUID institutionId) {
+        Objects.requireNonNull(principal, "principal is required");
+        if (displayName == null || displayName.isBlank() || studentCode == null || studentCode.isBlank()
+                || institutionId == null) {
+            throw new IllegalArgumentException("Student name, student code and institution are required.");
+        }
+        UUID tenantId = principal.tenantId();
+        permissionEvaluatorService.authorize(principal, "USER_CREATE",
+                RbacScope.institution(institutionId), RbacTarget.NONE);
+        enforcePlanUserLimit(tenantId);
+
+        String realm = tenantRepository.findById(tenantId)
+                .map(Tenant::getKeycloakRealm)
+                .filter(r -> !r.isBlank())
+                .orElseThrow(() -> new KeycloakProvisioningException(
+                        "Tenant " + tenantId + " has no sign-in realm, so no account can be provisioned."));
+
+        String tempPassword = generateTemporaryPassword();
+        String keycloakUserId = keycloakAdminClient.provisionStudentUser(
+                realm, displayName.trim(), studentCode.trim(), tempPassword, true);
+        if (keycloakUserId == null || keycloakUserId.isBlank()) {
+            throw new KeycloakProvisioningException("Keycloak created no student account id; nothing was saved.");
+        }
+
+        UUID userAccountId = UUID.randomUUID();
+        UserAccount account = UserAccount.builder()
+                .id(new UserAccountId(tenantId, userAccountId))
+                .userType(UserType.STUDENT)
+                .displayName(displayName.trim())
+                .email(null)
+                .mobile(null)
+                .status(UserAccountStatus.PENDING_ACTIVATION)
+                .credentialExpiresAt(com.edu360.api.auth.PrintedPasswordPolicy.expiryFor(
+                        UserType.STUDENT, java.time.Instant.now()))
+                .createdBy(principal.userAccountId())
+                .updatedBy(principal.userAccountId())
+                .build();
+        UserAccount saved = userAccountRepository.save(account);
+
+        userIdentityLinkRepository.save(UserIdentityLink.builder()
+                .id(new UserIdentityLinkId(tenantId, UUID.randomUUID()))
+                .userAccountId(userAccountId)
+                .identityRealm(realm)
+                .identitySubject(keycloakUserId)
+                .usernameKind(UsernameKind.STUDENT_CODE)
+                .status(IdentityLinkStatus.ACTIVE)
+                .createdBy(principal.userAccountId())
+                .updatedBy(principal.userAccountId())
+                .build());
+
+        roleAssignmentService.assignRole(principal, userAccountId,
+                new AssignRoleRequest(null, "STUDENT", ScopeType.INSTITUTION,
+                        institutionId, null, null, null));
+
+        auditLogService.record(AuditEventType.ACCOUNT_CREATED, null,
+                principal.userAccountId().toString(), null,
+                "Created student login for student code " + studentCode + " in tenant " + tenantId);
+        return CreateUserResponse.from(saved, tempPassword, "STUDENT");
+    }
+
     private void enforcePlanUserLimit(UUID tenantId) {
         long activeUserCount = userAccountRepository.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED);
 
