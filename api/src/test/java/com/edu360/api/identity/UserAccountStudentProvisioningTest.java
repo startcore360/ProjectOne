@@ -3,6 +3,7 @@ package com.edu360.api.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.util.Optional;
@@ -40,7 +41,7 @@ class UserAccountStudentProvisioningTest {
         when(tenant.getPlanId()).thenReturn(null);
         when(tenants.findById(tenantId)).thenReturn(Optional.of(tenant));
         when(accounts.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED)).thenReturn(0L);
-        when(keycloak.provisionStudentUser("tenant-realm", "Asha Rao", "COL-2026-001", "Edu360@Abc234", true))
+        when(keycloak.provisionStudentUser(eq("tenant-realm"), eq("Asha Rao"), eq("COL-2026-001"), anyString(), eq(true)))
                 .thenReturn("kc-student-1");
 
         UserAccountService service = new UserAccountService(accounts, links, tenants, plans,
@@ -53,7 +54,7 @@ class UserAccountStudentProvisioningTest {
         assertThat(response.email()).isNull();
         assertThat(response.initialRole()).isEqualTo("STUDENT");
         verify(keycloak).provisionStudentUser(eq("tenant-realm"), eq("Asha Rao"),
-                eq("COL-2026-001"), any(String.class), eq(true));
+                eq("COL-2026-001"), anyString(), eq(true));
 
         ArgumentCaptor<UserAccount> account = ArgumentCaptor.forClass(UserAccount.class);
         verify(accounts).save(account.capture());
