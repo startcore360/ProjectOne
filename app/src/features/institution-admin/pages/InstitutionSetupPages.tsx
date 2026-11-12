@@ -998,19 +998,8 @@ export function WeeklyOffRulesPage() {
                 </select>
               </label>
               <div className="platform-form-grid">
-                <label className="platform-form-field">
-                  Effective from
-                  <input
-                    type="date"
-                    value={effectiveFrom}
-                    onChange={(e) => setEffectiveFrom(e.target.value)}
-                    required
-                  />
-                </label>
-                <label className="platform-form-field">
-                  Effective to (optional)
-                  <input type="date" value={effectiveTo} onChange={(e) => setEffectiveTo(e.target.value)} />
-                </label>
+                <DateField id="weekly-off-effective-from" label="Effective from" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} required />
+                <DateField id="weekly-off-effective-to" label="Effective to (optional)" value={effectiveTo} onChange={(e) => setEffectiveTo(e.target.value)} />
               </div>
               <ResultBanner status={status} message={message} />
               <Button type="submit" busy={status === "busy"}>
@@ -1397,14 +1386,9 @@ export function TermLockPage() {
   const handleLockSubmit = async (e: FormEvent) => {
     e.preventDefault();
     // Client-side UUID check — show inline errors directly on the fields
-    let hasClientError = false;
     if (!isValidUuid(institutionId)) {
       clearLockFieldError("institutionId"); // reset first to force re-render
       setTimeout(() => clearLockFieldError("institutionId"), 0);
-      hasClientError = true;
-    }
-    if (!isValidUuid(sessionId)) {
-      hasClientError = true;
     }
     if (!isValidUuid(institutionId) || !isValidUuid(sessionId)) {
       const msg = "Valid Institution ID and Academic Session ID (UUID) are required.";
@@ -2021,7 +2005,6 @@ export function AcademicGovernancePage() {
   const [activeTab, setActiveTab] = useState<"rules" | "grading" | "allocation" | "promotion">("rules");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
-  const { fieldErrors, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
 
   // Program rules state (Story #30: PROGRAM_RULES_SET)
   const [rules, setRules] = useState<ProgramRuleSetItem[]>([]);

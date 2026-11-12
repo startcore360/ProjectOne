@@ -2,36 +2,36 @@
 
 | Action code | Chunk | Status |
 |---|---:|---|
-| TIMETABLE_BUILD | 1 | In progress |
-| ONLINE_PERIOD_SET | 1 | In progress |
-| TIMETABLE_VIEW | 1 | In progress |
-| SYLLABUS_VIEW | 1 | In progress |
-| SYLLABUS_MANAGE | 1 | In progress |
-| ATTENDANCE_MARK | 1 | In progress |
-| ATTENDANCE_NOT_HELD | 1 | In progress |
-| SUBSTITUTE_ASSIGN | 1 | In progress |
-| ATTENDANCE_CORRECTION_REQUEST | 1 | In progress |
-| ATTENDANCE_CORRECTION_APPROVE | 1 | In progress |
-| ATTENDANCE_BULK_UPLOAD | 1 | In progress |
-| ATTENDANCE_BULK_UPLOAD_APPROVE | 1 | In progress |
-| ATTENDANCE_RULES_SET | 1 | In progress |
-| ATTENDANCE_VIEW | 1 | In progress |
-| ATTENDANCE_VIEW_OWN | 1 | In progress |
-| ASSIGNMENT_CREATE | 1 | In progress |
-| ASSIGNMENT_CLOSE | 1 | In progress |
-| STUDY_MATERIAL_UPLOAD | 1 | In progress |
-| ASSIGNMENT_SUBMIT | 1 | In progress |
-| ASSIGNMENT_EVALUATE | 1 | In progress |
-| HOMEWORK_STATUS_MARK | 1 | In progress |
-| ASSIGNMENT_VIEW_OWN | 1 | In progress |
-| HOMEWORK_COMPLIANCE_VIEW | 1 | In progress |
-| STAFF_RECORD_MANAGE | 1 | In progress |
-| STAFF_DOCUMENT_VERIFY | 1 | In progress |
-| STAFF_RECORD_VIEW | 1 | In progress |
+| TIMETABLE_BUILD | 1 | Tested |
+| ONLINE_PERIOD_SET | 1 | Tested |
+| TIMETABLE_VIEW | 1 | Tested |
+| SYLLABUS_VIEW | 1 | Tested |
+| SYLLABUS_MANAGE | 1 | Tested |
+| ATTENDANCE_MARK | 1 | Tested |
+| ATTENDANCE_NOT_HELD | 1 | Tested |
+| SUBSTITUTE_ASSIGN | 1 | Tested |
+| ATTENDANCE_CORRECTION_REQUEST | 1 | Tested |
+| ATTENDANCE_CORRECTION_APPROVE | 1 | Tested |
+| ATTENDANCE_BULK_UPLOAD | 1 | Tested |
+| ATTENDANCE_BULK_UPLOAD_APPROVE | 1 | Tested |
+| ATTENDANCE_RULES_SET | 1 | Tested |
+| ATTENDANCE_VIEW | 1 | Tested |
+| ATTENDANCE_VIEW_OWN | 1 | Tested |
+| ASSIGNMENT_CREATE | 1 | Tested |
+| ASSIGNMENT_CLOSE | 1 | Tested |
+| STUDY_MATERIAL_UPLOAD | 1 | Tested |
+| ASSIGNMENT_SUBMIT | 1 | Tested |
+| ASSIGNMENT_EVALUATE | 1 | Tested |
+| HOMEWORK_STATUS_MARK | 1 | Tested |
+| ASSIGNMENT_VIEW_OWN | 1 | Tested |
+| HOMEWORK_COMPLIANCE_VIEW | 1 | Tested |
+| STAFF_RECORD_MANAGE | 1 | Tested |
+| STAFF_DOCUMENT_VERIFY | 1 | Tested |
+| STAFF_RECORD_VIEW | 1 | Tested |
 
 ## Chunk 1 — Foundations
 
-**Status:** In progress. Changes are committed to `sprint-2-development`; build and database execution gates remain open.
+**Status:** Tested (not Accepted). The core application and database gates passed in GitHub Actions run [42797436612](https://github.com/startcore360/ProjectOne/actions/runs/42797436612): Spring Boot/Java 21 verify, PostgreSQL migration/SQL validation, frontend lint, 154 frontend tests, TypeScript and production build. The overall workflow still reported separate dependency/security configuration findings (Dependency Review requires the repository dependency graph; OWASP Dependency-Check had no NVD API key; npm audit reported seven moderate minimatch findings).
 
 ### Part A — Sprint 1 dependency audit
 
@@ -81,3 +81,55 @@
 - Cursor helper is implemented but no new list endpoints exist in Chunk 1 to consume it.
 - A3 is explicitly carried forward by decision; A4 exam-day is deferred pending requirements. A6 assignment service regression suites pass on CI, with broader effective-date and overlap edge coverage still to be confirmed. A8 behavioural login-path SQL coverage is added; future academic own-data API enforcement remains open. A9 code changes and focused tests are present but integration/build regression is not yet executed; no claim is made that all Sprint 1 dependencies are fully validated.
 - No story is marked Accepted. Highest status remains In progress until build and SQL gates pass.
+
+
+## Chunk 2 — Platform files and frontend shell
+
+**Status:** In progress. The first implementation commit is on `sprint-2-development`; this correction set is being prepared on the same branch. No story is marked Accepted.
+
+### B5 — Files
+
+| Item | Current implementation | Remaining limitation |
+|---|---|---|
+| Upload | Multipart upload, 10 MiB application limit, safe-list content inspection, filename sanitization, SHA-256, PENDING scanner contract and structured `FILE_UPLOADED` audit entry. Audit values contain file identifiers/metadata only, never filename or bytes. | No real malware scanner; default scanner leaves files PENDING. |
+| Download | Attachment streaming, safe content type, `nosniff`, tenant-qualified file lookup, scan/status enforcement and a database-backed owning-record policy. | The attach-to-record endpoint is not implemented in this chunk. Existing domain rows can be authorized; a newly uploaded, unattached file is not downloadable. |
+| Record policy | Study material: active study-material record and uploader/active assigned teacher. Assignment submission: own student record, ACTIVE linked guardian, or assignment author. Syllabus: published record. Staff document: uploader or staff member. Attendance source: uploader's attendance import job. | Study-material downloads currently use `STUDY_MATERIAL_UPLOAD` because the authoritative Action List has no `STUDY_MATERIAL_VIEW` action. This does not grant students/guardians a material-view right; that action requires a Product Owner decision. |
+| Local storage | WHAT/HOW/WHY comments restored. Storage keys are normalized, checked for lexical containment and resolved-path/symlink containment before reads. | Local disk remains an interim deviation from D5 object storage and 15-minute expiring links. |
+| Type validation | File signatures are inspected. A valid safe file may declare `application/octet-stream`; server-detected MIME is returned. Executable-renamed files and unsafe HTML/SVG/scripts are rejected. | OOXML inspection checks ZIP central-directory names only; archive entries are never inflated. |
+| Size limits | General multipart ceiling is 10 MiB with an 11 MiB request allowance. `ProfileService` retains its separate 2 MiB JPEG/PNG check. | Profile upload remains subject to the global multipart parser ceiling before its endpoint-level 2 MiB check. |
+
+**DEC-7:** `files.allow-pending-download=true` in dev, `false` in prod, and false by default. Pending files are served only when the owning-record policy and action authorization both pass. INFECTED, QUARANTINED, DELETED and SCAN_FAILED remain blocked.
+
+### B6 — In-app notifications
+
+- `UserNotification` maps the existing `app.notification` columns, including entity and dedupe fields.
+- `InAppNotifier` writes with `REQUIRES_NEW`, catches delivery exceptions and deduplicates by tenant/key.
+- Tests cover dedupe and notification persistence failure not escaping to the caller transaction.
+- **Event wiring remains open:** this branch has no timetable publication, assignment publication, absence-alert or HOD self-approval publisher/service to invoke the notifier from. SMS/email remain out of scope.
+
+### B7 — Frontend shell
+
+- Tenant permissions are loaded after login and session hydration/page refresh, reloaded after active-role switch, and checked again at AppLayout bootstrap when tenant/user context does not match.
+- `AppLayout` filters tenant academic menu entries using server-issued `canAny()` grants for Timetable, Attendance, Assignments, Study material, Syllabus and Staff. Entries without a shipped page are visibly disabled as “Coming soon”; no placeholder routes are registered.
+- `ActionGate` is now used around existing routes for institution, user, role, academic-structure, term-lock and self-service screens. Denials are neutral in-page states; backend endpoint authorization remains authoritative.
+- Guardian dashboard uses `GuardianChildSwitcher`, which loads only ACTIVE linked children and presents selected-child identifiers/status as read-only.
+- The duplicate common `DateField` is removed. The shared design-system `DateField` is exported and used by existing academic-session and weekly-off setup forms.
+- The eight remaining generic controls (`PersonPicker`, `SectionPicker`, `SubjectAllocationPicker`, `WeekGrid`, `StatusToggleRoster`, `FileDrop`, `WarningsPanel`, `DiffTable`) have focused component tests and a common export barrel. They are not yet consumed by production feature pages because the matching timetable/attendance/assignment pages and their supporting list APIs are not present in this chunk; do not report them as integrated into those workflows.
+
+### Chunk 2 tests
+
+- Backend: `FileContentInspectorTest` — PDF magic bytes, generic browser MIME, S2-27 renamed executable, unsafe HTML and NUL-containing text.
+- Backend: `FileServiceTest` — S2-27 12 MiB rejection, audit record on upload, and S2-29 denial when the classmate does not match the owning-record policy.
+- Backend: `FileObjectControllerTest` — upload metadata response, attachment disposition and nosniff headers.
+- Backend: `LocalFileStorageTest` — read/write and path traversal containment.
+- Backend: `InAppNotifierTest` — dedupe and persistence failure isolation.
+- Frontend: tenant permission slice, login/hydration permission bootstrap, ActionGate denied/allowed state, guardian ACTIVE-child selection, DateField and the eight generic reusable controls.
+- CI run `43029231137` on commit `ce2afd38d3d05e31fa2e52da9960becc1de0a058`: Spring Boot `clean verify` passed (808 tests, 0 failures/errors); PostgreSQL migration validation passed; frontend lint passed; frontend unit suite passed (168 tests across 22 files); frontend type-check and production build passed. The symlink containment test is included in the successful backend run. OWASP Maven Dependency-Check and CodeQL analysis were still in progress at the time of this note; do not infer their outcome. Do not claim local execution; validation ran in GitHub Actions.
+
+### Open items before Chunk 2 can be marked Tested
+
+1. Execute all four required gates on the corrected branch: backend verify, PostgreSQL SQL validation, frontend lint/tests/build. Review the dependency-audit report separately and remediate or formally disposition the CVE findings.
+2. Add the approved `STUDY_MATERIAL_VIEW` action (or an explicit Product Owner rule for student/guardian material access) before enabling those downloads.
+3. Implement file attachment to an owning domain record and audit every subsequent scan/status transition.
+4. Wire `InAppNotifier` when the relevant timetable, assignment, attendance and HOD approval publishers exist.
+5. Consume the remaining generic controls from the real feature pages when those pages and supporting APIs are delivered; do not fabricate page workflows in this chunk.

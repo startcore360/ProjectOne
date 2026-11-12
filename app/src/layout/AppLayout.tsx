@@ -18,6 +18,8 @@ import { SESSION_IDLE_LIMIT_MS, startInactivityTracker } from "../services/inact
 import api from "../services/axios";
 import { useProfilePhoto } from "../features/profile/hooks/useProfilePhoto";
 import { roleDashboardByCode } from "../features/role-previews/roleDashboardCatalog";
+import { useTenantAccess } from "../features/profile/hooks/useTenantAccess";
+import { tenantPermissionsService } from "../features/profile/api/tenantPermissionsService";
 
 const universityNavigation = [
   { label: "Dashboard", to: "/dashboard", icon: "home" as const, important: true },
@@ -103,6 +105,7 @@ export default function AppLayout() {
   const name = user?.displayName?.trim() || "Account";
   const dispatch = useAppDispatch();
   const { canAny, customRoleName } = usePlatformAccess();
+  const { canAny: canTenantAny, loading: tenantPermissionsLoading, error: tenantPermissionsError, permissions: tenantPermissions } = useTenantAccess();
 
   // Role / Level detection
   const previewRoleCode = location.pathname.startsWith("/role-preview/")
@@ -157,6 +160,15 @@ export default function AppLayout() {
     if (isPlatformConsole && userId) void loadPlatformPermissions(dispatch, userId);
   }, [isPlatformConsole, userId, dispatch]);
 
+  // Bootstrap also runs after refresh/hydrate; login and role-switch flows dispatch the same
+  // permission load. Tenant/user mismatches are never allowed to reuse a previous scope.
+  useEffect(() => {
+    if (!user?.tenantId || user.platformRole || tenantPermissionsLoading || tenantPermissionsError) return;
+    if (tenantPermissions?.tenantId !== user.tenantId || tenantPermissions?.userAccountId !== user.id) {
+      void tenantPermissionsService.reload();
+    }
+  }, [user?.tenantId, user?.id, user?.platformRole, tenantPermissionsLoading, tenantPermissionsError, tenantPermissions?.tenantId, tenantPermissions?.userAccountId]);
+
   const scopeLabel = isPlatformConsole
     ? "PLATFORM"
     : isStudent
@@ -185,9 +197,9 @@ export default function AppLayout() {
               ? "University admin"
               : "Workspace";
 
-  const navigation = isPlatformConsole
+  const baseNavigation = isPlatformConsole
     ? platformNavigation.filter((item) => !item.anyOf || canAny(item.anyOf))
-    : isStudent
+    : isStudent || user?.userType === "GUARDIAN"
       ? studentNavigation
       : isUniversityLevel
         ? universityNavigation
@@ -198,6 +210,18 @@ export default function AppLayout() {
             : location.pathname.startsWith("/university")
               ? universityNavigation
               : workspaceNavigation;
+
+  // Academic destinations appear only when the active role has the matching server grant.
+  // They remain non-clickable until their real feature pages ship; no placeholder routes.
+  const academicNavigation = tenantPermissionsLoading ? [] : [
+    { label: "Timetable", to: "/dashboard", icon: "calendar" as const, important: false, disabled: true, anyOf: ["TIMETABLE_BUILD", "TIMETABLE_VIEW"] },
+    { label: "Attendance", to: "/dashboard", icon: "check-circle" as const, important: false, disabled: true, anyOf: ["ATTENDANCE_MARK", "ATTENDANCE_VIEW", "ATTENDANCE_VIEW_OWN", "ATTENDANCE_BULK_UPLOAD"] },
+    { label: "Assignments", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["ASSIGNMENT_CREATE", "ASSIGNMENT_SUBMIT", "ASSIGNMENT_VIEW_OWN", "ASSIGNMENT_EVALUATE"] },
+    { label: "Study material", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["STUDY_MATERIAL_UPLOAD"] },
+    { label: "Syllabus", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["SYLLABUS_VIEW", "SYLLABUS_MANAGE"] },
+    { label: "Staff", to: "/dashboard", icon: "users" as const, important: false, disabled: true, anyOf: ["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"] },
+  ].filter((item) => canTenantAny(item.anyOf));
+  const navigation = isPlatformConsole ? baseNavigation : [...baseNavigation, ...academicNavigation];
 
   // Sidebar overflow hint: overlay scrollbars (macOS, touch laptops) hide until hovered, so a
   // long menu gives no sign that more items sit below. Track whether the list can scroll
@@ -231,7 +255,9 @@ export default function AppLayout() {
   const importantNav = navigation.filter((item) => item.important);
   const moreNav = navigation.filter((item) => !item.important);
   const navLink = (item: (typeof navigation)[number], size = 20) =>
-    <NavLink key={item.to} to={item.to} end title={item.label} onClick={() => setMoreOpen(false)} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={size}/><span>{item.label}</span></NavLink>;
+    "disabled" in item && item.disabled
+      ? <span key={item.label} className="app-nav__link is-disabled" aria-disabled="true" title={`${item.label} page is not part of this sprint`}><Icon name={item.icon} size={size}/><span>{item.label} <small>Coming soon</small></span></span>
+      : <NavLink key={item.to} to={item.to} end title={item.label} onClick={() => setMoreOpen(false)} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={size}/><span>{item.label}</span></NavLink>;
 
   return <div className="app-shell">
     {/* Matches D10's .side-card: a grouped nav list with the signed-in identity and sign-out

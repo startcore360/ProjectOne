@@ -5,6 +5,7 @@ import { meService, type UserRoleOption } from "../../features/profile/api/meSer
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { switchActiveRole } from "../../store/slices/authSlice";
 import { ACTIVE_ROLE_REQUIRED_EVENT } from "../../services/activeRoleRequired";
+import { tenantPermissionsService } from "../../features/profile/api/tenantPermissionsService";
 
 type RoleSwitcherProps = {
   /**
@@ -67,6 +68,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
           roleName: data.roleName,
         })
       );
+      await tenantPermissionsService.reload();
       goToDashboard();
     } catch {
       // Retain prior on error
