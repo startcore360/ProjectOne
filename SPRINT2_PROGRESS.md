@@ -239,3 +239,11 @@ This is a progress record, not an acceptance declaration. Work is continuing on 
 - No story is marked `Tested` in this log. This environment has GitHub repository access but no working local checkout/runtime for executing Maven, frontend or PostgreSQL commands.
 - GitHub Actions runs for intermediate commits have repeatedly been cancelled when concurrent developer commits landed on the same branch. This is not a pass or a code failure. Await a non-cancelled run on the consolidated branch head before marking any affected repair Tested.
 - Continue using `sprint-2-development` only. Refresh the branch before each write and preserve concurrent commits; never force-push.
+
+
+### Follow-up security and enrolment notes
+
+- Pending file downloads now require either the original uploader or an active permission for the file purpose (assignment evaluators are also recognized). Record ownership and ordinary view permission alone do not expose an unscanned file. Regression coverage denies a non-uploader with only the normal view path.
+- Student creation now validates active section/class and admission date before allocating/provisioning the student login. The new tests cover college-default login, school class switch disabled, explicit school-login denial, and admission-date rejection before external provisioning.
+- The current OpenAPI/import contract exposes the existing imports operation as a USER import; it does not define the CSV row schema or execution contract for student-code legacy imports. The student-code generation and tenant uniqueness guard are implemented, but a separate legacy-code student bulk-import execution path remains open until its contract is defined. Do not silently reinterpret USER imports as student enrolment imports.
+- The security/architecture requirements still call for a real malware scanner and object-store-backed 15-minute download links. No provider or deployment credentials are defined in the supplied project configuration. These remain explicit deployment/integration blockers; local storage and the pending scanner are not represented as production-complete.
