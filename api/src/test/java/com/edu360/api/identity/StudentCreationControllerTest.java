@@ -44,7 +44,7 @@ class StudentCreationControllerTest {
                 null, null, sectionId, sessionId, null);
         StudentProfileResponse response = new StudentProfileResponse(UUID.randomUUID(), null,
                 institutionId, "COL-2026-001", "A Student", null, null, null, null,
-                "ACTIVE", null, null, null, userId, 3);
+                "ACTIVE", null, null, null, userId, 3, null);
         when(service.create(actor, request)).thenReturn(response);
 
         var result = controller.create(tenantId, request, authentication);
