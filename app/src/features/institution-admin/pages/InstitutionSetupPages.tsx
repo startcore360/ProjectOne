@@ -616,7 +616,7 @@ export function CalendarEventsPage() {
                     {masterEvents.map((e) => (
                       <tr key={e.academicCalendarEventId}>
                         <td><strong>{e.title}</strong></td>
-                        <td><Badge tone={e.eventType === "SEMESTER_DATES" ? "info" : "neutral"}>{e.eventType}</Badge></td>
+                        <td><Badge tone={e.eventType === "EXAM_DAY" ? "warning" : e.eventType === "SEMESTER_DATES" ? "info" : "neutral"}>{e.eventType}</Badge></td>
                         <td>{e.startDate}</td>
                         <td>{e.endDate}</td>
                         <td>{e.sourceLevel}</td>
@@ -649,7 +649,7 @@ export function CalendarEventsPage() {
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
 
-          <Panel title="Local events" description="Only LOCAL_HOLIDAY and LOCAL_EVENT rows for this institution.">
+          <Panel title="Local events" description="Local holidays, local events and exam days for this institution.">
             {events === null ? (
               <EmptyState
                 title="No events loaded yet"
@@ -681,7 +681,7 @@ export function CalendarEventsPage() {
                           <strong>{event.title}</strong>
                         </td>
                         <td>
-                          <Badge tone={event.eventType === "LOCAL_HOLIDAY" ? "info" : "neutral"}>{event.eventType}</Badge>
+                          <Badge tone={event.eventType === "EXAM_DAY" ? "warning" : event.eventType === "LOCAL_HOLIDAY" ? "info" : "neutral"}>{event.eventType}</Badge>
                         </td>
                         <td>{event.startDate}</td>
                         <td>{event.endDate}</td>
@@ -710,6 +710,7 @@ export function CalendarEventsPage() {
                 options={[
                   { value: "LOCAL_HOLIDAY", label: "Local holiday" },
                   { value: "LOCAL_EVENT", label: "Local event" },
+                  { value: "EXAM_DAY", label: "Exam day" },
                 ]}
               />
               <TextField
