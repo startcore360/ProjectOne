@@ -5,6 +5,7 @@ import com.edu360.api.selfservice.dto.LeaveBalanceDto;
 import com.edu360.api.selfservice.dto.LeaveRequestDto;
 import com.edu360.api.selfservice.dto.NoticeDto;
 import com.edu360.api.selfservice.dto.NotificationDto;
+import com.edu360.api.selfservice.dto.NotificationSummaryDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,10 +31,27 @@ public class SelfServiceController {
     @Operation(summary = "Get current user notifications")
     public ResponseEntity<List<NotificationDto>> getNotifications(
             @PathVariable UUID tenantId,
+            @RequestParam(value = "limit", defaultValue = "50") int limit,
             Authentication authentication
     ) {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(selfService.getNotifications(tenantId, principal.userAccountId(), limit));
+    }
+
+    /** Compatibility overload for direct controller callers; HTTP uses the limit-aware method. */
+    public ResponseEntity<List<NotificationDto>> getNotifications(UUID tenantId, Authentication authentication) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
         return ResponseEntity.ok(selfService.getNotifications(tenantId, principal.userAccountId()));
+    }
+
+    @GetMapping({"/v1/tenants/{tenantId}/me/notifications/summary", "/api/tenants/{tenantId}/me/notifications/summary"})
+    @Operation(summary = "Get the current user's unread notification count")
+    public ResponseEntity<NotificationSummaryDto> getNotificationSummary(
+            @PathVariable UUID tenantId,
+            Authentication authentication
+    ) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(selfService.getNotificationSummary(tenantId, principal.userAccountId()));
     }
 
     @PostMapping({"/v1/tenants/{tenantId}/me/notifications/{notificationId}/read", "/api/tenants/{tenantId}/me/notifications/{notificationId}/read"})

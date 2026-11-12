@@ -13,4 +13,5 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
     Optional<UserNotification> findFirstByIdTenantIdAndDedupeKey(UUID tenantId, String dedupeKey);
     Optional<UserNotification> findByIdTenantIdAndIdNotificationIdAndRecipientUserId(
             UUID tenantId, UUID notificationId, UUID recipientUserId);
+    long countByIdTenantIdAndRecipientUserIdAndReadAtIsNull(UUID tenantId, UUID recipientUserId);
 }

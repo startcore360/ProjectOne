@@ -31,9 +31,19 @@ public class SelfServiceService {
 
     @Transactional(readOnly = true)
     public List<NotificationDto> getNotifications(UUID tenantId, UUID userId) {
+        return getNotifications(tenantId, userId, 50);
+    }
+
+    @Transactional(readOnly = true)
+    public List<NotificationDto> getNotifications(UUID tenantId, UUID userId, int limit) {
         authorizeSelfService(tenantId, userId);
+        if (limit < 1 || limit > 200) {
+            throw new com.edu360.api.exception.BusinessRuleViolationException(
+                    "VALIDATION_FAILED", "Notification limit must be between 1 and 200.");
+        }
         return notificationRepository.findByIdTenantIdAndRecipientUserIdOrderByCreatedAtDesc(tenantId, userId)
                 .stream()
+                .limit(limit)
                 .map(n -> new NotificationDto(
                         n.getId().getNotificationId(),
                         n.getTriggerCode(),
@@ -41,9 +51,18 @@ public class SelfServiceService {
                         n.getBody(),
                         n.getPriorityClass(),
                         n.getCreatedAt(),
-                        n.getReadAt()
+                        n.getReadAt(),
+                        n.getEntityType(),
+                        n.getEntityId()
                 ))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public com.edu360.api.selfservice.dto.NotificationSummaryDto getNotificationSummary(UUID tenantId, UUID userId) {
+        authorizeSelfService(tenantId, userId);
+        return new com.edu360.api.selfservice.dto.NotificationSummaryDto(
+                notificationRepository.countByIdTenantIdAndRecipientUserIdAndReadAtIsNull(tenantId, userId));
     }
 
     @Transactional
