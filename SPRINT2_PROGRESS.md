@@ -165,3 +165,25 @@ The OWASP Maven findings are a **pre-existing baseline failure**: the same depen
 - CI follow-up found an action-number collision: `ROLLDOWN_VIEW` owns action number 279 in the V4.0 reference seed. `STUDY_MATERIAL_VIEW` is now assigned 280 in both the reference catalogue and migration 28; the next SQL pipeline run will verify the corrected seed order.
 
 - The next CI run identified a second collision in the V4.0 reference seed: `ROLLDOWN_OVERRIDE_SET` uses action number 280. The study-material view action has been moved to 281 in both reference data and migration 28; a fresh pipeline is required to verify the correction.
+
+
+## Chunk 2 and Chunk 3 continuation — 12 November 2026
+
+This is a progress record, not an acceptance declaration. Work is continuing on `sprint-2-development`; concurrent commits from the other contributor have been retained.
+
+### Changes added in this continuation
+- Added live WebSocket backend tests for oversized frames (1009), malformed authentication (4401), malformed JSON (4401), and ignored unknown client frames.
+- Added notification notifier tests for post-persistence `NOTIFICATION_CREATED` and `UNREAD_COUNT` delivery, plus suppression of live events for deduplicated notifications.
+- Added file-download regression coverage proving INFECTED, QUARANTINED, DELETED and SCAN_FAILED objects remain blocked even when pending downloads are enabled.
+- Student creation now validates the section is active and the requested/default admission date falls within the academic session before provisioning a Keycloak login. School class validation also checks institution ownership and active status before applying the class login switch.
+- Added StudentCreationService coverage for college-default student-code login/profile/enrolment creation and rejection of out-of-session admission before account provisioning.
+- The current branch also contains additional B4 staff authorization, service, and document tests; notification controller tests; and the student creation flow added concurrently. These have been retained rather than overwritten.
+
+### Pipeline and remaining completion gates
+- GitHub Actions is triggered on each branch update. Several runs were cancelled by subsequent commits while concurrent work continued; the latest run must be allowed to complete on the consolidated branch before claiming a green gate.
+- No local test execution is claimed. The current source state still requires a completed backend, PostgreSQL migration, frontend, CodeQL, dependency and secret-scan result.
+- Remaining provider/architecture decisions cannot be implemented safely by assumption: a malware-scanning provider has not been selected, and D5 object storage/expiring-link provider configuration is not present. Local storage remains a documented interim deviation.
+- File attachment exists for staff documents, but a generic file-to-domain-record attachment/status-transition workflow is not yet established for all owning record types. Do not infer a universal ownership contract.
+- Notification event invocation remains limited to publishers actually present in the repository; absent timetable, assignment, attendance and HOD approval publishers cannot be wired without those domain workflows.
+- OD-16 remains open; only SQL-defined staff fields and service-event types are used. OD-134 single-student action code follows the approved API proposal `USER_CREATE` in the current implementation; the user has directed completion without waiting for further approval.
+- Stories remain In progress / Tested only after their relevant CI gates complete. No story is marked Accepted by this note.
