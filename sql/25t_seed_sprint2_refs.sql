@@ -16,7 +16,11 @@ INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_versi
  ('PRINCIPAL_COLLEGE','Principal College','COLLEGE','4.0',false,true),
  ('SCHOOL_PRINCIPAL','School Principal','SCHOOL','4.0',false,true),
  ('VICE_PRINCIPAL_COLLEGE','Vice Principal College','COLLEGE','4.0',false,true),
- ('VICE_PRINCIPAL_SCHOOL','Vice Principal School','SCHOOL','4.0',false,true)
+ ('VICE_PRINCIPAL_SCHOOL','Vice Principal School','SCHOOL','4.0',false,true),
+ ('STUDENT_COLLEGE','Student (College)','COLLEGE','≤3.2',false,false),
+ ('STUDENT_SCHOOL','Student (School)','SCHOOL','≤3.2',false,false),
+ ('PARENT_COLLEGE','Parent (College)','COLLEGE','≤3.2',false,false),
+ ('PARENT_SCHOOL','Parent (School)','SCHOOL','≤3.2',false,false)
 ON CONFLICT(role_code) DO NOTHING;
 
 INSERT INTO ref.action_catalog(action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in) VALUES

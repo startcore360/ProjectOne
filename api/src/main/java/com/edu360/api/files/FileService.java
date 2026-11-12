@@ -125,11 +125,7 @@ public class FileService {
                 ? permissions.ownScope(caller)
                 : permissions.targetScope(caller, file.getInstitutionId(), null);
         switch (FilePurpose.valueOf(file.getPurpose())) {
-            case STUDY_MATERIAL -> {
-                // No STUDY_MATERIAL_VIEW action exists in the approved Action List yet.
-                // Until it is approved, only uploader/assigned-teacher roles with upload grant pass.
-                permissions.authorize(caller, "STUDY_MATERIAL_UPLOAD", scope, RbacTarget.NONE);
-            }
+            case STUDY_MATERIAL -> permissions.authorize(caller, "STUDY_MATERIAL_VIEW", scope, RbacTarget.NONE);
             case ASSIGNMENT_SUBMISSION -> {
                 if (!permissions.can(caller, "ASSIGNMENT_VIEW_OWN", scope, RbacTarget.NONE).allowed()
                         && !permissions.can(caller, "ASSIGNMENT_EVALUATE", scope, RbacTarget.NONE).allowed()) {
