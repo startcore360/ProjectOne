@@ -52,7 +52,7 @@ public class InAppNotifier {
                         "entityType", entityType == null ? "" : entityType,
                         "entityId", entityId == null ? "" : entityId.toString(),
                         "createdAt", Instant.now().toString()));
-                long unread = repository.countByIdTenantIdAndRecipientUserIdAndReadAtIsNull(tenantId, recipientUserId);
+                long unread = repository.countUnreadDeliverable(tenantId, recipientUserId, Instant.now());
                 liveEvents.publishToUser(tenantId, recipientUserId, "UNREAD_COUNT", Map.of("unreadCount", unread));
             }
         } catch (RuntimeException ex) {
