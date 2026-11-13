@@ -93,7 +93,7 @@ INSERT INTO ref.action_catalog (action_code, action_no, module_name, phase, desc
 INSERT INTO app.tenant_step_in (tenant_id, step_in_id, actor_user_id, action_code, reason, expires_at)
 VALUES ('00000000-0000-0000-0000-00000000c601', '00000000-0000-0000-0000-00000000c621', '00000000-0000-0000-0000-00000000c611', 'B6_RB_ACTION', 'Rollback evidence row', now() + interval '5 minutes');
 SQL
-for f in 31r_v41_staff_record_view_grants_rollback.sql 30r_v41_exam_day_event_type_rollback.sql 26r_v41_student_login_switch_guard_rollback.sql 25r_sprint2_foundations_rollback.sql 22r_v41_platform_audit_event_type_rollback.sql 20r_v41_never_allowed_guard_rollback.sql 18r_v41_user_sessions_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
+for f in 31r_v41_staff_record_view_grants_rollback.sql 30r_v41_exam_day_event_type_rollback.sql 27r_v41_notification_read_state_rollback.sql 26r_v41_student_login_switch_guard_rollback.sql 25r_sprint2_foundations_rollback.sql 22r_v41_platform_audit_event_type_rollback.sql 20r_v41_never_allowed_guard_rollback.sql 18r_v41_user_sessions_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
 if run edu360_v4_rb 16r_v41_tenant_top_post_authority_rollback.sql > /dev/null 2>&1; then r=MISMATCH; else r=OK; fi
 echo "RBCHECK | 16r refuses while step-in rows exist (DB-A12) | $r" >> "$OUT"
 $PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_rb -c "SET edu360.rollback_discard_step_ins = 'on'" -f "$D/16r_v41_tenant_top_post_authority_rollback.sql" > /dev/null
