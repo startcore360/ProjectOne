@@ -432,3 +432,32 @@ This section records verified repository edits made during the current implement
 - Added RoleAssignmentController regression coverage asserting department-scoped grants authorize ROLE_ASSIGN against the exact requested institution + department scope. Existing institution-scope coverage remains. Commit d38d826591a4be2a73ee2e23a1ddb0af68d96016.
 - These tests are committed but not yet executed in CI. C2-2 remains open pending the full grant/action audit across institution and department grants, tenant isolation, MX-04 sensitive roles, scope ownership and audit event assertions.
 - Staff document code includes a separate verification endpoint and server-side uploader != verifier guard; however, no live ClamAV deployment/scan evidence or complete storage-to-attach acceptance evidence is available from this repository review. Keep end-to-end staff document flow In Progress.
+
+
+## Current completion disposition — reconciled after implementation review (13 November 2026)
+
+This section supersedes older “Still open” bullets above where they conflict. Status is evidence-based; code/test presence is not the same as a passing CI run or production acceptance.
+
+### Implemented; validation still required
+- **B3 student CSV admission:** the current branch contains a STUDENTS template in `UserBulkUploadService`, student-row validation and `UserBulkImportRowService.createStudent(...)` which delegates to `StudentCreationService` under `REQUIRES_NEW`. This creates the profile/enrolment through the standard student lifecycle. This resolves the earlier generic-user-import discrepancy at source level. Full upload → prevalidate → execute → profile/enrolment verification and optional-login acceptance remains unverified.
+- **B9 approval badge/publisher:** implementation and publisher/frontend tests are present. Await passing current CI and integration evidence.
+- **C1-1 / C1-2:** regression suites are present for assignment roles and active-role institution switching. Await passing current CI.
+- **C2-2 role grants:** implementation enforces `ROLE_ASSIGN` / `ROLE_ASSIGN_NON_SENSITIVE`, tenant-local target lookup, MX-04 tenant-scope and sensitive-role restrictions, and emits grant/end audit events. Tests cover institution-scope grant, department-scope exact authorization, non-sensitive allow/deny, tenant-scope prohibition, sensitive standard/custom role denial and sensitive-role end denial. Remaining acceptance is full positive/negative matrix execution and audit assertions in CI; do not call the audit fully accepted yet.
+- **Staff sensitive-view audit:** service authorizes `STAFF_RECORD_VIEW`, redacts sensitive values unless `STAFF_RECORD_MANAGE` is granted, and records sensitive access. Tests now cover audit on privileged view and no sensitive-view audit for view-only access. Await CI execution and review all detail/export/document views, not just directory list.
+- **C2-8 pickers:** PersonPicker, SectionPicker and FileDrop are wired into the available HOD/mentor/class-teacher and staff-document pages. Await CI and role-specific workflow acceptance.
+
+### Still open — implementation or external operational work
+1. **B5 generic file attachment:** implement a reusable, authorized file-to-record attachment workflow for every supported record type. Current staff-document attach is a specific path, not a generic attachment subsystem.
+2. **B5 ClamAV deployment and staff document E2E:** configure a reachable ClamAV `clamd` service in the target environment, enable `files.scanner.clamav.enabled=true`, verify CLEAN/INFECTED/PENDING/timeout outcomes, then execute upload → scan → attach → independent verifier. Current default scanner deliberately returns PENDING. This cannot be completed or represented as production-verified by repository edits alone.
+3. **B6 notification event wiring:** timetable publication, assignment publication, absence alerts and HOD self-approval must call `InAppNotifier`. Current branch does not contain those publisher/service paths; SMS/email remain out of scope.
+4. **A3 / G2 academic structure:** PATCH/If-Match handlers and subject-group/member APIs remain explicitly carried forward by DEC-9. Do not silently pull them into Chunk 3.
+5. **A8 own-data enforcement:** enforce own-data constraints when the corresponding academic endpoints are introduced; login-switch behavioural SQL cases remain a separate validation requirement where not exercised by the current runner.
+6. **C2-2 live tenant rollout:** enumerate tenant databases requiring DEC-14 tenant-local role-action grants and apply only after tenant inventory/rollout approval. Standard-role grants alone do not modify existing tenant role copies.
+7. **Storage architecture deviation:** local disk remains interim; D5 object storage and expiring-link delivery are not implemented.
+8. **Deferred by product-owner decision:** personal-email verification/provider selection and delivery lifecycle remain deferred. Do not implement or mark complete without renewed approval.
+
+### Required validation before Tested/Accepted
+- Run backend Maven verify, frontend lint/test/build, PostgreSQL apply/test/rollback, npm audit, OWASP Dependency-Check, Gitleaks and CodeQL against the current development branch head.
+- Resolve all failures and rerun. Dependency Review only runs on pull requests and requires repository dependency-graph support; OWASP requires a valid NVD API key. Record these as environment/configuration blockers if unavailable rather than waiving them.
+- Confirm the newest five GitHub Actions runs for `sprint-2-development` and record run IDs, head SHAs, conclusions and cancelled superseded runs. The available GitHub integration in this session did not expose a list-runs operation, so no latest-five result is asserted here.
+- No story is Accepted until its role-specific workflow and required CI/SQL evidence are recorded. Do not change `master`; default-branch incident cleanup remains repository-owner work and is not authorized by this task.
