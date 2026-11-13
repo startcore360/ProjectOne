@@ -1682,7 +1682,7 @@ export function TermLockPage() {
       )}
 
       <Panel title="Lock academic term" description="Authorized principals can lock a term after final marks and attendance have been submitted.">
-        <form onSubmit={handleLockSubmit} className="platform-form">
+        <form onSubmit={handleLockSubmit} className="platform-form" noValidate>
           {institutions.length > 0 && (
             <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
               <SelectField
@@ -2054,7 +2054,7 @@ export function DelegationsApprovalsPage() {
         title="Delegate approval authority"
         description="Hand over your approval responsibilities to an eligible colleague for a defined period."
       >
-        <form onSubmit={handleCreateDelegation} className="platform-form">
+        <form onSubmit={handleCreateDelegation} className="platform-form" noValidate>
           <TextField
             id="delegate-user-id"
             label="Delegate User Account ID (UUID) *"
@@ -2110,7 +2110,7 @@ export function DelegationsApprovalsPage() {
         title="Bulk approval decision"
         description="Review and decide several eligible requests together, with an optional comment."
       >
-        <form onSubmit={handleBulkDecision} className="platform-form">
+        <form onSubmit={handleBulkDecision} className="platform-form" noValidate>
           <TextAreaField
             id="bulk-request-ids"
             label="Approval Request IDs (comma-separated UUIDs) *"
