@@ -6,7 +6,7 @@ import { selfServiceApi, type NoticeItem } from "../../self-service/api/selfServ
 
 export interface StudentDashboardProps {
   name: string;
-  tenantId: string;
+  tenantId?: string;
 }
 
 export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
@@ -119,19 +119,19 @@ export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
           {noticesLoading ? (
             <p role="status">Loading published campus notices…</p>
           ) : noticesError ? (
-            <p role="status">Campus notices could not be loaded. Open Self-Service to retry.</p>
+            <p role="status">{tenantId ? "Campus notices could not be loaded. Open Self-Service to retry." : "Sign in as a student to view campus notices."}</p>
           ) : notices.length === 0 ? (
             <QuietEmpty title="No published campus notices" description="There are no published notices available to your account right now." />
           ) : (
-            <ul className="student-notice-list">
+            <div className="space-y-3">
               {notices.map((notice) => (
-                <li key={notice.noticeId}>
+                <article key={notice.noticeId} className="self-service-card self-service-card--notice">
                   <strong>{notice.title}</strong>
                   <p>{notice.body}</p>
-                  <span>{notice.publishedAt ? new Date(notice.publishedAt).toLocaleDateString() : "Recently published"}</span>
-                </li>
+                  <span className="self-service-card__meta">{notice.publishedAt ? new Date(notice.publishedAt).toLocaleDateString() : "Recently published"}</span>
+                </article>
               ))}
-            </ul>
+            </div>
           )}
         </DashboardPanel>
         <DashboardPanel
