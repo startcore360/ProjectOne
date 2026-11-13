@@ -13,8 +13,8 @@ export default function ActionGate({ anyOf, children }: ActionGateProps) {
   if (loading) return <Spinner label="Checking access…" />;
   if (!canAny(anyOf)) {
     return (
-      <div role="status" aria-live="polite">
-        <EmptyState title="Access unavailable" description="You don't have access to this." />
+      <div className="eds-access-denied" role="status" aria-live="polite">
+        <EmptyState variant="page" icon="shield" title="Access unavailable" description="Your current role does not have permission to view this page. Contact your administrator if you believe you need access." />
       </div>
     );
   }

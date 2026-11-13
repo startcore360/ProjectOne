@@ -53,7 +53,7 @@ export default function SelfServicePage() {
       setNotices(Array.isArray(nots) ? nots : []);
     } catch (err) {
       setError(err instanceof Error && err.message
-        ? `Failed to load self-service records: ${err.message}`
+        ? "We could not load your self-service records. Please try again."
         : "Failed to load self-service records. Please retry.");
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function SelfServicePage() {
     <div className="space-y-6">
       <PageHeader
         title="Self-Service Portal"
-        description="Access institutional notices, check remaining leave balances, and review alert notifications [SELF_SERVICE_VIEW]."
+        description="Access institutional notices, check remaining leave balances, and review your notifications."
       />
 
       {loading && (
@@ -115,8 +115,8 @@ export default function SelfServicePage() {
                     <div className="self-service-card__header">
                       <h3 className="self-service-card__title">{n.title}</h3>
                       <div className="self-service-card__badges">
-                        <Badge tone="info">{n.noticeKind}</Badge>
-                        <Badge tone="neutral">{n.noticeLevel}</Badge>
+                        <Badge tone="info">{n.noticeKind.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())}</Badge>
+                        <Badge tone="neutral">{n.noticeLevel.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())}</Badge>
                       </div>
                     </div>
                     <p className="self-service-card__body">{n.body}</p>
@@ -197,11 +197,11 @@ export default function SelfServicePage() {
                       <div className="self-service-card__title">{n.title}</div>
                       {n.body && <div className="self-service-card__body">{n.body}</div>}
                       <div className="self-service-card__meta">
-                        {new Date(n.createdAt).toLocaleString()} • Trigger: {n.triggerCode}
+                        {new Date(n.createdAt).toLocaleString()}
                       </div>
                     </div>
                     <Badge tone={n.priorityClass === "EMERGENCY" ? "danger" : "neutral"}>
-                      {n.priorityClass}
+                      {n.priorityClass.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())}
                     </Badge>
                   </div>
                 ))

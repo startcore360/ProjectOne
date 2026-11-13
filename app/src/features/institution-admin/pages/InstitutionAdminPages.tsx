@@ -167,7 +167,7 @@ export function InstitutionsPage() {
               <Button
                 variant="secondary"
                 onClick={() => setVcModalOpen(true)}
-                title="Configure Vice-Chancellor leave approver [Rule C6, VC_LEAVE_APPROVER_SET]"
+                title="Configure Vice-Chancellor leave approver "
               >
                 Set VC Approver
               </Button>
@@ -372,7 +372,7 @@ export function InstitutionsPage() {
                             <Button
                               onClick={() => handleActivate(institution)}
                               disabled={activatingId === institution.institutionId}
-                              title="Vice Chancellor approval required to activate [WF-16]"
+                              title="Vice Chancellor approval required to activate "
                             >
                               {activatingId === institution.institutionId ? "Activating..." : "Activate"}
                             </Button>
@@ -380,7 +380,7 @@ export function InstitutionsPage() {
                           <Button
                             variant="secondary"
                             onClick={() => setApproverModalItem(institution)}
-                            title="Configure Principal's leave approver [Rule C7, PRINCIPAL_LEAVE_APPROVER_SET]"
+                            title="Configure Principal's leave approver "
                           >
                             Approver
                           </Button>
@@ -388,7 +388,7 @@ export function InstitutionsPage() {
                             <Button
                               variant="secondary"
                               onClick={() => setBlockModalItem(institution)}
-                              title="Ask to block this institution's access [WF-15, RL-01]"
+                              title="Ask to block this institution's access "
                             >
                               Block
                             </Button>
@@ -396,7 +396,7 @@ export function InstitutionsPage() {
                           <Button
                             variant="secondary"
                             onClick={() => setDecideModalItem(institution)}
-                            title="Executive review of institution block [WF-15, INSTITUTION_BLOCK_APPROVE]"
+                            title="Executive review of institution block "
                           >
                             Review Block Decision
                           </Button>
@@ -642,7 +642,7 @@ export function RolesPermissionsPage() {
 
       <Panel
         title="Role catalogue"
-        description="Roles returned by the tenant role catalogue. Standard roles are system-defined; custom roles are tenant-managed [ROLE_CUSTOM_MANAGE]."
+        description="Roles returned by the tenant role catalogue. Standard roles are system-defined; custom roles are tenant-managed."
       >
         {loading && <p className="platform-empty-note" role="status">Loading roles from catalogue...</p>}
         {loadError && !loading && (
@@ -671,10 +671,9 @@ export function RolesPermissionsPage() {
             <thead>
               <tr>
                 <th>Role</th>
-                <th>Code</th>
                 <th>Level</th>
                 <th>Type</th>
-                <th>Sensitivity [MX-04]</th>
+                <th>Sensitivity</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -682,12 +681,7 @@ export function RolesPermissionsPage() {
             <tbody>
               {filtered.map((role) => (
                 <tr key={role.code || role.name}>
-                  <td>
-                    <strong>{role.name}</strong>
-                  </td>
-                  <td>
-                    <code>{role.code}</code>
-                  </td>
+                  <td><strong>{role.name}</strong></td>
                   <td>{role.level}</td>
                   <td>{role.type}</td>
                   <td>

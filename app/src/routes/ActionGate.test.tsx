@@ -20,7 +20,8 @@ describe("ActionGate", () => {
     access.loading = false;
     access.canAny.mockReturnValue(false);
     render(<ActionGate anyOf={["TIMETABLE_VIEW"]}><p>Protected page</p></ActionGate>);
-    expect(screen.getByText("You don't have access to this.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Access unavailable" })).toBeInTheDocument();
+    expect(screen.getByText(/current role does not have permission/i)).toBeInTheDocument();
     expect(screen.queryByText("Protected page")).not.toBeInTheDocument();
   });
 
