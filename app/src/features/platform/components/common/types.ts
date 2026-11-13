@@ -77,7 +77,7 @@ export function readErrorMessage(err: unknown, fallback: string): string {
       }
       const safe = raw
         .replace(/^STEP_IN_REQUIRED:\s*/i, "")
-        .replace(/\s*correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "")
+        .replace(/\s*(?:please contact support quoting\s*)?correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "")
         .replace(/\s*\(?(?:code|error)\s*:\s*[A-Z][A-Z0-9_]{2,}\)?/g, "")
         .trim();
       if (!safe || /^[A-Z][A-Z0-9_]{2,}$/.test(safe) || /org\.springframework|java\./.test(safe)) return fallback;
@@ -85,7 +85,7 @@ export function readErrorMessage(err: unknown, fallback: string): string {
     }
   }
   if (err instanceof Error && err.message && !err.message.startsWith("Request failed with status code")) {
-    const safe = err.message.replace(/\s*correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "").trim();
+    const safe = err.message.replace(/\s*(?:please contact support quoting\s*)?correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "").trim();
     if (safe && !/^[A-Z][A-Z0-9_]{2,}$/.test(safe)) return safe;
   }
   return fallback;
