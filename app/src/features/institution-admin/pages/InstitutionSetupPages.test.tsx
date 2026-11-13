@@ -391,7 +391,7 @@ describe("Institution setup action screens", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Odd Semester 2026")).toBeInTheDocument();
-      expect(screen.getByText("SEMESTER_DATES")).toBeInTheDocument();
+      expect(screen.getByText("Semester dates")).toBeInTheDocument();
     });
   });
 

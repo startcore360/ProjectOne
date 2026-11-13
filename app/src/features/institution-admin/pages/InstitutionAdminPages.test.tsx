@@ -590,7 +590,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     await waitFor(() => {
       expect(roleAssignmentService.retireCustomRole).toHaveBeenCalledWith("tenant-1", "role-1");
       expect(
-        screen.getByText(/retired\. Existing assignments remain historical/i)
+        screen.getByText(/retired\. Existing assignments are retained for historical reference/i)
       ).toBeInTheDocument();
     });
   });
