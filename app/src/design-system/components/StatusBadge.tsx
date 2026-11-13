@@ -7,13 +7,16 @@ export interface StatusBadgeProps {
 }
 
 export function StatusBadge({ value, status, className = "" }: StatusBadgeProps) {
-  const displayVal = value ?? status ?? "";
+  const rawValue = value ?? status ?? "";
+  const displayVal = /^[A-Z0-9_]+$/.test(rawValue)
+    ? rawValue.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : rawValue;
   const tone =
-    displayVal === "ACTIVE" || displayVal === "Active" || displayVal === "Success" || displayVal === "Allowed"
+    rawValue === "ACTIVE" || rawValue === "Active" || rawValue === "Success" || rawValue === "Allowed"
       ? "success"
-      : displayVal === "Trial" || displayVal === "Invited" || displayVal === "PENDING_ACTIVATION"
+      : rawValue === "Trial" || rawValue === "Invited" || rawValue === "PENDING_ACTIVATION"
       ? "warning"
-      : displayVal === "Denied" || displayVal === "Suspended" || displayVal === "Disallowed" || displayVal === "BLOCKED"
+      : rawValue === "Denied" || rawValue === "Suspended" || rawValue === "Disallowed" || rawValue === "BLOCKED"
       ? "danger"
       : "neutral";
 

@@ -100,7 +100,7 @@ export function CreatedCredentialsModal({
 
         {user.twoStepLoginRequired && (
           <div className="platform-modal-note" style={{ fontSize: "0.8rem", color: "#e11d48" }}>
-            Security Invariant [Rule F-12]: Two-step login (MFA) will be enforced upon first sign-in.
+            Two-step login (MFA) will be required at the user's first sign-in.
           </div>
         )}
 

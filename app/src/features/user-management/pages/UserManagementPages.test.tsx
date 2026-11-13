@@ -329,7 +329,7 @@ describe("UserListPage", () => {
         mobile: "+919876543210",
       });
       expect(screen.getByDisplayValue("test-only-password")).toBeInTheDocument();
-      expect(screen.getByText(/Security Invariant \[Rule F-12\]/i)).toBeInTheDocument();
+      expect(screen.getByText(/Two-step login \(MFA\) is required at first sign-in/i)).toBeInTheDocument();
     });
 
     // Close modal
@@ -482,7 +482,7 @@ describe("UserDetailPage", () => {
         }),
         "inst-1"
       );
-      expect(screen.getByText(/Guardian linked successfully \[GUARDIAN_LINK/i)).toBeInTheDocument();
+      expect(screen.getByText("Guardian linked successfully.")).toBeInTheDocument();
     });
   });
 
@@ -658,8 +658,8 @@ describe("UserDetailPage", () => {
           reason: "Medical leave approved by Board",
         }
       );
-      expect(screen.getByText(/Student status successfully changed to LEAVE_OF_ABSENCE/i)).toBeInTheDocument();
-      expect(screen.getByText("LEAVE_OF_ABSENCE")).toBeInTheDocument();
+      expect(screen.getByText(/Student status successfully changed to Leave of absence/i)).toBeInTheDocument();
+      expect(screen.getByText("Leave of absence")).toBeInTheDocument();
     });
   });
 });

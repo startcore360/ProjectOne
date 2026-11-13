@@ -3,6 +3,19 @@ import { Button, Modal, Notice, Panel, StatusBadge } from "../../../../design-sy
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { academicService } from "../../../institution-admin/api/academicService";
 
+function formatStudentStatus(value: string): string {
+  const labels: Record<string, string> = {
+    ACTIVE: "Active",
+    LEAVE_OF_ABSENCE: "Leave of absence",
+    SUSPENDED: "Suspended",
+    EXPELLED: "Expelled",
+    WITHDRAWN: "Withdrawn",
+    TRANSFERRED: "Transferred",
+    GRADUATED: "Graduated",
+  };
+  return labels[value] ?? value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export interface StudentStatusPanelProps {
   tenantId?: string;
   studentId: string;
@@ -31,7 +44,7 @@ export function StudentStatusPanel({
         reason: reason.trim(),
       });
       setCurrentStatus(res.status);
-      setFeedback({ tone: "success", message: `Student status successfully changed to ${res.status}.` });
+      setFeedback({ tone: "success", message: `Student status successfully changed to ${formatStudentStatus(res.status)}.` });
       setShowModal(false);
       setReason("");
     } catch (err: unknown) {
@@ -44,7 +57,7 @@ export function StudentStatusPanel({
   return (
     <Panel
       title="Student Academic Status"
-      description="Manage student status lifecycle (Leave of Absence, Suspension, Expulsion, Transfer, Graduation) with mandatory statutory reasons [Action #41 / Rule AT-08]."
+      description="Manage a student's academic standing, including leave, suspension, transfer and graduation. A reason is required for each change."
       action={
         <Button onClick={() => setShowModal(true)} disabled={!currentTenantId}>
           Change Student Status
@@ -67,7 +80,7 @@ export function StudentStatusPanel({
       <Modal
         isOpen={showModal && Boolean(currentTenantId)}
         onClose={() => setShowModal(false)}
-        kicker="STUDENT_STATUS_CHANGE • Action #41 / Rule AT-08"
+        kicker="STUDENT ACADEMIC STATUS"
         title="Change Student Academic Status"
         size="sm"
       >
@@ -86,13 +99,13 @@ export function StudentStatusPanel({
                 borderRadius: "var(--radius-md, 4px)",
               }}
             >
-              <option value="ACTIVE">ACTIVE (Normal standing)</option>
-              <option value="LEAVE_OF_ABSENCE">LEAVE_OF_ABSENCE (Authorized break)</option>
-              <option value="SUSPENDED">SUSPENDED (Disciplinary)</option>
-              <option value="EXPELLED">EXPELLED (Permanent statutory bar)</option>
-              <option value="WITHDRAWN">WITHDRAWN (Voluntary discontinuation)</option>
-              <option value="TRANSFERRED">TRANSFERRED (To other institution)</option>
-              <option value="GRADUATED">GRADUATED (Program completed)</option>
+              <option value="ACTIVE">Active (normal standing)</option>
+              <option value="LEAVE_OF_ABSENCE">Leave of absence (authorized break)</option>
+              <option value="SUSPENDED">Suspended (disciplinary)</option>
+              <option value="EXPELLED">Expelled (permanent exclusion)</option>
+              <option value="WITHDRAWN">Withdrawn (voluntary discontinuation)</option>
+              <option value="TRANSFERRED">Transferred (to another institution)</option>
+              <option value="GRADUATED">Graduated (programme completed)</option>
             </select>
           </div>
 

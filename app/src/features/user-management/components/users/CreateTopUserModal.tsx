@@ -53,7 +53,7 @@ export function CreateTopUserModal({
       kicker="TENANT_TOP_USERS_CREATE"
       title="Create governance / top user"
       titleId="governance-user-title"
-      description="Provision executive leadership and statutory governance accounts [Action #268]."
+      description="Create executive leadership and governance accounts for this tenant."
       size="md"
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
@@ -70,10 +70,10 @@ export function CreateTopUserModal({
             value={roleCode}
             onChange={(e) => setRoleCode(e.target.value as TopUserRoleCode)}
             options={[
-              { value: "VICE_CHANCELLOR", label: "Vice Chancellor (Academic & Executive Head) [Staff]" },
-              { value: "GOVERNING_BODY_APPROVER", label: "Governing Body Approver (Statutory Leave Gate) [Governance]" },
-              { value: "MANAGEMENT", label: "Management / Trustee [Governance]" },
-              { value: "DATA_PROTECTION_CONTACT", label: "Data Protection Officer [Staff]" },
+              { value: "VICE_CHANCELLOR", label: "Vice Chancellor (academic and executive head)" },
+              { value: "GOVERNING_BODY_APPROVER", label: "Governing Body Approver" },
+              { value: "MANAGEMENT", label: "Management or trustee" },
+              { value: "DATA_PROTECTION_CONTACT", label: "Data Protection Officer" },
             ]}
           />
         </div>
@@ -123,9 +123,9 @@ export function CreateTopUserModal({
         >
           <strong>Governance Policies:</strong>
           <ul style={{ margin: "0.25rem 0 0 1.25rem", padding: 0 }}>
-            <li><strong>[Rule F-12]:</strong> Two-step login (MFA) will be enforced upon first sign-in.</li>
-            <li><strong>[Addendum Rule 11]:</strong> Self-assignment prohibited. Cannot create or assign to own identity.</li>
-            <li><strong>[Decision C9]:</strong> Management & Governing Body Approver hold Governance type; VC & DPO hold Staff type.</li>
+            <li>Two-step login (MFA) is required at first sign-in.</li>
+            <li>You cannot create or assign an account to your own identity.</li>
+            <li>Management and Governing Body Approver accounts are governance roles; Vice Chancellor and Data Protection Officer accounts are staff roles.</li>
           </ul>
         </div>
 
