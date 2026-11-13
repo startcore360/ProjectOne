@@ -32,7 +32,7 @@ function cleanUserMessage(value: string | undefined): string | null {
     return "Your current role does not have permission to perform this action. Ask your administrator to review your access.";
   }
   const cleaned = value
-    .replace(/\s*correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "")
+    .replace(/\s*(?:please contact support quoting\s*)?correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "")
     .replace(/\s*\(?(?:code|error)\s*:\s*[A-Z][A-Z0-9_]{2,}\)?/g, "")
     .trim();
   return isInternalErrorText(cleaned) ? null : cleaned;
