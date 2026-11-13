@@ -22,7 +22,7 @@ const EVENT_OPTIONS = [
   { value: "OTHER", label: "Other" },
 ];
 function humanize(value: string) {
-  return value.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+  return value.replaceAll("_", " ").toLowerCase().split(" ").map((word) => word ? word[0].toUpperCase() + word.slice(1) : "").join(" ");
 }
 const today = () => new Date().toISOString().slice(0, 10);
 
