@@ -358,6 +358,7 @@ export default function StaffRecordsPage() {
 
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Add staff member" kicker="STAFF RECORDS" description="Create a staff profile, then add its institution or department assignment." size="lg">
         <form onSubmit={createStaff} className="platform-form">
+          {createError && <Notice tone="danger">{createError}</Notice>}
           <div className="platform-form-grid">
             <TextField id="new-staff-full-name" label="Full name" required value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} />
             <TextField id="new-staff-code" label="Staff code (optional)" value={draft.staffCode ?? ""} onChange={(e) => setDraft({ ...draft, staffCode: e.target.value })} />
@@ -369,7 +370,6 @@ export default function StaffRecordsPage() {
             <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\\D/g, "") })} />
             <DateField id="new-staff-joined-on" label="Joined on" value={draft.joinedOn ?? ""} onChange={(e) => setDraft({ ...draft, joinedOn: e.target.value })} />
           </div>
-          {createError && <Notice tone="danger">{createError}</Notice>}
           <footer className="platform-modal__footer">
             <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
             <Button type="submit" busy={creating}>Create staff account and profile</Button>
