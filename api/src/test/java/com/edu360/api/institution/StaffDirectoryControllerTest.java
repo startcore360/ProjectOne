@@ -38,7 +38,7 @@ class StaffDirectoryControllerTest {
     @BeforeEach
     void setUp() {
         service = mock(StaffDirectoryService.class);
-        controller = new StaffDirectoryController(service);
+        controller = new StaffDirectoryController(service, mock(StaffOnboardingService.class));
         when(authentication.getPrincipal()).thenReturn(tenantPrincipal);
     }
 
