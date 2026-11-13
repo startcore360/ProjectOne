@@ -73,9 +73,14 @@ public class StaffDirectoryService {
         UUID departmentId = active.getScopeType() == ScopeType.DEPARTMENT ? active.getDepartmentId() : null;
         RbacScope scope = activeScope(active.getScopeType(), institutionId, departmentId);
         permissions.authorize(actor, "STAFF_RECORD_VIEW", scope, RbacTarget.NONE);
-        List<StaffProfileResponse> items = staffProfiles.searchTenantStaff(actor.tenantId(),
-                        institutionId, departmentId, normalizeQuery(query), limit)
-                .stream().map(StaffProfileResponse::from).toList();
+        List<StaffProfile> profiles = staffProfiles.searchTenantStaff(actor.tenantId(),
+                institutionId, departmentId, normalizeQuery(query), limit);
+        boolean includeSensitive = permissions.can(actor, "STAFF_RECORD_MANAGE", scope, RbacTarget.NONE).allowed();
+        if (includeSensitive) {
+            profiles.forEach(profile -> recordSensitiveView(actor, profile, institutionId));
+        }
+        List<StaffProfileResponse> items = profiles.stream()
+                .map(profile -> StaffProfileResponse.from(profile, includeSensitive)).toList();
         return new StaffListResponse(items, new StaffListResponse.PageInfo(limit, null, false, null));
     }
 
@@ -120,7 +125,14 @@ public class StaffDirectoryService {
     @Transactional(readOnly = true)
     public StaffProfileResponse get(RbacPrincipal actor, UUID staffProfileId) {
         StaffProfile profile = findScopedProfile(actor, staffProfileId, "STAFF_RECORD_VIEW");
-        return StaffProfileResponse.from(profile);
+        var active = permissions.activeAssignment(actor)
+                .orElseThrow(() -> new com.edu360.api.exception.UnauthorizedException("An active staff role is required."));
+        UUID institutionId = active.getScopeType() == ScopeType.TENANT ? null : active.getInstitutionId();
+        RbacScope scope = activeScope(active.getScopeType(), institutionId,
+                active.getScopeType() == ScopeType.DEPARTMENT ? active.getDepartmentId() : null);
+        boolean includeSensitive = permissions.can(actor, "STAFF_RECORD_MANAGE", scope, RbacTarget.NONE).allowed();
+        if (includeSensitive) recordSensitiveView(actor, profile, institutionId);
+        return StaffProfileResponse.from(profile, includeSensitive);
     }
 
     @Transactional
@@ -283,6 +295,12 @@ public class StaffDirectoryService {
         return serviceRecords.findByIdTenantIdAndStaffProfileIdOrderByEffectiveOnDesc(
                         actor.tenantId(), staffProfileId).stream().limit(limit)
                 .map(StaffServiceRecordResponse::from).toList();
+    }
+
+    private void recordSensitiveView(RbacPrincipal actor, StaffProfile profile, UUID institutionId) {
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
+                "STAFF_PROFILE", profile.getStaffProfileId(), institutionId, null,
+                Map.of("view", "sensitive_staff_fields"), 1, "P", "SUCCESS"));
     }
 
     private StaffProfile findScopedProfile(RbacPrincipal actor, UUID staffProfileId, String action) {
