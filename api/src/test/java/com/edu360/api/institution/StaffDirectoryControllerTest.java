@@ -45,6 +45,24 @@ class StaffDirectoryControllerTest {
     }
 
 
+
+    @Test
+    void teacherPickerUsesTheAssignmentActionAsItsAuthorizationPurpose() {
+        UUID institutionId = UUID.randomUUID();
+        UUID departmentId = UUID.randomUUID();
+        TeacherLookupResponse response = new TeacherLookupResponse(java.util.List.of(),
+                new StaffListResponse.PageInfo(50, null, false, null));
+        when(service.teacherLookup(new RbacPrincipal(tenantId, userId), institutionId, departmentId,
+                "Asha", 50, "MENTOR_ASSIGN")).thenReturn(response);
+
+        var result = controller.list(tenantId, "Asha", "TEACHING", institutionId, departmentId,
+                "MENTOR_ASSIGN", 50, authentication);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(service).teacherLookup(new RbacPrincipal(tenantId, userId), institutionId, departmentId,
+                "Asha", 50, "MENTOR_ASSIGN");
+    }
+
     @Test
     void createUsesOnboardingWorkflowAndReturnsStaffVersionEtag() {
         StaffProfileRequest request = new StaffProfileRequest(null, "Taylor Reed", null, "taylor@school.edu", null,
