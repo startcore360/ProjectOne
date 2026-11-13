@@ -163,8 +163,8 @@ describe("Sprint 1 platform screens", () => {
     });
 
     renderWithStore(<TenantsPage />);
-    await screen.findByRole("option", { name: /Standard trial/ });
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
+    await screen.findByRole("option", { name: /Standard trial/ });
 
     fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Doon World Academy" } });
     fireEvent.change(screen.getByLabelText(/Assigned subdomain/i), { target: { value: "doon-world" } });
@@ -200,8 +200,8 @@ describe("Sprint 1 platform screens", () => {
     });
 
     renderWithStore(<TenantsPage />);
-    await screen.findByRole("option", { name: /Standard trial/ });
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
+    await screen.findByRole("option", { name: /Standard trial/ });
     fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Doon World Academy" } });
     fireEvent.change(screen.getByLabelText(/Assigned subdomain/i), { target: { value: "doon-world" } });
     fireEvent.change(screen.getByLabelText(/Primary administrator full name/i), { target: { value: "Anita Roy" } });
