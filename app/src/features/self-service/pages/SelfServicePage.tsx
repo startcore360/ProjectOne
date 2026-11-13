@@ -60,7 +60,8 @@ export default function SelfServicePage() {
   }, [tenantId]);
 
   useEffect(() => {
-    loadData();
+    const timeoutId = window.setTimeout(() => { void loadData(); }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [loadData]);
 
   const tabItems = [
