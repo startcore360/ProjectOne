@@ -119,7 +119,11 @@ class StudentEnrollmentServiceTest {
 
     @Test
     void rejectsAcademicSessionWithoutDateBounds() {
-        arrangeValidRecords();
+        when(students.findById(studentId)).thenReturn(Optional.of(
+                new StudentProfile(studentId, tenantId, institutionId, UUID.randomUUID(), "SCH-001", "ACTIVE")));
+        when(sections.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.of(
+                Section.builder().sectionId(sectionId).tenantId(tenantId).institutionId(institutionId)
+                        .academicSessionId(sessionId).sectionName("A").status("ACTIVE").build()));
         when(sessions.findByTenantIdAndAcademicSessionId(tenantId, sessionId)).thenReturn(Optional.of(
                 AcademicSession.builder().academicSessionId(sessionId).tenantId(tenantId)
                         .institutionId(institutionId).sessionLabel("2026-27")
