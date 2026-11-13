@@ -671,10 +671,9 @@ export function RolesPermissionsPage() {
             <thead>
               <tr>
                 <th>Role</th>
-                <th>Code</th>
                 <th>Level</th>
                 <th>Type</th>
-                <th>Sensitivity [MX-04]</th>
+                <th>Sensitivity</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -682,12 +681,7 @@ export function RolesPermissionsPage() {
             <tbody>
               {filtered.map((role) => (
                 <tr key={role.code || role.name}>
-                  <td>
-                    <strong>{role.name}</strong>
-                  </td>
-                  <td>
-                    <code>{role.code}</code>
-                  </td>
+                  <td><strong>{role.name}</strong></td>
                   <td>{role.level}</td>
                   <td>{role.type}</td>
                   <td>

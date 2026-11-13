@@ -1750,3 +1750,6 @@ progress.progress--thin { height: 4px; }
   .platform-modal { width:calc(100vw - 24px); max-height:92dvh; }
   .platform-modal__footer > * { flex:1 1 auto; }
 }
+
+.eds-access-denied { display:flex; min-height:calc(100dvh - 190px); align-items:center; justify-content:center; padding:var(--space-6); }
+.eds-access-denied > .eds-empty-state { width:min(100%,760px); }

@@ -15,10 +15,8 @@ export function PlatformPageGate({ anyOf }: { anyOf: string[] }) {
   const { canAny } = usePlatformAccess();
   if (canAny(anyOf)) return <Outlet />;
   return (
-    <EmptyState
-      icon="shield"
-      title="You don't have access to this"
-      description="Your platform role doesn't include this page. Ask your Product Owner if you need it."
-    />
+    <div className="eds-access-denied">
+      <EmptyState variant="page" icon="shield" title="Access unavailable" description="Your platform role does not include this page. Contact your platform administrator if you need access." />
+    </div>
   );
 }
