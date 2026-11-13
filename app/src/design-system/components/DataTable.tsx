@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, isValidElement, type ReactNode } from "react";
 
 export interface DataTableProps {
   headers: string[];
@@ -8,6 +8,7 @@ export interface DataTableProps {
   className?: string;
   tableClassName?: string;
   ariaLabel?: string;
+  mobileCards?: boolean;
 }
 
 export function DataTable({
@@ -18,36 +19,60 @@ export function DataTable({
   className = "",
   tableClassName = "",
   ariaLabel,
+  mobileCards = true,
 }: DataTableProps) {
+  const rows = Children.toArray(children).filter(isValidElement);
+  const cardRows = rows.filter((row) => row.type === "tr" && !row.props?.["data-no-mobile-card"]);
+
   return (
-    <div
-      className={`platform-table-wrap ${className}`.trim()}
-      role="region"
-      aria-label={ariaLabel ?? `Scrollable data table: ${headers.join(", ")}`}
-      tabIndex={0}
-    >
-      <table className={`platform-table ${tableClassName}`.trim()}>
-        <thead>
-          <tr>
-            {headers.map((h) => (
-              <th key={h} scope="col">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {empty ? (
+    <div className={`platform-table-wrap ${className}`.trim()}>
+      <div
+        className="platform-table-scroll"
+        role="region"
+        aria-label={ariaLabel ?? `Scrollable data table: ${headers.join(", ")}`}
+        tabIndex={0}
+      >
+        <table className={`platform-table ${tableClassName}`.trim()}>
+          <thead>
             <tr>
-              <td colSpan={headers.length} className="platform-empty-cell">
-                {emptyMessage}
-              </td>
+              {headers.map((h, index) => (
+                <th key={`${h}-${index}`} scope="col">{h}</th>
+              ))}
             </tr>
-          ) : (
-            children
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {empty ? (
+              <tr>
+                <td colSpan={headers.length} className="platform-empty-cell">{emptyMessage}</td>
+              </tr>
+            ) : children}
+          </tbody>
+        </table>
+      </div>
+      {mobileCards && !empty && cardRows.length > 0 && (
+        <div className="platform-table-cards" aria-label={ariaLabel ?? "Records"}>
+          {cardRows.map((row, rowIndex) => {
+            const cells = Children.toArray(row.props.children).filter(isValidElement);
+            if (cells.some((cell) => Number(cell.props?.colSpan ?? 1) > 1 || Number(cell.props?.rowSpan ?? 1) > 1)) {
+              return null;
+            }
+            return (
+              <article className="platform-table-card" key={row.key ?? rowIndex}>
+                {cells.map((cell, cellIndex) => {
+                  const header = headers[cellIndex] ?? `Field ${cellIndex + 1}`;
+                  const isAction = /^(actions?|action)$/i.test(header.trim());
+                  return (
+                    <div className={isAction ? "platform-table-card__actions" : "platform-table-card__field"} key={cell.key ?? cellIndex}>
+                      {!isAction && <span className="platform-table-card__label">{header}</span>}
+                      <div className="platform-table-card__value">{cell.props.children}</div>
+                    </div>
+                  );
+                })}
+              </article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
