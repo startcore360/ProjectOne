@@ -11,16 +11,12 @@ export interface StudentDashboardProps {
 
 export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
   const [notices, setNotices] = useState<NoticeItem[]>([]);
-  const [noticesLoading, setNoticesLoading] = useState(true);
-  const [noticesError, setNoticesError] = useState(false);
+  const [noticesLoading, setNoticesLoading] = useState(Boolean(tenantId));
+  const [noticesError, setNoticesError] = useState(!tenantId);
 
   useEffect(() => {
     let active = true;
-    if (!tenantId) {
-      setNoticesLoading(false);
-      setNoticesError(true);
-      return () => { active = false; };
-    }
+    if (!tenantId) return () => { active = false; };
     selfServiceApi.getNotices(tenantId)
       .then((items) => { if (active) setNotices(Array.isArray(items) ? items.slice(0, 3) : []); })
       .catch(() => { if (active) setNoticesError(true); })
