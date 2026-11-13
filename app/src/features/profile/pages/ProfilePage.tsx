@@ -300,8 +300,7 @@ export default function ProfilePage() {
               required
               value={displayName}
               onChange={(e) => { setDisplayName(e.target.value); clearFeedback(); }}
-              aria-invalid={!!fieldErrors.displayName}
-              aria-describedby={fieldErrors.displayName ? "profile-display-name-error" : undefined}
+              error={fieldErrors.displayName}
             />
 
             {!isPlatform && (
@@ -312,8 +311,7 @@ export default function ProfilePage() {
                   placeholder="+15551234567"
                   value={mobile}
                   onChange={(e) => { setMobile(e.target.value); clearFeedback(); }}
-                  aria-invalid={!!fieldErrors.mobile}
-                  aria-describedby={fieldErrors.mobile ? "profile-mobile-error" : undefined}
+                  error={fieldErrors.mobile}
                 />
               </>
             )}
