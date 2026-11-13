@@ -15,7 +15,7 @@ vi.mock("../api/selfServiceApi", () => ({
   },
 }));
 
-function renderWithStore(ui: React.ReactElement) {
+function renderWithStore(ui: React.ReactElement, userType: "STAFF" | "STUDENT" | "GUARDIAN" = "STAFF") {
   const store = configureStore({
     reducer: { auth: authReducer },
   });
@@ -26,7 +26,7 @@ function renderWithStore(ui: React.ReactElement) {
       roleCode: "PROFESSOR",
       roleName: "Professor",
       tenantId: "tenant-1",
-      userType: "STAFF",
+      userType,
       platformRole: null,
       photoUrl: null,
       mustChangePassword: false,
@@ -85,6 +85,19 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       },
     ]);
   });
+
+
+  it.each(["STUDENT", "GUARDIAN"] as const)(
+    "loads self-service for the %s tenant persona",
+    async (userType) => {
+      renderWithStore(<SelfServicePage />, userType);
+      await waitFor(() => {
+        expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
+      });
+      expect(selfServiceApi.getNotifications).toHaveBeenCalled();
+      expect(selfServiceApi.getNotices).toHaveBeenCalled();
+    }
+  );
 
   it("loads and displays published campus notices on initial view", async () => {
     renderWithStore(<SelfServicePage />);
