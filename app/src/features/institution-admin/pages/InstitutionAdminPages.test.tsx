@@ -372,7 +372,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     renderWithStore(<RolesPermissionsPage />);
     await waitFor(() => expect(screen.getByText("No roles were returned by the tenant role catalogue.")).toBeInTheDocument());
     expect(screen.queryByText("University Admin")).not.toBeInTheDocument();
-    expect(screen.getByText(/Role assignment & delegation policy \(Rule MX-04\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Role assignment and delegation policy/i)).toBeInTheDocument();
   });
 
   it("displays Go-Live readiness warning banner when missing approver blockers exist (Rules C6 & C7)", async () => {
@@ -387,7 +387,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     renderWithStore(<InstitutionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Go-Live Readiness Warning \[Rule C7 \/ C6\]:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Go-live readiness warning:/i)).toBeInTheDocument();
       expect(screen.getByText(/Vice-Chancellor leave approver not set/i)).toBeInTheDocument();
       expect(screen.getByText(/Principal leave approver not set for institution ID: inst-2/i)).toBeInTheDocument();
     });
