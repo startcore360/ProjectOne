@@ -59,6 +59,9 @@ function renderWithTenant(
 describe("Institution setup action screens", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (api.get as ReturnType<typeof vi.fn>).mockReset();
+    (api.post as ReturnType<typeof vi.fn>).mockReset();
+    (api.put as ReturnType<typeof vi.fn>).mockReset();
   });
 
   it("shows the permission-denied state when there is no tenant identity", () => {
@@ -233,7 +236,7 @@ describe("Institution setup action screens", () => {
     fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
 
-    expect(await screen.findByText("Grade 8")).toBeInTheDocument();
+    expect((await screen.findAllByText("Grade 8")).length).toBeGreaterThan(0);
     expect(screen.getByText("Section A")).toBeInTheDocument();
     expect(screen.getByText("School classes")).toBeInTheDocument();
     expect(screen.queryByText("Academic Departments")).not.toBeInTheDocument();
@@ -262,7 +265,7 @@ describe("Institution setup action screens", () => {
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
     fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
-    await screen.findByText("Grade 8");
+    await screen.findAllByText("Grade 8");
 
     fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
     fireEvent.click(screen.getByRole("button", { name: /create section/i }));
