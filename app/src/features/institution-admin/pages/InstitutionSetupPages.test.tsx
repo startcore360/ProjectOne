@@ -410,7 +410,7 @@ describe("Institution setup action screens", () => {
 
   it("creates time-bounded delegation (Story #20: APPROVAL_DELEGATE / Rule 11)", async () => {
     const delegateId = "44444444-4444-4444-4444-444444444444";
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: {
         delegationId: "del-1",
@@ -454,7 +454,7 @@ describe("Institution setup action screens", () => {
     const req1 = "55555555-5555-5555-5555-555555555555";
     const req2 = "66666666-6666-6666-6666-666666666666";
 
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: {
         batchId: "batch-1",
