@@ -71,6 +71,9 @@ public class InstitutionService {
     @Autowired(required = false)
     private InstitutionIdFormatService institutionIdFormatService;
 
+    @Autowired(required = false)
+    private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
+
     public InstitutionService(
             InstitutionRepository institutionRepository,
             LeaveApproverSettingRepository leaveApproverSettingRepository,
@@ -389,6 +392,9 @@ public class InstitutionService {
                 .updatedAt(now).updatedBy(principal.userAccountId())
                 .rowVersion(1)
                 .build());
+        if (approvalCountPublisher != null) {
+            approvalCountPublisher.publishForRole(tenantId, institutionId, "VICE_CHANCELLOR");
+        }
     }
 
     private void enforcePlanLimits(UUID tenantId) {
