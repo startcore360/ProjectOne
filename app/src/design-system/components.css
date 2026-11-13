@@ -1212,7 +1212,7 @@ a {
 .platform-search span:first-child { font-size: 20px; }
 .platform-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--color-text); font: inherit; }
 .platform-select-label { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-body-sm); }
-.platform-select-label select, .platform-form-field select { min-height: 42px; padding: 0 34px 0 12px; border: 1px solid var(--color-border-control); border-radius: var(--radius-md); background: var(--color-bg-surface); color: var(--color-text); font: inherit; }
+.platform-select-label select, .platform-form-field select { min-height: var(--control-height); padding: 0 34px 0 12px; border: 1px solid var(--color-border-control); border-radius: var(--radius-md); background: var(--color-bg-surface); color: var(--color-text); font: inherit; }
 .platform-table-wrap { width: 100%; overflow-x: auto; border-top: 1px solid var(--color-border-divider); }
 .platform-table-wrap:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .platform-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--fs-body-sm); }
