@@ -89,7 +89,7 @@ class StaffDirectoryControllerTest {
 
     @Test
     void missingTenantAuthenticationIsRejected() {
-        assertThatThrownBy(() -> controller.list(tenantId, null, 50, null))
+        assertThatThrownBy(() -> controller.list(tenantId, null, null, null, null, 50, null))
                 .isInstanceOf(UnauthorizedException.class);
         verify(service, never()).list(any(), any(), anyInt());
     }
