@@ -97,6 +97,37 @@ class StudentEnrollmentServiceTest {
         verify(enrollments, never()).save(any());
     }
 
+
+    @Test
+    void rejectsInactiveAcademicSession() {
+        arrangeValidRecords();
+        when(sessions.findByTenantIdAndAcademicSessionId(tenantId, sessionId)).thenReturn(Optional.of(
+                AcademicSession.builder().academicSessionId(sessionId).tenantId(tenantId)
+                        .institutionId(institutionId).sessionLabel("2026-27")
+                        .startDate(sessionStart).endDate(sessionEnd).academicYear(2026).status("INACTIVE").build()));
+
+        assertThatThrownBy(() -> service.enrolExistingStudent(actor, studentId, institutionId,
+                sectionId, sessionId, null, LocalDate.of(2026, 6, 15)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("active academic session");
+        verify(enrollments, never()).save(any());
+    }
+
+    @Test
+    void rejectsAcademicSessionWithoutDateBounds() {
+        arrangeValidRecords();
+        when(sessions.findByTenantIdAndAcademicSessionId(tenantId, sessionId)).thenReturn(Optional.of(
+                AcademicSession.builder().academicSessionId(sessionId).tenantId(tenantId)
+                        .institutionId(institutionId).sessionLabel("2026-27")
+                        .academicYear(2026).status("ACTIVE").build()));
+
+        assertThatThrownBy(() -> service.enrolExistingStudent(actor, studentId, institutionId,
+                sectionId, sessionId, null, LocalDate.of(2026, 6, 15)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("start and end dates");
+        verify(enrollments, never()).save(any());
+    }
+
     @Test
     void rejectsStudentFromAnotherTenant() {
         when(students.findById(studentId)).thenReturn(Optional.of(
