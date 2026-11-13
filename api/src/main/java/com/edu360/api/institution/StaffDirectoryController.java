@@ -32,7 +32,7 @@ public class StaffDirectoryController {
     }
 
     @GetMapping
-    public ResponseEntity<StaffListResponse> list(@PathVariable UUID tenantId,
+    public ResponseEntity<?> list(@PathVariable UUID tenantId,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) UUID institutionId,
