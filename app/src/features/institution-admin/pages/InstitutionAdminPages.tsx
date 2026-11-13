@@ -39,9 +39,18 @@ import {
   RolldownOverrideModal,
 } from "../components";
 
+function TenantContextNotice() {
+  return (
+    <div className="eds-error-state" role="alert">
+      <h3 className="eds-error-state__title">Institution context unavailable</h3>
+      <p className="eds-error-state__message">This page requires a signed-in account linked to a tenant. No tenant-scoped request has been sent.</p>
+    </div>
+  );
+}
+
 export function InstitutionsPage() {
   const user = useAppSelector((state) => state.auth.user);
-  const tenantId = user?.tenantId || "00000000-0000-0000-0000-000000000001";
+  const tenantId = user?.tenantId ?? "";
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +83,7 @@ export function InstitutionsPage() {
   const [vcModalOpen, setVcModalOpen] = useState(false);
 
   const fetchInstitutions = async () => {
+    if (!tenantId) return;
     setLoading(true);
     setError(null);
     try {
@@ -93,10 +103,11 @@ export function InstitutionsPage() {
   };
 
   useEffect(() => {
-    fetchInstitutions();
+    if (tenantId) void fetchInstitutions();
   }, [tenantId]);
 
   const handleActivate = async (item: InstitutionItem) => {
+    if (!tenantId) return;
     setActivatingId(item.institutionId);
     setFeedback(null);
     try {
@@ -139,6 +150,8 @@ export function InstitutionsPage() {
       return matchesQuery && matchesStatus;
     });
   }, [institutions, query, statusFilter]);
+
+  if (!tenantId) return <TenantContextNotice />;
 
   return (
     <div className="platform-page">
@@ -537,7 +550,7 @@ const roleRows = [
 ];
 
 export function RolesPermissionsPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [query, setQuery] = useState("");
   const [roles, setRoles] = useState<RoleDefinitionItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -550,21 +563,22 @@ export function RolesPermissionsPage() {
   const [retireModalItem, setRetireModalItem] = useState<RoleDefinitionItem | null>(null);
 
   const fetchRoles = async () => {
+    if (!tenantId) return;
     setLoading(true);
     try {
       const data = await roleAssignmentService.listRoles(tenantId);
       if (data && data.length > 0) {
         setRoles(data);
       }
-    } catch {
-      // Keep existing roles
+    } catch (err) {
+      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void fetchRoles();
+    if (tenantId) void fetchRoles();
   }, [tenantId]);
 
   const displayRows = useMemo(() => {
@@ -599,6 +613,8 @@ export function RolesPermissionsPage() {
       ),
     [displayRows, query]
   );
+
+  if (!tenantId) return <TenantContextNotice />;
 
   return (
     <div className="platform-page">
@@ -766,7 +782,7 @@ export function RolesPermissionsPage() {
 }
 
 export function MissingRolesPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
 
   const [entries, setEntries] = useState<RolldownMapEntry[]>([]);
   const [overrides, setOverrides] = useState<RolldownOverride[]>([]);
@@ -778,6 +794,7 @@ export function MissingRolesPage() {
   const [overrideTarget, setOverrideTarget] = useState<{ missingRoleCode: string; permissionKind: string } | null>(null);
 
   const fetchRolldown = async () => {
+    if (!tenantId) return;
     setLoading(true);
     try {
       const [mapData, overrideData] = await Promise.all([
@@ -794,10 +811,11 @@ export function MissingRolesPage() {
   };
 
   useEffect(() => {
-    void fetchRolldown();
+    if (tenantId) void fetchRolldown();
   }, [tenantId]);
 
   const handleRevokeOverride = async (overrideId: string) => {
+    if (!tenantId) return;
     try {
       await rolldownService.revokeOverride(tenantId, overrideId);
       setFeedback({ tone: "success", message: "Rolldown override revoked. Reverted to default roll-down order." });
@@ -806,6 +824,8 @@ export function MissingRolesPage() {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     }
   };
+
+  if (!tenantId) return <TenantContextNotice />;
 
   return (
     <div className="platform-page">

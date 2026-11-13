@@ -1044,7 +1044,7 @@ export function AcademicStructurePage() {
           setInstitutions(res.items);
         }
       })
-      .catch(() => {});
+      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }));
   }, [tenantId]);
 
   if (!tenantId) return <NoTenantNotice />;
@@ -1346,7 +1346,7 @@ export function AcademicStructurePage() {
 // STORY #43 & #44: TERM_LOCK & TERM_UNLOCK (Academic Term Locking)
 // ============================================================================
 export function TermLockPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [institutionId, setInstitutionId] = useState("");
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [sessionId, setSessionId] = useState("");
@@ -1375,17 +1375,18 @@ export function TermLockPage() {
   const [unlocking, setUnlocking] = useState(false);
 
   const fetchLocks = (instId: string) => {
-    if (!isValidUuid(instId)) return;
+    if (!tenantId || !isValidUuid(instId)) return;
     setLoading(true);
     termLockService
       .listTermLocks(tenantId, instId.trim())
       .then((data) => setLocks(data || []))
-      .catch(() => setLocks([]))
+      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
       .finally(() => setLoading(false));
   };
 
   const handleLockSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!tenantId) return;
     // Client-side UUID check — show inline errors directly on the fields
     if (!isValidUuid(institutionId)) {
       clearLockFieldError("institutionId"); // reset first to force re-render
@@ -1419,6 +1420,8 @@ export function TermLockPage() {
       setLocking(false);
     }
   };
+
+  if (!tenantId) return <NoTenantNotice />;
 
   return (
     <div className="platform-page">
@@ -1568,7 +1571,7 @@ export function TermLockPage() {
         isOpen={!!unlockModalItem}
         onClose={() => setUnlockModalItem(null)}
         onSubmit={async (reason, hours) => {
-          if (!unlockModalItem) return;
+          if (!tenantId || !unlockModalItem) return;
           setUnlocking(true);
           try {
             const res = await termLockService.unlockTerm(tenantId, unlockModalItem.institutionId, unlockModalItem.termLockId, {
@@ -1597,7 +1600,7 @@ export function TermLockPage() {
 // STORIES #20 & #21: APPROVAL_DELEGATE & APPROVAL_BULK
 // ============================================================================
 export function DelegationsApprovalsPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [delegations, setDelegations] = useState<DelegationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
@@ -1623,24 +1626,27 @@ export function DelegationsApprovalsPage() {
   const [decidingId, setDecidingId] = useState<string | null>(null);
 
   const fetchDelegations = () => {
+    if (!tenantId) return;
     setLoading(true);
     approvalDelegationService
       .listDelegations(tenantId)
       .then((data) => setDelegations(data || []))
-      .catch(() => setDelegations([]))
+      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
       .finally(() => setLoading(false));
   };
 
   const fetchInbox = () => {
+    if (!tenantId) return;
     setInboxLoading(true);
     approvalDelegationService
       .listInbox(tenantId)
       .then((items) => setInboxItems(items || []))
-      .catch(() => setInboxItems([]))
+      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
       .finally(() => setInboxLoading(false));
   };
 
   useEffect(() => {
+    if (!tenantId) return;
     fetchDelegations();
     fetchInbox();
   }, [tenantId]);
@@ -1763,6 +1769,8 @@ export function DelegationsApprovalsPage() {
       setBulkSubmitting(false);
     }
   };
+
+  if (!tenantId) return <NoTenantNotice />;
 
   return (
     <div className="platform-page">
@@ -2002,7 +2010,7 @@ export function DelegationsApprovalsPage() {
 }
 
 export function AcademicGovernancePage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [activeTab, setActiveTab] = useState<"rules" | "grading" | "allocation" | "promotion">("rules");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
@@ -2026,6 +2034,7 @@ export function AcademicGovernancePage() {
   const [saving, setSaving] = useState(false);
 
   const fetchCurrentTab = () => {
+    if (!tenantId) return;
     setLoading(true);
     if (activeTab === "rules") {
       academicService.listProgramRules(tenantId)
@@ -2048,10 +2057,11 @@ export function AcademicGovernancePage() {
   };
 
   useEffect(() => {
-    fetchCurrentTab();
+    if (tenantId) fetchCurrentTab();
   }, [tenantId, activeTab]);
 
   const handleApprovePromotion = async (id: string) => {
+    if (!tenantId) return;
     try {
       const res = await academicService.decidePromotionRun(tenantId, id, { decision: "APPROVED", comment: "Verified and approved" });
       setPromotionRuns((prev) => prev.map((p) => p.promotionRunId === id ? res : p));
@@ -2060,6 +2070,8 @@ export function AcademicGovernancePage() {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     }
   };
+
+  if (!tenantId) return <NoTenantNotice />;
 
   return (
     <div className="platform-page">
