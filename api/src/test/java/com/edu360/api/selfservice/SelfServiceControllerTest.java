@@ -83,7 +83,6 @@ class SelfServiceControllerTest {
     @Test
     @DisplayName("ACT-SELF_SERVICE_VIEW-ALLOW: Authorized staff member views notifications, balances, requests, and notices")
     void ALLOW_staffViewsSelfService() {
-        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
 
         UserNotification notif = new UserNotification(tenantId, UUID.randomUUID(), userId, "SYSTEM", "Hello", "Welcome to EDU360", "NORMAL");
         when(notificationRepository.findDeliverable(eq(tenantId), eq(userId), any(Instant.class), any(Pageable.class)))
@@ -119,7 +118,6 @@ class SelfServiceControllerTest {
     @Test
     @DisplayName("B9: recipient can mark their own notification read")
     void markOwnNotificationRead() {
-        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
         UUID notificationId = UUID.randomUUID();
         UserNotification notification = new UserNotification(tenantId, notificationId, userId,
                 "SYSTEM", "Hello", "Welcome", "NORMAL");
@@ -135,7 +133,6 @@ class SelfServiceControllerTest {
     @Test
     @DisplayName("B9: another recipient notification is not discoverable")
     void cannotMarkAnotherUsersNotificationRead() {
-        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
         UUID notificationId = UUID.randomUUID();
         when(notificationRepository.findByIdTenantIdAndIdNotificationIdAndRecipientUserId(tenantId, notificationId, userId))
                 .thenReturn(Optional.empty());
@@ -147,7 +144,6 @@ class SelfServiceControllerTest {
     @Test
     @DisplayName("B9: mark-all-read only persists notifications belonging to the current recipient")
     void markAllOwnNotificationsRead() {
-        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
         service.markAllNotificationsRead(tenantId, userId);
 
         verify(notificationRepository).markAllDeliveredRead(eq(tenantId), eq(userId), any(Instant.class));
@@ -157,7 +153,6 @@ class SelfServiceControllerTest {
     @Test
     @DisplayName("B9: scheduled notifications cannot be read before their delivery time")
     void scheduledNotificationIsNotReadableBeforeDelivery() {
-        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
         UUID notificationId = UUID.randomUUID();
         UserNotification notification = new UserNotification(tenantId, notificationId, userId,
                 "SYSTEM", "Scheduled", "Not delivered yet", "NORMAL");
@@ -171,13 +166,14 @@ class SelfServiceControllerTest {
     }
 
     @Test
-    @DisplayName("ACT-SELF_SERVICE_VIEW-DENY: Unauthorized role (e.g. non-staff or blocked role) is denied")
-    void DENY_unauthorizedRoleFails() {
-        doThrow(new AccessDeniedException("ACTION_NOT_GRANTED"))
-                .when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
-
-        assertThatThrownBy(() -> controller.getNotifications(tenantId, auth))
-                .isInstanceOf(AccessDeniedException.class);
+    @DisplayName("C2-1: student, guardian and staff personas can access their own self-service notifications")
+    void C2_1_allTenantPersonasCanAccessSelfService() {
+        for (UserType type : List.of(UserType.STUDENT, UserType.GUARDIAN, UserType.STAFF)) {
+            TenantPrincipal principal = new TenantPrincipal(tenantId, userId, type, "Self-service user", false);
+            Authentication personaAuth = new UsernamePasswordAuthenticationToken(principal, null);
+            assertThat(controller.getNotifications(tenantId, personaAuth).getStatusCode())
+                    .isEqualTo(HttpStatus.OK);
+        }
     }
 
     @Test
