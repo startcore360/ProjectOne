@@ -13,6 +13,7 @@ public record StaffProfileRequest(
         @NotBlank @Size(min = 1, max = 150) String fullName,
         LocalDate dateOfBirth,
         @jakarta.validation.constraints.NotBlank @Email @Size(min = 3, max = 254) String officialEmail,
+        String initialRoleCode,
         @Email @Size(min = 3, max = 254) String personalEmail,
         @Pattern(regexp = "^\\+[1-9][0-9]{7,14}$") String personalMobile,
         @Pattern(regexp = "^[0-9A-Za-z]{4}$") String nationalIdLast4,
