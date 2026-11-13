@@ -72,6 +72,9 @@ public class ApprovalInboxService {
     private List<ApprovalOutcomeHandler> outcomeHandlers = List.of();
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired(required = false)
+    private ApprovalCountPublisher approvalCountPublisher;
+
     public ApprovalInboxService(
             ApprovalRequestRepository approvalRequestRepository,
             ApprovalStepRepository approvalStepRepository,
@@ -336,6 +339,16 @@ public class ApprovalInboxService {
 
         List<ApprovalStep> allSteps = approvalStepRepository
                 .findByIdTenantIdAndApprovalRequestIdOrderByStepNoAsc(tenantId, approvalRequestId);
+        if (approvalCountPublisher != null) {
+            approvalCountPublisher.publishForRole(tenantId, request.getInstitutionId(), step.getApproverRoleCode());
+            if ("PENDING".equals(request.getStatus())) {
+                approvalStepRepository.findByIdTenantIdAndApprovalRequestIdAndStepNo(
+                        tenantId, approvalRequestId, request.getCurrentStepNo())
+                        .ifPresent(next -> approvalCountPublisher.publishForRole(
+                                tenantId, request.getInstitutionId(), next.getApproverRoleCode()));
+            }
+            approvalCountPublisher.publishForUser(tenantId, userId);
+        }
         return new DecideApprovalResponseDto(toSummaryDto(request, allSteps), subjectNewStatus, List.of());
     }
 
