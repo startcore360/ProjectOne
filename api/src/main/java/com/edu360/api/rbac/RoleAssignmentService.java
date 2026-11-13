@@ -178,9 +178,14 @@ public class RoleAssignmentService {
         if (targetAccount.getUserType() == UserType.STAFF
                 && request.scopeType() != ScopeType.TENANT
                 && staffDirectoryService != null) {
+            java.time.LocalDate staffEffectiveFrom = request.effectiveFrom() == null
+                    ? java.time.LocalDate.now()
+                    : request.effectiveFrom().atZone(java.time.ZoneOffset.UTC).toLocalDate();
+            java.time.LocalDate staffEffectiveTo = request.effectiveTo() == null ? null
+                    : request.effectiveTo().atZone(java.time.ZoneOffset.UTC).toLocalDate();
             staffDirectoryService.ensureStaffAssignment(tenantId, targetUserId,
                     request.institutionId(), request.departmentId(), principal.userAccountId(),
-                    roleDefinition.getRoleName());
+                    roleDefinition.getRoleName(), staffEffectiveFrom, staffEffectiveTo);
         }
         log.info("Assigned role '{}' ({}) to user {} in tenant {} scope {}",
                 roleDefinition.getRoleCode(), roleDefinition.getId().getRoleDefinitionId(),
