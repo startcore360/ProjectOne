@@ -1,12 +1,29 @@
+import { useEffect, useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi } from "../../../design-system/components";
 import { DashboardPanel, QuietEmpty } from "./DashboardPanel";
+import { selfServiceApi, type NoticeItem } from "../../self-service/api/selfServiceApi";
 
 export interface StudentDashboardProps {
   name: string;
+  tenantId?: string;
 }
 
-export function StudentDashboard({ name }: StudentDashboardProps) {
+export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
+  const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(Boolean(tenantId));
+  const [noticesError, setNoticesError] = useState(!tenantId);
+
+  useEffect(() => {
+    let active = true;
+    if (!tenantId) return () => { active = false; };
+    selfServiceApi.getNotices(tenantId)
+      .then((items) => { if (active) setNotices(Array.isArray(items) ? items.slice(0, 3) : []); })
+      .catch(() => { if (active) setNoticesError(true); })
+      .finally(() => { if (active) setNoticesLoading(false); });
+    return () => { active = false; };
+  }, [tenantId]);
+
   return (
     <div className="student-dashboard">
       <PageHeader
@@ -27,7 +44,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
             institution timetable is connected.
           </p>
           <a className="hero__cta" href="#student-plan">
-            View today&rsquo;s plan
+            View timetable status
             <Icon name="send" size={16} />
           </a>
         </div>
@@ -51,11 +68,11 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           <Kpi
             label="Current CGPA"
             value="—"
-            context="Latest published academic record"
+            context="Awaiting published results"
             icon="chart"
           />
-          <Kpi label="To-do list" value="—" context="Tasks due soon" icon="book" />
-          <Kpi label="Fee status" value="—" context="Current outstanding balance" icon="wallet" />
+          <Kpi label="To-do list" value="—" context="Awaiting assignment service" icon="book" />
+          <Kpi label="Fee status" value="—" context="Awaiting finance service" icon="wallet" />
         </div>
       </section>
 
@@ -66,13 +83,6 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           eyebrow="TODAY · WHAT’S AHEAD"
           
         >
-          <div className="student-week-strip" aria-label="Weekly timetable preview">
-            <span>MON</span>
-            <span>TUE</span>
-            <span>WED</span>
-            <span>THU</span>
-            <span>FRI</span>
-          </div>
           <QuietEmpty
             title="Your classes will appear here"
             description="See today’s periods, subjects, rooms and teachers when your institution timetable is connected."
@@ -85,8 +95,8 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           
         >
           <QuietEmpty
-            title="You’re all caught up for now"
-            description="Published assignments, due dates and tasks that need your attention will appear here."
+            title="Assignments are not connected yet"
+            description="Published assignments and due dates will appear here when the assignment service is available."
           />
         </DashboardPanel>
         <DashboardPanel
@@ -95,10 +105,23 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           eyebrow="USEFUL UPDATES, IN ONE PLACE"
           action={{ label: "All notices", href: "/self-service" }}
         >
-          <QuietEmpty
-            title="No new notices"
-            description="School announcements, class updates and useful reminders will appear here."
-          />
+          {noticesLoading ? (
+            <p role="status">Loading published campus notices…</p>
+          ) : noticesError ? (
+            <p role="status">{tenantId ? "Campus notices could not be loaded. Open Self-Service to retry." : "Sign in as a student to view campus notices."}</p>
+          ) : notices.length === 0 ? (
+            <QuietEmpty title="No published campus notices" description="There are no published notices available to your account right now." />
+          ) : (
+            <div className="space-y-3">
+              {notices.map((notice) => (
+                <article key={notice.noticeId} className="self-service-card self-service-card--notice">
+                  <strong>{notice.title}</strong>
+                  <p>{notice.body}</p>
+                  <span className="self-service-card__meta">{notice.publishedAt ? new Date(notice.publishedAt).toLocaleDateString() : "Recently published"}</span>
+                </article>
+              ))}
+            </div>
+          )}
         </DashboardPanel>
         <DashboardPanel
           id="student-results"
