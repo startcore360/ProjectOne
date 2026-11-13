@@ -70,9 +70,9 @@ export function CreatedCredentialsModal({
               border: "1px dashed var(--color-border, #cbd5e1)",
             }}
           >
-            <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #64748b)", marginBottom: "4px" }}>
+            <label htmlFor="created-temp-password" style={{ display: "block", fontSize: "0.75rem", color: "var(--color-text-muted, #64748b)", marginBottom: "4px" }}>
               ONE-TIME TEMPORARY PASSWORD
-            </div>
+            </label>
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <input
                 id="created-temp-password"

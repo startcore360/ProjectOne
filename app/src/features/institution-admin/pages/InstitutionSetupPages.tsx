@@ -1456,6 +1456,7 @@ export function TermLockPage() {
                   const val = e.target.value;
                   setInstitutionId(val);
                   if (isValidUuid(val)) fetchLocks(val);
+                  else { setLocks([]); setLockLoadError(""); }
                 }}
               >
                 <option value="">-- Select an institution --</option>
@@ -1476,6 +1477,7 @@ export function TermLockPage() {
                 setInstitutionId(val);
                 clearLockFieldError("institutionId");
                 if (isValidUuid(val)) fetchLocks(val);
+                else { setLocks([]); setLockLoadError(""); }
               }}
               hint="Paste college or school UUID"
               error={fieldErrors.institutionId}
