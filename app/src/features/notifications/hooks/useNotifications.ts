@@ -12,6 +12,7 @@ export type NotificationsState = {
   /** True once the server sends a read state; false means "no unread count yet". */
   hasReadState: boolean;
   unreadCount: number;
+  pendingApprovalCount: number;
   refresh: () => Promise<void>;
   markRead: (notificationId: string) => Promise<void>;
   markAllRead: () => Promise<void>;
@@ -22,6 +23,7 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [hasReadState, setHasReadState] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -31,6 +33,13 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
       const [rows, summary] = await Promise.all([notificationsApi.list(tenantId), notificationsApi.summary(tenantId)]);
       setItems(rows);
       setUnreadCount(summary.unreadCount);
+      // Approval inbox is an independent source: its failure must not suppress notifications.
+      try {
+        const approvalCount = await notificationsApi.pendingApprovalCount(tenantId);
+        if (Number.isFinite(approvalCount) && approvalCount >= 0) setPendingApprovalCount(approvalCount);
+      } catch {
+        // Keep the last known approval count; the next poll/focus refresh retries it.
+      }
       setHasReadState(true);
       setError(null);
     } catch {
@@ -61,6 +70,11 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
       if (!event) return;
       if (event.type === "NOTIFICATION_CREATED") {
         void refresh();
+      } else if (event.type === "APPROVAL_COUNT") {
+        const value = event.payload?.pendingCount;
+        if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+          setPendingApprovalCount(value);
+        }
       } else if (event.type === "UNREAD_COUNT") {
         const value = event.payload?.unreadCount;
         if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
@@ -101,5 +115,5 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
     }
   }, [tenantId, refresh]);
 
-  return { items, loading, error, hasReadState, unreadCount, refresh, markRead, markAllRead };
+  return { items, loading, error, hasReadState, unreadCount, pendingApprovalCount, refresh, markRead, markAllRead };
 }
