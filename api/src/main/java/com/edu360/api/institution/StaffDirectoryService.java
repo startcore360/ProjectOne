@@ -284,6 +284,7 @@ public class StaffDirectoryService {
         return teacherLookup(actor, institutionId, departmentId, query, limit, "SUBJECT_ALLOCATE");
     }
 
+    @Transactional
     public TeacherLookupResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
             UUID departmentId, String query, int limit, String purpose) {
         validateLimit(limit);
