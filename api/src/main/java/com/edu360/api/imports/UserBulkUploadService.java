@@ -492,24 +492,45 @@ public class UserBulkUploadService {
             }
 
             String normalizedUserType = userTypeStr.trim().toUpperCase();
-            UserType userType = ("FACULTY".equals(normalizedUserType) || "TEACHER".equals(normalizedUserType))
-                    ? UserType.STAFF
-                    : UserType.valueOf(normalizedUserType);
-
-            CreateUserRequest createReq = new CreateUserRequest(
-                    userType,
-                    fullName.trim(),
-                    email.trim(),
-                    mobile != null && !mobile.isBlank() ? mobile.trim() : null,
-                    nationalIdLast4 != null && !nationalIdLast4.isBlank() ? nationalIdLast4.trim() : null,
-                    roleCode != null && !roleCode.isBlank() ? roleCode.trim() : null,
-                    instId != null ? com.edu360.api.rbac.ScopeType.INSTITUTION : com.edu360.api.rbac.ScopeType.TENANT,
-                    instId,
-                    null
-            );
 
             try {
-                userAccountService.createUser(principal, createReq);
+                if ("STUDENT".equals(normalizedUserType)) {
+                    String sectionValue = getCell(cells, headerMap, "sectionid");
+                    String sessionValue = getCell(cells, headerMap, "academicsessionid");
+                    String admissionValue = getCell(cells, headerMap, "admissiondate");
+                    String dobValue = getCell(cells, headerMap, "dateofbirth");
+                    String rollValue = getCell(cells, headerMap, "rollnumber");
+                    String loginValue = getCell(cells, headerMap, "createlogin");
+                    Boolean createLogin = loginValue == null || loginValue.isBlank()
+                            ? null : Boolean.valueOf(loginValue.trim());
+                    StudentCreateRequest studentRequest = new StudentCreateRequest(
+                            instId,
+                            fullName.trim(),
+                            parseOptionalDate(dobValue),
+                            parseOptionalDate(admissionValue),
+                            UUID.fromString(sectionValue.trim()),
+                            UUID.fromString(sessionValue.trim()),
+                            createLogin,
+                            rollValue == null || rollValue.isBlank() ? null : rollValue.trim());
+                    TenantPrincipal importActor = new TenantPrincipal(principal.tenantId(),
+                            principal.userAccountId(), UserType.STAFF, "Bulk student import", false);
+                    rowService.createStudent(importActor, studentRequest);
+                } else {
+                    UserType userType = ("FACULTY".equals(normalizedUserType) || "TEACHER".equals(normalizedUserType))
+                            ? UserType.STAFF : UserType.valueOf(normalizedUserType);
+                    CreateUserRequest createReq = new CreateUserRequest(
+                            userType,
+                            fullName.trim(),
+                            email.trim(),
+                            mobile != null && !mobile.isBlank() ? mobile.trim() : null,
+                            nationalIdLast4 != null && !nationalIdLast4.isBlank() ? nationalIdLast4.trim() : null,
+                            roleCode != null && !roleCode.isBlank() ? roleCode.trim() : null,
+                            instId != null ? com.edu360.api.rbac.ScopeType.INSTITUTION : com.edu360.api.rbac.ScopeType.TENANT,
+                            instId,
+                            null
+                    );
+                    rowService.createUser(principal, createReq);
+                }
                 importedCount++;
             } catch (Exception ex) {
                 log.warn("Failed to provision imported user row {}: {}", rowNumber, ex.getMessage());
