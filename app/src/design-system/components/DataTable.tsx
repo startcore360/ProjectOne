@@ -1,4 +1,6 @@
-import { Children, isValidElement, type ReactNode } from "react";
+import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
+type TableCellElement = ReactElement<{ children?: ReactNode; colSpan?: number; rowSpan?: number }>;
+type TableRowElement = ReactElement<{ children?: ReactNode; "data-no-mobile-card"?: boolean }>;
 
 export interface DataTableProps {
   headers: string[];
@@ -21,8 +23,8 @@ export function DataTable({
   ariaLabel,
   mobileCards = true,
 }: DataTableProps) {
-  const rows = Children.toArray(children).filter(isValidElement);
-  const cardRows = rows.filter((row) => row.type === "tr" && !row.props?.["data-no-mobile-card"]);
+  const rows = Children.toArray(children).filter((child): child is TableRowElement => isValidElement(child) && child.type === "tr");
+  const cardRows = rows.filter((row) => !row.props["data-no-mobile-card"]);
 
   return (
     <div className={`platform-table-wrap ${className}`.trim()}>
@@ -50,14 +52,14 @@ export function DataTable({
         </table>
       </div>
       {mobileCards && !empty && cardRows.length > 0 && (
-        <div className="platform-table-cards" aria-label={ariaLabel ?? "Records"}>
+        <div className="platform-table-cards" role="list" aria-label={ariaLabel ?? "Records"}>
           {cardRows.map((row, rowIndex) => {
-            const cells = Children.toArray(row.props.children).filter(isValidElement);
-            if (cells.some((cell) => Number(cell.props?.colSpan ?? 1) > 1 || Number(cell.props?.rowSpan ?? 1) > 1)) {
+            const cells = Children.toArray(row.props.children).filter((cell): cell is TableCellElement => isValidElement(cell) && (cell.type === "td" || cell.type === "th"));
+            if (cells.some((cell) => Number(cell.props.colSpan ?? 1) > 1 || Number(cell.props.rowSpan ?? 1) > 1)) {
               return null;
             }
             return (
-              <article className="platform-table-card" key={row.key ?? rowIndex}>
+              <article className="platform-table-card" role="listitem" key={row.key ?? rowIndex}>
                 {cells.map((cell, cellIndex) => {
                   const header = headers[cellIndex] ?? `Field ${cellIndex + 1}`;
                   const isAction = /^(actions?|action)$/i.test(header.trim());
