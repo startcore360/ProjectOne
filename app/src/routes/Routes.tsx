@@ -46,6 +46,7 @@ import {
 } from "../features/institution-admin/pages/InstitutionSetupPages";
 import { UserDetailPage, UserListPage } from "../features/user-management/pages/UserManagementPages";
 import TenantSupportPage from "../features/institution-admin/pages/TenantSupportPage";
+import StaffRecordsPage from "../features/institution-admin/pages/StaffRecordsPage";
 import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
@@ -92,6 +93,7 @@ export default function AppRoutes() {
         <Route element={<UniversityAdminRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/university/institutions" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.institutions}><InstitutionsPage /></ActionGate>} />
+            <Route path="/university/staff" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffRecordsPage /></ActionGate>} />
             <Route path="/university/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
             <Route path="/university/roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.roles}><RolesPermissionsPage /></ActionGate>} />
             <Route path="/university/missing-roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.missingRoles}><MissingRolesPage /></ActionGate>} />
