@@ -26,7 +26,11 @@ const TENANT_ID = "11111111-1111-1111-1111-111111111111";
 const DEPT_ID = "22222222-2222-2222-2222-222222222222";
 const STAFF_ASSIGNMENT_ID = "33333333-3333-3333-3333-333333333333";
 
-function renderWithTenant(element: ReactElement, tenantId: string | null = TENANT_ID) {
+function renderWithTenant(
+  element: ReactElement,
+  tenantId: string | null = TENANT_ID,
+  roleCode: string | null = null,
+) {
   const store = configureStore({
     reducer: { auth: authReducer },
     preloadedState: {
@@ -38,8 +42,8 @@ function renderWithTenant(element: ReactElement, tenantId: string | null = TENAN
               tenantId,
               userType: "STAFF" as const,
               platformRole: null,
-              roleCode: null,
-              roleName: null,
+              roleCode,
+              roleName: roleCode === "SCHOOL_ADMIN" ? "School Admin" : null,
               photoUrl: null,
               mustChangePassword: false,
             }
@@ -207,6 +211,66 @@ describe("Institution setup action screens", () => {
       expect(screen.getByText("B.Tech Computer Science")).toBeInTheDocument();
       expect(screen.getByText("BTECH_CSE")).toBeInTheDocument();
     });
+  });
+
+  it("loads school classes and sections without showing college department/programme panels", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const classId = "77777777-7777-7777-7777-777777777777";
+    const sessionId = "88888888-8888-8888-8888-888888888888";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/classes")) return Promise.resolve({ data: [
+        { classId, institutionId, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE" },
+      ] });
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [
+        { sectionId: "99999999-8888-7777-6666-555555555555", institutionId, academicSessionId: sessionId, semesterId: null, classId, sectionName: "A", status: "ACTIVE" },
+      ] });
+      return Promise.resolve({ data: [
+        { academicSessionId: sessionId, tenantId: TENANT_ID, institutionId, sessionLabel: "2026–27", startDate: "2026-06-01", endDate: "2027-05-31", academicYear: 2026, status: "ACTIVE", rowVersion: 1 },
+      ] });
+    });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+
+    expect(await screen.findByText("Grade 8")).toBeInTheDocument();
+    expect(screen.getByText("Section A")).toBeInTheDocument();
+    expect(screen.getByText("School classes")).toBeInTheDocument();
+    expect(screen.queryByText("Academic Departments")).not.toBeInTheDocument();
+    expect(screen.queryByText("Degree Programs")).not.toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/${institutionId}/classes`);
+    expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/${institutionId}/sections`);
+  });
+
+  it("creates a school section with its class and academic session IDs", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const classId = "77777777-7777-7777-7777-777777777777";
+    const sessionId = "88888888-8888-8888-8888-888888888888";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/classes")) return Promise.resolve({ data: [
+        { classId, institutionId, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE" },
+      ] });
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [
+        { academicSessionId: sessionId, tenantId: TENANT_ID, institutionId, sessionLabel: "2026–27", startDate: "2026-06-01", endDate: "2027-05-31", academicYear: 2026, status: "ACTIVE", rowVersion: 1 },
+      ] });
+    });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { sectionId: "99999999-8888-7777-6666-555555555555", institutionId, academicSessionId: sessionId, semesterId: null, classId, sectionName: "B", status: "ACTIVE" },
+    });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Grade 8");
+
+    fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
+    fireEvent.click(screen.getByRole("button", { name: /create section/i }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}/sections`,
+      { academicSessionId: sessionId, classId, sectionName: "B" },
+    ));
   });
 
   it("opens modal and creates department under college (Story #29: STRUCTURE_MANAGE)", async () => {
