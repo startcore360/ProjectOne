@@ -188,11 +188,14 @@ public class UserBulkUploadService {
             if (nationalIdLast4 == null) nationalIdLast4 = getCell(cells, headerMap, "aadhaar");
 
             List<RowValidationError> rowErrors = new ArrayList<>();
+            String normalizedType = userType == null ? "" : userType.trim().toUpperCase();
+            boolean studentRow = "STUDENT".equals(normalizedType);
+            boolean studentImport = "STUDENTS".equalsIgnoreCase(request.importKind());
 
-            // 1. Email validation
-            if (email == null || email.isBlank()) {
+            // 1. Email validation (student accounts use the generated student code, not an email username).
+            if (!studentRow && (email == null || email.isBlank())) {
                 rowErrors.add(new RowValidationError("email", "REQUIRED_FIELD", "Email is required"));
-            } else {
+            } else if (!studentRow && email != null && !email.isBlank()) {
                 String normalizedEmail = email.toLowerCase().trim();
                 if (!EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
                     rowErrors.add(new RowValidationError("email", "INVALID_EMAIL_FORMAT", "Invalid email address format"));
@@ -223,6 +226,43 @@ public class UserBulkUploadService {
                     } catch (IllegalArgumentException ex) {
                         rowErrors.add(new RowValidationError("userType", "INVALID_USER_TYPE", "User type must be STAFF, FACULTY, STUDENT, or GUARDIAN"));
                     }
+                }
+            }
+
+            if (studentImport && !studentRow) {
+                rowErrors.add(new RowValidationError("userType", "INVALID_USER_TYPE",
+                        "The STUDENTS import template accepts STUDENT rows only."));
+            }
+            if (studentRow) {
+                String rowInstitution = getCell(cells, headerMap, "institutionid");
+                String sectionValue = getCell(cells, headerMap, "sectionid");
+                String sessionValue = getCell(cells, headerMap, "academicsessionid");
+                String admissionValue = getCell(cells, headerMap, "admissiondate");
+                String dobValue = getCell(cells, headerMap, "dateofbirth");
+                String rollValue = getCell(cells, headerMap, "rollnumber");
+                String loginValue = getCell(cells, headerMap, "createlogin");
+
+                if ((rowInstitution == null || rowInstitution.isBlank()) && request.institutionId() == null) {
+                    rowErrors.add(new RowValidationError("institutionId", "REQUIRED_FIELD",
+                            "Institution ID is required for student enrolment."));
+                } else if (rowInstitution != null && !rowInstitution.isBlank()) {
+                    try { UUID.fromString(rowInstitution.trim()); }
+                    catch (IllegalArgumentException ex) {
+                        rowErrors.add(new RowValidationError("institutionId", "INVALID_UUID", "Institution ID must be a UUID."));
+                    }
+                }
+                validateUuidCell(sectionValue, "sectionId", "Section ID", rowErrors);
+                validateUuidCell(sessionValue, "academicSessionId", "Academic session ID", rowErrors);
+                validateDateCell(admissionValue, "admissionDate", "Admission date", rowErrors);
+                validateDateCell(dobValue, "dateOfBirth", "Date of birth", rowErrors);
+                if (rollValue != null && rollValue.length() > 30) {
+                    rowErrors.add(new RowValidationError("rollNumber", "INVALID_FIELD_LENGTH",
+                            "Roll number must not exceed 30 characters."));
+                }
+                if (loginValue != null && !loginValue.isBlank()
+                        && !List.of("TRUE", "FALSE").contains(loginValue.trim().toUpperCase())) {
+                    rowErrors.add(new RowValidationError("createLogin", "INVALID_BOOLEAN",
+                            "createLogin must be true or false."));
                 }
             }
 
