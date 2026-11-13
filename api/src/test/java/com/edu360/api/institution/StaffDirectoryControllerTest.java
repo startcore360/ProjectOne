@@ -47,9 +47,8 @@ class StaffDirectoryControllerTest {
 
     @Test
     void createUsesOnboardingWorkflowAndReturnsStaffVersionEtag() {
-        StaffProfileRequest request = new StaffProfileRequest(null, "Taylor Reed", null,
-                null, null, null, null, "ACTIVE", LocalDate.of(2026, 11, 1),
-                null, "taylor@school.edu", null);
+        StaffProfileRequest request = new StaffProfileRequest(null, "Taylor Reed", null, "taylor@school.edu", null,
+                null, null, null, null, "ACTIVE", LocalDate.of(2026, 11, 1), null);
         StaffProfileResponse profile = new StaffProfileResponse(staffId, userId, "ST-004",
                 "Taylor Reed", null, null, null, null, null, "ACTIVE",
                 LocalDate.of(2026, 11, 1), null, null, userId, null, userId, 2);
