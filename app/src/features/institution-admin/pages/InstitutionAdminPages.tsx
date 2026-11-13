@@ -901,7 +901,7 @@ export function MissingRolesPage() {
               </tr>
             </thead>
             <tbody>
-              {loadError ? null : entries.length === 0 ? (
+              {loadError || loading ? null : entries.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--color-muted)" }}>
                     No roll-down map rules loaded.
