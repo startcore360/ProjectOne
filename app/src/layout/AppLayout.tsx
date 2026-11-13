@@ -222,7 +222,7 @@ export default function AppLayout() {
     { label: "Assignments", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["ASSIGNMENT_CREATE", "ASSIGNMENT_SUBMIT", "ASSIGNMENT_VIEW_OWN", "ASSIGNMENT_EVALUATE"] },
     { label: "Study material", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["STUDY_MATERIAL_UPLOAD"] },
     { label: "Syllabus", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["SYLLABUS_VIEW", "SYLLABUS_MANAGE"] },
-    { label: "Staff", to: "/dashboard", icon: "users" as const, important: false, disabled: true, anyOf: ["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"] },
+    { label: "Staff records", to: "/university/staff", icon: "users" as const, important: false, anyOf: ["STAFF_RECORD_VIEW"] },
   ].filter((item) => canTenantAny(item.anyOf));
   const navigation = isPlatformConsole ? baseNavigation : [...baseNavigation, ...academicNavigation];
 
