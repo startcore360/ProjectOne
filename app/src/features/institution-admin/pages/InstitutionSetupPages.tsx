@@ -1224,7 +1224,7 @@ export function AcademicStructurePage() {
     <div className="platform-page">
       <PageHeader
         title="Academic structure"
-        description="Create and manage academic departments and degree programmes."
+        description={isSchool ? "Manage school classes, sections and academic sessions." : "Create and manage academic departments and degree programmes."}
       />
 
       <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
