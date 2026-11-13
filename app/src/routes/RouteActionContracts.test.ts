@@ -17,6 +17,9 @@ const grants: Record<string, readonly string[]> = {
   UNIVERSITY_HR_MANAGER: ["USER_VIEW"],
   REGISTRAR: ["USER_VIEW", "STRUCTURE_MANAGE", "PROGRAM_RULES_SET"],
   HEAD_OF_DEPARTMENT: ["SUBJECT_ALLOCATE"],
+  HR_MANAGER: ["STAFF_RECORD_VIEW"],
+  HR_EXECUTIVE: ["STAFF_RECORD_VIEW"],
+  UNIVERSITY_HR_MANAGER: ["STAFF_RECORD_VIEW"],
 };
 
 function canOpen(actions: readonly string[], role: string) {
@@ -65,5 +68,12 @@ describe("tenant administration route permission contracts", () => {
   it.each(["PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL"])(
     "term-lock route is reachable by %s",
     (role) => expect(canOpen(TENANT_ROUTE_ACTIONS.termLock, role)).toBe(true),
+  );
+
+  it.each([
+    "PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL", "COLLEGE_ADMIN", "SCHOOL_ADMIN",
+    "UNIVERSITY_ADMIN", "VICE_CHANCELLOR", "HR_MANAGER", "HR_EXECUTIVE", "UNIVERSITY_HR_MANAGER",
+  ])("staff records route is reachable by %s", (role) =>
+    expect(canOpen(TENANT_ROUTE_ACTIONS.staffRecords, role)).toBe(true),
   );
 });
