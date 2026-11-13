@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
 import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
@@ -117,4 +117,29 @@ describe("StaffRecordsPage", () => {
     rerender(<Provider store={store}><StaffRecordsPage /></Provider>);
     expect(screen.getByRole("button", { name: "Add staff member" })).toBeInTheDocument();
   });
+  it("paginates a long staff directory and reports the visible page", async () => {
+    const staffRows = Array.from({ length: 12 }, (_, index) => ({
+      ...staffMember,
+      id: `staff-${index + 1}`,
+      staffCode: `ST-${String(index + 1).padStart(3, "0")}`,
+      fullName: `Staff Member ${index + 1}`,
+    }));
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: staffRows,
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: staffRows.length },
+    });
+
+    renderWithActions();
+
+    expect(await screen.findByText("Staff Member 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    expect(screen.queryByText("Staff Member 11")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByText("Staff Member 11")).toBeInTheDocument();
+    expect(screen.queryByText("Staff Member 1")).not.toBeInTheDocument();
+  });
+
 });
