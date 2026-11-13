@@ -134,7 +134,7 @@ export function CreateUserModal({
             error={fieldErrors.initialRoleCode}
           />
         </div>
-        <p className="platform-form-note">
+        <p className="platform-modal-note">
           This form provisions a general user account. For admissions, student profile creation and section enrolment, use the separate Create student profile workflow.
         </p>
 
