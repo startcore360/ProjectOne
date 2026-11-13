@@ -38,6 +38,8 @@ export type CreateInstitutionRequest = {
   stateName?: string;
   postalCode?: string;
   principalInviteEmail?: string;
+  studentIdFormat: string;
+  staffIdFormat?: string;
 };
 
 export type DepartmentItem = {
