@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DataTable } from "./DataTable";
 
@@ -16,10 +16,10 @@ describe("DataTable", () => {
 
     const cards = screen.getByRole("list", { name: "Records" });
     expect(cards).toBeInTheDocument();
-    expect(screen.getByText("Name")).toBeInTheDocument();
-    expect(screen.getByText("Example student")).toBeInTheDocument();
-    expect(screen.getByText("Status")).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(within(cards).getByText("Name")).toBeInTheDocument();
+    expect(within(cards).getByText("Example student")).toBeInTheDocument();
+    expect(within(cards).getByText("Status")).toBeInTheDocument();
+    expect(within(cards).getByText("Active")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "View" })).toBeInTheDocument();
   });
 
