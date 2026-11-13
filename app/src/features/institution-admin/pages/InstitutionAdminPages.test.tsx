@@ -652,7 +652,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     renderWithStore(<MissingRolesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("VICE_CHANCELLOR")).toBeInTheDocument();
+      expect(screen.getByText("Vice Chancellor")).toBeInTheDocument();
     });
 
     const setBtn = screen.getByRole("button", { name: /Set role coverage override/i });

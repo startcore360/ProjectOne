@@ -2,7 +2,7 @@ export const TENANT_ROUTE_ACTIONS = {
   institutions: ["INSTITUTION_CREATE_DRAFT", "INSTITUTION_ACTIVATE"],
   users: ["USER_VIEW", "USER_CREATE", "USER_EDIT", "USER_DEACTIVATE"],
   roles: ["ROLE_ASSIGN", "ROLE_CUSTOM_MANAGE"],
-  missingRoles: ["USER_VIEW", "ROLE_ASSIGN"],
+  missingRoles: ["ROLLDOWN_VIEW"],
   academicStructure: ["STRUCTURE_MANAGE", "SUBJECT_ALLOCATE", "PROGRAM_RULES_SET"],
   termLock: ["TERM_LOCK", "TERM_UNLOCK"],
   hodAssignment: ["HOD_ASSIGN"],
