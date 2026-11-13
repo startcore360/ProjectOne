@@ -72,11 +72,11 @@ export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
           <Kpi
             label="Current CGPA"
             value="—"
-            context="Latest published academic record"
+            context="Awaiting published results"
             icon="chart"
           />
-          <Kpi label="To-do list" value="—" context="Tasks due soon" icon="book" />
-          <Kpi label="Fee status" value="—" context="Current outstanding balance" icon="wallet" />
+          <Kpi label="To-do list" value="—" context="Awaiting assignment service" icon="book" />
+          <Kpi label="Fee status" value="—" context="Awaiting finance service" icon="wallet" />
         </div>
       </section>
 
@@ -87,13 +87,6 @@ export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
           eyebrow="TODAY · WHAT’S AHEAD"
           
         >
-          <div className="student-week-strip" aria-label="Weekly timetable preview">
-            <span>MON</span>
-            <span>TUE</span>
-            <span>WED</span>
-            <span>THU</span>
-            <span>FRI</span>
-          </div>
           <QuietEmpty
             title="Your classes will appear here"
             description="See today’s periods, subjects, rooms and teachers when your institution timetable is connected."
