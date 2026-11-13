@@ -28,7 +28,7 @@ export function SetGradingSchemeModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="GRADING_SCHEME_SET • Action #34"
+      kicker="ACADEMIC GOVERNANCE"
       title="Set Grading Scheme"
       titleId="scheme-modal-title"
       size="sm"
