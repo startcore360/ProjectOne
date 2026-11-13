@@ -281,13 +281,23 @@ public class StaffDirectoryService {
     @Transactional
     public TeacherLookupResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
             UUID departmentId, String query, int limit) {
+        return teacherLookup(actor, institutionId, departmentId, query, limit, "SUBJECT_ALLOCATE");
+    }
+
+    public TeacherLookupResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
+            UUID departmentId, String query, int limit, String purpose) {
         validateLimit(limit);
         if (institutionId == null) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED", "institutionId is required for teacher lookup.");
         }
-        RbacScope scope = activeScope(departmentId == null ? ScopeType.INSTITUTION : ScopeType.DEPARTMENT,
-                institutionId, departmentId);
-        permissions.authorize(actor, "SUBJECT_ALLOCATE", scope, RbacTarget.NONE);
+        String action = purpose == null || purpose.isBlank() ? "SUBJECT_ALLOCATE" : purpose.trim().toUpperCase();
+        if (!java.util.Set.of("SUBJECT_ALLOCATE", "HOD_ASSIGN", "MENTOR_ASSIGN", "CLASS_TEACHER_ASSIGN").contains(action)) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "Unsupported teacher lookup purpose.");
+        }
+        boolean departmentScope = "MENTOR_ASSIGN".equals(action);
+        RbacScope scope = activeScope(departmentScope ? ScopeType.DEPARTMENT : ScopeType.INSTITUTION,
+                institutionId, departmentScope ? departmentId : null);
+        permissions.authorize(actor, action, scope, RbacTarget.NONE);
         record TeacherRole(UUID userId, String designation, UUID departmentId) {}
         List<TeacherRole> existingTeacherRoles = jdbc.query("""
                 SELECT ura.user_account_id, rd.role_name, ura.department_id
