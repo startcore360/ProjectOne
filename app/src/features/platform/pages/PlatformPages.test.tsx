@@ -144,6 +144,7 @@ describe("Sprint 1 platform screens", () => {
 
   it("opens the create trial tenant modal with statutory privacy note and fields", () => {
     renderWithStore(<TenantsPage />);
+    await screen.findByRole("option", { name: /Standard trial/ });
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
     expect(screen.getByRole("dialog", { name: "Create trial tenant" })).toBeInTheDocument();
     expect(screen.getByText(/Per UIDAI guidelines and DPDP Act 2023/i)).toBeInTheDocument();
@@ -163,6 +164,7 @@ describe("Sprint 1 platform screens", () => {
     });
 
     renderWithStore(<TenantsPage />);
+    await screen.findByRole("option", { name: /Standard trial/ });
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
 
     fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Doon World Academy" } });
