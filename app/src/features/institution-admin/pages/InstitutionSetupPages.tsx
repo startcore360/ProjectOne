@@ -1524,7 +1524,7 @@ export function TermLockPage() {
         {lockLoadError ? (
           <Notice tone="danger">{lockLoadError} <Button variant="secondary" size="sm" onClick={() => fetchLocks(institutionId)}>Retry</Button></Notice>
         ) : !isValidUuid(institutionId) ? (
-          <EmptyState title="Choose an institution" description="Select an institution or enter its UUID to load term locks." icon="building" />
+          <EmptyState title="Choose an institution" description="Select an institution or enter its UUID to load term locks." />
         ) : locks.length === 0 && !loading ? (
           <EmptyState
             title="No active term locks"
