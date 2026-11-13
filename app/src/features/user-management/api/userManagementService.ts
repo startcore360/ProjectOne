@@ -80,6 +80,7 @@ export type StudentCreatePayload = {
   sectionId: string;
   academicSessionId: string;
   createLogin?: boolean;
+  rollNumber?: string;
 };
 
 export type StudentProfileResponse = {
