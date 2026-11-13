@@ -9,7 +9,25 @@ export interface StudentDashboardProps {
   tenantId: string;
 }
 
-export function StudentDashboard({ name }: StudentDashboardProps) {
+export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
+  const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(true);
+  const [noticesError, setNoticesError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!tenantId) {
+      setNoticesLoading(false);
+      setNoticesError(true);
+      return () => { active = false; };
+    }
+    selfServiceApi.getNotices(tenantId)
+      .then((items) => { if (active) setNotices(Array.isArray(items) ? items.slice(0, 3) : []); })
+      .catch(() => { if (active) setNoticesError(true); })
+      .finally(() => { if (active) setNoticesLoading(false); });
+    return () => { active = false; };
+  }, [tenantId]);
+
   return (
     <div className="student-dashboard">
       <PageHeader
@@ -88,8 +106,8 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           
         >
           <QuietEmpty
-            title="You’re all caught up for now"
-            description="Published assignments, due dates and tasks that need your attention will appear here."
+            title="Assignments are not connected yet"
+            description="Published assignments and due dates will appear here when the assignment service is available."
           />
         </DashboardPanel>
         <DashboardPanel
@@ -98,10 +116,23 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           eyebrow="USEFUL UPDATES, IN ONE PLACE"
           action={{ label: "All notices", href: "/self-service" }}
         >
-          <QuietEmpty
-            title="No new notices"
-            description="School announcements, class updates and useful reminders will appear here."
-          />
+          {noticesLoading ? (
+            <p role="status">Loading published campus notices…</p>
+          ) : noticesError ? (
+            <p role="status">Campus notices could not be loaded. Open Self-Service to retry.</p>
+          ) : notices.length === 0 ? (
+            <QuietEmpty title="No published campus notices" description="There are no published notices available to your account right now." />
+          ) : (
+            <ul className="student-notice-list">
+              {notices.map((notice) => (
+                <li key={notice.noticeId}>
+                  <strong>{notice.title}</strong>
+                  <p>{notice.body}</p>
+                  <span>{notice.publishedAt ? new Date(notice.publishedAt).toLocaleDateString() : "Recently published"}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </DashboardPanel>
         <DashboardPanel
           id="student-results"
