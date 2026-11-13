@@ -224,7 +224,6 @@ export function HodAssignmentPage() {
             </Button>
           </form>
         </Panel>
-        </div>
       )}
     </div>
   );
@@ -279,7 +278,6 @@ export function MentorAssignmentPage() {
             </Button>
           </form>
         </Panel>
-        </div>
       )}
     </div>
   );
@@ -346,7 +344,6 @@ export function ClassTeacherAssignmentPage() {
             </Button>
           </form>
         </Panel>
-        </div>
       )}
     </div>
   );
@@ -397,7 +394,6 @@ export function StudentLoginSwitchPage() {
             </Button>
           </form>
         </Panel>
-        </div>
       )}
     </div>
   );
@@ -2206,6 +2202,7 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
+        </div>
       )}
 
       {!loading && !loadError && activeTab === "grading" && (
@@ -2238,6 +2235,7 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
+        </div>
       )}
 
       {!loading && !loadError && activeTab === "allocation" && (
@@ -2270,6 +2268,7 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
+        </div>
       )}
 
       {!loading && !loadError && activeTab === "promotion" && (
@@ -2308,6 +2307,7 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
+        </div>
       )}
 
       {/* Program Rule Set Modal */}
