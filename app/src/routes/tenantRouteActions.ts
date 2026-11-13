@@ -4,7 +4,7 @@ export const TENANT_ROUTE_ACTIONS = {
   roles: ["ROLE_ASSIGN", "ROLE_CUSTOM_MANAGE"],
   missingRoles: ["ROLLDOWN_VIEW"],
   academicStructure: ["STRUCTURE_MANAGE", "SUBJECT_ALLOCATE", "PROGRAM_RULES_SET"],
-  staffRecords: ["STAFF_RECORD_VIEW"],
+  staffRecords: ["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"],
   termLock: ["TERM_LOCK", "TERM_UNLOCK"],
   hodAssignment: ["HOD_ASSIGN"],
   mentorAssignment: ["MENTOR_ASSIGN"],
