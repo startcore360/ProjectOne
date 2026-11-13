@@ -113,7 +113,7 @@ export function BulkUploadModal({
       kicker="USER_BULK_UPLOAD"
       title="Bulk upload users"
       titleId="bulk-upload-title"
-      description="Upload a CSV file of staff, faculty or student accounts. Enforces pre-validation and row error tracking [Rule MD-27]."
+      description="Upload supported user accounts with pre-validation and row-level error tracking. This workflow does not create student profiles or enrolments; use Create student profile for student admissions [Rule MD-27]."
       size="lg"
     >
       <div style={{ padding: "0.5rem 0" }}>
