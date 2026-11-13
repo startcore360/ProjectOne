@@ -47,7 +47,7 @@ public class ClamAvFileScanner implements FileScanner {
             socket.setSoTimeout(readTimeoutMs);
             try (DataOutputStream output = new DataOutputStream(socket.getOutputStream());
                     DataInputStream input = new DataInputStream(socket.getInputStream())) {
-                output.write("zINSTREAM\\0".getBytes(StandardCharsets.US_ASCII));
+                output.write("zINSTREAM\0".getBytes(StandardCharsets.US_ASCII));
                 int offset = 0;
                 while (offset < content.length) {
                     int length = Math.min(CHUNK_BYTES, content.length - offset);

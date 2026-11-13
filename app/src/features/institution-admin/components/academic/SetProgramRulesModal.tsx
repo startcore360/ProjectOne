@@ -28,7 +28,7 @@ export function SetProgramRulesModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="PROGRAM_RULES_SET • Action #30"
+      kicker="ACADEMIC GOVERNANCE"
       title="Set Curriculum Rules"
       titleId="rules-modal-title"
       size="sm"

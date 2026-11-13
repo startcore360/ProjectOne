@@ -49,9 +49,9 @@ export function TenantSettingsModal({
       <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-settings-title">
         <header>
           <div>
-            <Kicker>TENANT SETTINGS · Rules PV-07, WF-06</Kicker>
+            <Kicker>TENANT SETTINGS</Kicker>
             <h2 id="tenant-settings-title">Tenant Settings: {tenant.name}</h2>
-            <p>Configure operational limits, custom domains, and platform analytics opt-out [TENANT_SETTINGS, Action #205].</p>
+            <p>Configure operational limits, custom domains and anonymous analytics preferences.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
             <Icon name="x" size={16} />
@@ -97,7 +97,7 @@ export function TenantSettingsModal({
                   onChange={(e) => setSettingsDraft({ ...settingsDraft, analyticsOptOut: e.target.checked })}
                 />
                 <span>
-                  <strong>Opt out of anonymous platform analytics</strong> [Rule PV-07, F-13]
+                  <strong>Opt out of anonymous platform analytics</strong>
                 </span>
               </label>
             </div>

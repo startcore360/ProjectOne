@@ -162,6 +162,14 @@ public class StaffDirectoryService {
         return StaffProfileResponse.from(saved);
     }
 
+    @Transactional(readOnly = true)
+    public List<StaffAssignmentResponse> listAssignments(RbacPrincipal actor, UUID staffProfileId) {
+        findScopedProfile(actor, staffProfileId, "STAFF_RECORD_VIEW");
+        return assignments.findByTenantIdAndStaffProfileIdOrderByEffectiveFromDesc(
+                actor.tenantId(), staffProfileId).stream()
+                .map(StaffAssignmentResponse::from).toList();
+    }
+
     @Transactional
     public StaffAssignmentResponse addAssignment(RbacPrincipal actor, UUID staffProfileId,
             StaffAssignmentRequest request) {

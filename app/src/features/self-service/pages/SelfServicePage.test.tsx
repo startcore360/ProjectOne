@@ -110,7 +110,7 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("15")).toBeInTheDocument();
       expect(screen.getByText(/days left/i)).toBeInTheDocument();
       expect(screen.getByText("Academic symposium")).toBeInTheDocument();
-      expect(screen.getByText("APPROVED")).toBeInTheDocument();
+      expect(screen.getByText("Approved")).toBeInTheDocument();
     });
   });
 

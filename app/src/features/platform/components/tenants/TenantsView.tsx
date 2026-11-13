@@ -156,15 +156,20 @@ export function TenantsView() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setCreating(true);
     setCreateError("");
     setMessage("");
+    const selectedPlanId = draft.planId || plans[0]?.planId;
+    if (!selectedPlanId) {
+      setCreateError("No subscription plan is available. Create or enable a plan before creating a tenant.");
+      return;
+    }
+    setCreating(true);
 
     try {
       const response = await platformTenantService.createTenant({
         tenantName: draft.tenantName,
         tenantType: draft.tenantType,
-        planId: draft.planId || (plans[0]?.planId ?? "11111111-1111-1111-1111-111111111101"),
+        planId: selectedPlanId,
         subdomain: draft.subdomain,
         isolationMode: draft.isolationMode,
         firstAdminName: draft.firstAdminName,

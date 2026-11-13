@@ -89,7 +89,7 @@ export function PlansView() {
     <div className="platform-page">
       <PageHeader
         title="Plans & billing"
-        description="Review the platform plan catalogue, pricing types, and subscription limits [PLAN_MANAGE, Action #202]."
+        description="Review subscription plans, pricing types and platform limits."
         actions={
           <Button
             onClick={() => {

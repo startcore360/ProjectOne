@@ -30,7 +30,7 @@ export function PrincipalLeaveApproverModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!approverUserId.trim()) {
-      setError("Approver User ID is required [Rule C7].");
+      setError("Enter the approver user account ID.");
       return;
     }
     setSaving(true);
@@ -40,7 +40,7 @@ export function PrincipalLeaveApproverModal({
         approverKind,
         approverUserId: approverUserId.trim(),
       });
-      onSaved(`Leave approver configured successfully for '${institution.institutionName}' [Rule C7].`);
+      onSaved(`Leave approver configured successfully for '${institution.institutionName}'.`);
       setApproverUserId("");
       onClose();
     } catch (err: unknown) {
@@ -60,7 +60,7 @@ export function PrincipalLeaveApproverModal({
       }}
       title={`Configure Leave Approver: ${institution.institutionName}`}
       titleId="approver-modal-title"
-      description="Designate who approves leaves submitted by the head/principal of this institution [Rule C7]."
+      description="Choose who can approve leave requests submitted by the head or principal of this institution."
       size="sm"
     >
       {error && (
@@ -88,9 +88,9 @@ export function PrincipalLeaveApproverModal({
               border: "1px solid var(--color-border, #ccc)",
             }}
           >
-            <option value="MANAGEMENT">MANAGEMENT (Management / Trustees)</option>
-            <option value="VICE_CHANCELLOR">VICE_CHANCELLOR (University VC)</option>
-            <option value="GOVERNING_BODY_APPROVER">GOVERNING_BODY_APPROVER (Governing Body)</option>
+            <option value="MANAGEMENT">Management / Trustees</option>
+            <option value="VICE_CHANCELLOR">Vice Chancellor</option>
+            <option value="GOVERNING_BODY_APPROVER">Governing Body Approver</option>
           </select>
         </div>
 

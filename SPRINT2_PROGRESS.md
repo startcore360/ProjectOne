@@ -1,5 +1,23 @@
 # EDU 360 Sprint 2 Progress
 
+## Current source reconciliation — 13 November 2026
+
+This section reconciles the initial action matrix with the code now present on `sprint-2-development`. “Implemented” means a code path exists; it does not mean a workflow has been formally accepted.
+
+| Area | Current source status | Boundary / remaining work |
+|---|---|---|
+| Staff | Staff directory, profile edit, assignments, service history, staff-document attach and document verification UI/API are present. Staff action rows below are now “Implemented — acceptance pending”. | Verify full role/scope combinations and the end-to-end upload → scan → attach → independent verification path before acceptance. |
+| Student admission | A dedicated student-creation endpoint and separate frontend form create a student profile plus enrolment. The form now loads active sessions/sections when lookup APIs are available. | The institution ID remains manually supplied because the institution directory endpoint has a narrower role grant. Manual session/section UUID entry remains a fallback. |
+| Student CSV import | The existing CSV import operation is a generic user-account import. | It does not create student profiles or enrolments; student bulk admission with optional legacy student codes is not implemented end-to-end. |
+| Calendar | Local and university calendar flows support typed exam-day events and holiday-conflict handling. | Exam-day calendar events are not a timetable builder, period schedule, or timetable publication workflow. |
+| Support | Tenant support ticket and support-access screens/workflows are present. | Do not report broader support operations beyond the shipped screen and API paths as complete. |
+| Files | Local disk storage, owning-record download policy, staff-document attachment flow, and a conditional ClamAV clamd scanner adapter are present. | ClamAV must be explicitly enabled and deployed; the default scanner keeps files PENDING. Generic attachment across all record types remains open. |
+| OTP | Disabled-mode status/request/verify API endpoints are present. | No SMS provider, OTP lifecycle, guardian/applicant eligibility or Keycloak token exchange; parent/applicant mobile OTP login is not a completed workflow. |
+| Academic structure | Existing create/list structure workflows include school classes, sections and academic-session lookups. | PATCH/If-Match and subject-group/member APIs remain outstanding (A3/G2). |
+| Reusable controls | PersonPicker, SectionPicker, SubjectAllocationPicker, WeekGrid, StatusToggleRoster, FileDrop, WarningsPanel and DiffTable have tests. | These controls are foundations, not proof that the associated production workflows consume them. |
+
+No story is marked Accepted solely because an endpoint, database rule, or reusable control exists. CI state and role-specific acceptance remain separate checks.
+
 | Action code | Chunk | Status |
 |---|---:|---|
 | TIMETABLE_BUILD | 1 | Tested |
@@ -25,9 +43,9 @@
 | HOMEWORK_STATUS_MARK | 1 | Tested |
 | ASSIGNMENT_VIEW_OWN | 1 | Tested |
 | HOMEWORK_COMPLIANCE_VIEW | 1 | Tested |
-| STAFF_RECORD_MANAGE | 3 | Not started |
-| STAFF_DOCUMENT_VERIFY | 3 | Not started |
-| STAFF_RECORD_VIEW | 3 | Not started |
+| STAFF_RECORD_MANAGE | 3 | Implemented — acceptance pending |
+| STAFF_DOCUMENT_VERIFY | 3 | Implemented — acceptance pending |
+| STAFF_RECORD_VIEW | 3 | Implemented — acceptance pending |
 
 ## Chunk 1 — Foundations
 
@@ -40,7 +58,7 @@
 | A1 Tenant/institution scope | `api/src/main/java/com/edu360/api/identity/TenantUserLookup.java` resolves one active role assignment and previously exposed only its institution. | Updated institution scope to include active assignments for the same selected role definition and scope type. Regression test still required. |
 | A2 Subject allocation | `SubjectAllocationService.java` was querying `UserRoleAssignmentRepository` using a staff-assignment id. Schema FK `fk_subject_allocation_staff_assignment_id` points to `app.staff_assignment`; Java mapping/repository exist in `institution/StaffAssignment.java` and `StaffAssignmentRepository.java`. | Updated to validate a same-tenant staff assignment, ACTIVE status, matching institution and tenant-local effective dates. |
 | A3 Academic structure PATCH | `StructureController` exposes POST/GET for departments, programs, years, semesters, classes, sections, subjects and course offerings; no PATCH/PUT or If-Match handlers exist. Subject-group/member Java resources were not found. `Section` has `academicSessionId` and exactly one of `semesterId`/`classId`; college department is derived via semester → program year → program. | **Carry-forward gap by decision:** record missing PATCH/If-Match handlers and subject-group/member APIs. Do not implement in Chunk 1 unless a later Sprint 2 dependency explicitly requires them (DEC-9). |
-| A4 Calendar and weekly off | Calendar events are institution/date scoped; weekly-off patterns support `ALL`, `ODD`, `EVEN`. The committed event-type constraint has no exam-day event type or exam calendar relation. | Added date-scoped holiday, weekly-off and academic-session lookup; single-day session ranges remain valid. **Exam-day support deferred by decision:** requirements and schema representation remain open; add no exam-day schema or title inference. DEC-13 holiday warning behaviour is unaffected. |
+| A4 Calendar and weekly off | Calendar events are institution/date scoped; weekly-off patterns support `ALL`, `ODD`, `EVEN`. A later Sprint 2 change adds typed `EXAM_DAY` calendar events and holiday-overlap handling. | Typed exam-day event creation and local/university calendar handling are implemented in migration 30. This is calendar event support, not a timetable builder or timetable publication workflow. DEC-13 holiday warning behaviour remains date-scoped. |
 | A5 Term lock | SQL `app.is_term_locked(tenant, section, date)` exists in `sql/02_rules.sql`; Java service previously had lock/unlock only. | Added shared `TermLockService.isLocked(tenantId, sectionId, date)` delegating to the SQL function. |
 | A6 Class teacher, mentor, HOD | `ClassTeacherAssignmentService`, `MentorAssignmentService`, and `HodAssignmentService` exist. | Retain the approved specification rules and complete regression validation for active status, effective dates, institution/department scope, overlap and unauthorized assignment paths. **Not yet validated.** |
 | A7 Approval routing | `ApprovalInboxService.resolveApprovalAction` recognised institution, promotion and guardian processes; attendance process codes were absent. | Added correction and bulk-upload action resolution, the narrow Java-side HOD self-approval check against the correction's marked session (APPROVED only), a dedicated self-approval audit event, and a fail-closed `ApprovalOutcomeHandler` extension point. Self-rejection/forwarding remains blocked. |
@@ -66,7 +84,7 @@
 - Added `CursorPageTest.defaultLimitAndStableSortAreApplied`, `CursorPageTest.rejectsUnknownSortAndOversizedLimit`, `CursorPageTest.cursorRoundTripsAndRejectsTampering`.
 - Added `TenantClockTest.usesTenantTimeZoneForBusinessDate`.
 - Added `GuardianLinkControllerTest.scope_guardianSeesOwnActiveChildren`, `GuardianLinkControllerTest.deny_nonGuardianCannotListChildren`, `GuardianLinkControllerTest.guard_missingGuardianAccount`, and `GuardianLinkControllerTest.guard_blockedLinksDoNotConsumeGuardianLimit`.
-- Added `CalendarDayStatusServiceTest.returnsLocalAndUniversityHolidayExamAndWeeklyOffForRequestedDate`, `CalendarDayStatusServiceTest.appliesOddAndEvenOccurrenceToAlternateWeekends`, and `CalendarDayStatusServiceTest.refusesForeignTenantCalendarScope` (exam-day explicitly false because the schema has no exam-day representation).
+- Added `CalendarDayStatusServiceTest.returnsLocalAndUniversityHolidayExamAndWeeklyOffForRequestedDate`, `CalendarDayStatusServiceTest.appliesOddAndEvenOccurrenceToAlternateWeekends`, and `CalendarDayStatusServiceTest.refusesForeignTenantCalendarScope`; current exam-day status is derived from typed events added by migration 30.
 - Added `IdempotencyServiceTest.requestHashIsDeterministicForMapKeyOrder` and `IdempotencyServiceTest.requestHashChangesWhenBodyChanges`.
 - Added SQL checks `S2-DB-01` through `S2-DB-10`, including HOD own-marked-session allowance, other-teacher denial, other-role denial, non-attendance denial, decided-step immutability and the student login-switch function contract.
 - `./mvnw clean verify` (CI equivalent `mvn --batch-mode --no-transfer-progress -f api/pom.xml verify`): last observed CI run failed compilation because `CalendarDayStatusService` referenced undefined `examDay`; corrected in this revision. Awaiting rerun.
@@ -79,7 +97,7 @@
 - Approval handlers are an extension point; no attendance outcome handler is registered yet. Final approval is denied and the transaction fails closed until a later attendance chunk registers one.
 - Idempotency helper is implemented but is not wired to attendance upload/correction/syllabus endpoints, which are implemented in later chunks.
 - Cursor helper is implemented but no new list endpoints exist in Chunk 1 to consume it.
-- A3 is explicitly carried forward by decision; A4 exam-day is deferred pending requirements. A6 assignment service regression suites pass on CI, with broader effective-date and overlap edge coverage still to be confirmed. A8 behavioural login-path SQL coverage is added; future academic own-data API enforcement remains open. A9 code changes and focused tests are present but integration/build regression is not yet executed; no claim is made that all Sprint 1 dependencies are fully validated.
+- A3 is explicitly carried forward by decision; typed exam-day calendar events were added later in G3 and do not imply timetable delivery. A6 assignment service regression suites pass on CI, with broader effective-date and overlap edge coverage still to be confirmed. A8 behavioural login-path SQL coverage is added; future academic own-data API enforcement remains open. A9 code changes and focused tests are present but integration/build regression is not yet executed; no claim is made that all Sprint 1 dependencies are fully validated.
 - No story is marked Accepted. Highest status remains In progress until build and SQL gates pass.
 
 
@@ -91,8 +109,8 @@
 
 | Item | Current implementation | Remaining limitation |
 |---|---|---|
-| Upload | Multipart upload, 10 MiB application limit, safe-list content inspection, filename sanitization, SHA-256, PENDING scanner contract and structured `FILE_UPLOADED` audit entry. Audit values contain file identifiers/metadata only, never filename or bytes. | No real malware scanner; default scanner leaves files PENDING. |
-| Download | Attachment streaming, safe content type, `nosniff`, tenant-qualified file lookup, scan/status enforcement and a database-backed owning-record policy. | The attach-to-record endpoint is not implemented in this chunk. Existing domain rows can be authorized; a newly uploaded, unattached file is not downloadable. |
+| Upload | Multipart upload, 10 MiB application limit, safe-list content inspection, filename sanitization, SHA-256 and structured `FILE_UPLOADED` audit entry. A ClamAV `clamd` INSTREAM adapter is available behind `FILES_SCANNER_CLAMAV_ENABLED`; transport/protocol failure fails closed with 503. | The safe default is `PendingFileScanner` when ClamAV is disabled, so files remain PENDING until a scanner is deployed and enabled. The adapter must be enabled only when a reachable `clamd` service is configured. |
+| Download | Attachment streaming, safe content type, `nosniff`, tenant-qualified file lookup, scan/status enforcement and a database-backed owning-record policy. A staff-document upload/attach/verify path is now present. | A generic file-to-record attachment workflow for all supported record types is not implemented. Newly uploaded, unattached files are not downloadable under the owning-record policy. |
 | Record policy | Study material: active study-material record, uploader/assigned teacher, or student with a current IN_PROGRESS enrollment in its section/subject group; guardian must have an ACTIVE link to that enrolled student. Assignment submission: own student record, ACTIVE linked guardian, or assignment author. Syllabus: published record. Staff document: uploader or staff member. Attendance source: uploader's attendance import job. | The approved STUDY_MATERIAL_VIEW action and student/guardian ownership policy are implemented in migration 28 and the file download service. File-to-record attachment remains open. |
 | Local storage | WHAT/HOW/WHY comments restored. Storage keys are normalized, checked for lexical containment and resolved-path/symlink containment before reads. | Local disk remains an interim deviation from D5 object storage and 15-minute expiring links. |
 | Type validation | File signatures are inspected. A valid safe file may declare `application/octet-stream`; server-detected MIME is returned. Executable-renamed files and unsafe HTML/SVG/scripts are rejected. | OOXML inspection checks ZIP central-directory names only; archive entries are never inflated. |
@@ -137,7 +155,7 @@
 
 ### Status correction — staff stories
 
-The three staff action codes above belong to Chunk 3 (B4), not Chunk 1. They are **Not started** until the B4 implementation and a green CI run cover them. No story is marked Accepted. This correction changes reporting only; it does not claim implementation or test execution.
+The initial matrix above predates the B4 staff implementation that subsequently landed on this branch. The current source tree contains the staff directory/profile API, `StaffRecordsPage`, scoped route gating, staff assignments and service history, staff-document upload/attachment, and document verification. Focused frontend and backend tests are present. The three action codes are therefore marked **Implemented — acceptance pending**, not Not started and not Accepted. End-to-end role/scope acceptance and deployment scanner configuration still require verification.
 
 
 ### Latest branch validation — progress correction commit

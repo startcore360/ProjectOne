@@ -27,7 +27,7 @@ export function ViceChancellorModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!approverUserId.trim()) {
-      setError("Approver User ID is required [Rule C6].");
+      setError("Enter the approver user account ID.");
       return;
     }
     setSaving(true);
@@ -37,7 +37,7 @@ export function ViceChancellorModal({
         approverKind,
         approverUserId: approverUserId.trim(),
       });
-      onSaved("Vice-Chancellor leave approver configured successfully [Rule C6].");
+      onSaved("Vice-Chancellor leave approver configured successfully.");
       setApproverUserId("");
       onClose();
     } catch (err: unknown) {
@@ -57,7 +57,7 @@ export function ViceChancellorModal({
       }}
       title="Configure Vice-Chancellor's Leave Approver"
       titleId="vc-approver-modal-title"
-      description="Designate who approves leaves submitted by the Vice-Chancellor [Rule C6 / Decision C9]."
+      description="Choose who can approve leave requests submitted by the Vice-Chancellor."
       size="sm"
     >
       {error && (
@@ -85,8 +85,8 @@ export function ViceChancellorModal({
               border: "1px solid var(--color-border, #ccc)",
             }}
           >
-            <option value="GOVERNING_BODY_APPROVER">GOVERNING_BODY_APPROVER (Governing Body Approver)</option>
-            <option value="MANAGEMENT">MANAGEMENT (Management / Trustees)</option>
+            <option value="GOVERNING_BODY_APPROVER">Governing Body Approver</option>
+            <option value="MANAGEMENT">Management / Trustees</option>
           </select>
         </div>
 

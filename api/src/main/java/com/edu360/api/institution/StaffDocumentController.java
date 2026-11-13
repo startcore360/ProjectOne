@@ -1,11 +1,13 @@
 package com.edu360.api.institution;
 
 import java.util.UUID;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +26,14 @@ public class StaffDocumentController {
 
     public StaffDocumentController(StaffDocumentService service) {
         this.service = service;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<StaffDocumentResponse>> list(@PathVariable UUID tenantId,
+            @PathVariable("id") UUID staffProfileId,
+            Authentication authentication) {
+        TenantPrincipal principal = principal(authentication, tenantId);
+        return ResponseEntity.ok(service.list(principal, staffProfileId));
     }
 
     @PostMapping

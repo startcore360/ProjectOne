@@ -37,7 +37,7 @@ export function PromotionRunModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="PROMOTION_RUN • Action #39"
+      kicker="YEAR-END PROMOTION"
       title="Initiate Promotion Run"
       titleId="prom-modal-title"
       size="sm"
