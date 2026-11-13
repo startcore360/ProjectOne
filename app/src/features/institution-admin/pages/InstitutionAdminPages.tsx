@@ -80,6 +80,7 @@ export function InstitutionsPage() {
 
   // Leave Approver state (Stories #45 & #46)
   const [goLiveCheck, setGoLiveCheck] = useState<GoLiveCheckResponse | null>(null);
+  const [goLiveCheckError, setGoLiveCheckError] = useState("");
   const [approverModalItem, setApproverModalItem] = useState<InstitutionItem | null>(null);
   const [vcModalOpen, setVcModalOpen] = useState(false);
 
@@ -90,11 +91,13 @@ export function InstitutionsPage() {
     try {
       const data = await institutionService.listInstitutions(tenantId);
       setInstitutions(data.items);
+      setGoLiveCheckError("");
+      setGoLiveCheck(null);
       try {
         const check = await leaveApproverService.getGoLiveCheck(tenantId);
         setGoLiveCheck(check);
       } catch {
-        // silent fallback if go-live check not applicable
+        setGoLiveCheckError("Go-live readiness could not be verified. Institution activation remains subject to server-side checks.");
       }
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -202,6 +205,12 @@ export function InstitutionsPage() {
         </div>
       )}
 
+      {goLiveCheckError && (
+        <Notice tone="danger">
+          {goLiveCheckError} <Button variant="secondary" size="sm" onClick={() => void fetchInstitutions()}>Retry readiness check</Button>
+        </Notice>
+      )}
+
       {goLiveCheck && !goLiveCheck.ready && (
         <div
           role="region"
@@ -301,7 +310,7 @@ export function InstitutionsPage() {
           <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-muted)" }}>
             Loading institutions...
           </div>
-        ) : filtered.length === 0 ? (
+        ) : error ? null : filtered.length === 0 ? (
           <div className="platform-admin-empty" style={{ padding: "var(--space-6)", textAlign: "center" }}>
             <span aria-hidden="true">
               <Icon name="shield" size={24} />
