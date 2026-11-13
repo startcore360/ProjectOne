@@ -166,7 +166,8 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
     public boolean canAttach(FileObject file, TenantPrincipal principal, String recordType, UUID recordId) {
         if (!"STAFF_DOCUMENT".equals(recordType) || recordId == null
                 || !"STAFF_DOCUMENT".equals(file.getPurpose())
-                || !"ACTIVE".equals(file.getStatus()) || !"CLEAN".equals(file.getScanStatus())
+                || !"ACTIVE".equals(file.getStatus())
+                || !java.util.Set.of("PENDING", "CLEAN").contains(file.getScanStatus())
                 || !principal.userAccountId().equals(file.getUploadedBy())) {
             return false;
         }
@@ -178,8 +179,9 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                    AND a.staff_profile_id = p.staff_profile_id
                    AND a.status = 'ACTIVE'
                   WHERE p.tenant_id = ? AND p.staff_profile_id = ?
+                    AND (? IS NULL OR a.institution_id = ?)
                 )
-                """, principal.tenantId(), recordId);
+                """, principal.tenantId(), recordId, file.getInstitutionId(), file.getInstitutionId());
     }
 
     private boolean exists(String sql, Object... parameters) {
