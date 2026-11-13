@@ -157,7 +157,7 @@ export type PlatformReportItem = {
   reportName: string;
   generatedAt: string;
   currency: string;
-  metrics: Record<string, number | string>;
+  metrics: Record<string, number | string | null>;
 };
 
 export const platformOpsService = {
