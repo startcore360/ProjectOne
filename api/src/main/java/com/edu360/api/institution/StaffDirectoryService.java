@@ -191,9 +191,22 @@ public class StaffDirectoryService {
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED", "effectiveTo cannot precede effectiveFrom.");
         }
-        if (assignments.existsByTenantIdAndStaffProfileIdAndInstitutionIdAndDepartmentIdAndStatus(
-                actor.tenantId(), staffProfileId, request.institutionId(), request.departmentId(), "ACTIVE")) {
-            throw new DuplicateResourceException("An active assignment already exists for this scope.");
+        Boolean overlapping = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1
+                      FROM app.staff_assignment
+                     WHERE tenant_id = ?
+                       AND staff_profile_id = ?
+                       AND institution_id IS NOT DISTINCT FROM ?
+                       AND department_id IS NOT DISTINCT FROM ?
+                       AND status = 'ACTIVE'
+                       AND effective_from <= COALESCE(?, DATE '9999-12-31')
+                       AND COALESCE(effective_to, DATE '9999-12-31') >= ?
+                )
+                """, Boolean.class, actor.tenantId(), staffProfileId, request.institutionId(),
+                request.departmentId(), request.effectiveTo(), request.effectiveFrom());
+        if (Boolean.TRUE.equals(overlapping)) {
+            throw new DuplicateResourceException("An active staff assignment overlaps the requested effective date range for this scope.");
         }
         StaffAssignment assignment = new StaffAssignment();
         assignment.setStaffAssignmentId(UUID.randomUUID());
@@ -235,6 +248,43 @@ public class StaffDirectoryService {
         }
         if (request.effectiveTo().isBefore(assignment.getEffectiveFrom())) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED", "effectiveTo cannot precede effectiveFrom.");
+        }
+        List<String> conflicts = new java.util.ArrayList<>();
+        conflicts.addAll(jdbc.query("""
+                SELECT 'PUBLISHED_TIMETABLE_SLOT:' || ts.timetable_slot_id::text
+                  FROM app.timetable_slot ts
+                  JOIN app.subject_allocation sa
+                    ON sa.tenant_id = ts.tenant_id
+                   AND sa.subject_allocation_id = ts.subject_allocation_id
+                 WHERE sa.tenant_id = ?
+                   AND sa.staff_assignment_id = ?
+                   AND sa.status = 'ACTIVE'
+                   AND ts.status = 'PUBLISHED'
+                   AND ts.valid_from <= ?
+                   AND COALESCE(ts.valid_to, DATE '9999-12-31') >= ?
+                """, (rs, rowNum) -> rs.getString(1),
+                actor.tenantId(), assignmentId, request.effectiveTo(), request.effectiveTo()));
+        conflicts.addAll(jdbc.query("""
+                SELECT 'ACTIVE_SUBJECT_ALLOCATION:' || subject_allocation_id::text
+                  FROM app.subject_allocation
+                 WHERE tenant_id = ? AND staff_assignment_id = ? AND status = 'ACTIVE'
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId));
+        conflicts.addAll(jdbc.query("""
+                SELECT 'CURRENT_CLASS_TEACHER:' || class_teacher_assignment_id::text
+                  FROM app.class_teacher_assignment
+                 WHERE tenant_id = ? AND staff_assignment_id = ?
+                   AND (effective_to IS NULL OR effective_to >= ?)
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo()));
+        conflicts.addAll(jdbc.query("""
+                SELECT 'CURRENT_MENTOR:' || mentor_assignment_id::text
+                  FROM app.mentor_assignment
+                 WHERE tenant_id = ? AND staff_assignment_id = ?
+                   AND (effective_to IS NULL OR effective_to >= ?)
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo()));
+        if (!conflicts.isEmpty()) {
+            throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_IN_USE",
+                    "Assignment cannot be ended while dependent teaching allocations remain active. Reassign or end these records first: "
+                            + String.join(", ", conflicts));
         }
         assignment.setEffectiveTo(request.effectiveTo());
         assignment.setStatus("ENDED");
