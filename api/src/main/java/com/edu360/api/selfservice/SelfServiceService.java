@@ -156,13 +156,14 @@ public class SelfServiceService {
     }
 
     /**
-     * A-08: SELF_SERVICE_VIEW ("Self" in D2) is checked at the user's own active scope - a
-     * Teacher at their institution, an HOD at their department - never as a tenant-wide check
-     * that only tenant-level roles could pass.
+     * Self-service is a per-authenticated-user area, not a staff permission. The controller
+     * derives both identifiers from the tenant-authenticated principal; action-code gating here
+     * would exclude students and guardians who also own notifications and notices.
      */
     private void authorizeSelfService(UUID tenantId, UUID userId) {
-        RbacPrincipal self = new RbacPrincipal(tenantId, userId);
-        RbacScope own = java.util.Objects.requireNonNullElse(permissionEvaluatorService.ownScope(self), RbacScope.tenant());
-        permissionEvaluatorService.authorize(self, "SELF_SERVICE_VIEW", own, RbacTarget.NONE);
+        if (tenantId == null || userId == null) {
+            throw new com.edu360.api.exception.UnauthorizedException(
+                    "An authenticated tenant user is required.");
+        }
     }
 }
