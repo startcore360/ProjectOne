@@ -662,7 +662,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
       expect(screen.getByRole("heading", { name: /Set role coverage override/i })).toBeInTheDocument();
     });
 
-    const reasonInput = screen.getByLabelText(/Statutory Justification/i);
+    const reasonInput = screen.getByLabelText(/Reason for this change/i);
     fireEvent.change(reasonInput, { target: { value: "Statutory delegation during executive travel" } });
 
     const submitBtn = screen.getByRole("button", { name: /^Save Override$/i });
@@ -678,7 +678,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
           reason: "Statutory delegation during executive travel",
         })
       );
-      expect(screen.getByText(/Rolldown override established for VICE_CHANCELLOR/i)).toBeInTheDocument();
+      expect(screen.getByText(/Role coverage override saved for Vice Chancellor/i)).toBeInTheDocument();
     });
   });
 });
