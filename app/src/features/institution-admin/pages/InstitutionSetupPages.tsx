@@ -16,6 +16,7 @@ import {
   Panel,
   EmptyState,
   Notice,
+  Tabs,
   Toast,
   toast,
 } from "../../../design-system/components";
@@ -223,6 +224,7 @@ export function HodAssignmentPage() {
             </Button>
           </form>
         </Panel>
+        </div>
       )}
     </div>
   );
@@ -277,6 +279,7 @@ export function MentorAssignmentPage() {
             </Button>
           </form>
         </Panel>
+        </div>
       )}
     </div>
   );
@@ -343,6 +346,7 @@ export function ClassTeacherAssignmentPage() {
             </Button>
           </form>
         </Panel>
+        </div>
       )}
     </div>
   );
@@ -393,6 +397,7 @@ export function StudentLoginSwitchPage() {
             </Button>
           </form>
         </Panel>
+        </div>
       )}
     </div>
   );
@@ -841,6 +846,15 @@ const DAY_OPTIONS = [
 
 function dayLabel(dayOfWeek: number): string {
   return DAY_OPTIONS.find((d) => d.value === dayOfWeek)?.label ?? String(dayOfWeek);
+}
+
+function formatStatusLabel(value: string): string {
+  const known: Record<string, string> = {
+    ACTIVE: "Active", DRAFT: "Draft", APPROVED: "Approved", PENDING_APPROVAL: "Pending approval",
+    REJECTED: "Rejected", CANCELLED: "Cancelled", EXAM_DAY: "Exam day", SEMESTER_DATES: "Semester dates",
+    LOCAL_HOLIDAY: "Local holiday", LOCAL_EVENT: "Local event", UNIVERSITY: "University", COLLEGE: "College", SCHOOL: "School",
+  };
+  return known[value] ?? value.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (letter) => letter.toUpperCase());
 }
 
 export function WeeklyOffRulesPage() {
@@ -1852,8 +1866,8 @@ export function DelegationsApprovalsPage() {
             value={delegationBasis}
             onChange={(e) => setDelegationBasis(e.target.value as "SAME_OR_HIGHER" | "DESIGNATED_DEPUTY")}
             options={[
-              { value: "SAME_OR_HIGHER", label: "Same or higher role ranking [OD-17]" },
-              { value: "DESIGNATED_DEPUTY", label: "Designated Deputy (e.g. Principal → Vice Principal) [D-001]" },
+              { value: "SAME_OR_HIGHER", label: "Same or higher role" },
+              { value: "DESIGNATED_DEPUTY", label: "Designated deputy (for example, Principal to Vice-Principal)" },
             ]}
           />
 
@@ -2136,76 +2150,17 @@ export function AcademicGovernancePage() {
         }
       />
 
-      <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--color-border, #e5e7eb)", marginBottom: "var(--space-4)" }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab("rules")}
-          style={{
-            padding: "8px 16px",
-            fontWeight: activeTab === "rules" ? 600 : 400,
-            borderBottom: activeTab === "rules" ? "2px solid #2563eb" : "2px solid transparent",
-            background: "none",
-            borderTop: "none",
-            borderLeft: "none",
-            borderRight: "none",
-            cursor: "pointer",
-            color: activeTab === "rules" ? "#2563eb" : "inherit",
-          }}
-        >
-          Curriculum & Program Rules (#30)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("grading")}
-          style={{
-            padding: "8px 16px",
-            fontWeight: activeTab === "grading" ? 600 : 400,
-            borderBottom: activeTab === "grading" ? "2px solid #2563eb" : "2px solid transparent",
-            background: "none",
-            borderTop: "none",
-            borderLeft: "none",
-            borderRight: "none",
-            cursor: "pointer",
-            color: activeTab === "grading" ? "#2563eb" : "inherit",
-          }}
-        >
-          Grading Schemes (#34)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("allocation")}
-          style={{
-            padding: "8px 16px",
-            fontWeight: activeTab === "allocation" ? 600 : 400,
-            borderBottom: activeTab === "allocation" ? "2px solid #2563eb" : "2px solid transparent",
-            background: "none",
-            borderTop: "none",
-            borderLeft: "none",
-            borderRight: "none",
-            cursor: "pointer",
-            color: activeTab === "allocation" ? "#2563eb" : "inherit",
-          }}
-        >
-          Subject Allocations (#36)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("promotion")}
-          style={{
-            padding: "8px 16px",
-            fontWeight: activeTab === "promotion" ? 600 : 400,
-            borderBottom: activeTab === "promotion" ? "2px solid #2563eb" : "2px solid transparent",
-            background: "none",
-            borderTop: "none",
-            borderLeft: "none",
-            borderRight: "none",
-            cursor: "pointer",
-            color: activeTab === "promotion" ? "#2563eb" : "inherit",
-          }}
-        >
-          Year-End Promotions (#39 & #40)
-        </button>
-      </div>
+      <Tabs
+        ariaLabel="Academic governance sections"
+        activeId={activeTab}
+        onChange={(id) => setActiveTab(id as "rules" | "grading" | "allocation" | "promotion")}
+        items={[
+          { id: "rules", label: "Curriculum and programme rules" },
+          { id: "grading", label: "Grading schemes" },
+          { id: "allocation", label: "Subject allocations" },
+          { id: "promotion", label: "Year-end promotions" },
+        ]}
+      />
 
       {feedback && (
         <Toast
@@ -2220,6 +2175,7 @@ export function AcademicGovernancePage() {
       {loadError && !loading && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={fetchCurrentTab}>Retry</Button></Notice>}
 
       {!loading && !loadError && activeTab === "rules" && (
+        <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" tabIndex={0}>
         <Panel title="Curriculum and programme rules" description="Versioned curriculum requirements set by the Registrar.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2241,7 +2197,7 @@ export function AcademicGovernancePage() {
                       <td><code>{r.programRuleSetId}</code></td>
                       <td>v{r.versionNo}</td>
                       <td>{r.effectiveFrom}</td>
-                      <td><Badge tone={r.status === "ACTIVE" ? "success" : "neutral"}>{r.status}</Badge></td>
+                      <td><Badge tone={r.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(r.status)}</Badge></td>
                       <td><code style={{ fontSize: "0.8rem" }}>{r.rules}</code></td>
                     </tr>
                   ))
@@ -2253,6 +2209,7 @@ export function AcademicGovernancePage() {
       )}
 
       {!loading && !loadError && activeTab === "grading" && (
+        <div id="panel-grading" role="tabpanel" aria-labelledby="tab-grading" tabIndex={0}>
         <Panel title="Grading schemes" description="University-wide or standalone institution grade points and bands.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2273,7 +2230,7 @@ export function AcademicGovernancePage() {
                       <td><strong>{s.schemeName}</strong></td>
                       <td>v{s.versionNo}</td>
                       <td>{s.effectiveFrom}</td>
-                      <td><Badge tone={s.status === "ACTIVE" ? "success" : "neutral"}>{s.status}</Badge></td>
+                      <td><Badge tone={s.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(s.status)}</Badge></td>
                     </tr>
                   ))
                 )}
@@ -2284,6 +2241,7 @@ export function AcademicGovernancePage() {
       )}
 
       {!loading && !loadError && activeTab === "allocation" && (
+        <div id="panel-allocation" role="tabpanel" aria-labelledby="tab-allocation" tabIndex={0}>
         <Panel title="Subject allocations" description="Allocate courses to teachers for specific class sections or elective subject groups.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2304,7 +2262,7 @@ export function AcademicGovernancePage() {
                       <td><code>{a.courseOfferingId}</code></td>
                       <td><code>{a.sectionId || a.subjectGroupId}</code></td>
                       <td><code>{a.staffAssignmentId}</code></td>
-                      <td><Badge tone={a.status === "ACTIVE" ? "success" : "neutral"}>{a.status}</Badge></td>
+                      <td><Badge tone={a.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(a.status)}</Badge></td>
                     </tr>
                   ))
                 )}
@@ -2315,6 +2273,7 @@ export function AcademicGovernancePage() {
       )}
 
       {!loading && !loadError && activeTab === "promotion" && (
+        <div id="panel-promotion" role="tabpanel" aria-labelledby="tab-promotion" tabIndex={0}>
         <Panel title="Year-end promotions" description="Promote students across academic sessions; Principal approves before execution.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2334,11 +2293,11 @@ export function AcademicGovernancePage() {
                     <tr key={p.promotionRunId}>
                       <td><code>{p.fromSessionId}</code></td>
                       <td><code>{p.toSessionId}</code></td>
-                      <td><Badge tone={p.status === "APPROVED" ? "success" : "neutral"}>{p.status}</Badge></td>
+                      <td><Badge tone={p.status === "APPROVED" ? "success" : "neutral"}>{formatStatusLabel(p.status)}</Badge></td>
                       <td>
                         {p.status === "PENDING_APPROVAL" && (
                           <Button variant="secondary" onClick={() => handleApprovePromotion(p.promotionRunId)}>
-                            Approve [Principal]
+                            Approve
                           </Button>
                         )}
                       </td>
