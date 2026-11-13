@@ -16,8 +16,8 @@ describe("GuardianChildSwitcher", () => {
     render(<GuardianChildSwitcher value="active-child" onChange={vi.fn()} />);
     await waitFor(() => expect(screen.getByRole("option", { name: "STU-1" })).toBeInTheDocument());
     expect(screen.queryByRole("option", { name: "STU-2" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Selected child details" })).toHaveTextContent("STU-1");
-    expect(screen.getByText("Child information is read-only.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "STU-1" })).toBeInTheDocument();
+    expect(screen.getByText(/Academic progress, attendance, fee details and notices are not yet available/i)).toBeInTheDocument();
     expect(get).toHaveBeenCalledWith("/guardian/children");
   });
 
