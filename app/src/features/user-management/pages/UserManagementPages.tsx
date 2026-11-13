@@ -21,6 +21,7 @@ import {
   userManagementService,
   type ActingScope,
   type CreateUserResponse,
+  type StudentProfileResponse,
   type ScopeType,
   type TopUserResponse,
   type UserSummary,
@@ -29,6 +30,7 @@ import {
   ScopeFields,
   CreateUserCheckModal,
   CreateUserModal,
+  CreateStudentModal,
   CreatedCredentialsModal,
   CreateTopUserModal,
   BulkUploadModal,
@@ -40,6 +42,7 @@ export {
   ScopeFields,
   CreateUserCheckModal,
   CreateUserModal,
+  CreateStudentModal,
   CreatedCredentialsModal,
   CreateTopUserModal,
   BulkUploadModal,
@@ -106,9 +109,11 @@ export function UserListPage() {
   const [query, setQuery] = useState("");
   const [showCreateCheck, setShowCreateCheck] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateStudentModal, setShowCreateStudentModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showGovernanceModal, setShowGovernanceModal] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreateUserResponse | TopUserResponse | null>(null);
+  const [createdStudent, setCreatedStudent] = useState<StudentProfileResponse | null>(null);
 
   if (!tenantId) {
     return (
@@ -163,6 +168,9 @@ export function UserListPage() {
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <Button variant="secondary" onClick={() => setShowCreateCheck(true)}>
               Check if I can create a user
+            </Button>
+            <Button variant="secondary" onClick={() => setShowCreateStudentModal(true)}>
+              Create student profile
             </Button>
             <Button variant="secondary" onClick={() => setShowBulkModal(true)}>
               Bulk import users
@@ -299,6 +307,17 @@ export function UserListPage() {
         }}
       />
 
+      <CreateStudentModal
+        tenantId={tenantId}
+        isOpen={showCreateStudentModal}
+        onClose={() => setShowCreateStudentModal(false)}
+        onCreated={(student) => {
+          setShowCreateStudentModal(false);
+          setCreatedStudent(student);
+          void load();
+        }}
+      />
+
       <CreateUserModal
         tenantId={tenantId}
         isOpen={showCreateModal}
@@ -309,6 +328,22 @@ export function UserListPage() {
           void load();
         }}
       />
+
+      {createdStudent && (
+        <CreatedCredentialsModal
+          user={{
+            displayName: createdStudent.fullName,
+            identifier: { label: "Student code", value: createdStudent.studentCode },
+            temporaryPassword: createdStudent.temporaryPassword ?? undefined,
+            message: "Student profile and enrolment were created. Login provisioning follows the institution and class settings.",
+          }}
+          isOpen={true}
+          onClose={() => setCreatedStudent(null)}
+          title="Student profile created successfully"
+          kicker="STUDENT PROFILE"
+          description="Share any issued temporary password securely. It is shown only in this confirmation."
+        />
+      )}
 
       {createdUser && (
         <CreatedCredentialsModal

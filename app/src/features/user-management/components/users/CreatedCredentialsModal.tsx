@@ -3,7 +3,8 @@ import { Button, Modal } from "../../../../design-system/components";
 
 export interface ProvisionedUserCredentials {
   displayName: string;
-  email: string;
+  email?: string;
+  identifier?: { label: string; value: string };
   temporaryPassword?: string;
   message?: string;
   twoStepLoginRequired?: boolean;
@@ -13,12 +14,18 @@ export interface CreatedCredentialsModalProps {
   user: ProvisionedUserCredentials;
   isOpen: boolean;
   onClose: () => void;
+  title?: string;
+  kicker?: string;
+  description?: string;
 }
 
 export function CreatedCredentialsModal({
   user,
   isOpen,
   onClose,
+  title = "User created successfully",
+  kicker = "CREDENTIALS ISSUED",
+  description = "Share this temporary password securely with the user. It will only be shown once.",
 }: CreatedCredentialsModalProps) {
   const [copied, setCopied] = useState(false);
 
@@ -34,16 +41,23 @@ export function CreatedCredentialsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="CREDENTIALS ISSUED"
-      title="User created successfully"
+      kicker={kicker}
+      title={title}
       titleId="created-cred-title"
-      description="Share this temporary password securely with the user. It will only be shown once."
+      description={description}
       size="sm"
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <p style={{ margin: 0, fontSize: "0.875rem" }}>
-          User <strong>{user.displayName}</strong> ({user.email}) has been provisioned.
+          User <strong>{user.displayName}</strong>{user.email ? ` (${user.email})` : ""} has been provisioned.
         </p>
+        {user.identifier && (
+          <p style={{ margin: 0, fontSize: "0.875rem" }}>
+            <strong>{user.identifier.label}:</strong> <code>{user.identifier.value}</code>
+          </p>
+        )}
+        {user.message && <p style={{ margin: 0, fontSize: "0.875rem" }}>{user.message}</p>}
+        {/* credential summary */}
 
         {user.temporaryPassword && (
           <div
