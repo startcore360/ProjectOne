@@ -256,7 +256,7 @@ export function MentorAssignmentPage() {
     <div className="platform-page">
       <PageHeader
         title="Assign mentor"
-        description="MENTOR_ASSIGN — assign a mentor / class coordinator to a college section."
+        description="Assign a mentor or class coordinator to a college section."
       />
       {!tenantId ? (
         <NoTenantNotice />
@@ -311,7 +311,7 @@ export function ClassTeacherAssignmentPage() {
     <div className="platform-page">
       <PageHeader
         title="Assign Class Teacher"
-        description="CLASS_TEACHER_ASSIGN — assign a Class Teacher to a school SECTION."
+        description="Assign a class teacher to a school section."
       />
       <div className="platform-policy-callout">
         <span aria-hidden="true">ⓘ</span>
@@ -370,7 +370,7 @@ export function StudentLoginSwitchPage() {
     <div className="platform-page">
       <PageHeader
         title="Student login switch"
-        description="STUDENT_LOGIN_SWITCH — turn view-only student login on or off for a school class."
+        description="Enable or disable view-only student access for a school class."
       />
       {!tenantId ? (
         <NoTenantNotice />
@@ -533,7 +533,7 @@ export function CalendarEventsPage() {
     <div className="platform-page">
       <PageHeader
         title="Local calendar events"
-        description="CALENDAR_MASTER_SET — master academic sessions & university holidays. CALENDAR_LOCAL_SET — local holidays & events."
+        description="Manage academic sessions, university holidays, and institution-specific calendar events."
       />
       {!tenantId ? (
         <NoTenantNotice />
@@ -542,7 +542,7 @@ export function CalendarEventsPage() {
           {/* Master Academic Sessions */}
           <Panel
             title="Master Academic Sessions"
-            description="Tenant-wide academic sessions [CALENDAR_MASTER_SET, Action #28]."
+            description="Academic sessions shared across the tenant."
           >
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
               <Button type="button" variant="secondary" onClick={() => void loadSessions()} busy={sessionsLoading}>
@@ -909,7 +909,7 @@ export function WeeklyOffRulesPage() {
     <div className="platform-page">
       <PageHeader
         title="Weekly-off rules"
-        description="WEEKLY_OFF_SET — set the weekly-off pattern for an institution (e.g. Sunday every week, alternate Saturdays)."
+        description="Set the institution’s weekly day off, including alternate-week patterns."
       />
       {!tenantId ? (
         <NoTenantNotice />
@@ -1082,7 +1082,7 @@ export function AcademicStructurePage() {
     <div className="platform-page">
       <PageHeader
         title="Academic structure"
-        description="Create and manage academic departments and degree programs (STRUCTURE_MANAGE)."
+        description="Create and manage academic departments and degree programmes."
       />
 
       <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
@@ -1431,7 +1431,7 @@ export function TermLockPage() {
     <div className="platform-page">
       <PageHeader
         title="Term lock management"
-        description="Lock academic terms to freeze marks and attendance records. Temporary unlocks require statutory justification and automatically expire [TERM_LOCK / TERM_UNLOCK / Rules R2-08, AT-09]."
+        description="Lock academic terms to protect marks and attendance records. Temporary unlocks require justification and expire automatically."
       />
 
       {institutionLoadError && <Notice tone="danger">{institutionLoadError}</Notice>}
@@ -1791,7 +1791,7 @@ export function DelegationsApprovalsPage() {
     <div className="platform-page">
       <PageHeader
         title="Approvals & delegations"
-        description="Hand over approval authority for set dates or perform bulk approval decisions [APPROVAL_DELEGATE / APPROVAL_BULK / Rules AP-06..10, AP-25, Addendum Rule 11]."
+        description="Delegate approval authority for a defined period or review several requests together."
       />
 
       {feedback && (
@@ -1806,7 +1806,7 @@ export function DelegationsApprovalsPage() {
       {/* Delegation Form */}
       <Panel
         title="Delegate approval authority"
-        description="Hand over own approvals to a peer or deputy for set dates [APPROVAL_DELEGATE / Rule 11]."
+        description="Hand over your approval responsibilities to an eligible colleague for a defined period."
       >
         <form onSubmit={handleCreateDelegation} className="platform-form">
           <TextField
@@ -1861,7 +1861,7 @@ export function DelegationsApprovalsPage() {
       {/* Bulk Approvals Form */}
       <Panel
         title="Bulk approval decision"
-        description="Approve several requests at once with an optional comment [APPROVAL_BULK / Rule AP-25]."
+        description="Review and decide several eligible requests together, with an optional comment."
       >
         <form onSubmit={handleBulkDecision} className="platform-form">
           <TextAreaField
@@ -2096,7 +2096,7 @@ export function AcademicGovernancePage() {
     <div className="platform-page">
       <PageHeader
         title="Academic setup & governance"
-        description="Configure curriculum rules, grading schemes, subject allocations, and year-end promotion runs [PROGRAM_RULES_SET, GRADING_SCHEME_SET, SUBJECT_ALLOCATE, PROMOTION_RUN, PROMOTION_APPROVE]."
+        description="Configure curriculum requirements, grading schemes, subject allocations and year-end student promotions."
         actions={
           activeTab === "rules" ? (
             <Button onClick={() => setRuleModalOpen(true)}>+ Set Program Rules</Button>
@@ -2194,7 +2194,7 @@ export function AcademicGovernancePage() {
       {loadError && !loading && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={fetchCurrentTab}>Retry</Button></Notice>}
 
       {!loading && !loadError && activeTab === "rules" && (
-        <Panel title="Curriculum & Program Rule Sets [PROGRAM_RULES_SET / Action #30]" description="Versioned curriculum requirements set by the Registrar.">
+        <Panel title="Curriculum and programme rules" description="Versioned curriculum requirements set by the Registrar.">
           <div className="platform-table-wrap">
             <table className="platform-table">
               <thead>
@@ -2227,7 +2227,7 @@ export function AcademicGovernancePage() {
       )}
 
       {!loading && !loadError && activeTab === "grading" && (
-        <Panel title="Grading Schemes [GRADING_SCHEME_SET / Action #34]" description="University-wide or standalone institution grade points and bands.">
+        <Panel title="Grading schemes" description="University-wide or standalone institution grade points and bands.">
           <div className="platform-table-wrap">
             <table className="platform-table">
               <thead>
@@ -2258,7 +2258,7 @@ export function AcademicGovernancePage() {
       )}
 
       {!loading && !loadError && activeTab === "allocation" && (
-        <Panel title="Subject Allocations [SUBJECT_ALLOCATE / Action #36]" description="Allocate courses to teachers for specific class sections or elective subject groups.">
+        <Panel title="Subject allocations" description="Allocate courses to teachers for specific class sections or elective subject groups.">
           <div className="platform-table-wrap">
             <table className="platform-table">
               <thead>
@@ -2289,7 +2289,7 @@ export function AcademicGovernancePage() {
       )}
 
       {!loading && !loadError && activeTab === "promotion" && (
-        <Panel title="Year-End Promotions [PROMOTION_RUN / PROMOTION_APPROVE / Actions #39 & #40]" description="Promote students across academic sessions; Principal approves before execution.">
+        <Panel title="Year-end promotions" description="Promote students across academic sessions; Principal approves before execution.">
           <div className="platform-table-wrap">
             <table className="platform-table">
               <thead>
