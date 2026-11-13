@@ -1852,8 +1852,8 @@ export function DelegationsApprovalsPage() {
   const [delegations, setDelegations] = useState<DelegationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
-  const { fieldErrors: delegFieldErrors, handleApiError: handleDelegApiError, clearFieldError: clearDelegFieldError, clearAll: clearDelegAll } = useFormErrors();
-  const { fieldErrors: bulkFieldErrors, handleApiError: handleBulkApiError, clearFieldError: clearBulkFieldError, clearAll: clearBulkAll } = useFormErrors();
+  const { fieldErrors: delegFieldErrors, formError: delegationFormError, setFieldError: setDelegFieldError, handleApiError: handleDelegApiError, clearFieldError: clearDelegFieldError, clearAll: clearDelegAll } = useFormErrors();
+  const { fieldErrors: bulkFieldErrors, formError: bulkFormError, setFieldError: setBulkFieldError, handleApiError: handleBulkApiError, clearFieldError: clearBulkFieldError, clearAll: clearBulkAll } = useFormErrors();
 
   // New delegation state
   const [delegateUserId, setDelegateUserId] = useState("");
@@ -1908,9 +1908,9 @@ export function DelegationsApprovalsPage() {
     if (!requestId) return;
     let remark: string | undefined;
     if (decision === "REJECTED") {
-      const promptRemark = window.prompt("Please provide a rejection remark (mandatory under Rule AP-06):");
+      const promptRemark = window.prompt("Please provide a rejection reason:");
       if (!promptRemark || !promptRemark.trim()) {
-        setFeedback({ tone: "danger", message: "A remark is mandatory when rejecting an approval." });
+        setFeedback({ tone: "danger", message: "A reason is required when rejecting an approval." });
         return;
       }
       remark = promptRemark.trim();
@@ -1929,20 +1929,26 @@ export function DelegationsApprovalsPage() {
 
   const handleCreateDelegation = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isValidUuid(delegateUserId)) {
-      const msg = "Valid Delegate User Account ID (UUID) is required.";
-      setFeedback({ tone: "danger", message: msg });
-      toast.error("Validation error", msg);
-      return;
-    }
-    if (!startsAt || !endsAt) {
-      const msg = "Start and end dates are required for time-bounded delegation.";
-      setFeedback({ tone: "danger", message: msg });
-      toast.error("Validation error", msg);
-      return;
-    }
-    setCreating(true);
     clearDelegAll();
+    let invalid = false;
+    if (!isValidUuid(delegateUserId)) {
+      setDelegFieldError("delegateUserId", "Enter a valid user account UUID.");
+      invalid = true;
+    }
+    if (!startsAt) {
+      setDelegFieldError("startsAt", "Choose when the delegation begins.");
+      invalid = true;
+    }
+    if (!endsAt) {
+      setDelegFieldError("endsAt", "Choose when the delegation ends.");
+      invalid = true;
+    }
+    if (startsAt && endsAt && (!Number.isFinite(new Date(startsAt).getTime()) || !Number.isFinite(new Date(endsAt).getTime()) || new Date(endsAt).getTime() <= new Date(startsAt).getTime())) {
+      setDelegFieldError("endsAt", "The end time must be later than the start time.");
+      invalid = true;
+    }
+    if (invalid) return;
+    setCreating(true);
     try {
       const res = await approvalDelegationService.createDelegation(tenantId, {
         delegateUserId: delegateUserId.trim(),
@@ -1950,12 +1956,12 @@ export function DelegationsApprovalsPage() {
         startsAt: new Date(startsAt).toISOString(),
         endsAt: new Date(endsAt).toISOString(),
       });
-      const msg = `Approval authority successfully delegated [APPROVAL_DELEGATE / Rule 11]. Self-approval prohibited.`;
+      const msg = "Approval authority delegated successfully. Self-approval remains prohibited.";
       setFeedback({
         tone: "success",
         message: msg,
       });
-      toast.success("Approval authority delegated [Rule 11]", "Self-approval prohibited.");
+      toast.success("Approval authority delegated", "Self-approval remains prohibited.");
       setDelegations((prev) => [res, ...prev]);
       setDelegateUserId("");
     } catch (err: unknown) {
@@ -1984,32 +1990,35 @@ export function DelegationsApprovalsPage() {
 
   const handleBulkDecision = async (e: FormEvent) => {
     e.preventDefault();
-    const ids = bulkIds
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => isValidUuid(s));
-
-    if (ids.length === 0) {
-      const msg = "Please provide at least one valid approval request UUID.";
-      setFeedback({ tone: "danger", message: msg });
-      toast.error("Validation error", msg);
+    clearBulkAll();
+    const rawIds = bulkIds.split(",").map((value) => value.trim()).filter(Boolean);
+    const ids = [...new Set(rawIds)];
+    if (rawIds.length === 0) {
+      setBulkFieldError("approvalRequestIds", "Enter at least one approval request UUID.");
+      return;
+    }
+    if (rawIds.some((value) => !isValidUuid(value))) {
+      setBulkFieldError("approvalRequestIds", "Every approval request ID must be a valid UUID. Remove or correct invalid entries.");
+      return;
+    }
+    if (ids.length !== rawIds.length) {
+      setBulkFieldError("approvalRequestIds", "Remove duplicate approval request IDs before continuing.");
       return;
     }
 
     setBulkSubmitting(true);
-    clearBulkAll();
     try {
       const res = await approvalDelegationService.bulkDecide(tenantId, {
         approvalRequestIds: ids,
         decision: bulkDecision,
         comment: bulkComment.trim() || undefined,
       });
-      const msg = `Bulk decision applied: ${res.succeeded} items processed successfully [APPROVAL_BULK / Rule AP-25].`;
+      const msg = `Bulk decision applied: ${res.succeeded} items processed successfully.`;
       setFeedback({
         tone: "success",
         message: msg,
       });
-      toast.success("Bulk decision applied [Rule AP-25]", `${res.succeeded} items processed successfully.`);
+      toast.success("Bulk decision applied", `${res.succeeded} items processed successfully.`);
       setBulkIds("");
       setBulkComment("");
     } catch (err: unknown) {
@@ -2032,12 +2041,12 @@ export function DelegationsApprovalsPage() {
       />
 
       {feedback && (
-        <Toast
-          variant={feedback.tone === "danger" ? "error" : "success"}
-          description={feedback.message}
-          onDismiss={() => setFeedback(null)}
-          className="mb-4"
-        />
+        <Notice tone={feedback.tone} className="mb-4">
+          <div className="platform-feedback-row">
+            <span>{feedback.message}</span>
+            <Button variant="tertiary" size="sm" onClick={() => setFeedback(null)}>Dismiss</Button>
+          </div>
+        </Notice>
       )}
 
       {/* Delegation Form */}
@@ -2074,7 +2083,7 @@ export function DelegationsApprovalsPage() {
               label="Effective From *"
               required
               value={startsAt}
-              onChange={(e) => { setStartsAt(e.target.value); clearDelegFieldError("startsAt"); }}
+              onChange={(e) => { setStartsAt(e.target.value); clearDelegFieldError("startsAt"); clearDelegFieldError("endsAt"); }}
               error={delegFieldErrors.startsAt}
             />
             <DateTimeField
@@ -2088,8 +2097,9 @@ export function DelegationsApprovalsPage() {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={creating || !isValidUuid(delegateUserId) || !startsAt || !endsAt}>
-              {creating ? "Delegating..." : "Create Delegation [Rule 11]"}
+            {delegationFormError && <Notice tone="danger">{delegationFormError}</Notice>}
+            <Button type="submit" disabled={creating}>
+              {creating ? "Delegating…" : "Create delegation"}
             </Button>
           </div>
         </form>
@@ -2136,8 +2146,9 @@ export function DelegationsApprovalsPage() {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={bulkSubmitting || !bulkIds.trim()}>
-              {bulkSubmitting ? "Processing..." : `Bulk ${bulkDecision === "APPROVED" ? "Approve" : "Reject"} [Rule AP-25]`}
+            {bulkFormError && <Notice tone="danger">{bulkFormError}</Notice>}
+            <Button type="submit" disabled={bulkSubmitting}>
+              {bulkSubmitting ? "Processing…" : "Apply bulk decision"}
             </Button>
           </div>
         </form>
@@ -2146,7 +2157,7 @@ export function DelegationsApprovalsPage() {
       <div style={{ marginTop: "var(--space-4)" }}>
         <Panel
           title="Pending approval requests (Inbox)"
-          description="Pending steps awaiting your review or acting delegation [Addendum Rule 11 / Self-approval prohibited]."
+          description="Pending approval steps awaiting your review or authorized delegation."
         >
           {inboxLoading && <p className="platform-empty-note">Loading pending approvals...</p>}
           {inboxError && <Notice tone="danger">{inboxError} <Button variant="secondary" size="sm" onClick={fetchInbox}>Retry</Button></Notice>}
@@ -2171,8 +2182,8 @@ export function DelegationsApprovalsPage() {
                   {inboxItems.map((item, idx) => (
                     <tr key={idx}>
                       <td>{item.stepNo}</td>
-                      <td><code>{item.approverRoleCode}</code></td>
-                      <td><Badge tone="warning">{item.decision}</Badge></td>
+                      <td>{formatStatusLabel(item.approverRoleCode)}</td>
+                      <td><Badge tone="warning">{formatStatusLabel(item.decision)}</Badge></td>
                       <td>
                         <div style={{ display: "flex", gap: "var(--space-2)" }}>
                           <Button

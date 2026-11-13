@@ -507,6 +507,16 @@ describe("Institution setup action screens", () => {
     });
   });
 
+  it("shows delegation field errors beside invalid IDs and dates", () => {
+    renderWithTenant(<DelegationsApprovalsPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Create delegation/i }));
+
+    expect(screen.getByText("Enter a valid user account UUID.")).toBeInTheDocument();
+    expect(screen.getByText("Choose when the delegation begins.")).toBeInTheDocument();
+    expect(screen.getByText("Choose when the delegation ends.")).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it("creates time-bounded delegation (Story #20: APPROVAL_DELEGATE / Rule 11)", async () => {
     const delegateId = "44444444-4444-4444-4444-444444444444";
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
@@ -534,7 +544,7 @@ describe("Institution setup action screens", () => {
     fireEvent.change(startInput, { target: { value: "2026-11-08T00:00" } });
     fireEvent.change(endInput, { target: { value: "2026-11-15T00:00" } });
 
-    const submitBtn = screen.getByRole("button", { name: /Create Delegation \[Rule 11\]/i });
+    const submitBtn = screen.getByRole("button", { name: /Create delegation/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -547,6 +557,15 @@ describe("Institution setup action screens", () => {
       );
       expect(screen.getByText(/Approval authority successfully delegated/i)).toBeInTheDocument();
     });
+  });
+
+  it("rejects mixed valid and invalid request IDs beside the bulk ID field", () => {
+    renderWithTenant(<DelegationsApprovalsPage />);
+    fireEvent.change(screen.getByLabelText(/Approval Request IDs/i), { target: { value: "55555555-5555-5555-5555-555555555555, invalid" } });
+    fireEvent.click(screen.getByRole("button", { name: /Apply bulk decision/i }));
+
+    expect(screen.getByText(/Every approval request ID must be a valid UUID/i)).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it("applies bulk approval decisions (Story #21: APPROVAL_BULK / Rule AP-25)", async () => {
@@ -572,7 +591,7 @@ describe("Institution setup action screens", () => {
     fireEvent.change(idsInput, { target: { value: `${req1}, ${req2}` } });
     fireEvent.change(commentInput, { target: { value: "Batch review approved" } });
 
-    const submitBtn = screen.getByRole("button", { name: /Bulk Approve \[Rule AP-25\]/i });
+    const submitBtn = screen.getByRole("button", { name: /Apply bulk decision/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
