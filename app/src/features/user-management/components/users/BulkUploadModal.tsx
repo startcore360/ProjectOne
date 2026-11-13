@@ -229,14 +229,7 @@ export function BulkUploadModal({
               Pre-validation Results [Rule MD-27]
             </h3>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "0.75rem",
-                marginBottom: "1rem",
-              }}
-            >
+            <div className="platform-import-summary">
               <div style={{ background: "var(--color-bg-subtle, #f8fafc)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary, #64748b)" }}>Total Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.totalRows}</div>
