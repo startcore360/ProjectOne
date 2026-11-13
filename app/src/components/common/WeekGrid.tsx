@@ -23,7 +23,7 @@ export function WeekGrid({ slots, onSelect }: Props) {
             <button
               ref={(node) => { buttons.current[index] = node; }}
               type="button"
-              tabIndex={index === activeIndex ? 0 : -1}
+              tabIndex={index === Math.min(activeIndex, slots.length - 1) ? 0 : -1}
               aria-label={`${slot.day}, ${slot.start} to ${slot.end}: ${slot.label}`}
               onFocus={() => setActiveIndex(index)}
               onClick={() => onSelect?.(slot)}
