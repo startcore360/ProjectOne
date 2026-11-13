@@ -10,9 +10,11 @@ on:
 permissions:
   contents: read
 
+# One active CI run per workflow/ref. A newer push supersedes an older run
+# on the same branch; other branches (including master) remain independent.
 concurrency:
-  group: edu360-ci-${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}
-  cancel-in-progress: false
+  group: edu360-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   frontend:
