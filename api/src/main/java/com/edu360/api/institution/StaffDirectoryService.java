@@ -181,6 +181,14 @@ public class StaffDirectoryService {
     @Transactional
     public void ensureStaffAssignment(UUID tenantId, UUID userAccountId, UUID institutionId,
             UUID departmentId, UUID actorId, String designation) {
+        ensureStaffAssignment(tenantId, userAccountId, institutionId, departmentId, actorId,
+                designation, LocalDate.now(), null);
+    }
+
+    @Transactional
+    public void ensureStaffAssignment(UUID tenantId, UUID userAccountId, UUID institutionId,
+            UUID departmentId, UUID actorId, String designation,
+            LocalDate effectiveFrom, LocalDate effectiveTo) {
         if (tenantId == null || userAccountId == null || institutionId == null || actorId == null) {
             throw new IllegalArgumentException("Tenant, user, institution and actor are required for staff linkage.");
         }
@@ -218,11 +226,11 @@ public class StaffDirectoryService {
                     SELECT 1 FROM app.staff_assignment
                      WHERE tenant_id = ? AND staff_profile_id = ?
                        AND institution_id = ? AND department_id IS NOT DISTINCT FROM ?
-                       AND status = 'ACTIVE'
-                       AND effective_from <= CURRENT_DATE
-                       AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
+                       AND effective_from <= COALESCE(?, DATE '9999-12-31')
+                       AND COALESCE(effective_to, DATE '9999-12-31') >= ?
                 )
-                """, Boolean.class, tenantId, profile.getStaffProfileId(), institutionId, departmentId);
+                """, Boolean.class, tenantId, profile.getStaffProfileId(), institutionId, departmentId,
+                effectiveTo, effectiveFrom);
         if (!Boolean.TRUE.equals(assignmentExists)) {
             StaffAssignment assignment = new StaffAssignment();
             assignment.setStaffAssignmentId(UUID.randomUUID());
@@ -231,8 +239,9 @@ public class StaffDirectoryService {
             assignment.setInstitutionId(institutionId);
             assignment.setDepartmentId(departmentId);
             assignment.setDesignation(designation == null || designation.isBlank() ? "Staff" : designation.trim());
-            assignment.setEffectiveFrom(LocalDate.now());
-            assignment.setStatus("ACTIVE");
+            assignment.setEffectiveFrom(effectiveFrom);
+            assignment.setEffectiveTo(effectiveTo);
+            assignment.setStatus(effectiveTo != null && effectiveTo.isBefore(LocalDate.now()) ? "ENDED" : "ACTIVE");
             assignment.setCreatedBy(actorId);
             assignment.setUpdatedBy(actorId);
             StaffAssignment saved = assignments.saveAndFlush(assignment);
