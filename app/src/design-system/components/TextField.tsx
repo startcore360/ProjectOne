@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes } from "react";
+import { Icon } from "../../components/ui/Icon";
 // The one place that renders the .eds-field pattern from components.css: a label (with a
 // "Required" hint), an input, optional hint/error messages, and the surrounding spacing -
 // used by every text/email/date field in the app instead of hand-writing elements per page.
@@ -29,7 +30,7 @@ export default function TextField({ label, id, required, hint, error, ...rest }:
       />
       {hint && (
         <p id={hintId} className="eds-field__hint">
-          <span aria-hidden="true">ⓘ</span> {hint}
+          <Icon name="info" size={14} /> {hint}
         </p>
       )}
       {error && (

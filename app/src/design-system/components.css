@@ -1304,6 +1304,16 @@ a {
 .platform-policy-callout > span { font-size: 22px; }
 .platform-policy-callout strong { display: block; margin-bottom: 4px; }
 .platform-policy-callout p { margin: 0; font-size: var(--fs-body-sm); }
+@media (pointer: coarse) {
+  .platform-icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex-basis: 44px;
+  }
+}
+
 @media (max-width: 960px) {
   .platform-two-col { grid-template-columns: 1fr; }
 }
