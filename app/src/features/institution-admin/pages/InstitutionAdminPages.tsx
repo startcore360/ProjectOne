@@ -142,7 +142,7 @@ export function InstitutionsPage() {
       if (errorCode === "GO_LIVE_BLOCKED" || errorMsg.includes("GO_LIVE_BLOCKED") || errorMsg.includes("[C7]")) {
         setFeedback({
           tone: "danger",
-          message: `Activation blocked: Principal's-leave approver not set for '${item.institutionName}' [Rule C7]. Please configure the leave approver in Settings before going live.`,
+          message: `Activation blocked: a Principal's leave approver is not configured for '${item.institutionName}'. Configure the leave approver before going live.`,
         });
       } else {
         setFeedback({
@@ -173,14 +173,14 @@ export function InstitutionsPage() {
     <div className="platform-page">
       <PageHeader
         title="Institutions"
-        description="Register colleges and schools within this tenant. Institutions begin as Draft and require Vice Chancellor approval before going live [WF-16, C7]."
+        description="Register colleges and schools within this tenant. New institutions begin as drafts and require executive approval before going live."
         actions={
           canManageInstitutions ? (
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
               <Button
                 variant="secondary"
                 onClick={() => setVcModalOpen(true)}
-                title="Configure Vice-Chancellor leave approver "
+                title="Configure the Vice-Chancellor leave approver"
               >
                 Set VC Approver
               </Button>
@@ -212,7 +212,7 @@ export function InstitutionsPage() {
         >
           <span aria-hidden="true">ℹ</span>
           <span>
-            <strong>Read-only institution register:</strong> Institution creation (colleges &amp; schools) and executive approvals are restricted to University Administrators [Rule INSTITUTION_CREATE_DRAFT]. As a {user?.roleName || "College / School Administrator"}, your assigned institutions are listed below.
+            <strong>Read-only institution register:</strong> Institution creation and executive approvals are restricted to University Administrators. As a {user?.roleName || "College or School Administrator"}, your assigned institutions are listed below.
           </span>
         </div>
       )}
@@ -237,7 +237,7 @@ export function InstitutionsPage() {
             fontSize: "0.875rem",
           }}
         >
-          <strong>Go-Live Readiness Warning [Rule C7 / C6]:</strong>
+          <strong>Go-live readiness warning:</strong>
           <p style={{ margin: "4px 0" }}>
             The following statutory leave approver settings are missing before institutions/tenant can go live:
           </p>
@@ -245,8 +245,8 @@ export function InstitutionsPage() {
             {goLiveCheck.blockers.map((b, idx) => (
               <li key={idx}>
                 {b.blocker === "VC_LEAVE_APPROVER_MISSING"
-                  ? "Vice-Chancellor leave approver not set (Rule C6 required for university group)."
-                  : `Principal leave approver not set for institution ID: ${b.institutionId || "unknown"}.`}
+                  ? "Vice-Chancellor leave approver has not been configured for this university."
+                  : `Principal leave approver has not been configured for institution ${b.institutionId || "unknown"}.`}
               </li>
             ))}
           </ul>
@@ -768,7 +768,7 @@ export function RolesPermissionsPage() {
           <Icon name="info" size={15} />
         </span>
         <div>
-          <strong>Role assignment & delegation policy (Rule MX-04)</strong>
+          <strong>Role assignment and delegation policy</strong>
           <p>
             Standard roles are templates; assigning a role to a person happens per user account and is
             scoped to an institution or department. Under statutory Rule MX-04, IT Administrators and

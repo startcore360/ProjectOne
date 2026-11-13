@@ -232,7 +232,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Principal's-leave approver not set for 'Northbridge School of Commerce' \[Rule C7\]/i)
+        screen.getByText(/Principal's leave approver is not configured for 'Northbridge School of Commerce'/i)
       ).toBeInTheDocument();
     });
   });
@@ -258,7 +258,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
       screen.getByRole("heading", { name: /Request to block Northbridge College of Science/i })
     ).toBeInTheDocument();
 
-    const reasonInput = screen.getByLabelText(/Reason for blocking \* \[Rule RL-01\]/i);
+    const reasonInput = screen.getByLabelText(/Reason for blocking \*/i);
     fireEvent.change(reasonInput, {
       target: { value: "Repeated regulatory non-compliance during state board inspection." },
     });
@@ -439,7 +439,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
         }
       );
       expect(
-        screen.getByText(/Leave approver configured successfully for 'Northbridge College of Science' \[Rule C7\]/i)
+        screen.getByText(/Leave approver configured successfully for 'Northbridge College of Science'/i)
       ).toBeInTheDocument();
     });
   });
@@ -484,7 +484,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
         }
       );
       expect(
-        screen.getByText(/Vice-Chancellor leave approver configured successfully \[Rule C6\]/i)
+        screen.getByText(/Vice-Chancellor leave approver configured successfully/i)
       ).toBeInTheDocument();
     });
   });
