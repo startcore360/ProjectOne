@@ -33,6 +33,14 @@ describe("WeekGrid", () => {
     expect(first).toHaveFocus();
   });
 
+  it("keeps one slot tabbable when the slot collection shrinks", () => {
+    const { rerender } = render(<WeekGrid slots={slots} />);
+    const last = screen.getByRole("button", { name: /Wednesday.*Chemistry/ });
+    last.focus();
+    rerender(<WeekGrid slots={slots.slice(0, 1)} />);
+    expect(screen.getByRole("button", { name: /Monday.*Mathematics/ })).toHaveAttribute("tabindex", "0");
+  });
+
   it("selects the focused timetable slot when activated", () => {
     const onSelect = vi.fn();
     render(<WeekGrid slots={slots} onSelect={onSelect} />);
