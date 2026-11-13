@@ -145,7 +145,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
             error={fieldErrors.admissionDate}
           />
         </div>
-        <p className="platform-form-note">
+        <p className="platform-modal-note">
           The institution and academic session must be active, and the section must belong to both. Use the UUIDs supplied by your institution setup records.
         </p>
         {formError && <Notice tone="danger">{formError}</Notice>}

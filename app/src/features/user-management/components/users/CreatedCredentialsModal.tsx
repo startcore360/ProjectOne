@@ -49,7 +49,11 @@ export function CreatedCredentialsModal({
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <p style={{ margin: 0, fontSize: "0.875rem" }}>
-          User <strong>{user.displayName}</strong>{user.email ? ` (${user.email})` : ""} has been provisioned.
+          {user.identifier ? (
+            <>Student profile <strong>{user.displayName}</strong> has been created.</>
+          ) : (
+            <>User <strong>{user.displayName}</strong>{user.email ? ` (${user.email})` : ""} has been provisioned.</>
+          )}
         </p>
         {user.identifier && (
           <p style={{ margin: 0, fontSize: "0.875rem" }}>
@@ -57,8 +61,6 @@ export function CreatedCredentialsModal({
           </p>
         )}
         {user.message && <p style={{ margin: 0, fontSize: "0.875rem" }}>{user.message}</p>}
-        {/* credential summary */}
-
         {user.temporaryPassword && (
           <div
             style={{
