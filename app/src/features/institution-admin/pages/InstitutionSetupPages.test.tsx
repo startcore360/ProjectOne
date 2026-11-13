@@ -26,6 +26,8 @@ vi.mock("../../../services/axios", () => ({
 const TENANT_ID = "11111111-1111-1111-1111-111111111111";
 const DEPT_ID = "22222222-2222-2222-2222-222222222222";
 const STAFF_ASSIGNMENT_ID = "33333333-3333-3333-3333-333333333333";
+const INST_ID = "55555555-5555-5555-5555-555555555555";
+const SECTION_ID = "66666666-6666-6666-6666-666666666666";
 
 function renderWithTenant(
   element: ReactElement,
@@ -59,6 +61,9 @@ function renderWithTenant(
     userAccountId: "u-1",
     activeRoleCode: roleCode ?? "UNIVERSITY_ADMIN",
     activeRoleName: roleCode === "SCHOOL_ADMIN" ? "School Admin" : "University Admin",
+    scopeType: roleCode === "HEAD_OF_DEPARTMENT" ? "DEPARTMENT" : "INSTITUTION",
+    institutionId: INST_ID,
+    departmentId: roleCode === "HEAD_OF_DEPARTMENT" ? DEPT_ID : null,
     allowedActions: [
       "STRUCTURE_MANAGE", "HOD_ASSIGN", "MENTOR_ASSIGN", "CLASS_TEACHER_ASSIGN",
       "STUDENT_LOGIN_SWITCH", "CALENDAR_LOCAL_SET", "WEEKLY_OFF_SET", "TERM_LOCK",
@@ -82,52 +87,71 @@ describe("Institution setup action screens", () => {
     expect(screen.getByText(/requires a signed-in institution identity/i)).toBeInTheDocument();
   });
 
-  it("shows a validation error before calling the API with invalid IDs", async () => {
+  it("keeps the HOD action disabled until a department and person are selected", () => {
     renderWithTenant(<HodAssignmentPage />);
-    fireEvent.click(screen.getByRole("button", { name: /assign hod/i }));
-    expect(await screen.findByText(/must both be valid IDs/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /assign hod/i })).toBeDisabled();
+    expect(screen.getByLabelText("Department")).toBeInTheDocument();
+    expect(screen.getByLabelText("New HOD")).toBeInTheDocument();
     expect(api.put).not.toHaveBeenCalled();
   });
 
-  it("submits HOD_ASSIGN with the exact backend field names and shows success", async () => {
+  it("submits HOD_ASSIGN with a picked department and staff assignment", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [{ departmentId: DEPT_ID, departmentName: "Computer Science" }] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{
+        staffProfileId: "77777777-7777-7777-7777-777777777777", staffAssignmentId: STAFF_ASSIGNMENT_ID,
+        staffCode: "ST-01", fullName: "Asha Rao", designation: "Professor", departmentId: DEPT_ID, departmentName: "Computer Science",
+      }] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: { departmentId: DEPT_ID, hodStaffAssignmentId: STAFF_ASSIGNMENT_ID },
     });
     renderWithTenant(<HodAssignmentPage />);
-    fireEvent.change(screen.getByLabelText(/Department ID/i), { target: { value: DEPT_ID } });
-    fireEvent.change(screen.getByLabelText(/Staff assignment ID \(new HOD\)/i), {
-      target: { value: STAFF_ASSIGNMENT_ID },
-    });
+    await screen.findByRole("option", { name: "Computer Science" });
+    fireEvent.change(screen.getByLabelText("Department"), { target: { value: DEPT_ID } });
+    await screen.findByRole("option", { name: /Asha Rao/ });
+    fireEvent.change(screen.getByLabelText("New HOD"), { target: { value: STAFF_ASSIGNMENT_ID } });
     fireEvent.click(screen.getByRole("button", { name: /assign hod/i }));
 
-    await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`, {
-        staffAssignmentId: STAFF_ASSIGNMENT_ID,
-      }),
-    );
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`, {
+      staffAssignmentId: STAFF_ASSIGNMENT_ID,
+    }));
     expect(await screen.findByText(/HOD assignment recorded/i)).toBeInTheDocument();
   });
 
-  it("surfaces a 403 from MENTOR_ASSIGN as a permission-denied banner, not a generic error", async () => {
+  it("surfaces a 403 from MENTOR_ASSIGN after selecting a college section and mentor", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [{
+        sectionId: SECTION_ID, sectionName: "CSE-A", institutionId: INST_ID, academicSessionId: "88888888-8888-8888-8888-888888888888",
+        semesterId: "99999999-9999-9999-9999-999999999999", classId: null, status: "ACTIVE",
+      }] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{
+        staffProfileId: "77777777-7777-7777-7777-777777777777", staffAssignmentId: STAFF_ASSIGNMENT_ID,
+        staffCode: "ST-01", fullName: "Asha Rao", designation: "Professor", departmentId: DEPT_ID, departmentName: "Computer Science",
+      }] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.put as ReturnType<typeof vi.fn>).mockRejectedValueOnce({
       isAxiosError: true,
       response: { status: 403, data: { error: "Not authorized for MENTOR_ASSIGN." } },
     });
     renderWithTenant(<MentorAssignmentPage />);
-    fireEvent.change(screen.getByLabelText(/Section ID/i), { target: { value: DEPT_ID } });
-    fireEvent.change(screen.getByLabelText(/Staff assignment ID \(new mentor\)/i), {
-      target: { value: STAFF_ASSIGNMENT_ID },
-    });
+    await screen.findByRole("option", { name: "CSE-A" });
+    fireEvent.change(screen.getByLabelText("Section"), { target: { value: SECTION_ID } });
+    await screen.findByRole("option", { name: /Asha Rao/ });
+    fireEvent.change(screen.getByLabelText("New mentor"), { target: { value: STAFF_ASSIGNMENT_ID } });
     fireEvent.click(screen.getByRole("button", { name: /assign mentor/i }));
 
     expect(await screen.findByText("Permission denied")).toBeInTheDocument();
     expect(await screen.findByText(/Not authorized for MENTOR_ASSIGN/i)).toBeInTheDocument();
   });
 
-  it("labels CLASS_TEACHER_ASSIGN against sections, not classes (OD-24)", () => {
+  it("uses scoped section and person pickers for CLASS_TEACHER_ASSIGN", () => {
     renderWithTenant(<ClassTeacherAssignmentPage />);
     expect(screen.getByText(/This assigns a section, not a class/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Section ID/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Section")).toBeInTheDocument();
+    expect(screen.getByLabelText("New Class Teacher")).toBeInTheDocument();
   });
 
   it("sends the enabled flag for STUDENT_LOGIN_SWITCH", async () => {
