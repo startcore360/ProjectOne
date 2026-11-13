@@ -22,7 +22,7 @@ const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), [tabindex]:not([tab
 export function NotificationBell() {
   const user = useAppSelector((s) => s.auth.user);
   const tenantId = user?.tenantId ?? null;
-  const { items, loading, error, hasReadState, unreadCount, markRead, markAllRead, refresh } = useNotifications(tenantId);
+  const { items, loading, error, hasReadState, unreadCount, pendingApprovalCount, markRead, markAllRead, refresh } = useNotifications(tenantId);
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -66,7 +66,9 @@ export function NotificationBell() {
   if (!tenantId) return null;
 
   const hasUnread = hasReadState && unreadCount > 0;
-  const label = hasUnread ? `Notifications, ${unreadCount} unread` : "Notifications";
+  const labelParts = [hasUnread ? `${unreadCount} unread` : null, pendingApprovalCount > 0 ? `${pendingApprovalCount} pending approvals` : null].filter(Boolean);
+  const label = labelParts.length ? `Notifications, ${labelParts.join(", ")}` : "Notifications";
+  const badgeCount = unreadCount + pendingApprovalCount;
   const visible = items.slice(0, MAX_VISIBLE);
 
   return (
@@ -82,14 +84,14 @@ export function NotificationBell() {
         onClick={() => { if (!open) void refresh(); setOpen((v) => !v); }}
       >
         <Icon name="bell" size={20} strokeWidth={1.75} />
-        {hasUnread && <span className="notif-bell__badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+        {badgeCount > 0 && <span className="notif-bell__badge" aria-hidden="true">{badgeCount > 99 ? "99+" : badgeCount}</span>}
       </button>
       {open && createPortal(
         <div className="notif-bell__backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
           <section id={panelId} ref={panelRef} tabIndex={-1} className="notif-bell__panel" role="dialog" aria-modal="true" aria-label="Notifications">
             <span className="notif-bell__grip" aria-hidden="true" />
             <header className="notif-bell__head">
-              <h2>Notifications</h2>
+              <div><h2>Notifications</h2>{pendingApprovalCount > 0 && <p className="notif-bell__state" role="status">{pendingApprovalCount} approval{pendingApprovalCount === 1 ? "" : "s"} awaiting your decision</p>}</div>
               <div className="notif-bell__head-actions">
                 {hasUnread && <button type="button" className="notif-bell__link" onClick={() => void markAllRead()}>Mark all read</button>}
                 <button type="button" className="platform-icon-button notif-bell__close" onClick={close} aria-label="Close notifications">

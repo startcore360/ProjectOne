@@ -34,6 +34,8 @@ export default function StaffRecordsPage() {
   const canManage = can("STAFF_RECORD_MANAGE");
   const canVerify = can("STAFF_DOCUMENT_VERIFY");
   const [query, setQuery] = useState("");
+  const [directoryPage, setDirectoryPage] = useState(1);
+  const [directoryPageSize, setDirectoryPageSize] = useState(10);
   const [state, setState] = useState<LoadState>("idle");
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [listError, setListError] = useState("");
@@ -71,6 +73,7 @@ export default function StaffRecordsPage() {
     try {
       const result = await staffService.list(tenantId, search.trim());
       setStaff(result.items ?? []);
+      setDirectoryPage(1);
       setState("loaded");
     } catch (error) {
       setStaff([]);
@@ -244,25 +247,47 @@ export default function StaffRecordsPage() {
         <Panel title="Staff directory" description="Results are limited to the active role scope.">
           <div className="platform-toolbar">
             <SearchBox value={query} onChange={setQuery} placeholder="Search staff name or code" />
-            <Button variant="secondary" size="sm" onClick={() => void loadDirectory(query)} busy={state === "loading"}>Search</Button>
+            <Button variant="secondary" size="sm" onClick={() => { setDirectoryPage(1); void loadDirectory(query); }} busy={state === "loading"}>Search</Button>
           </div>
           {state === "loading" && <Spinner label="Loading staff directory" />}
           {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
-          {state === "loaded" && staff.length === 0 && <EmptyState title="No staff records found" description={query ? "Try a different search term." : "No profiles are available in your active role scope."} />}
+          {state === "loaded" && staff.length === 0 && <div className="staff-directory-empty">
+            <EmptyState title={query ? "No matching staff records" : "Your staff directory is empty"}
+              description={query ? "Try a different name or staff code, or clear your search." : "Staff profiles within your active role scope will appear here. Create the first staff profile to begin building the directory."}
+              icon="users"
+              action={!query && canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : undefined} />
+          </div>}
           {state === "loaded" && staff.length > 0 && (
-            <div className="staff-record-list" role="list" aria-label="Staff directory">
-              {staff.map((person) => (
-                <div key={person.id} role="listitem">
-                  <button type="button"
-                    aria-pressed={selected?.id === person.id}
-                    className={`staff-record-list__item ${selected?.id === person.id ? "is-selected" : ""}`}
-                    onClick={() => { setSelected(person); void loadProfile(person.id); }}>
-                    <span className="staff-record-list__copy"><strong>{person.fullName}</strong><small>{person.staffCode} · {humanize(person.employmentStatus)}</small></span>
-                    <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>{humanize(person.employmentStatus)}</Badge>
-                  </button>
+            <>
+              <div className="staff-directory-summary">
+                <span><strong>{staff.length}</strong> staff {staff.length === 1 ? "record" : "records"}</span>
+                <label>Rows per page{" "}
+                  <select value={directoryPageSize} onChange={(event) => { setDirectoryPageSize(Number(event.target.value)); setDirectoryPage(1); }}>
+                    {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="staff-record-list" role="list" aria-label="Staff directory">
+                {staff.slice((directoryPage - 1) * directoryPageSize, directoryPage * directoryPageSize).map((person) => (
+                  <div key={person.id} role="listitem">
+                    <button type="button"
+                      aria-pressed={selected?.id === person.id}
+                      className={`staff-record-list__item ${selected?.id === person.id ? "is-selected" : ""}`}
+                      onClick={() => { setSelected(person); void loadProfile(person.id); }}>
+                      <span className="staff-record-list__copy"><strong>{person.fullName}</strong><small>{person.staffCode} · {humanize(person.employmentStatus)}</small></span>
+                      <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>{humanize(person.employmentStatus)}</Badge>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {staff.length > directoryPageSize && <nav className="staff-directory-pagination" aria-label="Staff directory pagination">
+                <span>Page {directoryPage} of {Math.ceil(staff.length / directoryPageSize)}</span>
+                <div>
+                  <Button size="sm" variant="secondary" disabled={directoryPage <= 1} onClick={() => setDirectoryPage((page) => Math.max(1, page - 1))}>Previous</Button>
+                  <Button size="sm" variant="secondary" disabled={directoryPage >= Math.ceil(staff.length / directoryPageSize)} onClick={() => setDirectoryPage((page) => Math.min(Math.ceil(staff.length / directoryPageSize), page + 1))}>Next</Button>
                 </div>
-              ))}
-            </div>
+              </nav>}
+            </>
           )}
           <div className="platform-inline-actions"><Button size="sm" variant="tertiary" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh directory</Button></div>
         </Panel>

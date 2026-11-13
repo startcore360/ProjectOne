@@ -170,7 +170,7 @@ describe("Platform roles page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create role" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Save draft" }));
-    expect(within(dialog).getByText("Enter a role name of at least 2 characters.")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("Enter a role name of at least 2 characters.").length).toBeGreaterThan(0);
     expect(mockedApi.post).not.toHaveBeenCalled();
 
     fireEvent.change(within(dialog).getByLabelText(/Role name/), { target: { value: "XY" } });

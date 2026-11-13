@@ -78,10 +78,16 @@ public class ApprovalCountPublisher {
 
     public void publishForRole(UUID tenantId, UUID institutionId, String roleCode) {
         if (tenantId == null || roleCode == null || roleCode.isBlank()) return;
-        List<UUID> recipients = jdbc.queryForList(RECIPIENTS, UUID.class,
-                tenantId, roleCode.trim().toUpperCase(), institutionId,
-                tenantId, institutionId, roleCode.trim().toUpperCase());
-        recipients.forEach(userId -> publishForUser(tenantId, userId));
+        try {
+            List<UUID> recipients = jdbc.queryForList(RECIPIENTS, UUID.class,
+                    tenantId, roleCode.trim().toUpperCase(java.util.Locale.ROOT), institutionId,
+                    tenantId, institutionId, roleCode.trim().toUpperCase(java.util.Locale.ROOT));
+            recipients.forEach(userId -> publishForUser(tenantId, userId));
+        } catch (RuntimeException ex) {
+            // Live badge delivery is best-effort and must never roll back an approval decision.
+            log.warn("Could not resolve approval-count recipients for tenant {} role {}: {}",
+                    tenantId, roleCode, ex.getMessage());
+        }
     }
 
     public void publishForUser(UUID tenantId, UUID userId) {
