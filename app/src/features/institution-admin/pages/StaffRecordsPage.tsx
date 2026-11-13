@@ -251,7 +251,12 @@ export default function StaffRecordsPage() {
           </div>
           {state === "loading" && <Spinner label="Loading staff directory" />}
           {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
-          {state === "loaded" && staff.length === 0 && <EmptyState title="No staff records found" description={query ? "Try a different search term." : "No profiles are available in your active role scope."} />}
+          {state === "loaded" && staff.length === 0 && <div className="staff-directory-empty">
+            <EmptyState title={query ? "No matching staff records" : "Your staff directory is empty"}
+              description={query ? "Try a different name or staff code, or clear your search." : "Staff profiles within your active role scope will appear here. Create the first staff profile to begin building the directory."}
+              icon="users"
+              action={!query && canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : undefined} />
+          </div>}
           {state === "loaded" && staff.length > 0 && (
             <>
               <div className="staff-directory-summary">
