@@ -458,6 +458,7 @@ public class UserBulkUploadService {
         }
 
         int importedCount = 0;
+        int runtimeErrorCount = 0;
 
         for (int lineIdx = 1; lineIdx < lines.length; lineIdx++) {
             int rowNumber = lineIdx + 1;
@@ -533,10 +534,29 @@ public class UserBulkUploadService {
                 }
                 importedCount++;
             } catch (Exception ex) {
-                log.warn("Failed to provision imported user row {}: {}", rowNumber, ex.getMessage());
+                runtimeErrorCount++;
+                String errorCode = ex instanceof com.edu360.api.exception.BusinessRuleViolationException rule
+                        ? rule.getErrorCode() : "IMPORT_ROW_FAILED";
+                ImportRowError runtimeError = ImportRowError.builder()
+                        .id(new ImportRowErrorId(tenantId, UUID.randomUUID()))
+                        .importJobId(importJobId)
+                        .rowNumber(rowNumber)
+                        .fieldName("row")
+                        .errorCode(errorCode)
+                        .errorMessage("Row could not be imported. Verify the row values, active institution scope, role assignment and duplicate constraints.")
+                        .rowData("{}")
+                        .createdAt(Instant.now())
+                        .createdBy(principal.userAccountId())
+                        .updatedAt(Instant.now())
+                        .updatedBy(principal.userAccountId())
+                        .build();
+                importRowErrorRepository.save(runtimeError);
+                log.warn("Failed to provision imported user row {} ({})", rowNumber, errorCode);
             }
         }
 
+        job.setValidRows(importedCount);
+        job.setErrorRows((job.getErrorRows() == null ? 0 : job.getErrorRows()) + runtimeErrorCount);
         job.setStatus("COMPLETED");
         job.setFinishedAt(Instant.now());
         job.setUpdatedAt(Instant.now());
