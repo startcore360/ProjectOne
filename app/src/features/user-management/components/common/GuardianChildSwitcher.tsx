@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "../../../../design-system/components";
 import api from "../../../../services/axios";
 
 export type GuardianChild = {
@@ -18,19 +19,30 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    api.get<GuardianChild[]>("/guardian/children")
-      .then(({ data }) => {
-        if (active) setChildren(data.filter((child) => child.status === "ACTIVE"));
-      })
-      .catch(() => { if (active) setError("Linked children could not be loaded."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+  const loadChildren = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await api.get<GuardianChild[]>("/guardian/children");
+      setChildren(Array.isArray(data) ? data.filter((child) => child.status === "ACTIVE") : []);
+    } catch {
+      setError("Linked children could not be loaded. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    void loadChildren();
+  }, [loadChildren]);
+
   if (loading) return <p role="status">Loading linked children…</p>;
-  if (error) return <p role="alert">{error}</p>;
+  if (error) return (
+    <div>
+      <p role="alert">{error}</p>
+      <Button variant="secondary" onClick={() => void loadChildren()}>Retry</Button>
+    </div>
+  );
   if (children.length === 0) return <p>No active linked children are available.</p>;
 
   const selected = children.find((child) => child.studentProfileId === value);
