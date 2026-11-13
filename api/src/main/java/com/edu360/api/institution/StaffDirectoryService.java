@@ -348,7 +348,6 @@ public class StaffDirectoryService {
                        AND staff_profile_id = ?
                        AND institution_id IS NOT DISTINCT FROM ?
                        AND department_id IS NOT DISTINCT FROM ?
-                       AND status = 'ACTIVE'
                        AND effective_from <= COALESCE(?, DATE '9999-12-31')
                        AND COALESCE(effective_to, DATE '9999-12-31') >= ?
                 )
@@ -422,14 +421,16 @@ public class StaffDirectoryService {
                 SELECT 'CURRENT_CLASS_TEACHER:' || class_teacher_assignment_id::text
                   FROM app.class_teacher_assignment
                  WHERE tenant_id = ? AND staff_assignment_id = ?
+                   AND effective_from <= ?
                    AND (effective_to IS NULL OR effective_to >= ?)
-                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo()));
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo(), request.effectiveTo()));
         conflicts.addAll(jdbc.query("""
                 SELECT 'CURRENT_MENTOR:' || mentor_assignment_id::text
                   FROM app.mentor_assignment
                  WHERE tenant_id = ? AND staff_assignment_id = ?
+                   AND effective_from <= ?
                    AND (effective_to IS NULL OR effective_to >= ?)
-                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo()));
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo(), request.effectiveTo()));
         if (!conflicts.isEmpty()) {
             throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_IN_USE",
                     "Assignment cannot be ended while dependent teaching allocations remain active. Reassign or end these records first: "
