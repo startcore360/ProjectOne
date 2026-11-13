@@ -4,7 +4,7 @@ import { notificationsApi } from "../api/notificationsApi";
 import { NOTIFICATION_REFRESH_MS, useNotifications } from "./useNotifications";
 
 vi.mock("../api/notificationsApi", () => ({
-  notificationsApi: { list: vi.fn(), summary: vi.fn(), markRead: vi.fn(), markAllRead: vi.fn() },
+  notificationsApi: { list: vi.fn(), summary: vi.fn(), pendingApprovalCount: vi.fn(), markRead: vi.fn(), markAllRead: vi.fn() },
 }));
 
 describe("useNotifications polling fallback", () => {
@@ -12,6 +12,7 @@ describe("useNotifications polling fallback", () => {
     vi.useFakeTimers();
     vi.mocked(notificationsApi.list).mockResolvedValue([]);
     vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 0 });
+    vi.mocked(notificationsApi.pendingApprovalCount).mockResolvedValue(0);
   });
 
   afterEach(() => {
@@ -24,6 +25,7 @@ describe("useNotifications polling fallback", () => {
     await act(async () => { await Promise.resolve(); });
     expect(notificationsApi.list).toHaveBeenCalledTimes(1);
     expect(notificationsApi.summary).toHaveBeenCalledTimes(1);
+    expect(notificationsApi.pendingApprovalCount).toHaveBeenCalledTimes(1);
     expect(NOTIFICATION_REFRESH_MS).toBe(60_000);
 
     await act(async () => {
@@ -65,12 +67,20 @@ describe("useNotifications polling fallback", () => {
 
     await act(async () => {
       window.dispatchEvent(new CustomEvent("edu360:live-event", {
+        detail: { type: "APPROVAL_COUNT", payload: { pendingCount: 4 } },
+      }));
+    });
+    expect(result.current.pendingApprovalCount).toBe(4);
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("edu360:live-event", {
         detail: { type: "NOTIFICATION_CREATED", payload: { notificationId: "new-1" } },
       }));
       await Promise.resolve();
     });
     expect(notificationsApi.list).toHaveBeenCalledTimes(2);
     expect(notificationsApi.summary).toHaveBeenCalledTimes(2);
+    expect(notificationsApi.pendingApprovalCount).toHaveBeenCalledTimes(2);
     unmount();
   });
 
@@ -80,6 +90,7 @@ describe("useNotifications polling fallback", () => {
       await vi.advanceTimersByTimeAsync(3 * NOTIFICATION_REFRESH_MS);
     });
     expect(notificationsApi.list).not.toHaveBeenCalled();
+    expect(notificationsApi.pendingApprovalCount).not.toHaveBeenCalled();
     unmount();
   });
 });
