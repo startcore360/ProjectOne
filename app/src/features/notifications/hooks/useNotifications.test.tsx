@@ -4,13 +4,14 @@ import { notificationsApi } from "../api/notificationsApi";
 import { NOTIFICATION_REFRESH_MS, useNotifications } from "./useNotifications";
 
 vi.mock("../api/notificationsApi", () => ({
-  notificationsApi: { list: vi.fn(), markRead: vi.fn(), markAllRead: vi.fn() },
+  notificationsApi: { list: vi.fn(), summary: vi.fn(), markRead: vi.fn(), markAllRead: vi.fn() },
 }));
 
 describe("useNotifications polling fallback", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.mocked(notificationsApi.list).mockResolvedValue([]);
+    vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 0 });
   });
 
   afterEach(() => {
@@ -22,6 +23,7 @@ describe("useNotifications polling fallback", () => {
     const { unmount } = renderHook(() => useNotifications("tenant-1"));
     await act(async () => { await Promise.resolve(); });
     expect(notificationsApi.list).toHaveBeenCalledTimes(1);
+    expect(notificationsApi.summary).toHaveBeenCalledTimes(1);
     expect(NOTIFICATION_REFRESH_MS).toBe(60_000);
 
     await act(async () => {
@@ -46,6 +48,29 @@ describe("useNotifications polling fallback", () => {
       await Promise.resolve();
     });
     expect(notificationsApi.list).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
+
+  it("applies live unread counts and refreshes on new notification events", async () => {
+    const { result, unmount } = renderHook(() => useNotifications("tenant-1"));
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("edu360:live-event", {
+        detail: { type: "UNREAD_COUNT", payload: { unreadCount: 7 } },
+      }));
+    });
+    expect(result.current.unreadCount).toBe(7);
+    expect(result.current.hasReadState).toBe(true);
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("edu360:live-event", {
+        detail: { type: "NOTIFICATION_CREATED", payload: { notificationId: "new-1" } },
+      }));
+      await Promise.resolve();
+    });
+    expect(notificationsApi.list).toHaveBeenCalledTimes(2);
+    expect(notificationsApi.summary).toHaveBeenCalledTimes(2);
     unmount();
   });
 
