@@ -619,7 +619,7 @@ export function RolesPermissionsPage() {
     <div className="platform-page">
       <PageHeader
         title="Roles & permissions"
-        description="Review standard roles and their permission scope. Standard roles are read-only; custom roles use actions from the approved Action List [ROLE_ASSIGN / ROLE_CUSTOM_MANAGE]."
+        description="Review standard roles and their permission scope. Standard roles are read-only; custom roles can be managed by authorized administrators."
         actions={
           <Button onClick={() => setCreateModalOpen(true)}>
             + Create Custom Role
@@ -701,7 +701,7 @@ export function RolesPermissionsPage() {
                     {role.sensitive ? (
                       <Badge tone="warning">Sensitive (Admin only)</Badge>
                     ) : (
-                      <Badge tone="neutral">Non-sensitive [MX-04]</Badge>
+                      <Badge tone="neutral">Non-sensitive</Badge>
                     )}
                   </td>
                   <td>
@@ -740,7 +740,7 @@ export function RolesPermissionsPage() {
           setRoles((prev) => [newRole, ...prev]);
           setFeedback({
             tone: "success",
-            message: `Custom role ${inputCode || newRole.roleCode} created successfully [Rule 17]!`,
+            message: `Custom role ${inputCode || newRole.roleCode} created successfully.`,
           });
           fetchRoles();
         }}
@@ -757,7 +757,7 @@ export function RolesPermissionsPage() {
           );
           setFeedback({
             tone: "success",
-            message: `Custom role ${retired.roleName} retired. Existing assignments remain historical per Rule 17.`,
+            message: `Custom role ${retired.roleName} retired. Existing assignments are retained for historical reference.`,
           });
           fetchRoles();
         }}
@@ -771,8 +771,7 @@ export function RolesPermissionsPage() {
           <strong>Role assignment and delegation policy</strong>
           <p>
             Standard roles are templates; assigning a role to a person happens per user account and is
-            scoped to an institution or department. Under statutory Rule MX-04, IT Administrators and
-            School IT Support can assign Non-sensitive operational roles (e.g. Office Staff, Library,
+            scoped to an institution or department. IT administrators and School IT support can assign non-sensitive operational roles (e.g. Office Staff, Library,
             Security, Transport). Leadership, academic faculty, financial, HR, and examination roles
             require full Administrative assignment authority.
           </p>

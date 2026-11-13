@@ -285,7 +285,7 @@ export function BulkUploadModal({
                 marginBottom: "1rem",
               }}
             >
-              <strong>Statutory Notice (DPDP Act 2023 / UIDAI [R2-34]):</strong> Unmasked 12-digit Aadhaar numbers are rejected. Only masked 4-digit national IDs are accepted and persisted.
+              <strong>Privacy notice:</strong> Unmasked 12-digit Aadhaar numbers are rejected. Only masked 4-digit national IDs are accepted and persisted.
             </div>
 
             {/* Actions */}

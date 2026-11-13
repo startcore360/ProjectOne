@@ -50,13 +50,13 @@ export function CreateTopUserModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="TENANT_TOP_USERS_CREATE"
+      kicker="GOVERNANCE ACCOUNT SETUP"
       title="Create governance / top user"
       titleId="governance-user-title"
       description="Create executive leadership and governance accounts for this tenant."
       size="md"
     >
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
+      <form onSubmit={handleSubmit} noValidate style={{ padding: "0.5rem 0" }}>
         {error && (
           <div style={{ marginBottom: "1rem" }}>
             <Notice tone="danger">{error}</Notice>

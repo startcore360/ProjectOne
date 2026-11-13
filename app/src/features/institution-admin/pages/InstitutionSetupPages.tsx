@@ -579,7 +579,7 @@ export function CalendarEventsPage() {
                         <td>{s.academicYear}</td>
                         <td>{s.startDate}</td>
                         <td>{s.endDate}</td>
-                        <td><Badge tone="success">{s.status}</Badge></td>
+                        <td><Badge tone="success">{formatStatusLabel(s.status)}</Badge></td>
                       </tr>
                     ))}
                   </tbody>
@@ -591,7 +591,7 @@ export function CalendarEventsPage() {
           {/* Master Calendar Events */}
           <Panel
             title="University Master Calendar Events"
-            description="Semester dates and university holidays [CL-02: mid-year changes notify institutions]."
+            description="Manage semester dates, university holidays and typed exam-day events. Changes to university events are communicated to affected institutions."
           >
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
               <Button type="button" variant="secondary" onClick={() => void loadMasterEvents()} busy={masterEventsLoading}>
@@ -621,10 +621,10 @@ export function CalendarEventsPage() {
                     {masterEvents.map((e) => (
                       <tr key={e.academicCalendarEventId}>
                         <td><strong>{e.title}</strong></td>
-                        <td><Badge tone={e.eventType === "EXAM_DAY" ? "warning" : e.eventType === "SEMESTER_DATES" ? "info" : "neutral"}>{e.eventType}</Badge></td>
+                        <td><Badge tone={e.eventType === "EXAM_DAY" ? "warning" : e.eventType === "SEMESTER_DATES" ? "info" : "neutral"}>{formatStatusLabel(e.eventType)}</Badge></td>
                         <td>{e.startDate}</td>
                         <td>{e.endDate}</td>
-                        <td>{e.sourceLevel}</td>
+                        <td>{formatStatusLabel(e.sourceLevel)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1001,7 +1001,7 @@ export function WeeklyOffRulesPage() {
                           <strong>{dayLabel(rule.dayOfWeek)}</strong>
                         </td>
                         <td>
-                          <Badge tone="neutral">{rule.occurrence}</Badge>
+                          <Badge tone="neutral">{formatStatusLabel(rule.occurrence)}</Badge>
                         </td>
                         <td>{rule.effectiveFrom}</td>
                         <td>{rule.effectiveTo ?? "Open-ended"}</td>
@@ -1424,7 +1424,7 @@ export function AcademicStructurePage() {
           {/* Departments Panel */}
           <Panel
             title="Academic Departments"
-            description="College-level academic departments [Rule HI-12: Colleges only; schools do not have departments in v1]."
+            description="Academic departments are available for colleges; school structures use classes and sections."
           >
             <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
@@ -2213,7 +2213,7 @@ export function DelegationsApprovalsPage() {
       </div>
 
       <div style={{ marginTop: "var(--space-4)" }}>
-        <Panel title="My active delegations" description="Review delegations you have granted. Self-approval is strictly prohibited under Rule 11.">
+        <Panel title="My active delegations" description="Review approval responsibilities you have delegated. You cannot approve your own request.">
           {loading && <p className="platform-empty-note">Loading delegations...</p>}
           {delegationsError && <Notice tone="danger">{delegationsError} <Button variant="secondary" size="sm" onClick={fetchDelegations}>Retry</Button></Notice>}
           {!loading && !delegationsError && delegations.length === 0 ? (
