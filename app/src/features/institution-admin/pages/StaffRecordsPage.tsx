@@ -47,7 +47,7 @@ export default function StaffRecordsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
-  const [draft, setDraft] = useState<StaffProfilePayload>({ fullName: "", employmentStatus: "ACTIVE", joinedOn: today() });
+  const [draft, setDraft] = useState<StaffProfilePayload>({ fullName: "", officialEmail: "", employmentStatus: "ACTIVE", joinedOn: today() });
   const [profileDraft, setProfileDraft] = useState<StaffProfilePayload | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [assignmentDraft, setAssignmentDraft] = useState({ institutionId: "", departmentId: "", designation: "", effectiveFrom: today() });
@@ -120,7 +120,7 @@ export default function StaffRecordsPage() {
     setCreateError("");
     try {
       const created = await staffService.create(tenantId, {
-        ...draft, fullName: draft.fullName.trim(),
+        ...draft, fullName: draft.fullName.trim(), officialEmail: draft.officialEmail?.trim(),
         staffCode: draft.staffCode?.trim() || undefined,
         personalEmail: draft.personalEmail?.trim() || undefined,
         personalMobile: draft.personalMobile?.trim() || undefined,
@@ -128,11 +128,11 @@ export default function StaffRecordsPage() {
         dateOfBirth: draft.dateOfBirth || undefined, joinedOn: draft.joinedOn || undefined,
       });
       setCreateOpen(false);
-      setDraft({ fullName: "", employmentStatus: "ACTIVE", joinedOn: today() });
+      setDraft({ fullName: "", officialEmail: "", employmentStatus: "ACTIVE", joinedOn: today() });
       await loadDirectory("");
-      setSelected(created);
-      await loadProfile(created.id);
-      setFeedback({ tone: "success", message: "Staff profile created. Add an institution or department assignment to make it appear in that scoped directory." });
+      setSelected(created.staff);
+      await loadProfile(created.staff.id);
+      setFeedback({ tone: "success", message: `Staff account created for ${created.login.email}. One-time temporary password: ${created.login.temporaryPassword}. Share it securely with the staff member. ${created.personalEmailVerificationRequired ? "Personal email is saved as a secondary login but remains disabled until ownership verification is implemented." : ""} ${created.login.initialRole ? `Initial role: ${created.login.initialRole}.` : "No role was assigned; assign a staff role before granting application access."}` });
     } catch (error) {
       setCreateError(getApiErrorMessage(error));
     } finally { setCreating(false); }
@@ -360,7 +360,9 @@ export default function StaffRecordsPage() {
           <div className="platform-form-grid">
             <TextField id="new-staff-full-name" label="Full name" required value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} />
             <TextField id="new-staff-code" label="Staff code (optional)" value={draft.staffCode ?? ""} onChange={(e) => setDraft({ ...draft, staffCode: e.target.value })} />
-            <TextField id="new-staff-email" label="Personal email" type="email" value={draft.personalEmail ?? ""} onChange={(e) => setDraft({ ...draft, personalEmail: e.target.value })} />
+            <TextField id="new-staff-official-email" label="Official email (login)" type="email" required value={draft.officialEmail ?? ""} onChange={(e) => setDraft({ ...draft, officialEmail: e.target.value })} />
+            <TextField id="new-staff-personal-email" label="Personal email (secondary login after verification)" type="email" value={draft.personalEmail ?? ""} onChange={(e) => setDraft({ ...draft, personalEmail: e.target.value })} />
+            <TextField id="new-staff-role" label="Initial role code (optional)" value={draft.initialRoleCode ?? ""} onChange={(e) => setDraft({ ...draft, initialRoleCode: e.target.value })} />
             <TextField id="new-staff-mobile" label="Personal mobile (E.164)" value={draft.personalMobile ?? ""} onChange={(e) => setDraft({ ...draft, personalMobile: e.target.value })} />
             <DateField id="new-staff-dob" label="Date of birth" value={draft.dateOfBirth ?? ""} onChange={(e) => setDraft({ ...draft, dateOfBirth: e.target.value })} />
             <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\\D/g, "") })} />
@@ -369,7 +371,7 @@ export default function StaffRecordsPage() {
           {createError && <Notice tone="danger">{createError}</Notice>}
           <footer className="platform-modal__footer">
             <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
-            <Button type="submit" busy={creating}>Create staff profile</Button>
+            <Button type="submit" busy={creating}>Create staff account and profile</Button>
           </footer>
         </form>
       </Modal>
