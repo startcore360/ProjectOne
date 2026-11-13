@@ -77,6 +77,7 @@ export function CreatePlatformUserModal({
           </button>
         </header>
         <form onSubmit={onSubmit}>
+          {createError && <Notice tone="danger">{createError}</Notice>}
           <TextField
             id="platform-user-name"
             label="Full name"
@@ -103,7 +104,7 @@ export function CreatePlatformUserModal({
               <RoleOptions customRoles={customRoles} />
             </select>
           </label>
-          {createError && <Notice tone="danger">{createError}</Notice>}
+
           <footer>
             <Button variant="secondary" onClick={onClose}>
               Cancel
