@@ -142,4 +142,21 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("Your symposium leave was approved.")).toBeInTheDocument();
     });
   });
+  it("keeps successful sections available when one self-service endpoint fails", async () => {
+    vi.mocked(selfServiceApi.getNotifications).mockRejectedValueOnce(new Error("notifications unavailable"));
+
+    renderWithStore(<SelfServicePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Notifications/i }));
+    expect(await screen.findByText("Notifications could not be loaded.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Leave Balances & History/i }));
+    expect(await screen.findByText("Academic symposium")).toBeInTheDocument();
+    expect(screen.getByText("15")).toBeInTheDocument();
+  });
+
 });
