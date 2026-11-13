@@ -2378,8 +2378,8 @@ export function AcademicGovernancePage() {
       {loading && <p className="platform-empty-note">Loading academic configuration...</p>}
       {loadError && !loading && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={fetchCurrentTab}>Retry</Button></Notice>}
 
+      <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" tabIndex={0} hidden={activeTab !== "rules"}>
       {!loading && !loadError && activeTab === "rules" && (
-        <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" tabIndex={0}>
         <Panel title="Curriculum and programme rules" description="Versioned curriculum requirements set by the Registrar.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2410,11 +2410,11 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
-        </div>
       )}
+      </div>
 
+      <div id="panel-grading" role="tabpanel" aria-labelledby="tab-grading" tabIndex={0} hidden={activeTab !== "grading"}>
       {!loading && !loadError && activeTab === "grading" && (
-        <div id="panel-grading" role="tabpanel" aria-labelledby="tab-grading" tabIndex={0}>
         <Panel title="Grading schemes" description="University-wide or standalone institution grade points and bands.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2443,11 +2443,11 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
-        </div>
       )}
+      </div>
 
+      <div id="panel-allocation" role="tabpanel" aria-labelledby="tab-allocation" tabIndex={0} hidden={activeTab !== "allocation"}>
       {!loading && !loadError && activeTab === "allocation" && (
-        <div id="panel-allocation" role="tabpanel" aria-labelledby="tab-allocation" tabIndex={0}>
         <Panel title="Subject allocations" description="Allocate courses to teachers for specific class sections or elective subject groups.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2476,11 +2476,11 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
-        </div>
       )}
+      </div>
 
+      <div id="panel-promotion" role="tabpanel" aria-labelledby="tab-promotion" tabIndex={0} hidden={activeTab !== "promotion"}>
       {!loading && !loadError && activeTab === "promotion" && (
-        <div id="panel-promotion" role="tabpanel" aria-labelledby="tab-promotion" tabIndex={0}>
         <Panel title="Year-end promotions" description="Promote students across academic sessions; Principal approves before execution.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2520,8 +2520,8 @@ export function AcademicGovernancePage() {
             </table>
           </div>
         </Panel>
-        </div>
       )}
+      </div>
 
       {/* Program Rule Set Modal */}
       <SetProgramRulesModal

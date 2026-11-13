@@ -578,6 +578,20 @@ describe("Institution setup action screens", () => {
       expect(screen.getByText(/Bulk decision applied: 2 items processed successfully/i)).toBeInTheDocument();
     });
   });
+  it("keeps every governance tab associated with a mounted tab panel", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    renderWithTenant(<AcademicGovernancePage />);
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(4);
+    for (const tab of tabs) {
+      const panelId = tab.getAttribute("aria-controls");
+      expect(panelId).toBeTruthy();
+      expect(document.getElementById(panelId!)).toHaveAttribute("role", "tabpanel");
+      expect(document.getElementById(panelId!)).toHaveAttribute("aria-labelledby", tab.id);
+    }
+  });
+
   it("renders academic governance and submits program rules (Story #30: PROGRAM_RULES_SET)", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: [
