@@ -1,12 +1,16 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { cn } from "../../lib/utils";
+import type { ReactNode } from "react";
+import DesignSystemButton, {
+  type ButtonProps as DesignSystemButtonProps,
+} from "../../design-system/components/Button";
 
-// A standard clickable button with color styles (variant), sizes, a loading
-// spinner, and a full-width option, so every button in the app looks the same.
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent";
-type ButtonSize = "sm" | "md" | "lg";
+/**
+ * Backwards-compatible button API for legacy UI imports.
+ * Rendering and Stillwater styles are owned by the design-system Button.
+ */
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent";
+export type ButtonSize = "sm" | "md" | "lg";
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends Omit<DesignSystemButtonProps, "variant" | "size" | "block" | "busy"> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
@@ -14,18 +18,18 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
-const variants: Record<ButtonVariant, string> = {
-  primary: "eds-button--primary",
-  secondary: "eds-button--secondary",
-  ghost: "eds-button--tertiary",
-  danger: "eds-button--danger",
-  accent: "eds-button--accent",
+const variantMap: Record<ButtonVariant, DesignSystemButtonProps["variant"]> = {
+  primary: "primary",
+  secondary: "secondary",
+  ghost: "tertiary",
+  danger: "danger",
+  accent: "accent",
 };
 
-const sizes: Record<ButtonSize, string> = {
-  sm: "eds-button--sm",
-  md: "",
-  lg: "eds-button--lg",
+const sizeMap: Record<ButtonSize, DesignSystemButtonProps["size"]> = {
+  sm: "sm",
+  md: "default",
+  lg: "lg",
 };
 
 export function Button({
@@ -33,28 +37,20 @@ export function Button({
   size = "md",
   loading = false,
   fullWidth = false,
-  disabled,
   children,
-  className,
-  type = "button",
   ...props
 }: ButtonProps) {
   return (
-    <button
+    <DesignSystemButton
       {...props}
-      type={type}
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
-      className={cn(
-        "eds-button",
-        variants[variant],
-        sizes[size],
-        fullWidth && "eds-button--block",
-        className,
-      )}
+      variant={variantMap[variant]}
+      size={sizeMap[size]}
+      busy={loading}
+      block={fullWidth}
     >
-      {loading ? <span className="eds-spinner" aria-hidden="true" /> : null}
       {children}
-    </button>
+    </DesignSystemButton>
   );
 }
+
+export default Button;
