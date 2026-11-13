@@ -63,12 +63,10 @@ export function SupportAccessView() {
 
       {message && <Notice tone="success">{message}</Notice>}
       {error && (
-        <Notice tone="danger">
-          <div className="eds-error-state" role="alert">
-            <p className="eds-error-state__message">{error}</p>
-            <Button variant="secondary" onClick={() => void loadGrants()}>Retry</Button>
-          </div>
-        </Notice>
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{error}</p>
+          <Button variant="secondary" onClick={() => void loadGrants()}>Retry</Button>
+        </div>
       )}
 
       <div className="platform-policy-callout">

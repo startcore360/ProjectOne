@@ -104,12 +104,10 @@ export function PlansView() {
       />
       {message && <Notice tone="success">{message}</Notice>}
       {loadError && !loading && (
-        <Notice tone="danger">
-          <div className="eds-error-state" role="alert">
-            <p className="eds-error-state__message">{loadError}</p>
-            <Button variant="secondary" onClick={() => void loadPlans()}>Retry</Button>
-          </div>
-        </Notice>
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{loadError}</p>
+          <Button variant="secondary" onClick={() => void loadPlans()}>Retry</Button>
+        </div>
       )}
 
       {loading ? (
