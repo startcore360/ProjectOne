@@ -22,12 +22,8 @@ export interface ModalProps {
   closeOnBackdrop?: boolean;
 }
 
-const sizeClasses: Record<ModalSize, string> = {
-  sm: "max-w-[440px]",
-  md: "max-w-[560px]",
-  lg: "max-w-[720px]",
-  xl: "max-w-[900px]",
-};
+// Width is controlled exclusively by the data-size CSS attribute selectors in components.css.
+// No Tailwind utility classes needed here — having both mechanisms caused cascade conflicts.
 
 export function Modal({
   isOpen,
@@ -116,7 +112,7 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         data-size={size}
         tabIndex={-1}
-        className={`platform-modal ${sizeClasses[size]} ${className}`.trim()}
+        className={`platform-modal ${className}`.trim()}
       >
         {(title || kicker || description) && (
           <header>

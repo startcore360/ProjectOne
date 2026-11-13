@@ -34,7 +34,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
             </h2>
             <p>{content.focus}</p>
             <a className="hero__cta" href="#workspace-queue">
-              View work queue
+              View work queue status
               <Icon name="send" size={16} />
             </a>
           </div>
@@ -70,7 +70,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
         <span className="student-panel__chevron">
           <Icon name="home" size={20} />
         </span>
-        <h2>Your assigned work will appear here</h2>
+        <h2>Work queue is not connected yet</h2>
         <p>
           Only tasks assigned to {role.name} within its authorised scope will be shown. No sample
           tasks are presented as live records. Available actions remain controlled by your assigned

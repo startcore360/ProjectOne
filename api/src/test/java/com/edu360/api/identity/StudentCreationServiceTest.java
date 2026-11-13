@@ -97,7 +97,7 @@ class StudentCreationServiceTest {
 
         StudentProfileResponse result = service.create(actor, new StudentCreateRequest(
                 institutionId, "A Student", null, LocalDate.of(2026, 6, 1),
-                sectionId, sessionId, null));
+                sectionId, sessionId, null, "R-01"));
 
         assertThat(result.studentCode()).isEqualTo("COL/2026/001");
         assertThat(result.userAccountId()).isEqualTo(studentUserId);
@@ -105,7 +105,7 @@ class StudentCreationServiceTest {
         verify(accounts).createStudentAccount(any(RbacPrincipal.class), eq("A Student"),
                 eq("COL/2026/001"), eq(institutionId));
         verify(enrollments).enrolExistingStudent(eq(actor), any(UUID.class), eq(institutionId),
-                eq(sectionId), eq(sessionId), isNull(), eq(LocalDate.of(2026, 6, 1)));
+                eq(sectionId), eq(sessionId), eq("R-01"), eq(LocalDate.of(2026, 6, 1)));
     }
     @Test
     void rejectsAdmissionOutsideSessionBeforeProvisioningAccount() {

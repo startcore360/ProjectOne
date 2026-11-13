@@ -34,7 +34,7 @@ describe("Sprint 2 shared academic components", () => {
   it("WeekGrid returns the selected timetable slot", () => {
     const onSelect = vi.fn();
     render(<WeekGrid slots={[{ id: "slot-1", day: "Monday", start: "09:00", end: "10:00", label: "Maths" }]} onSelect={onSelect} />);
-    fireEvent.click(screen.getByRole("gridcell"));
+    fireEvent.click(screen.getByRole("button", { name: /Monday/ }));
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: "slot-1" }));
   });
 

@@ -44,7 +44,16 @@ public record CreateInstitutionRequest(
         @Email(message = "principalInviteEmail must be a valid email address")
         @Size(max = 254, message = "principalInviteEmail must not exceed 254 characters")
         @Schema(description = "Principal invite email address", example = "principal@northbridge.edu.in")
-        String principalInviteEmail
+        String principalInviteEmail,
+
+        @NotBlank(message = "studentIdFormat is required")
+        @Size(max = 60, message = "studentIdFormat must not exceed 60 characters")
+        @Schema(description = "Institution-selected student code format; requires exactly one {SEQ:n} token", example = "{INST}-{YYYY}-{SEQ:4}")
+        String studentIdFormat,
+
+        @Size(max = 60, message = "staffIdFormat must not exceed 60 characters")
+        @Schema(description = "Optional institution-selected staff code format; HR may supply staff codes when omitted", example = "{INST}-ST-{YY}-{SEQ:4}")
+        String staffIdFormat
 ) {
     public boolean isExternalUniversityMode() {
         return externalUniversityMode != null && externalUniversityMode;

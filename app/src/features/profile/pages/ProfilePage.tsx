@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import axios from "axios";
+import { getApiErrorMessage } from "../../../services/apiHelper";
 import "./ProfilePage.css";
 import {
   Button,
@@ -35,7 +36,7 @@ function backendFieldErrors(err: unknown): FieldErrors | null {
 
 function backendMessage(err: unknown): string | null {
   if (axios.isAxiosError<{ error?: string }>(err)) {
-    return err.response?.data?.error ?? null;
+    return err.response?.data?.error ? getApiErrorMessage(err) : null;
   }
   return null;
 }
@@ -292,6 +293,7 @@ export default function ProfilePage() {
           )}
 
           <form onSubmit={submit} noValidate>
+            {Object.keys(fieldErrors).length > 0 && <div className="profile-message profile-message--error" role="alert">Please correct the highlighted fields below.</div>}
             <TextField
               id="profile-display-name"
               label="Display name"

@@ -121,8 +121,8 @@ export default function AppLayout() {
     customRoleName ??
     user?.roleName ??
     (roleProfile ? roleProfile.name : null) ??
-    (user?.roleCode ? user.roleCode.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (letter) => letter.toUpperCase()) : null) ??
-    ((user?.platformRole ?? user?.userType)?.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (letter) => letter.toUpperCase()) || "Member");
+    (user?.roleCode ? user.roleCode.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()) : null) ??
+    ((user?.platformRole ?? user?.userType)?.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Member");
 
   const isPlatformConsole = canOpenPlatformConsole(user?.platformRole);
   const isStudent = user?.userType === "STUDENT";
@@ -230,6 +230,7 @@ export default function AppLayout() {
   // long menu gives no sign that more items sit below. Track whether the list can scroll
   // further in either direction and let CSS fade that edge, plus show a "More" button below.
   const navRef = useRef<HTMLElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
   const [navOverflow, setNavOverflow] = useState({ above: false, below: false });
   const updateNavOverflow = useCallback(() => {
     const el = navRef.current;
@@ -250,6 +251,28 @@ export default function AppLayout() {
       observer?.disconnect();
     };
   }, [updateNavOverflow, navigation.length]);
+
+  // Focus-trap for the mobile "more" drawer: matches the Modal pattern exactly.
+  // Declared as a constant so the dep array stays stable.
+  const DRAWER_FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  useEffect(() => {
+    if (!moreOpen) return undefined;
+    drawerRef.current?.focus();
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setMoreOpen(false); return; }
+      if (e.key !== "Tab" || !drawerRef.current) return;
+      const focusable = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(DRAWER_FOCUSABLE));
+      if (focusable.length === 0) { e.preventDefault(); drawerRef.current.focus(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const idx = focusable.indexOf(document.activeElement as HTMLElement);
+      if (e.shiftKey && idx <= 0) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (idx === -1 || idx === focusable.length - 1)) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [moreOpen, DRAWER_FOCUSABLE]);
+
   const scrollNavDown = () => {
     const el = navRef.current;
     if (el) el.scrollTop += Math.max(el.clientHeight * 0.75, 88);
@@ -259,7 +282,7 @@ export default function AppLayout() {
   const moreNav = navigation.filter((item) => !item.important);
   const navLink = (item: (typeof navigation)[number], size = 20) =>
     "disabled" in item && item.disabled
-      ? <span key={item.label} className="app-nav__link is-disabled" aria-disabled="true" title={`${item.label} page is not part of this sprint`}><Icon name={item.icon} size={size}/><span>{item.label} <small>Coming soon</small></span></span>
+      ? <button key={item.label} type="button" disabled className="app-nav__link is-disabled" aria-label={`${item.label} — coming soon`}><Icon name={item.icon} size={size}/><span>{item.label} <small>Coming soon</small></span></button>
       : <NavLink key={item.to} to={item.to} end title={item.label} onClick={() => setMoreOpen(false)} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={size}/><span>{item.label}</span></NavLink>;
 
   return <div className="app-shell">
@@ -299,7 +322,7 @@ export default function AppLayout() {
       <button type="button" className="app-nav__link" aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Icon name="more" size={22}/><span>More</span></button>
     </nav>
     {moreOpen && <div className="platform-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setMoreOpen(false); }}>
-      <section className="app-more-drawer" role="dialog" aria-modal="true" aria-label="Menu">
+      <section ref={drawerRef} tabIndex={-1} className="app-more-drawer" role="dialog" aria-modal="true" aria-label="Menu">
         <header><h2>Menu</h2><button className="platform-icon-button" onClick={() => setMoreOpen(false)} aria-label="Close"><Icon name="x" size={16}/></button></header>
         {/* Mobile has no sidebar, so the signed-in identity + profile link live here too. */}
         <NavLink to="/profile" className="app-user app-user--drawer" onClick={() => setMoreOpen(false)}>

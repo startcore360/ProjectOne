@@ -4,6 +4,9 @@ import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { PersonPicker } from "../../../components/common/PersonPicker";
+import { SectionPicker } from "../../../components/common/SectionPicker";
+import { staffService, type TeacherLookupItem } from "../api/staffService";
 import { useFormErrors } from "../../../hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui";
@@ -62,11 +65,10 @@ import {
 // sample-data-only screens in InstitutionAdminPages.tsx. Kept in a separate file so this round's
 // additions don't collide with edits other agents are making to InstitutionAdminPages.tsx.
 //
-// IMPORTANT LIMITATION (read before changing the ID inputs below): there is no GET list endpoint
-// yet for departments, sections or classes - only the PUT assignment endpoints exist. Until a
-// "structure management" screen exists to browse them, every target is a plain pasted-ID text
-// field, not a picker. That's deliberate, not an oversight: a fake dropdown would imply a browse
-// experience the backend doesn't support.
+// Scoped department/section list endpoints and the teaching-staff lookup now power real
+// PersonPicker and SectionPicker controls on HOD, mentor and class-teacher assignment pages.
+// Other setup forms that do not yet have a supported browse endpoint keep explicit UUID fields;
+// do not replace those with synthetic dropdowns.
 
 type Status = "idle" | "busy" | "success" | "error" | "denied";
 
@@ -182,178 +184,187 @@ function useAction<TResponse>() {
 
 export function HodAssignmentPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { permissions } = useTenantAccess();
+  const institutionId = permissions?.institutionId ?? "";
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [departmentId, setDepartmentId] = useState("");
+  const [teachers, setTeachers] = useState<TeacherLookupItem[]>([]);
   const [staffAssignmentId, setStaffAssignmentId] = useState("");
+  const [pickerError, setPickerError] = useState("");
   const { status, message, run } = useAction<{ departmentId: string; hodStaffAssignmentId: string }>();
 
+  useEffect(() => {
+    if (!tenantId || !institutionId) { setDepartments([]); return undefined; }
+    let active = true;
+    void institutionService.listDepartments(tenantId, institutionId)
+      .then((rows) => { if (active) setDepartments(rows); })
+      .catch(() => { if (active) setPickerError("Could not load departments for the active institution."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !institutionId || !departmentId) { setTeachers([]); setStaffAssignmentId(""); return undefined; }
+    let active = true;
+    void staffService.teacherLookup(tenantId, institutionId, "HOD_ASSIGN", departmentId)
+      .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
+      .catch(() => { if (active) setPickerError("Could not load active faculty for this department."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId, departmentId]);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const invalid =
-      !isValidUuid(departmentId) || !isValidUuid(staffAssignmentId)
-        ? "Department ID and staff assignment ID must both be valid IDs."
-        : null;
-    void run(
-      invalid,
-      () =>
-        api.put(`/tenants/${tenantId}/departments/${departmentId.trim()}/hod`, {
-          staffAssignmentId: staffAssignmentId.trim(),
-        }),
-      (data) => `HOD assignment recorded for department ${data.departmentId} (assignment ${data.hodStaffAssignmentId}).`,
-    );
+    const invalid = !isValidUuid(departmentId) || !isValidUuid(staffAssignmentId)
+      ? "Select a department and an active faculty member."
+      : null;
+    void run(invalid, () => api.put(`/tenants/${tenantId}/departments/${departmentId}/hod`, {
+      staffAssignmentId,
+    }), (data) => `HOD assignment recorded for department ${data.departmentId}.`);
   };
 
   return (
     <div className="platform-page">
-      <PageHeader
-        title="Assign Head of Department"
-        description="Assign a faculty member as the Head of Department for a department."
-      />
-      {!tenantId ? (
-        <NoTenantNotice />
-      ) : (
-        <Panel title="Department HOD" description="Both IDs are required; there is no department or staff picker yet.">
+      <PageHeader title="Assign Head of Department" description="Choose a department and an active faculty member in the current institution." />
+      {!tenantId || !institutionId ? <NoTenantNotice /> : (
+        <Panel title="Department HOD" description="The picker is scoped to the active institution and validates faculty assignments on the server.">
           <form onSubmit={submit} noValidate>
-            <IdField id="hod-department-id" label="Department ID" value={departmentId} onChange={setDepartmentId} />
-            <IdField
-              id="hod-staff-assignment-id"
-              label="Staff assignment ID (new HOD)"
-              value={staffAssignmentId}
-              onChange={setStaffAssignmentId}
-              hint="This is the staff ASSIGNMENT id, not the person's user id — there is no lookup for it yet."
-            />
+            <SelectField id="hod-department-id" label="Department" required value={departmentId}
+              onChange={(event) => { setDepartmentId(event.target.value); setStaffAssignmentId(""); }}
+              options={[{ value: "", label: "Select a department" }, ...departments.map((d) => ({ value: d.departmentId, label: d.departmentName }))]} />
+            <PersonPicker label="New HOD" value={staffAssignmentId}
+              options={teachers.map((t) => ({ id: t.staffAssignmentId, name: t.fullName, designation: t.designation, department: t.departmentName ?? undefined }))}
+              onChange={setStaffAssignmentId} disabled={!departmentId} />
+            {pickerError && <Notice tone="danger">{pickerError}</Notice>}
             <ResultBanner status={status} message={message} />
-            <Button type="submit" busy={status === "busy"}>
-              {status === "busy" ? "Assigning…" : "Assign HOD"}
-            </Button>
+            <Button type="submit" busy={status === "busy"} disabled={!departmentId || !staffAssignmentId}>Assign HOD</Button>
           </form>
         </Panel>
       )}
     </div>
   );
 }
-
-// --- 2. Mentor assignment (MENTOR_ASSIGN) -----------------------------------------------------
-
 export function MentorAssignmentPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { permissions } = useTenantAccess();
+  const institutionId = permissions?.institutionId ?? "";
+  const departmentId = permissions?.departmentId ?? "";
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [teachers, setTeachers] = useState<TeacherLookupItem[]>([]);
   const [sectionId, setSectionId] = useState("");
   const [staffAssignmentId, setStaffAssignmentId] = useState("");
+  const [pickerError, setPickerError] = useState("");
   const { status, message, run } = useAction<{ sectionId: string; mentorAssignmentId: string; staffAssignmentId: string }>();
 
+  useEffect(() => {
+    if (!tenantId || !institutionId) { setSections([]); return undefined; }
+    let active = true;
+    void institutionService.listSections(tenantId, institutionId)
+      .then((rows) => { if (active) setSections(rows.filter((row) => row.status === "ACTIVE" && row.semesterId !== null)); })
+      .catch(() => { if (active) setPickerError("Could not load college sections for the active institution."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !institutionId || !departmentId) { setTeachers([]); return undefined; }
+    let active = true;
+    void staffService.teacherLookup(tenantId, institutionId, "MENTOR_ASSIGN", departmentId)
+      .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
+      .catch(() => { if (active) setPickerError("Could not load active faculty for the current department."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId, departmentId]);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const invalid =
-      !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
-        ? "Section ID and staff assignment ID must both be valid IDs."
-        : null;
-    void run(
-      invalid,
-      () =>
-        api.put(`/tenants/${tenantId}/sections/${sectionId.trim()}/mentor`, {
-          staffAssignmentId: staffAssignmentId.trim(),
-        }),
-      (data) => `Mentor assigned to section ${data.sectionId} (mentor assignment ${data.mentorAssignmentId}).`,
-    );
+    const invalid = !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
+      ? "Select a college section and an active faculty member."
+      : null;
+    void run(invalid, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/mentor`, {
+      staffAssignmentId,
+    }), (data) => `Mentor assigned to section ${data.sectionId}.`);
   };
 
   return (
     <div className="platform-page">
-      <PageHeader
-        title="Assign mentor"
-        description="Assign a mentor or class coordinator to a college section."
-      />
-      {!tenantId ? (
-        <NoTenantNotice />
-      ) : (
-        <Panel title="Section mentor" description="Both IDs are required; there is no section or staff picker yet.">
+      <PageHeader title="Assign mentor" description="Assign an active faculty member as mentor for a college section in the current department." />
+      {!tenantId || !institutionId || !departmentId ? <NoTenantNotice /> : (
+        <Panel title="Section mentor" description="Sections and faculty are limited to the active department.">
           <form onSubmit={submit} noValidate>
-            <IdField id="mentor-section-id" label="Section ID" value={sectionId} onChange={setSectionId} />
-            <IdField
-              id="mentor-staff-assignment-id"
-              label="Staff assignment ID (new mentor)"
-              value={staffAssignmentId}
-              onChange={setStaffAssignmentId}
-              hint="This is the staff ASSIGNMENT id, not the person's user id — there is no lookup for it yet."
-            />
+            <SectionPicker value={sectionId} options={sections.map((s) => ({ id: s.sectionId, label: s.sectionName }))}
+              onChange={setSectionId} />
+            <PersonPicker label="New mentor" value={staffAssignmentId}
+              options={teachers.map((t) => ({ id: t.staffAssignmentId, name: t.fullName, designation: t.designation, department: t.departmentName ?? undefined }))}
+              onChange={setStaffAssignmentId} />
+            {pickerError && <Notice tone="danger">{pickerError}</Notice>}
             <ResultBanner status={status} message={message} />
-            <Button type="submit" busy={status === "busy"}>
-              {status === "busy" ? "Assigning…" : "Assign mentor"}
-            </Button>
+            <Button type="submit" busy={status === "busy"} disabled={!sectionId || !staffAssignmentId}>Assign mentor</Button>
           </form>
         </Panel>
       )}
     </div>
   );
 }
-
-// --- 3. Class-teacher assignment (CLASS_TEACHER_ASSIGN, section-based) ------------------------
-
 export function ClassTeacherAssignmentPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { permissions } = useTenantAccess();
+  const institutionId = permissions?.institutionId ?? "";
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [teachers, setTeachers] = useState<TeacherLookupItem[]>([]);
   const [sectionId, setSectionId] = useState("");
   const [staffAssignmentId, setStaffAssignmentId] = useState("");
+  const [pickerError, setPickerError] = useState("");
   const { status, message, run } = useAction<{ sectionId: string; classTeacherAssignmentId: string; staffAssignmentId: string }>();
+
+  useEffect(() => {
+    if (!tenantId || !institutionId) { setSections([]); return undefined; }
+    let active = true;
+    void institutionService.listSections(tenantId, institutionId)
+      .then((rows) => { if (active) setSections(rows.filter((row) => row.status === "ACTIVE" && row.classId !== null)); })
+      .catch(() => { if (active) setPickerError("Could not load school sections for the active institution."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !institutionId) { setTeachers([]); return undefined; }
+    let active = true;
+    void staffService.teacherLookup(tenantId, institutionId, "CLASS_TEACHER_ASSIGN")
+      .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
+      .catch(() => { if (active) setPickerError("Could not load active teaching staff for the active school."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const invalid =
-      !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
-        ? "Section ID and staff assignment ID must both be valid IDs."
-        : null;
-    void run(
-      invalid,
-      () =>
-        api.put(`/tenants/${tenantId}/sections/${sectionId.trim()}/class-teacher`, {
-          staffAssignmentId: staffAssignmentId.trim(),
-        }),
-      (data) =>
-        `Class Teacher assigned to section ${data.sectionId} (assignment ${data.classTeacherAssignmentId}).`,
-    );
+    const invalid = !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
+      ? "Select a school section and an active teaching staff member."
+      : null;
+    void run(invalid, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/class-teacher`, {
+      staffAssignmentId,
+    }), (data) => `Class Teacher assigned to section ${data.sectionId}.`);
   };
 
   return (
     <div className="platform-page">
-      <PageHeader
-        title="Assign Class Teacher"
-        description="Assign a class teacher to a school section."
-      />
+      <PageHeader title="Assign Class Teacher" description="Assign a class teacher to a school section." />
       <div className="platform-policy-callout">
         <span aria-hidden="true">ⓘ</span>
-        <div>
-          <strong>This assigns a section, not a class</strong>
-          <p>
-            The backend currently builds CLASS_TEACHER_ASSIGN against sections, not classes — an
-            open product decision (OD-24). This screen is deliberately labelled "section" to
-            match what actually happens; it does not assign a Class Teacher to a whole class.
-          </p>
-        </div>
+        <div><strong>This assigns a section, not a class</strong><p>The backend currently builds CLASS_TEACHER_ASSIGN against sections, not classes — an open product decision (OD-24). This screen matches the stored unit.</p></div>
       </div>
-      {!tenantId ? (
-        <NoTenantNotice />
-      ) : (
-        <Panel title="Section Class Teacher" description="Both IDs are required; there is no section or staff picker yet.">
+      {!tenantId || !institutionId ? <NoTenantNotice /> : (
+        <Panel title="Section Class Teacher" description="Sections and staff are limited to the active school.">
           <form onSubmit={submit} noValidate>
-            <IdField id="ct-section-id" label="Section ID" value={sectionId} onChange={setSectionId} />
-            <IdField
-              id="ct-staff-assignment-id"
-              label="Staff assignment ID (new Class Teacher)"
-              value={staffAssignmentId}
-              onChange={setStaffAssignmentId}
-              hint="This is the staff ASSIGNMENT id, not the person's user id — there is no lookup for it yet."
-            />
+            <SectionPicker value={sectionId} options={sections.map((s) => ({ id: s.sectionId, label: s.sectionName }))}
+              onChange={setSectionId} />
+            <PersonPicker label="New Class Teacher" value={staffAssignmentId}
+              options={teachers.map((t) => ({ id: t.staffAssignmentId, name: t.fullName, designation: t.designation, department: t.departmentName ?? undefined }))}
+              onChange={setStaffAssignmentId} />
+            {pickerError && <Notice tone="danger">{pickerError}</Notice>}
             <ResultBanner status={status} message={message} />
-            <Button type="submit" busy={status === "busy"}>
-              {status === "busy" ? "Assigning…" : "Assign Class Teacher"}
-            </Button>
+            <Button type="submit" busy={status === "busy"} disabled={!sectionId || !staffAssignmentId}>Assign Class Teacher</Button>
           </form>
         </Panel>
       )}
     </div>
   );
 }
-
-// --- 4. Student login switch (STUDENT_LOGIN_SWITCH) -------------------------------------------
-
 export function StudentLoginSwitchPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [classId, setClassId] = useState("");

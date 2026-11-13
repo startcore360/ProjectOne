@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { notificationsApi, type BellNotification } from "../api/notificationsApi";
+import { LIVE_EVENT_NAME, type LiveEnvelope } from "../../live/liveSocket";
 
 /** D1 NFR: in-app notifications arrive within 1 minute, so the bell refreshes at least that often. */
 export const NOTIFICATION_REFRESH_MS = 60_000;
@@ -20,13 +21,27 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
   const [items, setItems] = useState<BellNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [hasReadState, setHasReadState] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
-      setItems(await notificationsApi.list(tenantId));
-      setError(null);
+      const [listResult, summaryResult] = await Promise.allSettled([
+        notificationsApi.list(tenantId),
+        notificationsApi.summary(tenantId),
+      ]);
+      if (listResult.status === "fulfilled") {
+        setItems(listResult.value);
+        setError(null);
+      } else {
+        setError("Could not load notifications.");
+      }
+      if (summaryResult.status === "fulfilled") {
+        setUnreadCount(summaryResult.value.unreadCount);
+        setHasReadState(true);
+      }
     } catch {
       setError("Could not load notifications.");
     } finally {
@@ -47,29 +62,46 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
     };
   }, [tenantId, refresh]);
 
-  const hasReadState = useMemo(() => items.some((n) => n.readAt !== undefined), [items]);
-  const unreadCount = useMemo(
-    () => (hasReadState ? items.filter((n) => n.readAt === null || n.readAt === undefined).length : 0),
-    [items, hasReadState],
-  );
+
+  useEffect(() => {
+    if (!tenantId) return undefined;
+    const onLiveEvent = (raw: Event) => {
+      const event = (raw as CustomEvent<LiveEnvelope>).detail;
+      if (!event) return;
+      if (event.type === "NOTIFICATION_CREATED") {
+        void refresh();
+      } else if (event.type === "UNREAD_COUNT") {
+        const value = event.payload?.unreadCount;
+        if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+          setUnreadCount(value);
+          setHasReadState(true);
+        }
+      }
+    };
+    window.addEventListener(LIVE_EVENT_NAME, onLiveEvent);
+    return () => window.removeEventListener(LIVE_EVENT_NAME, onLiveEvent);
+  }, [tenantId, refresh]);
 
   const markRead = useCallback(async (notificationId: string) => {
     if (!tenantId) return;
     const now = new Date().toISOString();
     // Optimistic update, rolled back if the server refuses.
     setItems((prev) => prev.map((n) => (n.notificationId === notificationId ? { ...n, readAt: n.readAt ?? now } : n)));
+    setUnreadCount((count) => Math.max(0, count - (items.some((n) => n.notificationId === notificationId && (n.readAt === null || n.readAt === undefined)) ? 1 : 0)));
     try {
       await notificationsApi.markRead(tenantId, notificationId);
     } catch {
       setError("Could not mark the notification as read.");
       await refresh();
     }
-  }, [tenantId, refresh]);
+  }, [tenantId, refresh, items]);
 
   const markAllRead = useCallback(async () => {
     if (!tenantId) return;
     const now = new Date().toISOString();
     setItems((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? now })));
+    setUnreadCount(0);
+    setHasReadState(true);
     try {
       await notificationsApi.markAllRead(tenantId);
     } catch {

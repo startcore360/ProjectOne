@@ -37,7 +37,7 @@ import com.edu360.api.files.FileObjectId;
 import com.edu360.api.files.FileObjectRepository;
 import com.edu360.api.files.LocalFileStorage;
 import com.edu360.api.identity.UserAccountRepository;
-import com.edu360.api.identity.UserAccountService;
+import com.edu360.api.imports.UserBulkImportRowService;
 import com.edu360.api.imports.dto.ImportJobResponse;
 import com.edu360.api.imports.dto.ImportRowErrorResponse;
 import com.edu360.api.imports.dto.ImportTemplateResponse;
@@ -66,7 +66,7 @@ class UserBulkUploadControllerTest {
     private LocalFileStorage localFileStorage;
     private PermissionEvaluatorService permissionEvaluatorService;
     private UserAccountRepository userAccountRepository;
-    private UserAccountService userAccountService;
+    private UserBulkImportRowService userAccountService;
     private AuditLogService auditLogService;
 
     private UserBulkUploadService userBulkUploadService;
@@ -86,7 +86,7 @@ class UserBulkUploadControllerTest {
         localFileStorage = mock(LocalFileStorage.class);
         permissionEvaluatorService = mock(PermissionEvaluatorService.class);
         userAccountRepository = mock(UserAccountRepository.class);
-        userAccountService = mock(UserAccountService.class);
+        userAccountService = mock(UserBulkImportRowService.class);
         auditLogService = mock(AuditLogService.class);
 
         userBulkUploadService = new UserBulkUploadService(

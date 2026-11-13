@@ -33,13 +33,55 @@ class StaffDirectoryControllerTest {
             new TenantPrincipal(tenantId, userId, UserType.STAFF, "Staff", false);
     private final Authentication authentication = mock(Authentication.class);
     private StaffDirectoryService service;
+    private StaffOnboardingService onboarding;
     private StaffDirectoryController controller;
 
     @BeforeEach
     void setUp() {
         service = mock(StaffDirectoryService.class);
-        controller = new StaffDirectoryController(service);
+        onboarding = mock(StaffOnboardingService.class);
+        controller = new StaffDirectoryController(service, onboarding);
         when(authentication.getPrincipal()).thenReturn(tenantPrincipal);
+    }
+
+
+
+    @Test
+    void teacherPickerUsesTheAssignmentActionAsItsAuthorizationPurpose() {
+        UUID institutionId = UUID.randomUUID();
+        UUID departmentId = UUID.randomUUID();
+        TeacherLookupResponse response = new TeacherLookupResponse(java.util.List.of(),
+                new StaffListResponse.PageInfo(50, null, false, null));
+        when(service.teacherLookup(new RbacPrincipal(tenantId, userId), institutionId, departmentId,
+                "Asha", 50, "MENTOR_ASSIGN")).thenReturn(response);
+
+        var result = controller.list(tenantId, "Asha", "TEACHING", institutionId, departmentId,
+                "MENTOR_ASSIGN", 50, authentication);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(service).teacherLookup(new RbacPrincipal(tenantId, userId), institutionId, departmentId,
+                "Asha", 50, "MENTOR_ASSIGN");
+    }
+
+    @Test
+    void createUsesOnboardingWorkflowAndReturnsStaffVersionEtag() {
+        StaffProfileRequest request = new StaffProfileRequest(null, "Taylor Reed", null, "taylor@school.edu", null,
+                null, null, null, null, "ACTIVE", LocalDate.of(2026, 11, 1), null);
+        StaffProfileResponse profile = new StaffProfileResponse(staffId, userId, "ST-004",
+                "Taylor Reed", null, null, null, null, null, "ACTIVE",
+                LocalDate.of(2026, 11, 1), null, null, userId, null, userId, 2);
+        var login = new com.edu360.api.rbac.dto.CreateUserResponse(userId, tenantId,
+                UserType.STAFF, "Taylor Reed", "taylor@school.edu", null,
+                com.edu360.api.identity.UserAccountStatus.PENDING_ACTIVATION,
+                "temporary", null, java.time.Instant.now());
+        when(onboarding.onboard(any(RbacPrincipal.class), eq(request)))
+                .thenReturn(new StaffOnboardingResponse(profile, login, false));
+
+        var result = controller.create(tenantId, request, authentication);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(result.getHeaders().getETag()).isEqualTo("\"2\"");
+        verify(onboarding).onboard(new RbacPrincipal(tenantId, userId), request);
     }
 
     @Test
@@ -89,7 +131,7 @@ class StaffDirectoryControllerTest {
 
     @Test
     void missingTenantAuthenticationIsRejected() {
-        assertThatThrownBy(() -> controller.list(tenantId, null, 50, null))
+        assertThatThrownBy(() -> controller.list(tenantId, null, null, null, null, null, 50, null))
                 .isInstanceOf(UnauthorizedException.class);
         verify(service, never()).list(any(), any(), anyInt());
     }

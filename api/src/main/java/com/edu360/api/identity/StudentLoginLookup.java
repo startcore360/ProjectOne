@@ -23,6 +23,28 @@ public class StudentLoginLookup {
     @PersistenceContext
     private EntityManager entityManager;
 
+    /**
+     * Resolves a verified secondary email alias to its owning account. The caller must have
+     * established the tenant from the login host before setting TenantContext.
+     */
+    @Transactional(readOnly = true)
+    public Optional<UUID> accountForVerifiedEmailAlias(String email) {
+        if (email == null || email.isBlank()) return Optional.empty();
+        List<?> rows = entityManager.createNativeQuery("""
+                SELECT user_account_id
+                  FROM app.user_login_alias
+                 WHERE tenant_id = current_setting('app.tenant_id')::uuid
+                   AND email = lower(btrim(:email))
+                   AND is_verified = true
+                 LIMIT 1
+                """)
+                .setParameter("email", email)
+                .getResultList();
+        if (rows.isEmpty() || rows.get(0) == null) return Optional.empty();
+        Object value = rows.get(0);
+        return Optional.of(value instanceof UUID uuid ? uuid : UUID.fromString(value.toString()));
+    }
+
     @Transactional(readOnly = true)
     public Optional<UUID> accountForStudentCode(String studentCode) {
         if (studentCode == null || studentCode.isBlank()) {

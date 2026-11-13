@@ -388,12 +388,14 @@ public class AuthService {
      */
     private String keycloakUsernameFor(Resolution resolution, String identifier) {
         String trimmed = identifier == null ? "" : identifier.trim();
-        if (!(resolution instanceof TenantLogin tenantLogin) || trimmed.contains("@") || trimmed.isEmpty()) {
+        if (!(resolution instanceof TenantLogin tenantLogin) || trimmed.isEmpty()) {
             return trimmed;
         }
         Tenant tenant = tenantLogin.tenant();
         TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef());
-        Optional<UUID> accountId = studentLoginLookup.accountForStudentCode(trimmed);
+        Optional<UUID> accountId = trimmed.contains("@")
+                ? studentLoginLookup.accountForVerifiedEmailAlias(trimmed)
+                : studentLoginLookup.accountForStudentCode(trimmed);
         if (accountId.isEmpty()) {
             return trimmed;
         }

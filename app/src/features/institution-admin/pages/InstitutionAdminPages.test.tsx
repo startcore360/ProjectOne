@@ -30,6 +30,8 @@ vi.mock("../api/institutionService", () => ({
   institutionService: {
     listInstitutions: vi.fn(),
     createDraftInstitution: vi.fn(),
+    getIdFormats: vi.fn(),
+    setIdFormats: vi.fn(),
     activateInstitution: vi.fn(),
     requestBlock: vi.fn(),
     decideBlock: vi.fn(),
@@ -170,6 +172,9 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     fireEvent.change(screen.getByLabelText(/Institution Name \*/i), {
       target: { value: "Northbridge Institute of Technology" },
     });
+    fireEvent.change(screen.getByLabelText(/Student ID format \*/i), {
+      target: { value: "{INST}-{YYYY}-{SEQ:4}" },
+    });
     fireEvent.change(screen.getByLabelText(/City/i), { target: { value: "Bengaluru" } });
 
     // Submit
@@ -180,8 +185,42 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
         institutionCode: "NBC-03",
         institutionName: "Northbridge Institute of Technology",
         institutionType: "COLLEGE",
+        studentIdFormat: "{INST}-{YYYY}-{SEQ:4}",
+        staffIdFormat: undefined,
       }));
       expect(screen.getAllByText(/Northbridge Institute of Technology/i).length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+
+  it("loads and updates institution ID formats until their generated-code locks apply", async () => {
+    vi.mocked(institutionService.getIdFormats).mockResolvedValue({
+      studentIdFormat: "{INST}-{YYYY}-{SEQ:4}",
+      staffIdFormat: null,
+      studentFormatLocked: false,
+      staffFormatLocked: false,
+    });
+    vi.mocked(institutionService.setIdFormats).mockResolvedValue({
+      studentIdFormat: "{INST}-{YY}-{SEQ:5}",
+      staffIdFormat: "{INST}-ST-{YY}-{SEQ:4}",
+      studentFormatLocked: false,
+      staffFormatLocked: false,
+    });
+
+    renderWithStore(<InstitutionsPage />);
+    await waitFor(() => expect(screen.getByText("Northbridge College of Science")).toBeInTheDocument());
+    fireEvent.click(screen.getAllByRole("button", { name: "ID formats" })[0]);
+
+    expect(await screen.findByDisplayValue("{INST}-{YYYY}-{SEQ:4}")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Student ID format/i), { target: { value: "{INST}-{YY}-{SEQ:5}" } });
+    fireEvent.change(screen.getByLabelText(/Staff ID format/i), { target: { value: "{INST}-ST-{YY}-{SEQ:4}" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
+
+    await waitFor(() => {
+      expect(institutionService.setIdFormats).toHaveBeenCalledWith("tenant-1", "inst-1", {
+        studentIdFormat: "{INST}-{YY}-{SEQ:5}",
+        staffIdFormat: "{INST}-ST-{YY}-{SEQ:4}",
+      });
     });
   });
 

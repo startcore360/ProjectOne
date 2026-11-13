@@ -132,7 +132,7 @@ class InstitutionControllerTest {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
                 "COLLEGE", "NBC-01", "Northbridge College of Science", false,
-                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001", "principal@northbridge.edu.in"
+                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001", "principal@northbridge.edu.in", "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         when(institutionRepository.existsByIdTenantIdAndInstitutionCode(TENANT_ID, "NBC-01")).thenReturn(false);
@@ -168,7 +168,7 @@ class InstitutionControllerTest {
     void actInstitutionCreateDraft_deny() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-01", "Northbridge College of Science", false, null, null, null, null, null
+                "COLLEGE", "NBC-01", "Northbridge College of Science", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         doThrow(new UnauthorizedException("The active role does not hold action INSTITUTION_CREATE_DRAFT."))
@@ -186,7 +186,7 @@ class InstitutionControllerTest {
         UUID foreignTenantId = UUID.randomUUID();
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null
+                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         assertThatThrownBy(() -> controller.createDraft(foreignTenantId, req, auth))
@@ -199,7 +199,7 @@ class InstitutionControllerTest {
     void actInstitutionCreateDraft_guard_duplicateCode() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null
+                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         when(institutionRepository.existsByIdTenantIdAndInstitutionCode(TENANT_ID, "NBC-01")).thenReturn(true);
@@ -214,7 +214,7 @@ class InstitutionControllerTest {
     void actInstitutionCreateDraft_guard_planLimitReached() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-02", "New Campus", false, null, null, null, null, null
+                "COLLEGE", "NBC-02", "New Campus", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         when(institutionRepository.countByIdTenantIdAndStatusNot(TENANT_ID, "ARCHIVED")).thenReturn(5L);

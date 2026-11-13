@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
-  Panel, SearchBox, SelectField, Spinner, TextAreaField, TextField,
+  Panel, SearchBox, SelectField, Spinner, TextAreaField, TextField, DataTable,
 } from "../../../design-system/components";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { FileDrop } from "../../../components/common/FileDrop";
 import {
   staffService, type StaffAssignment, type StaffDocument, type StaffProfile,
   type StaffProfilePayload, type StaffServiceRecord,
@@ -47,7 +48,7 @@ export default function StaffRecordsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
-  const [draft, setDraft] = useState<StaffProfilePayload>({ fullName: "", employmentStatus: "ACTIVE", joinedOn: today() });
+  const [draft, setDraft] = useState<StaffProfilePayload>({ fullName: "", officialEmail: "", employmentStatus: "ACTIVE", joinedOn: today() });
   const [profileDraft, setProfileDraft] = useState<StaffProfilePayload | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [assignmentDraft, setAssignmentDraft] = useState({ institutionId: "", departmentId: "", designation: "", effectiveFrom: today() });
@@ -120,7 +121,7 @@ export default function StaffRecordsPage() {
     setCreateError("");
     try {
       const created = await staffService.create(tenantId, {
-        ...draft, fullName: draft.fullName.trim(),
+        ...draft, fullName: draft.fullName.trim(), officialEmail: draft.officialEmail?.trim(),
         staffCode: draft.staffCode?.trim() || undefined,
         personalEmail: draft.personalEmail?.trim() || undefined,
         personalMobile: draft.personalMobile?.trim() || undefined,
@@ -128,11 +129,11 @@ export default function StaffRecordsPage() {
         dateOfBirth: draft.dateOfBirth || undefined, joinedOn: draft.joinedOn || undefined,
       });
       setCreateOpen(false);
-      setDraft({ fullName: "", employmentStatus: "ACTIVE", joinedOn: today() });
+      setDraft({ fullName: "", officialEmail: "", employmentStatus: "ACTIVE", joinedOn: today() });
       await loadDirectory("");
-      setSelected(created);
-      await loadProfile(created.id);
-      setFeedback({ tone: "success", message: "Staff profile created. Add an institution or department assignment to make it appear in that scoped directory." });
+      setSelected(created.staff);
+      await loadProfile(created.staff.id);
+      setFeedback({ tone: "success", message: `Staff account created for ${created.login.email}. One-time temporary password: ${created.login.temporaryPassword}. Share it securely with the staff member. ${created.personalEmailVerificationRequired ? "Personal email is saved as a secondary login but remains disabled until ownership verification is implemented." : ""} ${created.login.initialRole ? `Initial role: ${created.login.initialRole}.` : "No role was assigned; assign a staff role before granting application access."}` });
     } catch (error) {
       setCreateError(getApiErrorMessage(error));
     } finally { setCreating(false); }
@@ -293,10 +294,9 @@ export default function StaffRecordsPage() {
 
               <Panel title="Institution assignments" description="Assign the staff member to an institution or department with an effective date.">
                 {assignments.length === 0 ? <EmptyState title="No assignments recorded" description="A staff profile must have an active assignment to appear in an institution or department directory." /> : (
-                  <div className="platform-table-wrap"><table className="platform-table">
-                    <thead><tr><th>Designation</th><th>Institution</th><th>Department</th><th>Effective from</th><th>Status</th></tr></thead>
-                    <tbody>{assignments.map((item) => <tr key={item.id}><td>{item.designation}</td><td><code>{item.institutionId ?? "Tenant-wide"}</code></td><td><code>{item.departmentId ?? "—"}</code></td><td>{item.effectiveFrom}</td><td><Badge tone={item.status === "ACTIVE" ? "success" : "neutral"}>{humanize(item.status)}</Badge></td></tr>)}</tbody>
-                  </table></div>
+                  <DataTable headers={["Designation", "Institution", "Department", "Effective from", "Status"]} ariaLabel="Staff institution assignments" empty={assignments.length === 0}>
+                    {assignments.map((item) => <tr key={item.id}><td>{item.designation}</td><td><code>{item.institutionId ?? "Tenant-wide"}</code></td><td><code>{item.departmentId ?? "—"}</code></td><td>{item.effectiveFrom}</td><td><Badge tone={item.status === "ACTIVE" ? "success" : "neutral"}>{humanize(item.status)}</Badge></td></tr>)}
+                  </DataTable>
                 )}
                 {canManage && <form onSubmit={addAssignment} className="platform-form staff-form-divider">
                   <div className="platform-form-grid">
@@ -311,9 +311,8 @@ export default function StaffRecordsPage() {
 
               <Panel title="Staff documents" description="Upload supporting documents for scanning and attach them to this profile. An authorized second person must verify them.">
                 {documents.length === 0 ? <EmptyState title="No documents attached" description="Add a degree certificate, identity proof or other supporting document." icon="book" /> : (
-                  <div className="platform-table-wrap"><table className="platform-table">
-                    <thead><tr><th>Document</th><th>File ID</th><th>Status</th><th>Review</th></tr></thead>
-                    <tbody>{documents.map((doc) => <tr key={doc.id}>
+                  <DataTable headers={["Document", "File ID", "Status", "Review"]} ariaLabel="Staff documents">
+                    {documents.map((doc) => <tr key={doc.id}>
                       <td>{humanize(doc.documentType)}</td><td><code>{doc.fileId}</code></td><td>{humanize(doc.verificationStatus)}</td>
                       <td>{canVerify && doc.verificationStatus === "UPLOADED" && doc.createdBy !== userId ? (
                         <span className="staff-document-actions">
@@ -321,13 +320,13 @@ export default function StaffRecordsPage() {
                           <Button size="sm" variant="tertiary" disabled={verifyingId === doc.id} onClick={() => void verifyDocument(doc, "REJECTED")}>Reject</Button>
                         </span>
                       ) : doc.createdBy === userId && doc.verificationStatus === "UPLOADED" ? "Awaiting independent review" : "—"}</td>
-                    </tr>)}</tbody>
-                  </table></div>
+                    </tr>)}
+                  </DataTable>
                 )}
                 {canManage && <form onSubmit={uploadDocument} className="platform-form staff-form-divider">
                   <div className="platform-form-grid">
                     <SelectField id="staff-doc-type" label="Document type" value={documentType} onChange={(e) => setDocumentType(e.target.value)} options={[{ value: "DEGREE", label: "Degree certificate" }, { value: "ID_PROOF", label: "Identity proof" }, { value: "OTHER", label: "Other" }]} />
-                    <div className="eds-field"><label htmlFor="staff-doc-file">Choose file</label><input id="staff-doc-file" type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => setDocumentFile(e.target.files?.[0] ?? null)} /><p className="eds-field__hint">The file is scanned before it can be attached.</p></div>
+                    <FileDrop label="Choose file" onFile={setDocumentFile} accept=".pdf,.png,.jpg,.jpeg" maxBytes={10_485_760} />
                   </div>
                   <div className="platform-inline-actions"><Button type="submit" variant="secondary" busy={uploading} disabled={!documentFile}>Upload and attach</Button></div>
                 </form>}
@@ -336,10 +335,9 @@ export default function StaffRecordsPage() {
 
               <Panel title="Service history" description="Record employment events and other staff service history.">
                 {records.length === 0 ? <EmptyState title="No service history yet" description="Add the first service record below." icon="clock" /> : (
-                  <div className="platform-table-wrap"><table className="platform-table">
-                    <thead><tr><th>Event</th><th>Effective on</th><th>Details</th></tr></thead>
-                    <tbody>{records.map((record) => <tr key={record.id}><td>{humanize(record.eventType)}</td><td>{record.effectiveOn}</td><td>{record.details}</td></tr>)}</tbody>
-                  </table></div>
+                  <DataTable headers={["Event", "Effective on", "Details"]} ariaLabel="Staff service history">
+                    {records.map((record) => <tr key={record.id}><td>{humanize(record.eventType)}</td><td>{record.effectiveOn}</td><td>{record.details}</td></tr>)}
+                  </DataTable>
                 )}
                 {canManage && <form onSubmit={addServiceRecord} className="platform-form staff-form-divider">
                   <div className="platform-form-grid">
@@ -357,19 +355,21 @@ export default function StaffRecordsPage() {
 
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Add staff member" kicker="STAFF RECORDS" description="Create a staff profile, then add its institution or department assignment." size="lg">
         <form onSubmit={createStaff} className="platform-form">
+          {createError && <Notice tone="danger">{createError}</Notice>}
           <div className="platform-form-grid">
             <TextField id="new-staff-full-name" label="Full name" required value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} />
             <TextField id="new-staff-code" label="Staff code (optional)" value={draft.staffCode ?? ""} onChange={(e) => setDraft({ ...draft, staffCode: e.target.value })} />
-            <TextField id="new-staff-email" label="Personal email" type="email" value={draft.personalEmail ?? ""} onChange={(e) => setDraft({ ...draft, personalEmail: e.target.value })} />
+            <TextField id="new-staff-official-email" label="Official email (login)" type="email" required value={draft.officialEmail ?? ""} onChange={(e) => setDraft({ ...draft, officialEmail: e.target.value })} />
+            <TextField id="new-staff-personal-email" label="Personal email (secondary login after verification)" type="email" value={draft.personalEmail ?? ""} onChange={(e) => setDraft({ ...draft, personalEmail: e.target.value })} />
+            <TextField id="new-staff-role" label="Initial role code (optional)" value={draft.initialRoleCode ?? ""} onChange={(e) => setDraft({ ...draft, initialRoleCode: e.target.value })} />
             <TextField id="new-staff-mobile" label="Personal mobile (E.164)" value={draft.personalMobile ?? ""} onChange={(e) => setDraft({ ...draft, personalMobile: e.target.value })} />
             <DateField id="new-staff-dob" label="Date of birth" value={draft.dateOfBirth ?? ""} onChange={(e) => setDraft({ ...draft, dateOfBirth: e.target.value })} />
             <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\\D/g, "") })} />
             <DateField id="new-staff-joined-on" label="Joined on" value={draft.joinedOn ?? ""} onChange={(e) => setDraft({ ...draft, joinedOn: e.target.value })} />
           </div>
-          {createError && <Notice tone="danger">{createError}</Notice>}
           <footer className="platform-modal__footer">
             <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
-            <Button type="submit" busy={creating}>Create staff profile</Button>
+            <Button type="submit" busy={creating}>Create staff account and profile</Button>
           </footer>
         </form>
       </Modal>

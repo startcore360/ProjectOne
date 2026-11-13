@@ -23,6 +23,13 @@ export type InstitutionItem = {
   rowVersion: number;
 };
 
+export type InstitutionIdFormats = {
+  studentIdFormat: string;
+  staffIdFormat: string | null;
+  studentFormatLocked: boolean;
+  staffFormatLocked: boolean;
+};
+
 export type InstitutionPageResponse = {
   items: InstitutionItem[];
   total: number;
@@ -38,6 +45,8 @@ export type CreateInstitutionRequest = {
   stateName?: string;
   postalCode?: string;
   principalInviteEmail?: string;
+  studentIdFormat: string;
+  staffIdFormat?: string;
 };
 
 export type DepartmentItem = {
@@ -148,6 +157,25 @@ export const institutionService = {
     request: CreateInstitutionRequest
   ): Promise<InstitutionItem> {
     const res = await api.post<InstitutionItem>(`/api/tenants/${tenantId}/institutions`, request);
+    return res.data;
+  },
+
+
+  async getIdFormats(tenantId: string, institutionId: string): Promise<InstitutionIdFormats> {
+    const res = await api.get<InstitutionIdFormats>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/id-formats`
+    );
+    return res.data;
+  },
+
+  async setIdFormats(tenantId: string, institutionId: string, payload: {
+    studentIdFormat: string;
+    staffIdFormat?: string;
+  }): Promise<InstitutionIdFormats> {
+    const res = await api.put<InstitutionIdFormats>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/id-formats`,
+      payload
+    );
     return res.data;
   },
 

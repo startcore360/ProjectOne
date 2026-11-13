@@ -37,6 +37,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
   const [academicSessionId, setAcademicSessionId] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [admissionDate, setAdmissionDate] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
   const [sections, setSections] = useState<SectionItem[]>([]);
   const [sessions, setSessions] = useState<AcademicSessionItem[]>([]);
   const [optionsLoadedFor, setOptionsLoadedFor] = useState("");
@@ -144,6 +145,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
       academicSessionId: academicSessionId.trim(),
       dateOfBirth: dateOfBirth || undefined,
       admissionDate: admissionDate || undefined,
+      rollNumber: rollNumber.trim() || undefined,
     };
 
     setSubmitting(true);
@@ -155,6 +157,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
       setAcademicSessionId("");
       setDateOfBirth("");
       setAdmissionDate("");
+      setRollNumber("");
       setSections([]);
       setSessions([]);
       setOptionsLoadedFor("");
@@ -272,6 +275,14 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
           )}
 
           <TextField
+            id="student-roll-number"
+            label="Roll number (optional)"
+            maxLength={30}
+            value={rollNumber}
+            onChange={(event) => setRollNumber(event.target.value)}
+            hint="Must be unique within the section."
+          />
+          <TextField
             id="student-date-of-birth"
             label="Date of birth (optional)"
             type="date"
@@ -304,7 +315,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
           The institution and academic session must be active, and the section must belong to both. Student profiles are created separately from general user accounts; login provisioning follows institution and class settings.
         </p>
         {formError && <Notice tone="danger">{formError}</Notice>}
-        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+        <footer>
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
           <Button type="submit" busy={submitting}>Create student profile</Button>
         </footer>

@@ -12,6 +12,7 @@ import {
 import { Icon } from "../../../components/ui/Icon";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { InstitutionIdFormatsModal } from "../components/institutions/InstitutionIdFormatsModal";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import {
   institutionService,
@@ -72,6 +73,7 @@ export function InstitutionsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activatingId, setActivatingId] = useState<string | null>(null);
   const [blockModalItem, setBlockModalItem] = useState<InstitutionItem | null>(null);
+  const [idFormatsModalItem, setIdFormatsModalItem] = useState<InstitutionItem | null>(null);
   const [decideModalItem, setDecideModalItem] = useState<InstitutionItem | null>(null);
   const [feedback, setFeedback] = useState<{
     tone: "success" | "danger" | "info";
@@ -392,6 +394,13 @@ export function InstitutionsPage() {
                           )}
                           <Button
                             variant="secondary"
+                            onClick={() => setIdFormatsModalItem(institution)}
+                            title="Configure institution student and staff ID formats"
+                          >
+                            ID formats
+                          </Button>
+                          <Button
+                            variant="secondary"
                             onClick={() => setApproverModalItem(institution)}
                             title="Configure Principal's leave approver "
                           >
@@ -428,6 +437,17 @@ export function InstitutionsPage() {
           </div>
         )}
       </Panel>
+
+
+      <InstitutionIdFormatsModal
+        tenantId={tenantId}
+        institution={idFormatsModalItem}
+        onClose={() => setIdFormatsModalItem(null)}
+        onSaved={() => setFeedback({
+          tone: "success",
+          message: "Institution ID formats saved. Student formats lock after the first generated student code; staff formats lock after the first generated staff code.",
+        })}
+      />
 
       {/* Creation Modal */}
       <CreateInstitutionModal

@@ -55,6 +55,8 @@ export type StaffServiceRecord = {
 export type StaffProfilePayload = {
   staffCode?: string;
   fullName: string;
+  officialEmail?: string;
+  initialRoleCode?: string;
   dateOfBirth?: string;
   personalEmail?: string;
   personalMobile?: string;
@@ -82,6 +84,28 @@ export type StaffServiceRecordPayload = {
   documentFileId?: string;
 };
 
+export type StaffOnboardingResponse = {
+  staff: StaffProfile;
+  login: {
+    userAccountId: string;
+    email: string;
+    status: string;
+    temporaryPassword: string;
+    initialRole: string | null;
+  };
+  personalEmailVerificationRequired: boolean;
+};
+
+export type TeacherLookupItem = {
+  staffProfileId: string;
+  staffAssignmentId: string;
+  staffCode: string;
+  fullName: string;
+  designation: string;
+  departmentId: string | null;
+  departmentName: string | null;
+};
+
 export type StaffListResponse = {
   items: StaffProfile[];
   page: { limit: number; nextCursor: string | null; hasMore: boolean; totalCount: number | null };
@@ -102,13 +126,22 @@ export const staffService = {
     return response.data;
   },
 
+
+  async teacherLookup(tenantId: string, institutionId: string, purpose: "SUBJECT_ALLOCATE" | "HOD_ASSIGN" | "MENTOR_ASSIGN" | "CLASS_TEACHER_ASSIGN", departmentId?: string) {
+    const response = await api.get<{ items: TeacherLookupItem[]; page: StaffListResponse["page"] }>(
+      `/api/tenants/${tenantId}/staff`,
+      { params: { role: "TEACHING", institutionId, departmentId, purpose, limit: 100 } },
+    );
+    return response.data.items;
+  },
+
   async get(tenantId: string, id: string) {
     const response = await api.get<StaffProfile>(`/api/tenants/${tenantId}/staff/${id}`);
     return { data: response.data, etag: response.headers.etag as string | undefined };
   },
 
   async create(tenantId: string, payload: StaffProfilePayload) {
-    const response = await api.post<StaffProfile>(`/api/tenants/${tenantId}/staff`, payload);
+    const response = await api.post<StaffOnboardingResponse>(`/api/tenants/${tenantId}/staff`, payload);
     return response.data;
   },
 

@@ -73,14 +73,24 @@ public class StaffDirectoryService {
         UUID departmentId = active.getScopeType() == ScopeType.DEPARTMENT ? active.getDepartmentId() : null;
         RbacScope scope = activeScope(active.getScopeType(), institutionId, departmentId);
         permissions.authorize(actor, "STAFF_RECORD_VIEW", scope, RbacTarget.NONE);
-        List<StaffProfileResponse> items = staffProfiles.searchTenantStaff(actor.tenantId(),
-                        institutionId, departmentId, normalizeQuery(query), limit)
-                .stream().map(StaffProfileResponse::from).toList();
+        List<StaffProfile> profiles = staffProfiles.searchTenantStaff(actor.tenantId(),
+                institutionId, departmentId, normalizeQuery(query), limit);
+        boolean includeSensitive = permissions.can(actor, "STAFF_RECORD_MANAGE", scope, RbacTarget.NONE).allowed();
+        if (includeSensitive) {
+            profiles.forEach(profile -> recordSensitiveView(actor, profile, institutionId));
+        }
+        List<StaffProfileResponse> items = profiles.stream()
+                .map(profile -> StaffProfileResponse.from(profile, includeSensitive)).toList();
         return new StaffListResponse(items, new StaffListResponse.PageInfo(limit, null, false, null));
     }
 
     @Transactional
     public StaffProfileResponse create(RbacPrincipal actor, StaffProfileRequest request) {
+        return create(actor, request, null);
+    }
+
+    @Transactional
+    public StaffProfileResponse create(RbacPrincipal actor, StaffProfileRequest request, UUID userAccountId) {
         var active = permissions.activeAssignment(actor)
                 .orElseThrow(() -> new com.edu360.api.exception.UnauthorizedException("An active staff role is required."));
         UUID institutionId = active.getScopeType() == ScopeType.TENANT ? null : active.getInstitutionId();
@@ -97,6 +107,7 @@ public class StaffDirectoryService {
         StaffProfile profile = new StaffProfile();
         UUID id = UUID.randomUUID();
         profile.setId(new StaffProfileId(actor.tenantId(), id));
+        profile.setUserAccountId(userAccountId);
         profile.setStaffCode(staffCode);
         profile.setFullName(request.fullName().trim());
         profile.setDateOfBirth(request.dateOfBirth());
@@ -120,7 +131,14 @@ public class StaffDirectoryService {
     @Transactional(readOnly = true)
     public StaffProfileResponse get(RbacPrincipal actor, UUID staffProfileId) {
         StaffProfile profile = findScopedProfile(actor, staffProfileId, "STAFF_RECORD_VIEW");
-        return StaffProfileResponse.from(profile);
+        var active = permissions.activeAssignment(actor)
+                .orElseThrow(() -> new com.edu360.api.exception.UnauthorizedException("An active staff role is required."));
+        UUID institutionId = active.getScopeType() == ScopeType.TENANT ? null : active.getInstitutionId();
+        RbacScope scope = activeScope(active.getScopeType(), institutionId,
+                active.getScopeType() == ScopeType.DEPARTMENT ? active.getDepartmentId() : null);
+        boolean includeSensitive = permissions.can(actor, "STAFF_RECORD_MANAGE", scope, RbacTarget.NONE).allowed();
+        if (includeSensitive) recordSensitiveView(actor, profile, institutionId);
+        return StaffProfileResponse.from(profile, includeSensitive);
     }
 
     @Transactional
@@ -135,6 +153,7 @@ public class StaffDirectoryService {
             throw new BusinessRuleViolationException("VERSION_CONFLICT", "The staff record has changed. Reload it and retry.");
         }
         StaffProfile profile = findScopedProfile(actor, staffProfileId, "STAFF_RECORD_MANAGE");
+        String previousPersonalEmail = trimToNull(profile.getPersonalEmail());
         if (request.staffCode() != null && !request.staffCode().isBlank()
                 && !request.staffCode().equalsIgnoreCase(profile.getStaffCode())) {
             if (staffProfiles.existsByIdTenantIdAndStaffCode(actor.tenantId(), request.staffCode().trim().toUpperCase())) {
@@ -153,6 +172,24 @@ public class StaffDirectoryService {
         if (request.leftOn() != null) profile.setLeftOn(request.leftOn());
         validateProfile(profile.getFullName(), profile.getPersonalEmail(), profile.getPersonalMobile(),
                 profile.getNationalIdLast4(), profile.getEmploymentStatus(), profile.getJoinedOn(), profile.getLeftOn());
+        String oldPersonalEmail = previousPersonalEmail;
+        String newPersonalEmail = trimToNull(request.personalEmail());
+        if (profile.getUserAccountId() != null
+                && !java.util.Objects.equals(normalizeEmail(oldPersonalEmail), normalizeEmail(newPersonalEmail))) {
+            jdbc.update("""
+                    DELETE FROM app.user_login_alias
+                     WHERE tenant_id=? AND user_account_id=? AND email=?
+                    """, actor.tenantId(), profile.getUserAccountId(), normalizeEmail(oldPersonalEmail));
+            if (newPersonalEmail != null) {
+                jdbc.update("""
+                        INSERT INTO app.user_login_alias
+                            (tenant_id, user_login_alias_id, user_account_id, email, is_verified,
+                             created_by, updated_by)
+                        VALUES (?, ?, ?, ?, false, ?, ?)
+                        """, actor.tenantId(), UUID.randomUUID(), profile.getUserAccountId(),
+                        normalizeEmail(newPersonalEmail), actor.userAccountId(), actor.userAccountId());
+            }
+        }
         profile.setUpdatedBy(actor.userAccountId());
         StaffProfile saved = staffProfiles.saveAndFlush(profile);
         entityManager.refresh(saved);
@@ -160,6 +197,175 @@ public class StaffDirectoryService {
                 "STAFF_PROFILE", staffProfileId, null, null,
                 Map.of("employment_status", saved.getEmploymentStatus()), 1, "P", "SUCCESS"));
         return StaffProfileResponse.from(saved);
+    }
+
+    /**
+     * Idempotently creates the staff person record and institutional assignment for an account
+     * that has just received an institution/department staff role.
+     */
+    @Transactional
+    public void ensureStaffAssignment(UUID tenantId, UUID userAccountId, UUID institutionId,
+            UUID departmentId, UUID actorId, String designation) {
+        ensureStaffAssignment(tenantId, userAccountId, institutionId, departmentId, actorId,
+                designation, LocalDate.now(), null);
+    }
+
+    @Transactional
+    public void ensureStaffAssignment(UUID tenantId, UUID userAccountId, UUID institutionId,
+            UUID departmentId, UUID actorId, String designation,
+            LocalDate effectiveFrom, LocalDate effectiveTo) {
+        if (tenantId == null || userAccountId == null || institutionId == null || actorId == null) {
+            throw new IllegalArgumentException("Tenant, user, institution and actor are required for staff linkage.");
+        }
+        String displayName = jdbc.queryForObject("""
+                SELECT display_name FROM app.user_account
+                 WHERE tenant_id = ? AND user_account_id = ? AND user_type = 'STAFF'
+                """, String.class, tenantId, userAccountId);
+        StaffProfile profile = staffProfiles.findByIdTenantIdAndUserAccountId(tenantId, userAccountId)
+                .orElseGet(() -> {
+                    int year = LocalDate.now().getYear();
+                    StaffProfile created = new StaffProfile();
+                    UUID profileId = UUID.randomUUID();
+                    created.setId(new StaffProfileId(tenantId, profileId));
+                    created.setUserAccountId(userAccountId);
+                    created.setStaffCode(idFormats.resolveStaffCode(tenantId, institutionId, null, year));
+                    created.setFullName(displayName);
+                    created.setEmploymentStatus("ACTIVE");
+                    created.setJoinedOn(LocalDate.now());
+                    created.setCreatedBy(actorId);
+                    created.setUpdatedBy(actorId);
+                    StaffProfile persisted = staffProfiles.saveAndFlush(created);
+                    entityManager.refresh(persisted);
+                    audit.record(new AuditEntry(AuditEventType.STAFF_PROFILE_CREATED, "USER_CREATE",
+                            "STAFF_PROFILE", profileId, institutionId, null,
+                            Map.of("source", "automatic_role_linkage"), 1, "P", "SUCCESS"));
+                    return persisted;
+                });
+        if (profile.getUserAccountId() == null) {
+            profile.setUserAccountId(userAccountId);
+            profile.setUpdatedBy(actorId);
+            staffProfiles.saveAndFlush(profile);
+        }
+        Boolean assignmentExists = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM app.staff_assignment
+                     WHERE tenant_id = ? AND staff_profile_id = ?
+                       AND institution_id = ? AND department_id IS NOT DISTINCT FROM ?
+                       AND effective_from <= COALESCE(?, DATE '9999-12-31')
+                       AND COALESCE(effective_to, DATE '9999-12-31') >= ?
+                )
+                """, Boolean.class, tenantId, profile.getStaffProfileId(), institutionId, departmentId,
+                effectiveTo, effectiveFrom);
+        if (!Boolean.TRUE.equals(assignmentExists)) {
+            StaffAssignment assignment = new StaffAssignment();
+            assignment.setStaffAssignmentId(UUID.randomUUID());
+            assignment.setTenantId(tenantId);
+            assignment.setStaffProfileId(profile.getStaffProfileId());
+            assignment.setInstitutionId(institutionId);
+            assignment.setDepartmentId(departmentId);
+            assignment.setDesignation(designation == null || designation.isBlank() ? "Staff" : designation.trim());
+            assignment.setEffectiveFrom(effectiveFrom);
+            assignment.setEffectiveTo(effectiveTo);
+            assignment.setStatus(effectiveTo != null && effectiveTo.isBefore(LocalDate.now()) ? "ENDED" : "ACTIVE");
+            assignment.setCreatedBy(actorId);
+            assignment.setUpdatedBy(actorId);
+            StaffAssignment saved = assignments.saveAndFlush(assignment);
+            entityManager.refresh(saved);
+            audit.record(new AuditEntry(AuditEventType.STAFF_ASSIGNMENT_CREATED, "ROLE_ASSIGN",
+                    "STAFF_ASSIGNMENT", saved.getStaffAssignmentId(), institutionId, null,
+                    Map.of("source", "automatic_role_linkage", "staff_profile_id",
+                            profile.getStaffProfileId().toString()), 1, "N", "SUCCESS"));
+        }
+    }
+
+    @Transactional
+    public TeacherLookupResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
+            UUID departmentId, String query, int limit) {
+        return teacherLookup(actor, institutionId, departmentId, query, limit, "SUBJECT_ALLOCATE");
+    }
+
+    @Transactional
+    public TeacherLookupResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
+            UUID departmentId, String query, int limit, String purpose) {
+        validateLimit(limit);
+        if (institutionId == null) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "institutionId is required for teacher lookup.");
+        }
+        String action = purpose == null || purpose.isBlank() ? "SUBJECT_ALLOCATE" : purpose.trim().toUpperCase();
+        if (!java.util.Set.of("SUBJECT_ALLOCATE", "HOD_ASSIGN", "MENTOR_ASSIGN", "CLASS_TEACHER_ASSIGN").contains(action)) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "Unsupported teacher lookup purpose.");
+        }
+        boolean departmentScope = "MENTOR_ASSIGN".equals(action);
+        RbacScope scope = activeScope(departmentScope ? ScopeType.DEPARTMENT : ScopeType.INSTITUTION,
+                institutionId, departmentScope ? departmentId : null);
+        permissions.authorize(actor, action, scope, RbacTarget.NONE);
+        record TeacherRole(UUID userId, String designation, UUID departmentId) {}
+        List<TeacherRole> existingTeacherRoles = jdbc.query("""
+                SELECT ura.user_account_id, rd.role_name, ura.department_id
+                  FROM app.user_role_assignment ura
+                  JOIN app.role_definition rd
+                    ON rd.tenant_id = ura.tenant_id
+                   AND rd.role_definition_id = ura.role_definition_id
+                  JOIN app.user_account ua
+                    ON ua.tenant_id = ura.tenant_id
+                   AND ua.user_account_id = ura.user_account_id
+                 WHERE ura.tenant_id = ? AND ura.institution_id = ?
+                   AND ura.scope_type IN ('INSTITUTION', 'DEPARTMENT')
+                   AND ura.status = 'ACTIVE'
+                   AND ura.effective_from <= CURRENT_TIMESTAMP
+                   AND (ura.effective_to IS NULL OR ura.effective_to > CURRENT_TIMESTAMP)
+                   AND ua.user_type = 'STAFF'
+                   AND (ura.department_id IS NULL OR COALESCE(?, ura.department_id) = ura.department_id)
+                   AND rd.role_code IN ('HEAD_OF_DEPARTMENT','PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR',
+                       'LAB_ASSISTANT','RESEARCH_ASSISTANT','CLASS_TEACHER','SUBJECT_TEACHER')
+                """, (rs, rowNum) -> new TeacherRole(rs.getObject(1, UUID.class),
+                        rs.getString(2), rs.getObject(3, UUID.class)),
+                actor.tenantId(), institutionId, departmentId);
+        for (TeacherRole teacher : existingTeacherRoles) {
+            ensureStaffAssignment(actor.tenantId(), teacher.userId(), institutionId,
+                    teacher.departmentId(), actor.userAccountId(), teacher.designation());
+        }
+        List<TeacherLookupItem> items = jdbc.query("""
+                SELECT p.staff_profile_id, sa.staff_assignment_id, p.staff_code, p.full_name,
+                       sa.designation, sa.department_id, d.department_name
+                  FROM app.staff_profile p
+                  JOIN app.staff_assignment sa
+                    ON sa.tenant_id = p.tenant_id AND sa.staff_profile_id = p.staff_profile_id
+                  LEFT JOIN app.department d
+                    ON d.tenant_id = sa.tenant_id AND d.department_id = sa.department_id
+                 WHERE p.tenant_id = ? AND sa.institution_id = ?
+                   AND (sa.department_id IS NULL OR COALESCE(?, sa.department_id) = sa.department_id)
+                   AND sa.status = 'ACTIVE'
+                   AND sa.effective_from <= CURRENT_DATE
+                   AND (sa.effective_to IS NULL OR sa.effective_to >= CURRENT_DATE)
+                   AND (COALESCE(?, '') = '' OR p.full_name ILIKE '%' || ? || '%'
+                        OR p.staff_code ILIKE '%' || ? || '%')
+                   AND EXISTS (
+                       SELECT 1
+                         FROM app.user_role_assignment ura
+                         JOIN app.role_definition rd
+                           ON rd.tenant_id = ura.tenant_id
+                          AND rd.role_definition_id = ura.role_definition_id
+                        WHERE ura.tenant_id = p.tenant_id
+                          AND ura.user_account_id = p.user_account_id
+                          AND ura.status = 'ACTIVE'
+                          AND ura.scope_type IN ('INSTITUTION', 'DEPARTMENT')
+                          AND ura.institution_id = sa.institution_id
+                          AND (ura.department_id IS NULL OR ura.department_id = sa.department_id)
+                          AND rd.role_code IN ('HEAD_OF_DEPARTMENT','PROFESSOR','ASSOCIATE_PROFESSOR',
+                              'ASSISTANT_PROFESSOR','LAB_ASSISTANT','RESEARCH_ASSISTANT',
+                              'CLASS_TEACHER','SUBJECT_TEACHER'))
+                 ORDER BY p.full_name, p.staff_profile_id
+                 LIMIT ?
+                """, (rs, rowNum) -> new TeacherLookupItem(
+                        rs.getObject("staff_profile_id", UUID.class),
+                        rs.getObject("staff_assignment_id", UUID.class),
+                        rs.getString("staff_code"), rs.getString("full_name"),
+                        rs.getString("designation"), rs.getObject("department_id", UUID.class),
+                        rs.getString("department_name")),
+                actor.tenantId(), institutionId, departmentId, query == null ? "" : normalizeQuery(query),
+                normalizeQuery(query), normalizeQuery(query), limit);
+        return new TeacherLookupResponse(items, new StaffListResponse.PageInfo(limit, null, false, null));
     }
 
     @Transactional(readOnly = true)
@@ -179,9 +385,21 @@ public class StaffDirectoryService {
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED", "effectiveTo cannot precede effectiveFrom.");
         }
-        if (assignments.existsByTenantIdAndStaffProfileIdAndInstitutionIdAndDepartmentIdAndStatus(
-                actor.tenantId(), staffProfileId, request.institutionId(), request.departmentId(), "ACTIVE")) {
-            throw new DuplicateResourceException("An active assignment already exists for this scope.");
+        Boolean overlapping = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1
+                      FROM app.staff_assignment
+                     WHERE tenant_id = ?
+                       AND staff_profile_id = ?
+                       AND institution_id IS NOT DISTINCT FROM ?
+                       AND department_id IS NOT DISTINCT FROM ?
+                       AND effective_from <= COALESCE(?, DATE '9999-12-31')
+                       AND COALESCE(effective_to, DATE '9999-12-31') >= ?
+                )
+                """, Boolean.class, actor.tenantId(), staffProfileId, request.institutionId(),
+                request.departmentId(), request.effectiveTo(), request.effectiveFrom());
+        if (Boolean.TRUE.equals(overlapping)) {
+            throw new DuplicateResourceException("An existing staff assignment overlaps the requested effective date range for this scope.");
         }
         StaffAssignment assignment = new StaffAssignment();
         assignment.setStaffAssignmentId(UUID.randomUUID());
@@ -223,6 +441,45 @@ public class StaffDirectoryService {
         }
         if (request.effectiveTo().isBefore(assignment.getEffectiveFrom())) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED", "effectiveTo cannot precede effectiveFrom.");
+        }
+        List<String> conflicts = new java.util.ArrayList<>();
+        conflicts.addAll(jdbc.query("""
+                SELECT 'PUBLISHED_TIMETABLE_SLOT:' || ts.timetable_slot_id::text
+                  FROM app.timetable_slot ts
+                  JOIN app.subject_allocation sa
+                    ON sa.tenant_id = ts.tenant_id
+                   AND sa.subject_allocation_id = ts.subject_allocation_id
+                 WHERE sa.tenant_id = ?
+                   AND sa.staff_assignment_id = ?
+                   AND sa.status = 'ACTIVE'
+                   AND ts.status = 'PUBLISHED'
+                   AND ts.valid_from <= ?
+                   AND COALESCE(ts.valid_to, DATE '9999-12-31') >= ?
+                """, (rs, rowNum) -> rs.getString(1),
+                actor.tenantId(), assignmentId, request.effectiveTo(), request.effectiveTo()));
+        conflicts.addAll(jdbc.query("""
+                SELECT 'ACTIVE_SUBJECT_ALLOCATION:' || subject_allocation_id::text
+                  FROM app.subject_allocation
+                 WHERE tenant_id = ? AND staff_assignment_id = ? AND status = 'ACTIVE'
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId));
+        conflicts.addAll(jdbc.query("""
+                SELECT 'CURRENT_CLASS_TEACHER:' || class_teacher_assignment_id::text
+                  FROM app.class_teacher_assignment
+                 WHERE tenant_id = ? AND staff_assignment_id = ?
+                   AND effective_from <= ?
+                   AND (effective_to IS NULL OR effective_to >= ?)
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo(), request.effectiveTo()));
+        conflicts.addAll(jdbc.query("""
+                SELECT 'CURRENT_MENTOR:' || mentor_assignment_id::text
+                  FROM app.mentor_assignment
+                 WHERE tenant_id = ? AND staff_assignment_id = ?
+                   AND effective_from <= ?
+                   AND (effective_to IS NULL OR effective_to >= ?)
+                """, (rs, rowNum) -> rs.getString(1), actor.tenantId(), assignmentId, request.effectiveTo(), request.effectiveTo()));
+        if (!conflicts.isEmpty()) {
+            throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_IN_USE",
+                    "Assignment cannot be ended while dependent teaching allocations remain active. Reassign or end these records first: "
+                            + String.join(", ", conflicts));
         }
         assignment.setEffectiveTo(request.effectiveTo());
         assignment.setStatus("ENDED");
@@ -283,6 +540,12 @@ public class StaffDirectoryService {
         return serviceRecords.findByIdTenantIdAndStaffProfileIdOrderByEffectiveOnDesc(
                         actor.tenantId(), staffProfileId).stream().limit(limit)
                 .map(StaffServiceRecordResponse::from).toList();
+    }
+
+    private void recordSensitiveView(RbacPrincipal actor, StaffProfile profile, UUID institutionId) {
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
+                "STAFF_PROFILE", profile.getStaffProfileId(), institutionId, null,
+                Map.of("view", "sensitive_staff_fields"), 1, "P", "SUCCESS"));
     }
 
     private StaffProfile findScopedProfile(RbacPrincipal actor, UUID staffProfileId, String action) {
@@ -388,6 +651,10 @@ public class StaffDirectoryService {
         String value = query.trim();
         if (value.length() > 100) throw new BusinessRuleViolationException("INVALID_QUERY", "Search query is too long.");
         return value;
+    }
+
+    private static String normalizeEmail(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toLowerCase();
     }
 
     private static String trimToNull(String value) {

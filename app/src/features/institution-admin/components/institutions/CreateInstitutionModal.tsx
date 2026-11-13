@@ -29,6 +29,8 @@ export function CreateInstitutionModal({
   const [stateName, setStateName] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [principalEmail, setPrincipalEmail] = useState("");
+  const [studentIdFormat, setStudentIdFormat] = useState("");
+  const [staffIdFormat, setStaffIdFormat] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -50,14 +52,16 @@ export function CreateInstitutionModal({
     setStateName("");
     setPostalCode("");
     setPrincipalEmail("");
+    setStudentIdFormat("");
+    setStaffIdFormat("");
     clearAll();
   };
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     // Client-side required check
-    if (!instCode.trim() || !instName.trim()) {
-      setFormError("Institution Code and Name are required.");
+    if (!instCode.trim() || !instName.trim() || !studentIdFormat.trim()) {
+      setFormError("Institution Code, Name and Student ID format are required.");
       return;
     }
     setSubmitting(true);
@@ -73,6 +77,8 @@ export function CreateInstitutionModal({
         stateName: stateName.trim() || undefined,
         postalCode: postalCode.trim() || undefined,
         principalInviteEmail: principalEmail.trim() || undefined,
+        studentIdFormat: studentIdFormat.trim(),
+        staffIdFormat: staffIdFormat.trim() || undefined,
       });
       resetForm();
       onCreated(res);
@@ -140,6 +146,38 @@ export function CreateInstitutionModal({
           />
         </div>
 
+
+        <div style={{ marginBottom: "var(--space-3)" }}>
+          <TextField
+            id="inst-student-id-format"
+            label="Student ID format *"
+            required
+            value={studentIdFormat}
+            onChange={(event) => { setStudentIdFormat(event.target.value.toUpperCase()); clearFieldError("studentIdFormat"); }}
+            placeholder="{INST}-{YYYY}-{SEQ:4}"
+            hint="Use {YYYY}, {YY}, {INST}, and exactly one {SEQ:n} token (n = 3–10). Literals: A–Z, 0–9, _ and -."
+            error={fieldErrors.studentIdFormat}
+          />
+          <p className="platform-modal-note" aria-live="polite">
+            Preview only: {studentIdFormat ? studentIdFormat.replaceAll("{INST}", instCode.trim() || "INST").replaceAll("{YYYY}", "2026").replaceAll("{YY}", "26").replace(/\{SEQ:(\d+)\}/g, (_match, width: string) => "1".padStart(Number(width), "0")) : "Enter the format to preview the generated student code."}
+          </p>
+        </div>
+        <div style={{ marginBottom: "var(--space-3)" }}>
+          <TextField
+            id="inst-staff-id-format"
+            label="Staff ID format (optional)"
+            value={staffIdFormat}
+            onChange={(event) => { setStaffIdFormat(event.target.value.toUpperCase()); clearFieldError("staffIdFormat"); }}
+            placeholder="{INST}-ST-{YY}-{SEQ:4}"
+            hint="If omitted, HR must supply a unique staff code when creating each staff profile."
+            error={fieldErrors.staffIdFormat}
+          />
+          {staffIdFormat && (
+            <p className="platform-modal-note" aria-live="polite">
+              Preview only: {staffIdFormat.replaceAll("{INST}", instCode.trim() || "INST").replaceAll("{YYYY}", "2026").replaceAll("{YY}", "26").replace(/\{SEQ:(\d+)\}/g, (_match, width: string) => "1".padStart(Number(width), "0"))}
+            </p>
+          )}
+        </div>
         <div style={{ marginBottom: "var(--space-3)" }}>
           <TextField
             id="inst-address"

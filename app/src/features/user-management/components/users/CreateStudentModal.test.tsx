@@ -52,6 +52,7 @@ describe("CreateStudentModal", () => {
     await waitFor(() => expect(institutionService.listSections).toHaveBeenCalledWith(tenantId, institutionId));
     fireEvent.change(screen.getByLabelText(/Academic session/i), { target: { value: academicSessionId } });
     fireEvent.change(screen.getByLabelText(/Section/i), { target: { value: sectionId } });
+    fireEvent.change(screen.getByLabelText(/Roll number/i), { target: { value: "R-01" } });
     fireEvent.click(screen.getByRole("button", { name: "Create student profile" }));
 
     await waitFor(() => {
@@ -62,6 +63,7 @@ describe("CreateStudentModal", () => {
         academicSessionId,
         dateOfBirth: undefined,
         admissionDate: undefined,
+        rollNumber: "R-01",
       });
       expect(onCreated).toHaveBeenCalledWith(student);
     });

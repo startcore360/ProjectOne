@@ -5,6 +5,9 @@ export type TenantPermissions = {
   userAccountId: string;
   activeRoleCode: string | null;
   activeRoleName: string | null;
+  scopeType?: "TENANT" | "INSTITUTION" | "DEPARTMENT" | null;
+  institutionId?: string | null;
+  departmentId?: string | null;
   allowedActions: string[];
 };
 

@@ -16,5 +16,13 @@ public record StudentCreateRequest(
         @NotNull UUID sectionId,
         @NotNull UUID academicSessionId,
         @Schema(description = "Optional override. College defaults to enabled; school follows its class login switch.")
-        Boolean createLogin
-) {}
+        Boolean createLogin,
+        @Size(max = 30) String rollNumber
+) {
+    /** Backwards-compatible constructor for existing API tests and clients. */
+    public StudentCreateRequest(UUID institutionId, String fullName, LocalDate dateOfBirth,
+            LocalDate admissionDate, UUID sectionId, UUID academicSessionId, Boolean createLogin) {
+        this(institutionId, fullName, dateOfBirth, admissionDate, sectionId, academicSessionId,
+                createLogin, null);
+    }
+}

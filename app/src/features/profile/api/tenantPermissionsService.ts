@@ -34,6 +34,9 @@ export const tenantPermissionsService = {
         userAccountId: data.userAccountId,
         activeRoleCode: data.activeRoleCode,
         activeRoleName: data.activeRoleName,
+        scopeType: data.scopeType,
+        institutionId: data.institutionId,
+        departmentId: data.departmentId,
         allowedActions: data.allowedActions ?? [],
       };
       store.dispatch(setTenantPermissions(permissions));

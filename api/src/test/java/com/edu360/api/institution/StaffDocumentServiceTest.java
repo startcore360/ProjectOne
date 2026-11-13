@@ -71,4 +71,33 @@ class StaffDocumentServiceTest {
                 .hasMessageContaining("VERIFIED or REJECTED");
         verifyNoInteractions(documents);
     }
+
+    @Test
+    void viewOnlyPermissionIsUsedWhenListingStaffDocuments() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID staffProfileId = UUID.randomUUID();
+        StaffProfileRepository profiles = mock(StaffProfileRepository.class);
+        StaffDocumentRepository documents = mock(StaffDocumentRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        PermissionEvaluatorService permissions = mock(PermissionEvaluatorService.class);
+        UserRoleAssignment active = mock(UserRoleAssignment.class);
+        when(active.getScopeType()).thenReturn(ScopeType.TENANT);
+        when(permissions.activeAssignment(any(RbacPrincipal.class))).thenReturn(Optional.of(active));
+        when(jdbc.queryForObject(any(String.class), eq(Boolean.class), eq(tenantId), eq(staffProfileId)))
+                .thenReturn(true);
+        when(documents.findByIdTenantIdAndStaffProfileIdOrderByCreatedAtDesc(tenantId, staffProfileId))
+                .thenReturn(java.util.List.of());
+
+        StaffDocumentService service = new StaffDocumentService(profiles, documents,
+                mock(FileObjectRepository.class), mock(FileAccessPolicy.class),
+                jdbc, permissions, mock(AuditLogService.class));
+        TenantPrincipal actor = new TenantPrincipal(tenantId, userId, UserType.STAFF, "Viewer", false);
+
+        assertThat(service.list(actor, staffProfileId)).isEmpty();
+        verify(permissions).authorize(any(RbacPrincipal.class), eq("STAFF_RECORD_VIEW"),
+                eq(RbacScope.tenant()), eq(RbacTarget.NONE));
+        verify(permissions, never()).authorize(any(RbacPrincipal.class), eq("STAFF_RECORD_MANAGE"),
+                any(RbacScope.class), any(RbacTarget.class));
+    }
 }

@@ -75,6 +75,14 @@ public class StudentEnrollmentService {
         if (session.getInstitutionId() != null && !institutionId.equals(session.getInstitutionId())) {
             throw new ResourceNotFoundException("Academic session not found in the requested institution.");
         }
+        if (!"ACTIVE".equals(session.getStatus())) {
+            throw new BusinessRuleViolationException("ACADEMIC_SESSION_NOT_ACTIVE",
+                    "Students can only be enrolled in an active academic session.");
+        }
+        if (session.getStartDate() == null || session.getEndDate() == null) {
+            throw new BusinessRuleViolationException("ACADEMIC_SESSION_INVALID",
+                    "The academic session must have start and end dates before student enrolment.");
+        }
         if (startedOn.isBefore(session.getStartDate()) || startedOn.isAfter(session.getEndDate())) {
             throw new BusinessRuleViolationException("ENROLLMENT_DATE_OUTSIDE_SESSION",
                     "startedOn must fall within the academic session.");
