@@ -244,7 +244,7 @@ public class StaffDirectoryService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StaffListResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
             UUID departmentId, String query, int limit) {
         validateLimit(limit);
@@ -254,13 +254,39 @@ public class StaffDirectoryService {
         RbacScope scope = activeScope(departmentId == null ? ScopeType.INSTITUTION : ScopeType.DEPARTMENT,
                 institutionId, departmentId);
         permissions.authorize(actor, "SUBJECT_ALLOCATE", scope, RbacTarget.NONE);
+        record TeacherRole(UUID userId, String designation, UUID departmentId) {}
+        List<TeacherRole> existingTeacherRoles = jdbc.query("""
+                SELECT ura.user_account_id, rd.role_name, ura.department_id
+                  FROM app.user_role_assignment ura
+                  JOIN app.role_definition rd
+                    ON rd.tenant_id = ura.tenant_id
+                   AND rd.role_definition_id = ura.role_definition_id
+                  JOIN app.user_account ua
+                    ON ua.tenant_id = ura.tenant_id
+                   AND ua.user_account_id = ura.user_account_id
+                 WHERE ura.tenant_id = ? AND ura.institution_id = ?
+                   AND ura.scope_type IN ('INSTITUTION', 'DEPARTMENT')
+                   AND ura.status = 'ACTIVE'
+                   AND ura.effective_from <= CURRENT_TIMESTAMP
+                   AND (ura.effective_to IS NULL OR ura.effective_to > CURRENT_TIMESTAMP)
+                   AND ua.user_type = 'STAFF'
+                   AND (? IS NULL OR ura.department_id IS NULL OR ura.department_id = ?)
+                   AND rd.role_code IN ('PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR',
+                       'LAB_ASSISTANT','RESEARCH_ASSISTANT','CLASS_TEACHER','SUBJECT_TEACHER')
+                """, (rs, rowNum) -> new TeacherRole(rs.getObject(1, UUID.class),
+                        rs.getString(2), rs.getObject(3, UUID.class)),
+                actor.tenantId(), institutionId, departmentId, departmentId);
+        for (TeacherRole teacher : existingTeacherRoles) {
+            ensureStaffAssignment(actor.tenantId(), teacher.userId(), institutionId,
+                    teacher.departmentId(), actor.userAccountId(), teacher.designation());
+        }
         List<UUID> teacherIds = jdbc.query("""
                 SELECT DISTINCT p.staff_profile_id
                   FROM app.staff_profile p
                   JOIN app.staff_assignment sa
                     ON sa.tenant_id = p.tenant_id AND sa.staff_profile_id = p.staff_profile_id
                  WHERE p.tenant_id = ? AND sa.institution_id = ?
-                   AND sa.department_id IS NOT DISTINCT FROM ?
+                   AND (sa.department_id IS NULL OR sa.department_id = ?)
                    AND sa.status = 'ACTIVE'
                    AND sa.effective_from <= CURRENT_DATE
                    AND (sa.effective_to IS NULL OR sa.effective_to >= CURRENT_DATE)
