@@ -13,7 +13,7 @@ describe("readErrorMessage", () => {
   it("removes correlation IDs from server messages", () => {
     expect(readErrorMessage({
       response: { data: { error: "An unexpected error occurred. Please contact support quoting correlation ID: dd1681e4-6a44-4e63-aa4f-b708db0f2e3a" } },
-    }, "Fallback")).toBe("An unexpected error occurred. Please contact support quoting");
+    }, "Fallback")).toBe("An unexpected error occurred.");
   });
 
   it("uses a friendly fallback for raw internal exception messages", () => {
