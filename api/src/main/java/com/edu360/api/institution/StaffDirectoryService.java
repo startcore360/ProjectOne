@@ -174,7 +174,7 @@ public class StaffDirectoryService {
                 profile.getNationalIdLast4(), profile.getEmploymentStatus(), profile.getJoinedOn(), profile.getLeftOn());
         String oldPersonalEmail = previousPersonalEmail;
         String newPersonalEmail = trimToNull(request.personalEmail());
-        if (profile.getUserAccountId() != null && request.personalEmail() != null
+        if (profile.getUserAccountId() != null
                 && !java.util.Objects.equals(normalizeEmail(oldPersonalEmail), normalizeEmail(newPersonalEmail))) {
             jdbc.update("""
                     DELETE FROM app.user_login_alias
