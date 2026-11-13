@@ -320,3 +320,16 @@ This section records verified repository edits made during the current implement
 - Added response-mapping tests for masked default responses and explicitly authorized full responses.
 - Commits: `2b4657bbe7829879e5b9bc53bb066c23e3f0b8fc`, `3de41e02fdd1c7e05a90a56f1421a91ef7aa04df`, `ff640b69848be9522283b8a25f99aa4f70fc909e`.
 - Validation remains pending; do not mark this story Tested or Accepted until Maven and role-specific API tests pass.
+
+
+### Staff identity, teacher lookup and assignment integrity — implementation pass 3
+
+- Added idempotent `StaffDirectoryService.ensureStaffAssignment(...)`: an institution/department staff role can create the linked `staff_profile` and scoped `staff_assignment` for a STAFF account, without duplicating an existing profile or active assignment.
+- Wired `RoleAssignmentService.assignRole(...)` to invoke staff identity linkage after an institution/department role is assigned to a STAFF account. Tenant-wide roles do not create an institution assignment.
+- Added authorized `GET /v1/tenants/{tenantId}/staff?role=TEACHING&institutionId=...&departmentId=...` lookup. It backfills eligible existing teaching-role assignments on demand and returns staff name, staff code, designation and department identity/name without sensitive profile fields. The lookup requires `SUBJECT_ALLOCATE` at the requested institution/department scope.
+- Teaching-role codes are grounded in the repository reference data: `HEAD_OF_DEPARTMENT`, `PROFESSOR`, `ASSOCIATE_PROFESSOR`, `ASSISTANT_PROFESSOR`, `LAB_ASSISTANT`, `RESEARCH_ASSISTANT`, `CLASS_TEACHER`, and `SUBJECT_TEACHER`.
+- Added overlap validation for active staff assignments at the same institution/department and date range.
+- Ending an assignment now checks dependent published timetable slots, active subject allocations, current class-teacher assignments and current mentor assignments. It refuses the change with conflict identifiers so the administrator can reassign or end dependent records first.
+- Added focused tests for identity idempotency/creation, teacher lookup institution and department authorization, and blocking an assignment end when a published timetable slot depends on it. Updated the controller test for the expanded lookup query.
+- Commits in this batch: `cb94068d57f0cdd944b01acb049a2cbfd7f21f3f`, `0a16665ae10a444d1adece5d680b3d2dcc0bc865`, `f890da59a622f95228334ed929b48656da3f1115`, `9d1cdfc1c5432217fa89c13c914d7f722582971d`, `cc495459de7add5ff0a8bbfc4314be44dcbd192f`, `df9a15d55829bc709cef9bd7f31e167d3ad79616`, `a81447218620537fa72a301f7a79e978cf825014`, `1899255365b179303833c33e8c619b55fbcd5f58`, `b63f0a873a235c5e9ce1bab9c9c52593925106f4`, `2eb42fb5a609a29e08acfea6adb5105c20341c52`, `a1faae78adf91c4a7f8878e2912d0a1dbf064864`, `37953cde57f832c71360155a835cddd548abd9c3`, and `90dbf08d5f03c8262f6557aef91987bb7ebec108`.
+- Validation pending: Maven compile/tests, migration-backed integration tests, role assignment integration tests, and CI. These stories remain In Progress, not Tested/Accepted. The manual `POST /staff` onboarding path still needs to be completed so a manually created HR profile provisions/returns login credentials through the existing user-creation flow; current automatic linkage covers staff users receiving an institution/department role through `USER_CREATE` or `ROLE_ASSIGN`.
