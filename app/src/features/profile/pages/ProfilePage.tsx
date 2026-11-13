@@ -293,6 +293,7 @@ export default function ProfilePage() {
           )}
 
           <form onSubmit={submit} noValidate>
+            {Object.keys(fieldErrors).length > 0 && <div className="profile-message profile-message--error" role="alert">Please correct the highlighted fields below.</div>}
             <TextField
               id="profile-display-name"
               label="Display name"
