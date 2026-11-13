@@ -153,6 +153,7 @@ public class StaffDirectoryService {
             throw new BusinessRuleViolationException("VERSION_CONFLICT", "The staff record has changed. Reload it and retry.");
         }
         StaffProfile profile = findScopedProfile(actor, staffProfileId, "STAFF_RECORD_MANAGE");
+        String previousPersonalEmail = trimToNull(profile.getPersonalEmail());
         if (request.staffCode() != null && !request.staffCode().isBlank()
                 && !request.staffCode().equalsIgnoreCase(profile.getStaffCode())) {
             if (staffProfiles.existsByIdTenantIdAndStaffCode(actor.tenantId(), request.staffCode().trim().toUpperCase())) {
@@ -171,7 +172,7 @@ public class StaffDirectoryService {
         if (request.leftOn() != null) profile.setLeftOn(request.leftOn());
         validateProfile(profile.getFullName(), profile.getPersonalEmail(), profile.getPersonalMobile(),
                 profile.getNationalIdLast4(), profile.getEmploymentStatus(), profile.getJoinedOn(), profile.getLeftOn());
-        String oldPersonalEmail = trimToNull(profile.getPersonalEmail());
+        String oldPersonalEmail = previousPersonalEmail;
         String newPersonalEmail = trimToNull(request.personalEmail());
         if (profile.getUserAccountId() != null && request.personalEmail() != null
                 && !java.util.Objects.equals(normalizeEmail(oldPersonalEmail), normalizeEmail(newPersonalEmail))) {
