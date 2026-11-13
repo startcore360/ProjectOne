@@ -37,6 +37,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
   const [academicSessionId, setAcademicSessionId] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [admissionDate, setAdmissionDate] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
   const [sections, setSections] = useState<SectionItem[]>([]);
   const [sessions, setSessions] = useState<AcademicSessionItem[]>([]);
   const [optionsLoadedFor, setOptionsLoadedFor] = useState("");
@@ -144,6 +145,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
       academicSessionId: academicSessionId.trim(),
       dateOfBirth: dateOfBirth || undefined,
       admissionDate: admissionDate || undefined,
+      rollNumber: rollNumber.trim() || undefined,
     };
 
     setSubmitting(true);
@@ -155,6 +157,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
       setAcademicSessionId("");
       setDateOfBirth("");
       setAdmissionDate("");
+      setRollNumber("");
       setSections([]);
       setSessions([]);
       setOptionsLoadedFor("");
@@ -271,6 +274,14 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
             />
           )}
 
+          <TextField
+            id="student-roll-number"
+            label="Roll number (optional)"
+            maxLength={30}
+            value={rollNumber}
+            onChange={(event) => setRollNumber(event.target.value)}
+            hint="Must be unique within the section."
+          />
           <TextField
             id="student-date-of-birth"
             label="Date of birth (optional)"
