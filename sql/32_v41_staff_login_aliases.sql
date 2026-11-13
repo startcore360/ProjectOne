@@ -27,7 +27,6 @@ BEGIN
         SELECT 1 FROM app.user_account a
          WHERE a.tenant_id=NEW.tenant_id
            AND lower(btrim(a.email))=NEW.email
-           AND a.user_account_id<>NEW.user_account_id
     ) THEN
         RAISE EXCEPTION 'LOGIN_EMAIL_IN_USE: email is already a primary login for another account'
             USING ERRCODE='23505';
@@ -43,6 +42,26 @@ BEGIN
     END IF;
     RETURN NEW;
 END$$;
+
+CREATE OR REPLACE FUNCTION app.fn_user_account_email_alias_guard() RETURNS trigger
+LANGUAGE plpgsql AS $
+BEGIN
+    IF NEW.email IS NOT NULL AND EXISTS (
+        SELECT 1 FROM app.user_login_alias x
+         WHERE x.tenant_id=NEW.tenant_id
+           AND x.email=lower(btrim(NEW.email))
+           AND x.user_account_id<>NEW.user_account_id
+    ) THEN
+        RAISE EXCEPTION 'LOGIN_EMAIL_IN_USE: primary email is already a secondary login for another account'
+            USING ERRCODE='23505';
+    END IF;
+    RETURN NEW;
+END$;
+
+DROP TRIGGER IF EXISTS trg_user_account_email_alias_guard ON app.user_account;
+CREATE TRIGGER trg_user_account_email_alias_guard
+    BEFORE INSERT OR UPDATE OF email ON app.user_account
+    FOR EACH ROW EXECUTE FUNCTION app.fn_user_account_email_alias_guard();
 
 DROP TRIGGER IF EXISTS trg_user_login_alias_guard ON app.user_login_alias;
 CREATE TRIGGER trg_user_login_alias_guard
