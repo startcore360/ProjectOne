@@ -10,7 +10,7 @@ describe("FileDrop", () => {
     const input = screen.getByLabelText("Upload document");
     fireEvent.change(input, { target: { files: [new File(["four"], "large.pdf", { type: "application/pdf" })] } });
 
-    expect(screen.getByRole("alert")).toHaveTextContent("no larger than 0.0 MiB");
+    expect(screen.getByRole("alert")).toHaveTextContent("no larger than 3 bytes");
     expect(onFile).toHaveBeenCalledWith(null);
     expect(input).toHaveValue("");
   });
