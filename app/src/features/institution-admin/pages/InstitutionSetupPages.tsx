@@ -1591,7 +1591,7 @@ export function TermLockPage() {
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const [lockLoadError, setLockLoadError] = useState("");
   const [institutionLoadError, setInstitutionLoadError] = useState("");
-  const { fieldErrors, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
+  const { fieldErrors, formError: lockFormError, setFieldError: setLockFieldError, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
 
   useEffect(() => {
     if (!tenantId || import.meta.env.MODE === "test") return;
@@ -1623,17 +1623,21 @@ export function TermLockPage() {
   const handleLockSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!tenantId) return;
-    // Client-side UUID check — show inline errors directly on the fields
+    clearLockAll();
+    let invalid = false;
     if (!isValidUuid(institutionId)) {
-      clearLockFieldError("institutionId"); // reset first to force re-render
-      setTimeout(() => clearLockFieldError("institutionId"), 0);
+      setLockFieldError("institutionId", "Enter a valid institution UUID.");
+      invalid = true;
     }
-    if (!isValidUuid(institutionId) || !isValidUuid(sessionId)) {
-      const msg = "Valid Institution ID and Academic Session ID (UUID) are required.";
-      setFeedback({ tone: "danger", message: msg });
-      toast.error("Validation error", msg);
-      return;
+    if (!isValidUuid(sessionId)) {
+      setLockFieldError("academicSessionId", "Enter a valid academic session UUID.");
+      invalid = true;
     }
+    if (semesterId.trim() && !isValidUuid(semesterId)) {
+      setLockFieldError("semesterId", "Enter a valid semester UUID or leave this field empty.");
+      invalid = true;
+    }
+    if (invalid) return;
     setLocking(true);
     clearLockAll();
     try {
@@ -1642,16 +1646,16 @@ export function TermLockPage() {
         semesterId: semesterId.trim() ? semesterId.trim() : undefined,
         notes: lockNotes.trim() || undefined,
       });
-      const msg = `Term locked successfully [Rule R2-08]. Attendance and marks cannot change.`;
+      const msg = "Term locked successfully. Attendance and marks can no longer be changed for this term.";
       setFeedback({ tone: "success", message: msg });
-      toast.success("Term locked successfully [Rule R2-08]", "Attendance and marks cannot change.");
+      
       setLocks((prev) => [res, ...prev.filter((l) => l.termLockId !== res.termLockId)]);
       setLockNotes("");
     } catch (err: unknown) {
       handleLockApiError(err);
       const msg = getApiErrorMessage(err);
       setFeedback({ tone: "danger", message: msg });
-      toast.error("Failed to lock term", msg);
+      
     } finally {
       setLocking(false);
     }
@@ -1666,17 +1670,18 @@ export function TermLockPage() {
         description="Lock academic terms to protect marks and attendance records. Temporary unlocks require justification and expire automatically."
       />
 
-      {institutionLoadError && <Notice tone="danger">{institutionLoadError}</Notice>}
+      {institutionLoadError && <Notice tone="warning">{institutionLoadError} You can enter a known institution UUID manually.</Notice>}
+      {lockFormError && <Notice tone="danger">{lockFormError}</Notice>}
       {feedback && (
-        <Toast
-          variant={feedback.tone === "danger" ? "error" : "success"}
-          description={feedback.message}
-          onDismiss={() => setFeedback(null)}
-          className="mb-4"
-        />
+        <Notice tone={feedback.tone} className="mb-4">
+          <div className="platform-feedback-row">
+            <span>{feedback.message}</span>
+            <Button variant="tertiary" size="sm" onClick={() => setFeedback(null)}>Dismiss</Button>
+          </div>
+        </Notice>
       )}
 
-      <Panel title="Lock academic term" description="Principal authority to lock a term upon final marks/attendance submission [Rule R2-08].">
+      <Panel title="Lock academic term" description="Authorized principals can lock a term after final marks and attendance have been submitted.">
         <form onSubmit={handleLockSubmit} className="platform-form">
           {institutions.length > 0 && (
             <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
@@ -1744,8 +1749,8 @@ export function TermLockPage() {
             />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={locking || !isValidUuid(institutionId) || !isValidUuid(sessionId)}>
-              {locking ? "Locking term..." : "Lock Term [Rule R2-08]"}
+            <Button type="submit" disabled={locking}>
+              {locking ? "Locking term…" : "Lock term"}
             </Button>
           </div>
         </form>
@@ -1784,7 +1789,7 @@ export function TermLockPage() {
                     <td>{lock.semesterId ? <code>{lock.semesterId}</code> : "Whole Session"}</td>
                     <td>
                       <Badge tone={lock.lockState === "LOCKED" ? "danger" : "warning"}>
-                        {lock.lockState}
+                        {lock.lockState === "LOCKED" ? "Locked" : "Temporarily unlocked"}
                       </Badge>
                     </td>
                     <td>{lock.unlockUntil ? new Date(lock.unlockUntil).toLocaleString() : "—"}</td>
@@ -1823,7 +1828,7 @@ export function TermLockPage() {
             });
             setFeedback({
               tone: "success",
-              message: `Term temporarily unlocked until ${res.unlockUntil || "3 days"} [Rule AT-09]. It will automatically relock.`,
+              message: `Term temporarily unlocked until ${res.unlockUntil || "in three days"}. It will automatically relock.`,
             });
             setLocks((prev) => prev.map((l) => (l.termLockId === res.termLockId ? res : l)));
             setUnlockModalItem(null);

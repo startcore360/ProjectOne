@@ -395,6 +395,15 @@ describe("Institution setup action screens", () => {
     });
   });
 
+  it("shows term-lock UUID errors beside their fields before calling the API", () => {
+    renderWithTenant(<TermLockPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Lock term/i }));
+
+    expect(screen.getByText("Enter a valid institution UUID.")).toBeInTheDocument();
+    expect(screen.getByText("Enter a valid academic session UUID.")).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it("locks academic term upon submit (Story #43: TERM_LOCK / Rule R2-08)", async () => {
     const instId = "11111111-2222-3333-4444-555555555555";
     const sessionId = "22222222-3333-4444-5555-666666666666";
@@ -419,7 +428,7 @@ describe("Institution setup action screens", () => {
     fireEvent.change(instInput, { target: { value: instId } });
     fireEvent.change(sessionInput, { target: { value: sessionId } });
 
-    const lockBtn = screen.getByRole("button", { name: /Lock Term \[Rule R2-08\]/i });
+    const lockBtn = screen.getByRole("button", { name: /Lock term/i });
     fireEvent.click(lockBtn);
 
     await waitFor(() => {
@@ -430,7 +439,7 @@ describe("Institution setup action screens", () => {
         })
       );
       expect(
-        screen.getByText(/Term locked successfully \[Rule R2-08\]/i)
+        screen.getByText(/Term locked successfully\. Attendance and marks can no longer be changed/i)
       ).toBeInTheDocument();
     });
   });
