@@ -65,11 +65,10 @@ import {
 // sample-data-only screens in InstitutionAdminPages.tsx. Kept in a separate file so this round's
 // additions don't collide with edits other agents are making to InstitutionAdminPages.tsx.
 //
-// IMPORTANT LIMITATION (read before changing the ID inputs below): there is no GET list endpoint
-// yet for departments, sections or classes - only the PUT assignment endpoints exist. Until a
-// "structure management" screen exists to browse them, every target is a plain pasted-ID text
-// field, not a picker. That's deliberate, not an oversight: a fake dropdown would imply a browse
-// experience the backend doesn't support.
+// Scoped department/section list endpoints and the teaching-staff lookup now power real
+// PersonPicker and SectionPicker controls on HOD, mentor and class-teacher assignment pages.
+// Other setup forms that do not yet have a supported browse endpoint keep explicit UUID fields;
+// do not replace those with synthetic dropdowns.
 
 type Status = "idle" | "busy" | "success" | "error" | "denied";
 
