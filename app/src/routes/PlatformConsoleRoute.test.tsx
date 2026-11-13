@@ -56,7 +56,7 @@ describe("platform console access", () => {
     "shows %s the console but a clear denied state on a page they can't use",
     (role) => {
       renderAt(role);
-      expect(screen.getByText("You don't have access to this")).toBeInTheDocument();
+      expect(screen.getByText("Your platform role does not include this page. Contact your platform administrator if you need access.")).toBeInTheDocument();
       expect(screen.queryByText("staff page")).not.toBeInTheDocument();
       expect(screen.queryByText("dashboard")).not.toBeInTheDocument();
     },
@@ -74,6 +74,6 @@ describe("platform console access", () => {
 
   it("denies a Product Owner when the server says the action is gone", () => {
     renderAt("PRODUCT_OWNER", ["PLAN_MANAGE"]);
-    expect(screen.getByText("You don't have access to this")).toBeInTheDocument();
+    expect(screen.getByText("Your platform role does not include this page. Contact your platform administrator if you need access.")).toBeInTheDocument();
   });
 });

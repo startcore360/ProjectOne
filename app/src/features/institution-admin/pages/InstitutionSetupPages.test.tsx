@@ -597,7 +597,7 @@ describe("Institution setup action screens", () => {
     renderWithTenant(<AcademicGovernancePage />);
 
     // Test grading schemes tab
-    fireEvent.click(screen.getByRole("button", { name: /Grading Schemes \(#34\)/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Grading schemes/i }));
     fireEvent.click(screen.getByRole("button", { name: /\+ Set Grading Scheme/i }));
     fireEvent.click(screen.getByRole("button", { name: /Save Scheme/i }));
 
@@ -606,7 +606,7 @@ describe("Institution setup action screens", () => {
     });
 
     // Test subject allocation tab
-    fireEvent.click(screen.getByRole("button", { name: /Subject Allocations \(#36\)/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Subject allocations/i }));
     fireEvent.click(screen.getByRole("button", { name: "+ Allocate Subject" }));
     fireEvent.change(screen.getByLabelText(/Institution UUID \*/i), { target: { value: "inst-1" } });
     fireEvent.change(screen.getByLabelText(/Course Offering UUID \*/i), { target: { value: "off-1" } });
@@ -618,7 +618,7 @@ describe("Institution setup action screens", () => {
     });
 
     // Test year-end promotions tab
-    fireEvent.click(screen.getByRole("button", { name: /Year-End Promotions \(#39 & #40\)/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Year-end promotions/i }));
     fireEvent.click(screen.getByRole("button", { name: /\+ New Promotion Run/i }));
     fireEvent.change(screen.getByLabelText(/Institution UUID \*/i), { target: { value: "inst-1" } });
     fireEvent.change(screen.getByLabelText(/From Session UUID \*/i), { target: { value: "sess-1" } });
@@ -627,7 +627,7 @@ describe("Institution setup action screens", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Year-end promotion run created in draft/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Approve \[Principal\]/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Approve$/i })).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Approve \[Principal\]/i }));
