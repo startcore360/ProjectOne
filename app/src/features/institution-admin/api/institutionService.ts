@@ -73,6 +73,28 @@ export type CreateProgramPayload = {
   semestersPerYear?: number;
 };
 
+export type SchoolClassItem = {
+  classId: string;
+  institutionId: string;
+  className: string;
+  displayOrder: number;
+  studentLoginEnabled: boolean;
+  status: string;
+};
+
+export type SectionItem = {
+  sectionId: string;
+  institutionId: string;
+  academicSessionId: string;
+  semesterId: string | null;
+  classId: string | null;
+  sectionName: string;
+  status: string;
+};
+
+export type CreateSchoolClassPayload = { className: string; displayOrder: number };
+export type CreateSectionPayload = { academicSessionId: string; classId: string; sectionName: string };
+
 export type AcademicSessionItem = {
   academicSessionId: string;
   tenantId: string;
@@ -194,6 +216,44 @@ export const institutionService = {
   ): Promise<ProgramItem> {
     const res = await api.post<ProgramItem>(
       `/api/tenants/${tenantId}/institutions/${institutionId}/programs`,
+      payload
+    );
+    return res.data;
+  },
+
+  async listSchoolClasses(tenantId: string, institutionId: string): Promise<SchoolClassItem[]> {
+    const res = await api.get<SchoolClassItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/classes`
+    );
+    return res.data;
+  },
+
+  async createSchoolClass(
+    tenantId: string,
+    institutionId: string,
+    payload: CreateSchoolClassPayload
+  ): Promise<SchoolClassItem> {
+    const res = await api.post<SchoolClassItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/classes`,
+      payload
+    );
+    return res.data;
+  },
+
+  async listSections(tenantId: string, institutionId: string): Promise<SectionItem[]> {
+    const res = await api.get<SectionItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/sections`
+    );
+    return res.data;
+  },
+
+  async createSection(
+    tenantId: string,
+    institutionId: string,
+    payload: CreateSectionPayload
+  ): Promise<SectionItem> {
+    const res = await api.post<SectionItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/sections`,
       payload
     );
     return res.data;
