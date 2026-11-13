@@ -28,7 +28,13 @@ function isInternalErrorText(value: string): boolean {
 
 function cleanUserMessage(value: string | undefined): string | null {
   if (!value) return null;
-  const cleaned = value.replace(/\\s*correlation\\s*id\\s*:\\s*[a-f0-9-]{16,}/ig, "").trim();
+  if (/does not hold action\\s+[A-Z0-9_]+/i.test(value) || /does not hold permission\\s+[A-Z0-9_]+/i.test(value)) {
+    return "Your current role does not have permission to perform this action. Ask your administrator to review your access.";
+  }
+  const cleaned = value
+    .replace(/\\s*correlation\\s*id\\s*:\\s*[a-f0-9-]{16,}/ig, "")
+    .replace(/\\s*\\(?(?:code|error)\\s*:\\s*[A-Z][A-Z0-9_]{2,}\\)?/g, "")
+    .trim();
   return isInternalErrorText(cleaned) ? null : cleaned;
 }
 
