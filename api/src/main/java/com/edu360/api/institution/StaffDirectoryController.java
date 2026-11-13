@@ -61,6 +61,12 @@ public class StaffDirectoryController {
         return ResponseEntity.ok().eTag(etag(response.version())).body(response);
     }
 
+    @GetMapping("/{id}/assignments")
+    public ResponseEntity<List<StaffAssignmentResponse>> listAssignments(@PathVariable UUID tenantId,
+            @PathVariable UUID id, Authentication authentication) {
+        return ResponseEntity.ok(service.listAssignments(principal(authentication, tenantId), id));
+    }
+
     @PostMapping("/{id}/assignments")
     public ResponseEntity<StaffAssignmentResponse> addAssignment(@PathVariable UUID tenantId,
             @PathVariable UUID id, @Valid @RequestBody StaffAssignmentRequest request,

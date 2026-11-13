@@ -47,6 +47,16 @@ public class StaffDocumentService {
         this.auditLog = auditLog;
     }
 
+    @Transactional(readOnly = true)
+    public List<StaffDocumentResponse> list(TenantPrincipal actor, UUID staffProfileId) {
+        RbacPrincipal caller = new RbacPrincipal(actor.tenantId(), actor.userAccountId());
+        staffProfiles.findByIdTenantIdAndIdStaffProfileId(actor.tenantId(), staffProfileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff record not found."));
+        authorizeProfileScope(caller, staffProfileId, "STAFF_RECORD_VIEW");
+        return documents.findByIdTenantIdAndStaffProfileIdOrderByCreatedAtDesc(
+                actor.tenantId(), staffProfileId).stream().map(StaffDocumentResponse::from).toList();
+    }
+
     @Transactional
     public StaffDocumentResponse attach(TenantPrincipal actor, UUID staffProfileId,
             String documentTypeValue, UUID fileId) {
@@ -59,7 +69,7 @@ public class StaffDocumentService {
         RbacPrincipal caller = new RbacPrincipal(actor.tenantId(), actor.userAccountId());
         StaffProfile profile = staffProfiles.findByIdTenantIdAndIdStaffProfileId(actor.tenantId(), staffProfileId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff record not found."));
-        authorizeTargetAssignments(caller, profile.getStaffProfileId());
+        authorizeProfileScope(caller, profile.getStaffProfileId(), "STAFF_RECORD_MANAGE");
 
         FileObject file = files.findById(new FileObjectId(actor.tenantId(), fileId))
                 .orElseThrow(() -> new ResourceNotFoundException("File not found."));
@@ -166,7 +176,7 @@ public class StaffDocumentService {
         throw new ResourceNotFoundException("Staff document not found in the active role scope.");
     }
 
-    private void authorizeTargetAssignments(RbacPrincipal caller, UUID staffProfileId) {
+    private void authorizeProfileScope(RbacPrincipal caller, UUID staffProfileId, String action) {
         var active = permissions.activeAssignment(caller)
                 .orElseThrow(() -> new com.edu360.api.exception.UnauthorizedException(
                         "An active staff-management role is required."));
