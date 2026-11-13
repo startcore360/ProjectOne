@@ -25,6 +25,10 @@ export const notificationsApi = {
     const res = await api.get<NotificationSummary>(`/tenants/${tenantId}/me/notifications/summary`);
     return res.data;
   },
+  pendingApprovalCount: async (tenantId: string): Promise<number> => {
+    const res = await api.get<{ items?: unknown[] }>(`/api/tenants/${tenantId}/approvals/inbox`);
+    return Array.isArray(res.data?.items) ? res.data.items.length : 0;
+  },
   markRead: async (tenantId: string, notificationId: string): Promise<void> => {
     await api.post(`/tenants/${tenantId}/me/notifications/${notificationId}/read`);
   },
