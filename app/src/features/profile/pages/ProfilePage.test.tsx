@@ -150,6 +150,8 @@ describe("ProfilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(await screen.findByText(/Display name must not be blank/i)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Please correct the highlighted fields below.");
+    expect(screen.getByLabelText(/Display name/i)).toHaveAttribute("aria-invalid", "true");
     expect(profileService.update).not.toHaveBeenCalled();
   });
 });
