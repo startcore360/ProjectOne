@@ -170,6 +170,9 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     fireEvent.change(screen.getByLabelText(/Institution Name \*/i), {
       target: { value: "Northbridge Institute of Technology" },
     });
+    fireEvent.change(screen.getByLabelText(/Student ID format \*/i), {
+      target: { value: "{INST}-{YYYY}-{SEQ:4}" },
+    });
     fireEvent.change(screen.getByLabelText(/City/i), { target: { value: "Bengaluru" } });
 
     // Submit
@@ -180,6 +183,8 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
         institutionCode: "NBC-03",
         institutionName: "Northbridge Institute of Technology",
         institutionType: "COLLEGE",
+        studentIdFormat: "{INST}-{YYYY}-{SEQ:4}",
+        staffIdFormat: undefined,
       }));
       expect(screen.getAllByText(/Northbridge Institute of Technology/i).length).toBeGreaterThanOrEqual(1);
     });

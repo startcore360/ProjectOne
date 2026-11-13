@@ -132,7 +132,7 @@ class InstitutionControllerTest {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
                 "COLLEGE", "NBC-01", "Northbridge College of Science", false,
-                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001", "principal@northbridge.edu.in"
+                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001", "principal@northbridge.edu.in", "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         when(institutionRepository.existsByIdTenantIdAndInstitutionCode(TENANT_ID, "NBC-01")).thenReturn(false);
@@ -168,7 +168,7 @@ class InstitutionControllerTest {
     void actInstitutionCreateDraft_deny() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-01", "Northbridge College of Science", false, null, null, null, null, null
+                "COLLEGE", "NBC-01", "Northbridge College of Science", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         doThrow(new UnauthorizedException("The active role does not hold action INSTITUTION_CREATE_DRAFT."))
