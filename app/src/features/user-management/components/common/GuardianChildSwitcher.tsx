@@ -45,7 +45,8 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
     {selected && <section aria-label="Selected child details">
       <p>Student code: {selected.studentCode}</p>
       <p>Status: {selected.status}</p>
-      <p>Institution: {selected.institutionId}</p>
+      <p>Institution details are available to authorised institutional staff.</p>
+      <p>Progress, attendance, notices and academic records are not connected to this view yet.</p>
       <p>Child information is read-only.</p>
     </section>}
   </div>;

@@ -64,7 +64,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           id="student-plan"
           title="Your timetable"
           eyebrow="TODAY · WHAT’S AHEAD"
-          action={{ label: "Full calendar", href: "#student-plan" }}
+          
         >
           <div className="student-week-strip" aria-label="Weekly timetable preview">
             <span>MON</span>
@@ -82,7 +82,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           id="student-focus"
           title="Next small steps"
           eyebrow="CLEAR PRIORITIES, NO CLUTTER"
-          action={{ label: "All tasks", href: "#student-focus" }}
+          
         >
           <QuietEmpty
             title="You’re all caught up for now"
@@ -93,7 +93,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           id="student-updates"
           title="From your campus"
           eyebrow="USEFUL UPDATES, IN ONE PLACE"
-          action={{ label: "All notices", href: "#student-updates" }}
+          action={{ label: "All notices", href: "/self-service" }}
         >
           <QuietEmpty
             title="No new notices"
@@ -104,7 +104,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           id="student-results"
           title="Recent results"
           eyebrow="LATEST PUBLISHED ASSESSMENTS"
-          action={{ label: "All results", href: "#student-results" }}
+          
         >
           <QuietEmpty
             title="Your results will appear here"
@@ -118,7 +118,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           id="student-attendance"
           title="Attendance, at a glance"
           eyebrow="TERM TO DATE · ALL SUBJECTS"
-          action={{ label: "Attendance details", href: "#student-attendance" }}
+          
         >
           <div className="student-attendance-summary">
             <div className="student-attendance-ring" aria-hidden="true">
