@@ -62,6 +62,9 @@ public class RoleAssignmentService {
     @Autowired(required = false)
     private StaffDirectoryService staffDirectoryService;
 
+    @Autowired(required = false)
+    private com.edu360.api.live.LiveEventPublisher liveEventPublisher;
+
     /**
      * Assigns a role to a user within an authorized scope (ROLE_ASSIGN).
      */
@@ -498,6 +501,12 @@ public class RoleAssignmentService {
                     .ifPresent(link -> keycloakAdminClient.logoutUser(link.getIdentityRealm(), link.getIdentitySubject()));
         } catch (Exception ex) {
             log.warn("Session logout skipped or non-fatal for user {} in tenant {}: {}", userId, tenantId, ex.getMessage());
+        }
+        if (liveEventPublisher != null) {
+            liveEventPublisher.publishToUser(tenantId, userId, "PERMISSIONS_CHANGED",
+                    java.util.Map.of("reason", "ROLE_ASSIGNMENT_CHANGED"));
+            liveEventPublisher.publishToUser(tenantId, userId, "SESSION_REVOKED",
+                    java.util.Map.of("reason", "ROLE_ASSIGNMENT_CHANGED"));
         }
     }
 
