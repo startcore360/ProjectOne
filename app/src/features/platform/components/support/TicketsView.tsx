@@ -29,6 +29,7 @@ export function TicketsView() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [grantsError, setGrantsError] = useState("");
 
   // Resolve Ticket Modal
@@ -42,6 +43,7 @@ export function TicketsView() {
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
+    setLoadError("");
     setGrantsError("");
     try {
       const [tList, grantResult] = await Promise.all([
@@ -55,7 +57,7 @@ export function TicketsView() {
       setGrants(grantResult.items);
       setGrantsError(grantResult.error);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load support tickets");
+      setLoadError(err instanceof Error ? err.message : "Failed to load support tickets");
     } finally {
       setLoading(false);
     }
@@ -133,7 +135,8 @@ export function TicketsView() {
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error} <Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button></Notice>}
+      {error && <Notice tone="danger">{error}</Notice>}
+      {loadError && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button></Notice>}
       {grantsError && <Notice tone="danger">Active support grants could not be verified. Session-assumption actions are disabled until this is resolved. {grantsError} <Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button></Notice>}
       {assumedToken && (
         <Notice tone="info">
@@ -142,9 +145,9 @@ export function TicketsView() {
       )}
 
       <div className="kpi-grid">
-        <MetricCard label="Total Tickets" value={tickets.length} note="Platform-wide" mark="book" />
-        <MetricCard label="Open Tickets" value={openTickets} note="Awaiting resolution" mark="alert" />
-        <MetricCard label="Resolved Tickets" value={resolvedTickets} note="SLA satisfied" mark="check-circle" />
+        <MetricCard label="Total Tickets" value={loadError ? "—" : tickets.length} note={loadError ? "Unavailable" : "Platform-wide"} mark="book" />
+        <MetricCard label="Open Tickets" value={loadError ? "—" : openTickets} note={loadError ? "Unavailable" : "Awaiting resolution"} mark="alert" />
+        <MetricCard label="Resolved Tickets" value={loadError ? "—" : resolvedTickets} note={loadError ? "Unavailable" : "SLA satisfied"} mark="check-circle" />
         <MetricCard label="Active Grants" value={grantsError ? "—" : grants.length} note={grantsError ? "Verification unavailable" : "Tenant approved sessions"} mark="shield" />
       </div>
 
@@ -174,7 +177,7 @@ export function TicketsView() {
           <div className="platform-empty-inline">
             <Spinner label="Loading support tickets..." />
           </div>
-        ) : filteredTickets.length === 0 ? (
+        ) : loadError ? null : filteredTickets.length === 0 ? (
           <p className="platform-empty-inline">No support tickets found matching criteria.</p>
         ) : (
           <DataTable headers={["Ticket #", "Subject", "Requester", "Priority", "Status", "Support Grant", "Actions"]}>

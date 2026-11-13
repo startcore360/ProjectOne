@@ -228,7 +228,7 @@ export function PlatformUsersView() {
           <div className="platform-empty-inline">
             <Spinner label="Loading platform users" />
           </div>
-        ) : (
+        ) : loadError ? null : (
           <DataTable
             headers={["Name", "Email", "Platform role", "Status", "Last active", "Actions"]}
             empty={!filtered.length}
