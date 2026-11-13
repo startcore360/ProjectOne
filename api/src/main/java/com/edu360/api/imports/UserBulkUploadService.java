@@ -92,7 +92,7 @@ public class UserBulkUploadService {
             );
         }
         String csvTemplate = String.join(",", headers) + "\n" +
-                String.join(",", sampleRows.get(0)) + "\n";
+                sampleRows.stream().map(row -> String.join(",", row)).collect(java.util.stream.Collectors.joining("\n")) + "\n";
 
         return new ImportTemplateResponse(
                 effectiveKind,
