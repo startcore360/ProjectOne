@@ -630,7 +630,7 @@ describe("Institution setup action screens", () => {
       expect(screen.getByRole("button", { name: /^Approve$/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Approve \[Principal\]/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Approve$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Promotion run approved by Principal/i)).toBeInTheDocument();
