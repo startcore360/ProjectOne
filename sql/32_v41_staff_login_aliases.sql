@@ -45,7 +45,7 @@ BEGIN
 END$$;
 
 CREATE OR REPLACE FUNCTION app.fn_user_account_email_alias_guard() RETURNS trigger
-LANGUAGE plpgsql AS $
+LANGUAGE plpgsql AS $fn$
 BEGIN
     IF NEW.email IS NOT NULL THEN
         PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text || ':' || lower(btrim(NEW.email)), 0));
@@ -59,7 +59,7 @@ BEGIN
             USING ERRCODE='23505';
     END IF;
     RETURN NEW;
-END$;
+END$fn$;
 
 DROP TRIGGER IF EXISTS trg_user_account_email_alias_guard ON app.user_account;
 CREATE TRIGGER trg_user_account_email_alias_guard
