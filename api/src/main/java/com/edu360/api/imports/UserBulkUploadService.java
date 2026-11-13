@@ -564,6 +564,31 @@ public class UserBulkUploadService {
         }
     }
 
+    private void validateUuidCell(String value, String field, String label, List<RowValidationError> errors) {
+        if (value == null || value.isBlank()) {
+            errors.add(new RowValidationError(field, "REQUIRED_FIELD", label + " is required for student enrolment."));
+            return;
+        }
+        try {
+            UUID.fromString(value.trim());
+        } catch (IllegalArgumentException ex) {
+            errors.add(new RowValidationError(field, "INVALID_UUID", label + " must be a UUID."));
+        }
+    }
+
+    private void validateDateCell(String value, String field, String label, List<RowValidationError> errors) {
+        if (value == null || value.isBlank()) return;
+        try {
+            LocalDate.parse(value.trim());
+        } catch (DateTimeParseException ex) {
+            errors.add(new RowValidationError(field, "INVALID_DATE", label + " must use YYYY-MM-DD."));
+        }
+    }
+
+    private LocalDate parseOptionalDate(String value) {
+        return value == null || value.isBlank() ? null : LocalDate.parse(value.trim());
+    }
+
     private String[] parseCsvLine(String line) {
         List<String> tokens = new ArrayList<>();
         boolean inQuotes = false;
