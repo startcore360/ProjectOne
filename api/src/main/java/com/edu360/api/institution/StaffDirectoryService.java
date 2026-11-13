@@ -279,12 +279,12 @@ public class StaffDirectoryService {
                    AND ura.effective_from <= CURRENT_TIMESTAMP
                    AND (ura.effective_to IS NULL OR ura.effective_to > CURRENT_TIMESTAMP)
                    AND ua.user_type = 'STAFF'
-                   AND (? IS NULL OR ura.department_id IS NULL OR ura.department_id = ?)
+                   AND (ura.department_id IS NULL OR COALESCE(?, ura.department_id) = ura.department_id)
                    AND rd.role_code IN ('HEAD_OF_DEPARTMENT','PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR',
                        'LAB_ASSISTANT','RESEARCH_ASSISTANT','CLASS_TEACHER','SUBJECT_TEACHER')
                 """, (rs, rowNum) -> new TeacherRole(rs.getObject(1, UUID.class),
                         rs.getString(2), rs.getObject(3, UUID.class)),
-                actor.tenantId(), institutionId, departmentId, departmentId);
+                actor.tenantId(), institutionId, departmentId);
         for (TeacherRole teacher : existingTeacherRoles) {
             ensureStaffAssignment(actor.tenantId(), teacher.userId(), institutionId,
                     teacher.departmentId(), actor.userAccountId(), teacher.designation());
@@ -302,7 +302,7 @@ public class StaffDirectoryService {
                    AND sa.status = 'ACTIVE'
                    AND sa.effective_from <= CURRENT_DATE
                    AND (sa.effective_to IS NULL OR sa.effective_to >= CURRENT_DATE)
-                   AND (? IS NULL OR p.full_name ILIKE '%' || ? || '%'
+                   AND (COALESCE(?, '') = '' OR p.full_name ILIKE '%' || ? || '%'
                         OR p.staff_code ILIKE '%' || ? || '%')
                    AND EXISTS (
                        SELECT 1
@@ -327,7 +327,7 @@ public class StaffDirectoryService {
                         rs.getString("staff_code"), rs.getString("full_name"),
                         rs.getString("designation"), rs.getObject("department_id", UUID.class),
                         rs.getString("department_name")),
-                actor.tenantId(), institutionId, departmentId, normalizeQuery(query),
+                actor.tenantId(), institutionId, departmentId, query == null ? "" : normalizeQuery(query),
                 normalizeQuery(query), normalizeQuery(query), limit);
         return new TeacherLookupResponse(items, new StaffListResponse.PageInfo(limit, null, false, null));
     }
