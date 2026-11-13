@@ -24,7 +24,7 @@ export function TicketsView() {
 
   const [tickets, setTickets] = useState<SupportTicketItem[]>([]);
   const [grants, setGrants] = useState<SupportAccessGrantItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [message, setMessage] = useState("");

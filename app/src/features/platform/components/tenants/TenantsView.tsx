@@ -32,7 +32,7 @@ export function TenantsView() {
   const canManageLifecycle = can("TENANT_SUSPEND_ARCHIVE");
   const canEditSettings = can("TENANT_SETTINGS");
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [plansError, setPlansError] = useState("");
   const [plans, setPlans] = useState<PlanItem[]>([]);

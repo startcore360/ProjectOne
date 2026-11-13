@@ -28,7 +28,7 @@ export function GuardianManagementPanel({
 }: GuardianManagementPanelProps) {
   const currentTenantId = tenantId ?? "";
   const [links, setLinks] = useState<GuardianLinkItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 

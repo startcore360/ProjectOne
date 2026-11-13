@@ -16,7 +16,7 @@ export function SupportAccessView() {
 
   const [grants, setGrants] = useState<SupportAccessGrantItem[]>([]);
   const [tickets, setTickets] = useState<Record<string, SupportTicketItem>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 

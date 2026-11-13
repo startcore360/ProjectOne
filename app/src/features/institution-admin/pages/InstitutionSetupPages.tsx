@@ -1523,6 +1523,8 @@ export function TermLockPage() {
         {loading && <p className="platform-empty-note">Loading locks...</p>}
         {lockLoadError ? (
           <Notice tone="danger">{lockLoadError} <Button variant="secondary" size="sm" onClick={() => fetchLocks(institutionId)}>Retry</Button></Notice>
+        ) : !isValidUuid(institutionId) ? (
+          <EmptyState title="Choose an institution" description="Select an institution or enter its UUID to load term locks." icon="building" />
         ) : locks.length === 0 && !loading ? (
           <EmptyState
             title="No active term locks"
@@ -1611,7 +1613,7 @@ export function TermLockPage() {
 export function DelegationsApprovalsPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [delegations, setDelegations] = useState<DelegationItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const { fieldErrors: delegFieldErrors, handleApiError: handleDelegApiError, clearFieldError: clearDelegFieldError, clearAll: clearDelegAll } = useFormErrors();
   const { fieldErrors: bulkFieldErrors, handleApiError: handleBulkApiError, clearFieldError: clearBulkFieldError, clearAll: clearBulkAll } = useFormErrors();
@@ -1631,7 +1633,7 @@ export function DelegationsApprovalsPage() {
 
   // Approval Inbox state
   const [inboxItems, setInboxItems] = useState<ApprovalStepItem[]>([]);
-  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxLoading, setInboxLoading] = useState(true);
   const [delegationsError, setDelegationsError] = useState("");
   const [inboxError, setInboxError] = useState("");
   const [decidingId, setDecidingId] = useState<string | null>(null);
@@ -2027,7 +2029,7 @@ export function DelegationsApprovalsPage() {
 export function AcademicGovernancePage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [activeTab, setActiveTab] = useState<"rules" | "grading" | "allocation" | "promotion">("rules");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 

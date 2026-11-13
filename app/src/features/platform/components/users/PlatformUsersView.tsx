@@ -86,7 +86,7 @@ export function PlatformUsersView() {
 
   const [users, setUsers] = useState<PlatformUserItem[]>([]);
   const [customRoles, setCustomRoles] = useState<PlatformRoleItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [rolesError, setRolesError] = useState("");
   const [query, setQuery] = useState("");

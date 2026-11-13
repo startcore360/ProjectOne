@@ -52,7 +52,7 @@ export function InstitutionsPage() {
   const user = useAppSelector((state) => state.auth.user);
   const tenantId = user?.tenantId ?? "";
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -553,7 +553,7 @@ export function RolesPermissionsPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [query, setQuery] = useState("");
   const [roles, setRoles] = useState<RoleDefinitionItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Custom role creation state (Story #16: ROLE_CUSTOM_MANAGE)
@@ -786,7 +786,7 @@ export function MissingRolesPage() {
 
   const [entries, setEntries] = useState<RolldownMapEntry[]>([]);
   const [overrides, setOverrides] = useState<RolldownOverride[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Set override modal state (Story #24: ROLLDOWN_OVERRIDE_SET)

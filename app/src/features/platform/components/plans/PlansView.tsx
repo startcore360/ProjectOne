@@ -8,7 +8,7 @@ import { CreatePlanModal, type CreatePlanDraft } from "./CreatePlanModal";
 export function PlansView() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [tenants, setTenants] = useState<TenantItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [createDraft, setCreateDraft] = useState<CreatePlanDraft>({
