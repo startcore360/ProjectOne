@@ -307,7 +307,7 @@ export default function StaffRecordsPage() {
               </Panel>
 
               <Panel title="Staff documents" description="Upload supporting documents for scanning and attach them to this profile. An authorized second person must verify them.">
-                {documents.length === 0 ? <EmptyState title="No documents attached" description="Add a degree certificate, identity proof or other supporting document." icon="file" /> : (
+                {documents.length === 0 ? <EmptyState title="No documents attached" description="Add a degree certificate, identity proof or other supporting document." icon="book" /> : (
                   <div className="platform-table-wrap"><table className="platform-table">
                     <thead><tr><th>Document</th><th>File ID</th><th>Status</th><th>Review</th></tr></thead>
                     <tbody>{documents.map((doc) => <tr key={doc.id}>
