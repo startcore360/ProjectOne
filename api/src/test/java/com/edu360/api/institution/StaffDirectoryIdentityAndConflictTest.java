@@ -99,4 +99,94 @@ class StaffDirectoryIdentityAndConflictTest {
 
         verify(assignments, never()).saveAndFlush(any(StaffAssignment.class));
     }
+
+    @Test
+    void ensureStaffAssignmentCreatesLinkedProfileAndScopedAssignmentWhenMissing() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID institutionId = UUID.randomUUID();
+        UUID departmentId = UUID.randomUUID();
+
+        StaffProfileRepository profiles = mock(StaffProfileRepository.class);
+        StaffAssignmentRepository assignments = mock(StaffAssignmentRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        InstitutionIdFormatService formats = mock(InstitutionIdFormatService.class);
+        jakarta.persistence.EntityManager entityManager = mock(jakarta.persistence.EntityManager.class);
+
+        when(jdbc.queryForObject(anyString(), eq(String.class), eq(tenantId), eq(userId)))
+                .thenReturn("New Teacher");
+        when(jdbc.queryForObject(anyString(), eq(Boolean.class),
+                eq(tenantId), any(UUID.class), eq(institutionId), eq(departmentId))).thenReturn(false);
+        when(formats.resolveStaffCode(eq(tenantId), eq(institutionId), eq(null), anyInt()))
+                .thenReturn("STF-2026-0001");
+        when(profiles.saveAndFlush(any(StaffProfile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(assignments.saveAndFlush(any(StaffAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        StaffDirectoryService service = new StaffDirectoryService(profiles, assignments,
+                mock(StaffServiceRecordRepository.class), mock(StaffDocumentRepository.class),
+                mock(InstitutionRepository.class), mock(DepartmentRepository.class), formats,
+                mock(PermissionEvaluatorService.class), mock(AuditLogService.class), jdbc);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "entityManager", entityManager);
+
+        service.ensureStaffAssignment(tenantId, userId, institutionId, departmentId, actorId, "Subject Teacher");
+
+        org.mockito.ArgumentCaptor<StaffProfile> profileCaptor =
+                org.mockito.ArgumentCaptor.forClass(StaffProfile.class);
+        verify(profiles).saveAndFlush(profileCaptor.capture());
+        org.assertj.core.api.Assertions.assertThat(profileCaptor.getValue().getUserAccountId()).isEqualTo(userId);
+        org.assertj.core.api.Assertions.assertThat(profileCaptor.getValue().getFullName()).isEqualTo("New Teacher");
+
+        org.mockito.ArgumentCaptor<StaffAssignment> assignmentCaptor =
+                org.mockito.ArgumentCaptor.forClass(StaffAssignment.class);
+        verify(assignments).saveAndFlush(assignmentCaptor.capture());
+        org.assertj.core.api.Assertions.assertThat(assignmentCaptor.getValue().getInstitutionId()).isEqualTo(institutionId);
+        org.assertj.core.api.Assertions.assertThat(assignmentCaptor.getValue().getDepartmentId()).isEqualTo(departmentId);
+        org.assertj.core.api.Assertions.assertThat(assignmentCaptor.getValue().getDesignation()).isEqualTo("Subject Teacher");
+    }
+
+    @Test
+    void teacherLookupAuthorizesInstitutionScopeBeforeReturningPickerResults() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID institutionId = UUID.randomUUID();
+        PermissionEvaluatorService permissions = mock(PermissionEvaluatorService.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        doReturn(List.of()).when(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
+
+        StaffDirectoryService service = new StaffDirectoryService(mock(StaffProfileRepository.class),
+                mock(StaffAssignmentRepository.class), mock(StaffServiceRecordRepository.class),
+                mock(StaffDocumentRepository.class), mock(InstitutionRepository.class),
+                mock(DepartmentRepository.class), mock(InstitutionIdFormatService.class),
+                permissions, mock(AuditLogService.class), jdbc);
+
+        service.teacherLookup(new RbacPrincipal(tenantId, userId), institutionId, null, "math", 20);
+
+        verify(permissions).authorize(eq(new RbacPrincipal(tenantId, userId)),
+                eq("SUBJECT_ALLOCATE"), eq(com.edu360.api.rbac.RbacScope.institution(institutionId)),
+                eq(com.edu360.api.rbac.RbacTarget.NONE));
+    }
+
+    @Test
+    void teacherLookupAuthorizesDepartmentScope() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID institutionId = UUID.randomUUID();
+        UUID departmentId = UUID.randomUUID();
+        PermissionEvaluatorService permissions = mock(PermissionEvaluatorService.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        doReturn(List.of()).when(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
+
+        StaffDirectoryService service = new StaffDirectoryService(mock(StaffProfileRepository.class),
+                mock(StaffAssignmentRepository.class), mock(StaffServiceRecordRepository.class),
+                mock(StaffDocumentRepository.class), mock(InstitutionRepository.class),
+                mock(DepartmentRepository.class), mock(InstitutionIdFormatService.class),
+                permissions, mock(AuditLogService.class), jdbc);
+
+        service.teacherLookup(new RbacPrincipal(tenantId, userId), institutionId, departmentId, null, 20);
+
+        verify(permissions).authorize(eq(new RbacPrincipal(tenantId, userId)),
+                eq("SUBJECT_ALLOCATE"), eq(com.edu360.api.rbac.RbacScope.department(institutionId, departmentId)),
+                eq(com.edu360.api.rbac.RbacTarget.NONE));
+    }
 }
