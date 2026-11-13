@@ -337,8 +337,10 @@ a {
    the elevated floating-card look back, since there's no bar to sit in there. */
 .theme-toggle {
   display: inline-flex;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border: 0;
