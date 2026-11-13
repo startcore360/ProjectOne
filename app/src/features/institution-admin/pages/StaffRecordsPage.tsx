@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
-  Panel, SearchBox, SelectField, Spinner, TextAreaField, TextField,
+  Panel, SearchBox, SelectField, Spinner, TextAreaField, TextField, DataTable,
 } from "../../../design-system/components";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
@@ -294,10 +294,9 @@ export default function StaffRecordsPage() {
 
               <Panel title="Institution assignments" description="Assign the staff member to an institution or department with an effective date.">
                 {assignments.length === 0 ? <EmptyState title="No assignments recorded" description="A staff profile must have an active assignment to appear in an institution or department directory." /> : (
-                  <div className="platform-table-wrap"><table className="platform-table">
-                    <thead><tr><th>Designation</th><th>Institution</th><th>Department</th><th>Effective from</th><th>Status</th></tr></thead>
-                    <tbody>{assignments.map((item) => <tr key={item.id}><td>{item.designation}</td><td><code>{item.institutionId ?? "Tenant-wide"}</code></td><td><code>{item.departmentId ?? "—"}</code></td><td>{item.effectiveFrom}</td><td><Badge tone={item.status === "ACTIVE" ? "success" : "neutral"}>{humanize(item.status)}</Badge></td></tr>)}</tbody>
-                  </table></div>
+                  <DataTable headers={["Designation", "Institution", "Department", "Effective from", "Status"]} ariaLabel="Staff institution assignments" empty={assignments.length === 0}>
+                    {assignments.map((item) => <tr key={item.id}><td>{item.designation}</td><td><code>{item.institutionId ?? "Tenant-wide"}</code></td><td><code>{item.departmentId ?? "—"}</code></td><td>{item.effectiveFrom}</td><td><Badge tone={item.status === "ACTIVE" ? "success" : "neutral"}>{humanize(item.status)}</Badge></td></tr>)}
+                  </DataTable>
                 )}
                 {canManage && <form onSubmit={addAssignment} className="platform-form staff-form-divider">
                   <div className="platform-form-grid">
@@ -312,9 +311,8 @@ export default function StaffRecordsPage() {
 
               <Panel title="Staff documents" description="Upload supporting documents for scanning and attach them to this profile. An authorized second person must verify them.">
                 {documents.length === 0 ? <EmptyState title="No documents attached" description="Add a degree certificate, identity proof or other supporting document." icon="book" /> : (
-                  <div className="platform-table-wrap"><table className="platform-table">
-                    <thead><tr><th>Document</th><th>File ID</th><th>Status</th><th>Review</th></tr></thead>
-                    <tbody>{documents.map((doc) => <tr key={doc.id}>
+                  <DataTable headers={["Document", "File ID", "Status", "Review"]} ariaLabel="Staff documents">
+                    {documents.map((doc) => <tr key={doc.id}>
                       <td>{humanize(doc.documentType)}</td><td><code>{doc.fileId}</code></td><td>{humanize(doc.verificationStatus)}</td>
                       <td>{canVerify && doc.verificationStatus === "UPLOADED" && doc.createdBy !== userId ? (
                         <span className="staff-document-actions">
@@ -322,8 +320,8 @@ export default function StaffRecordsPage() {
                           <Button size="sm" variant="tertiary" disabled={verifyingId === doc.id} onClick={() => void verifyDocument(doc, "REJECTED")}>Reject</Button>
                         </span>
                       ) : doc.createdBy === userId && doc.verificationStatus === "UPLOADED" ? "Awaiting independent review" : "—"}</td>
-                    </tr>)}</tbody>
-                  </table></div>
+                    </tr>)}
+                  </DataTable>
                 )}
                 {canManage && <form onSubmit={uploadDocument} className="platform-form staff-form-divider">
                   <div className="platform-form-grid">
@@ -337,10 +335,9 @@ export default function StaffRecordsPage() {
 
               <Panel title="Service history" description="Record employment events and other staff service history.">
                 {records.length === 0 ? <EmptyState title="No service history yet" description="Add the first service record below." icon="clock" /> : (
-                  <div className="platform-table-wrap"><table className="platform-table">
-                    <thead><tr><th>Event</th><th>Effective on</th><th>Details</th></tr></thead>
-                    <tbody>{records.map((record) => <tr key={record.id}><td>{humanize(record.eventType)}</td><td>{record.effectiveOn}</td><td>{record.details}</td></tr>)}</tbody>
-                  </table></div>
+                  <DataTable headers={["Event", "Effective on", "Details"]} ariaLabel="Staff service history">
+                    {records.map((record) => <tr key={record.id}><td>{humanize(record.eventType)}</td><td>{record.effectiveOn}</td><td>{record.details}</td></tr>)}
+                  </DataTable>
                 )}
                 {canManage && <form onSubmit={addServiceRecord} className="platform-form staff-form-divider">
                   <div className="platform-form-grid">
