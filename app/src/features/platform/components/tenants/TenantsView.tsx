@@ -34,6 +34,7 @@ export function TenantsView() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [plansError, setPlansError] = useState("");
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
@@ -112,18 +113,23 @@ export function TenantsView() {
     }
   };
 
+  const loadPlans = async () => {
+    setPlansError("");
+    try {
+      const res = await platformTenantService.getPlans();
+      const availablePlans = Array.isArray(res?.data) ? res.data : [];
+      setPlans(availablePlans);
+      if (availablePlans.length > 0) {
+        setDraft((prev) => ({ ...prev, planId: prev.planId || availablePlans[0].planId }));
+      }
+    } catch (err: unknown) {
+      setPlansError(err instanceof Error ? err.message : "Unable to load subscription plans. Please retry.");
+    }
+  };
+
   useEffect(() => {
     void loadTenants();
-    platformTenantService.getPlans()
-      .then((res) => {
-        if (Array.isArray(res?.data) && res.data.length > 0) {
-          setPlans(res.data);
-          setDraft((prev) => ({ ...prev, planId: prev.planId || res.data[0].planId }));
-        }
-      })
-      .catch((err: unknown) => {
-        setLoadError(err instanceof Error ? err.message : "Unable to load subscription plans. Please retry.");
-      });
+    void loadPlans();
   }, []);
 
   const handleNameChange = (name: string) => {
@@ -372,9 +378,15 @@ export function TenantsView() {
         <TenantCredentialsNotice credentials={createdCredentials} onDismiss={() => setCreatedCredentials(null)} />
       )}
       {loadError && (
-        <div className="platform-error-state" role="alert">
-          <p>{loadError}</p>
-          <Button variant="secondary" onClick={() => void loadTenants()}>Retry</Button>
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{loadError}</p>
+          <Button variant="secondary" onClick={() => void loadTenants()}>Retry tenant list</Button>
+        </div>
+      )}
+      {plansError && (
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{plansError}</p>
+          <Button variant="secondary" onClick={() => void loadPlans()}>Retry plans</Button>
         </div>
       )}
       {message && (

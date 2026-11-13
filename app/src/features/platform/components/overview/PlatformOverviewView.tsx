@@ -45,8 +45,8 @@ export function PlatformOverviewView() {
       />
 
       {error && !loading && (
-        <div className="platform-error-state" role="alert">
-          <p>{error}</p>
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{error}</p>
           <Button variant="secondary" onClick={() => setRetryKey((value) => value + 1)}>Retry</Button>
         </div>
       )}

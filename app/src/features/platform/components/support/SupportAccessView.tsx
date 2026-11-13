@@ -64,8 +64,8 @@ export function SupportAccessView() {
       {message && <Notice tone="success">{message}</Notice>}
       {error && (
         <Notice tone="danger">
-          <div className="platform-error-state" role="alert">
-            <p>{error}</p>
+          <div className="eds-error-state" role="alert">
+            <p className="eds-error-state__message">{error}</p>
             <Button variant="secondary" onClick={() => void loadGrants()}>Retry</Button>
           </div>
         </Notice>

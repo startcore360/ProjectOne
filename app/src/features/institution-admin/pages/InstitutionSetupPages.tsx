@@ -201,7 +201,7 @@ export function HodAssignmentPage() {
     <div className="platform-page">
       <PageHeader
         title="Assign Head of Department"
-        description="HOD_ASSIGN — make a faculty member the Head of Department for a department."
+        description="Assign a faculty member as the Head of Department for a department."
       />
       {!tenantId ? (
         <NoTenantNotice />
