@@ -5,6 +5,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ReactElement } from "react";
 import api from "../../../services/axios";
 import authReducer from "../../../store/slices/authSlice";
+import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
 import {
   AcademicGovernancePage,
   AcademicStructurePage,
@@ -32,7 +33,7 @@ function renderWithTenant(
   roleCode: string | null = null,
 ) {
   const store = configureStore({
-    reducer: { auth: authReducer },
+    reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer },
     preloadedState: {
       auth: {
         user: tenantId
@@ -53,6 +54,18 @@ function renderWithTenant(
       },
     },
   });
+  store.dispatch(setTenantPermissions({
+    tenantId: tenantId ?? TENANT_ID,
+    userAccountId: "u-1",
+    activeRoleCode: roleCode ?? "UNIVERSITY_ADMIN",
+    activeRoleName: roleCode === "SCHOOL_ADMIN" ? "School Admin" : "University Admin",
+    allowedActions: [
+      "STRUCTURE_MANAGE", "HOD_ASSIGN", "MENTOR_ASSIGN", "CLASS_TEACHER_ASSIGN",
+      "STUDENT_LOGIN_SWITCH", "CALENDAR_LOCAL_SET", "WEEKLY_OFF_SET", "TERM_LOCK",
+      "TERM_UNLOCK", "APPROVAL_DELEGATE", "APPROVAL_BULK", "PROGRAM_RULES_SET",
+      "GRADING_SCHEME_SET", "SUBJECT_ALLOCATE", "PROMOTION_RUN", "PROMOTION_APPROVE",
+    ],
+  }));
   return render(<Provider store={store}>{element}</Provider>);
 }
 
@@ -646,7 +659,7 @@ describe("Institution setup action screens", () => {
           institutionId: "inst-1",
           fromSessionId: "sess-1",
           toSessionId: "sess-2",
-          status: "PENDING_APPROVAL",
+          status: "DRAFT",
           rowVersion: 1,
         },
       })
@@ -656,8 +669,18 @@ describe("Institution setup action screens", () => {
           institutionId: "inst-1",
           fromSessionId: "sess-1",
           toSessionId: "sess-2",
-          status: "APPROVED",
+          status: "PENDING_APPROVAL",
           rowVersion: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          promotionRunId: "prom-1",
+          institutionId: "inst-1",
+          fromSessionId: "sess-1",
+          toSessionId: "sess-2",
+          status: "APPROVED",
+          rowVersion: 3,
         },
       });
 
@@ -694,6 +717,13 @@ describe("Institution setup action screens", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Year-end promotion run created in draft/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Submit for approval/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Submit for approval/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Promotion run submitted for Principal approval/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^Approve$/i })).toBeInTheDocument();
     });
 
