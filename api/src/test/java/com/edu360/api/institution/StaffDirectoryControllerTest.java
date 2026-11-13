@@ -63,7 +63,7 @@ class StaffDirectoryControllerTest {
         var result = controller.create(tenantId, request, authentication);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(result.getHeaders().getETag()).isEqualTo("\\"2\\"");
+        assertThat(result.getHeaders().getETag()).isEqualTo("\"2\"");
         verify(onboarding).onboard(new RbacPrincipal(tenantId, userId), request);
     }
 
