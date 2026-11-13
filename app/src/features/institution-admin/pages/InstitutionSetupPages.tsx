@@ -3,6 +3,7 @@ import axios from "axios";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
+import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
 import { useFormErrors } from "../../../hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui";
@@ -2259,6 +2260,7 @@ export function DelegationsApprovalsPage() {
 
 export function AcademicGovernancePage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
+  const { can: canTenantAction } = useTenantAccess();
   const [activeTab, setActiveTab] = useState<"rules" | "grading" | "allocation" | "promotion">("rules");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -2309,6 +2311,17 @@ export function AcademicGovernancePage() {
   useEffect(() => {
     if (tenantId) fetchCurrentTab();
   }, [fetchCurrentTab, tenantId]);
+
+  const handleSubmitPromotionRun = async (id: string) => {
+    if (!tenantId) return;
+    try {
+      const res = await academicService.submitPromotionRun(tenantId, id);
+      setPromotionRuns((prev) => prev.map((run) => run.promotionRunId === id ? res : run));
+      setFeedback({ tone: "success", message: "Promotion run submitted for Principal approval." });
+    } catch (err: unknown) {
+      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+    }
+  };
 
   const handleApprovePromotion = async (id: string) => {
     if (!tenantId) return;
@@ -2489,8 +2502,13 @@ export function AcademicGovernancePage() {
                       <td><code>{p.toSessionId}</code></td>
                       <td><Badge tone={p.status === "APPROVED" ? "success" : "neutral"}>{formatStatusLabel(p.status)}</Badge></td>
                       <td>
-                        {p.status === "PENDING_APPROVAL" && (
-                          <Button variant="secondary" onClick={() => handleApprovePromotion(p.promotionRunId)}>
+                        {p.status === "DRAFT" && canTenantAction("PROMOTION_RUN") && (
+                          <Button variant="secondary" onClick={() => void handleSubmitPromotionRun(p.promotionRunId)}>
+                            Submit for approval
+                          </Button>
+                        )}
+                        {p.status === "PENDING_APPROVAL" && canTenantAction("PROMOTION_APPROVE") && (
+                          <Button variant="secondary" onClick={() => void handleApprovePromotion(p.promotionRunId)}>
                             Approve
                           </Button>
                         )}
