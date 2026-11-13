@@ -13,6 +13,7 @@ export const setTokens = (accessToken: string, refreshToken: string | null) => {
     // that intentionally contains no refresh token.
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
   }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("edu360:token-refreshed"));
 };
 
 export const getAccessToken = (): string | null => sessionStorage.getItem(ACCESS_TOKEN_KEY);

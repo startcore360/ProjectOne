@@ -15,4 +15,6 @@ public interface StudentGuardianLinkRepository extends JpaRepository<StudentGuar
     Optional<StudentGuardianLink> findByIdTenantIdAndIdStudentGuardianLinkId(UUID tenantId, UUID studentGuardianLinkId);
 
     long countByIdTenantIdAndStudentProfileId(UUID tenantId, UUID studentProfileId);
+
+    long countByIdTenantIdAndStudentProfileIdAndStatusNot(UUID tenantId, UUID studentProfileId, String excludedStatus);
 }

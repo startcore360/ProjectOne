@@ -110,10 +110,10 @@ export function BulkUploadModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="USER_BULK_UPLOAD"
-      title="Bulk upload users"
+      kicker="ACCOUNT IMPORT"
+      title="Bulk upload user accounts"
       titleId="bulk-upload-title"
-      description="Upload a CSV file of staff, faculty or student accounts. Enforces pre-validation and row error tracking [Rule MD-27]."
+      description="Import supported user accounts from CSV with pre-validation and row-level error tracking. This workflow does not create student profiles or enrolments. Student CSV admission is not available yet; use Create student profile for individual admissions."
       size="lg"
     >
       <div style={{ padding: "0.5rem 0" }}>
@@ -133,7 +133,7 @@ export function BulkUploadModal({
           <div>
             <strong>1. Need a template?</strong>
             <div style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary, #64748b)" }}>
-              Download standard CSV with required headers and sample data [MD-26].
+              Download a standard CSV template with the required headers and sample data.
             </div>
           </div>
           <Button
@@ -216,7 +216,7 @@ export function BulkUploadModal({
                 Cancel
               </Button>
               <Button type="submit" variant="primary" busy={validating} disabled={!csvContent.trim()}>
-                Pre-validate CSV (Rule MD-27)
+                Pre-validate CSV
               </Button>
             </div>
           )}
@@ -226,17 +226,10 @@ export function BulkUploadModal({
         {job && (
           <div style={{ marginTop: "1.25rem", borderTop: "1px solid var(--color-border, #e2e8f0)", paddingTop: "1rem" }}>
             <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>
-              Pre-validation Results [Rule MD-27]
+              Pre-validation results
             </h3>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "0.75rem",
-                marginBottom: "1rem",
-              }}
-            >
+            <div className="platform-import-summary">
               <div style={{ background: "var(--color-bg-subtle, #f8fafc)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary, #64748b)" }}>Total Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.totalRows}</div>
@@ -263,7 +256,7 @@ export function BulkUploadModal({
             {rowErrors.length > 0 && (
               <div style={{ marginBottom: "1rem" }}>
                 <h4 style={{ fontSize: "0.875rem", color: "#991b1b", margin: "0 0 0.5rem" }}>
-                  Rejected rows kept to fix and add later [Rule MD-27]:
+                  Rows with errors can be corrected and imported later:
                 </h4>
                 <DataTable
                   headers={["Row #", "Field", "Error Code", "Message"]}
@@ -292,7 +285,7 @@ export function BulkUploadModal({
                 marginBottom: "1rem",
               }}
             >
-              <strong>Statutory Notice (DPDP Act 2023 / UIDAI [R2-34]):</strong> Unmasked 12-digit Aadhaar numbers are rejected. Only masked 4-digit national IDs are accepted and persisted.
+              <strong>Privacy notice:</strong> Unmasked 12-digit Aadhaar numbers are rejected. Only masked 4-digit national IDs are accepted and persisted.
             </div>
 
             {/* Actions */}
@@ -307,7 +300,7 @@ export function BulkUploadModal({
                   disabled={job.errorRows > 0 || starting}
                   busy={starting}
                   onClick={() => handleStartImport("CLEAN_ONLY")}
-                  title={job.errorRows > 0 ? "Disabled: errors must be fixed first [MD-27]" : "Import only clean file"}
+                  title={job.errorRows > 0 ? "Fix the errors before importing a clean file" : "Import only clean file"}
                 >
                   Import clean only {job.errorRows > 0 ? "(Disabled: errors present)" : ""}
                 </Button>

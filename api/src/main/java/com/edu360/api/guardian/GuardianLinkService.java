@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.approval.ApprovalInboxService;
@@ -29,6 +30,11 @@ import com.edu360.api.guardian.dto.GuardianChangeDecisionRequest;
 import com.edu360.api.guardian.dto.GuardianChangeRequestDto;
 import com.edu360.api.guardian.dto.GuardianLinkResponse;
 import com.edu360.api.guardian.dto.LinkGuardianRequest;
+import com.edu360.api.guardian.dto.GuardianChildResponse;
+import com.edu360.api.identity.UserAccount;
+import com.edu360.api.identity.UserAccountRepository;
+import com.edu360.api.identity.UserAccountStatus;
+import com.edu360.api.identity.UserType;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
 import com.edu360.api.institution.InstitutionRepository;
@@ -67,6 +73,10 @@ public class GuardianLinkService {
     private final InstitutionRepository institutionRepository;
     private final ApprovalInboxService approvalInboxService;
 
+    @Autowired(required = false)
+    private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
+    private final UserAccountRepository userAccountRepository;
+
     public GuardianLinkService(
             StudentGuardianLinkRepository linkRepository,
             GuardianProfileRepository profileRepository,
@@ -76,7 +86,8 @@ public class GuardianLinkService {
             ApprovalStepRepository approvalStepRepository,
             StudentProfileRepository studentProfileRepository,
             InstitutionRepository institutionRepository,
-            ApprovalInboxService approvalInboxService) {
+            ApprovalInboxService approvalInboxService,
+            UserAccountRepository userAccountRepository) {
         this.linkRepository = linkRepository;
         this.profileRepository = profileRepository;
         this.permissionEvaluatorService = permissionEvaluatorService;
@@ -86,6 +97,7 @@ public class GuardianLinkService {
         this.studentProfileRepository = Objects.requireNonNull(studentProfileRepository);
         this.institutionRepository = Objects.requireNonNull(institutionRepository);
         this.approvalInboxService = Objects.requireNonNull(approvalInboxService);
+        this.userAccountRepository = Objects.requireNonNull(userAccountRepository);
     }
 
     @Transactional(readOnly = true)
@@ -99,6 +111,19 @@ public class GuardianLinkService {
         }).toList();
     }
 
+    /** Return only children connected to the authenticated guardian by an ACTIVE link. */
+    @Transactional(readOnly = true)
+    public List<GuardianChildResponse> listActiveChildren(UUID tenantId, TenantPrincipal principal) {
+        if (principal.userType() != UserType.GUARDIAN) {
+            throw new UnauthorizedException("Guardian account required to list linked children.");
+        }
+        return studentProfileRepository.findActiveChildrenByGuardianUser(tenantId, principal.userAccountId())
+                .stream()
+                .map(s -> new GuardianChildResponse(s.getStudentProfileId(), s.getInstitutionId(),
+                        s.getStudentCode(), s.getStatus()))
+                .toList();
+    }
+
     @Transactional
     public GuardianLinkResponse linkGuardian(
             UUID tenantId,
@@ -110,7 +135,7 @@ public class GuardianLinkService {
         authorizeAtStudent(tenantId, principal, "GUARDIAN_LINK", student);
 
         // Rule WF-21: Up to 3 guardians per student
-        long currentCount = linkRepository.countByIdTenantIdAndStudentProfileId(tenantId, studentProfileId);
+        long currentCount = linkRepository.countByIdTenantIdAndStudentProfileIdAndStatusNot(tenantId, studentProfileId, "BLOCKED");
         if (currentCount >= 3) {
             throw new BusinessRuleViolationException("MAX_GUARDIANS_EXCEEDED",
                     "A student can have at most 3 guardians (Rule WF-21).");
@@ -118,7 +143,8 @@ public class GuardianLinkService {
 
         // Rule WF-24: Exactly one primary guardian
         List<StudentGuardianLink> existingLinks = linkRepository.findByIdTenantIdAndStudentProfileId(tenantId, studentProfileId);
-        boolean shouldBePrimary = request.isPrimary() || existingLinks.isEmpty();
+        boolean hasUsableLink = existingLinks.stream().anyMatch(l -> !"BLOCKED".equals(l.getStatus()));
+        boolean shouldBePrimary = request.isPrimary() || !hasUsableLink;
 
         if (shouldBePrimary) {
             for (StudentGuardianLink existing : existingLinks) {
@@ -131,13 +157,21 @@ public class GuardianLinkService {
             }
         }
 
+        // Parent login is provisioned by the admission/user-creation flow. Never invent a
+        // user_account_id: guardian_profile has a composite FK to app.user_account.
+        UserAccount guardianAccount = userAccountRepository
+                .findByIdTenantIdAndMobileAndUserType(tenantId, request.mobile().trim(), UserType.GUARDIAN)
+                .filter(a -> a.getStatus() != UserAccountStatus.DEACTIVATED)
+                .orElseThrow(() -> new BusinessRuleViolationException("GUARDIAN_ACCOUNT_NOT_FOUND",
+                        "Create the guardian login for this mobile number before linking the student."));
+
         // Matched by mobile to avoid duplicates (Rule WF-22)
-        GuardianProfile profile = profileRepository.findByIdTenantIdAndMobile(tenantId, request.mobile())
+        GuardianProfile profile = profileRepository.findByIdTenantIdAndMobile(tenantId, request.mobile().trim())
                 .orElseGet(() -> {
                     UUID newProfileId = UUID.randomUUID();
                     GuardianProfile newProfile = GuardianProfile.builder()
                             .id(new GuardianProfileId(tenantId, newProfileId))
-                            .userAccountId(UUID.randomUUID())
+                            .userAccountId(guardianAccount.getId().getUserAccountId())
                             .fullName(request.fullName())
                             .mobile(request.mobile())
                             .email(request.email())
@@ -244,6 +278,9 @@ public class GuardianLinkService {
                 .updatedAt(now).updatedBy(principal.userAccountId())
                 .rowVersion(1)
                 .build());
+        if (approvalCountPublisher != null) {
+            approvalCountPublisher.publishForRole(tenantId, institutionId, approverRole);
+        }
 
         GuardianProfile profile = profileRepository.findByIdTenantIdAndIdGuardianProfileId(
                 tenantId, link.getGuardianProfileId()).orElse(null);

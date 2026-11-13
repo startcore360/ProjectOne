@@ -72,6 +72,29 @@ export type CreateUserPayload = {
   departmentId?: string;
 };
 
+export type StudentCreatePayload = {
+  institutionId: string;
+  fullName: string;
+  dateOfBirth?: string;
+  admissionDate?: string;
+  sectionId: string;
+  academicSessionId: string;
+  createLogin?: boolean;
+  rollNumber?: string;
+};
+
+export type StudentProfileResponse = {
+  id: string;
+  userAccountId: string | null;
+  institutionId: string;
+  studentCode: string;
+  fullName: string;
+  dateOfBirth?: string | null;
+  admissionDate?: string | null;
+  status: string;
+  temporaryPassword?: string | null;
+};
+
 export type CreateUserResponse = {
   userAccountId: string;
   displayName: string;
@@ -187,6 +210,10 @@ export const userManagementService = {
   // POST /api/tenants/{tenantId}/users/{userId}/unlock (USER_PASSWORD_RESET_UNLOCK)
   unlockUser: (tenantId: string, userId: string, institutionId: string) =>
     api.post<ActionResponse>(`/tenants/${tenantId}/users/${userId}/unlock`, { institutionId }),
+
+  // POST /api/tenants/{tenantId}/students (USER_CREATE) - creates a student profile and active enrolment.
+  createStudentProfile: (tenantId: string, payload: StudentCreatePayload) =>
+    api.post<StudentProfileResponse>(`/tenants/${tenantId}/students`, payload),
 
   // POST /api/tenants/{tenantId}/users (USER_CREATE) - real user creation
   // with Keycloak provisioning, user account creation, DPDP Act 2023 compliance, and temporary credentials.

@@ -3,6 +3,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
+import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
 import { institutionService, type InstitutionItem } from "../api/institutionService";
 import { leaveApproverService } from "../api/leaveApproverService";
 import { roleAssignmentService, type RoleDefinitionItem } from "../api/roleAssignmentService";
@@ -29,6 +30,8 @@ vi.mock("../api/institutionService", () => ({
   institutionService: {
     listInstitutions: vi.fn(),
     createDraftInstitution: vi.fn(),
+    getIdFormats: vi.fn(),
+    setIdFormats: vi.fn(),
     activateInstitution: vi.fn(),
     requestBlock: vi.fn(),
     decideBlock: vi.fn(),
@@ -88,7 +91,7 @@ const mockInstitutions: InstitutionItem[] = [
 ];
 
 function renderWithStore(ui: React.ReactElement, tenantId: string = "tenant-1") {
-  const store = configureStore({ reducer: { auth: authReducer } });
+  const store = configureStore({ reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer } });
   store.dispatch(
     setUser({
       id: "u1",
@@ -102,6 +105,13 @@ function renderWithStore(ui: React.ReactElement, tenantId: string = "tenant-1") 
       mustChangePassword: false,
     })
   );
+  store.dispatch(setTenantPermissions({
+    tenantId,
+    userAccountId: "u1",
+    activeRoleCode: "UNIVERSITY_ADMIN",
+    activeRoleName: "University Admin",
+    allowedActions: ["ROLLDOWN_VIEW", "ROLLDOWN_OVERRIDE_SET"],
+  }));
   return render(<Provider store={store}>{ui}</Provider>);
 }
 
@@ -162,6 +172,9 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     fireEvent.change(screen.getByLabelText(/Institution Name \*/i), {
       target: { value: "Northbridge Institute of Technology" },
     });
+    fireEvent.change(screen.getByLabelText(/Student ID format \*/i), {
+      target: { value: "{INST}-{YYYY}-{SEQ:4}" },
+    });
     fireEvent.change(screen.getByLabelText(/City/i), { target: { value: "Bengaluru" } });
 
     // Submit
@@ -172,8 +185,42 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
         institutionCode: "NBC-03",
         institutionName: "Northbridge Institute of Technology",
         institutionType: "COLLEGE",
+        studentIdFormat: "{INST}-{YYYY}-{SEQ:4}",
+        staffIdFormat: undefined,
       }));
       expect(screen.getAllByText(/Northbridge Institute of Technology/i).length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+
+  it("loads and updates institution ID formats until their generated-code locks apply", async () => {
+    vi.mocked(institutionService.getIdFormats).mockResolvedValue({
+      studentIdFormat: "{INST}-{YYYY}-{SEQ:4}",
+      staffIdFormat: null,
+      studentFormatLocked: false,
+      staffFormatLocked: false,
+    });
+    vi.mocked(institutionService.setIdFormats).mockResolvedValue({
+      studentIdFormat: "{INST}-{YY}-{SEQ:5}",
+      staffIdFormat: "{INST}-ST-{YY}-{SEQ:4}",
+      studentFormatLocked: false,
+      staffFormatLocked: false,
+    });
+
+    renderWithStore(<InstitutionsPage />);
+    await waitFor(() => expect(screen.getByText("Northbridge College of Science")).toBeInTheDocument());
+    fireEvent.click(screen.getAllByRole("button", { name: "ID formats" })[0]);
+
+    expect(await screen.findByDisplayValue("{INST}-{YYYY}-{SEQ:4}")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Student ID format/i), { target: { value: "{INST}-{YY}-{SEQ:5}" } });
+    fireEvent.change(screen.getByLabelText(/Staff ID format/i), { target: { value: "{INST}-ST-{YY}-{SEQ:4}" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
+
+    await waitFor(() => {
+      expect(institutionService.setIdFormats).toHaveBeenCalledWith("tenant-1", "inst-1", {
+        studentIdFormat: "{INST}-{YY}-{SEQ:5}",
+        staffIdFormat: "{INST}-ST-{YY}-{SEQ:4}",
+      });
     });
   });
 
@@ -224,7 +271,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Principal's-leave approver not set for 'Northbridge School of Commerce' \[Rule C7\]/i)
+        screen.getByText(/Principal's leave approver is not configured for 'Northbridge School of Commerce'/i)
       ).toBeInTheDocument();
     });
   });
@@ -250,7 +297,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
       screen.getByRole("heading", { name: /Request to block Northbridge College of Science/i })
     ).toBeInTheDocument();
 
-    const reasonInput = screen.getByLabelText(/Reason for blocking \* \[Rule RL-01\]/i);
+    const reasonInput = screen.getByLabelText(/Reason for blocking \*/i);
     fireEvent.change(reasonInput, {
       target: { value: "Repeated regulatory non-compliance during state board inspection." },
     });
@@ -359,12 +406,12 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     expect(screen.getByRole("button", { name: /Create user/i })).toBeDisabled();
   });
 
-  it("labels the role list as representative and explains Rule MX-04 non-sensitive delegation", () => {
+  it("shows an honest empty state when the tenant role catalogue is empty", async () => {
+    vi.mocked(roleAssignmentService.listRoles).mockResolvedValue([]);
     renderWithStore(<RolesPermissionsPage />);
-    expect(screen.getByText(/not the complete 71-role catalogue/i)).toBeInTheDocument();
-    expect(screen.getByText("University Admin")).toBeInTheDocument();
-    expect(screen.getByText(/Role assignment & delegation policy \(Rule MX-04\)/i)).toBeInTheDocument();
-    expect(screen.getByText("Sensitivity [MX-04]")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("No roles were returned by the tenant role catalogue.")).toBeInTheDocument());
+    expect(screen.queryByText("University Admin")).not.toBeInTheDocument();
+    expect(screen.getByText(/Role assignment and delegation policy/i)).toBeInTheDocument();
   });
 
   it("displays Go-Live readiness warning banner when missing approver blockers exist (Rules C6 & C7)", async () => {
@@ -379,9 +426,9 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     renderWithStore(<InstitutionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Go-Live Readiness Warning \[Rule C7 \/ C6\]:/i)).toBeInTheDocument();
-      expect(screen.getByText(/Vice-Chancellor leave approver not set/i)).toBeInTheDocument();
-      expect(screen.getByText(/Principal leave approver not set for institution ID: inst-2/i)).toBeInTheDocument();
+      expect(screen.getByText(/Go-live readiness warning:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Vice-Chancellor leave approver has not been configured for this university/i)).toBeInTheDocument();
+      expect(screen.getByText(/Principal leave approver has not been configured for institution inst-2/i)).toBeInTheDocument();
     });
   });
 
@@ -431,7 +478,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
         }
       );
       expect(
-        screen.getByText(/Leave approver configured successfully for 'Northbridge College of Science' \[Rule C7\]/i)
+        screen.getByText(/Leave approver configured successfully for 'Northbridge College of Science'/i)
       ).toBeInTheDocument();
     });
   });
@@ -476,14 +523,14 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
         }
       );
       expect(
-        screen.getByText(/Vice-Chancellor leave approver configured successfully \[Rule C6\]/i)
+        screen.getByText(/Vice-Chancellor leave approver configured successfully/i)
       ).toBeInTheDocument();
     });
   });
 
   it("explains the approved V4.0 role roll-down rules", () => {
     renderWithStore(<MissingRolesPage />);
-    expect(screen.getByText("Decision V4-PD-01")).toBeInTheDocument();
+    expect(screen.getByText("How role coverage works")).toBeInTheDocument();
     expect(screen.getByText("Next-level leader")).toBeInTheDocument();
     expect(screen.getByText("Next-level administrator")).toBeInTheDocument();
   });
@@ -582,7 +629,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     await waitFor(() => {
       expect(roleAssignmentService.retireCustomRole).toHaveBeenCalledWith("tenant-1", "role-1");
       expect(
-        screen.getByText(/retired\. Existing assignments remain historical/i)
+        screen.getByText(/retired\. Existing assignments are retained for historical reference/i)
       ).toBeInTheDocument();
     });
   });
@@ -605,8 +652,8 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     renderWithStore(<MissingRolesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("VICE_CHANCELLOR")).toBeInTheDocument();
-      expect(screen.getByText(/REGISTRAR/i)).toBeInTheDocument();
+      expect(screen.getByText("Vice Chancellor")).toBeInTheDocument();
+      expect(screen.getByText("Registrar")).toBeInTheDocument();
       expect(screen.getByText("Default order")).toBeInTheDocument();
     });
   });
@@ -644,17 +691,17 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     renderWithStore(<MissingRolesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("VICE_CHANCELLOR")).toBeInTheDocument();
+      expect(screen.getByText("Vice Chancellor")).toBeInTheDocument();
     });
 
-    const setBtn = screen.getByRole("button", { name: /\+ Set Rolldown Override/i });
+    const setBtn = screen.getByRole("button", { name: /Set role coverage override/i });
     fireEvent.click(setBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /Set Statutory Rolldown Override/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Set role coverage override/i })).toBeInTheDocument();
     });
 
-    const reasonInput = screen.getByLabelText(/Statutory Justification/i);
+    const reasonInput = screen.getByLabelText(/Reason for this change/i);
     fireEvent.change(reasonInput, { target: { value: "Statutory delegation during executive travel" } });
 
     const submitBtn = screen.getByRole("button", { name: /^Save Override$/i });
@@ -670,7 +717,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
           reason: "Statutory delegation during executive travel",
         })
       );
-      expect(screen.getByText(/Rolldown override established for VICE_CHANCELLOR/i)).toBeInTheDocument();
+      expect(screen.getByText(/Role coverage override saved for Vice Chancellor/i)).toBeInTheDocument();
     });
   });
 });

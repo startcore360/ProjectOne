@@ -7,6 +7,7 @@ export interface NotificationItem {
   body: string | null;
   priorityClass: string;
   createdAt: string;
+  readAt: string | null;
 }
 
 export interface LeaveBalanceItem {
@@ -45,6 +46,12 @@ export const selfServiceApi = {
   getNotifications: async (tenantId: string): Promise<NotificationItem[]> => {
     const res = await api.get<NotificationItem[]>(`/tenants/${tenantId}/me/notifications`);
     return Array.isArray(res.data) ? res.data : [];
+  },
+  markNotificationRead: async (tenantId: string, notificationId: string): Promise<void> => {
+    await api.post(`/tenants/${tenantId}/me/notifications/${notificationId}/read`);
+  },
+  markAllNotificationsRead: async (tenantId: string): Promise<void> => {
+    await api.post(`/tenants/${tenantId}/me/notifications/read-all`);
   },
   getLeaveBalances: async (tenantId: string): Promise<LeaveBalanceItem[]> => {
     const res = await api.get<LeaveBalanceItem[]>(`/tenants/${tenantId}/me/leave-balances`);

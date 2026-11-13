@@ -37,6 +37,9 @@ public class PromotionService {
     private final ApprovalStepRepository approvalStepRepository;
     private final InstitutionRepository institutionRepository;
 
+    @Autowired(required = false)
+    private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
+
     @Autowired
     public PromotionService(
             PromotionRunRepository repository,
@@ -188,6 +191,9 @@ public class PromotionService {
                     .rowVersion(1)
                     .build();
             approvalStepRepository.save(step);
+            if (approvalCountPublisher != null) {
+                approvalCountPublisher.publishForRole(tenantId, run.getInstitutionId(), approverRole);
+            }
         }
 
         auditLogService.record(

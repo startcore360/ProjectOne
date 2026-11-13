@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.approval.ApprovalInboxService;
@@ -66,6 +67,12 @@ public class InstitutionService {
 
 
     private final ApprovalInboxService approvalInboxService;
+
+    @Autowired(required = false)
+    private InstitutionIdFormatService institutionIdFormatService;
+
+    @Autowired(required = false)
+    private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
 
     public InstitutionService(
             InstitutionRepository institutionRepository,
@@ -152,6 +159,11 @@ public class InstitutionService {
                 .build();
 
         Institution saved = institutionRepository.save(institution);
+        if (institutionIdFormatService == null) {
+            throw new IllegalStateException("Institution ID format service is required for institution creation.");
+        }
+        institutionIdFormatService.set(principal, institutionId,
+                new InstitutionIdFormatsRequest(request.studentIdFormat(), request.staffIdFormat()));
         log.info("Created draft institution '{}' ({}) in tenant {}", name, institutionId, tenantId);
 
         auditLogService.record(
@@ -380,6 +392,9 @@ public class InstitutionService {
                 .updatedAt(now).updatedBy(principal.userAccountId())
                 .rowVersion(1)
                 .build());
+        if (approvalCountPublisher != null) {
+            approvalCountPublisher.publishForRole(tenantId, institutionId, "VICE_CHANCELLOR");
+        }
     }
 
     private void enforcePlanLimits(UUID tenantId) {

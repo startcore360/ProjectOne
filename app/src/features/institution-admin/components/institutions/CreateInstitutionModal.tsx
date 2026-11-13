@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Button, CheckboxField, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
-import { getApiErrorMessage } from "../../../../services/apiHelper";
+import { useFormErrors } from "../../../../hooks";
 import {
   institutionService,
   type InstitutionItem,
@@ -29,8 +29,18 @@ export function CreateInstitutionModal({
   const [stateName, setStateName] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [principalEmail, setPrincipalEmail] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+  const [studentIdFormat, setStudentIdFormat] = useState("");
+  const [staffIdFormat, setStaffIdFormat] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const {
+    fieldErrors,
+    formError,
+    handleApiError,
+    clearFieldError,
+    clearAll,
+    setFormError,
+  } = useFormErrors();
 
   const resetForm = () => {
     setInstType("COLLEGE");
@@ -42,17 +52,20 @@ export function CreateInstitutionModal({
     setStateName("");
     setPostalCode("");
     setPrincipalEmail("");
-    setFormError(null);
+    setStudentIdFormat("");
+    setStaffIdFormat("");
+    clearAll();
   };
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
-    if (!instCode.trim() || !instName.trim()) {
-      setFormError("Institution Code and Name are required.");
+    // Client-side required check
+    if (!instCode.trim() || !instName.trim() || !studentIdFormat.trim()) {
+      setFormError("Institution Code, Name and Student ID format are required.");
       return;
     }
     setSubmitting(true);
-    setFormError(null);
+    clearAll();
     try {
       const res = await institutionService.createDraftInstitution(tenantId, {
         institutionCode: instCode.trim(),
@@ -64,12 +77,14 @@ export function CreateInstitutionModal({
         stateName: stateName.trim() || undefined,
         postalCode: postalCode.trim() || undefined,
         principalInviteEmail: principalEmail.trim() || undefined,
+        studentIdFormat: studentIdFormat.trim(),
+        staffIdFormat: staffIdFormat.trim() || undefined,
       });
       resetForm();
       onCreated(res);
       onClose();
     } catch (err: unknown) {
-      setFormError(getApiErrorMessage(err));
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }
@@ -105,6 +120,7 @@ export function CreateInstitutionModal({
               { value: "COLLEGE", label: "College" },
               { value: "SCHOOL", label: "School" },
             ]}
+            error={fieldErrors.institutionType}
           />
 
           <TextField
@@ -112,8 +128,9 @@ export function CreateInstitutionModal({
             label="Institution Code *"
             required
             value={instCode}
-            onChange={(e) => setInstCode(e.target.value)}
+            onChange={(e) => { setInstCode(e.target.value); clearFieldError("institutionCode"); }}
             placeholder="e.g. NBC-01"
+            error={fieldErrors.institutionCode}
           />
         </div>
 
@@ -123,18 +140,52 @@ export function CreateInstitutionModal({
             label="Institution Name *"
             required
             value={instName}
-            onChange={(e) => setInstName(e.target.value)}
+            onChange={(e) => { setInstName(e.target.value); clearFieldError("institutionName"); }}
             placeholder="e.g. Northbridge College of Engineering"
+            error={fieldErrors.institutionName}
           />
         </div>
 
+
+        <div style={{ marginBottom: "var(--space-3)" }}>
+          <TextField
+            id="inst-student-id-format"
+            label="Student ID format *"
+            required
+            value={studentIdFormat}
+            onChange={(event) => { setStudentIdFormat(event.target.value.toUpperCase()); clearFieldError("studentIdFormat"); }}
+            placeholder="{INST}-{YYYY}-{SEQ:4}"
+            hint="Use {YYYY}, {YY}, {INST}, and exactly one {SEQ:n} token (n = 3–10). Literals: A–Z, 0–9, _ and -."
+            error={fieldErrors.studentIdFormat}
+          />
+          <p className="platform-modal-note" aria-live="polite">
+            Preview only: {studentIdFormat ? studentIdFormat.replaceAll("{INST}", instCode.trim() || "INST").replaceAll("{YYYY}", "2026").replaceAll("{YY}", "26").replace(/\{SEQ:(\d+)\}/g, (_match, width: string) => "1".padStart(Number(width), "0")) : "Enter the format to preview the generated student code."}
+          </p>
+        </div>
+        <div style={{ marginBottom: "var(--space-3)" }}>
+          <TextField
+            id="inst-staff-id-format"
+            label="Staff ID format (optional)"
+            value={staffIdFormat}
+            onChange={(event) => { setStaffIdFormat(event.target.value.toUpperCase()); clearFieldError("staffIdFormat"); }}
+            placeholder="{INST}-ST-{YY}-{SEQ:4}"
+            hint="If omitted, HR must supply a unique staff code when creating each staff profile."
+            error={fieldErrors.staffIdFormat}
+          />
+          {staffIdFormat && (
+            <p className="platform-modal-note" aria-live="polite">
+              Preview only: {staffIdFormat.replaceAll("{INST}", instCode.trim() || "INST").replaceAll("{YYYY}", "2026").replaceAll("{YY}", "26").replace(/\{SEQ:(\d+)\}/g, (_match, width: string) => "1".padStart(Number(width), "0"))}
+            </p>
+          )}
+        </div>
         <div style={{ marginBottom: "var(--space-3)" }}>
           <TextField
             id="inst-address"
             label="Primary Address"
             value={addressLine}
-            onChange={(e) => setAddressLine(e.target.value)}
+            onChange={(e) => { setAddressLine(e.target.value); clearFieldError("addressLine"); }}
             placeholder="Campus address"
+            error={fieldErrors.addressLine}
           />
         </div>
 
@@ -150,22 +201,25 @@ export function CreateInstitutionModal({
             id="inst-city"
             label="City"
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={(e) => { setCity(e.target.value); clearFieldError("city"); }}
             placeholder="Bengaluru"
+            error={fieldErrors.city}
           />
           <TextField
             id="inst-state"
             label="State"
             value={stateName}
-            onChange={(e) => setStateName(e.target.value)}
+            onChange={(e) => { setStateName(e.target.value); clearFieldError("stateName"); }}
             placeholder="Karnataka"
+            error={fieldErrors.stateName}
           />
           <TextField
             id="inst-postal"
             label="Postal Code"
             value={postalCode}
-            onChange={(e) => setPostalCode(e.target.value)}
+            onChange={(e) => { setPostalCode(e.target.value); clearFieldError("postalCode"); }}
             placeholder="560001"
+            error={fieldErrors.postalCode}
           />
         </div>
 
@@ -175,8 +229,9 @@ export function CreateInstitutionModal({
             label="Principal / Head Email"
             type="email"
             value={principalEmail}
-            onChange={(e) => setPrincipalEmail(e.target.value)}
+            onChange={(e) => { setPrincipalEmail(e.target.value); clearFieldError("principalInviteEmail"); }}
             placeholder="principal@northbridge.edu.in"
+            error={fieldErrors.principalInviteEmail}
           />
         </div>
 
@@ -201,7 +256,7 @@ export function CreateInstitutionModal({
             Cancel
           </Button>
           <Button type="submit" busy={submitting}>
-            Submit & create draft
+            Submit &amp; create draft
           </Button>
         </div>
       </form>

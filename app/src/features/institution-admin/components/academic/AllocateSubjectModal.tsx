@@ -40,7 +40,7 @@ export function AllocateSubjectModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="SUBJECT_ALLOCATE • Action #36"
+      kicker="ACADEMIC SETUP"
       title="Allocate Subject to Teacher"
       titleId="alloc-modal-title"
       size="sm"

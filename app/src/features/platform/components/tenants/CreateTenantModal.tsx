@@ -98,15 +98,16 @@ export function CreateTenantModal({
                     </option>
                   ))
                 ) : (
-                  <>
-                    <option value="11111111-1111-1111-1111-111111111101">Standard School Plan (₹499)</option>
-                    <option value="11111111-1111-1111-1111-111111111102">Premium College Plan (₹999)</option>
-                    <option value="11111111-1111-1111-1111-111111111103">Enterprise University Plan (₹1999)</option>
-                  </>
+                  <option value="">No subscription plans available</option>
                 )}
               </select>
             </label>
           </div>
+          {plans.length === 0 && (
+            <Notice tone="warning">
+              A subscription plan must exist before a tenant can be created. Configure a plan first, then retry.
+            </Notice>
+          )}
           <div className="platform-form-grid">
             <label className="platform-form-field">
               Database isolation
@@ -167,7 +168,7 @@ export function CreateTenantModal({
             <Button variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" busy={creating}>
+            <Button type="submit" busy={creating} disabled={creating || plans.length === 0}>
               Submit & create tenant
             </Button>
           </footer>

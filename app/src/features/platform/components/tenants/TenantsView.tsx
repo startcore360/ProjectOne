@@ -32,7 +32,9 @@ export function TenantsView() {
   const canManageLifecycle = can("TENANT_SUSPEND_ARCHIVE");
   const canEditSettings = can("TENANT_SETTINGS");
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [plansError, setPlansError] = useState("");
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
@@ -84,50 +86,50 @@ export function TenantsView() {
     firstAdminNationalIdLast4: "",
   });
 
-  const loadTenants = () => {
-    const req = platformTenantService.getTenants();
-    if (req && typeof req.then === "function") {
-      setLoading(true);
-      req
-        .then((res) => {
-          if (res?.data?.items) {
-            const mapped: Tenant[] = res.data.items.map((t) => ({
-              id: t.tenantId,
-              name: t.tenantName,
-              type:
-                t.tenantType === "STANDALONE_SCHOOL"
-                  ? "School"
-                  : t.tenantType === "STANDALONE_COLLEGE"
-                  ? "College"
-                  : "University",
-              plan: t.planName,
-              status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : "Suspended",
-              gates: t.state === "TRIAL" ? 1 : 0,
-              updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
-            }));
-            setTenants(mapped);
-          } else {
-            setTenants([]);
-          }
-        })
-        .catch(() => setTenants([]))
-        .finally(() => setLoading(false));
+  const loadTenants = async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const res = await platformTenantService.getTenants();
+      const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+      setTenants(items.map((t) => ({
+        id: t.tenantId,
+        name: t.tenantName,
+        type:
+          t.tenantType === "STANDALONE_SCHOOL"
+            ? "School"
+            : t.tenantType === "STANDALONE_COLLEGE"
+              ? "College"
+              : "University",
+        plan: t.planName,
+        status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : "Suspended",
+        gates: t.state === "TRIAL" ? 1 : 0,
+        updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
+      })));
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Unable to load tenants. Please retry.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPlans = async () => {
+    setPlansError("");
+    try {
+      const res = await platformTenantService.getPlans();
+      const availablePlans = Array.isArray(res?.data) ? res.data : [];
+      setPlans(availablePlans);
+      if (availablePlans.length > 0) {
+        setDraft((prev) => ({ ...prev, planId: prev.planId || availablePlans[0].planId }));
+      }
+    } catch (err: unknown) {
+      setPlansError(err instanceof Error ? err.message : "Unable to load subscription plans. Please retry.");
     }
   };
 
   useEffect(() => {
-    loadTenants();
-    const planReq = platformTenantService.getPlans();
-    if (planReq && typeof planReq.then === "function") {
-      planReq
-        .then((res) => {
-          if (res?.data && res.data.length > 0) {
-            setPlans(res.data);
-            setDraft((prev) => ({ ...prev, planId: prev.planId || res.data[0].planId }));
-          }
-        })
-        .catch(() => {});
-    }
+    void loadTenants();
+    void loadPlans();
   }, []);
 
   const handleNameChange = (name: string) => {
@@ -154,15 +156,20 @@ export function TenantsView() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setCreating(true);
     setCreateError("");
     setMessage("");
+    const selectedPlanId = draft.planId || plans[0]?.planId;
+    if (!selectedPlanId) {
+      setCreateError("No subscription plan is available. Create or enable a plan before creating a tenant.");
+      return;
+    }
+    setCreating(true);
 
     try {
       const response = await platformTenantService.createTenant({
         tenantName: draft.tenantName,
         tenantType: draft.tenantType,
-        planId: draft.planId || (plans[0]?.planId ?? "11111111-1111-1111-1111-111111111101"),
+        planId: selectedPlanId,
         subdomain: draft.subdomain,
         isolationMode: draft.isolationMode,
         firstAdminName: draft.firstAdminName,
@@ -375,6 +382,18 @@ export function TenantsView() {
       {createdCredentials && (
         <TenantCredentialsNotice credentials={createdCredentials} onDismiss={() => setCreatedCredentials(null)} />
       )}
+      {loadError && (
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{loadError}</p>
+          <Button variant="secondary" onClick={() => void loadTenants()}>Retry tenant list</Button>
+        </div>
+      )}
+      {plansError && (
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{plansError}</p>
+          <Button variant="secondary" onClick={() => void loadPlans()}>Retry plans</Button>
+        </div>
+      )}
       {message && (
         <div className="platform-inline-notice" role="status">
           {message}
@@ -415,6 +434,8 @@ export function TenantsView() {
           <div className="platform-empty-inline">
             <Spinner label="Loading tenants" />
           </div>
+        ) : loadError && tenants.length === 0 ? (
+          <p className="platform-empty-inline">Tenant data is unavailable until the request succeeds.</p>
         ) : (
           <DataTable
             headers={["Institution", "Type", "Plan", "Status", "Open gates", "Last updated", "Action"]}

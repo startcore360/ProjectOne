@@ -28,7 +28,7 @@ import com.edu360.api.tenant.TenantContext;
  *
  * Scopes: Reads user's active role assignment(s) and computes real institution scope:
  * - TENANT scope: institutionScope = "ALL" (per D4 §2.2 reserved for tenant-wide roles)
- * - INSTITUTION / DEPARTMENT scope: institutionScope = "LIST", institutionIds = {institutionId}
+ * - INSTITUTION / DEPARTMENT scope: institutionScope = "LIST", institutionIds = the selected assignment's institution
  * - No active assignment: institutionScope = "NONE", institutionIds = {}
  */
 @Component
@@ -121,9 +121,10 @@ public class TenantUserLookup {
                         institutionScope = "ALL";
                     } else {
                         institutionScope = "LIST";
-                        if (chosen.getInstitutionId() != null) {
-                            institutionIds = Set.of(chosen.getInstitutionId());
-                        }
+                        // Keep the selected active role, but include its active institution assignments.
+                        institutionIds = chosen.getInstitutionId() == null
+                                ? Set.of()
+                                : Set.of(chosen.getInstitutionId());
                     }
 
                     if (roleDefinitionRepository != null) {

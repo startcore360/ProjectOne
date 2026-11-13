@@ -1,6 +1,6 @@
 -- AC-S5 (V3.3): reference counts
-SELECT 'actions', count(*), 278 FROM ref.action_catalog
-UNION ALL SELECT 'phase1 actions', count(*), 234 FROM ref.action_catalog WHERE phase = 1
+SELECT 'actions', count(*), 279 FROM ref.action_catalog
+UNION ALL SELECT 'phase1 actions', count(*), 235 FROM ref.action_catalog WHERE phase = 1
 UNION ALL SELECT 'phase2 actions', count(*), 32 FROM ref.action_catalog WHERE phase = 2
 UNION ALL SELECT 'phase3 actions', count(*), 12 FROM ref.action_catalog WHERE phase = 3
 UNION ALL SELECT 'roles', count(*), 71 FROM ref.standard_role

@@ -81,6 +81,7 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
         body: "Your symposium leave was approved.",
         priorityClass: "NORMAL",
         createdAt: "2026-11-06T00:00:00Z",
+        readAt: null,
       },
     ]);
   });
@@ -102,14 +103,14 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
     });
 
-    const leavesTab = screen.getByRole("button", { name: /Leave Balances & History/i });
+    const leavesTab = screen.getByRole("tab", { name: /Leave Balances & History/i });
     fireEvent.click(leavesTab);
 
     await waitFor(() => {
       expect(screen.getByText("15")).toBeInTheDocument();
       expect(screen.getByText(/days left/i)).toBeInTheDocument();
       expect(screen.getByText("Academic symposium")).toBeInTheDocument();
-      expect(screen.getByText("APPROVED")).toBeInTheDocument();
+      expect(screen.getByText("Approved")).toBeInTheDocument();
     });
   });
 
@@ -120,12 +121,30 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
     });
 
-    const notifsTab = screen.getByRole("button", { name: /Notifications \(1\)/i });
+    const notifsTab = screen.getByRole("tab", { name: /Notifications \(1\)/i });
     fireEvent.click(notifsTab);
 
     await waitFor(() => {
       expect(screen.getByText("Leave approved")).toBeInTheDocument();
       expect(screen.getByText("Your symposium leave was approved.")).toBeInTheDocument();
+    });
+  });
+
+  it("isolates API errors: campus notices still render even when leave records fail", async () => {
+    vi.mocked(selfServiceApi.getLeaveBalances).mockRejectedValue(new Error("500 Server Error"));
+    renderWithStore(<SelfServicePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
+      expect(screen.getByText("Campus is closed tomorrow.")).toBeInTheDocument();
+    });
+
+    const leavesTab = screen.getByRole("tab", { name: /Leave Balances & History/i });
+    fireEvent.click(leavesTab);
+
+    await waitFor(() => {
+      expect(screen.getByText("Leave records could not be loaded. Please try again.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Retry/i })).toBeInTheDocument();
     });
   });
 });

@@ -3,6 +3,8 @@ package com.edu360.api.imports;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,8 +29,9 @@ import com.edu360.api.files.FileObject;
 import com.edu360.api.files.FileObjectId;
 import com.edu360.api.files.FileObjectRepository;
 import com.edu360.api.files.LocalFileStorage;
+import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.identity.StudentCreateRequest;
 import com.edu360.api.identity.UserAccountRepository;
-import com.edu360.api.identity.UserAccountService;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.imports.dto.ImportJobResponse;
 import com.edu360.api.imports.dto.ImportRowErrorResponse;
@@ -66,7 +69,7 @@ public class UserBulkUploadService {
     private final LocalFileStorage localFileStorage;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final UserAccountRepository userAccountRepository;
-    private final UserAccountService userAccountService;
+    private final UserBulkImportRowService rowService;
     private final AuditLogService auditLogService;
 
     /**
@@ -74,14 +77,22 @@ public class UserBulkUploadService {
      */
     public ImportTemplateResponse getImportTemplate(String kind) {
         String effectiveKind = kind != null ? kind.toUpperCase() : "USERS";
-        List<String> headers = List.of("email", "fullName", "userType", "mobile", "nationalIdLast4", "roleCode", "institutionId");
-        List<List<String>> sampleRows = List.of(
-                List.of("john.doe@northbridge.edu.in", "John Doe", "STAFF", "+919876543210", "4821", "OFFICE_STAFF", ""),
-                List.of("priya.sharma@northbridge.edu.in", "Priya Sharma", "STAFF", "+919812345678", "9034", "TEACHER", "")
-        );
+        List<String> headers;
+        List<List<String>> sampleRows;
+        if ("STUDENTS".equals(effectiveKind)) {
+            headers = List.of("fullName", "userType", "institutionId", "sectionId", "academicSessionId",
+                    "admissionDate", "dateOfBirth", "rollNumber", "createLogin");
+            sampleRows = List.of(List.of("Asha Rao", "STUDENT", "", "SECTION_UUID", "SESSION_UUID",
+                    "2026-06-01", "", "R-01", ""));
+        } else {
+            headers = List.of("email", "fullName", "userType", "mobile", "nationalIdLast4", "roleCode", "institutionId");
+            sampleRows = List.of(
+                    List.of("john.doe@northbridge.edu.in", "John Doe", "STAFF", "+919876543210", "4821", "OFFICE_STAFF", ""),
+                    List.of("priya.sharma@northbridge.edu.in", "Priya Sharma", "STAFF", "+919812345678", "9034", "TEACHER", "")
+            );
+        }
         String csvTemplate = String.join(",", headers) + "\n" +
-                String.join(",", sampleRows.get(0)) + "\n" +
-                String.join(",", sampleRows.get(1)) + "\n";
+                sampleRows.stream().map(row -> String.join(",", row)).collect(java.util.stream.Collectors.joining("\n")) + "\n";
 
         return new ImportTemplateResponse(
                 effectiveKind,
@@ -177,11 +188,14 @@ public class UserBulkUploadService {
             if (nationalIdLast4 == null) nationalIdLast4 = getCell(cells, headerMap, "aadhaar");
 
             List<RowValidationError> rowErrors = new ArrayList<>();
+            String normalizedType = userType == null ? "" : userType.trim().toUpperCase();
+            boolean studentRow = "STUDENT".equals(normalizedType);
+            boolean studentImport = "STUDENTS".equalsIgnoreCase(request.importKind());
 
-            // 1. Email validation
-            if (email == null || email.isBlank()) {
+            // 1. Email validation (student accounts use the generated student code, not an email username).
+            if (!studentRow && (email == null || email.isBlank())) {
                 rowErrors.add(new RowValidationError("email", "REQUIRED_FIELD", "Email is required"));
-            } else {
+            } else if (!studentRow && email != null && !email.isBlank()) {
                 String normalizedEmail = email.toLowerCase().trim();
                 if (!EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
                     rowErrors.add(new RowValidationError("email", "INVALID_EMAIL_FORMAT", "Invalid email address format"));
@@ -203,7 +217,6 @@ public class UserBulkUploadService {
             if (userType == null || userType.isBlank()) {
                 rowErrors.add(new RowValidationError("userType", "REQUIRED_FIELD", "User type is required"));
             } else {
-                String normalizedType = userType.trim().toUpperCase();
                 if ("FACULTY".equals(normalizedType) || "TEACHER".equals(normalizedType)) {
                     // Mapped to STAFF
                 } else {
@@ -212,6 +225,43 @@ public class UserBulkUploadService {
                     } catch (IllegalArgumentException ex) {
                         rowErrors.add(new RowValidationError("userType", "INVALID_USER_TYPE", "User type must be STAFF, FACULTY, STUDENT, or GUARDIAN"));
                     }
+                }
+            }
+
+            if (studentImport && !studentRow) {
+                rowErrors.add(new RowValidationError("userType", "INVALID_USER_TYPE",
+                        "The STUDENTS import template accepts STUDENT rows only."));
+            }
+            if (studentRow) {
+                String rowInstitution = getCell(cells, headerMap, "institutionid");
+                String sectionValue = getCell(cells, headerMap, "sectionid");
+                String sessionValue = getCell(cells, headerMap, "academicsessionid");
+                String admissionValue = getCell(cells, headerMap, "admissiondate");
+                String dobValue = getCell(cells, headerMap, "dateofbirth");
+                String rollValue = getCell(cells, headerMap, "rollnumber");
+                String loginValue = getCell(cells, headerMap, "createlogin");
+
+                if ((rowInstitution == null || rowInstitution.isBlank()) && request.institutionId() == null) {
+                    rowErrors.add(new RowValidationError("institutionId", "REQUIRED_FIELD",
+                            "Institution ID is required for student enrolment."));
+                } else if (rowInstitution != null && !rowInstitution.isBlank()) {
+                    try { UUID.fromString(rowInstitution.trim()); }
+                    catch (IllegalArgumentException ex) {
+                        rowErrors.add(new RowValidationError("institutionId", "INVALID_UUID", "Institution ID must be a UUID."));
+                    }
+                }
+                validateUuidCell(sectionValue, "sectionId", "Section ID", rowErrors);
+                validateUuidCell(sessionValue, "academicSessionId", "Academic session ID", rowErrors);
+                validateDateCell(admissionValue, "admissionDate", "Admission date", rowErrors);
+                validateDateCell(dobValue, "dateOfBirth", "Date of birth", rowErrors);
+                if (rollValue != null && rollValue.length() > 30) {
+                    rowErrors.add(new RowValidationError("rollNumber", "INVALID_FIELD_LENGTH",
+                            "Roll number must not exceed 30 characters."));
+                }
+                if (loginValue != null && !loginValue.isBlank()
+                        && !List.of("TRUE", "FALSE").contains(loginValue.trim().toUpperCase())) {
+                    rowErrors.add(new RowValidationError("createLogin", "INVALID_BOOLEAN",
+                            "createLogin must be true or false."));
                 }
             }
 
@@ -407,6 +457,7 @@ public class UserBulkUploadService {
         }
 
         int importedCount = 0;
+        int runtimeErrorCount = 0;
 
         for (int lineIdx = 1; lineIdx < lines.length; lineIdx++) {
             int rowNumber = lineIdx + 1;
@@ -441,30 +492,70 @@ public class UserBulkUploadService {
             }
 
             String normalizedUserType = userTypeStr.trim().toUpperCase();
-            UserType userType = ("FACULTY".equals(normalizedUserType) || "TEACHER".equals(normalizedUserType))
-                    ? UserType.STAFF
-                    : UserType.valueOf(normalizedUserType);
-
-            CreateUserRequest createReq = new CreateUserRequest(
-                    userType,
-                    fullName.trim(),
-                    email.trim(),
-                    mobile != null && !mobile.isBlank() ? mobile.trim() : null,
-                    nationalIdLast4 != null && !nationalIdLast4.isBlank() ? nationalIdLast4.trim() : null,
-                    roleCode != null && !roleCode.isBlank() ? roleCode.trim() : null,
-                    instId != null ? com.edu360.api.rbac.ScopeType.INSTITUTION : com.edu360.api.rbac.ScopeType.TENANT,
-                    instId,
-                    null
-            );
 
             try {
-                userAccountService.createUser(principal, createReq);
+                if ("STUDENT".equals(normalizedUserType)) {
+                    String sectionValue = getCell(cells, headerMap, "sectionid");
+                    String sessionValue = getCell(cells, headerMap, "academicsessionid");
+                    String admissionValue = getCell(cells, headerMap, "admissiondate");
+                    String dobValue = getCell(cells, headerMap, "dateofbirth");
+                    String rollValue = getCell(cells, headerMap, "rollnumber");
+                    String loginValue = getCell(cells, headerMap, "createlogin");
+                    Boolean createLogin = loginValue == null || loginValue.isBlank()
+                            ? null : Boolean.valueOf(loginValue.trim());
+                    StudentCreateRequest studentRequest = new StudentCreateRequest(
+                            instId,
+                            fullName.trim(),
+                            parseOptionalDate(dobValue),
+                            parseOptionalDate(admissionValue),
+                            UUID.fromString(sectionValue.trim()),
+                            UUID.fromString(sessionValue.trim()),
+                            createLogin,
+                            rollValue == null || rollValue.isBlank() ? null : rollValue.trim());
+                    TenantPrincipal importActor = new TenantPrincipal(principal.tenantId(),
+                            principal.userAccountId(), UserType.STAFF, "Bulk student import", false);
+                    rowService.createStudent(importActor, studentRequest);
+                } else {
+                    UserType userType = ("FACULTY".equals(normalizedUserType) || "TEACHER".equals(normalizedUserType))
+                            ? UserType.STAFF : UserType.valueOf(normalizedUserType);
+                    CreateUserRequest createReq = new CreateUserRequest(
+                            userType,
+                            fullName.trim(),
+                            email.trim(),
+                            mobile != null && !mobile.isBlank() ? mobile.trim() : null,
+                            nationalIdLast4 != null && !nationalIdLast4.isBlank() ? nationalIdLast4.trim() : null,
+                            roleCode != null && !roleCode.isBlank() ? roleCode.trim() : null,
+                            instId != null ? com.edu360.api.rbac.ScopeType.INSTITUTION : com.edu360.api.rbac.ScopeType.TENANT,
+                            instId,
+                            null
+                    );
+                    rowService.createUser(principal, createReq);
+                }
                 importedCount++;
             } catch (Exception ex) {
-                log.warn("Failed to provision imported user row {}: {}", rowNumber, ex.getMessage());
+                runtimeErrorCount++;
+                String errorCode = ex instanceof com.edu360.api.exception.BusinessRuleViolationException rule
+                        ? rule.getErrorCode() : "IMPORT_ROW_FAILED";
+                ImportRowError runtimeError = ImportRowError.builder()
+                        .id(new ImportRowErrorId(tenantId, UUID.randomUUID()))
+                        .importJobId(importJobId)
+                        .rowNumber(rowNumber)
+                        .fieldName("row")
+                        .errorCode(errorCode)
+                        .errorMessage("Row could not be imported. Verify the row values, active institution scope, role assignment and duplicate constraints.")
+                        .rowData("{}")
+                        .createdAt(Instant.now())
+                        .createdBy(principal.userAccountId())
+                        .updatedAt(Instant.now())
+                        .updatedBy(principal.userAccountId())
+                        .build();
+                importRowErrorRepository.save(runtimeError);
+                log.warn("Failed to provision imported user row {} ({})", rowNumber, errorCode);
             }
         }
 
+        job.setValidRows(importedCount);
+        job.setErrorRows((job.getErrorRows() == null ? 0 : job.getErrorRows()) + runtimeErrorCount);
         job.setStatus("COMPLETED");
         job.setFinishedAt(Instant.now());
         job.setUpdatedAt(Instant.now());
@@ -490,6 +581,31 @@ public class UserBulkUploadService {
         if (!principal.tenantId().equals(tenantId)) {
             throw new ResourceNotFoundException("Tenant not found or does not match authenticated context");
         }
+    }
+
+    private void validateUuidCell(String value, String field, String label, List<RowValidationError> errors) {
+        if (value == null || value.isBlank()) {
+            errors.add(new RowValidationError(field, "REQUIRED_FIELD", label + " is required for student enrolment."));
+            return;
+        }
+        try {
+            UUID.fromString(value.trim());
+        } catch (IllegalArgumentException ex) {
+            errors.add(new RowValidationError(field, "INVALID_UUID", label + " must be a UUID."));
+        }
+    }
+
+    private void validateDateCell(String value, String field, String label, List<RowValidationError> errors) {
+        if (value == null || value.isBlank()) return;
+        try {
+            LocalDate.parse(value.trim());
+        } catch (DateTimeParseException ex) {
+            errors.add(new RowValidationError(field, "INVALID_DATE", label + " must use YYYY-MM-DD."));
+        }
+    }
+
+    private LocalDate parseOptionalDate(String value) {
+        return value == null || value.isBlank() ? null : LocalDate.parse(value.trim());
     }
 
     private String[] parseCsvLine(String line) {

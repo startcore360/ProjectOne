@@ -86,7 +86,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     // BS-27: Both /api/auth/** and /v1/auth/** permitted consistently, plus identity-events webhooks (M-03)
-                    auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/internal/identity-events", "/v1/internal/identity-events").permitAll();
+                    auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/internal/identity-events", "/v1/internal/identity-events", "/v1/ws", "/api/ws").permitAll();
                     // BS-25: Swagger and H2 console only open in dev or test profiles
                     if (isDevOrTest) {
                         auth.requestMatchers("/h2-console/**").permitAll();

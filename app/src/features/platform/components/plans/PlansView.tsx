@@ -8,7 +8,8 @@ import { CreatePlanModal, type CreatePlanDraft } from "./CreatePlanModal";
 export function PlansView() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [tenants, setTenants] = useState<TenantItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [createDraft, setCreateDraft] = useState<CreatePlanDraft>({
     planName: "",
@@ -25,16 +26,21 @@ export function PlansView() {
   const [createError, setCreateError] = useState("");
   const [message, setMessage] = useState("");
 
-  const loadPlans = () => {
+  const loadPlans = async () => {
     setLoading(true);
-    Promise.all([
-      platformTenantService.getPlans().then((res) => res?.data ?? []).catch(() => []),
-      platformTenantService.getTenants().then((res) => res?.data?.items ?? []).catch(() => []),
-    ]).then(([pList, tList]) => {
-      setPlans(pList);
-      setTenants(tList);
+    setLoadError("");
+    try {
+      const [plansResponse, tenantsResponse] = await Promise.all([
+        platformTenantService.getPlans(),
+        platformTenantService.getTenants(),
+      ]);
+      setPlans(Array.isArray(plansResponse?.data) ? plansResponse.data : []);
+      setTenants(Array.isArray(tenantsResponse?.data?.items) ? tenantsResponse.data.items : []);
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Unable to load plans and tenant allocations. Please retry.");
+    } finally {
       setLoading(false);
-    });
+    }
   };
 
   useEffect(() => {
@@ -83,7 +89,7 @@ export function PlansView() {
     <div className="platform-page">
       <PageHeader
         title="Plans & billing"
-        description="Review the platform plan catalogue, pricing types, and subscription limits [PLAN_MANAGE, Action #202]."
+        description="Review subscription plans, pricing types and platform limits."
         actions={
           <Button
             onClick={() => {
@@ -97,12 +103,18 @@ export function PlansView() {
         }
       />
       {message && <Notice tone="success">{message}</Notice>}
+      {loadError && !loading && (
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{loadError}</p>
+          <Button variant="secondary" onClick={() => void loadPlans()}>Retry</Button>
+        </div>
+      )}
 
       {loading ? (
         <div className="platform-empty-inline">
           <Spinner label="Loading plans..." />
         </div>
-      ) : plans.length === 0 ? (
+      ) : loadError ? null : plans.length === 0 ? (
         <p className="platform-empty-inline">No subscription plans found.</p>
       ) : (
         <div className="platform-plan-grid">

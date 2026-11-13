@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Badge,
   Button,
@@ -6,6 +6,7 @@ import {
   Modal,
   Notice,
   Panel,
+  ErrorState,
   TextField,
 } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
@@ -25,9 +26,10 @@ export function GuardianManagementPanel({
   studentId,
   institutionId,
 }: GuardianManagementPanelProps) {
-  const currentTenantId = tenantId || "00000000-0000-0000-0000-000000000001";
+  const currentTenantId = tenantId ?? "";
   const [links, setLinks] = useState<GuardianLinkItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Link modal state
@@ -49,21 +51,31 @@ export function GuardianManagementPanel({
   const [decisionApproved, setDecisionApproved] = useState(true);
   const [deciding, setDeciding] = useState(false);
 
-  const fetchLinks = () => {
+  const fetchLinks = useCallback(async () => {
+    if (!currentTenantId || !studentId) {
+      setLoadError("A valid tenant and student context are required to load guardian links.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    guardianService
-      .listGuardianLinks(currentTenantId, studentId)
-      .then((data) => setLinks(data || []))
-      .catch(() => setLinks([]))
-      .finally(() => setLoading(false));
-  };
+    setLoadError("");
+    try {
+      const data = await guardianService.listGuardianLinks(currentTenantId, studentId);
+      setLinks(data || []);
+    } catch (err) {
+      setLoadError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [currentTenantId, studentId]);
 
   useEffect(() => {
-    fetchLinks();
-  }, [currentTenantId, studentId]);
+    void fetchLinks();
+  }, [fetchLinks]);
 
   const handleLinkSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!fullName.trim() || !mobile.trim()) {
       setFeedback({ tone: "danger", message: "Full name and valid mobile number are required." });
       return;
@@ -84,7 +96,7 @@ export function GuardianManagementPanel({
       );
       setFeedback({
         tone: "success",
-        message: "Guardian linked successfully [GUARDIAN_LINK / Rules WF-21, WF-22, WF-24].",
+        message: "Guardian linked successfully.",
       });
       setShowLinkModal(false);
       setFullName("");
@@ -100,9 +112,10 @@ export function GuardianManagementPanel({
 
   const handleRequestChangeSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!changeModalItem) return;
     if (!changeReason.trim()) {
-      setFeedback({ tone: "danger", message: "Reason is required to request guardian change (Rule WF-23)." });
+      setFeedback({ tone: "danger", message: "Enter a reason for the guardian change request." });
       return;
     }
     setRequestingChange(true);
@@ -115,7 +128,7 @@ export function GuardianManagementPanel({
       );
       setFeedback({
         tone: "success",
-        message: "Guardian change requested with reason [GUARDIAN_CHANGE_REQUEST / Rule WF-23]. Sent to Principal for decision.",
+        message: "Guardian change request submitted to the Principal for review.",
       });
       setChangeModalItem(null);
       setChangeReason("");
@@ -129,6 +142,7 @@ export function GuardianManagementPanel({
 
   const handleDecideSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!decideModalItem) return;
     setDeciding(true);
     try {
@@ -141,7 +155,7 @@ export function GuardianManagementPanel({
       setFeedback({
         tone: "success",
         message: decisionApproved
-          ? "Guardian change approved. Old guardian access blocked immediately [GUARDIAN_CHANGE_APPROVE / Rule WF-25]."
+          ? "Guardian change approved. The previous guardian's access has been blocked."
           : "Guardian change request rejected. Existing link preserved.",
       });
       setDecideModalItem(null);
@@ -155,10 +169,10 @@ export function GuardianManagementPanel({
 
   return (
     <Panel
-      title="Guardian linkages [WF-21..25]"
+      title="Guardian linkages"
       description="Link parent or guardian profiles to this student (up to 3 guardians, exactly one primary). Changes require reason and Principal approval."
       action={
-        <Button onClick={() => setShowLinkModal(true)} disabled={links.length >= 3}>
+        <Button onClick={() => setShowLinkModal(true)} disabled={!currentTenantId || links.length >= 3}>
           + Link Guardian
         </Button>
       }
@@ -170,7 +184,11 @@ export function GuardianManagementPanel({
           </div>
         )}
 
-        {loading ? (
+        {!currentTenantId ? (
+          <ErrorState title="Tenant context unavailable" message="Guardian links cannot be loaded or changed without a tenant identity." />
+        ) : loadError ? (
+          <ErrorState title="Could not load guardian links" message={loadError} action={<Button variant="secondary" onClick={() => void fetchLinks()}>Retry</Button>} />
+        ) : loading ? (
           <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>Loading guardian linkages...</p>
         ) : (
           <DataTable
@@ -235,7 +253,7 @@ export function GuardianManagementPanel({
       <Modal
         isOpen={showLinkModal}
         onClose={() => setShowLinkModal(false)}
-        kicker="GUARDIAN_LINK • Action #17 / Rules WF-21..24"
+        kicker="GUARDIAN LINK"
         title="Link Parent or Guardian"
         size="md"
       >
@@ -301,7 +319,7 @@ export function GuardianManagementPanel({
                 checked={isPrimary}
                 onChange={(e) => setIsPrimary(e.target.checked)}
               />
-              Designate as Primary Guardian [Rule WF-22: Exactly one primary required]
+              Designate as primary guardian
             </label>
           </div>
 
@@ -320,7 +338,7 @@ export function GuardianManagementPanel({
       <Modal
         isOpen={!!changeModalItem}
         onClose={() => setChangeModalItem(null)}
-        kicker="GUARDIAN_CHANGE_REQUEST • Action #18 / Rule WF-23"
+        kicker="GUARDIAN CHANGE REQUEST"
         title="Request Change or Block"
         size="md"
       >
@@ -367,7 +385,7 @@ export function GuardianManagementPanel({
       <Modal
         isOpen={!!decideModalItem}
         onClose={() => setDecideModalItem(null)}
-        kicker="GUARDIAN_CHANGE_APPROVE • Action #19 / Rule WF-25"
+        kicker="GUARDIAN CHANGE REVIEW"
         title="Review Guardian Change"
         size="md"
       >
@@ -388,7 +406,7 @@ export function GuardianManagementPanel({
                   checked={decisionApproved}
                   onChange={() => setDecisionApproved(true)}
                 />
-                Approve (Block old guardian immediately [Rule WF-25])
+                Approve and block previous guardian access
               </label>
               <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
                 <input

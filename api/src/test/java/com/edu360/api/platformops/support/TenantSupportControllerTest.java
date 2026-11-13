@@ -137,7 +137,7 @@ class TenantSupportControllerTest {
     }
 
     @Test
-    void anyTenantUserCanRaiseATicket() {
+    void userWithRaisePermissionCanRaiseATicket() {
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ResponseEntity<SupportTicketResponse> res = controller.raiseTicket(TENANT_ID,
@@ -147,6 +147,35 @@ class TenantSupportControllerTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(res.getBody().status()).isEqualTo("NEW");
         assertThat(res.getBody().tenantId()).isEqualTo(TENANT_ID);
+        verify(evaluator).authorize(new RbacPrincipal(TENANT_ID, USER_ID), "SUPPORT_TICKET_RAISE",
+                RbacScope.tenant(), RbacTarget.NONE);
+    }
+
+    @Test
+    void userWithoutRaisePermissionCannotRaiseATicket() {
+        doThrow(new UnauthorizedException("denied")).when(evaluator).authorize(any(), eq("SUPPORT_TICKET_RAISE"), any(), any());
+        assertThatThrownBy(() -> controller.raiseTicket(TENANT_ID,
+                new CreateSupportTicketRequest("Subject", "Description", null, null), tenantAuth(TENANT_ID)))
+                .isInstanceOf(UnauthorizedException.class);
+        verify(ticketRepository, never()).save(any());
+    }
+
+    @Test
+    void myTicketsQueryIsRestrictedToAuthenticatedUserAndTenant() {
+        when(ticketRepository.findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(TENANT_ID, USER_ID)).thenReturn(List.of());
+        ResponseEntity<List<SupportTicketResponse>> response = controller.myTickets(TENANT_ID, tenantAuth(TENANT_ID));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+        verify(ticketRepository).findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(TENANT_ID, USER_ID);
+        verify(evaluator).authorize(new RbacPrincipal(TENANT_ID, USER_ID), "SUPPORT_TICKET_RAISE",
+                RbacScope.tenant(), RbacTarget.NONE);
+    }
+
+    @Test
+    void myTicketsRejectsAnotherTenantPath() {
+        assertThatThrownBy(() -> controller.myTickets(TENANT_ID, tenantAuth(UUID.randomUUID())))
+                .isInstanceOf(UnauthorizedException.class);
+        verify(ticketRepository, never()).findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(any(), any());
     }
 
     @Test

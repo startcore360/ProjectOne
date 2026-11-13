@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: edu360-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: edu360-ci-${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   frontend:
@@ -88,8 +88,13 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: Audit Maven dependencies
-        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          # Read the key from the environment without placing its value in Maven arguments.
+          mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:12.2.2:check -DfailBuildOnCVSS=7 -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
       - name: Scan repository for secrets
+        if: always()
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

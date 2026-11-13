@@ -46,9 +46,9 @@ export function CreatePlanModal({
       <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="plan-create-title">
         <header>
           <div>
-            <Kicker>NEW SUBSCRIPTION PLAN · Rule F-4</Kicker>
+            <Kicker>NEW SUBSCRIPTION PLAN</Kicker>
             <h2 id="plan-create-title">Add subscription plan</h2>
-            <p>Platform Admins can configure limits and modules; Product Owner configures pricing [Rule F-4].</p>
+            <p>Platform administrators configure limits and modules; the Product Owner configures pricing.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
             <Icon name="x" size={16} />

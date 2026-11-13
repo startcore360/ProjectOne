@@ -22,12 +22,8 @@ export interface ModalProps {
   closeOnBackdrop?: boolean;
 }
 
-const sizeClasses: Record<ModalSize, string> = {
-  sm: "max-w-[440px]",
-  md: "max-w-[560px]",
-  lg: "max-w-[720px]",
-  xl: "max-w-[900px]",
-};
+// Width is controlled exclusively by the data-size CSS attribute selectors in components.css.
+// No Tailwind utility classes needed here — having both mechanisms caused cascade conflicts.
 
 export function Modal({
   isOpen,
@@ -42,11 +38,12 @@ export function Modal({
   className = "",
   closeOnBackdrop = true,
 }: ModalProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLElement>(null);
   const reactId = useId();
   const titleId = customTitleId ?? `modal-title-${reactId}`;
+  const descriptionId = `modal-description-${reactId}`;
 
-  // Handle Escape key and Tab focus trap
+  // Keep keyboard focus inside the dialog, including when focus enters from outside it.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -58,17 +55,22 @@ export function Modal({
       if (e.key !== "Tab" || !contentRef.current) return;
 
       const focusable = Array.from(
-        contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
       );
-      if (focusable.length === 0) return;
+      if (focusable.length === 0) {
+        e.preventDefault();
+        contentRef.current.focus();
+        return;
+      }
 
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
+      const activeIndex = focusable.indexOf(document.activeElement as HTMLElement);
 
-      if (e.shiftKey && document.activeElement === first) {
+      if (e.shiftKey && activeIndex <= 0) {
         e.preventDefault();
         last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
+      } else if (!e.shiftKey && (activeIndex === -1 || activeIndex === focusable.length - 1)) {
         e.preventDefault();
         first.focus();
       }
@@ -78,7 +80,7 @@ export function Modal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Focus the first element when opened
+  // Move focus into the dialog when it opens and restore it when it closes.
   useEffect(() => {
     if (!isOpen) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -107,19 +109,21 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
+        aria-describedby={description ? descriptionId : undefined}
+        data-size={size}
         tabIndex={-1}
-        className={`platform-modal ${sizeClasses[size]} ${className}`.trim()}
+        className={`platform-modal ${className}`.trim()}
       >
         {(title || kicker || description) && (
           <header>
             <div>
               {kicker && <Kicker>{kicker}</Kicker>}
               {title && <h2 id={titleId}>{title}</h2>}
-              {description && <p>{description}</p>}
+              {description && <p id={descriptionId}>{description}</p>}
             </div>
             <button
               type="button"
-              className="platform-icon-button"
+              className="platform-icon-button platform-modal__close"
               onClick={onClose}
               aria-label="Close"
             >
@@ -133,7 +137,6 @@ export function Modal({
     </div>
   );
 
-  // Use portal if document body exists (browser environment)
   if (typeof document !== "undefined") {
     return createPortal(modalElement, document.body);
   }

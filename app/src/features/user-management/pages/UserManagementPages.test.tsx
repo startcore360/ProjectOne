@@ -239,9 +239,9 @@ describe("UserListPage", () => {
     renderList();
 
     // Click Bulk import users
-    fireEvent.click(screen.getByRole("button", { name: /Bulk import users/i }));
-    expect(screen.getByRole("heading", { name: "Bulk upload users" })).toBeInTheDocument();
-    expect(screen.getByText(/Enforces pre-validation and row error tracking \[Rule MD-27\]/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Bulk import user accounts/i }));
+    expect(screen.getByRole("heading", { name: "Bulk upload user accounts" })).toBeInTheDocument();
+    expect(screen.getByText(/This workflow does not create student profiles or enrolments/i)).toBeInTheDocument();
 
     // Download template
     fireEvent.click(screen.getByRole("button", { name: /Download CSV Template/i }));
@@ -256,7 +256,7 @@ describe("UserListPage", () => {
     });
 
     // Submit for pre-validation
-    fireEvent.click(screen.getByRole("button", { name: /Pre-validate CSV \(Rule MD-27\)/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Pre-validate CSV/i }));
 
     await waitFor(() => {
       expect(userManagementService.createUserImport).toHaveBeenCalledWith(
@@ -264,7 +264,7 @@ describe("UserListPage", () => {
         expect.stringContaining("clean@test.com"),
         undefined
       );
-      expect(screen.getByText("Pre-validation Results [Rule MD-27]")).toBeInTheDocument();
+      expect(screen.getByText("Pre-validation results")).toBeInTheDocument();
       expect(screen.getByText("UIDAI_MASKED_LAST4_REQUIRED")).toBeInTheDocument();
       expect(screen.getAllByText(/Unmasked 12-digit Aadhaar/i).length).toBeGreaterThanOrEqual(1);
     });
@@ -294,7 +294,7 @@ describe("UserListPage", () => {
         roleCode: "VICE_CHANCELLOR",
         userType: "STAFF",
         status: "PENDING_ACTIVATION",
-        temporaryPassword: "vc-temp-pass-1234",
+        temporaryPassword: "test-only-password",
         twoStepLoginRequired: true,
         message: "Executive account created successfully.",
       },
@@ -310,7 +310,7 @@ describe("UserListPage", () => {
 
     const dialog = screen.getByRole("dialog", { name: /Create governance \/ top user/i });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByText(/Two-step login \(MFA\) will be enforced/i)).toBeInTheDocument();
+    expect(screen.getByText(/Two-step login \(MFA\) is required at first sign-in/i)).toBeInTheDocument();
 
     // Fill in fields
     fireEvent.change(screen.getByLabelText(/Governance Role/i), { target: { value: "VICE_CHANCELLOR" } });
@@ -328,13 +328,13 @@ describe("UserListPage", () => {
         email: "vc@northbridge.edu.in",
         mobile: "+919876543210",
       });
-      expect(screen.getByDisplayValue("vc-temp-pass-1234")).toBeInTheDocument();
-      expect(screen.getByText(/Security Invariant \[Rule F-12\]/i)).toBeInTheDocument();
+      expect(screen.getByDisplayValue("test-only-password")).toBeInTheDocument();
+      expect(screen.getByText(/Two-step login \(MFA\) will be required at the user/i)).toBeInTheDocument();
     });
 
     // Close modal
     fireEvent.click(screen.getByRole("button", { name: /I've copied it, close/i }));
-    expect(screen.queryByDisplayValue("vc-temp-pass-1234")).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue("test-only-password")).not.toBeInTheDocument();
   });
 });
 
@@ -406,7 +406,7 @@ describe("UserDetailPage", () => {
     await waitFor(() => {
       expect(userManagementService.deactivateUser).toHaveBeenCalledWith("tenant-1", "ua-1", "inst-1");
       expect(screen.getByText(/User deactivated \(soft delete; the row was never removed\)\./i)).toBeInTheDocument();
-      expect(screen.getByText(/^DEACTIVATED$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Deactivated$/)).toBeInTheDocument();
     });
   });
 
@@ -482,7 +482,7 @@ describe("UserDetailPage", () => {
         }),
         "inst-1"
       );
-      expect(screen.getByText(/Guardian linked successfully \[GUARDIAN_LINK/i)).toBeInTheDocument();
+      expect(screen.getByText("Guardian linked successfully.")).toBeInTheDocument();
     });
   });
 
@@ -550,7 +550,7 @@ describe("UserDetailPage", () => {
         { reason: "Court custody order updated" },
         "inst-1"
       );
-      expect(screen.getByText(/Guardian change requested with reason/i)).toBeInTheDocument();
+      expect(screen.getByText(/Guardian change request submitted to the Principal for review/i)).toBeInTheDocument();
     });
   });
 
@@ -616,7 +616,7 @@ describe("UserDetailPage", () => {
         { approved: true },
         "inst-1"
       );
-      expect(screen.getByText(/Guardian change approved\. Old guardian access blocked immediately/i)).toBeInTheDocument();
+      expect(screen.getByText(/Guardian change approved\. The previous guardian/i)).toBeInTheDocument();
     });
   });
   it("changes student academic status with statutory reason (Story #41: STUDENT_STATUS_CHANGE / Rule AT-08)", async () => {
@@ -634,7 +634,7 @@ describe("UserDetailPage", () => {
       </Provider>
     );
 
-    expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+    expect(screen.getByText("Not available from the current student-status endpoint")).toBeInTheDocument();
 
     const changeBtn = screen.getByRole("button", { name: /Change Student Status/i });
     fireEvent.click(changeBtn);
@@ -658,8 +658,8 @@ describe("UserDetailPage", () => {
           reason: "Medical leave approved by Board",
         }
       );
-      expect(screen.getByText(/Student status successfully changed to LEAVE_OF_ABSENCE/i)).toBeInTheDocument();
-      expect(screen.getByText("LEAVE_OF_ABSENCE")).toBeInTheDocument();
+      expect(screen.getByText(/Student status successfully changed to Leave of absence/i)).toBeInTheDocument();
+      expect(screen.getByText("Leave of absence")).toBeInTheDocument();
     });
   });
 });

@@ -45,10 +45,15 @@ import {
   WeeklyOffRulesPage,
 } from "../features/institution-admin/pages/InstitutionSetupPages";
 import { UserDetailPage, UserListPage } from "../features/user-management/pages/UserManagementPages";
+import TenantSupportPage from "../features/institution-admin/pages/TenantSupportPage";
+import StaffRecordsPage from "../features/institution-admin/pages/StaffRecordsPage";
 import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
+import ActionGate from "./ActionGate";
+import TenantUserRoute from "./TenantUserRoute";
+import { TENANT_ROUTE_ACTIONS } from "./tenantRouteActions";
 
 // AuthUserResponse (api/.../auth/dto/AuthUserResponse.java) only ever populates platformRole
 // for a platform identity, or tenantId+userType for a tenant identity - never a generic "role"
@@ -87,22 +92,23 @@ export default function AppRoutes() {
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route element={<UniversityAdminRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/university/institutions" element={<InstitutionsPage />} />
-            <Route path="/university/users" element={<UserListPage />} />
-            <Route path="/university/roles" element={<RolesPermissionsPage />} />
-            <Route path="/university/missing-roles" element={<MissingRolesPage />} />
-            <Route path="/university/setup/hod" element={<HodAssignmentPage />} />
-            <Route path="/university/setup/mentor" element={<MentorAssignmentPage />} />
-            <Route path="/university/setup/class-teacher" element={<ClassTeacherAssignmentPage />} />
-            <Route path="/university/setup/student-login" element={<StudentLoginSwitchPage />} />
-            <Route path="/university/setup/calendar-events" element={<CalendarEventsPage />} />
-            <Route path="/university/setup/weekly-off" element={<WeeklyOffRulesPage />} />
-            <Route path="/university/setup/structure" element={<AcademicStructurePage />} />
-            <Route path="/university/setup/term-lock" element={<TermLockPage />} />
-            <Route path="/university/setup/delegations" element={<DelegationsApprovalsPage />} />
-            <Route path="/university/setup/academic-governance" element={<AcademicGovernancePage />} />
-            <Route path="/tenants/users" element={<UserListPage />} />
-            <Route path="/tenants/users/:userId" element={<UserDetailPage />} />
+            <Route path="/university/institutions" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.institutions}><InstitutionsPage /></ActionGate>} />
+            <Route path="/university/staff" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffRecordsPage /></ActionGate>} />
+            <Route path="/university/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
+            <Route path="/university/roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.roles}><RolesPermissionsPage /></ActionGate>} />
+            <Route path="/university/missing-roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.missingRoles}><MissingRolesPage /></ActionGate>} />
+            <Route path="/university/setup/hod" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.hodAssignment}><HodAssignmentPage /></ActionGate>} />
+            <Route path="/university/setup/mentor" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.mentorAssignment}><MentorAssignmentPage /></ActionGate>} />
+            <Route path="/university/setup/class-teacher" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.classTeacherAssignment}><ClassTeacherAssignmentPage /></ActionGate>} />
+            <Route path="/university/setup/student-login" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.studentLogin}><StudentLoginSwitchPage /></ActionGate>} />
+            <Route path="/university/setup/calendar-events" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.calendarEvents}><CalendarEventsPage /></ActionGate>} />
+            <Route path="/university/setup/weekly-off" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.weeklyOff}><WeeklyOffRulesPage /></ActionGate>} />
+            <Route path="/university/setup/structure" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><AcademicStructurePage /></ActionGate>} />
+            <Route path="/university/setup/term-lock" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.termLock}><TermLockPage /></ActionGate>} />
+            <Route path="/university/setup/delegations" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.delegations}><DelegationsApprovalsPage /></ActionGate>} />
+            <Route path="/university/setup/academic-governance" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicGovernance}><AcademicGovernancePage /></ActionGate>} />
+            <Route path="/tenants/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
+            <Route path="/tenants/users/:userId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserDetailPage /></ActionGate>} />
           </Route>
         </Route>
         <Route element={<PlatformConsoleRoute />}>
@@ -154,9 +160,10 @@ export default function AppRoutes() {
         <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/support" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.support}><TenantSupportPage /></ActionGate>} />
           {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/self-service" element={<SelfServicePage />} />
+          <Route path="/self-service" element={<TenantUserRoute><SelfServicePage /></TenantUserRoute>} />
           <Route path="/sessions" element={<SessionsPage />} />
         </Route>
       </Route>

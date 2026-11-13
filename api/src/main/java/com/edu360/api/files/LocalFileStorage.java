@@ -14,16 +14,17 @@ import org.springframework.stereotype.Component;
  * app.file_object.storage_key. This is a deliberate interim implementation, not the real
  * object-store the V4.0 schema's own comment on file_object.storage_key describes ("Object-store
  * key prefixed tenants/{tenant_id}/") - there is no S3/equivalent configured anywhere in this
- * codebase yet, and building that integration is separate scope from "let a user upload a
- * profile photo." storage_key itself still never leaves the server (same invariant the schema
- * comment requires) - only FileObjectController's own stream endpoint ever reads it back.
+ * codebase yet. The key remains server-side and is never returned by an API.
  *
- * baseDir defaults to ./data/uploads (dev-friendly, gitignored) - override with
- * FILE_STORAGE_BASE_DIR in any environment that needs a different location.
+ * HOW: tenant files are isolated below tenants/{tenant_id}/ and identified by random UUIDs.
+ * Every read normalizes the key, checks lexical containment, resolves symlinks, and checks the
+ * real target remains beneath the real storage root before opening it.
+ *
+ * WHY: the interim local implementation preserves tenant partitioning and prevents path traversal
+ * while object storage and expiring download links remain a later integration.
  */
 @Component
 public class LocalFileStorage {
-
     private final Path baseDir;
 
     public LocalFileStorage(@Value("${app.file-storage.base-dir:./data/uploads}") String baseDir) {
@@ -31,28 +32,52 @@ public class LocalFileStorage {
     }
 
     public String store(UUID tenantId, UUID fileId, InputStream content) {
-        Path tenantDir = baseDir.resolve(tenantId.toString());
+        Path tenantsDir = baseDir.resolve("tenants").normalize();
+        Path tenantDir = tenantsDir.resolve(tenantId.toString()).normalize();
+        if (!tenantDir.startsWith(tenantsDir) || !tenantsDir.startsWith(baseDir)) {
+            throw new IllegalArgumentException("Invalid tenant storage path.");
+        }
         try {
+            Files.createDirectories(baseDir);
             Files.createDirectories(tenantDir);
-            Path target = tenantDir.resolve(fileId.toString());
+            Path realBase = baseDir.toRealPath();
+            Path realTenantDir = tenantDir.toRealPath();
+            if (!realTenantDir.startsWith(realBase)) {
+                throw new IllegalArgumentException("Tenant storage directory escapes the storage root.");
+            }
+            Path target = realTenantDir.resolve(fileId.toString()).normalize();
+            if (!target.startsWith(realTenantDir)) throw new IllegalArgumentException("Invalid file storage path.");
             Files.copy(content, target);
-            return baseDir.relativize(target).toString().replace('\\', '/');
+            return baseDir.relativize(tenantDir.resolve(fileId.toString())).toString().replace('\\', '/');
         } catch (IOException ex) {
             throw new UncheckedFileStorageException("Could not store uploaded file", ex);
         }
     }
 
-    public byte[] read(String storageKey) {
+    public InputStream openRead(String storageKey) {
+        Path target = baseDir.resolve(storageKey).normalize();
+        if (!target.startsWith(baseDir)) throw new IllegalArgumentException("Invalid storage key.");
         try {
-            return Files.readAllBytes(baseDir.resolve(storageKey).normalize());
+            Path realBase = baseDir.toRealPath();
+            Path realTarget = target.toRealPath();
+            if (!realTarget.startsWith(realBase) || !Files.isRegularFile(realTarget)) {
+                throw new IllegalArgumentException("Invalid storage key.");
+            }
+            return Files.newInputStream(realTarget);
+        } catch (IOException ex) {
+            throw new UncheckedFileStorageException("Could not read stored file", ex);
+        }
+    }
+
+    public byte[] read(String storageKey) {
+        try (InputStream input = openRead(storageKey)) {
+            return input.readAllBytes();
         } catch (IOException ex) {
             throw new UncheckedFileStorageException("Could not read stored file", ex);
         }
     }
 
     public static class UncheckedFileStorageException extends RuntimeException {
-        public UncheckedFileStorageException(String message, Throwable cause) {
-            super(message, cause);
-        }
+        public UncheckedFileStorageException(String message, Throwable cause) { super(message, cause); }
     }
 }
