@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -23,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
+import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
@@ -550,6 +553,13 @@ class RoleAssignmentControllerTest {
                 eq("ROLE_ASSIGN"),
                 eq(RbacScope.department(INSTITUTION_ID, departmentId)),
                 any(RbacTarget.class));
+        // C2-2: the grant must emit the immutable role-assignment audit event.
+        verify(auditLogService).record(
+                eq(AuditEventType.ROLE_ASSIGNED),
+                isNull(),
+                eq(ADMIN_USER_ID.toString()),
+                isNull(),
+                contains("Assigned role OFFICE_STAFF"));
     }
 
 }
