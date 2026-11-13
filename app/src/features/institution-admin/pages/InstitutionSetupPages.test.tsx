@@ -250,7 +250,7 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
 
     expect((await screen.findAllByText("Grade 8")).length).toBeGreaterThan(0);
-    expect(screen.getByText("A", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getByText("Section A", { selector: "strong" })).toBeInTheDocument();
     expect(screen.getByText("School classes")).toBeInTheDocument();
     expect(screen.queryByText("Academic Departments")).not.toBeInTheDocument();
     expect(screen.queryByText("Degree Programs")).not.toBeInTheDocument();

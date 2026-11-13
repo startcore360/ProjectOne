@@ -1397,7 +1397,7 @@ export function AcademicStructurePage() {
                   <tbody>
                     {schoolSections.map((section) => (
                       <tr key={section.sectionId}>
-                        <td><strong>{section.sectionName}</strong></td>
+                        <td><strong>Section {section.sectionName}</strong></td>
                         <td>{schoolClasses.find((item) => item.classId === section.classId)?.className ?? "Class unavailable"}</td>
                         <td>{schoolSessions.find((item) => item.academicSessionId === section.academicSessionId)?.sessionLabel ?? section.academicSessionId}</td>
                         <td><Badge tone={section.status === "ACTIVE" ? "success" : "neutral"}>{section.status === "ACTIVE" ? "Active" : section.status}</Badge></td>

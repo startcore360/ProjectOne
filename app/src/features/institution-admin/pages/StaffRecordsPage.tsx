@@ -251,12 +251,15 @@ export default function StaffRecordsPage() {
           {state === "loaded" && staff.length > 0 && (
             <div className="staff-record-list" role="list" aria-label="Staff directory">
               {staff.map((person) => (
-                <button key={person.id} type="button" role="listitem"
-                  className={`staff-record-list__item ${selected?.id === person.id ? "is-selected" : ""}`}
-                  onClick={() => { setSelected(person); void loadProfile(person.id); }}>
-                  <span className="staff-record-list__copy"><strong>{person.fullName}</strong><small>{person.staffCode} · {humanize(person.employmentStatus)}</small></span>
-                  <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>{humanize(person.employmentStatus)}</Badge>
-                </button>
+                <div key={person.id} role="listitem">
+                  <button type="button"
+                    aria-pressed={selected?.id === person.id}
+                    className={`staff-record-list__item ${selected?.id === person.id ? "is-selected" : ""}`}
+                    onClick={() => { setSelected(person); void loadProfile(person.id); }}>
+                    <span className="staff-record-list__copy"><strong>{person.fullName}</strong><small>{person.staffCode} · {humanize(person.employmentStatus)}</small></span>
+                    <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>{humanize(person.employmentStatus)}</Badge>
+                  </button>
+                </div>
               ))}
             </div>
           )}

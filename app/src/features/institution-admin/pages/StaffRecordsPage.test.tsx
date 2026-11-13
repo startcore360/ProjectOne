@@ -71,9 +71,9 @@ describe("StaffRecordsPage", () => {
     renderWithActions();
 
     expect(await screen.findByText("Taylor Reed")).toBeInTheDocument();
-    const directoryItem = screen.getByRole("listitem", { name: /Taylor Reed/ });
-    expect(directoryItem).toHaveTextContent("ST-004");
-    expect(directoryItem).toHaveTextContent("Active");
+    const directoryButton = screen.getByRole("button", { name: /Taylor Reed/ });
+    expect(directoryButton).toHaveTextContent("ST-004");
+    expect(directoryButton).toHaveTextContent("Active");
     expect(screen.queryByText("No staff records found")).not.toBeInTheDocument();
   });
 
