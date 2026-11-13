@@ -88,6 +88,7 @@ export function PlatformUsersView() {
   const [customRoles, setCustomRoles] = useState<PlatformRoleItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [rolesError, setRolesError] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [showCreate, setShowCreate] = useState(false);
@@ -111,14 +112,21 @@ export function PlatformUsersView() {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadRoles = useCallback(async () => {
+    if (!canManage) return;
+    setRolesError("");
+    try {
+      const res = await platformRoleService.getRoles();
+      setCustomRoles(Array.isArray(res?.data) ? res.data : []);
+    } catch (err) {
+      setRolesError(readErrorMessage(err, "Could not load custom platform roles."));
+    }
+  }, [canManage]);
+
   useEffect(() => {
     loadUsers();
-    if (canManage) {
-      Promise.resolve(platformRoleService.getRoles())
-        .then((res) => setCustomRoles(Array.isArray(res?.data) ? res.data : []))
-        .catch(() => setCustomRoles([]));
-    }
-  }, [loadUsers, canManage]);
+    void loadRoles();
+  }, [loadUsers, loadRoles]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -194,6 +202,7 @@ export function PlatformUsersView() {
       )}
       {notice && <Notice tone="success">{notice}</Notice>}
       {actionError && <Notice tone="danger">{actionError}</Notice>}
+      {rolesError && <Notice tone="danger">{rolesError} <Button variant="secondary" size="sm" onClick={() => void loadRoles()}>Retry custom roles</Button></Notice>}
       {loadError && (
         <Notice tone="danger">
           {loadError}{" "}

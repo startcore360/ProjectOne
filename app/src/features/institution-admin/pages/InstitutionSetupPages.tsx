@@ -1356,6 +1356,8 @@ export function TermLockPage() {
   const [loading, setLoading] = useState(false);
   const [locking, setLocking] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const [lockLoadError, setLockLoadError] = useState("");
+  const [institutionLoadError, setInstitutionLoadError] = useState("");
   const { fieldErrors, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
 
   useEffect(() => {
@@ -1367,7 +1369,7 @@ export function TermLockPage() {
           setInstitutions(res.items);
         }
       })
-      .catch(() => {});
+      .catch((err) => setInstitutionLoadError(getApiErrorMessage(err)));
   }, [tenantId]);
 
   // Unlock modal state
@@ -1377,10 +1379,11 @@ export function TermLockPage() {
   const fetchLocks = (instId: string) => {
     if (!tenantId || !isValidUuid(instId)) return;
     setLoading(true);
+    setLockLoadError("");
     termLockService
       .listTermLocks(tenantId, instId.trim())
       .then((data) => setLocks(data || []))
-      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
+      .catch((err) => setLockLoadError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
   };
 
@@ -1430,6 +1433,7 @@ export function TermLockPage() {
         description="Lock academic terms to freeze marks and attendance records. Temporary unlocks require statutory justification and automatically expire [TERM_LOCK / TERM_UNLOCK / Rules R2-08, AT-09]."
       />
 
+      {institutionLoadError && <Notice tone="danger">{institutionLoadError}</Notice>}
       {feedback && (
         <Toast
           variant={feedback.tone === "danger" ? "error" : "success"}
@@ -1514,13 +1518,15 @@ export function TermLockPage() {
 
       <Panel title="Active term locks" description="Review locked terms. Principals can temporarily unlock for grievances or corrections.">
         {loading && <p className="platform-empty-note">Loading locks...</p>}
-        {locks.length === 0 ? (
+        {lockLoadError ? (
+          <Notice tone="danger">{lockLoadError} <Button variant="secondary" size="sm" onClick={() => fetchLocks(institutionId)}>Retry</Button></Notice>
+        ) : locks.length === 0 && !loading ? (
           <EmptyState
             title="No active term locks"
             description="No active term locks recorded for this institution."
             icon="lock"
           />
-        ) : (
+        ) : loading ? null : (
           <div className="platform-table-wrap">
             <table className="platform-table">
               <thead>
@@ -1603,6 +1609,7 @@ export function DelegationsApprovalsPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [delegations, setDelegations] = useState<DelegationItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const { fieldErrors: delegFieldErrors, handleApiError: handleDelegApiError, clearFieldError: clearDelegFieldError, clearAll: clearDelegAll } = useFormErrors();
   const { fieldErrors: bulkFieldErrors, handleApiError: handleBulkApiError, clearFieldError: clearBulkFieldError, clearAll: clearBulkAll } = useFormErrors();
@@ -1623,25 +1630,29 @@ export function DelegationsApprovalsPage() {
   // Approval Inbox state
   const [inboxItems, setInboxItems] = useState<ApprovalStepItem[]>([]);
   const [inboxLoading, setInboxLoading] = useState(false);
+  const [delegationsError, setDelegationsError] = useState("");
+  const [inboxError, setInboxError] = useState("");
   const [decidingId, setDecidingId] = useState<string | null>(null);
 
   const fetchDelegations = useCallback(() => {
     if (!tenantId) return;
     setLoading(true);
+    setDelegationsError("");
     approvalDelegationService
       .listDelegations(tenantId)
       .then((data) => setDelegations(data || []))
-      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
+      .catch((err) => setDelegationsError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [tenantId]);
 
   const fetchInbox = useCallback(() => {
     if (!tenantId) return;
     setInboxLoading(true);
+    setInboxError("");
     approvalDelegationService
       .listInbox(tenantId)
       .then((items) => setInboxItems(items || []))
-      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
+      .catch((err) => setInboxError(getApiErrorMessage(err)))
       .finally(() => setInboxLoading(false));
   }, [tenantId]);
 
@@ -1897,13 +1908,14 @@ export function DelegationsApprovalsPage() {
           description="Pending steps awaiting your review or acting delegation [Addendum Rule 11 / Self-approval prohibited]."
         >
           {inboxLoading && <p className="platform-empty-note">Loading pending approvals...</p>}
-          {!inboxLoading && inboxItems.length === 0 ? (
+          {inboxError && <Notice tone="danger">{inboxError} <Button variant="secondary" size="sm" onClick={fetchInbox}>Retry</Button></Notice>}
+          {!inboxLoading && !inboxError && inboxItems.length === 0 ? (
             <EmptyState
               title="No pending approvals"
               description="No pending approval requests in your inbox."
               icon="check-circle"
             />
-          ) : (
+          ) : inboxLoading || inboxError ? null : (
             <div className="platform-table-wrap">
               <table className="platform-table">
                 <thead>
@@ -1951,13 +1963,14 @@ export function DelegationsApprovalsPage() {
       <div style={{ marginTop: "var(--space-4)" }}>
         <Panel title="My active delegations" description="Review delegations you have granted. Self-approval is strictly prohibited under Rule 11.">
           {loading && <p className="platform-empty-note">Loading delegations...</p>}
-          {delegations.length === 0 ? (
+          {delegationsError && <Notice tone="danger">{delegationsError} <Button variant="secondary" size="sm" onClick={fetchDelegations}>Retry</Button></Notice>}
+          {!loading && !delegationsError && delegations.length === 0 ? (
             <EmptyState
               title="No active delegations"
               description="No active delegations created."
               icon="user"
             />
-          ) : (
+          ) : loading || delegationsError ? null : (
             <div className="platform-table-wrap">
               <table className="platform-table">
                 <thead>
@@ -2036,20 +2049,21 @@ export function AcademicGovernancePage() {
   const fetchCurrentTab = useCallback(() => {
     if (!tenantId) return;
     setLoading(true);
+    setLoadError("");
     if (activeTab === "rules") {
       academicService.listProgramRules(tenantId)
         .then(setRules)
-        .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
+        .catch((err) => setLoadError(getApiErrorMessage(err)))
         .finally(() => setLoading(false));
     } else if (activeTab === "grading") {
       academicService.listGradingSchemes(tenantId)
         .then(setSchemes)
-        .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
+        .catch((err) => setLoadError(getApiErrorMessage(err)))
         .finally(() => setLoading(false));
     } else if (activeTab === "allocation") {
       academicService.listSubjectAllocations(tenantId)
         .then(setAllocations)
-        .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
+        .catch((err) => setLoadError(getApiErrorMessage(err)))
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -2172,8 +2186,9 @@ export function AcademicGovernancePage() {
       )}
 
       {loading && <p className="platform-empty-note">Loading academic configuration...</p>}
+      {loadError && !loading && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={fetchCurrentTab}>Retry</Button></Notice>}
 
-      {!loading && activeTab === "rules" && (
+      {!loading && !loadError && activeTab === "rules" && (
         <Panel title="Curriculum & Program Rule Sets [PROGRAM_RULES_SET / Action #30]" description="Versioned curriculum requirements set by the Registrar.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2206,7 +2221,7 @@ export function AcademicGovernancePage() {
         </Panel>
       )}
 
-      {!loading && activeTab === "grading" && (
+      {!loading && !loadError && activeTab === "grading" && (
         <Panel title="Grading Schemes [GRADING_SCHEME_SET / Action #34]" description="University-wide or standalone institution grade points and bands.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2237,7 +2252,7 @@ export function AcademicGovernancePage() {
         </Panel>
       )}
 
-      {!loading && activeTab === "allocation" && (
+      {!loading && !loadError && activeTab === "allocation" && (
         <Panel title="Subject Allocations [SUBJECT_ALLOCATE / Action #36]" description="Allocate courses to teachers for specific class sections or elective subject groups.">
           <div className="platform-table-wrap">
             <table className="platform-table">
@@ -2268,7 +2283,7 @@ export function AcademicGovernancePage() {
         </Panel>
       )}
 
-      {!loading && activeTab === "promotion" && (
+      {!loading && !loadError && activeTab === "promotion" && (
         <Panel title="Year-End Promotions [PROMOTION_RUN / PROMOTION_APPROVE / Actions #39 & #40]" description="Promote students across academic sessions; Principal approves before execution.">
           <div className="platform-table-wrap">
             <table className="platform-table">
