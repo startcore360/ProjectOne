@@ -12,6 +12,7 @@ const DEFAULT_MAX_BYTES = 10_485_760;
 const DEFAULT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.txt";
 
 function formatMiB(bytes: number) {
+  if (bytes < 104_858) return `${bytes.toLocaleString()} bytes`;
   const value = bytes / (1024 * 1024);
   return `${Number.isInteger(value) ? value : value.toFixed(1)} MiB`;
 }
