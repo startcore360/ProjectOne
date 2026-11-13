@@ -461,3 +461,8 @@ This section supersedes older “Still open” bullets above where they conflict
 - Resolve all failures and rerun. Dependency Review only runs on pull requests and requires repository dependency-graph support; OWASP requires a valid NVD API key. Record these as environment/configuration blockers if unavailable rather than waiving them.
 - Confirm the newest five GitHub Actions runs for `sprint-2-development` and record run IDs, head SHAs, conclusions and cancelled superseded runs. The available GitHub integration in this session did not expose a list-runs operation, so no latest-five result is asserted here.
 - No story is Accepted until its role-specific workflow and required CI/SQL evidence are recorded. Do not change `master`; default-branch incident cleanup remains repository-owner work and is not authorized by this task.
+
+
+### Additional implementation work — 13 November 2026
+- C2-2 department-grant test strengthened: the department-scoped grant now asserts the exact `ROLE_ASSIGNED` audit event, actor and role detail in addition to the exact institution + department authorization scope. Source commit: `f985795e09bd998ad9677eb6d5a94b0c4a237fd3`.
+- This is source-level test coverage only. No workflow run was returned for that commit, so it is not marked passed.
