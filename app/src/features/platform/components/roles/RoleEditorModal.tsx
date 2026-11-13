@@ -136,6 +136,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
         value={name}
         onChange={(e) => { setName(e.target.value); if (e.target.value.trim().length >= 2) { setNameError(""); setError(""); } }}
         placeholder="e.g. Billing Assistant"
+        error={nameError}
       />
       {!role && (
         <div className="platform-form-grid">
