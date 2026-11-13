@@ -354,7 +354,7 @@ public class StaffDirectoryService {
                 """, Boolean.class, actor.tenantId(), staffProfileId, request.institutionId(),
                 request.departmentId(), request.effectiveTo(), request.effectiveFrom());
         if (Boolean.TRUE.equals(overlapping)) {
-            throw new DuplicateResourceException("An active staff assignment overlaps the requested effective date range for this scope.");
+            throw new DuplicateResourceException("An existing staff assignment overlaps the requested effective date range for this scope.");
         }
         StaffAssignment assignment = new StaffAssignment();
         assignment.setStaffAssignmentId(UUID.randomUUID());
