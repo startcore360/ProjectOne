@@ -140,7 +140,7 @@ public class StudentCreationService {
         entityManager.refresh(saved);
 
         enrollments.enrolExistingStudent(actor, studentProfileId, institutionId, request.sectionId(),
-                request.academicSessionId(), null, admissionDate);
+                request.academicSessionId(), request.rollNumber(), admissionDate);
 
         audit.record(new AuditEntry(AuditEventType.STUDENT_PROFILE_CREATED, "USER_CREATE",
                 "STUDENT_PROFILE", studentProfileId, institutionId, null,
