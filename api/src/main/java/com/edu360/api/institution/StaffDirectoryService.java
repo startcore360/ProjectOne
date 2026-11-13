@@ -298,7 +298,7 @@ public class StaffDirectoryService {
                   LEFT JOIN app.department d
                     ON d.tenant_id = sa.tenant_id AND d.department_id = sa.department_id
                  WHERE p.tenant_id = ? AND sa.institution_id = ?
-                   AND (sa.department_id IS NULL OR sa.department_id = ?)
+                   AND (sa.department_id IS NULL OR COALESCE(?, sa.department_id) = sa.department_id)
                    AND sa.status = 'ACTIVE'
                    AND sa.effective_from <= CURRENT_DATE
                    AND (sa.effective_to IS NULL OR sa.effective_to >= CURRENT_DATE)
