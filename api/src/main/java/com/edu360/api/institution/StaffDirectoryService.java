@@ -86,6 +86,11 @@ public class StaffDirectoryService {
 
     @Transactional
     public StaffProfileResponse create(RbacPrincipal actor, StaffProfileRequest request) {
+        return create(actor, request, null);
+    }
+
+    @Transactional
+    public StaffProfileResponse create(RbacPrincipal actor, StaffProfileRequest request, UUID userAccountId) {
         var active = permissions.activeAssignment(actor)
                 .orElseThrow(() -> new com.edu360.api.exception.UnauthorizedException("An active staff role is required."));
         UUID institutionId = active.getScopeType() == ScopeType.TENANT ? null : active.getInstitutionId();
@@ -102,6 +107,7 @@ public class StaffDirectoryService {
         StaffProfile profile = new StaffProfile();
         UUID id = UUID.randomUUID();
         profile.setId(new StaffProfileId(actor.tenantId(), id));
+        profile.setUserAccountId(userAccountId);
         profile.setStaffCode(staffCode);
         profile.setFullName(request.fullName().trim());
         profile.setDateOfBirth(request.dateOfBirth());
