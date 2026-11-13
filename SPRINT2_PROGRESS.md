@@ -310,3 +310,13 @@ This section records verified repository edits made during the current implement
 - The SQL runner and OWASP checks have not yet been executed for these commits.
 - No claim is made that the complete branch is accepted or that all Sprint 2 work is finished.
 - Outstanding security work, staff identity linkage, staff assignment conflict checks, student bulk enrolment, ID-format UI, notification event coverage, recipient-level database isolation, Chunk 3b G2, and full chunk acceptance remain tracked above until implemented and validated.
+
+
+### Staff sensitive-field protection — implementation pass 2
+
+- `StaffProfileResponse.from(profile)` now defaults to masking date of birth, personal email, personal mobile and national-ID last four characters.
+- The staff directory list/detail paths request sensitive fields only when the active caller is also authorized for `STAFF_RECORD_MANAGE`; otherwise those fields remain null in the response.
+- Privileged list/detail reads write a structured `SENSITIVE_VIEW` audit event per staff profile viewed. Audit payloads contain no personal field values.
+- Added response-mapping tests for masked default responses and explicitly authorized full responses.
+- Commits: `2b4657bbe7829879e5b9bc53bb066c23e3f0b8fc`, `3de41e02fdd1c7e05a90a56f1421a91ef7aa04df`, `ff640b69848be9522283b8a25f99aa4f70fc909e`.
+- Validation remains pending; do not mark this story Tested or Accepted until Maven and role-specific API tests pass.
