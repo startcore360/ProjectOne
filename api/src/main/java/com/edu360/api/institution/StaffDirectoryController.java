@@ -39,6 +39,7 @@ public class StaffDirectoryController {
             @RequestParam(required = false) String role,
             @RequestParam(required = false) UUID institutionId,
             @RequestParam(required = false) UUID departmentId,
+            @RequestParam(required = false) String purpose,
             @RequestParam(defaultValue = "50") int limit,
             Authentication authentication) {
         RbacPrincipal actor = principal(authentication, tenantId);
@@ -49,7 +50,7 @@ public class StaffDirectoryController {
             throw new com.edu360.api.exception.BusinessRuleViolationException(
                     "VALIDATION_FAILED", "Only role=TEACHING is supported by the staff picker.");
         }
-        return ResponseEntity.ok(service.teacherLookup(actor, institutionId, departmentId, q, limit));
+        return ResponseEntity.ok(service.teacherLookup(actor, institutionId, departmentId, q, limit, purpose));
     }
 
     @PostMapping
