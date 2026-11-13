@@ -5,6 +5,8 @@ import { TENANT_ROUTE_ACTIONS } from "./tenantRouteActions";
 // The assertions guard the route-level "any of" checks; endpoint authorization remains server-side.
 const grants: Record<string, readonly string[]> = {
   UNIVERSITY_ADMIN: ["INSTITUTION_CREATE_DRAFT", "USER_VIEW", "ROLE_ASSIGN", "STRUCTURE_MANAGE", "ROLLDOWN_VIEW"],
+  MANAGEMENT: ["ROLLDOWN_VIEW"],
+  GOVERNING_BODY_APPROVER: ["ROLLDOWN_VIEW"],
   VICE_CHANCELLOR: ["INSTITUTION_ACTIVATE", "USER_VIEW", "STRUCTURE_MANAGE", "ROLLDOWN_VIEW"],
   COLLEGE_ADMIN: ["USER_VIEW", "ROLE_ASSIGN", "STRUCTURE_MANAGE", "SUBJECT_ALLOCATE", "ROLLDOWN_VIEW"],
   SCHOOL_ADMIN: ["USER_VIEW", "ROLE_ASSIGN", "STRUCTURE_MANAGE", "SUBJECT_ALLOCATE", "ROLLDOWN_VIEW"],
@@ -42,7 +44,7 @@ describe("tenant administration route permission contracts", () => {
 
   it.each([
     "UNIVERSITY_ADMIN", "VICE_CHANCELLOR", "COLLEGE_ADMIN", "SCHOOL_ADMIN",
-    "PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL",
+    "PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL", "MANAGEMENT", "GOVERNING_BODY_APPROVER",
   ])("missing-roles route is reachable by %s", (role) =>
     expect(canOpen(TENANT_ROUTE_ACTIONS.missingRoles, role)).toBe(true),
   );
