@@ -71,7 +71,8 @@ describe("StaffRecordsPage", () => {
     renderWithActions();
 
     expect(await screen.findByText("Taylor Reed")).toBeInTheDocument();
-    expect(screen.getByText("ST-004 · Active")).toBeInTheDocument();
+    expect(screen.getByText("ST-004")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.queryByText("No staff records found")).not.toBeInTheDocument();
   });
 
