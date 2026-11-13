@@ -19,6 +19,19 @@ export type ApiError = AxiosError<ApiErrorResponse>;
  * Axios service calls should continue using relative paths with the shared
  * Axios instance (whose baseURL already includes /api).
  */
+function isInternalErrorText(value: string): boolean {
+  const text = value.trim();
+  return !text || /^[A-Z][A-Z0-9_]{2,}$/.test(text) ||
+    /correlation\\s*id\\s*:/i.test(text) ||
+    /^(?:org\\.springframework|java\\.|com\\.edu360\\.)/.test(text);
+}
+
+function cleanUserMessage(value: string | undefined): string | null {
+  if (!value) return null;
+  const cleaned = value.replace(/\\s*correlation\\s*id\\s*:\\s*[a-f0-9-]{16,}/ig, "").trim();
+  return isInternalErrorText(cleaned) ? null : cleaned;
+}
+
 export class ApiHelper {
   static getUrl(path: string): string {
     const normalizedPath = path.replace(/^\/+/, "");
@@ -37,27 +50,26 @@ export class ApiHelper {
 
     if (error && typeof error === "object" && "isAxiosError" in error) {
       const apiError = error as ApiError;
-      const responseMessage =
+      const status = apiError.response?.status;
+      if (status === 401) return "Your session has expired. Please sign in again.";
+      if (status === 403) return "You do not have permission to perform this action.";
+      if (status === 404) return "The requested record could not be found.";
+      if (status === 409 || status === 412) return "This record has changed. Refresh it and try again.";
+      if (status && status >= 500) return "The server encountered an error. Please try again later.";
+
+      const responseMessage = cleanUserMessage(
         apiError.response?.data?.message ||
         apiError.response?.data?.error ||
-        apiError.response?.data?.details;
-
+        apiError.response?.data?.details,
+      );
       if (responseMessage) return responseMessage;
       if (apiError.code === "ERR_NETWORK") {
         return "Unable to reach the server. Check your connection and try again.";
       }
-      if (apiError.response?.status === 401) {
-        return "Your session has expired. Please sign in again.";
-      }
-      if (apiError.response?.status === 403) {
-        return "You do not have permission to perform this action.";
-      }
-      if (apiError.response?.status && apiError.response.status >= 500) {
-        return "The server encountered an error. Please try again later.";
-      }
+
     }
 
-    if (error instanceof Error && error.message) return error.message;
+    if (error instanceof Error && error.message) return cleanUserMessage(error.message) ?? "Something went wrong. Please try again.";
     return "Something went wrong. Please try again.";
   }
 
