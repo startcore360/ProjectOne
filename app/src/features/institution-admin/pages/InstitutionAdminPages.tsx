@@ -18,7 +18,6 @@ import {
 import {
   roleAssignmentService,
   type RoleDefinitionItem,
-  type RoleDefinitionStatus,
 } from "../api/roleAssignmentService";
 import {
   leaveApproverService,
@@ -549,21 +548,12 @@ export function InstitutionUsersPage() {
   );
 }
 
-const roleRows = [
-  { name: "University Admin", level: "University", type: "Standard" },
-  { name: "College Admin", level: "College", type: "Standard" },
-  { name: "School Admin", level: "School", type: "Standard" },
-  { name: "Principal", level: "School", type: "Standard" },
-  { name: "Teacher", level: "School", type: "Standard" },
-  { name: "Accountant", level: "Institution", type: "Standard" },
-  { name: "Governing Body Approver", level: "Governance", type: "Standard" },
-];
-
 export function RolesPermissionsPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [query, setQuery] = useState("");
   const [roles, setRoles] = useState<RoleDefinitionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Custom role creation state (Story #16: ROLE_CUSTOM_MANAGE)
@@ -575,12 +565,12 @@ export function RolesPermissionsPage() {
   const fetchRoles = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
+    setLoadError("");
     try {
       const data = await roleAssignmentService.listRoles(tenantId);
-      if (data && data.length > 0) {
-        setRoles(data);
-      }
+      setRoles(Array.isArray(data) ? data : []);
     } catch (err) {
+      setRoles([]);
       setLoadError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
@@ -591,30 +581,16 @@ export function RolesPermissionsPage() {
     if (tenantId) void fetchRoles();
   }, [fetchRoles, tenantId]);
 
-  const displayRows = useMemo(() => {
-    if (roles.length > 0) {
-      return roles.map((r) => ({
-        id: r.roleDefinitionId ?? r.roleCode,
-        raw: r,
-        name: r.roleName,
-        code: r.roleCode,
-        level: r.roleLevel,
-        type: r.roleOrigin === "STANDARD" ? "Standard" : "Custom",
-        sensitive: r.sensitiveRole,
-        status: r.status || "ACTIVE",
-      }));
-    }
-    return roleRows.map((r) => ({
-      id: r.name,
-      raw: undefined as RoleDefinitionItem | undefined,
-      name: r.name,
-      code: r.name.toUpperCase().replace(/\s+/g, "_"),
-      level: r.level,
-      type: r.type,
-      sensitive: false,
-      status: "ACTIVE" as RoleDefinitionStatus,
-    }));
-  }, [roles]);
+  const displayRows = useMemo(() => roles.map((r) => ({
+    id: r.roleDefinitionId ?? r.roleCode,
+    raw: r,
+    name: r.roleName,
+    code: r.roleCode,
+    level: r.roleLevel,
+    type: r.roleOrigin === "STANDARD" ? "Standard" : "Custom",
+    sensitive: r.sensitiveRole,
+    status: r.status || "ACTIVE",
+  })), [roles]);
 
   const filtered = useMemo(
     () =>
@@ -666,9 +642,17 @@ export function RolesPermissionsPage() {
 
       <Panel
         title="Role catalogue"
-        description="Representative role names from the V4.0 prototype. This is not the complete 71-role catalogue. Standard roles are system-defined; custom roles are tenant-managed [ROLE_CUSTOM_MANAGE]."
+        description="Roles returned by the tenant role catalogue. Standard roles are system-defined; custom roles are tenant-managed [ROLE_CUSTOM_MANAGE]."
       >
-        {loading && <p className="platform-empty-note">Loading roles from catalogue...</p>}
+        {loading && <p className="platform-empty-note" role="status">Loading roles from catalogue...</p>}
+        {loadError && !loading && (
+          <Notice tone="danger">
+            {loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRoles()}>Retry</Button>
+          </Notice>
+        )}
+        {!loading && !loadError && roles.length === 0 && (
+          <p className="platform-empty-note">No roles were returned by the tenant role catalogue.</p>
+        )}
         <div className="platform-toolbar">
           <label className="platform-search">
             <span aria-hidden="true">
@@ -682,7 +666,7 @@ export function RolesPermissionsPage() {
             />
           </label>
         </div>
-        <div className="platform-table-wrap">
+        {!loading && !loadError && roles.length > 0 && <div className="platform-table-wrap">
           <table className="platform-table">
             <thead>
               <tr>
@@ -737,7 +721,7 @@ export function RolesPermissionsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </div>}
       </Panel>
 
       {/* Create Custom Role Modal (Story #16: ROLE_CUSTOM_MANAGE) */}

@@ -359,12 +359,12 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     expect(screen.getByRole("button", { name: /Create user/i })).toBeDisabled();
   });
 
-  it("labels the role list as representative and explains Rule MX-04 non-sensitive delegation", () => {
+  it("shows an honest empty state when the tenant role catalogue is empty", async () => {
+    vi.mocked(roleAssignmentService.listRoles).mockResolvedValue([]);
     renderWithStore(<RolesPermissionsPage />);
-    expect(screen.getByText(/not the complete 71-role catalogue/i)).toBeInTheDocument();
-    expect(screen.getByText("University Admin")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("No roles were returned by the tenant role catalogue.")).toBeInTheDocument());
+    expect(screen.queryByText("University Admin")).not.toBeInTheDocument();
     expect(screen.getByText(/Role assignment & delegation policy \(Rule MX-04\)/i)).toBeInTheDocument();
-    expect(screen.getByText("Sensitivity [MX-04]")).toBeInTheDocument();
   });
 
   it("displays Go-Live readiness warning banner when missing approver blockers exist (Rules C6 & C7)", async () => {
