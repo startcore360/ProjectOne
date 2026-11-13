@@ -3,6 +3,13 @@ package com.edu360.api.files;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.edu360.api.identity.UserType;
+import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.RbacPrincipal;
+import com.edu360.api.rbac.RbacScope;
+import com.edu360.api.rbac.RbacTarget;
 import org.springframework.stereotype.Component;
 
 import com.edu360.api.config.TenantPrincipal;
@@ -144,6 +151,9 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
 
     private final JdbcTemplate jdbc;
 
+    @Autowired(required = false)
+    private PermissionEvaluatorService permissions;
+
     public JdbcFileAccessPolicy(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
@@ -154,7 +164,8 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
         UUID userId = principal.userAccountId();
         UUID fileId = file.getId().getFileId();
         return switch (FilePurpose.valueOf(file.getPurpose())) {
-            case STUDY_MATERIAL -> exists(STUDY_MATERIAL, tenantId, fileId, userId, userId, userId, userId);
+            case STUDY_MATERIAL -> exists(STUDY_MATERIAL, tenantId, fileId, userId, userId, userId, userId)
+                    || canStaffViewStudyMaterial(file, principal);
             case ASSIGNMENT_SUBMISSION -> exists(ASSIGNMENT_SUBMISSION, tenantId, fileId, userId, userId, userId);
             case SYLLABUS -> exists(SYLLABUS, tenantId, fileId);
             case STAFF_DOCUMENT -> exists(STAFF_DOCUMENT, tenantId, fileId);
@@ -182,6 +193,14 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                     AND (?::uuid IS NULL OR a.institution_id = ?)
                 )
                 """, principal.tenantId(), recordId, file.getInstitutionId(), file.getInstitutionId());
+    }
+
+    private boolean canStaffViewStudyMaterial(FileObject file, TenantPrincipal principal) {
+        if (permissions == null || principal.userType() != UserType.STAFF || file.getInstitutionId() == null) {
+            return false;
+        }
+        return permissions.can(new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
+                "STUDY_MATERIAL_VIEW", RbacScope.institution(file.getInstitutionId()), RbacTarget.NONE).allowed();
     }
 
     private boolean exists(String sql, Object... parameters) {
