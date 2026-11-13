@@ -54,9 +54,9 @@ class StaffOnboardingServiceTest {
                 LocalDate.of(2026, 11, 1), null, null, actorId, null, actorId, 1);
         when(directory.create(eq(actor), any(StaffProfileRequest.class), eq(accountId))).thenReturn(profile);
 
-        StaffProfileRequest request = new StaffProfileRequest(null, "Asha Rao", null,
+        StaffProfileRequest request = new StaffProfileRequest(null, "Asha Rao", null, "asha@school.edu", null,
                 "asha.personal@gmail.com", null, null, null, "ACTIVE",
-                LocalDate.of(2026, 11, 1), null, "asha@school.edu", null);
+                LocalDate.of(2026, 11, 1), null);
 
         StaffOnboardingResponse result = new StaffOnboardingService(accounts, directory, roles,
                 permissions, jdbc).onboard(actor, request);
@@ -75,9 +75,8 @@ class StaffOnboardingServiceTest {
         StaffOnboardingService service = new StaffOnboardingService(accounts,
                 mock(StaffDirectoryService.class), mock(RoleAssignmentService.class),
                 mock(PermissionEvaluatorService.class), mock(JdbcTemplate.class));
-        StaffProfileRequest request = new StaffProfileRequest(null, "Asha Rao", null,
-                "asha@school.edu", null, null, null, "ACTIVE", null, null,
-                "ASHA@SCHOOL.EDU", null);
+        StaffProfileRequest request = new StaffProfileRequest(null, "Asha Rao", null, "ASHA@SCHOOL.EDU", null,
+                "asha@school.edu", null, null, null, "ACTIVE", null, null);
 
         assertThatThrownBy(() -> service.onboard(new RbacPrincipal(UUID.randomUUID(), UUID.randomUUID()), request))
                 .isInstanceOf(IllegalArgumentException.class)
