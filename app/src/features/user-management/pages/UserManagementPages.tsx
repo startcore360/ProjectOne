@@ -118,7 +118,7 @@ export function UserListPage() {
   if (!tenantId) {
     return (
       <div className="platform-page">
-        <PageHeader title="Users & roles" description="User account management (USER_VIEW)." />
+        <PageHeader title="Users & roles" description="Manage tenant user accounts within your permitted scope." />
         <ErrorState
           title="Not available"
           message="This screen is for tenant accounts. No tenant is associated with your sign-in."
@@ -163,7 +163,7 @@ export function UserListPage() {
     <div className="platform-page">
       <PageHeader
         title="Users & roles"
-        description="View and manage tenant user accounts in a chosen scope (USER_VIEW)."
+        description="View and manage tenant user accounts within your permitted scope."
         actions={
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <Button variant="secondary" onClick={() => setShowCreateCheck(true)}>
@@ -173,7 +173,7 @@ export function UserListPage() {
               Create student profile
             </Button>
             <Button variant="secondary" onClick={() => setShowBulkModal(true)}>
-              Bulk import users
+              Bulk import user accounts
             </Button>
             <Button variant="secondary" onClick={() => setShowGovernanceModal(true)}>
               Create governance user
@@ -411,7 +411,7 @@ export function UserDetailPage() {
   if (!tenantId || !userId) {
     return (
       <div className="platform-page">
-        <PageHeader title="User detail" description="User account management (USER_VIEW)." />
+        <PageHeader title="User detail" description="Manage tenant user accounts and their profile details." />
         <ErrorState
           title="Not available"
           message="This screen is for tenant accounts with a valid user ID."
@@ -517,7 +517,7 @@ export function UserDetailPage() {
     <div className="platform-page">
       <PageHeader
         title="User detail"
-        description="View, edit and manage a single user account (USER_VIEW / USER_EDIT / USER_DEACTIVATE / USER_PASSWORD_RESET_UNLOCK)."
+        description="View, edit and manage a single user account. Sensitive changes are checked against your active role and institution scope."
         actions={
           <Button variant="secondary" onClick={() => navigate("/tenants/users")}>
             Back to register
@@ -620,7 +620,7 @@ export function UserDetailPage() {
 
           <Panel
             title="Institution-scoped actions"
-            description="USER_DEACTIVATE and USER_PASSWORD_RESET_UNLOCK are always checked against your own institution-scoped grant, never tenant or department scope."
+            description="Account deactivation and password recovery are always checked against your own institution scope."
           >
             <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
               <TextField

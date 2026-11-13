@@ -239,9 +239,9 @@ describe("UserListPage", () => {
     renderList();
 
     // Click Bulk import users
-    fireEvent.click(screen.getByRole("button", { name: /Bulk import users/i }));
-    expect(screen.getByRole("heading", { name: "Bulk upload users" })).toBeInTheDocument();
-    expect(screen.getByText(/Upload supported user accounts with pre-validation and row-level error tracking/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Bulk import user accounts/i }));
+    expect(screen.getByRole("heading", { name: "Bulk upload user accounts" })).toBeInTheDocument();
+    expect(screen.getByText(/This workflow does not create student profiles or enrolments/i)).toBeInTheDocument();
 
     // Download template
     fireEvent.click(screen.getByRole("button", { name: /Download CSV Template/i }));
@@ -256,7 +256,7 @@ describe("UserListPage", () => {
     });
 
     // Submit for pre-validation
-    fireEvent.click(screen.getByRole("button", { name: /Pre-validate CSV \(Rule MD-27\)/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Pre-validate CSV/i }));
 
     await waitFor(() => {
       expect(userManagementService.createUserImport).toHaveBeenCalledWith(
@@ -264,7 +264,7 @@ describe("UserListPage", () => {
         expect.stringContaining("clean@test.com"),
         undefined
       );
-      expect(screen.getByText("Pre-validation Results [Rule MD-27]")).toBeInTheDocument();
+      expect(screen.getByText("Pre-validation results")).toBeInTheDocument();
       expect(screen.getByText("UIDAI_MASKED_LAST4_REQUIRED")).toBeInTheDocument();
       expect(screen.getAllByText(/Unmasked 12-digit Aadhaar/i).length).toBeGreaterThanOrEqual(1);
     });
