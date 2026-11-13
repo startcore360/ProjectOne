@@ -182,7 +182,7 @@ public class StaffDocumentService {
                         "An active staff-management role is required."));
         ScopeType scopeType = active.getScopeType();
         if (scopeType == ScopeType.TENANT) {
-            permissions.authorize(caller, "STAFF_RECORD_MANAGE", RbacScope.tenant(), RbacTarget.NONE);
+            permissions.authorize(caller, action, RbacScope.tenant(), RbacTarget.NONE);
             boolean exists = Boolean.TRUE.equals(jdbc.queryForObject("""
                     SELECT EXISTS (SELECT 1 FROM app.staff_assignment
                      WHERE tenant_id = ? AND staff_profile_id = ?)
@@ -208,7 +208,7 @@ public class StaffDocumentService {
             RbacScope targetScope = scopeType == ScopeType.DEPARTMENT
                     ? RbacScope.department(target.institutionId(), target.departmentId())
                     : RbacScope.institution(target.institutionId());
-            permissions.authorize(caller, "STAFF_RECORD_MANAGE", targetScope, RbacTarget.NONE);
+            permissions.authorize(caller, action, targetScope, RbacTarget.NONE);
             return;
         }
         throw new ResourceNotFoundException("Staff record not found in the active role scope.");
