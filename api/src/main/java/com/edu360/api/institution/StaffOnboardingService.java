@@ -71,9 +71,9 @@ public class StaffOnboardingService {
 
         StaffProfileRequest profileRequest = new StaffProfileRequest(
                 request.staffCode(), request.fullName(), request.dateOfBirth(),
-                personalEmail, request.personalMobile(), request.nationalIdLast4(),
-                request.photoFileId(), request.employmentStatus(), request.joinedOn(),
-                request.leftOn(), officialEmail, request.initialRoleCode());
+                officialEmail, request.initialRoleCode(), personalEmail, request.personalMobile(),
+                request.nationalIdLast4(), request.photoFileId(), request.employmentStatus(),
+                request.joinedOn(), request.leftOn());
         StaffProfileResponse profile = staffDirectory.create(actor, profileRequest, login.userAccountId());
 
         if (personalEmail != null) {
