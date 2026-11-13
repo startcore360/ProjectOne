@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Button,
   Kicker,
@@ -82,7 +82,7 @@ export function InstitutionsPage() {
   const [approverModalItem, setApproverModalItem] = useState<InstitutionItem | null>(null);
   const [vcModalOpen, setVcModalOpen] = useState(false);
 
-  const fetchInstitutions = async () => {
+  const fetchInstitutions = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     setError(null);
@@ -100,11 +100,11 @@ export function InstitutionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId) void fetchInstitutions();
-  }, [tenantId]);
+  }, [fetchInstitutions, tenantId]);
 
   const handleActivate = async (item: InstitutionItem) => {
     if (!tenantId) return;
@@ -562,7 +562,7 @@ export function RolesPermissionsPage() {
   // Custom role retirement state (Story #16: ROLE_CUSTOM_MANAGE)
   const [retireModalItem, setRetireModalItem] = useState<RoleDefinitionItem | null>(null);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
@@ -575,11 +575,11 @@ export function RolesPermissionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId) void fetchRoles();
-  }, [tenantId]);
+  }, [fetchRoles, tenantId]);
 
   const displayRows = useMemo(() => {
     if (roles.length > 0) {
@@ -793,7 +793,7 @@ export function MissingRolesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [overrideTarget, setOverrideTarget] = useState<{ missingRoleCode: string; permissionKind: string } | null>(null);
 
-  const fetchRolldown = async () => {
+  const fetchRolldown = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
@@ -808,11 +808,11 @@ export function MissingRolesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId) void fetchRolldown();
-  }, [tenantId]);
+  }, [fetchRolldown, tenantId]);
 
   const handleRevokeOverride = async (overrideId: string) => {
     if (!tenantId) return;

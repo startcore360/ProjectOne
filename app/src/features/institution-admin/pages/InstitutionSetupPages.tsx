@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
@@ -1625,7 +1625,7 @@ export function DelegationsApprovalsPage() {
   const [inboxLoading, setInboxLoading] = useState(false);
   const [decidingId, setDecidingId] = useState<string | null>(null);
 
-  const fetchDelegations = () => {
+  const fetchDelegations = useCallback(() => {
     if (!tenantId) return;
     setLoading(true);
     approvalDelegationService
@@ -1633,9 +1633,9 @@ export function DelegationsApprovalsPage() {
       .then((data) => setDelegations(data || []))
       .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
       .finally(() => setLoading(false));
-  };
+  }, [tenantId]);
 
-  const fetchInbox = () => {
+  const fetchInbox = useCallback(() => {
     if (!tenantId) return;
     setInboxLoading(true);
     approvalDelegationService
@@ -1643,13 +1643,13 @@ export function DelegationsApprovalsPage() {
       .then((items) => setInboxItems(items || []))
       .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }))
       .finally(() => setInboxLoading(false));
-  };
+  }, [tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
     fetchDelegations();
     fetchInbox();
-  }, [tenantId]);
+  }, [fetchDelegations, fetchInbox, tenantId]);
 
   const handleDecideStep = async (step: ApprovalStepItem, decision: "APPROVED" | "REJECTED") => {
     const requestId = step.approvalRequestId || "";
@@ -2033,7 +2033,7 @@ export function AcademicGovernancePage() {
 
   const [saving, setSaving] = useState(false);
 
-  const fetchCurrentTab = () => {
+  const fetchCurrentTab = useCallback(() => {
     if (!tenantId) return;
     setLoading(true);
     if (activeTab === "rules") {
@@ -2054,11 +2054,11 @@ export function AcademicGovernancePage() {
     } else {
       setLoading(false);
     }
-  };
+  }, [activeTab, tenantId]);
 
   useEffect(() => {
     if (tenantId) fetchCurrentTab();
-  }, [tenantId, activeTab]);
+  }, [fetchCurrentTab, tenantId]);
 
   const handleApprovePromotion = async (id: string) => {
     if (!tenantId) return;
