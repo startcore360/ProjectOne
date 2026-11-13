@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS app.user_login_alias (
 CREATE OR REPLACE FUNCTION app.fn_user_login_alias_guard() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
+    PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text || ':' || NEW.email, 0));
     IF EXISTS (
         SELECT 1 FROM app.user_account a
          WHERE a.tenant_id=NEW.tenant_id
@@ -46,6 +47,9 @@ END$$;
 CREATE OR REPLACE FUNCTION app.fn_user_account_email_alias_guard() RETURNS trigger
 LANGUAGE plpgsql AS $
 BEGIN
+    IF NEW.email IS NOT NULL THEN
+        PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text || ':' || lower(btrim(NEW.email)), 0));
+    END IF;
     IF NEW.email IS NOT NULL AND EXISTS (
         SELECT 1 FROM app.user_login_alias x
          WHERE x.tenant_id=NEW.tenant_id
