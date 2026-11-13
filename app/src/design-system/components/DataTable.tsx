@@ -33,7 +33,7 @@ export function DataTable({
   });
 
   return (
-    <div className={`platform-table-wrap ${className}`.trim()}>
+    <div className={`platform-table-wrap ${className} ${mobileCards && !empty && cardRows.length > 0 ? "platform-table-wrap--mobile-cards" : ""}`.trim()}>
       <div
         className="platform-table-scroll"
         role="region"
