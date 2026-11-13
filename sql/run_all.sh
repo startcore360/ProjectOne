@@ -47,7 +47,7 @@ $PSQL -q -d edu360_v4_ref -f "$D/33t_tests_study_material_leadership_grants.sql"
 $PSQL -q -d edu360_v4_ref -f "$D/34t_tests_staff_record_view_hr_grants.sql" > /dev/null                                          # V4.0 additions
 $PSQL -At -d edu360_v4_ref >> "$OUT" <<'SQL'
 SELECT 'REFCHECK | V4.0 actions (279 + 2 roll-down)|'||count(*)||'|281' FROM ref.action_catalog;
-SELECT 'REFCHECK | V4.0 role-action pairs (1851 + 12)|'||count(*)||'|1863' FROM ref.standard_role_action;
+SELECT 'REFCHECK | role-action pairs (1851 + 12 roll-down + 3 HR + 4 leadership)|'||count(*)||'|1870' FROM ref.standard_role_action;
 SELECT 'REFCHECK | roll-down default rows|'||count(*)||'|182' FROM ref.role_rolldown_default;
 SELECT 'REFCHECK | roles with a roll-down|'||count(DISTINCT missing_role_code)||'|52' FROM ref.role_rolldown_default;
 SELECT 'REFCHECK | roll-down stand-ins that are personal / platform / GBA roles|'||count(*)||'|0' FROM ref.role_rolldown_default d JOIN ref.standard_role r ON r.role_code = d.stand_in_role_code WHERE r.role_level IN ('PLATFORM','EXTERNAL') OR d.stand_in_role_code IN ('GOVERNING_BODY_APPROVER','STUDENT_COLLEGE','PARENT_COLLEGE','STUDENT_SCHOOL','PARENT_SCHOOL');
