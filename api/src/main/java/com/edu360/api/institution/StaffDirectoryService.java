@@ -245,7 +245,7 @@ public class StaffDirectoryService {
     }
 
     @Transactional
-    public StaffListResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
+    public TeacherLookupResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
             UUID departmentId, String query, int limit) {
         validateLimit(limit);
         if (institutionId == null) {
@@ -271,7 +271,7 @@ public class StaffDirectoryService {
                    AND (ura.effective_to IS NULL OR ura.effective_to > CURRENT_TIMESTAMP)
                    AND ua.user_type = 'STAFF'
                    AND (? IS NULL OR ura.department_id IS NULL OR ura.department_id = ?)
-                   AND rd.role_code IN ('PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR',
+                   AND rd.role_code IN ('HEAD_OF_DEPARTMENT','PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR',
                        'LAB_ASSISTANT','RESEARCH_ASSISTANT','CLASS_TEACHER','SUBJECT_TEACHER')
                 """, (rs, rowNum) -> new TeacherRole(rs.getObject(1, UUID.class),
                         rs.getString(2), rs.getObject(3, UUID.class)),
@@ -280,11 +280,14 @@ public class StaffDirectoryService {
             ensureStaffAssignment(actor.tenantId(), teacher.userId(), institutionId,
                     teacher.departmentId(), actor.userAccountId(), teacher.designation());
         }
-        List<UUID> teacherIds = jdbc.query("""
-                SELECT DISTINCT p.staff_profile_id
+        List<TeacherLookupItem> items = jdbc.query("""
+                SELECT p.staff_profile_id, sa.staff_assignment_id, p.staff_code, p.full_name,
+                       sa.designation, sa.department_id, d.department_name
                   FROM app.staff_profile p
                   JOIN app.staff_assignment sa
                     ON sa.tenant_id = p.tenant_id AND sa.staff_profile_id = p.staff_profile_id
+                  LEFT JOIN app.department d
+                    ON d.tenant_id = sa.tenant_id AND d.department_id = sa.department_id
                  WHERE p.tenant_id = ? AND sa.institution_id = ?
                    AND (sa.department_id IS NULL OR sa.department_id = ?)
                    AND sa.status = 'ACTIVE'
@@ -304,17 +307,20 @@ public class StaffDirectoryService {
                           AND ura.scope_type IN ('INSTITUTION', 'DEPARTMENT')
                           AND ura.institution_id = sa.institution_id
                           AND (ura.department_id IS NULL OR ura.department_id = sa.department_id)
-                          AND rd.role_code IN ('PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR',
-                              'LAB_ASSISTANT','RESEARCH_ASSISTANT','CLASS_TEACHER','SUBJECT_TEACHER'))
-                 ORDER BY p.staff_profile_id
+                          AND rd.role_code IN ('HEAD_OF_DEPARTMENT','PROFESSOR','ASSOCIATE_PROFESSOR',
+                              'ASSISTANT_PROFESSOR','LAB_ASSISTANT','RESEARCH_ASSISTANT',
+                              'CLASS_TEACHER','SUBJECT_TEACHER'))
+                 ORDER BY p.full_name, p.staff_profile_id
                  LIMIT ?
-                """, (rs, rowNum) -> rs.getObject(1, UUID.class), actor.tenantId(), institutionId,
-                departmentId, normalizeQuery(query), normalizeQuery(query), normalizeQuery(query), limit);
-        List<StaffProfileResponse> items = teacherIds.stream()
-                .map(id -> staffProfiles.findByIdTenantIdAndIdStaffProfileId(actor.tenantId(), id).orElse(null))
-                .filter(java.util.Objects::nonNull)
-                .map(profile -> StaffProfileResponse.from(profile, false)).toList();
-        return new StaffListResponse(items, new StaffListResponse.PageInfo(limit, null, false, null));
+                """, (rs, rowNum) -> new TeacherLookupItem(
+                        rs.getObject("staff_profile_id", UUID.class),
+                        rs.getObject("staff_assignment_id", UUID.class),
+                        rs.getString("staff_code"), rs.getString("full_name"),
+                        rs.getString("designation"), rs.getObject("department_id", UUID.class),
+                        rs.getString("department_name")),
+                actor.tenantId(), institutionId, departmentId, normalizeQuery(query),
+                normalizeQuery(query), normalizeQuery(query), limit);
+        return new TeacherLookupResponse(items, new StaffListResponse.PageInfo(limit, null, false, null));
     }
 
     @Transactional(readOnly = true)
