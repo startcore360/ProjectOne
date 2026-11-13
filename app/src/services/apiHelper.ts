@@ -45,7 +45,7 @@ export class ApiHelper {
   // raw technical error.
   static normalizeError(error: unknown): string {
     if (typeof error === "string" && error.trim()) {
-      return error;
+      return cleanUserMessage(error) ?? "Something went wrong. Please try again.";
     }
 
     if (error && typeof error === "object" && "isAxiosError" in error) {
