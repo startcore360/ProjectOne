@@ -14,4 +14,13 @@ BEGIN
          WHERE schemaname='app' AND tablename='user_login_alias'
            AND policyname='p_tenant' AND permissive='PERMISSIVE'
     ) THEN RAISE EXCEPTION 'LOGIN_ALIAS_TENANT_RLS_MISSING'; END IF;
-END$$;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+         WHERE tgname='trg_user_login_alias_guard' AND NOT tgisinternal
+    ) THEN RAISE EXCEPTION 'LOGIN_ALIAS_COLLISION_GUARD_MISSING'; END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+         WHERE tgname='trg_user_account_email_alias_guard' AND NOT tgisinternal
+    ) THEN RAISE EXCEPTION 'PRIMARY_EMAIL_COLLISION_GUARD_MISSING'; END IF;
+END$;
