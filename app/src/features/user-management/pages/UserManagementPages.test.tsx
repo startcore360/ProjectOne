@@ -241,7 +241,7 @@ describe("UserListPage", () => {
     // Click Bulk import users
     fireEvent.click(screen.getByRole("button", { name: /Bulk import users/i }));
     expect(screen.getByRole("heading", { name: "Bulk upload users" })).toBeInTheDocument();
-    expect(screen.getByText(/Enforces pre-validation and row error tracking \[Rule MD-27\]/i)).toBeInTheDocument();
+    expect(screen.getByText(/Upload supported user accounts with pre-validation and row-level error tracking/i)).toBeInTheDocument();
 
     // Download template
     fireEvent.click(screen.getByRole("button", { name: /Download CSV Template/i }));
@@ -634,7 +634,7 @@ describe("UserDetailPage", () => {
       </Provider>
     );
 
-    expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+    expect(screen.getByText("Not available from the current student-status endpoint")).toBeInTheDocument();
 
     const changeBtn = screen.getByRole("button", { name: /Change Student Status/i });
     fireEvent.click(changeBtn);
