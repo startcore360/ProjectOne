@@ -46,7 +46,7 @@ class StaffDirectoryIdentityAndConflictTest {
                 .thenReturn("Existing Teacher");
         when(profiles.findByIdTenantIdAndUserAccountId(tenantId, userId)).thenReturn(Optional.of(existing));
         when(jdbc.queryForObject(anyString(), eq(Boolean.class),
-                eq(tenantId), eq(profileId), eq(institutionId), eq(null))).thenReturn(true);
+                eq(tenantId), eq(profileId), eq(institutionId), eq(null), eq(null), any(LocalDate.class))).thenReturn(true);
 
         StaffDirectoryService service = new StaffDirectoryService(profiles, assignments,
                 mock(StaffServiceRecordRepository.class), mock(StaffDocumentRepository.class),
@@ -118,7 +118,7 @@ class StaffDirectoryIdentityAndConflictTest {
         when(jdbc.queryForObject(anyString(), eq(String.class), eq(tenantId), eq(userId)))
                 .thenReturn("New Teacher");
         when(jdbc.queryForObject(anyString(), eq(Boolean.class),
-                eq(tenantId), any(UUID.class), eq(institutionId), eq(departmentId))).thenReturn(false);
+                eq(tenantId), any(UUID.class), eq(institutionId), eq(departmentId), eq(null), any(LocalDate.class))).thenReturn(false);
         when(formats.resolveStaffCode(eq(tenantId), eq(institutionId), eq(null), anyInt()))
                 .thenReturn("STF-2026-0001");
         when(profiles.saveAndFlush(any(StaffProfile.class))).thenAnswer(inv -> inv.getArgument(0));
