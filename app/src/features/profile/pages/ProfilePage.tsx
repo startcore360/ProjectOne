@@ -303,11 +303,6 @@ export default function ProfilePage() {
               aria-invalid={!!fieldErrors.displayName}
               aria-describedby={fieldErrors.displayName ? "profile-display-name-error" : undefined}
             />
-            {fieldErrors.displayName && (
-              <p className="profile-field-error" id="profile-display-name-error" role="alert">
-                {fieldErrors.displayName}
-              </p>
-            )}
 
             {!isPlatform && (
               <>
@@ -320,11 +315,6 @@ export default function ProfilePage() {
                   aria-invalid={!!fieldErrors.mobile}
                   aria-describedby={fieldErrors.mobile ? "profile-mobile-error" : undefined}
                 />
-                {fieldErrors.mobile && (
-                  <p className="profile-field-error" id="profile-mobile-error" role="alert">
-                    {fieldErrors.mobile}
-                  </p>
-                )}
               </>
             )}
 
