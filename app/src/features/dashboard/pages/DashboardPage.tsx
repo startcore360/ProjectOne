@@ -17,12 +17,12 @@ export default function DashboardPage() {
   const [selectedChildId, setSelectedChildId] = useState("");
 
   if (user?.userType === "STUDENT") {
-    return <StudentDashboard name={name} />;
+    return <StudentDashboard name={name} tenantId={user.tenantId ?? ""} />;
   }
 
   if (user?.userType === "GUARDIAN") {
     return <div className="platform-page">
-      <PageHeader title="Parent dashboard" description="Choose a child linked to your account. Progress, attendance, notices and academic records are not connected to this dashboard yet." />
+      <PageHeader title="Parent dashboard" description="Choose a child linked to your account. Only linked student code and status are currently available; academic information is not yet available here." />
       <GuardianChildSwitcher value={selectedChildId} onChange={setSelectedChildId} />
     </div>;
   }
