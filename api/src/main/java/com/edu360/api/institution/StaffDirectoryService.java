@@ -171,6 +171,24 @@ public class StaffDirectoryService {
         if (request.leftOn() != null) profile.setLeftOn(request.leftOn());
         validateProfile(profile.getFullName(), profile.getPersonalEmail(), profile.getPersonalMobile(),
                 profile.getNationalIdLast4(), profile.getEmploymentStatus(), profile.getJoinedOn(), profile.getLeftOn());
+        String oldPersonalEmail = trimToNull(profile.getPersonalEmail());
+        String newPersonalEmail = trimToNull(request.personalEmail());
+        if (profile.getUserAccountId() != null && request.personalEmail() != null
+                && !java.util.Objects.equals(normalizeEmail(oldPersonalEmail), normalizeEmail(newPersonalEmail))) {
+            jdbc.update("""
+                    DELETE FROM app.user_login_alias
+                     WHERE tenant_id=? AND user_account_id=? AND email=?
+                    """, actor.tenantId(), profile.getUserAccountId(), normalizeEmail(oldPersonalEmail));
+            if (newPersonalEmail != null) {
+                jdbc.update("""
+                        INSERT INTO app.user_login_alias
+                            (tenant_id, user_login_alias_id, user_account_id, email, is_verified,
+                             created_by, updated_by)
+                        VALUES (?, ?, ?, ?, false, ?, ?)
+                        """, actor.tenantId(), UUID.randomUUID(), profile.getUserAccountId(),
+                        normalizeEmail(newPersonalEmail), actor.userAccountId(), actor.userAccountId());
+            }
+        }
         profile.setUpdatedBy(actor.userAccountId());
         StaffProfile saved = staffProfiles.saveAndFlush(profile);
         entityManager.refresh(saved);
@@ -621,6 +639,10 @@ public class StaffDirectoryService {
         String value = query.trim();
         if (value.length() > 100) throw new BusinessRuleViolationException("INVALID_QUERY", "Search query is too long.");
         return value;
+    }
+
+    private static String normalizeEmail(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toLowerCase();
     }
 
     private static String trimToNull(String value) {
