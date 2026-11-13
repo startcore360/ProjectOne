@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi } from "../../../design-system/components";
 import { DashboardPanel, QuietEmpty } from "./DashboardPanel";
+import { selfServiceApi, type NoticeItem } from "../../self-service/api/selfServiceApi";
 
 export interface StudentDashboardProps {
   name: string;
+  tenantId: string;
 }
 
 export function StudentDashboard({ name }: StudentDashboardProps) {
@@ -27,7 +30,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
             institution timetable is connected.
           </p>
           <a className="hero__cta" href="#student-plan">
-            View today&rsquo;s plan
+            View timetable status
             <Icon name="send" size={16} />
           </a>
         </div>

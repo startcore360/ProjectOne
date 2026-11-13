@@ -25,7 +25,7 @@ export default function SelfServicePage() {
 
   const [activeTab, setActiveTab] = useState<"notices" | "leaves" | "notifications">("notices");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ notifications?: string; balances?: string; requests?: string; notices?: string }>({});
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [balances, setBalances] = useState<LeaveBalanceItem[]>([]);
@@ -34,30 +34,29 @@ export default function SelfServicePage() {
 
   const loadData = useCallback(async () => {
     if (!tenantId) {
-      setError("Your account is not linked to an institution. Contact your administrator.");
+      const message = "Your account is not linked to an institution. Contact your administrator.";
+      setErrors({ notifications: message, balances: message, requests: message, notices: message });
       setLoading(false);
       return;
     }
     setLoading(true);
-    setError(null);
-    try {
-      const [notifs, bals, reqs, nots] = await Promise.all([
-        selfServiceApi.getNotifications(tenantId),
-        selfServiceApi.getLeaveBalances(tenantId),
-        selfServiceApi.getLeaveRequests(tenantId),
-        selfServiceApi.getNotices(tenantId),
-      ]);
-      setNotifications(Array.isArray(notifs) ? notifs : []);
-      setBalances(Array.isArray(bals) ? bals : []);
-      setRequests(Array.isArray(reqs) ? reqs : []);
-      setNotices(Array.isArray(nots) ? nots : []);
-    } catch (err) {
-      setError(err instanceof Error && err.message
-        ? "We could not load your self-service records. Please try again."
-        : "Failed to load self-service records. Please retry.");
-    } finally {
-      setLoading(false);
-    }
+    const results = await Promise.allSettled([
+      selfServiceApi.getNotifications(tenantId),
+      selfServiceApi.getLeaveBalances(tenantId),
+      selfServiceApi.getLeaveRequests(tenantId),
+      selfServiceApi.getNotices(tenantId),
+    ]);
+    const nextErrors: typeof errors = {};
+    if (results[0].status === "fulfilled") setNotifications(Array.isArray(results[0].value) ? results[0].value : []);
+    else nextErrors.notifications = "Notifications could not be loaded.";
+    if (results[1].status === "fulfilled") setBalances(Array.isArray(results[1].value) ? results[1].value : []);
+    else nextErrors.balances = "Leave balances could not be loaded.";
+    if (results[2].status === "fulfilled") setRequests(Array.isArray(results[2].value) ? results[2].value : []);
+    else nextErrors.requests = "Leave requests could not be loaded.";
+    if (results[3].status === "fulfilled") setNotices(Array.isArray(results[3].value) ? results[3].value : []);
+    else nextErrors.notices = "Campus notices could not be loaded.";
+    setErrors(nextErrors);
+    setLoading(false);
   }, [tenantId]);
 
   useEffect(() => {
@@ -83,14 +82,7 @@ export default function SelfServicePage() {
         </div>
       )}
 
-      {error && !loading && (
-        <ErrorState
-          message={error}
-          action={<Button variant="secondary" onClick={loadData}>Retry</Button>}
-        />
-      )}
-
-      {!loading && !error && (
+      {!loading && (
         <>
           <Tabs
             items={tabItems}
@@ -101,7 +93,7 @@ export default function SelfServicePage() {
 
           {activeTab === "notices" && (
             <div className="space-y-4">
-              {!Array.isArray(notices) || notices.length === 0 ? (
+              {errors.notices ? <ErrorState message={errors.notices} action={<Button variant="secondary" onClick={loadData}>Retry notices</Button>} /> : !Array.isArray(notices) || notices.length === 0 ? (
                 <EmptyState
                   title="No published notices found."
                   description="Check back later for university-wide announcements."
@@ -134,7 +126,7 @@ export default function SelfServicePage() {
               <div>
                 <h3 className="self-service-section-title">Leave Balances</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {!Array.isArray(balances) || balances.length === 0 ? (
+                  {errors.balances ? <div className="col-span-3"><ErrorState message={errors.balances} action={<Button variant="secondary" onClick={loadData}>Retry leave data</Button>} /></div> : !Array.isArray(balances) || balances.length === 0 ? (
                     <div className="col-span-3">
                       <EmptyState
                         title="No leave balance records found."
@@ -158,7 +150,7 @@ export default function SelfServicePage() {
 
               <div>
                 <h3 className="self-service-section-title">Leave Requests</h3>
-                <DataTable
+                {errors.requests ? <ErrorState message={errors.requests} action={<Button variant="secondary" onClick={loadData}>Retry leave data</Button>} /> : <DataTable
                   headers={["Dates", "Days", "Reason", "Status"]}
                   empty={requests.length === 0}
                   emptyMessage="No leave requests found."
@@ -175,14 +167,14 @@ export default function SelfServicePage() {
                       </td>
                     </tr>
                   ))}
-                </DataTable>
+                </DataTable>}
               </div>
             </div>
           )}
 
           {activeTab === "notifications" && (
             <div className="space-y-3">
-              {!Array.isArray(notifications) || notifications.length === 0 ? (
+              {errors.notifications ? <ErrorState message={errors.notifications} action={<Button variant="secondary" onClick={loadData}>Retry notifications</Button>} /> : !Array.isArray(notifications) || notifications.length === 0 ? (
                 <EmptyState
                   title="No notifications."
                   description="You are all caught up."
