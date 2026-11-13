@@ -17,8 +17,6 @@ export function PlatformOverviewView() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError("");
     Promise.all([
       platformTenantService.getTenants().then((res) => (Array.isArray(res.data) ? res.data : res.data?.items ?? [])),
       platformUserService.getPlatformUsers().then((res) => (Array.isArray(res.data) ? res.data : (res.data as { items?: PlatformUserItem[] })?.items ?? [])),
@@ -47,7 +45,7 @@ export function PlatformOverviewView() {
       {error && !loading && (
         <div className="eds-error-state" role="alert">
           <p className="eds-error-state__message">{error}</p>
-          <Button variant="secondary" onClick={() => setRetryKey((value) => value + 1)}>Retry</Button>
+          <Button variant="secondary" onClick={() => { setLoading(true); setError(""); setRetryKey((value) => value + 1); }}>Retry</Button>
         </div>
       )}
 
