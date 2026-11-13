@@ -424,3 +424,11 @@ This section records verified repository edits made during the current implement
 - CI workflow .github/workflows/ci.yml now uses one concurrency group per workflow/ref with cancel-in-progress enabled; a newer push supersedes an older run on the same branch. github.ref keeps sprint-2-development and master isolated. No workflow dispatch or master change was made.
 - Current connector can fetch jobs for known workflow run IDs but does not expose a list-all-workflow-runs action; push-triggered run for the CI configuration commit could not be independently retrieved here. Verify the latest five runs in GitHub Actions before declaring the pipeline healthy.
 - C2-2 remains open: RoleAssignmentService checks ROLE_ASSIGN / ROLE_ASSIGN_NON_SENSITIVE at the requested scope, enforces MX-04 and writes ROLE_ASSIGNED / ROLE_ASSIGNMENT_ENDED audit events. The complete matrix still needs source-to-action coverage for institution and department grants, role sensitivity, scope ownership, and positive/negative audit assertions; no blanket completion claim is made.
+
+
+### Sensitive-view and C2-2 regression coverage — 13 November 2026
+
+- Added StaffDirectoryService tests that assert sensitive staff-list access records an audit entry when STAFF_RECORD_MANAGE is allowed and does not record a sensitive-view audit when the caller is view-only. Commit e84e35f2ae4ae9c18e97ef6776c6bd3be9948b37.
+- Added RoleAssignmentController regression coverage asserting department-scoped grants authorize ROLE_ASSIGN against the exact requested institution + department scope. Existing institution-scope coverage remains. Commit d38d826591a4be2a73ee2e23a1ddb0af68d96016.
+- These tests are committed but not yet executed in CI. C2-2 remains open pending the full grant/action audit across institution and department grants, tenant isolation, MX-04 sensitive roles, scope ownership and audit event assertions.
+- Staff document code includes a separate verification endpoint and server-side uploader != verifier guard; however, no live ClamAV deployment/scan evidence or complete storage-to-attach acceptance evidence is available from this repository review. Keep end-to-end staff document flow In Progress.
