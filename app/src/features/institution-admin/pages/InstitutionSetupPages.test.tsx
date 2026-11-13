@@ -555,7 +555,7 @@ describe("Institution setup action screens", () => {
           delegationBasis: "SAME_OR_HIGHER",
         })
       );
-      expect(screen.getByText(/Approval authority successfully delegated/i)).toBeInTheDocument();
+      expect(screen.getByText(/Approval authority delegated successfully/i)).toBeInTheDocument();
     });
   });
 
