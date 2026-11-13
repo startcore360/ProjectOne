@@ -51,7 +51,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
   const activeSectionsForSession = sections.filter((section) =>
     isActive(section.status) && section.academicSessionId === academicSessionId
   );
-  const hasCurrentOptions = optionsLoadedFor === institutionId.trim() && !optionsError;
+  const hasCurrentOptions = optionsLoadedFor === institutionId.trim();
   const canChooseSession = hasCurrentOptions && activeSessions.length > 0;
   const canChooseSection = hasCurrentOptions && activeSectionsForSession.length > 0;
 

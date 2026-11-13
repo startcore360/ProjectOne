@@ -37,9 +37,10 @@ describe("CreateStudentModal", () => {
     vi.mocked(userManagementService.createStudentProfile).mockResolvedValue({ data: student } as never);
     const onCreated = vi.fn();
 
-    vi.mocked(institutionService.listSections).mockResolvedValue([{
-      sectionId, institutionId, academicSessionId, semesterId: null, classId: null, sectionName: "A", status: "ACTIVE",
-    }]);
+    vi.mocked(institutionService.listSections).mockResolvedValue([
+      { sectionId, institutionId, academicSessionId, semesterId: null, classId: null, sectionName: "A", status: "ACTIVE" },
+      { sectionId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", institutionId, academicSessionId, semesterId: null, classId: null, sectionName: "B", status: "INACTIVE" },
+    ]);
     vi.mocked(institutionService.listAcademicSessions).mockResolvedValue([{
       academicSessionId, tenantId, institutionId, sessionLabel: "2026–27",
       startDate: "2026-06-01", endDate: "2027-05-31", academicYear: 2026, status: "ACTIVE", rowVersion: 1,
@@ -63,6 +64,40 @@ describe("CreateStudentModal", () => {
         admissionDate: undefined,
       });
       expect(onCreated).toHaveBeenCalledWith(student);
+    });
+  });
+
+  it("keeps a validated manual-ID path when academic lookups are unavailable", async () => {
+    const student: StudentProfileResponse = {
+      id: "66666666-6666-6666-6666-666666666666",
+      userAccountId: null,
+      institutionId,
+      studentCode: "STU-2026-002",
+      fullName: "Asha Rao",
+      status: "ACTIVE",
+      temporaryPassword: null,
+    };
+    vi.mocked(institutionService.listSections).mockRejectedValue(new Error("Academic directory temporarily unavailable"));
+    vi.mocked(institutionService.listAcademicSessions).mockRejectedValue(new Error("Academic directory temporarily unavailable"));
+    vi.mocked(userManagementService.createStudentProfile).mockResolvedValue({ data: student } as never);
+
+    render(<CreateStudentModal tenantId={tenantId} isOpen onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/Student full name/i), { target: { value: "Asha Rao" } });
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /Load sessions and sections/i }));
+
+    expect(await screen.findByText(/Academic directory temporarily unavailable/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Academic session ID/i), { target: { value: academicSessionId } });
+    fireEvent.change(screen.getByLabelText(/Section ID/i), { target: { value: sectionId } });
+    fireEvent.click(screen.getByRole("button", { name: "Create student profile" }));
+
+    await waitFor(() => {
+      expect(userManagementService.createStudentProfile).toHaveBeenCalledWith(tenantId, expect.objectContaining({
+        institutionId,
+        fullName: "Asha Rao",
+        sectionId,
+        academicSessionId,
+      }));
     });
   });
 
