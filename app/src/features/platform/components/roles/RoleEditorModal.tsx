@@ -33,6 +33,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
   const [updateTemplate, setUpdateTemplate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [nameError, setNameError] = useState("");
 
   const usableTemplates = templates.filter((t) => !t.locked && t.status === "ACTIVE");
   const count = Object.keys(selected).length;
@@ -54,7 +55,9 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
 
   const save = async (activate: boolean) => {
     if (name.trim().length < 2) {
-      setError("Enter a role name of at least 2 characters.");
+      const message = "Enter a role name of at least 2 characters.";
+      setNameError(message);
+      setError(message);
       return;
     }
     if (activate && count === 0) {
@@ -131,7 +134,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
         required
         maxLength={100}
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => { setName(e.target.value); if (e.target.value.trim().length >= 2) { setNameError(""); setError(""); } }}
         placeholder="e.g. Billing Assistant"
       />
       {!role && (
