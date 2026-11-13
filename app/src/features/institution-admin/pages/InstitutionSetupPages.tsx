@@ -646,6 +646,7 @@ export function CalendarEventsPage() {
                   {listStatus === "busy" ? "Loading…" : "Load events"}
                 </Button>
               </div>
+              {fieldErrors.institutionId && <p id="wo-institution-id-error" className="eds-field__error">{fieldErrors.institutionId}</p>}
             </div>
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
@@ -849,6 +850,7 @@ export function WeeklyOffRulesPage() {
   const [occurrence, setOccurrence] = useState("ALL");
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ institutionId?: string; effectiveFrom?: string; effectiveTo?: string }>({});
 
   const [rules, setRules] = useState<WeeklyOffRule[] | null>(null);
   const [listStatus, setListStatus] = useState<Status>("idle");
@@ -857,10 +859,10 @@ export function WeeklyOffRulesPage() {
 
   const loadRules = async () => {
     if (!isValidUuid(institutionId)) {
-      setListStatus("error");
-      setListMessage("Institution ID must be a valid ID before rules can be listed.");
+      setFieldErrors((current) => ({ ...current, institutionId: "Enter a valid institution ID." }));
       return;
     }
+    setFieldErrors((current) => ({ ...current, institutionId: undefined }));
     setListStatus("busy");
     setListMessage("");
     try {
@@ -882,14 +884,14 @@ export function WeeklyOffRulesPage() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const invalid =
-      !isValidUuid(institutionId) || !effectiveFrom
-        ? "Institution ID and effective-from date are required."
-        : effectiveTo && effectiveTo < effectiveFrom
-          ? "Effective-to must not be before effective-from."
-          : null;
+    const nextErrors: typeof fieldErrors = {};
+    if (!isValidUuid(institutionId)) nextErrors.institutionId = "Enter a valid institution ID.";
+    if (!effectiveFrom) nextErrors.effectiveFrom = "Choose an effective-from date.";
+    if (effectiveTo && effectiveTo < effectiveFrom) nextErrors.effectiveTo = "The end date cannot be earlier than the start date.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     void run(
-      invalid,
+      null,
       () =>
         api.post<WeeklyOffRule>(`/tenants/${tenantId}/weekly-off-rules`, {
           institutionId: institutionId.trim(),
@@ -924,7 +926,12 @@ export function WeeklyOffRulesPage() {
                 <input
                   id="wo-institution-id"
                   value={institutionId}
-                  onChange={(e) => setInstitutionId(e.target.value)}
+                  aria-invalid={Boolean(fieldErrors.institutionId)}
+                  aria-describedby={fieldErrors.institutionId ? "wo-institution-id-error" : undefined}
+                  onChange={(e) => {
+                    setInstitutionId(e.target.value);
+                    setFieldErrors((current) => ({ ...current, institutionId: undefined }));
+                  }}
                   placeholder="Paste the ID (UUID)"
                   style={{ flex: 1 }}
                 />
@@ -1000,8 +1007,27 @@ export function WeeklyOffRulesPage() {
                 </select>
               </label>
               <div className="platform-form-grid">
-                <DateField id="weekly-off-effective-from" label="Effective from" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} required />
-                <DateField id="weekly-off-effective-to" label="Effective to (optional)" value={effectiveTo} onChange={(e) => setEffectiveTo(e.target.value)} />
+                <DateField
+                  id="weekly-off-effective-from"
+                  label="Effective from"
+                  value={effectiveFrom}
+                  onChange={(e) => {
+                    setEffectiveFrom(e.target.value);
+                    setFieldErrors((current) => ({ ...current, effectiveFrom: undefined, effectiveTo: undefined }));
+                  }}
+                  required
+                  error={fieldErrors.effectiveFrom}
+                />
+                <DateField
+                  id="weekly-off-effective-to"
+                  label="Effective to (optional)"
+                  value={effectiveTo}
+                  onChange={(e) => {
+                    setEffectiveTo(e.target.value);
+                    setFieldErrors((current) => ({ ...current, effectiveTo: undefined }));
+                  }}
+                  error={fieldErrors.effectiveTo}
+                />
               </div>
               <ResultBanner status={status} message={message} />
               <Button type="submit" busy={status === "busy"}>
