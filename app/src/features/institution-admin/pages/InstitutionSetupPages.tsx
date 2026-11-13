@@ -38,6 +38,8 @@ import {
   type AcademicSessionItem,
   type MasterCalendarEventItem,
   type InstitutionItem,
+  type SchoolClassItem,
+  type SectionItem,
 } from "../api/institutionService";
 import { termLockService, type TermLockItem } from "../api/termLockService";
 import {
@@ -1074,6 +1076,14 @@ export function AcademicStructurePage() {
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [programs, setPrograms] = useState<ProgramItem[]>([]);
+  const [schoolClasses, setSchoolClasses] = useState<SchoolClassItem[]>([]);
+  const [schoolSections, setSchoolSections] = useState<SectionItem[]>([]);
+  const [schoolSessions, setSchoolSessions] = useState<AcademicSessionItem[]>([]);
+  const [classNameDraft, setClassNameDraft] = useState("");
+  const [classOrderDraft, setClassOrderDraft] = useState("0");
+  const [classSaving, setClassSaving] = useState(false);
+  const [sectionDraft, setSectionDraft] = useState({ classId: "", academicSessionId: "", sectionName: "" });
+  const [sectionSaving, setSectionSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1105,16 +1115,46 @@ export function AcademicStructurePage() {
       setError("Please enter a valid institution UUID.");
       return;
     }
+    const target = institutions.find((institution) => institution.institutionId === id);
+    const schoolContext = target?.institutionType === "SCHOOL" || user?.roleCode === "SCHOOL_ADMIN";
     setLoading(true);
     setError(null);
     try {
-      const [deptRes, progRes] = await Promise.all([
-        institutionService.listDepartments(tenantId, id),
-        institutionService.listPrograms(tenantId, id),
-      ]);
-      setDepartments(deptRes);
-      setPrograms(progRes);
+      if (schoolContext) {
+        const [classes, sections, sessions] = await Promise.all([
+          institutionService.listSchoolClasses(tenantId, id),
+          institutionService.listSections(tenantId, id),
+          institutionService.listAcademicSessions(tenantId, id),
+        ]);
+        setSchoolClasses(classes);
+        setSchoolSections(sections);
+        setSchoolSessions(sessions);
+        setDepartments([]);
+        setPrograms([]);
+        setSectionDraft((current) => ({
+          ...current,
+          classId: classes.some((item) => item.classId === current.classId) ? current.classId : (classes[0]?.classId ?? ""),
+          academicSessionId: sessions.some((item) => item.academicSessionId === current.academicSessionId)
+            ? current.academicSessionId
+            : (sessions.find((item) => item.status === "ACTIVE")?.academicSessionId ?? sessions[0]?.academicSessionId ?? ""),
+        }));
+      } else {
+        const [deptRes, progRes] = await Promise.all([
+          institutionService.listDepartments(tenantId, id),
+          institutionService.listPrograms(tenantId, id),
+        ]);
+        setDepartments(deptRes);
+        setPrograms(progRes);
+        setSchoolClasses([]);
+        setSchoolSections([]);
+        setSchoolSessions([]);
+      }
     } catch (err) {
+      setDepartments([]);
+      setPrograms([]);
+      setSchoolClasses([]);
+      setSchoolSections([]);
+      setSchoolSessions([]);
       setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
@@ -1123,6 +1163,57 @@ export function AcademicStructurePage() {
 
   const loadStructure = async () => {
     await loadStructureFor(institutionId);
+  };
+
+  const createSchoolClass = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!isValidUuid(institutionId) || !classNameDraft.trim()) {
+      setError("Enter a class name before creating the class.");
+      return;
+    }
+    const displayOrder = Number(classOrderDraft);
+    if (!Number.isInteger(displayOrder) || displayOrder < 0) {
+      setError("Display order must be a whole number of zero or greater.");
+      return;
+    }
+    setClassSaving(true);
+    setError(null);
+    try {
+      await institutionService.createSchoolClass(tenantId, institutionId, {
+        className: classNameDraft.trim(),
+        displayOrder,
+      });
+      setClassNameDraft("");
+      setClassOrderDraft(String(schoolClasses.length));
+      await loadStructureFor(institutionId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setClassSaving(false);
+    }
+  };
+
+  const createSchoolSection = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!isValidUuid(institutionId) || !sectionDraft.classId || !sectionDraft.academicSessionId || !sectionDraft.sectionName.trim()) {
+      setError("Choose a class and academic session, then enter a section name.");
+      return;
+    }
+    setSectionSaving(true);
+    setError(null);
+    try {
+      await institutionService.createSection(tenantId, institutionId, {
+        academicSessionId: sectionDraft.academicSessionId,
+        classId: sectionDraft.classId,
+        sectionName: sectionDraft.sectionName.trim(),
+      });
+      setSectionDraft((current) => ({ ...current, sectionName: "" }));
+      await loadStructureFor(institutionId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setSectionSaving(false);
+    }
   };
 
   const selectedInst = institutions.find((i) => i.institutionId === institutionId);
