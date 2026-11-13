@@ -283,3 +283,30 @@ This is a progress record, not an acceptance declaration. Work is continuing on 
 - Generic file-to-domain-record attachment and audit of subsequent scan/status transitions remain incomplete outside the existing staff-document attachment flow.
 - Notification triggers can only be connected where publisher workflows exist; timetable, assignment, attendance and HOD approval publishers are still absent from this branch.
 - B3/B4/B9 and Chunk 2 remain In progress until the latest consolidated CI run passes and the listed integration dependencies are resolved. No story is marked Accepted.
+
+
+## Implementation continuation — 13 November 2026
+
+This section records verified repository edits made during the current implementation pass. It is not an acceptance declaration.
+
+### Confirmed changes
+
+- Fixed StaffDocumentService.authorizeProfileScope(...) to authorize using the requested action code. Staff-document listing now checks STAFF_RECORD_VIEW instead of incorrectly requiring STAFF_RECORD_MANAGE; write/attach operations continue to pass STAFF_RECORD_MANAGE.
+- Added a focused StaffDocumentServiceTest.viewOnlyPermissionIsUsedWhenListingStaffDocuments regression test for the tenant-scope view-only path and to assert that STAFF_RECORD_MANAGE is not requested by list.
+- Added the missing sql/27r_v41_notification_read_state_rollback.sql to remove the read-state index and column introduced by migration 27.
+- Registered the migration 27 rollback in the sql/run_all.sh rollback round-trip sequence.
+
+### Commits
+
+- 7586feb8b6e26c2e834f1654492c769946057686 — fix staff document list authorization.
+- 27c435898624f06d7a144587b18aed288ff01c1d — add view-only authorization regression test.
+- 52e62ee46ce693e11b434260ef1471fb94138445 — add migration 27 rollback.
+- 6c940054e9246cdc3750dc882ec41bb9d5bb9f2d — include migration 27 rollback in SQL round-trip.
+
+### Validation status
+
+- These edits have been committed to sprint-2-development.
+- The focused test has not yet been executed in this environment.
+- The SQL runner and OWASP checks have not yet been executed for these commits.
+- No claim is made that the complete branch is accepted or that all Sprint 2 work is finished.
+- Outstanding security work, staff identity linkage, staff assignment conflict checks, student bulk enrolment, ID-format UI, notification event coverage, recipient-level database isolation, Chunk 3b G2, and full chunk acceptance remain tracked above until implemented and validated.
