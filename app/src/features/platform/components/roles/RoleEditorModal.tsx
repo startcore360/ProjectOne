@@ -124,6 +124,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
         </>
       }
     >
+      {error && <Notice tone="danger">{error}</Notice>}
       <TextField
         id="platform-role-name"
         label="Role name"
@@ -174,7 +175,6 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
           Also update this template for future roles (existing roles won't change)
         </label>
       )}
-      {error && <Notice tone="danger">{error}</Notice>}
     </Modal>
   );
 }
