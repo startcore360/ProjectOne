@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.edu360.api.config.TenantPrincipal;
@@ -20,7 +21,10 @@ import com.edu360.api.selfservice.dto.NotificationDto;
 import com.edu360.api.identity.UserType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -82,7 +86,7 @@ class SelfServiceControllerTest {
         doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
 
         UserNotification notif = new UserNotification(tenantId, UUID.randomUUID(), userId, "SYSTEM", "Hello", "Welcome to EDU360", "NORMAL");
-        when(notificationRepository.findByIdTenantIdAndRecipientUserIdOrderByCreatedAtDesc(tenantId, userId))
+        when(notificationRepository.findDeliverable(eq(tenantId), eq(userId), any(Instant.class), any(Pageable.class)))
                 .thenReturn(List.of(notif));
 
         UserLeaveBalance balance = new UserLeaveBalance(tenantId, UUID.randomUUID(), userId, UUID.randomUUID(), (short) 2026, BigDecimal.valueOf(20), BigDecimal.valueOf(5));
@@ -110,6 +114,60 @@ class SelfServiceControllerTest {
         assertThat(reqRes.getBody()).hasSize(1);
         assertThat(notRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(notRes.getBody()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("B9: recipient can mark their own notification read")
+    void markOwnNotificationRead() {
+        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
+        UUID notificationId = UUID.randomUUID();
+        UserNotification notification = new UserNotification(tenantId, notificationId, userId,
+                "SYSTEM", "Hello", "Welcome", "NORMAL");
+        when(notificationRepository.findByIdTenantIdAndIdNotificationIdAndRecipientUserId(tenantId, notificationId, userId))
+                .thenReturn(Optional.of(notification));
+
+        service.markNotificationRead(tenantId, userId, notificationId);
+
+        assertThat(notification.getReadAt()).isNotNull();
+        verify(notificationRepository).save(notification);
+    }
+
+    @Test
+    @DisplayName("B9: another recipient notification is not discoverable")
+    void cannotMarkAnotherUsersNotificationRead() {
+        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
+        UUID notificationId = UUID.randomUUID();
+        when(notificationRepository.findByIdTenantIdAndIdNotificationIdAndRecipientUserId(tenantId, notificationId, userId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.markNotificationRead(tenantId, userId, notificationId))
+                .isInstanceOf(com.edu360.api.exception.ResourceNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("B9: mark-all-read only persists notifications belonging to the current recipient")
+    void markAllOwnNotificationsRead() {
+        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
+        service.markAllNotificationsRead(tenantId, userId);
+
+        verify(notificationRepository).markAllDeliveredRead(eq(tenantId), eq(userId), any(Instant.class));
+    }
+
+
+    @Test
+    @DisplayName("B9: scheduled notifications cannot be read before their delivery time")
+    void scheduledNotificationIsNotReadableBeforeDelivery() {
+        doNothing().when(permissionEvaluatorService).authorize(any(), eq("SELF_SERVICE_VIEW"), any(), any());
+        UUID notificationId = UUID.randomUUID();
+        UserNotification notification = new UserNotification(tenantId, notificationId, userId,
+                "SYSTEM", "Scheduled", "Not delivered yet", "NORMAL");
+        notification.setDeliverAfter(Instant.now().plusSeconds(3600));
+        when(notificationRepository.findByIdTenantIdAndIdNotificationIdAndRecipientUserId(
+                tenantId, notificationId, userId)).thenReturn(Optional.of(notification));
+
+        assertThatThrownBy(() -> service.markNotificationRead(tenantId, userId, notificationId))
+                .isInstanceOf(com.edu360.api.exception.ResourceNotFoundException.class);
+        org.mockito.Mockito.verify(notificationRepository, org.mockito.Mockito.never()).save(any());
     }
 
     @Test

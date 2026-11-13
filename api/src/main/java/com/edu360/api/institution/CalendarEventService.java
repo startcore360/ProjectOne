@@ -29,7 +29,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 public class CalendarEventService {
 
-    private static final Set<String> ALLOWED_LOCAL_EVENT_TYPES = Set.of("LOCAL_HOLIDAY", "LOCAL_EVENT");
+    private static final Set<String> ALLOWED_LOCAL_EVENT_TYPES = Set.of("LOCAL_HOLIDAY", "LOCAL_EVENT", "EXAM_DAY");
 
     private final AcademicCalendarEventRepository academicCalendarEventRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
@@ -76,19 +76,24 @@ public class CalendarEventService {
             throw new ResourceNotFoundException("Academic session not found for this institution.");
         }
 
-        // Exam conflict check: holidays on exam days are blocked with a warning
+        // CL-01: local holidays on exam days are blocked with a warning.
+        // Use typed events; never infer exams from free-text titles.
         if ("LOCAL_HOLIDAY".equalsIgnoreCase(request.eventType())) {
-            List<AcademicCalendarEvent> universityEvents = academicCalendarEventRepository
-                    .findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(
-                            principal.tenantId(), request.academicSessionId(), "UNIVERSITY");
-            boolean conflictsWithExam = universityEvents.stream()
-                    .filter(e -> e.getTitle() != null && e.getTitle().toUpperCase().contains("EXAM"))
-                    .anyMatch(e -> !request.endDate().isBefore(e.getStartDate()) && !request.startDate().isAfter(e.getEndDate()));
-
+            List<AcademicCalendarEvent> universityEvents =
+                    academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(
+                            principal.tenantId(), "UNIVERSITY");
+            List<AcademicCalendarEvent> institutionEvents =
+                    academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(
+                            principal.tenantId(), request.institutionId());
+            boolean conflictsWithExam = java.util.stream.Stream.concat(
+                            universityEvents.stream(), institutionEvents.stream())
+                    .filter(e -> "EXAM_DAY".equals(e.getEventType()))
+                    .anyMatch(e -> !request.endDate().isBefore(e.getStartDate())
+                            && !request.startDate().isAfter(e.getEndDate()));
             if (conflictsWithExam) {
                 throw new BusinessRuleViolationException(
                         "HOLIDAY_EXAM_CONFLICT",
-                        "Local holiday overlaps with scheduled university exam dates.");
+                        "Local holiday overlaps an exam day. Choose dates outside the exam-day range.");
             }
         }
 

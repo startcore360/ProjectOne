@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Badge,
   Button,
@@ -6,6 +6,7 @@ import {
   Modal,
   Notice,
   Panel,
+  ErrorState,
   TextField,
 } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
@@ -25,9 +26,10 @@ export function GuardianManagementPanel({
   studentId,
   institutionId,
 }: GuardianManagementPanelProps) {
-  const currentTenantId = tenantId || "00000000-0000-0000-0000-000000000001";
+  const currentTenantId = tenantId ?? "";
   const [links, setLinks] = useState<GuardianLinkItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Link modal state
@@ -49,21 +51,31 @@ export function GuardianManagementPanel({
   const [decisionApproved, setDecisionApproved] = useState(true);
   const [deciding, setDeciding] = useState(false);
 
-  const fetchLinks = () => {
+  const fetchLinks = useCallback(async () => {
+    if (!currentTenantId || !studentId) {
+      setLoadError("A valid tenant and student context are required to load guardian links.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    guardianService
-      .listGuardianLinks(currentTenantId, studentId)
-      .then((data) => setLinks(data || []))
-      .catch(() => setLinks([]))
-      .finally(() => setLoading(false));
-  };
+    setLoadError("");
+    try {
+      const data = await guardianService.listGuardianLinks(currentTenantId, studentId);
+      setLinks(data || []);
+    } catch (err) {
+      setLoadError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [currentTenantId, studentId]);
 
   useEffect(() => {
-    fetchLinks();
-  }, [currentTenantId, studentId]);
+    void fetchLinks();
+  }, [fetchLinks]);
 
   const handleLinkSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!fullName.trim() || !mobile.trim()) {
       setFeedback({ tone: "danger", message: "Full name and valid mobile number are required." });
       return;
@@ -100,6 +112,7 @@ export function GuardianManagementPanel({
 
   const handleRequestChangeSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!changeModalItem) return;
     if (!changeReason.trim()) {
       setFeedback({ tone: "danger", message: "Reason is required to request guardian change (Rule WF-23)." });
@@ -129,6 +142,7 @@ export function GuardianManagementPanel({
 
   const handleDecideSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!decideModalItem) return;
     setDeciding(true);
     try {
@@ -158,7 +172,7 @@ export function GuardianManagementPanel({
       title="Guardian linkages [WF-21..25]"
       description="Link parent or guardian profiles to this student (up to 3 guardians, exactly one primary). Changes require reason and Principal approval."
       action={
-        <Button onClick={() => setShowLinkModal(true)} disabled={links.length >= 3}>
+        <Button onClick={() => setShowLinkModal(true)} disabled={!currentTenantId || links.length >= 3}>
           + Link Guardian
         </Button>
       }
@@ -170,7 +184,11 @@ export function GuardianManagementPanel({
           </div>
         )}
 
-        {loading ? (
+        {!currentTenantId ? (
+          <ErrorState title="Tenant context unavailable" message="Guardian links cannot be loaded or changed without a tenant identity." />
+        ) : loadError ? (
+          <ErrorState title="Could not load guardian links" message={loadError} action={<Button variant="secondary" onClick={() => void fetchLinks()}>Retry</Button>} />
+        ) : loading ? (
           <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>Loading guardian linkages...</p>
         ) : (
           <DataTable

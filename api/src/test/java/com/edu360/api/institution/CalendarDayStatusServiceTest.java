@@ -23,7 +23,7 @@ class CalendarDayStatusServiceTest {
  @Test void returnsLocalAndUniversityHolidayExamAndWeeklyOffForRequestedDate(){
   UUID tenant=UUID.randomUUID(),institution=UUID.randomUUID();LocalDate date=LocalDate.of(2026,11,15);scope(tenant);
   AcademicCalendarEvent local=new AcademicCalendarEvent();local.setAcademicCalendarEventId(UUID.randomUUID());local.setEventType("LOCAL_HOLIDAY");local.setTitle("Founder's Day");
-  AcademicCalendarEvent university=new AcademicCalendarEvent();university.setAcademicCalendarEventId(UUID.randomUUID());university.setEventType("SEMESTER_DATES");university.setTitle("Final Exam Week");
+  AcademicCalendarEvent university=new AcademicCalendarEvent();university.setAcademicCalendarEventId(UUID.randomUUID());university.setEventType("EXAM_DAY");university.setTitle("Mid-term assessment");
   when(events.findByTenantIdAndInstitutionIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenant,institution,date,date)).thenReturn(List.of(local));
   when(events.findByTenantIdAndInstitutionIdIsNullAndSourceLevelAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenant,"UNIVERSITY",date,date)).thenReturn(List.of(university));
   WeeklyOffRule rule=new WeeklyOffRule();rule.setDayOfWeek((short)7);rule.setOccurrence("ALL");rule.setEffectiveFrom(date.minusYears(1));
@@ -32,7 +32,7 @@ class CalendarDayStatusServiceTest {
   when(sessions.findByTenantIdAndInstitutionIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenant,institution,date,date)).thenReturn(List.of(session));
   when(sessions.findByTenantIdAndInstitutionIdIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqual(tenant,date,date)).thenReturn(List.of());
   var status=service.forDate(tenant,institution,date);
-  assertThat(status.holiday()).isTrue();assertThat(status.weeklyOff()).isTrue();assertThat(status.examDay()).isFalse();
+  assertThat(status.holiday()).isTrue();assertThat(status.weeklyOff()).isTrue();assertThat(status.examDay()).isTrue();
   assertThat(status.academicSessionIds()).containsExactly(session.getAcademicSessionId());assertThat(status.calendarEventIds()).hasSize(2);
  }
  @Test void appliesOddAndEvenOccurrenceToAlternateWeekends(){

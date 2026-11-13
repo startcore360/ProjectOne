@@ -14,6 +14,7 @@ import Edu360Logo from "../assets/Edu360Logo";
 import { ThemeToggle } from "../components/ui";
 import { RoleSwitcher } from "../components/layout/RoleSwitcher";
 import { NotificationBell } from "../features/notifications/components/NotificationBell";
+import { useLiveSocket } from "../features/live/liveSocket";
 import { SESSION_IDLE_LIMIT_MS, startInactivityTracker } from "../services/inactivityTracker";
 import api from "../services/axios";
 import { useProfilePhoto } from "../features/profile/hooks/useProfilePhoto";
@@ -91,6 +92,7 @@ const studentNavigation = [
 
 export default function AppLayout() {
   const user = useAppSelector((s) => s.auth.user);
+  useLiveSocket(user?.tenantId ?? null, Boolean(user?.platformRole));
   const navigate = useNavigate();
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -214,6 +216,7 @@ export default function AppLayout() {
   // Academic destinations appear only when the active role has the matching server grant.
   // They remain non-clickable until their real feature pages ship; no placeholder routes.
   const academicNavigation = tenantPermissionsLoading ? [] : [
+    { label: "Support", to: "/support", icon: "help" as const, important: false, anyOf: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"] },
     { label: "Timetable", to: "/dashboard", icon: "calendar" as const, important: false, disabled: true, anyOf: ["TIMETABLE_BUILD", "TIMETABLE_VIEW"] },
     { label: "Attendance", to: "/dashboard", icon: "check-circle" as const, important: false, disabled: true, anyOf: ["ATTENDANCE_MARK", "ATTENDANCE_VIEW", "ATTENDANCE_VIEW_OWN", "ATTENDANCE_BULK_UPLOAD"] },
     { label: "Assignments", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["ASSIGNMENT_CREATE", "ASSIGNMENT_SUBMIT", "ASSIGNMENT_VIEW_OWN", "ASSIGNMENT_EVALUATE"] },

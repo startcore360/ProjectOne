@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.HodAssignRequest;
 import com.edu360.api.rbac.PermissionEvaluatorService;
@@ -121,6 +122,51 @@ class HodAssignmentServiceTest {
         assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("not ACTIVE");
+    }
+
+    @Test
+    void assignHod_rejectsStaffAssignmentOutsideEffectiveDates() {
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPARTMENT_ID))
+                .thenReturn(Optional.of(department()));
+        StaffAssignment future = staffAssignment(DEPARTMENT_ID, "ACTIVE");
+        future.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).plusDays(1));
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
+                .thenReturn(Optional.of(future));
+
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("not effective");
+    }
+
+    @Test
+    void assignHod_replacesTheDepartmentCurrentHodWithTheNewActiveAssignment() {
+        Department department = department();
+        UUID priorHod = UUID.randomUUID();
+        department.setHodStaffAssignmentId(priorHod);
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPARTMENT_ID))
+                .thenReturn(Optional.of(department));
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
+                .thenReturn(Optional.of(staffAssignment(DEPARTMENT_ID, "ACTIVE")));
+        when(departmentRepository.save(any(Department.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var response = service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID));
+
+        assertThat(response.hodStaffAssignmentId()).isEqualTo(STAFF_ASSIGNMENT_ID);
+        assertThat(response.hodStaffAssignmentId()).isNotEqualTo(priorHod);
+    }
+
+    @Test
+    void assignHod_rejectsStaffAssignmentFromAnotherInstitutionEvenWhenDepartmentIdMatches() {
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPARTMENT_ID))
+                .thenReturn(Optional.of(department()));
+        StaffAssignment otherInstitution = staffAssignment(DEPARTMENT_ID, "ACTIVE");
+        otherInstitution.setInstitutionId(UUID.randomUUID());
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
+                .thenReturn(Optional.of(otherInstitution));
+
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("department institution");
     }
 
     @Test

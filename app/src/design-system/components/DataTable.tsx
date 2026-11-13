@@ -7,6 +7,7 @@ export interface DataTableProps {
   emptyMessage?: string;
   className?: string;
   tableClassName?: string;
+  ariaLabel?: string;
 }
 
 export function DataTable({
@@ -16,9 +17,15 @@ export function DataTable({
   emptyMessage = "No matching records.",
   className = "",
   tableClassName = "",
+  ariaLabel,
 }: DataTableProps) {
   return (
-    <div className={`platform-table-wrap ${className}`.trim()}>
+    <div
+      className={`platform-table-wrap ${className}`.trim()}
+      role="region"
+      aria-label={ariaLabel ?? `Scrollable data table: ${headers.join(", ")}`}
+      tabIndex={0}
+    >
       <table className={`platform-table ${tableClassName}`.trim()}>
         <thead>
           <tr>

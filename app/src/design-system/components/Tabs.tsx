@@ -22,9 +22,11 @@ export function Tabs({
   ariaLabel = "Navigation tabs",
   tabRole = "tab",
 }: TabsProps) {
+  const isTabList = tabRole === "tab";
+
   return (
     <div
-      role="tablist"
+      role={isTabList ? "tablist" : "group"}
       aria-label={ariaLabel}
       className={`platform-tabs ${className}`.trim()}
       style={{
@@ -40,12 +42,32 @@ export function Tabs({
         return (
           <button
             key={tab.id}
-            role={tabRole === "tab" ? "tab" : undefined}
+            role={isTabList ? "tab" : undefined}
             id={`tab-${tab.id}`}
-            aria-selected={tabRole === "tab" ? isActive : undefined}
-            aria-controls={`panel-${tab.id}`}
+            aria-selected={isTabList ? isActive : undefined}
+            aria-pressed={!isTabList ? isActive : undefined}
+            aria-controls={isTabList ? `panel-${tab.id}` : undefined}
+            tabIndex={isTabList ? (isActive ? 0 : -1) : undefined}
             disabled={tab.disabled}
             onClick={() => onChange(tab.id)}
+            onKeyDown={(event) => {
+              if (!isTabList || !["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+              const enabledTabs = Array.from(
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                  '[role="tab"]:not(:disabled)',
+                ) ?? [],
+              );
+              if (enabledTabs.length === 0) return;
+              const currentIndex = enabledTabs.indexOf(event.currentTarget);
+              const nextIndex = event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? enabledTabs.length - 1
+                  : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + enabledTabs.length) % enabledTabs.length;
+              event.preventDefault();
+              enabledTabs[nextIndex].focus();
+              onChange(enabledTabs[nextIndex].id.replace(/^tab-/, ""));
+            }}
             style={{
               padding: "8px 16px",
               background: "none",

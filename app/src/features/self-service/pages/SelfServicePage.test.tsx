@@ -81,6 +81,7 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
         body: "Your symposium leave was approved.",
         priorityClass: "NORMAL",
         createdAt: "2026-11-06T00:00:00Z",
+        readAt: null,
       },
     ]);
   });

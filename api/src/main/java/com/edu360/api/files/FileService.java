@@ -104,7 +104,7 @@ public class FileService {
         return FileUploadResponse.from(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StoredFile download(TenantPrincipal principal, UUID fileId) {
         FileObject file = repository.findById(new FileObjectId(principal.tenantId(), fileId))
                 .orElseThrow(() -> new ResourceNotFoundException("File not found."));
@@ -124,12 +124,21 @@ public class FileService {
         RbacScope scope = file.getInstitutionId() == null
                 ? permissions.ownScope(caller)
                 : permissions.targetScope(caller, file.getInstitutionId(), null);
-        switch (FilePurpose.valueOf(file.getPurpose())) {
-            case STUDY_MATERIAL -> {
-                // No STUDY_MATERIAL_VIEW action exists in the approved Action List yet.
-                // Until it is approved, only uploader/assigned-teacher roles with upload grant pass.
-                permissions.authorize(caller, "STUDY_MATERIAL_UPLOAD", scope, RbacTarget.NONE);
+        FilePurpose purpose = FilePurpose.valueOf(file.getPurpose());
+        if ("PENDING".equals(file.getScanStatus())
+                && !principal.userAccountId().equals(file.getUploadedBy())) {
+            boolean authorizedForPending = permissions.can(caller, purpose.actionCode(),
+                    scope, RbacTarget.NONE).allowed();
+            if (!authorizedForPending && purpose == FilePurpose.ASSIGNMENT_SUBMISSION) {
+                authorizedForPending = permissions.can(caller, "ASSIGNMENT_EVALUATE",
+                        scope, RbacTarget.NONE).allowed();
             }
+            if (!authorizedForPending) {
+                throw new UnauthorizedException("Pending files are available only to the uploader or an authorized role.");
+            }
+        }
+        switch (purpose) {
+            case STUDY_MATERIAL -> permissions.authorize(caller, "STUDY_MATERIAL_VIEW", scope, RbacTarget.NONE);
             case ASSIGNMENT_SUBMISSION -> {
                 if (!permissions.can(caller, "ASSIGNMENT_VIEW_OWN", scope, RbacTarget.NONE).allowed()
                         && !permissions.can(caller, "ASSIGNMENT_EVALUATE", scope, RbacTarget.NONE).allowed()) {
@@ -149,6 +158,11 @@ public class FileService {
                     throw new UnauthorizedException("The active role cannot view attendance imports.");
                 }
             }
+        }
+        if (FilePurpose.STAFF_DOCUMENT.name().equals(file.getPurpose())) {
+            auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
+                    "FILE_OBJECT", fileId, file.getInstitutionId(), null,
+                    Map.of("purpose", FilePurpose.STAFF_DOCUMENT.name()), 1, "P", "SUCCESS"));
         }
         return new StoredFile(storage.openRead(file.getStorageKey()), file.getOriginalFilename(), file.getContentType());
     }

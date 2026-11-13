@@ -37,7 +37,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex, HttpServletRequest request) {
-        return buildResponse(ex.getStatus(), ex.getErrorCode(), ex.getMessage(), request);
+        ResponseEntity<Map<String, Object>> response = buildResponse(ex.getStatus(), ex.getErrorCode(), ex.getMessage(), request);
+        if ("OTP_PROVIDER_NOT_CONFIGURED".equals(ex.getErrorCode())) {
+            Map<String, Object> body = new HashMap<>(response.getBody());
+            body.put("retryable", false);
+            return ResponseEntity.status(ex.getStatus()).header("Cache-Control", "no-store").body(body);
+        }
+        return response;
     }
 
     @ExceptionHandler(AuditFailureException.class)

@@ -92,9 +92,9 @@ public class AuditLogService {
   return new TenantAuditEvent(actor.tenantId(),id,institution,now,actor.userAccountId(),role,operation,null,type.name(),null,null,null,outcome,null,newJson,corr,hash);
  }
  static String operationOf(AuditEventType t){return switch(t){
-  case LOGIN_SUCCESS,LOGIN_FAILURE,LOGOUT->"LOGIN";case DENIED_ATTEMPT->"DENIED";case EXPORT->"EXPORT";
+  case LOGIN_SUCCESS,LOGIN_FAILURE,LOGOUT->"LOGIN";case DENIED_ATTEMPT->"DENIED";case EXPORT->"EXPORT";case STAFF_DOCUMENT_ATTACHED->"CREATE";
   case SENSITIVE_VIEW->"VIEW_SENSITIVE";case DELETE->"DELETE";case APPROVAL,ATTENDANCE_CORRECTION_SELF_APPROVED->"APPROVE";
-  case TERM_LOCKED,TERM_UNLOCKED,TENANT_SETTINGS_UPDATED,PRINCIPAL_LEAVE_APPROVER_SET,VC_LEAVE_APPROVER_SET->"CONFIG_CHANGE";
+  case TERM_LOCKED,TERM_UNLOCKED,TENANT_SETTINGS_UPDATED,PRINCIPAL_LEAVE_APPROVER_SET,VC_LEAVE_APPROVER_SET,INSTITUTION_ID_FORMAT_UPDATED->"CONFIG_CHANGE";
   case ATTENDANCE_MARKED,ATTENDANCE_CORRECTION_APPLIED->"UPDATE";
   default->t.name().endsWith("_REJECTED")?"REJECT":t.name().endsWith("_APPROVED")||t.name().endsWith("_PUBLISHED")?"APPROVE":
    t.name().endsWith("_CREATED")||t.name().endsWith("_CREATED_DRAFT")||t.name().endsWith("_LINKED")||

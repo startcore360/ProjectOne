@@ -12,6 +12,8 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
 
     Optional<StudentProfile> findByTenantIdAndUserAccountId(UUID tenantId, UUID userAccountId);
 
+    boolean existsByTenantIdAndStudentCode(UUID tenantId, String studentCode);
+
     /** Parent self-service: only ACTIVE links owned by this guardian account grant child access. */
     @Query(value = """
             SELECT DISTINCT s.*

@@ -22,7 +22,7 @@ export default function DashboardPage() {
 
   if (user?.userType === "GUARDIAN") {
     return <div className="platform-page">
-      <PageHeader title="Parent dashboard" description="Choose a child linked to your account. Child details are read-only." />
+      <PageHeader title="Parent dashboard" description="Choose a child linked to your account. Progress, attendance, notices and academic records are not connected to this dashboard yet." />
       <GuardianChildSwitcher value={selectedChildId} onChange={setSelectedChildId} />
     </div>;
   }

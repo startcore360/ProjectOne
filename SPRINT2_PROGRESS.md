@@ -25,9 +25,9 @@
 | HOMEWORK_STATUS_MARK | 1 | Tested |
 | ASSIGNMENT_VIEW_OWN | 1 | Tested |
 | HOMEWORK_COMPLIANCE_VIEW | 1 | Tested |
-| STAFF_RECORD_MANAGE | 1 | Tested |
-| STAFF_DOCUMENT_VERIFY | 1 | Tested |
-| STAFF_RECORD_VIEW | 1 | Tested |
+| STAFF_RECORD_MANAGE | 3 | Not started |
+| STAFF_DOCUMENT_VERIFY | 3 | Not started |
+| STAFF_RECORD_VIEW | 3 | Not started |
 
 ## Chunk 1 — Foundations
 
@@ -93,7 +93,7 @@
 |---|---|---|
 | Upload | Multipart upload, 10 MiB application limit, safe-list content inspection, filename sanitization, SHA-256, PENDING scanner contract and structured `FILE_UPLOADED` audit entry. Audit values contain file identifiers/metadata only, never filename or bytes. | No real malware scanner; default scanner leaves files PENDING. |
 | Download | Attachment streaming, safe content type, `nosniff`, tenant-qualified file lookup, scan/status enforcement and a database-backed owning-record policy. | The attach-to-record endpoint is not implemented in this chunk. Existing domain rows can be authorized; a newly uploaded, unattached file is not downloadable. |
-| Record policy | Study material: active study-material record and uploader/active assigned teacher. Assignment submission: own student record, ACTIVE linked guardian, or assignment author. Syllabus: published record. Staff document: uploader or staff member. Attendance source: uploader's attendance import job. | Study-material downloads currently use `STUDY_MATERIAL_UPLOAD` because the authoritative Action List has no `STUDY_MATERIAL_VIEW` action. This does not grant students/guardians a material-view right; that action requires a Product Owner decision. |
+| Record policy | Study material: active study-material record, uploader/assigned teacher, or student with a current IN_PROGRESS enrollment in its section/subject group; guardian must have an ACTIVE link to that enrolled student. Assignment submission: own student record, ACTIVE linked guardian, or assignment author. Syllabus: published record. Staff document: uploader or staff member. Attendance source: uploader's attendance import job. | The approved STUDY_MATERIAL_VIEW action and student/guardian ownership policy are implemented in migration 28 and the file download service. File-to-record attachment remains open. |
 | Local storage | WHAT/HOW/WHY comments restored. Storage keys are normalized, checked for lexical containment and resolved-path/symlink containment before reads. | Local disk remains an interim deviation from D5 object storage and 15-minute expiring links. |
 | Type validation | File signatures are inspected. A valid safe file may declare `application/octet-stream`; server-detected MIME is returned. Executable-renamed files and unsafe HTML/SVG/scripts are rejected. | OOXML inspection checks ZIP central-directory names only; archive entries are never inflated. |
 | Size limits | General multipart ceiling is 10 MiB with an 11 MiB request allowance. `ProfileService` retains its separate 2 MiB JPEG/PNG check. | Profile upload remains subject to the global multipart parser ceiling before its endpoint-level 2 MiB check. |
@@ -129,7 +129,139 @@
 ### Open items before Chunk 2 can be marked Tested
 
 1. Execute all four required gates on the corrected branch: backend verify, PostgreSQL SQL validation, frontend lint/tests/build. Review the dependency-audit report separately and remediate or formally disposition the CVE findings.
-2. Add the approved `STUDY_MATERIAL_VIEW` action (or an explicit Product Owner rule for student/guardian material access) before enabling those downloads.
+2. `STUDY_MATERIAL_VIEW` is now in the reference catalogue and migration 28, with enrolled-student/active-guardian policy and download authorization. The migration and policy require the follow-up CI run to pass before this item can be marked Tested.
 3. Implement file attachment to an owning domain record and audit every subsequent scan/status transition.
 4. Wire `InAppNotifier` when the relevant timetable, assignment, attendance and HOD approval publishers exist.
 5. Consume the remaining generic controls from the real feature pages when those pages and supporting APIs are delivered; do not fabricate page workflows in this chunk.
+
+
+### Status correction — staff stories
+
+The three staff action codes above belong to Chunk 3 (B4), not Chunk 1. They are **Not started** until the B4 implementation and a green CI run cover them. No story is marked Accepted. This correction changes reporting only; it does not claim implementation or test execution.
+
+
+### Latest branch validation — progress correction commit
+
+GitHub Actions run [43171144257](https://github.com/startcore360/ProjectOne/actions/runs/43171144257) for commit `dd01ef966a9a1e18a9b0a4869f9799e5f8586bf2` completed with these job results:
+
+| Job | Result | Evidence |
+|---|---|---|
+| Spring Boot quality gates | **Passed** | Run 43171144257, job 131024577601 — Verify backend and package upload succeeded. |
+| PostgreSQL migration validation | **Passed** | Run 43171144257, job 131024577670 — `sql/run_all.sh` succeeded against PostgreSQL 16. |
+| Frontend quality gates | **Passed** | Run 43171144257, job 131024577790 — `npm ci`, lint, full unit suite, type-check/build and artifact upload succeeded. |
+| CodeQL static analysis | **Passed** | Run 43171144257, job 131024577454 — initialize, autobuild and analyze succeeded. |
+| Dependency and secret checks | **Failed** | Run 43171144257, job 131024577752 — npm audit passed; OWASP Maven Dependency-Check failed on high/critical findings. Secret scan was skipped after the Maven audit failure. |
+| Pull request dependency review | **Skipped** | Run 43171144257, job 131024579427 — this was a push run, not a pull request. |
+
+The OWASP Maven findings are a **pre-existing baseline failure**: the same dependency-check step and CVE families failed on the pre-sync target commit in run [43029920181](https://github.com/startcore360/ProjectOne/actions/runs/43029920181), job 130554023543. The baseline run's Spring Boot, PostgreSQL and frontend jobs passed; CodeQL passed. The dependency failure is not attributed to the progress correction or source-sync commit. The OWASP gate remains open pending the C2-5 remediation; do not treat it as passed. Secret scanning did not execute in either failed dependency job. Dependency Review is not executed on push events.
+
+
+### B5 study-material view access — implementation update
+
+- Added migration `28_v41_study_material_view.sql`: the approved `STUDY_MATERIAL_VIEW` action is registered and mapped to Assignments; grants are assigned to college/school students, college/school parents, and assigned teaching roles.
+- File downloads now authorize `STUDY_MATERIAL_VIEW`, not the upload action. The database-backed ownership policy requires an active study-material row and current `IN_PROGRESS` enrollment in the matching section or subject group; guardian access additionally requires an `ACTIVE` student-guardian link. All joins are tenant/institution-qualified and policy errors fail closed.
+- SQL checks `S2-B5-01/02` and a backend authorization regression test were added. CI verification is pending; this item is not marked Tested until the pipeline completes.
+
+- CI follow-up found an action-number collision: `ROLLDOWN_VIEW` owns action number 279 in the V4.0 reference seed. `STUDY_MATERIAL_VIEW` is now assigned 280 in both the reference catalogue and migration 28; the next SQL pipeline run will verify the corrected seed order.
+
+- The next CI run identified a second collision in the V4.0 reference seed: `ROLLDOWN_OVERRIDE_SET` uses action number 280. The study-material view action has been moved to 281 in both reference data and migration 28; a fresh pipeline is required to verify the correction.
+
+
+## Chunk 2 and Chunk 3 continuation — 12 November 2026
+
+This is a progress record, not an acceptance declaration. Work is continuing on `sprint-2-development`; concurrent commits from the other contributor have been retained.
+
+### Changes added in this continuation
+- Added live WebSocket backend tests for oversized frames (1009), malformed authentication (4401), malformed JSON (4401), and ignored unknown client frames.
+- Added notification notifier tests for post-persistence `NOTIFICATION_CREATED` and `UNREAD_COUNT` delivery, plus suppression of live events for deduplicated notifications.
+- Added file-download regression coverage proving INFECTED, QUARANTINED, DELETED and SCAN_FAILED objects remain blocked even when pending downloads are enabled.
+- Student creation now validates the section is active and the requested/default admission date falls within the academic session before provisioning a Keycloak login. School class validation also checks institution ownership and active status before applying the class login switch.
+- Added StudentCreationService coverage for college-default student-code login/profile/enrolment creation and rejection of out-of-session admission before account provisioning.
+- The current branch also contains additional B4 staff authorization, service, and document tests; notification controller tests; and the student creation flow added concurrently. These have been retained rather than overwritten.
+
+### Pipeline and remaining completion gates
+- GitHub Actions is triggered on each branch update. Several runs were cancelled by subsequent commits while concurrent work continued; the latest run must be allowed to complete on the consolidated branch before claiming a green gate.
+- No local test execution is claimed. The current source state still requires a completed backend, PostgreSQL migration, frontend, CodeQL, dependency and secret-scan result.
+- Remaining provider/architecture decisions cannot be implemented safely by assumption: a malware-scanning provider has not been selected, and D5 object storage/expiring-link provider configuration is not present. Local storage remains a documented interim deviation.
+- File attachment exists for staff documents, but a generic file-to-domain-record attachment/status-transition workflow is not yet established for all owning record types. Do not infer a universal ownership contract.
+- Notification event invocation remains limited to publishers actually present in the repository; absent timetable, assignment, attendance and HOD approval publishers cannot be wired without those domain workflows.
+- OD-16 remains open; only SQL-defined staff fields and service-event types are used. OD-134 single-student action code follows the approved API proposal `USER_CREATE` in the current implementation; the user has directed completion without waiting for further approval.
+- Stories remain In progress / Tested only after their relevant CI gates complete. No story is marked Accepted by this note.
+
+
+## Sprint 1 gap repairs — active implementation log
+
+**Scope:** working through the Sprint 1 gap-validation register, prioritising the Chunk 3b repairs and then the remaining gaps. This is an implementation log, not an acceptance statement. The existing 26-action-code status table above is retained unchanged.
+
+### G1 — Tenant-side support
+
+**Status: Built; CI/test validation pending.**
+
+- Added tenant ticket creation authorization using `SUPPORT_TICKET_RAISE`.
+- Added `GET /v1/tenants/{tenantId}/support-tickets`; repository query is constrained by both authenticated tenant and authenticated user.
+- Added the tenant Support screen for ticket creation, own-ticket list, grant history, grant up to 24 hours, and immediate withdrawal.
+- Added a permission-filtered Support navigation item and an `ActionGate` route.
+- Added audit events for reads of own support tickets and tenant support grant history.
+- Ticket categories remain unspecified; the UI does not invent a category catalogue. Priority values follow the SQL constraint (LOW, MEDIUM, HIGH, CRITICAL).
+- Relevant commits include `4f21d6e` (ticket authorization/list endpoint) and later support UI/navigation/audit commits on this branch.
+
+### G2 — Academic structure PATCH and subject groups
+
+**Status: In progress; not yet implemented in this repair pass.**
+
+- Current controller still has create/list endpoints for academic structure; PATCH/If-Match handlers and subject-group/member endpoints remain to be built.
+- Subject-group membership is represented by `app.subject_group_member.enrollment_id` in the current schema. Subject-group operations will use `STRUCTURE_MANAGE`; `SUBJECT_ALLOCATE` remains for teacher allocation.
+- No G2 story is marked Built or Tested.
+
+### G3 — Exam-day calendar events
+
+**Status: Built; SQL/CI validation pending.**
+
+- Added `EXAM_DAY` to local and university master calendar event handling.
+- Added migration `30_v41_exam_day_event_type.sql`, guarded rollback `30r_v41_exam_day_event_type_rollback.sql`, SQL checks `30t_tests_exam_day_event_type.sql`, and registered them in `sql/run_all.sh`.
+- Added service tests for typed exam-day creation and local-holiday overlap; updated calendar-day status coverage so `examDay` is derived from typed events rather than title text.
+- Master calendar form and local calendar form expose Exam day with a distinct warning badge.
+- Product D1 §2.1 / CL-01 says local holidays on exam days are blocked with a warning. The service returns `HOLIDAY_EXAM_CONFLICT`; it does not infer exams from free-text titles.
+- Local build and PostgreSQL migration tests have not been run from this environment.
+
+### G4 — Parent/applicant one-time-code login
+
+**Status: Disabled-mode API built; full OTP lifecycle not implemented.**
+
+- Added `GET /v1/auth/otp/status` and `POST /v1/auth/otp/request`, `POST /v1/auth/otp/verify` (also under `/api/auth`).
+- Status reports `enabled:false`; request/verify fail closed with 503 `OTP_PROVIDER_NOT_CONFIGURED`; the D5 response includes `retryable:false` and `Cache-Control: no-store`.
+- Set `auth.otp.enabled=false` explicitly in base, dev, test and prod application properties.
+- Added focused controller unit tests. The mobile-code option remains absent from the login screen.
+- Not implemented: SMS sender adapter, OTP issuance/storage/expiry/rate-limits, guardian-only eligibility and Keycloak token exchange. Applicant login remains Phase 2. This is not a complete G4 implementation.
+
+### Validation and CI notes
+
+- No story is marked `Tested` in this log. This environment has GitHub repository access but no working local checkout/runtime for executing Maven, frontend or PostgreSQL commands.
+- GitHub Actions runs for intermediate commits have repeatedly been cancelled when concurrent developer commits landed on the same branch. This is not a pass or a code failure. Await a non-cancelled run on the consolidated branch head before marking any affected repair Tested.
+- Continue using `sprint-2-development` only. Refresh the branch before each write and preserve concurrent commits; never force-push.
+
+
+### Follow-up security and enrolment notes
+
+- Pending file downloads now require either the original uploader or an active permission for the file purpose (assignment evaluators are also recognized). Record ownership and ordinary view permission alone do not expose an unscanned file. Regression coverage denies a non-uploader with only the normal view path.
+- Student creation now validates active section/class and admission date before allocating/provisioning the student login. The new tests cover college-default login, school class switch disabled, explicit school-login denial, and admission-date rejection before external provisioning.
+- The current OpenAPI/import contract exposes the existing imports operation as a USER import; it does not define the CSV row schema or execution contract for student-code legacy imports. The student-code generation and tenant uniqueness guard are implemented, but a separate legacy-code student bulk-import execution path remains open until its contract is defined. Do not silently reinterpret USER imports as student enrolment imports.
+- The security/architecture requirements still call for a real malware scanner and object-store-backed 15-minute download links. No provider or deployment credentials are defined in the supplied project configuration. These remain explicit deployment/integration blockers; local storage and the pending scanner are not represented as production-complete.
+
+
+## Chunk 2 / Chunk 3 continuation — implementation update
+
+- The existing self-service notification endpoints were retained (no duplicate controller was left behind). Inbox listing, unread counts, mark-read and mark-all-read now exclude notifications whose `deliver_after` time has not arrived; mark-read also hides a scheduled notification by returning not-found. Bulk read uses a tenant/recipient-scoped database update, and live unread counts use the same due-only rule. Mark-read/read-all remain intentionally unaudited per the approved decision.
+- Added single-student creation at `POST /v1/tenants/{tenantId}/students` (and the legacy `/api` alias). The flow validates active institution, section and academic session, authorizes `USER_CREATE` before consuming an ID sequence, generates the tenant-unique institution student code, creates the profile and enrolment in one database transaction, and uses the approved OD-134 `USER_CREATE` action code.
+- College student login defaults on and uses the student code as Keycloak username with no email. School login follows the class-level login switch; an explicit request cannot bypass a disabled switch. The creation response returns the temporary password once for secure printing/delivery. A transaction rollback schedules cleanup of the provisioned Keycloak identity to avoid orphan accounts.
+- Added regression coverage for student-code-only Keycloak provisioning, missing ID format, school login switch, admission date bounds, staff-code normalization/uniqueness, staff document verification scope, WebSocket connection limit, heartbeat timeout and token reauthentication.
+- The CI workflow now gives each run a unique concurrency group and always runs the secret scan even if an earlier dependency step fails.
+- **Validated checkpoint:** GitHub Actions run [43235642537](https://github.com/startcore360/ProjectOne/actions/runs/43235642537), commit `536a65ac0b971b3021f38c9bbbf923ef8444a9e2`, passed Spring Boot, frontend, PostgreSQL migration, CodeQL, dependency and secret checks. Pull-request dependency review was skipped on the push event. This is an intermediate checkpoint; later commits still require a completed pipeline on the consolidated branch before final validation.
+
+### Remaining Chunk 2 / Chunk 3 gates
+
+- Student bulk import with optional legacy student codes and duplicate handling is not yet implemented end-to-end; the existing generic user import does not create student profiles/enrolments.
+- Malware scanning provider and D5 object-storage/presigned-link provider remain unselected. Local storage and PENDING scanner behavior therefore remain documented interim deviations; no provider has been invented.
+- Generic file-to-domain-record attachment and audit of subsequent scan/status transitions remain incomplete outside the existing staff-document attachment flow.
+- Notification triggers can only be connected where publisher workflows exist; timetable, assignment, attendance and HOD approval publishers are still absent from this branch.
+- B3/B4/B9 and Chunk 2 remain In progress until the latest consolidated CI run passes and the listed integration dependencies are resolved. No story is marked Accepted.

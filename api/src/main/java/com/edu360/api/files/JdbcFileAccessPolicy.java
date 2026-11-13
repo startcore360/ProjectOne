@@ -38,6 +38,53 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                       AND ((m.section_id IS NOT NULL AND sa.section_id = m.section_id)
                         OR (m.subject_group_id IS NOT NULL AND sa.subject_group_id = m.subject_group_id))
                   )
+                  OR EXISTS (
+                    SELECT 1
+                    FROM app.course_offering co
+                    JOIN app.student_enrollment en
+                      ON en.tenant_id = co.tenant_id
+                     AND en.institution_id = co.institution_id
+                     AND en.academic_session_id = co.academic_session_id
+                     AND en.outcome = 'IN_PROGRESS'
+                     AND en.started_on <= CURRENT_DATE
+                     AND (en.ended_on IS NULL OR en.ended_on >= CURRENT_DATE)
+                    JOIN app.student_profile student
+                      ON student.tenant_id = en.tenant_id
+                     AND student.student_profile_id = en.student_profile_id
+                     AND student.status = 'ACTIVE'
+                    WHERE co.tenant_id = m.tenant_id
+                      AND co.institution_id = m.institution_id
+                      AND co.course_offering_id = m.course_offering_id
+                      AND (
+                        (m.section_id IS NOT NULL AND en.section_id = m.section_id)
+                        OR (m.subject_group_id IS NOT NULL AND EXISTS (
+                          SELECT 1
+                          FROM app.subject_group_member gm
+                          JOIN app.subject_group sg
+                            ON sg.tenant_id = gm.tenant_id
+                           AND sg.subject_group_id = gm.subject_group_id
+                          WHERE gm.tenant_id = en.tenant_id
+                            AND gm.enrollment_id = en.enrollment_id
+                            AND gm.subject_group_id = m.subject_group_id
+                            AND sg.course_offering_id = co.course_offering_id
+                            AND sg.status = 'ACTIVE'
+                        ))
+                      )
+                      AND (
+                        student.user_account_id = ?
+                        OR EXISTS (
+                          SELECT 1
+                          FROM app.student_guardian_link gl
+                          JOIN app.guardian_profile guardian
+                            ON guardian.tenant_id = gl.tenant_id
+                           AND guardian.guardian_profile_id = gl.guardian_profile_id
+                          WHERE gl.tenant_id = student.tenant_id
+                            AND gl.student_profile_id = student.student_profile_id
+                            AND gl.status = 'ACTIVE'
+                            AND guardian.user_account_id = ?
+                        )
+                      )
+                  )
                 )
             )
             """;
@@ -107,7 +154,7 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
         UUID userId = principal.userAccountId();
         UUID fileId = file.getId().getFileId();
         return switch (FilePurpose.valueOf(file.getPurpose())) {
-            case STUDY_MATERIAL -> exists(STUDY_MATERIAL, tenantId, fileId, userId, userId);
+            case STUDY_MATERIAL -> exists(STUDY_MATERIAL, tenantId, fileId, userId, userId, userId, userId);
             case ASSIGNMENT_SUBMISSION -> exists(ASSIGNMENT_SUBMISSION, tenantId, fileId, userId, userId, userId);
             case SYLLABUS -> exists(SYLLABUS, tenantId, fileId);
             case STAFF_DOCUMENT -> exists(STAFF_DOCUMENT, tenantId, fileId);
@@ -117,8 +164,22 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
 
     @Override
     public boolean canAttach(FileObject file, TenantPrincipal principal, String recordType, UUID recordId) {
-        // The record-attachment endpoint is not part of this chunk; no implicit attachment is allowed.
-        return false;
+        if (!"STAFF_DOCUMENT".equals(recordType) || recordId == null
+                || !"STAFF_DOCUMENT".equals(file.getPurpose())
+                || !"ACTIVE".equals(file.getStatus()) || !"CLEAN".equals(file.getScanStatus())
+                || !principal.userAccountId().equals(file.getUploadedBy())) {
+            return false;
+        }
+        return exists("""
+                SELECT EXISTS (
+                  SELECT 1 FROM app.staff_profile p
+                  JOIN app.staff_assignment a
+                    ON a.tenant_id = p.tenant_id
+                   AND a.staff_profile_id = p.staff_profile_id
+                   AND a.status = 'ACTIVE'
+                  WHERE p.tenant_id = ? AND p.staff_profile_id = ?
+                )
+                """, principal.tenantId(), recordId);
     }
 
     private boolean exists(String sql, Object... parameters) {

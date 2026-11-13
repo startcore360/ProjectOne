@@ -16,7 +16,7 @@ export function SupportAccessView() {
 
   const [grants, setGrants] = useState<SupportAccessGrantItem[]>([]);
   const [tickets, setTickets] = useState<Record<string, SupportTicketItem>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -25,8 +25,8 @@ export function SupportAccessView() {
     setError("");
     try {
       const [gList, tList] = await Promise.all([
-        platformOpsService.listActiveGrants().catch(() => []),
-        platformOpsService.listSupportTickets().catch(() => []),
+        platformOpsService.listActiveGrants(),
+        platformOpsService.listSupportTickets(),
       ]);
       setGrants(gList);
       const ticketMap: Record<string, SupportTicketItem> = {};
@@ -62,7 +62,12 @@ export function SupportAccessView() {
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error && (
+        <div className="eds-error-state" role="alert">
+          <p className="eds-error-state__message">{error}</p>
+          <Button variant="secondary" onClick={() => void loadGrants()}>Retry</Button>
+        </div>
+      )}
 
       <div className="platform-policy-callout">
         <span aria-hidden="true">
@@ -82,7 +87,7 @@ export function SupportAccessView() {
           <div className="platform-empty-inline">
             <Spinner label="Loading active grants..." />
           </div>
-        ) : grants.length === 0 ? (
+        ) : error ? null : grants.length === 0 ? (
           <p className="platform-empty-inline">No active support sessions or grants currently open.</p>
         ) : (
           <DataTable headers={["Ticket #", "Tenant ID", "Granted At", "Access Ends", "Status", "Actions"]}>

@@ -57,6 +57,36 @@ class CalendarEventServiceTest {
     }
 
     @Test
+    void addLocalHoliday_refusesOverlapWithTypedUniversityExamDay() {
+        AcademicSession session = new AcademicSession();
+        session.setAcademicSessionId(SESSION_ID); session.setTenantId(TENANT_ID); session.setInstitutionId(null);
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, SESSION_ID))
+                .thenReturn(java.util.Optional.of(session));
+        AcademicCalendarEvent exam = new AcademicCalendarEvent();
+        exam.setEventType("EXAM_DAY"); exam.setTitle("Mid-term assessment");
+        exam.setStartDate(LocalDate.of(2026, 11, 10)); exam.setEndDate(LocalDate.of(2026, 11, 12));
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(TENANT_ID, "UNIVERSITY")).thenReturn(List.of(exam));
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(TENANT_ID, INSTITUTION_ID)).thenReturn(List.of());
+        var request = new CalendarEventRequest(INSTITUTION_ID, SESSION_ID, "LOCAL_HOLIDAY", "Local closure",
+                LocalDate.of(2026, 11, 12), LocalDate.of(2026, 11, 13));
+        assertThatThrownBy(() -> service().addLocalEvent(principal, request))
+                .isInstanceOfSatisfying(com.edu360.api.exception.BusinessRuleViolationException.class,
+                        error -> assertThat(error.getErrorCode()).isEqualTo("HOLIDAY_EXAM_CONFLICT"));
+        org.mockito.Mockito.verify(academicCalendarEventRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void addLocalEvent_allowsTypedLocalExamDay() {
+        AcademicSession session = new AcademicSession();
+        session.setAcademicSessionId(SESSION_ID); session.setTenantId(TENANT_ID); session.setInstitutionId(INSTITUTION_ID);
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, SESSION_ID)).thenReturn(java.util.Optional.of(session));
+        when(academicCalendarEventRepository.save(any(AcademicCalendarEvent.class))).thenAnswer(inv -> inv.getArgument(0));
+        var request = new CalendarEventRequest(INSTITUTION_ID, SESSION_ID, "EXAM_DAY", "Unit test",
+                LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 10));
+        assertThat(service().addLocalEvent(principal, request).eventType()).isEqualTo("EXAM_DAY");
+    }
+
+    @Test
     void addLocalEvent_rejectsSemesterDatesBecauseThatIsTheSeparateCalendarMasterSetStory() {
         var request = new CalendarEventRequest(
                 INSTITUTION_ID, SESSION_ID, "SEMESTER_DATES", "Odd semester", LocalDate.of(2026, 7, 1), LocalDate.of(2026, 12, 1));

@@ -24,6 +24,7 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.PermissionDecision;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.rbac.UserRoleAssignment;
 
@@ -98,6 +99,29 @@ class FileServiceTest {
     }
 
     @Test
+    void studyMaterialDownloadUsesDedicatedViewAction() {
+        UUID institutionId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(institutionId).purpose("STUDY_MATERIAL")
+                .storageKey("tenants/material.pdf").originalFilename("material.pdf")
+                .contentType("application/pdf").sizeBytes(8).sha256("hash")
+                .scanStatus("CLEAN").status("ACTIVE").uploadedBy(userId)
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(true);
+        when(permissions.targetScope(any(), eq(institutionId), eq(null)))
+                .thenReturn(com.edu360.api.rbac.RbacScope.institution(institutionId));
+        when(storage.openRead("tenants/material.pdf")).thenReturn(new java.io.ByteArrayInputStream(new byte[]{1, 2, 3}));
+
+        StoredFile downloaded = service.download(principal, fileId);
+
+        assertThat(downloaded.content()).isNotNull();
+        verify(permissions).authorize(any(), eq("STUDY_MATERIAL_VIEW"), any(), any());
+        verify(permissions, never()).authorize(any(), eq("STUDY_MATERIAL_UPLOAD"), any(), any());
+    }
+
+    @Test
     void S2_29_deniesClassmatesSubmissionWhenOwningRecordPolicyDoesNotMatch() {
         UUID fileId = UUID.randomUUID();
         FileObject file = FileObject.builder()
@@ -114,4 +138,51 @@ class FileServiceTest {
         verify(permissions, never()).authorize(any(), any(), any(), any());
         verify(storage, never()).openRead(any());
     }
+    @Test
+    void infectedQuarantinedDeletedAndFailedScansAreAlwaysBlocked() {
+        assertBlockedFile("QUARANTINED", "INFECTED");
+        assertBlockedFile("DELETED", "CLEAN");
+        assertBlockedFile("ACTIVE", "INFECTED");
+        assertBlockedFile("ACTIVE", "SCAN_FAILED");
+    }
+
+    private void assertBlockedFile(String status, String scanStatus) {
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).purpose("STUDY_MATERIAL")
+                .storageKey("tenants/blocked.pdf").originalFilename("blocked.pdf")
+                .contentType("application/pdf").sizeBytes(8).sha256("hash")
+                .scanStatus(scanStatus).status(status).uploadedBy(userId)
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+
+        assertThatThrownBy(() -> service.download(principal, fileId))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("not available");
+    }
+
+    @Test
+    void pendingDownloadDeniesNonUploaderWithoutPurposePermission() {
+        UUID institutionId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(institutionId)
+                .purpose("STUDY_MATERIAL").storageKey("tenants/pending.pdf")
+                .originalFilename("pending.pdf").contentType("application/pdf")
+                .sizeBytes(8).sha256("hash").scanStatus("PENDING").status("ACTIVE")
+                .uploadedBy(UUID.randomUUID()).createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(true);
+        when(permissions.targetScope(any(), eq(institutionId), eq(null)))
+                .thenReturn(com.edu360.api.rbac.RbacScope.institution(institutionId));
+        when(permissions.can(any(), eq("STUDY_MATERIAL_UPLOAD"), any(), any()))
+                .thenReturn(PermissionDecision.deny("ACTION_NOT_GRANTED", "Denied"));
+
+        assertThatThrownBy(() -> service.download(principal, fileId))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("Pending files are available only");
+        verify(storage, never()).openRead(any());
+        verify(permissions, never()).authorize(any(), any(), any(), any());
+    }
+
 }

@@ -113,7 +113,7 @@ export function BulkUploadModal({
       kicker="USER_BULK_UPLOAD"
       title="Bulk upload users"
       titleId="bulk-upload-title"
-      description="Upload a CSV file of staff, faculty or student accounts. Enforces pre-validation and row error tracking [Rule MD-27]."
+      description="Upload supported user accounts with pre-validation and row-level error tracking. This workflow does not create student profiles or enrolments; use Create student profile for student admissions [Rule MD-27]."
       size="lg"
     >
       <div style={{ padding: "0.5rem 0" }}>
@@ -229,14 +229,7 @@ export function BulkUploadModal({
               Pre-validation Results [Rule MD-27]
             </h3>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "0.75rem",
-                marginBottom: "1rem",
-              }}
-            >
+            <div className="platform-import-summary">
               <div style={{ background: "var(--color-bg-subtle, #f8fafc)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary, #64748b)" }}>Total Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.totalRows}</div>

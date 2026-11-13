@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, DateField, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export interface AddAcademicSessionModalProps {
   isOpen: boolean;
@@ -66,35 +66,43 @@ export function AddAcademicSessionModal({
           />
         </div>
         <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
-          <label className="platform-form-field">
-            Academic Year
-            <input
-              type="number"
-              value={academicYear}
-              onChange={(e) => setAcademicYear(Number(e.target.value))}
-              min={2000}
-              max={2200}
-              required
-            />
-          </label>
-          <label className="platform-form-field">
-            Status
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="PLANNED">PLANNED</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="CLOSED">CLOSED</option>
-            </select>
-          </label>
+          <TextField
+            id="session-academic-year"
+            label="Academic year"
+            type="number"
+            value={academicYear}
+            onChange={(e) => setAcademicYear(Number(e.target.value))}
+            min={2000}
+            max={2200}
+            required
+          />
+          <SelectField
+            id="session-status"
+            label="Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            options={[
+              { value: "PLANNED", label: "Planned" },
+              { value: "ACTIVE", label: "Active" },
+              { value: "CLOSED", label: "Closed" },
+            ]}
+          />
         </div>
         <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
-          <label className="platform-form-field">
-            Start Date
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-          </label>
-          <label className="platform-form-field">
-            End Date
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
-          </label>
+          <DateField
+            id="session-start-date"
+            label="Start date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+          <DateField
+            id="session-end-date"
+            label="End date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            required
+          />
         </div>
         <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>

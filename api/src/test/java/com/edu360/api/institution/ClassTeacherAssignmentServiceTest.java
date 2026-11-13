@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.institution.dto.ClassTeacherAssignRequest;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
@@ -81,6 +82,53 @@ class ClassTeacherAssignmentServiceTest {
         assertThat(response.staffAssignmentId()).isEqualTo(STAFF_ASSIGNMENT_ID);
         org.mockito.Mockito.verify(permissionEvaluatorService).authorize(
                 principal, "CLASS_TEACHER_ASSIGN", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+    }
+
+    @Test
+    void assignClassTeacher_rejectsFutureEffectiveStaffAssignment() {
+        when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, SECTION_ID)).thenReturn(Optional.of(schoolSection()));
+        StaffAssignment future = staffAssignment(INSTITUTION_ID, "ACTIVE");
+        future.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).plusDays(1));
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
+                .thenReturn(Optional.of(future));
+
+        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("not effective");
+    }
+
+    @Test
+    void assignClassTeacher_endsTheExistingSectionAssignmentBeforeReplacement() {
+        when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, SECTION_ID)).thenReturn(Optional.of(schoolSection()));
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
+                .thenReturn(Optional.of(staffAssignment(INSTITUTION_ID, "ACTIVE")));
+        ClassTeacherAssignment current = new ClassTeacherAssignment();
+        current.setClassTeacherAssignmentId(UUID.randomUUID());
+        current.setTenantId(TENANT_ID);
+        current.setInstitutionId(INSTITUTION_ID);
+        current.setSectionId(SECTION_ID);
+        current.setStaffAssignmentId(UUID.randomUUID());
+        current.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).minusMonths(3));
+        when(classTeacherAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(TENANT_ID, SECTION_ID))
+                .thenReturn(Optional.of(current));
+        when(classTeacherAssignmentRepository.save(any(ClassTeacherAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID));
+
+        assertThat(current.getEffectiveTo()).isEqualTo(LocalDate.now(TenantClock.DEFAULT_ZONE));
+    }
+
+    @Test
+    void assignClassTeacher_deniesUnauthorizedCallerBeforeReadingStaffAssignment() {
+        when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, SECTION_ID)).thenReturn(Optional.of(schoolSection()));
+        org.mockito.Mockito.doThrow(new UnauthorizedException("denied"))
+                .when(permissionEvaluatorService)
+                .authorize(principal, "CLASS_TEACHER_ASSIGN", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
+                .isInstanceOf(UnauthorizedException.class);
+
+        org.mockito.Mockito.verifyNoInteractions(staffAssignmentRepository, classTeacherAssignmentRepository);
     }
 
     @Test

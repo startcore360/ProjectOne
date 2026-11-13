@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 
 class LocalFileStorageTest {
@@ -27,7 +28,13 @@ class LocalFileStorageTest {
         Path outside = tempDir.getParent();
         UUID tenant = UUID.randomUUID();
         java.nio.file.Files.createDirectories(tenants);
-        java.nio.file.Files.createSymbolicLink(tenants.resolve(tenant.toString()), outside);
+        Path link = tenants.resolve(tenant.toString());
+        try {
+            java.nio.file.Files.createSymbolicLink(link, outside);
+        } catch (UnsupportedOperationException | java.io.IOException | SecurityException ex) {
+            Assumptions.assumeTrue(false, "Symbolic links are unavailable to this test process: " + ex.getMessage());
+        }
+        Assumptions.assumeTrue(java.nio.file.Files.isSymbolicLink(link), "The test filesystem did not create a symbolic link.");
         LocalFileStorage storage = new LocalFileStorage(tempDir.toString());
         assertThatThrownBy(() -> storage.store(tenant, UUID.randomUUID(),
                 new java.io.ByteArrayInputStream(new byte[]{1})))

@@ -1,4 +1,5 @@
 import type { TextareaHTMLAttributes } from "react";
+import { Icon } from "../../components/ui/Icon";
 
 export type TextAreaFieldProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string;
@@ -36,13 +37,13 @@ export default function TextAreaField({
       />
       {hint && (
         <p id={hintId} className="eds-field__hint">
-          <span aria-hidden="true">ⓘ</span> {hint}
+          <Icon name="info" size={14} /> {hint}
         </p>
       )}
-      {error && (
-        <p id={errorId} className="eds-field__error" role="alert">
-          {error}
-        </p>
+      {error ? (
+        <p id={errorId} className="eds-field__error" role="alert">{error}</p>
+      ) : (
+        <p className="eds-field__error-placeholder" aria-hidden="true">&nbsp;</p>
       )}
     </div>
   );

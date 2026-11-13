@@ -1,5 +1,7 @@
 -- Minimal reference fixture for applying the Sprint 2 migration in the isolated acceptance-test database.
 -- The full V3.3 reference load is deliberately not used here because 04_tests.sql owns its own seed rows.
+INSERT INTO ref.module_catalog VALUES ('ASSIGNMENTS','Assignments, homework and study material',1,true) ON CONFLICT DO NOTHING;
+
 INSERT INTO ref.approval_process VALUES
  ('ATTENDANCE_CORRECTION_COLLEGE','Attendance correction (college)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture'),
  ('ATTENDANCE_CORRECTION_SCHOOL','Attendance correction (school)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture')
@@ -16,7 +18,11 @@ INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_versi
  ('PRINCIPAL_COLLEGE','Principal College','COLLEGE','4.0',false,true),
  ('SCHOOL_PRINCIPAL','School Principal','SCHOOL','4.0',false,true),
  ('VICE_PRINCIPAL_COLLEGE','Vice Principal College','COLLEGE','4.0',false,true),
- ('VICE_PRINCIPAL_SCHOOL','Vice Principal School','SCHOOL','4.0',false,true)
+ ('VICE_PRINCIPAL_SCHOOL','Vice Principal School','SCHOOL','4.0',false,true),
+ ('STUDENT_COLLEGE','Student (College)','COLLEGE','≤3.2',false,false),
+ ('STUDENT_SCHOOL','Student (School)','SCHOOL','≤3.2',false,false),
+ ('PARENT_COLLEGE','Parent (College)','COLLEGE','≤3.2',false,false),
+ ('PARENT_SCHOOL','Parent (School)','SCHOOL','≤3.2',false,false)
 ON CONFLICT(role_code) DO NOTHING;
 
 INSERT INTO ref.action_catalog(action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in) VALUES

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Button,
+  Notice,
   Kicker,
   Panel,
   StatusBadge as StateBadge,
@@ -17,7 +18,6 @@ import {
 import {
   roleAssignmentService,
   type RoleDefinitionItem,
-  type RoleDefinitionStatus,
 } from "../api/roleAssignmentService";
 import {
   leaveApproverService,
@@ -39,11 +39,20 @@ import {
   RolldownOverrideModal,
 } from "../components";
 
+function TenantContextNotice() {
+  return (
+    <div className="eds-error-state" role="alert">
+      <h3 className="eds-error-state__title">Institution context unavailable</h3>
+      <p className="eds-error-state__message">This page requires a signed-in account linked to a tenant. No tenant-scoped request has been sent.</p>
+    </div>
+  );
+}
+
 export function InstitutionsPage() {
   const user = useAppSelector((state) => state.auth.user);
-  const tenantId = user?.tenantId || "00000000-0000-0000-0000-000000000001";
+  const tenantId = user?.tenantId ?? "";
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -70,33 +79,38 @@ export function InstitutionsPage() {
 
   // Leave Approver state (Stories #45 & #46)
   const [goLiveCheck, setGoLiveCheck] = useState<GoLiveCheckResponse | null>(null);
+  const [goLiveCheckError, setGoLiveCheckError] = useState("");
   const [approverModalItem, setApproverModalItem] = useState<InstitutionItem | null>(null);
   const [vcModalOpen, setVcModalOpen] = useState(false);
 
-  const fetchInstitutions = async () => {
+  const fetchInstitutions = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
     setError(null);
     try {
       const data = await institutionService.listInstitutions(tenantId);
       setInstitutions(data.items);
+      setGoLiveCheckError("");
+      setGoLiveCheck(null);
       try {
         const check = await leaveApproverService.getGoLiveCheck(tenantId);
         setGoLiveCheck(check);
       } catch {
-        // silent fallback if go-live check not applicable
+        setGoLiveCheckError("Go-live readiness could not be verified. Institution activation remains subject to server-side checks.");
       }
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchInstitutions();
   }, [tenantId]);
 
+  useEffect(() => {
+    if (tenantId) void fetchInstitutions();
+  }, [fetchInstitutions, tenantId]);
+
   const handleActivate = async (item: InstitutionItem) => {
+    if (!tenantId) return;
     setActivatingId(item.institutionId);
     setFeedback(null);
     try {
@@ -139,6 +153,8 @@ export function InstitutionsPage() {
       return matchesQuery && matchesStatus;
     });
   }, [institutions, query, statusFilter]);
+
+  if (!tenantId) return <TenantContextNotice />;
 
   return (
     <div className="platform-page">
@@ -186,6 +202,12 @@ export function InstitutionsPage() {
             <strong>Read-only institution register:</strong> Institution creation (colleges &amp; schools) and executive approvals are restricted to University Administrators [Rule INSTITUTION_CREATE_DRAFT]. As a {user?.roleName || "College / School Administrator"}, your assigned institutions are listed below.
           </span>
         </div>
+      )}
+
+      {goLiveCheckError && (
+        <Notice tone="danger">
+          {goLiveCheckError} <Button variant="secondary" size="sm" onClick={() => void fetchInstitutions()}>Retry readiness check</Button>
+        </Notice>
       )}
 
       {goLiveCheck && !goLiveCheck.ready && (
@@ -287,7 +309,7 @@ export function InstitutionsPage() {
           <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-muted)" }}>
             Loading institutions...
           </div>
-        ) : filtered.length === 0 ? (
+        ) : error ? null : filtered.length === 0 ? (
           <div className="platform-admin-empty" style={{ padding: "var(--space-6)", textAlign: "center" }}>
             <span aria-hidden="true">
               <Icon name="shield" size={24} />
@@ -526,21 +548,12 @@ export function InstitutionUsersPage() {
   );
 }
 
-const roleRows = [
-  { name: "University Admin", level: "University", type: "Standard" },
-  { name: "College Admin", level: "College", type: "Standard" },
-  { name: "School Admin", level: "School", type: "Standard" },
-  { name: "Principal", level: "School", type: "Standard" },
-  { name: "Teacher", level: "School", type: "Standard" },
-  { name: "Accountant", level: "Institution", type: "Standard" },
-  { name: "Governing Body Approver", level: "Governance", type: "Standard" },
-];
-
 export function RolesPermissionsPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
   const [query, setQuery] = useState("");
   const [roles, setRoles] = useState<RoleDefinitionItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Custom role creation state (Story #16: ROLE_CUSTOM_MANAGE)
@@ -549,48 +562,35 @@ export function RolesPermissionsPage() {
   // Custom role retirement state (Story #16: ROLE_CUSTOM_MANAGE)
   const [retireModalItem, setRetireModalItem] = useState<RoleDefinitionItem | null>(null);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
+    setLoadError("");
     try {
       const data = await roleAssignmentService.listRoles(tenantId);
-      if (data && data.length > 0) {
-        setRoles(data);
-      }
-    } catch {
-      // Keep existing roles
+      setRoles(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setRoles([]);
+      setLoadError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void fetchRoles();
   }, [tenantId]);
 
-  const displayRows = useMemo(() => {
-    if (roles.length > 0) {
-      return roles.map((r) => ({
-        id: r.roleDefinitionId ?? r.roleCode,
-        raw: r,
-        name: r.roleName,
-        code: r.roleCode,
-        level: r.roleLevel,
-        type: r.roleOrigin === "STANDARD" ? "Standard" : "Custom",
-        sensitive: r.sensitiveRole,
-        status: r.status || "ACTIVE",
-      }));
-    }
-    return roleRows.map((r) => ({
-      id: r.name,
-      raw: undefined as RoleDefinitionItem | undefined,
-      name: r.name,
-      code: r.name.toUpperCase().replace(/\s+/g, "_"),
-      level: r.level,
-      type: r.type,
-      sensitive: false,
-      status: "ACTIVE" as RoleDefinitionStatus,
-    }));
-  }, [roles]);
+  useEffect(() => {
+    if (tenantId) void fetchRoles();
+  }, [fetchRoles, tenantId]);
+
+  const displayRows = useMemo(() => roles.map((r) => ({
+    id: r.roleDefinitionId ?? r.roleCode,
+    raw: r,
+    name: r.roleName,
+    code: r.roleCode,
+    level: r.roleLevel,
+    type: r.roleOrigin === "STANDARD" ? "Standard" : "Custom",
+    sensitive: r.sensitiveRole,
+    status: r.status || "ACTIVE",
+  })), [roles]);
 
   const filtered = useMemo(
     () =>
@@ -599,6 +599,8 @@ export function RolesPermissionsPage() {
       ),
     [displayRows, query]
   );
+
+  if (!tenantId) return <TenantContextNotice />;
 
   return (
     <div className="platform-page">
@@ -640,9 +642,17 @@ export function RolesPermissionsPage() {
 
       <Panel
         title="Role catalogue"
-        description="Representative role names from the V4.0 prototype. This is not the complete 71-role catalogue. Standard roles are system-defined; custom roles are tenant-managed [ROLE_CUSTOM_MANAGE]."
+        description="Roles returned by the tenant role catalogue. Standard roles are system-defined; custom roles are tenant-managed [ROLE_CUSTOM_MANAGE]."
       >
-        {loading && <p className="platform-empty-note">Loading roles from catalogue...</p>}
+        {loading && <p className="platform-empty-note" role="status">Loading roles from catalogue...</p>}
+        {loadError && !loading && (
+          <Notice tone="danger">
+            {loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRoles()}>Retry</Button>
+          </Notice>
+        )}
+        {!loading && !loadError && roles.length === 0 && (
+          <p className="platform-empty-note">No roles were returned by the tenant role catalogue.</p>
+        )}
         <div className="platform-toolbar">
           <label className="platform-search">
             <span aria-hidden="true">
@@ -656,7 +666,7 @@ export function RolesPermissionsPage() {
             />
           </label>
         </div>
-        <div className="platform-table-wrap">
+        {!loading && !loadError && roles.length > 0 && <div className="platform-table-wrap">
           <table className="platform-table">
             <thead>
               <tr>
@@ -711,7 +721,7 @@ export function RolesPermissionsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </div>}
       </Panel>
 
       {/* Create Custom Role Modal (Story #16: ROLE_CUSTOM_MANAGE) */}
@@ -766,19 +776,22 @@ export function RolesPermissionsPage() {
 }
 
 export function MissingRolesPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) || "00000000-0000-0000-0000-000000000001";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
 
   const [entries, setEntries] = useState<RolldownMapEntry[]>([]);
   const [overrides, setOverrides] = useState<RolldownOverride[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Set override modal state (Story #24: ROLLDOWN_OVERRIDE_SET)
   const [modalOpen, setModalOpen] = useState(false);
   const [overrideTarget, setOverrideTarget] = useState<{ missingRoleCode: string; permissionKind: string } | null>(null);
 
-  const fetchRolldown = async () => {
+  const fetchRolldown = useCallback(async () => {
+    if (!tenantId) return;
     setLoading(true);
+    setLoadError("");
     try {
       const [mapData, overrideData] = await Promise.all([
         rolldownService.getRolldownMap(tenantId),
@@ -791,13 +804,14 @@ export function MissingRolesPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void fetchRolldown();
   }, [tenantId]);
 
+  useEffect(() => {
+    if (tenantId) void fetchRolldown();
+  }, [fetchRolldown, tenantId]);
+
   const handleRevokeOverride = async (overrideId: string) => {
+    if (!tenantId) return;
     try {
       await rolldownService.revokeOverride(tenantId, overrideId);
       setFeedback({ tone: "success", message: "Rolldown override revoked. Reverted to default roll-down order." });
@@ -806,6 +820,8 @@ export function MissingRolesPage() {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     }
   };
+
+  if (!tenantId) return <TenantContextNotice />;
 
   return (
     <div className="platform-page">
@@ -858,6 +874,8 @@ export function MissingRolesPage() {
         </div>
       </div>
 
+      {loadError && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRolldown()}>Retry</Button></Notice>}
+
       <Panel
         title="Active roll-down resolution map (ROLLDOWN_VIEW / Action #23)"
         description="Ordered stand-in preferences evaluated dynamically per context (University wide, College, School)."
@@ -876,7 +894,7 @@ export function MissingRolesPage() {
               </tr>
             </thead>
             <tbody>
-              {entries.length === 0 ? (
+              {loadError || loading ? null : entries.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--color-muted)" }}>
                     No roll-down map rules loaded.

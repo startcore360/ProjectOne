@@ -55,7 +55,7 @@ export function AddMasterEventModal({
       onClose={onClose}
       title="Add Master Calendar Event"
       titleId="add-master-event-title"
-      description="Set semester dates or university holidays [CALENDAR_MASTER_SET, Rule CL-02]."
+      description="Set semester dates, university holidays or exam days [CALENDAR_MASTER_SET, CL-01/CL-02]."
       size="md"
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
@@ -104,6 +104,7 @@ export function AddMasterEventModal({
           >
             <option value="SEMESTER_DATES">Semester Dates (SEMESTER_DATES)</option>
             <option value="UNIVERSITY_HOLIDAY">University Holiday (UNIVERSITY_HOLIDAY)</option>
+            <option value="EXAM_DAY">Exam day (EXAM_DAY)</option>
           </select>
         </div>
         <div style={{ marginBottom: "1rem" }}>

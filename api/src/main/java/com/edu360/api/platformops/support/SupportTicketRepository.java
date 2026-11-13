@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SupportTicketRepository extends JpaRepository<SupportTicket, UUID> {
     List<SupportTicket> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+    List<SupportTicket> findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(UUID tenantId, UUID raisedByUserId);
     Optional<SupportTicket> findByTicketNumber(String ticketNumber);
     List<SupportTicket> findAllByOrderByCreatedAtDesc();
 }

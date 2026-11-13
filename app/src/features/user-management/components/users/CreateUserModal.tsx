@@ -91,7 +91,6 @@ export function CreateUserModal({
             onChange={(e) => setUserType(e.target.value as UserType)}
             options={[
               { value: "STAFF", label: "Staff (Faculty / Admin)" },
-              { value: "STUDENT", label: "Student" },
               { value: "GUARDIAN", label: "Guardian / Parent" },
               { value: "APPLICANT", label: "Applicant" },
               { value: "GOVERNANCE", label: "Governance / Board" },
@@ -135,6 +134,9 @@ export function CreateUserModal({
             error={fieldErrors.initialRoleCode}
           />
         </div>
+        <p className="platform-modal-note">
+          This form provisions a general user account. For admissions, student profile creation and section enrolment, use the separate Create student profile workflow.
+        </p>
 
         <div style={{ marginTop: "1rem" }}>
           <Kicker>ACCESS SCOPE</Kicker>

@@ -33,7 +33,7 @@ import lombok.RequiredArgsConstructor;
 public class MasterCalendarService {
 
     private static final Set<String> ALLOWED_SESSION_STATUSES = Set.of("PLANNED", "ACTIVE", "CLOSED");
-    private static final Set<String> ALLOWED_MASTER_EVENT_TYPES = Set.of("SEMESTER_DATES", "UNIVERSITY_HOLIDAY");
+    private static final Set<String> ALLOWED_MASTER_EVENT_TYPES = Set.of("SEMESTER_DATES", "UNIVERSITY_HOLIDAY", "EXAM_DAY");
 
     private final AcademicSessionRepository academicSessionRepository;
     private final AcademicCalendarEventRepository academicCalendarEventRepository;
@@ -128,11 +128,11 @@ public class MasterCalendarService {
                 .findByTenantIdAndAcademicSessionId(principal.tenantId(), academicSessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session not found: " + academicSessionId));
 
-        RbacScope scope = session.getInstitutionId() == null
-                ? RbacScope.tenant()
-                : RbacScope.institution(session.getInstitutionId());
-
-        permissionEvaluatorService.authorize(principal, "CALENDAR_MASTER_SET", scope, RbacTarget.NONE);
+        if (session.getInstitutionId() != null) {
+            throw new BusinessRuleViolationException("UNIVERSITY_EVENT_REQUIRES_TENANT_SESSION",
+                    "A university master calendar event must use a tenant-wide academic session.");
+        }
+        permissionEvaluatorService.authorize(principal, "CALENDAR_MASTER_SET", RbacScope.tenant(), RbacTarget.NONE);
 
         if (!request.endDate().isAfter(request.startDate())) {
             throw new BusinessRuleViolationException("INVALID_DATE_RANGE", "endDate must not be before startDate.");
@@ -177,7 +177,7 @@ public class MasterCalendarService {
         if (!ALLOWED_MASTER_EVENT_TYPES.contains(request.eventType())) {
             throw new BusinessRuleViolationException(
                     "INVALID_EVENT_TYPE",
-                    "CALENDAR_MASTER_SET_CANNOT_SET_LOCAL_EVENTS: Master calendar events must be SEMESTER_DATES or UNIVERSITY_HOLIDAY.");
+                    "CALENDAR_MASTER_SET_CANNOT_SET_LOCAL_EVENTS: Master calendar events must be SEMESTER_DATES, UNIVERSITY_HOLIDAY or EXAM_DAY.");
         }
 
         if (request.endDate().isBefore(request.startDate())) {

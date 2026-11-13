@@ -33,22 +33,28 @@ export default function SelfServicePage() {
   const [notices, setNotices] = useState<NoticeItem[]>([]);
 
   const loadData = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      setError("Your account is not linked to an institution. Contact your administrator.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const [notifs, bals, reqs, nots] = await Promise.all([
-        selfServiceApi.getNotifications(tenantId).catch(() => []),
-        selfServiceApi.getLeaveBalances(tenantId).catch(() => []),
-        selfServiceApi.getLeaveRequests(tenantId).catch(() => []),
-        selfServiceApi.getNotices(tenantId).catch(() => []),
+        selfServiceApi.getNotifications(tenantId),
+        selfServiceApi.getLeaveBalances(tenantId),
+        selfServiceApi.getLeaveRequests(tenantId),
+        selfServiceApi.getNotices(tenantId),
       ]);
       setNotifications(Array.isArray(notifs) ? notifs : []);
       setBalances(Array.isArray(bals) ? bals : []);
       setRequests(Array.isArray(reqs) ? reqs : []);
       setNotices(Array.isArray(nots) ? nots : []);
-    } catch {
-      setError("Failed to load self-service records. Please retry.");
+    } catch (err) {
+      setError(err instanceof Error && err.message
+        ? `Failed to load self-service records: ${err.message}`
+        : "Failed to load self-service records. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -104,17 +110,17 @@ export default function SelfServicePage() {
                 notices.map((n) => (
                   <div
                     key={n.noticeId}
-                    className="p-5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 space-y-2"
+                    className="self-service-card self-service-card--notice"
                   >
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{n.title}</h3>
-                      <div className="flex gap-2">
+                    <div className="self-service-card__header">
+                      <h3 className="self-service-card__title">{n.title}</h3>
+                      <div className="self-service-card__badges">
                         <Badge tone="info">{n.noticeKind}</Badge>
                         <Badge tone="neutral">{n.noticeLevel}</Badge>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{n.body}</p>
-                    <div className="text-xs text-gray-400">
+                    <p className="self-service-card__body">{n.body}</p>
+                    <div className="self-service-card__meta">
                       Authored by: {n.authoredActiveRole} • {n.publishedAt ? new Date(n.publishedAt).toLocaleDateString() : "Just now"}
                     </div>
                   </div>
@@ -126,7 +132,7 @@ export default function SelfServicePage() {
           {activeTab === "leaves" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">Leave Balances</h3>
+                <h3 className="self-service-section-title">Leave Balances</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {!Array.isArray(balances) || balances.length === 0 ? (
                     <div className="col-span-3">
@@ -151,7 +157,7 @@ export default function SelfServicePage() {
               </div>
 
               <div>
-                <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">Leave Requests</h3>
+                <h3 className="self-service-section-title">Leave Requests</h3>
                 <DataTable
                   headers={["Dates", "Days", "Reason", "Status"]}
                   empty={requests.length === 0}
@@ -185,12 +191,12 @@ export default function SelfServicePage() {
                 notifications.map((n) => (
                   <div
                     key={n.notificationId}
-                    className="p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 flex items-start justify-between"
+                    className="self-service-card self-service-card--notification"
                   >
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{n.title}</div>
-                      {n.body && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{n.body}</div>}
-                      <div className="text-xs text-gray-400 mt-2">
+                    <div className="self-service-card__content">
+                      <div className="self-service-card__title">{n.title}</div>
+                      {n.body && <div className="self-service-card__body">{n.body}</div>}
+                      <div className="self-service-card__meta">
                         {new Date(n.createdAt).toLocaleString()} • Trigger: {n.triggerCode}
                       </div>
                     </div>

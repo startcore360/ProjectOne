@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
@@ -24,11 +24,13 @@ export function TicketsView() {
 
   const [tickets, setTickets] = useState<SupportTicketItem[]>([]);
   const [grants, setGrants] = useState<SupportAccessGrantItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [grantsError, setGrantsError] = useState("");
 
   // Resolve Ticket Modal
   const [resolvingTicket, setResolvingTicket] = useState<SupportTicketItem | null>(null);
@@ -38,26 +40,32 @@ export function TicketsView() {
   // Assumed Session Alert
   const [assumedToken, setAssumedToken] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
+    setLoadError("");
+    setGrantsError("");
     try {
-      const [tList, gList] = await Promise.all([
+      const [tList, grantResult] = await Promise.all([
         platformOpsService.listSupportTickets(),
-        platformOpsService.listActiveGrants().catch(() => []),
+        platformOpsService.listActiveGrants().then((items) => ({ items, error: "" })).catch((err: unknown) => ({
+          items: [] as SupportAccessGrantItem[],
+          error: err instanceof Error ? err.message : "Unable to verify active support grants.",
+        })),
       ]);
       setTickets(tList);
-      setGrants(gList);
+      setGrants(grantResult.items);
+      setGrantsError(grantResult.error);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load support tickets");
+      setLoadError(err instanceof Error ? err.message : "Failed to load support tickets");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+  }, [loadData]);
 
   const handleUpdateStatus = async (ticket: SupportTicketItem, newStatus: string) => {
     if (newStatus === "RESOLVED" || newStatus === "CLOSED") {
@@ -128,6 +136,8 @@ export function TicketsView() {
 
       {message && <Notice tone="success">{message}</Notice>}
       {error && <Notice tone="danger">{error}</Notice>}
+      {loadError && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button></Notice>}
+      {grantsError && <Notice tone="danger">Active support grants could not be verified. Session-assumption actions are disabled until this is resolved. {grantsError} <Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button></Notice>}
       {assumedToken && (
         <Notice tone="info">
           <strong>Active Support Session:</strong> Temporary diagnostic session key is bound to this window. Access is logged in the tenant audit log.
@@ -135,10 +145,10 @@ export function TicketsView() {
       )}
 
       <div className="kpi-grid">
-        <MetricCard label="Total Tickets" value={tickets.length} note="Platform-wide" mark="book" />
-        <MetricCard label="Open Tickets" value={openTickets} note="Awaiting resolution" mark="alert" />
-        <MetricCard label="Resolved Tickets" value={resolvedTickets} note="SLA satisfied" mark="check-circle" />
-        <MetricCard label="Active Grants" value={grants.length} note="Tenant approved sessions" mark="shield" />
+        <MetricCard label="Total Tickets" value={loadError ? "—" : tickets.length} note={loadError ? "Unavailable" : "Platform-wide"} mark="book" />
+        <MetricCard label="Open Tickets" value={loadError ? "—" : openTickets} note={loadError ? "Unavailable" : "Awaiting resolution"} mark="alert" />
+        <MetricCard label="Resolved Tickets" value={loadError ? "—" : resolvedTickets} note={loadError ? "Unavailable" : "SLA satisfied"} mark="check-circle" />
+        <MetricCard label="Active Grants" value={grantsError ? "—" : grants.length} note={grantsError ? "Verification unavailable" : "Tenant approved sessions"} mark="shield" />
       </div>
 
       <Panel title="Platform Support Queue" description="Incoming issues raised by tenant representatives">
@@ -167,7 +177,7 @@ export function TicketsView() {
           <div className="platform-empty-inline">
             <Spinner label="Loading support tickets..." />
           </div>
-        ) : filteredTickets.length === 0 ? (
+        ) : loadError ? null : filteredTickets.length === 0 ? (
           <p className="platform-empty-inline">No support tickets found matching criteria.</p>
         ) : (
           <DataTable headers={["Ticket #", "Subject", "Requester", "Priority", "Status", "Support Grant", "Actions"]}>

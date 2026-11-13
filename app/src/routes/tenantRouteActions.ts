@@ -1,0 +1,17 @@
+export const TENANT_ROUTE_ACTIONS = {
+  institutions: ["INSTITUTION_CREATE_DRAFT", "INSTITUTION_ACTIVATE"],
+  users: ["USER_VIEW", "USER_CREATE", "USER_EDIT", "USER_DEACTIVATE"],
+  roles: ["ROLE_ASSIGN", "ROLE_CUSTOM_MANAGE"],
+  missingRoles: ["USER_VIEW", "ROLE_ASSIGN"],
+  academicStructure: ["STRUCTURE_MANAGE", "SUBJECT_ALLOCATE", "PROGRAM_RULES_SET"],
+  termLock: ["TERM_LOCK", "TERM_UNLOCK"],
+  hodAssignment: ["HOD_ASSIGN"],
+  mentorAssignment: ["MENTOR_ASSIGN"],
+  classTeacherAssignment: ["CLASS_TEACHER_ASSIGN"],
+  studentLogin: ["STUDENT_LOGIN_SWITCH"],
+  calendarEvents: ["CALENDAR_LOCAL_SET"],
+  weeklyOff: ["WEEKLY_OFF_SET"],
+  delegations: ["APPROVAL_DELEGATE", "APPROVAL_BULK"],
+  academicGovernance: ["PROGRAM_RULES_SET", "GRADING_SCHEME_SET", "SUBJECT_ALLOCATE", "PROMOTION_RUN", "PROMOTION_APPROVE"],
+  support: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"],
+} as const;
