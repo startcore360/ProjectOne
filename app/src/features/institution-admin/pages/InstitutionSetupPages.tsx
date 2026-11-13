@@ -1044,7 +1044,7 @@ export function AcademicStructurePage() {
           setInstitutions(res.items);
         }
       })
-      .catch((err) => setFeedback({ tone: "danger", message: getApiErrorMessage(err) }));
+      .catch((err) => setError(getApiErrorMessage(err)));
   }, [tenantId]);
 
   if (!tenantId) return <NoTenantNotice />;
