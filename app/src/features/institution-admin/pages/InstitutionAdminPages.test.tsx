@@ -3,6 +3,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
+import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
 import { institutionService, type InstitutionItem } from "../api/institutionService";
 import { leaveApproverService } from "../api/leaveApproverService";
 import { roleAssignmentService, type RoleDefinitionItem } from "../api/roleAssignmentService";
@@ -88,7 +89,7 @@ const mockInstitutions: InstitutionItem[] = [
 ];
 
 function renderWithStore(ui: React.ReactElement, tenantId: string = "tenant-1") {
-  const store = configureStore({ reducer: { auth: authReducer } });
+  const store = configureStore({ reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer } });
   store.dispatch(
     setUser({
       id: "u1",
@@ -102,6 +103,13 @@ function renderWithStore(ui: React.ReactElement, tenantId: string = "tenant-1") 
       mustChangePassword: false,
     })
   );
+  store.dispatch(setTenantPermissions({
+    tenantId,
+    userAccountId: "u1",
+    activeRoleCode: "UNIVERSITY_ADMIN",
+    activeRoleName: "University Admin",
+    allowedActions: ["ROLLDOWN_VIEW", "ROLLDOWN_OVERRIDE_SET"],
+  }));
   return render(<Provider store={store}>{ui}</Provider>);
 }
 
@@ -483,7 +491,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
 
   it("explains the approved V4.0 role roll-down rules", () => {
     renderWithStore(<MissingRolesPage />);
-    expect(screen.getByText("Decision V4-PD-01")).toBeInTheDocument();
+    expect(screen.getByText("How role coverage works")).toBeInTheDocument();
     expect(screen.getByText("Next-level leader")).toBeInTheDocument();
     expect(screen.getByText("Next-level administrator")).toBeInTheDocument();
   });
@@ -605,8 +613,8 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     renderWithStore(<MissingRolesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("VICE_CHANCELLOR")).toBeInTheDocument();
-      expect(screen.getByText(/REGISTRAR/i)).toBeInTheDocument();
+      expect(screen.getByText("Vice Chancellor")).toBeInTheDocument();
+      expect(screen.getByText("Registrar")).toBeInTheDocument();
       expect(screen.getByText("Default order")).toBeInTheDocument();
     });
   });
@@ -647,11 +655,11 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
       expect(screen.getByText("VICE_CHANCELLOR")).toBeInTheDocument();
     });
 
-    const setBtn = screen.getByRole("button", { name: /\+ Set Rolldown Override/i });
+    const setBtn = screen.getByRole("button", { name: /Set role coverage override/i });
     fireEvent.click(setBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /Set Statutory Rolldown Override/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Set role coverage override/i })).toBeInTheDocument();
     });
 
     const reasonInput = screen.getByLabelText(/Statutory Justification/i);

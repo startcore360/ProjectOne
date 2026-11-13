@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Button,
   Notice,
+  EmptyState,
   Kicker,
   Panel,
   StatusBadge as StateBadge,
@@ -10,6 +11,7 @@ import {
 } from "../../../design-system/components";
 import { Icon } from "../../../components/ui/Icon";
 import { useAppSelector } from "../../../store/hooks";
+import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import {
   institutionService,
@@ -38,6 +40,17 @@ import {
   RetireCustomRoleModal,
   RolldownOverrideModal,
 } from "../components";
+
+function formatCodeLabel(value: string): string {
+  const known: Record<string, string> = {
+    VICE_CHANCELLOR: "Vice Chancellor",
+    GOVERNING_BODY_APPROVER: "Governing Body Approver",
+    DATA_PROTECTION_CONTACT: "Data Protection Contact",
+    DATA_PROTECTION_OFFICER: "Data Protection Officer",
+    UNIVERSITY_WIDE: "University-wide",
+  };
+  return known[value] ?? value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
 function TenantContextNotice() {
   return (
@@ -771,14 +784,14 @@ export function RolesPermissionsPage() {
 
 export function MissingRolesPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
+  const { can: canTenantAction } = useTenantAccess();
+  const canSetOverride = canTenantAction("ROLLDOWN_OVERRIDE_SET");
 
   const [entries, setEntries] = useState<RolldownMapEntry[]>([]);
   const [overrides, setOverrides] = useState<RolldownOverride[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
-
-  // Set override modal state (Story #24: ROLLDOWN_OVERRIDE_SET)
   const [modalOpen, setModalOpen] = useState(false);
   const [overrideTarget, setOverrideTarget] = useState<{ missingRoleCode: string; permissionKind: string } | null>(null);
 
@@ -791,10 +804,10 @@ export function MissingRolesPage() {
         rolldownService.getRolldownMap(tenantId),
         rolldownService.getOverrides(tenantId),
       ]);
-      setEntries(mapData);
-      setOverrides(overrideData);
-    } catch (err) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      setEntries(Array.isArray(mapData) ? mapData : []);
+      setOverrides(Array.isArray(overrideData) ? overrideData : []);
+    } catch {
+      setLoadError("We could not load the role coverage rules. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -808,10 +821,10 @@ export function MissingRolesPage() {
     if (!tenantId) return;
     try {
       await rolldownService.revokeOverride(tenantId, overrideId);
-      setFeedback({ tone: "success", message: "Rolldown override revoked. Reverted to default roll-down order." });
-      fetchRolldown();
-    } catch (err: unknown) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      await fetchRolldown();
+      setFeedback({ tone: "success", message: "Override removed. The default role coverage order is now active." });
+    } catch {
+      setFeedback({ tone: "danger", message: "The override could not be removed. Please try again." });
     }
   };
 
@@ -820,141 +833,110 @@ export function MissingRolesPage() {
   return (
     <div className="platform-page">
       <PageHeader
-        title="Missing roles & roll-down map"
-        description="V4.0 role roll-down (Decision V4-PD-01 / Actions #23 & #24): see who handles approvals and operational tasks when a role has no active holder."
-        actions={
-          <Button onClick={() => setModalOpen(true)}>
-            + Set Rolldown Override
-          </Button>
-        }
+        title="Role coverage"
+        description="See which roles take responsibility when an institution role has no active holder."
+        actions={canSetOverride ? (
+          <Button onClick={() => setModalOpen(true)}>Set role coverage override</Button>
+        ) : null}
       />
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{feedback.message}</span>
-          <button
-            onClick={() => setFeedback(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ×
-          </button>
-        </div>
+        <Notice tone={feedback.tone}>
+          <div className="platform-feedback-row">
+            <span>{feedback.message}</span>
+            <Button variant="tertiary" size="sm" onClick={() => setFeedback(null)}>Dismiss</Button>
+          </div>
+        </Notice>
       )}
 
       <div className="platform-policy-callout">
-        <span aria-hidden="true">
-          <Icon name="info" size={15} />
-        </span>
+        <span aria-hidden="true"><Icon name="info" size={15} /></span>
         <div>
-          <strong>Decision V4-PD-01</strong>
+          <strong>How role coverage works</strong>
           <p>
-            When a role is missing, approvals go to the head of the next level down. Operational work goes
-            to that level's administrator. Approval rights can never be withheld (Guard RD-G2). Changes require an authorized role (Management, VC, or Admin) and a statutory justification.
+            Approval work moves to the leader at the next level down. Other operational work moves to
+            that level's administrator. Approval rights cannot be withheld. Authorized administrators
+            can change eligible operational assignments with a documented reason.
           </p>
         </div>
       </div>
 
-      {loadError && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRolldown()}>Retry</Button></Notice>}
+      {loadError && (
+        <Notice tone="danger">
+          {loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRolldown()}>Retry</Button>
+        </Notice>
+      )}
 
       <Panel
-        title="Active roll-down resolution map (ROLLDOWN_VIEW / Action #23)"
-        description="Ordered stand-in preferences evaluated dynamically per context (University wide, College, School)."
+        title="Role coverage by institution level"
+        description="Default stand-in roles used when a role has no active holder."
       >
-        {loading && <p className="platform-empty-note">Loading roll-down resolution map...</p>}
-        <div className="platform-table-wrap">
-          <table className="platform-table">
-            <thead>
-              <tr>
-                <th>Missing Role</th>
-                <th>Context</th>
-                <th>Kind</th>
-                <th>Default Stand-In</th>
-                <th>Resolution Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loadError || loading ? null : entries.length === 0 ? (
+        {loading && <p className="platform-empty-note" role="status">Loading role coverage rules…</p>}
+        {!loading && !loadError && entries.length === 0 && (
+          <EmptyState
+            icon="shield"
+            title="No default role coverage rules returned"
+            description="The service returned no rules for this tenant. Confirm that the V4.0 role roll-down reference data has been applied."
+          />
+        )}
+        {!loading && !loadError && entries.length > 0 && (
+          <div className="platform-table-wrap">
+            <table className="platform-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--color-muted)" }}>
-                    No roll-down map rules loaded.
-                  </td>
+                  <th>Missing role</th>
+                  <th>Context</th>
+                  <th>Work type</th>
+                  <th>Default stand-in</th>
+                  <th>Resolution</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                entries.map((e, idx) => (
-                  <tr key={`${e.missingRoleCode}-${e.permissionKind}-${idx}`}>
-                    <td><code>{e.missingRoleCode}</code></td>
-                    <td>{e.context}</td>
-                    <td>
-                      <Badge tone={e.permissionKind === "APPROVE" ? "warning" : "neutral"}>
-                        {e.permissionKind}
-                      </Badge>
-                    </td>
-                    <td>
-                      <code>{e.standInRoleCode}</code> (Pref #{e.preference})
-                    </td>
-                    <td>
-                      {e.hasOverride ? (
-                        <Badge tone="danger">
-                          Active Override: {e.overrideMode} {e.overrideTargetRoleCode ? `-> ${e.overrideTargetRoleCode}` : ""}
+              </thead>
+              <tbody>
+                {entries.map((entry, index) => {
+                  const override = overrides.find((item) =>
+                    item.missingRoleCode === entry.missingRoleCode && item.permissionKind === entry.permissionKind
+                  );
+                  return (
+                    <tr key={`${entry.missingRoleCode}-${entry.permissionKind}-${index}`}>
+                      <td>{formatCodeLabel(entry.missingRoleCode)}</td>
+                      <td>{formatCodeLabel(entry.context)}</td>
+                      <td>
+                        <Badge tone={entry.permissionKind === "APPROVE" ? "warning" : "neutral"}>
+                          {entry.permissionKind === "APPROVE" ? "Approval" : formatCodeLabel(entry.permissionKind)}
                         </Badge>
-                      ) : (
-                        <Badge tone="success">Default order</Badge>
-                      )}
-                    </td>
-                    <td>
-                      {e.hasOverride ? (
-                        <Button
-                          variant="secondary"
-                          style={{ padding: "2px 8px", fontSize: "0.8rem" }}
-                          onClick={() => {
-                            const ov = overrides.find(
-                              (o) => o.missingRoleCode === e.missingRoleCode && o.permissionKind === e.permissionKind
-                            );
-                            if (ov) handleRevokeOverride(ov.roleRolldownOverrideId);
-                          }}
-                        >
-                          Revoke Override
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="secondary"
-                          style={{ padding: "2px 8px", fontSize: "0.8rem" }}
-                          onClick={() => {
-                            setOverrideTarget({
-                              missingRoleCode: e.missingRoleCode,
-                              permissionKind: e.permissionKind,
-                            });
+                      </td>
+                      <td>{formatCodeLabel(entry.standInRoleCode)} <span className="muted">· Priority {entry.preference}</span></td>
+                      <td>
+                        {entry.hasOverride ? (
+                          <Badge tone="warning">
+                            {entry.overrideMode === "WITHHOLD"
+                              ? "Operational work withheld"
+                              : `Assigned to ${formatCodeLabel(entry.overrideTargetRoleCode ?? "")}`}
+                          </Badge>
+                        ) : <Badge tone="success">Default order</Badge>}
+                      </td>
+                      <td>
+                        {canSetOverride ? (entry.hasOverride ? (
+                          <Button variant="secondary" size="sm" disabled={!override} onClick={() => override && void handleRevokeOverride(override.roleRolldownOverrideId)}>
+                            Remove override
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" size="sm" onClick={() => {
+                            setOverrideTarget({ missingRoleCode: entry.missingRoleCode, permissionKind: entry.permissionKind });
                             setModalOpen(true);
-                          }}
-                        >
-                          Set Override
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                          }}>Set override</Button>
+                        )) : <span className="muted">View only</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Panel>
 
-      {/* Set Rolldown Override Modal (Story #24: ROLLDOWN_OVERRIDE_SET) */}
       <RolldownOverrideModal
         tenantId={tenantId}
         isOpen={modalOpen}
@@ -964,35 +946,28 @@ export function MissingRolesPage() {
           setModalOpen(false);
           setOverrideTarget(null);
         }}
-        onCreated={(override) => {
-          setOverrides((prev) => [override, ...prev]);
-          setFeedback({
-            tone: "success",
-            message: `Rolldown override established for ${override.missingRoleCode} [Rule 24]!`,
-          });
+        onCreated={async (override) => {
+          setModalOpen(false);
+          setOverrideTarget(null);
+          await fetchRolldown();
+          setFeedback({ tone: "success", message: `Role coverage override saved for ${formatCodeLabel(override.missingRoleCode)}.` });
         }}
       />
 
       <Panel
-        title="Default roll-down rules"
-        description="Policy view from the prototype; no live role-holder assignments are loaded."
+        title="Default role coverage rules"
+        description="Policy summary. Live role-holder assignments are not included in this view."
       >
         <div className="platform-roll-grid">
           <article>
             <Kicker>APPROVALS</Kicker>
             <h3>Next-level leader</h3>
-            <p>
-              Approval work moves to the head of the next level down. Approval rights cannot be
-              withheld.
-            </p>
+            <p>Approval work moves to the head of the next level down. Approval rights cannot be withheld.</p>
           </article>
           <article>
             <Kicker>OTHER WORK</Kicker>
             <h3>Next-level administrator</h3>
-            <p>
-              Other work moves to the next level's administrator. Where permitted, it may be withheld
-              until the role is filled.
-            </p>
+            <p>Other work moves to the next level's administrator. Where permitted, it may be withheld until the role is filled.</p>
           </article>
         </div>
       </Panel>
@@ -1001,10 +976,7 @@ export function MissingRolesPage() {
           <li>Nobody approves their own request.</li>
           <li>A preparer never approves their own work.</li>
           <li>Students, parents, applicants and platform staff never act for an institution role.</li>
-          <li>
-            Every action taken through roll-down must show “Acting for …” and be recorded in the audit
-            log.
-          </li>
+          <li>Every action taken through role coverage must show “Acting for…” and be recorded in the audit log.</li>
         </ul>
       </Panel>
     </div>
