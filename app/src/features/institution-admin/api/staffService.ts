@@ -55,6 +55,8 @@ export type StaffServiceRecord = {
 export type StaffProfilePayload = {
   staffCode?: string;
   fullName: string;
+  officialEmail?: string;
+  initialRoleCode?: string;
   dateOfBirth?: string;
   personalEmail?: string;
   personalMobile?: string;
@@ -80,6 +82,18 @@ export type StaffServiceRecordPayload = {
   details: string;
   staffAssignmentId?: string;
   documentFileId?: string;
+};
+
+export type StaffOnboardingResponse = {
+  staff: StaffProfile;
+  login: {
+    userAccountId: string;
+    email: string;
+    status: string;
+    temporaryPassword: string;
+    initialRole: string | null;
+  };
+  personalEmailVerificationRequired: boolean;
 };
 
 export type StaffListResponse = {
@@ -108,7 +122,7 @@ export const staffService = {
   },
 
   async create(tenantId: string, payload: StaffProfilePayload) {
-    const response = await api.post<StaffProfile>(`/api/tenants/${tenantId}/staff`, payload);
+    const response = await api.post<StaffOnboardingResponse>(`/api/tenants/${tenantId}/staff`, payload);
     return response.data;
   },
 
