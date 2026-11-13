@@ -136,7 +136,7 @@ describe("Institution setup action screens", () => {
       isAxiosError: true,
       response: { status: 403, data: { error: "Not authorized for MENTOR_ASSIGN." } },
     });
-    renderWithTenant(<MentorAssignmentPage />);
+    renderWithTenant(<MentorAssignmentPage />, TENANT_ID, "HEAD_OF_DEPARTMENT");
     await screen.findByRole("option", { name: "CSE-A" });
     fireEvent.change(screen.getByLabelText("Section"), { target: { value: SECTION_ID } });
     await screen.findByRole("option", { name: /Asha Rao/ });
@@ -148,7 +148,7 @@ describe("Institution setup action screens", () => {
   });
 
   it("uses scoped section and person pickers for CLASS_TEACHER_ASSIGN", () => {
-    renderWithTenant(<ClassTeacherAssignmentPage />);
+    renderWithTenant(<ClassTeacherAssignmentPage />, TENANT_ID, "SCHOOL_ADMIN");
     expect(screen.getByText(/This assigns a section, not a class/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Section")).toBeInTheDocument();
     expect(screen.getByLabelText("New Class Teacher")).toBeInTheDocument();
