@@ -174,6 +174,123 @@ public class StaffDirectoryService {
         return StaffProfileResponse.from(saved);
     }
 
+    /**
+     * Idempotently creates the staff person record and institutional assignment for an account
+     * that has just received an institution/department staff role.
+     */
+    @Transactional
+    public void ensureStaffAssignment(UUID tenantId, UUID userAccountId, UUID institutionId,
+            UUID departmentId, UUID actorId, String designation) {
+        if (tenantId == null || userAccountId == null || institutionId == null || actorId == null) {
+            throw new IllegalArgumentException("Tenant, user, institution and actor are required for staff linkage.");
+        }
+        String displayName = jdbc.queryForObject("""
+                SELECT display_name FROM app.user_account
+                 WHERE tenant_id = ? AND user_account_id = ? AND user_type = 'STAFF'
+                """, String.class, tenantId, userAccountId);
+        StaffProfile profile = staffProfiles.findByIdTenantIdAndUserAccountId(tenantId, userAccountId)
+                .orElseGet(() -> {
+                    int year = LocalDate.now().getYear();
+                    StaffProfile created = new StaffProfile();
+                    UUID profileId = UUID.randomUUID();
+                    created.setId(new StaffProfileId(tenantId, profileId));
+                    created.setUserAccountId(userAccountId);
+                    created.setStaffCode(idFormats.resolveStaffCode(tenantId, institutionId, null, year));
+                    created.setFullName(displayName);
+                    created.setEmploymentStatus("ACTIVE");
+                    created.setJoinedOn(LocalDate.now());
+                    created.setCreatedBy(actorId);
+                    created.setUpdatedBy(actorId);
+                    StaffProfile persisted = staffProfiles.saveAndFlush(created);
+                    entityManager.refresh(persisted);
+                    audit.record(new AuditEntry(AuditEventType.STAFF_PROFILE_CREATED, "USER_CREATE",
+                            "STAFF_PROFILE", profileId, institutionId, null,
+                            Map.of("source", "automatic_role_linkage"), 1, "P", "SUCCESS"));
+                    return persisted;
+                });
+        if (profile.getUserAccountId() == null) {
+            profile.setUserAccountId(userAccountId);
+            profile.setUpdatedBy(actorId);
+            staffProfiles.saveAndFlush(profile);
+        }
+        Boolean assignmentExists = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM app.staff_assignment
+                     WHERE tenant_id = ? AND staff_profile_id = ?
+                       AND institution_id = ? AND department_id IS NOT DISTINCT FROM ?
+                       AND status = 'ACTIVE'
+                       AND effective_from <= CURRENT_DATE
+                       AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
+                )
+                """, Boolean.class, tenantId, profile.getStaffProfileId(), institutionId, departmentId);
+        if (!Boolean.TRUE.equals(assignmentExists)) {
+            StaffAssignment assignment = new StaffAssignment();
+            assignment.setStaffAssignmentId(UUID.randomUUID());
+            assignment.setTenantId(tenantId);
+            assignment.setStaffProfileId(profile.getStaffProfileId());
+            assignment.setInstitutionId(institutionId);
+            assignment.setDepartmentId(departmentId);
+            assignment.setDesignation(designation == null || designation.isBlank() ? "Staff" : designation.trim());
+            assignment.setEffectiveFrom(LocalDate.now());
+            assignment.setStatus("ACTIVE");
+            assignment.setCreatedBy(actorId);
+            assignment.setUpdatedBy(actorId);
+            StaffAssignment saved = assignments.saveAndFlush(assignment);
+            entityManager.refresh(saved);
+            audit.record(new AuditEntry(AuditEventType.STAFF_ASSIGNMENT_CREATED, "ROLE_ASSIGN",
+                    "STAFF_ASSIGNMENT", saved.getStaffAssignmentId(), institutionId, null,
+                    Map.of("source", "automatic_role_linkage", "staff_profile_id",
+                            profile.getStaffProfileId().toString()), 1, "N", "SUCCESS"));
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public StaffListResponse teacherLookup(RbacPrincipal actor, UUID institutionId,
+            UUID departmentId, String query, int limit) {
+        validateLimit(limit);
+        if (institutionId == null) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "institutionId is required for teacher lookup.");
+        }
+        RbacScope scope = activeScope(departmentId == null ? ScopeType.INSTITUTION : ScopeType.DEPARTMENT,
+                institutionId, departmentId);
+        permissions.authorize(actor, "SUBJECT_ALLOCATE", scope, RbacTarget.NONE);
+        List<UUID> teacherIds = jdbc.query("""
+                SELECT DISTINCT p.staff_profile_id
+                  FROM app.staff_profile p
+                  JOIN app.staff_assignment sa
+                    ON sa.tenant_id = p.tenant_id AND sa.staff_profile_id = p.staff_profile_id
+                 WHERE p.tenant_id = ? AND sa.institution_id = ?
+                   AND sa.department_id IS NOT DISTINCT FROM ?
+                   AND sa.status = 'ACTIVE'
+                   AND sa.effective_from <= CURRENT_DATE
+                   AND (sa.effective_to IS NULL OR sa.effective_to >= CURRENT_DATE)
+                   AND (? IS NULL OR p.full_name ILIKE '%' || ? || '%'
+                        OR p.staff_code ILIKE '%' || ? || '%')
+                   AND EXISTS (
+                       SELECT 1
+                         FROM app.user_role_assignment ura
+                         JOIN app.role_definition rd
+                           ON rd.tenant_id = ura.tenant_id
+                          AND rd.role_definition_id = ura.role_definition_id
+                        WHERE ura.tenant_id = p.tenant_id
+                          AND ura.user_account_id = p.user_account_id
+                          AND ura.status = 'ACTIVE'
+                          AND ura.scope_type IN ('INSTITUTION', 'DEPARTMENT')
+                          AND ura.institution_id = sa.institution_id
+                          AND (ura.department_id IS NULL OR ura.department_id = sa.department_id)
+                          AND rd.role_code IN ('PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR',
+                              'LAB_ASSISTANT','RESEARCH_ASSISTANT','CLASS_TEACHER','SUBJECT_TEACHER'))
+                 ORDER BY p.staff_profile_id
+                 LIMIT ?
+                """, (rs, rowNum) -> rs.getObject(1, UUID.class), actor.tenantId(), institutionId,
+                departmentId, normalizeQuery(query), normalizeQuery(query), normalizeQuery(query), limit);
+        List<StaffProfileResponse> items = teacherIds.stream()
+                .map(id -> staffProfiles.findByIdTenantIdAndIdStaffProfileId(actor.tenantId(), id).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .map(profile -> StaffProfileResponse.from(profile, false)).toList();
+        return new StaffListResponse(items, new StaffListResponse.PageInfo(limit, null, false, null));
+    }
+
     @Transactional(readOnly = true)
     public List<StaffAssignmentResponse> listAssignments(RbacPrincipal actor, UUID staffProfileId) {
         findScopedProfile(actor, staffProfileId, "STAFF_RECORD_VIEW");
