@@ -1,4 +1,5 @@
 import type { ReactNode, SelectHTMLAttributes } from "react";
+import { Icon } from "../../components/ui/Icon";
 
 export type SelectOption = {
   value: string | number;
@@ -52,7 +53,7 @@ export default function SelectField({
       </select>
       {hint && (
         <p id={hintId} className="eds-field__hint">
-          <span aria-hidden="true">ⓘ</span> {hint}
+          <Icon name="info" size={14} /> {hint}
         </p>
       )}
       {error && (

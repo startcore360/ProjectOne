@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   userManagementService,
@@ -63,21 +63,19 @@ export function CreateTopUserModal({
           </div>
         )}
 
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="top-role-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-            Governance Role
-          </label>
-          <select
+        <div style={{ marginBottom: "1rem" }}>
+          <SelectField
             id="top-role-select"
+            label="Governance role"
             value={roleCode}
             onChange={(e) => setRoleCode(e.target.value as TopUserRoleCode)}
-            style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
-          >
-            <option value="VICE_CHANCELLOR">Vice Chancellor (Academic & Executive Head) [Staff]</option>
-            <option value="GOVERNING_BODY_APPROVER">Governing Body Approver (Statutory Leave Gate) [Governance]</option>
-            <option value="MANAGEMENT">Management / Trustee [Governance]</option>
-            <option value="DATA_PROTECTION_CONTACT">Data Protection Officer [Staff]</option>
-          </select>
+            options={[
+              { value: "VICE_CHANCELLOR", label: "Vice Chancellor (Academic & Executive Head) [Staff]" },
+              { value: "GOVERNING_BODY_APPROVER", label: "Governing Body Approver (Statutory Leave Gate) [Governance]" },
+              { value: "MANAGEMENT", label: "Management / Trustee [Governance]" },
+              { value: "DATA_PROTECTION_CONTACT", label: "Data Protection Officer [Staff]" },
+            ]}
+          />
         </div>
 
         <div style={{ marginBottom: "1rem" }}>
