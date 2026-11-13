@@ -35,9 +35,9 @@ export function SuspendTenantModal({
       <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-suspend-title">
         <header>
           <div>
-            <Kicker>TENANT SUSPENSION · Rule R2-24</Kicker>
+            <Kicker>TENANT SUSPENSION</Kicker>
             <h2 id="tenant-suspend-title">Suspend Tenant: {tenant.name}</h2>
-            <p>Suspends institution login access immediately [TENANT_SUSPEND_ARCHIVE, Action #204].</p>
+            <p>Suspends login access for the tenant's institutions immediately.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
             <Icon name="x" size={16} />
@@ -100,9 +100,9 @@ export function ArchiveTenantModal({
       <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-archive-title">
         <header>
           <div>
-            <Kicker>TENANT ARCHIVAL · Rule R2-24</Kicker>
+            <Kicker>TENANT ARCHIVAL</Kicker>
             <h2 id="tenant-archive-title">Archive Tenant: {tenant.name}</h2>
-            <p>Archives tenancy records and prevents all operational logins [TENANT_SUSPEND_ARCHIVE, Action #204].</p>
+            <p>Archives tenant records and prevents operational logins.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
             <Icon name="x" size={16} />

@@ -43,7 +43,7 @@ export function ActivateTenantModal({
           <div>
             <Kicker>TENANT GO-LIVE</Kicker>
             <h2 id="tenant-activate-title">Activate Tenant: {tenant.name}</h2>
-            <p>Verify payment and confirm statutory go-live readiness [TENANT_ACTIVATE, Action #203].</p>
+            <p>Verify payment and confirm readiness before activating the tenant.</p>
           </div>
           <button className="platform-icon-button" onClick={onClose} aria-label="Close">
             <Icon name="x" size={16} />
