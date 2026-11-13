@@ -127,10 +127,10 @@ export const staffService = {
   },
 
 
-  async teacherLookup(tenantId: string, institutionId: string, departmentId?: string) {
+  async teacherLookup(tenantId: string, institutionId: string, purpose: "SUBJECT_ALLOCATE" | "HOD_ASSIGN" | "MENTOR_ASSIGN" | "CLASS_TEACHER_ASSIGN", departmentId?: string) {
     const response = await api.get<{ items: TeacherLookupItem[]; page: StaffListResponse["page"] }>(
       `/api/tenants/${tenantId}/staff`,
-      { params: { role: "TEACHING", institutionId, departmentId, limit: 100 } },
+      { params: { role: "TEACHING", institutionId, departmentId, purpose, limit: 100 } },
     );
     return response.data.items;
   },
