@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Button, MetricCard, Notice, Panel } from "../../../../design-system/components";
 import { Spinner } from "../../../../components/ui";
+import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { platformOpsService, type PlatformReportItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
 
@@ -17,11 +18,12 @@ export function ReportsView() {
   const loadReport = async (code: string) => {
     setLoading(true);
     setError("");
+    setReport(null);
     try {
       const data = await platformOpsService.getReport(code);
       setReport(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load report");
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -70,13 +72,20 @@ export function ReportsView() {
         </div>
       ) : report ? (
         <>
+          {Object.entries(report.metrics).some(([key, value]) => /note|description|message/i.test(key) && typeof value === "string") && (
+            <Notice tone="info">
+              <strong>Reporting note</strong>
+              <p>{Object.entries(report.metrics).filter(([key, value]) => /note|description|message/i.test(key) && typeof value === "string").map(([, value]) => value).join(" ")}</p>
+            </Notice>
+          )}
           <div className="kpi-grid">
-            {Object.entries(report.metrics).map(([key, val]) => {
+            {Object.entries(report.metrics).filter(([key]) => !/note|description|message/i.test(key)).map(([key, val]) => {
               const formattedLabel = key
                 .replace(/([A-Z])/g, " $1")
                 .replace(/^./, (str) => str.toUpperCase());
-              const displayVal =
-                typeof val === "number" && (key.toLowerCase().includes("revenue") || key.toLowerCase().includes("amount") || key.toLowerCase().includes("collections"))
+              const displayVal = val == null
+                ? "Not available"
+                : typeof val === "number" && (key.toLowerCase().includes("revenue") || key.toLowerCase().includes("amount") || key.toLowerCase().includes("collections"))
                   ? `₹${val.toLocaleString("en-IN")}`
                   : String(val);
 
@@ -85,7 +94,7 @@ export function ReportsView() {
                   key={key}
                   label={formattedLabel}
                   value={displayVal}
-                  note={`Report: ${report.reportCode}`}
+                  note={val == null ? "This metric was not returned by the reporting service." : `Report: ${report.reportCode}`}
                   mark="chart"
                 />
               );
