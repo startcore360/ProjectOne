@@ -24,7 +24,13 @@ export function DataTable({
   mobileCards = true,
 }: DataTableProps) {
   const rows = Children.toArray(children).filter((child): child is TableRowElement => isValidElement(child) && child.type === "tr");
-  const cardRows = rows.filter((row) => !row.props["data-no-mobile-card"]);
+  const cardRows = rows.filter((row) => {
+    if (row.props["data-no-mobile-card"]) return false;
+    const cells = Children.toArray(row.props.children).filter(
+      (cell): cell is TableCellElement => isValidElement(cell) && (cell.type === "td" || cell.type === "th"),
+    );
+    return !cells.some((cell) => Number(cell.props.colSpan ?? 1) > 1 || Number(cell.props.rowSpan ?? 1) > 1);
+  });
 
   return (
     <div className={`platform-table-wrap ${className}`.trim()}>
