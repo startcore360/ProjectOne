@@ -34,9 +34,20 @@ public class StaffDirectoryController {
     @GetMapping
     public ResponseEntity<StaffListResponse> list(@PathVariable UUID tenantId,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) UUID institutionId,
+            @RequestParam(required = false) UUID departmentId,
             @RequestParam(defaultValue = "50") int limit,
             Authentication authentication) {
-        return ResponseEntity.ok(service.list(principal(authentication, tenantId), q, limit));
+        RbacPrincipal actor = principal(authentication, tenantId);
+        if (role == null || role.isBlank()) {
+            return ResponseEntity.ok(service.list(actor, q, limit));
+        }
+        if (!"TEACHING".equalsIgnoreCase(role.trim())) {
+            throw new com.edu360.api.exception.BusinessRuleViolationException(
+                    "VALIDATION_FAILED", "Only role=TEACHING is supported by the staff picker.");
+        }
+        return ResponseEntity.ok(service.teacherLookup(actor, institutionId, departmentId, q, limit));
     }
 
     @PostMapping
