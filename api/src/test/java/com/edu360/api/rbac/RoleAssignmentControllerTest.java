@@ -511,4 +511,45 @@ class RoleAssignmentControllerTest {
                     assertThat(bre.getErrorCode()).isEqualTo("MX_04_SENSITIVE_ROLE_PROHIBITED");
                 });
     }
+    @Test
+    @DisplayName("C2-2: Department role grants are authorized against the exact institution and department scope")
+    void departmentRoleGrantUsesExactRequestedScope() {
+        UUID departmentId = UUID.randomUUID();
+        AssignRoleRequest request = new AssignRoleRequest(
+                ROLE_DEF_ID, null, ScopeType.DEPARTMENT, INSTITUTION_ID, departmentId, null, null);
+
+        UserAccount targetAccount = mock(UserAccount.class);
+        when(targetAccount.getUserType()).thenReturn(UserType.STAFF);
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, TARGET_USER_ID)))
+                .thenReturn(Optional.of(targetAccount));
+
+        RoleDefinition roleDefinition = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID))
+                .roleCode("OFFICE_STAFF")
+                .roleName("Office Staff")
+                .roleOrigin(RoleOrigin.STANDARD)
+                .roleLevel(RoleLevel.COLLEGE)
+                .status(RoleDefinitionStatus.ACTIVE)
+                .build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID)))
+                .thenReturn(Optional.of(roleDefinition));
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, TARGET_USER_ID, ScopeType.DEPARTMENT, INSTITUTION_ID, departmentId, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of());
+        when(userRoleAssignmentRepository.save(any(UserRoleAssignment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseEntity<UserRoleAssignmentResponse> response = controller.assignRole(
+                TENANT_ID, TARGET_USER_ID, request, authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().scopeType()).isEqualTo(ScopeType.DEPARTMENT);
+        verify(permissionEvaluatorService).can(
+                eq(new RbacPrincipal(TENANT_ID, ADMIN_USER_ID)),
+                eq("ROLE_ASSIGN"),
+                eq(RbacScope.department(INSTITUTION_ID, departmentId)),
+                any(RbacTarget.class));
+    }
+
 }
