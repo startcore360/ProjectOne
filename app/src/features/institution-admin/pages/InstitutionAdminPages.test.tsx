@@ -388,7 +388,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
 
     await waitFor(() => {
       expect(screen.getByText(/Go-live readiness warning:/i)).toBeInTheDocument();
-      expect(screen.getByText(/Vice-Chancellor leave approver not set/i)).toBeInTheDocument();
+      expect(screen.getByText(/Vice-Chancellor leave approver has not been configured for this university/i)).toBeInTheDocument();
       expect(screen.getByText(/Principal leave approver not set for institution ID: inst-2/i)).toBeInTheDocument();
     });
   });

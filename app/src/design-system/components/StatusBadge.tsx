@@ -9,7 +9,7 @@ export interface StatusBadgeProps {
 export function StatusBadge({ value, status, className = "" }: StatusBadgeProps) {
   const rawValue = value ?? status ?? "";
   const displayVal = /^[A-Z0-9_]+$/.test(rawValue)
-    ? rawValue.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+    ? rawValue.replaceAll("_", " ").toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())
     : rawValue;
   const tone =
     rawValue === "ACTIVE" || rawValue === "Active" || rawValue === "Success" || rawValue === "Allowed"

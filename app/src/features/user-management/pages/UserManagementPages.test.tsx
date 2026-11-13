@@ -310,7 +310,7 @@ describe("UserListPage", () => {
 
     const dialog = screen.getByRole("dialog", { name: /Create governance \/ top user/i });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByText(/Two-step login \(MFA\) will be enforced/i)).toBeInTheDocument();
+    expect(screen.getByText(/Two-step login \(MFA\) is required at first sign-in/i)).toBeInTheDocument();
 
     // Fill in fields
     fireEvent.change(screen.getByLabelText(/Governance Role/i), { target: { value: "VICE_CHANCELLOR" } });
@@ -329,7 +329,7 @@ describe("UserListPage", () => {
         mobile: "+919876543210",
       });
       expect(screen.getByDisplayValue("test-only-password")).toBeInTheDocument();
-      expect(screen.getByText(/Two-step login \(MFA\) is required at first sign-in/i)).toBeInTheDocument();
+      expect(screen.getByText(/Two-step login \(MFA\) will be required at the user/i)).toBeInTheDocument();
     });
 
     // Close modal
@@ -406,7 +406,7 @@ describe("UserDetailPage", () => {
     await waitFor(() => {
       expect(userManagementService.deactivateUser).toHaveBeenCalledWith("tenant-1", "ua-1", "inst-1");
       expect(screen.getByText(/User deactivated \(soft delete; the row was never removed\)\./i)).toBeInTheDocument();
-      expect(screen.getByText(/^DEACTIVATED$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Deactivated$/)).toBeInTheDocument();
     });
   });
 
@@ -550,7 +550,7 @@ describe("UserDetailPage", () => {
         { reason: "Court custody order updated" },
         "inst-1"
       );
-      expect(screen.getByText(/Guardian change requested with reason/i)).toBeInTheDocument();
+      expect(screen.getByText(/Guardian change request submitted to the Principal for review/i)).toBeInTheDocument();
     });
   });
 
@@ -616,7 +616,7 @@ describe("UserDetailPage", () => {
         { approved: true },
         "inst-1"
       );
-      expect(screen.getByText(/Guardian change approved\. Old guardian access blocked immediately/i)).toBeInTheDocument();
+      expect(screen.getByText(/Guardian change approved\. The previous guardian/i)).toBeInTheDocument();
     });
   });
   it("changes student academic status with statutory reason (Story #41: STUDENT_STATUS_CHANGE / Rule AT-08)", async () => {
