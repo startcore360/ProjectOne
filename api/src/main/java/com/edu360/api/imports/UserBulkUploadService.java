@@ -3,6 +3,8 @@ package com.edu360.api.imports;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,8 +29,9 @@ import com.edu360.api.files.FileObject;
 import com.edu360.api.files.FileObjectId;
 import com.edu360.api.files.FileObjectRepository;
 import com.edu360.api.files.LocalFileStorage;
+import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.identity.StudentCreateRequest;
 import com.edu360.api.identity.UserAccountRepository;
-import com.edu360.api.identity.UserAccountService;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.imports.dto.ImportJobResponse;
 import com.edu360.api.imports.dto.ImportRowErrorResponse;
@@ -66,7 +69,7 @@ public class UserBulkUploadService {
     private final LocalFileStorage localFileStorage;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final UserAccountRepository userAccountRepository;
-    private final UserAccountService userAccountService;
+    private final UserBulkImportRowService rowService;
     private final AuditLogService auditLogService;
 
     /**
@@ -74,14 +77,22 @@ public class UserBulkUploadService {
      */
     public ImportTemplateResponse getImportTemplate(String kind) {
         String effectiveKind = kind != null ? kind.toUpperCase() : "USERS";
-        List<String> headers = List.of("email", "fullName", "userType", "mobile", "nationalIdLast4", "roleCode", "institutionId");
-        List<List<String>> sampleRows = List.of(
-                List.of("john.doe@northbridge.edu.in", "John Doe", "STAFF", "+919876543210", "4821", "OFFICE_STAFF", ""),
-                List.of("priya.sharma@northbridge.edu.in", "Priya Sharma", "STAFF", "+919812345678", "9034", "TEACHER", "")
-        );
+        List<String> headers;
+        List<List<String>> sampleRows;
+        if ("STUDENTS".equals(effectiveKind)) {
+            headers = List.of("fullName", "userType", "institutionId", "sectionId", "academicSessionId",
+                    "admissionDate", "dateOfBirth", "rollNumber", "createLogin");
+            sampleRows = List.of(List.of("Asha Rao", "STUDENT", "", "SECTION_UUID", "SESSION_UUID",
+                    "2026-06-01", "", "R-01", ""));
+        } else {
+            headers = List.of("email", "fullName", "userType", "mobile", "nationalIdLast4", "roleCode", "institutionId");
+            sampleRows = List.of(
+                    List.of("john.doe@northbridge.edu.in", "John Doe", "STAFF", "+919876543210", "4821", "OFFICE_STAFF", ""),
+                    List.of("priya.sharma@northbridge.edu.in", "Priya Sharma", "STAFF", "+919812345678", "9034", "TEACHER", "")
+            );
+        }
         String csvTemplate = String.join(",", headers) + "\n" +
-                String.join(",", sampleRows.get(0)) + "\n" +
-                String.join(",", sampleRows.get(1)) + "\n";
+                String.join(",", sampleRows.get(0)) + "\n";
 
         return new ImportTemplateResponse(
                 effectiveKind,
