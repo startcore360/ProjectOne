@@ -129,6 +129,21 @@ public class UserAccountService {
         if (keycloakUserId == null || keycloakUserId.isBlank()) {
             throw new KeycloakProvisioningException("Keycloak created no account id for this user; nothing was saved.");
         }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                        try {
+                            keycloakAdminClient.deleteUser(realm, keycloakUserId);
+                        } catch (RuntimeException cleanupFailure) {
+                            log.error("Could not remove orphan staff/user identity {} from realm {} after transaction rollback",
+                                    keycloakUserId, realm, cleanupFailure);
+                        }
+                    }
+                }
+            });
+        }
         log.info("Provisioned Keycloak account {} in realm '{}'", keycloakUserId, realm);
 
         // 7. Persist UserAccount (app.user_account)
