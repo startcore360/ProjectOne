@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { notificationsApi, type BellNotification } from "../api/notificationsApi";
 import { LIVE_EVENT_NAME, type LiveEnvelope } from "../../live/liveSocket";
 
@@ -53,6 +53,25 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
     };
   }, [tenantId, refresh]);
 
+
+  useEffect(() => {
+    if (!tenantId) return undefined;
+    const onLiveEvent = (raw: Event) => {
+      const event = (raw as CustomEvent<LiveEnvelope>).detail;
+      if (!event) return;
+      if (event.type === "NOTIFICATION_CREATED") {
+        void refresh();
+      } else if (event.type === "UNREAD_COUNT") {
+        const value = event.payload?.unreadCount;
+        if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+          setUnreadCount(value);
+          setHasReadState(true);
+        }
+      }
+    };
+    window.addEventListener(LIVE_EVENT_NAME, onLiveEvent);
+    return () => window.removeEventListener(LIVE_EVENT_NAME, onLiveEvent);
+  }, [tenantId, refresh]);
 
   const markRead = useCallback(async (notificationId: string) => {
     if (!tenantId) return;
