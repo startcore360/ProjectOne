@@ -1595,7 +1595,7 @@ a {
    value, context line). Previously the dashboard used a page-local .student-metric card with a
    different shape (no icon badge, no context line) - this is the real prototype pattern,
    shared so any future screen's KPI row uses the same visual language. */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-3); align-items: stretch; }
 .kpi {
   display: grid; gap: var(--space-2); align-content: start; height: 100%;
   border: var(--border-width) solid var(--color-border-divider); border-radius: var(--radius-lg);
@@ -1817,3 +1817,26 @@ progress.progress--thin { height: 4px; }
   .staff-records-layout .platform-toolbar { grid-template-columns: minmax(0, 1fr); }
   .platform-table-pagination { align-items: flex-start; flex-direction: column; }
 }
+
+/* Dashboard KPI rows expand evenly to use the available content width. */
+.kpi-grid > .kpi { min-width: 0; }
+.workspace-dashboard .student-section { width: 100%; }
+.workspace-dashboard .workspace-state { width: 100%; max-width: none; }
+.profile-page { max-width: 1200px; }
+.profile-card { width: 100%; max-width: none; }
+.profile-card form { width: 100%; }
+.staff-records-layout { grid-template-columns: minmax(300px, 0.95fr) minmax(0, 2fr); gap: var(--space-5); }
+.staff-records-layout > .platform-panel { min-width: 0; }
+.staff-record-list__item { min-height: 68px; }
+.staff-directory-summary { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-2); margin:0 var(--space-5) var(--space-3); color:var(--color-text-muted); font-size:var(--fs-caption); }
+.staff-directory-summary strong { color:var(--color-text); font-variant-numeric:tabular-nums; }
+.staff-directory-empty { margin:0 var(--space-5) var(--space-4); }
+.staff-directory-empty .eds-empty-state { min-height:220px; }
+.eds-notice { display:flex; align-items:flex-start; gap:var(--space-3); }
+.eds-notice__content { min-width:0; overflow-wrap:anywhere; }
+.platform-modal .eds-notice { margin-bottom:var(--space-4); }
+.platform-modal form { display:grid; gap:var(--space-4); }
+.platform-modal form .eds-field { margin:0; }
+.platform-modal form footer { margin-top:var(--space-2); }
+@media (max-width: 900px) { .staff-records-layout { grid-template-columns:minmax(0,1fr); } }
+@media (max-width: 640px) { .profile-page { max-width:100%; } }
