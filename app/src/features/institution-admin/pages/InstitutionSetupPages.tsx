@@ -1279,56 +1279,146 @@ export function AcademicStructurePage() {
       </Panel>
 
       {isSchool && institutionId && (
-        <div style={{ marginTop: "var(--space-4)" }}>
-          <Toast
-            variant="info"
-            title="School Structure & Curriculum (Rule HI-12)"
-            content={
-              <div>
-                <p style={{ margin: "0 0 var(--space-3) 0" }}>
-                  Schools organise learners into Classes and Sections rather than academic departments.
-                  Use the dedicated school configuration tools below to assign teachers and calendar rules:
-                </p>
-                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-                  <a
-                    href="/university/setup/class-teacher"
-                    style={{
-                      display: "inline-block",
-                      padding: "6px 14px",
-                      borderRadius: "var(--radius-md)",
-                      backgroundColor: "var(--color-brand-primary, #2563eb)",
-                      color: "#ffffff",
-                      fontWeight: 500,
-                      textDecoration: "none",
-                      fontSize: "0.8125rem",
-                    }}
-                  >
-                    Assign Class Teachers →
-                  </a>
-                  <a
-                    href="/university/setup/weekly-off"
-                    style={{
-                      display: "inline-block",
-                      padding: "6px 14px",
-                      borderRadius: "var(--radius-md)",
-                      backgroundColor: "var(--color-bg-surface, #ffffff)",
-                      color: "var(--color-brand-primary, #1e40af)",
-                      border: "1px solid var(--color-border-divider, #bfdbfe)",
-                      fontWeight: 500,
-                      textDecoration: "none",
-                      fontSize: "0.8125rem",
-                    }}
-                  >
-                    Configure Weekly Off &amp; Calendar →
-                  </a>
+        <>
+          <Panel
+            title="School classes"
+            description="Create the year groups or grades used by this school. Display order controls how classes are presented."
+          >
+            <div className="platform-form">
+              <form onSubmit={createSchoolClass}>
+                <div className="platform-form-grid">
+                  <TextField
+                    id="school-class-name"
+                    label="Class or grade name"
+                    required
+                    maxLength={30}
+                    value={classNameDraft}
+                    onChange={(event) => setClassNameDraft(event.target.value)}
+                    placeholder="For example, Grade 8"
+                  />
+                  <TextField
+                    id="school-class-order"
+                    label="Display order"
+                    type="number"
+                    min={0}
+                    step={1}
+                    required
+                    value={classOrderDraft}
+                    onChange={(event) => setClassOrderDraft(event.target.value)}
+                  />
                 </div>
+                <div className="platform-inline-actions">
+                  <Button type="submit" busy={classSaving}>Create class</Button>
+                </div>
+              </form>
+            </div>
+            {loading ? <p className="platform-empty-note" role="status">Loading classes and sections…</p> : null}
+            {!loading && !error && schoolClasses.length === 0 ? (
+              <EmptyState title="No classes configured" description="Create the first class or grade for this school." />
+            ) : schoolClasses.length > 0 ? (
+              <div className="platform-table-wrap">
+                <table className="platform-table">
+                  <thead><tr><th>Class or grade</th><th>Display order</th><th>Student access</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {schoolClasses.map((schoolClass) => (
+                      <tr key={schoolClass.classId}>
+                        <td><strong>{schoolClass.className}</strong></td>
+                        <td>{schoolClass.displayOrder}</td>
+                        <td>{schoolClass.studentLoginEnabled ? "Enabled" : "Disabled"}</td>
+                        <td><Badge tone={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>{schoolClass.status === "ACTIVE" ? "Active" : schoolClass.status}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            }
-          />
-        </div>
+            ) : null}
+          </Panel>
+
+          <Panel
+            title="School sections"
+            description="Create sections within a class and academic session. Section IDs can then be used by teacher assignment workflows."
+          >
+            {schoolSessions.length === 0 ? (
+              <Notice tone="warning">
+                No academic sessions are available for this school yet. Set up an academic session in Calendar and return here to create sections.
+                <div className="platform-inline-actions">
+                  <a href="/university/setup/calendar-events">Open calendar and academic sessions</a>
+                </div>
+              </Notice>
+            ) : schoolClasses.length === 0 ? (
+              <EmptyState title="Create a class first" description="Sections belong to a school class. Create at least one class before adding sections." />
+            ) : (
+              <form onSubmit={createSchoolSection} className="platform-form">
+                <div className="platform-form-grid">
+                  <SelectField
+                    id="school-section-class"
+                    label="Class or grade"
+                    value={sectionDraft.classId}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, classId: event.target.value })}
+                  >
+                    {schoolClasses.map((schoolClass) => (
+                      <option key={schoolClass.classId} value={schoolClass.classId}>{schoolClass.className}</option>
+                    ))}
+                  </SelectField>
+                  <SelectField
+                    id="school-section-session"
+                    label="Academic session"
+                    value={sectionDraft.academicSessionId}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, academicSessionId: event.target.value })}
+                  >
+                    {schoolSessions.map((session) => (
+                      <option key={session.academicSessionId} value={session.academicSessionId}>
+                        {session.sessionLabel} ({session.startDate} – {session.endDate})
+                      </option>
+                    ))}
+                  </SelectField>
+                  <TextField
+                    id="school-section-name"
+                    label="Section name"
+                    required
+                    maxLength={20}
+                    value={sectionDraft.sectionName}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, sectionName: event.target.value })}
+                    placeholder="For example, A"
+                  />
+                </div>
+                <div className="platform-inline-actions">
+                  <Button type="submit" busy={sectionSaving}>Create section</Button>
+                </div>
+              </form>
+            )}
+            {!loading && !error && schoolSections.length === 0 && schoolClasses.length > 0 && schoolSessions.length > 0 ? (
+              <EmptyState title="No sections configured" description="Create the first section for a class and academic session." />
+            ) : schoolSections.length > 0 ? (
+              <div className="platform-table-wrap">
+                <table className="platform-table">
+                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {schoolSections.map((section) => (
+                      <tr key={section.sectionId}>
+                        <td><strong>{section.sectionName}</strong></td>
+                        <td>{schoolClasses.find((item) => item.classId === section.classId)?.className ?? "Class unavailable"}</td>
+                        <td>{schoolSessions.find((item) => item.academicSessionId === section.academicSessionId)?.sessionLabel ?? section.academicSessionId}</td>
+                        <td><Badge tone={section.status === "ACTIVE" ? "success" : "neutral"}>{section.status === "ACTIVE" ? "Active" : section.status}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </Panel>
+
+          <Panel title="School setup shortcuts" description="Continue with teacher assignments and weekly calendar rules.">
+            <div className="platform-inline-actions">
+              <a href="/university/setup/class-teacher">Assign class teachers</a>
+              <a href="/university/setup/weekly-off">Configure weekly off</a>
+              <a href="/university/setup/calendar-events">Manage academic sessions and calendar events</a>
+            </div>
+          </Panel>
+        </>
       )}
 
-      {institutionId && (
+      {institutionId && !isSchool && (
         <>
           {/* Departments Panel */}
           <Panel
@@ -1425,7 +1515,7 @@ export function AcademicStructurePage() {
 
       {/* Add Department Modal */}
       <AddDepartmentModal
-        isOpen={showAddDept}
+        isOpen={!isSchool && showAddDept}
         onClose={() => {
           setShowAddDept(false);
           setDeptError(null);
@@ -1452,7 +1542,7 @@ export function AcademicStructurePage() {
 
       {/* Add Program Modal */}
       <AddProgramModal
-        isOpen={showAddProg}
+        isOpen={!isSchool && showAddProg}
         onClose={() => {
           setShowAddProg(false);
           setProgError(null);
