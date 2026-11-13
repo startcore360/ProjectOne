@@ -56,10 +56,10 @@ export default function SelectField({
           <Icon name="info" size={14} /> {hint}
         </p>
       )}
-      {error && (
-        <p id={errorId} className="eds-field__error" role="alert">
-          {error}
-        </p>
+      {error ? (
+        <p id={errorId} className="eds-field__error" role="alert">{error}</p>
+      ) : (
+        <p className="eds-field__error-placeholder" aria-hidden="true">&nbsp;</p>
       )}
     </div>
   );

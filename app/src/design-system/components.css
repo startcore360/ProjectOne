@@ -492,6 +492,12 @@ a {
 .eds-field__hint span {
   color: inherit;
 }
+ .eds-field__error-placeholder {
+  display: block;
+  min-height: 1.2em;
+  margin-top: var(--space-1);
+  visibility: hidden;
+}
 .eds-field__error {
   display: block;
   margin-top: var(--space-1);
