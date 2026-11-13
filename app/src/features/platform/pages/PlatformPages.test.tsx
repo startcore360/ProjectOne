@@ -152,7 +152,7 @@ describe("Sprint 1 platform screens", () => {
   });
 
   it("submits new trial tenant to platform tenants API", async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockImplementation((url: string) => Promise.resolve({ data: url === "/platform/plans" ? [{ planId: "plan-1", planName: "Standard trial", pricingType: "PER_STUDENT_YEAR", priceAmount: 499, currencyCode: "INR", status: "ACTIVE" }] : [] }));
     mockedApi.post.mockResolvedValue({
       data: {
         tenantId: "ten-99",
@@ -186,7 +186,7 @@ describe("Sprint 1 platform screens", () => {
   });
 
   it("shows the first admin's temporary password once after creating a tenant, until dismissed", async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockImplementation((url: string) => Promise.resolve({ data: url === "/platform/plans" ? [{ planId: "plan-1", planName: "Standard trial", pricingType: "PER_STUDENT_YEAR", priceAmount: 499, currencyCode: "INR", status: "ACTIVE" }] : [] }));
     mockedApi.post.mockResolvedValue({
       data: {
         tenantId: "ten-99",
