@@ -54,7 +54,6 @@ BEGIN
         SELECT 1 FROM app.user_login_alias x
          WHERE x.tenant_id=NEW.tenant_id
            AND x.email=lower(btrim(NEW.email))
-           AND x.user_account_id<>NEW.user_account_id
     ) THEN
         RAISE EXCEPTION 'LOGIN_EMAIL_IN_USE: primary email is already a secondary login for another account'
             USING ERRCODE='23505';
