@@ -12,8 +12,8 @@ export function StudentStatusPanel({
   tenantId,
   studentId,
 }: StudentStatusPanelProps) {
-  const currentTenantId = tenantId || "00000000-0000-0000-0000-000000000001";
-  const [currentStatus, setCurrentStatus] = useState<string>("ACTIVE");
+  const currentTenantId = tenantId ?? "";
+  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [newStatus, setNewStatus] = useState("LEAVE_OF_ABSENCE");
   const [reason, setReason] = useState("");
@@ -22,6 +22,7 @@ export function StudentStatusPanel({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     setSaving(true);
     setFeedback(null);
     try {
@@ -45,12 +46,13 @@ export function StudentStatusPanel({
       title="Student Academic Status"
       description="Manage student status lifecycle (Leave of Absence, Suspension, Expulsion, Transfer, Graduation) with mandatory statutory reasons [Action #41 / Rule AT-08]."
       action={
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={() => setShowModal(true)} disabled={!currentTenantId}>
           Change Student Status
         </Button>
       }
     >
       <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
+        {!currentTenantId && <Notice tone="danger">A tenant identity is required to change student status.</Notice>}
         {feedback && (
           <div style={{ marginBottom: "var(--space-3)" }}>
             <Notice tone={feedback.tone}>{feedback.message}</Notice>
@@ -58,12 +60,12 @@ export function StudentStatusPanel({
         )}
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <span style={{ fontSize: "0.875rem", color: "var(--color-text-muted, #666)" }}>Current Status:</span>
-          <StatusBadge status={currentStatus} />
+          {currentStatus ? <StatusBadge status={currentStatus} /> : <span style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>Not available from the current student-status endpoint</span>}
         </div>
       </div>
 
       <Modal
-        isOpen={showModal}
+        isOpen={showModal && Boolean(currentTenantId)}
         onClose={() => setShowModal(false)}
         kicker="STUDENT_STATUS_CHANGE • Action #41 / Rule AT-08"
         title="Change Student Academic Status"
