@@ -571,7 +571,7 @@ export function RolesPermissionsPage() {
         setRoles(data);
       }
     } catch (err) {
-      setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+      setLoadError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -787,6 +787,7 @@ export function MissingRolesPage() {
   const [entries, setEntries] = useState<RolldownMapEntry[]>([]);
   const [overrides, setOverrides] = useState<RolldownOverride[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Set override modal state (Story #24: ROLLDOWN_OVERRIDE_SET)
@@ -796,6 +797,7 @@ export function MissingRolesPage() {
   const fetchRolldown = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
+    setLoadError("");
     try {
       const [mapData, overrideData] = await Promise.all([
         rolldownService.getRolldownMap(tenantId),
@@ -878,6 +880,8 @@ export function MissingRolesPage() {
         </div>
       </div>
 
+      {loadError && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRolldown()}>Retry</Button></Notice>}
+
       <Panel
         title="Active roll-down resolution map (ROLLDOWN_VIEW / Action #23)"
         description="Ordered stand-in preferences evaluated dynamically per context (University wide, College, School)."
@@ -896,7 +900,7 @@ export function MissingRolesPage() {
               </tr>
             </thead>
             <tbody>
-              {entries.length === 0 ? (
+              {loadError ? null : entries.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", padding: "var(--space-4)", color: "var(--color-muted)" }}>
                     No roll-down map rules loaded.
