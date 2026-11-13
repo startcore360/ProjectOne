@@ -6,6 +6,7 @@ import {
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { FileDrop } from "../../../components/common/FileDrop";
 import {
   staffService, type StaffAssignment, type StaffDocument, type StaffProfile,
   type StaffProfilePayload, type StaffServiceRecord,
@@ -327,7 +328,7 @@ export default function StaffRecordsPage() {
                 {canManage && <form onSubmit={uploadDocument} className="platform-form staff-form-divider">
                   <div className="platform-form-grid">
                     <SelectField id="staff-doc-type" label="Document type" value={documentType} onChange={(e) => setDocumentType(e.target.value)} options={[{ value: "DEGREE", label: "Degree certificate" }, { value: "ID_PROOF", label: "Identity proof" }, { value: "OTHER", label: "Other" }]} />
-                    <div className="eds-field"><label htmlFor="staff-doc-file">Choose file</label><input id="staff-doc-file" type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => setDocumentFile(e.target.files?.[0] ?? null)} /><p className="eds-field__hint">The file is scanned before it can be attached.</p></div>
+                    <FileDrop label="Choose file" onFile={setDocumentFile} accept=".pdf,.png,.jpg,.jpeg" maxBytes={10_485_760} />
                   </div>
                   <div className="platform-inline-actions"><Button type="submit" variant="secondary" busy={uploading} disabled={!documentFile}>Upload and attach</Button></div>
                 </form>}
