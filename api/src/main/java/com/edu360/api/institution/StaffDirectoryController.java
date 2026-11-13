@@ -26,9 +26,11 @@ import jakarta.validation.Valid;
 @RequestMapping({"/v1/tenants/{tenantId}/staff", "/api/tenants/{tenantId}/staff"})
 public class StaffDirectoryController {
     private final StaffDirectoryService service;
+    private final StaffOnboardingService onboarding;
 
-    public StaffDirectoryController(StaffDirectoryService service) {
+    public StaffDirectoryController(StaffDirectoryService service, StaffOnboardingService onboarding) {
         this.service = service;
+        this.onboarding = onboarding;
     }
 
     @GetMapping
@@ -51,10 +53,10 @@ public class StaffDirectoryController {
     }
 
     @PostMapping
-    public ResponseEntity<StaffProfileResponse> create(@PathVariable UUID tenantId,
+    public ResponseEntity<StaffOnboardingResponse> create(@PathVariable UUID tenantId,
             @Valid @RequestBody StaffProfileRequest request, Authentication authentication) {
-        StaffProfileResponse response = service.create(principal(authentication, tenantId), request);
-        return ResponseEntity.status(201).eTag(etag(response.version())).body(response);
+        StaffOnboardingResponse response = onboarding.onboard(principal(authentication, tenantId), request);
+        return ResponseEntity.status(201).eTag(etag(response.staff().version())).body(response);
     }
 
     @GetMapping("/{id}")
