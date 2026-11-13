@@ -96,6 +96,16 @@ export type StaffOnboardingResponse = {
   personalEmailVerificationRequired: boolean;
 };
 
+export type TeacherLookupItem = {
+  staffProfileId: string;
+  staffAssignmentId: string;
+  staffCode: string;
+  fullName: string;
+  designation: string;
+  departmentId: string | null;
+  departmentName: string | null;
+};
+
 export type StaffListResponse = {
   items: StaffProfile[];
   page: { limit: number; nextCursor: string | null; hasMore: boolean; totalCount: number | null };
@@ -114,6 +124,15 @@ export const staffService = {
       params: { q: query || undefined, limit: 100 },
     });
     return response.data;
+  },
+
+
+  async teacherLookup(tenantId: string, institutionId: string, departmentId?: string) {
+    const response = await api.get<{ items: TeacherLookupItem[]; page: StaffListResponse["page"] }>(
+      `/api/tenants/${tenantId}/staff`,
+      { params: { role: "TEACHING", institutionId, departmentId, limit: 100 } },
+    );
+    return response.data.items;
   },
 
   async get(tenantId: string, id: string) {
