@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.approval.ApprovalInboxService;
@@ -71,6 +72,9 @@ public class GuardianLinkService {
     private final StudentProfileRepository studentProfileRepository;
     private final InstitutionRepository institutionRepository;
     private final ApprovalInboxService approvalInboxService;
+
+    @Autowired(required = false)
+    private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
     private final UserAccountRepository userAccountRepository;
 
     public GuardianLinkService(
@@ -274,6 +278,9 @@ public class GuardianLinkService {
                 .updatedAt(now).updatedBy(principal.userAccountId())
                 .rowVersion(1)
                 .build());
+        if (approvalCountPublisher != null) {
+            approvalCountPublisher.publishForRole(tenantId, institutionId, approverRole);
+        }
 
         GuardianProfile profile = profileRepository.findByIdTenantIdAndIdGuardianProfileId(
                 tenantId, link.getGuardianProfileId()).orElse(null);
