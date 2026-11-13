@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS app.user_login_alias (
     CONSTRAINT uq_user_login_alias_account_email UNIQUE (tenant_id, user_account_id, email),
     CONSTRAINT fk_user_login_alias_account FOREIGN KEY (tenant_id, user_account_id)
         REFERENCES app.user_account (tenant_id, user_account_id) ON DELETE CASCADE,
-    CONSTRAINT ck_user_login_alias_email CHECK (email = lower(btrim(email)) AND email ~ '^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$'),
+    CONSTRAINT ck_user_login_alias_email CHECK (email = lower(btrim(email)) AND email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'),
     CONSTRAINT ck_user_login_alias_row_version CHECK (row_version >= 1)
 );
 
