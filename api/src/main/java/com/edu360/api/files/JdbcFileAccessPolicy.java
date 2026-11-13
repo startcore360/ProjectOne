@@ -179,7 +179,7 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                    AND a.staff_profile_id = p.staff_profile_id
                    AND a.status = 'ACTIVE'
                   WHERE p.tenant_id = ? AND p.staff_profile_id = ?
-                    AND (? IS NULL OR a.institution_id = ?)
+                    AND (?::uuid IS NULL OR a.institution_id = ?)
                 )
                 """, principal.tenantId(), recordId, file.getInstitutionId(), file.getInstitutionId());
     }
