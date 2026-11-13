@@ -131,6 +131,16 @@ describe("Institution setup action screens", () => {
     expect(screen.getByText(/No events loaded yet/i)).toBeInTheDocument();
   });
 
+  it("places weekly-off validation messages beside the relevant fields", () => {
+    renderWithTenant(<WeeklyOffRulesPage />);
+    fireEvent.click(screen.getByRole("button", { name: /add rule/i }));
+
+    expect(screen.getByText("Enter a valid institution ID.")).toBeInTheDocument();
+    expect(screen.getByText("Choose an effective-from date.")).toBeInTheDocument();
+    expect(screen.queryByText("Institution ID and effective-from date are required.")).not.toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it("lists weekly-off rules returned by the API with the configured day labels", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: [

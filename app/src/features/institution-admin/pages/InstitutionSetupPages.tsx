@@ -647,7 +647,6 @@ export function CalendarEventsPage() {
                   {listStatus === "busy" ? "Loading…" : "Load events"}
                 </Button>
               </div>
-              {fieldErrors.institutionId && <p id="wo-institution-id-error" className="eds-field__error">{fieldErrors.institutionId}</p>}
             </div>
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
@@ -949,12 +948,27 @@ export function WeeklyOffRulesPage() {
                   {listStatus === "busy" ? "Loading…" : "Load rules"}
                 </Button>
               </div>
+              {fieldErrors.institutionId && <p id="wo-institution-id-error" className="eds-field__error" role="alert">{fieldErrors.institutionId}</p>}
             </div>
-            <ResultBanner status={listStatus} message={listMessage} />
+            {listStatus === "error" || listStatus === "denied" ? (
+              <Notice tone="danger">
+                <div className="platform-feedback-row">
+                  <span>{listMessage || "Weekly-off rules could not be loaded."}</span>
+                  <Button variant="secondary" size="sm" onClick={() => void loadRules()}>Retry</Button>
+                </div>
+              </Notice>
+            ) : listStatus === "busy" ? <p className="platform-empty-note" role="status">Loading weekly-off rules…</p> : null}
           </Panel>
 
           <Panel title="Current weekly-off rules">
-            {rules === null ? (
+            {rules === null && (listStatus === "error" || listStatus === "denied") ? (
+              <EmptyState
+                title="Rules could not be loaded"
+                description="The request did not complete. Retry loading the rules to see the current configuration."
+                icon="alert"
+                action={<Button variant="secondary" onClick={() => void loadRules()}>Retry</Button>}
+              />
+            ) : rules === null ? (
               <EmptyState
                 title="No rules loaded yet"
                 description="Enter an institution ID above and choose Load rules."
