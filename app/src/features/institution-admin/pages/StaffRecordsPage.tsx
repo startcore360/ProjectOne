@@ -34,6 +34,8 @@ export default function StaffRecordsPage() {
   const canManage = can("STAFF_RECORD_MANAGE");
   const canVerify = can("STAFF_DOCUMENT_VERIFY");
   const [query, setQuery] = useState("");
+  const [directoryPage, setDirectoryPage] = useState(1);
+  const [directoryPageSize, setDirectoryPageSize] = useState(10);
   const [state, setState] = useState<LoadState>("idle");
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [listError, setListError] = useState("");
@@ -71,6 +73,7 @@ export default function StaffRecordsPage() {
     try {
       const result = await staffService.list(tenantId, search.trim());
       setStaff(result.items ?? []);
+      setDirectoryPage(1);
       setState("loaded");
     } catch (error) {
       setStaff([]);
@@ -244,7 +247,7 @@ export default function StaffRecordsPage() {
         <Panel title="Staff directory" description="Results are limited to the active role scope.">
           <div className="platform-toolbar">
             <SearchBox value={query} onChange={setQuery} placeholder="Search staff name or code" />
-            <Button variant="secondary" size="sm" onClick={() => void loadDirectory(query)} busy={state === "loading"}>Search</Button>
+            <Button variant="secondary" size="sm" onClick={() => { setDirectoryPage(1); void loadDirectory(query); }} busy={state === "loading"}>Search</Button>
           </div>
           {state === "loading" && <Spinner label="Loading staff directory" />}
           {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
