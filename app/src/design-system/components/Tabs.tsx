@@ -29,13 +29,6 @@ export function Tabs({
       role={isTabList ? "tablist" : "group"}
       aria-label={ariaLabel}
       className={`app-tabs ${className}`.trim()}
-      style={{
-        display: "flex",
-        gap: "4px",
-        borderBottom: "1px solid var(--color-border)",
-        marginBottom: "var(--space-4)",
-        overflowX: "auto",
-      }}
     >
       {items.map((tab) => {
         const isActive = tab.id === activeId;
@@ -48,6 +41,7 @@ export function Tabs({
             aria-pressed={!isTabList ? isActive : undefined}
             aria-controls={isTabList ? `panel-${tab.id}` : undefined}
             tabIndex={isTabList ? (isActive ? 0 : -1) : undefined}
+            data-active={isActive}
             disabled={tab.disabled}
             onClick={() => onChange(tab.id)}
             onKeyDown={(event) => {
@@ -68,34 +62,11 @@ export function Tabs({
               enabledTabs[nextIndex].focus();
               onChange(enabledTabs[nextIndex].id.replace(/^tab-/, ""));
             }}
-            style={{
-              padding: "8px 16px",
-              background: "none",
-              border: "none",
-              borderBottom: isActive ? "2px solid var(--color-brand)" : "2px solid transparent",
-              color: isActive ? "var(--color-brand)" : "var(--color-text-muted)",
-              fontWeight: isActive ? 600 : 500,
-              cursor: tab.disabled ? "not-allowed" : "pointer",
-              opacity: tab.disabled ? 0.5 : 1,
-              whiteSpace: "nowrap",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "0.875rem",
-              transition: "all 0.15s ease",
-            }}
+            className="app-tabs__tab"
           >
             <span>{tab.label}</span>
             {typeof tab.count === "number" && (
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  padding: "1px 6px",
-                  borderRadius: "999px",
-                  background: isActive ? "var(--color-brand-muted, #EBF4FF)" : "var(--color-bg-muted, #F1F5F9)",
-                  color: isActive ? "var(--color-brand)" : "var(--color-text-muted)",
-                }}
-              >
+              <span className="app-tabs__count">
                 {tab.count}
               </span>
             )}

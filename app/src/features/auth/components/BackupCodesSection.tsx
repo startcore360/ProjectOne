@@ -1,23 +1,56 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
+import axios from "axios";
 import { Button, Modal, Notice, PasswordField } from "../../../design-system/components";
 import { serverMessage } from "../serverMessage";
 import { authService } from "../../../services/modules/authService";
 import { BackupCodes } from "./BackupCodes";
 
-// MFA-01: on "My profile", a signed-in user gets a fresh set of backup codes. The current password
-// is asked again, so an unattended open session alone cannot produce codes that bypass the
-// authenticator. New codes replace the old ones.
-export function BackupCodesSection() {
+// A missing route (404) or a server fault (5xx) carries a technical sentence such as
+// "Resource not found: api/auth/mfa/recovery-codes" - never show that to a person.
+function friendlyMessage(err: unknown): string {
+  const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+  if (status === 404 || (status !== undefined && status >= 500)) {
+    return "Backup codes are not available right now. Please try again later.";
+  }
+  return serverMessage(err);
+}
+
+export interface BackupCodesSectionProps {
+  /** Optional icon shown at the start of the row (the profile Security tab passes one). */
+  icon?: ReactNode;
+}
+
+// MFA-01: a signed-in user gets a fresh set of backup codes. The current password is asked again
+// (in a dialog, not a field left open on the page), so an unattended open session alone cannot
+// produce codes that bypass the authenticator. New codes replace the old ones.
+export function BackupCodesSection({ icon }: BackupCodesSectionProps) {
+  const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
   const [done, setDone] = useState(false);
 
+  const openDialog = () => {
+    setPassword("");
+    setError("");
+    setCodes([]);
+    setDone(false);
+    setOpen(true);
+  };
+
+  const close = () => {
+    const issued = codes.length > 0;
+    setOpen(false);
+    setCodes([]);
+    setPassword("");
+    setError("");
+    if (issued) setDone(true);
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setDone(false);
     if (!password) {
       setError("Enter your current password.");
       return;
@@ -28,62 +61,69 @@ export function BackupCodesSection() {
       setCodes(data.recoveryCodes);
       setPassword("");
     } catch (err) {
-      setError(serverMessage(err));
+      setError(friendlyMessage(err));
     } finally {
       setBusy(false);
     }
   };
 
+  const showingCodes = codes.length > 0;
+
   return (
-    <section className="app-panel" aria-labelledby="backup-codes-title">
-      <div className="app-panel__header">
-        <div>
-          <h2 id="backup-codes-title" className="app-panel__title">Two-step login backup codes</h2>
-          <p className="app-panel__description">
-            Backup codes let you sign in if you lose your phone. Getting new codes makes your old codes stop working.
+    <div className="app-profile-row" aria-labelledby="backup-codes-title">
+      {icon && <span className="app-profile-row__icon">{icon}</span>}
+      <div className="app-profile-row__body">
+        <h4 id="backup-codes-title" className="app-profile-row__title">Backup codes</h4>
+        <p className="app-profile-row__text">
+          One-time codes that let you sign in if you lose your phone. New codes replace your old ones.
+        </p>
+        {done && (
+          <p className="app-status-text app-status-text--success" role="status">
+            Your new backup codes are active. Your old codes no longer work.
           </p>
-        </div>
+        )}
       </div>
-      <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-        {done && <Notice tone="success">Your new backup codes are active. Your old codes no longer work.</Notice>}
-        {error && <Notice tone="danger">{error}</Notice>}
-        <form onSubmit={submit} noValidate className="app-form-grid">
-          <PasswordField
-            id="backup-codes-password"
-            label="Current password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Button type="submit" variant="secondary" busy={busy}>
-              Get new backup codes
-            </Button>
-          </div>
-        </form>
+      <div className="app-profile-row__action">
+        <Button variant="secondary" onClick={openDialog}>
+          Generate new codes
+        </Button>
       </div>
+
       <Modal
-        isOpen={codes.length > 0}
-        onClose={() => {
-          setCodes([]);
-          setDone(true);
-        }}
+        isOpen={open}
+        onClose={close}
         closeOnBackdrop={false}
-        kicker="ONE-TIME DISPLAY"
-        title="Save your new backup codes"
+        kicker={showingCodes ? "ONE-TIME DISPLAY" : "TWO-STEP LOGIN"}
+        title={showingCodes ? "Save your new backup codes" : "Generate new backup codes"}
         titleId="new-backup-codes-title"
         size="sm"
       >
-        <BackupCodes
-          codes={codes}
-          continueLabel="Done"
-          onContinue={() => {
-            setCodes([]);
-            setDone(true);
-          }}
-        />
+        {showingCodes ? (
+          <BackupCodes codes={codes} continueLabel="Done" onContinue={close} />
+        ) : (
+          <form onSubmit={submit} noValidate className="app-profile-dialog-form">
+            <Notice tone="warning">Your current backup codes will stop working as soon as new ones are made.</Notice>
+            {error && <Notice tone="danger">{error}</Notice>}
+            <PasswordField
+              id="backup-codes-password"
+              label="Current password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoFocus
+            />
+            <div className="app-profile-dialog-form__actions">
+              <Button type="button" variant="tertiary" onClick={close} disabled={busy}>
+                Cancel
+              </Button>
+              <Button type="submit" busy={busy}>
+                Get new backup codes
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
-    </section>
+    </div>
   );
 }

@@ -31,7 +31,8 @@ const PAGE_SIZE = 25;
 export function AuditLogView() {
   const [status, setStatus] = useState<FetchStatus>("loading");
   const [events, setEvents] = useState<AuditLogItem[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [page, setPage] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [query, setQuery] = useState("");
@@ -45,8 +46,12 @@ export function AuditLogView() {
       .get("/platform/audit-logs", { params: { page, size: PAGE_SIZE } })
       .then((res) => {
         if (!active) return;
-        setEvents(res.data?.items ?? []);
-        setTotalCount(res.data?.totalCount ?? res.data?.items?.length ?? 0);
+        const items: AuditLogItem[] = res.data?.items ?? [];
+        // AuditLogPageResponse: { items, page, size, totalElements, totalPages }.
+        const total = Number(res.data?.totalElements ?? items.length);
+        setEvents(items);
+        setTotalElements(total);
+        setTotalPages(Number(res.data?.totalPages ?? Math.ceil(total / PAGE_SIZE)));
         setStatus("success");
       })
       .catch((err) => {
@@ -105,6 +110,12 @@ export function AuditLogView() {
           <>
             <DataTable
               headers={["When", "Actor", "Action", "Target", "Outcome"]}
+              ariaLabel="Platform audit events"
+              // Paged on the server (below); the table's own client pager would page only this
+              // page's rows and show a second, conflicting pager. pageSize must match the server
+              // page too: DataTable still slices to pageSize even with pagination off.
+              pagination={false}
+              pageSize={PAGE_SIZE}
               empty={!filtered.length}
               emptyMessage={
                 status === "error" ? "Audit events could not be loaded." : "No platform audit events recorded yet."
@@ -131,18 +142,21 @@ export function AuditLogView() {
                 </tr>
               ))}
             </DataTable>
-            {(page > 0 || totalCount >= PAGE_SIZE) && (
-              <div className="app-pagination">
-                <span>Page {page + 1}{totalCount > 0 ? ` · ${totalCount} total` : ""}</span>
+            {totalPages > 1 && (
+              <nav className="app-pagination" aria-label="Audit log pagination">
+                <span className="app-pagination__range">
+                  Showing {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + events.length} of {totalElements}
+                </span>
                 <div className="app-pagination__actions">
                   <Button variant="secondary" size="sm" disabled={page === 0} onClick={() => { setStatus("loading"); setPage((p) => Math.max(0, p - 1)); }}>
                     Previous
                   </Button>
-                  <Button variant="secondary" size="sm" disabled={events.length < PAGE_SIZE} onClick={() => { setStatus("loading"); setPage((p) => p + 1); }}>
+                  <span aria-live="polite">Page {page + 1} of {totalPages}</span>
+                  <Button variant="secondary" size="sm" disabled={page + 1 >= totalPages} onClick={() => { setStatus("loading"); setPage((p) => p + 1); }}>
                     Next
                   </Button>
                 </div>
-              </div>
+              </nav>
             )}
           </>
         )}

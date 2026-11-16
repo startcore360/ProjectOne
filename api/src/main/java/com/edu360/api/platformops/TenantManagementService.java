@@ -289,6 +289,7 @@ public class TenantManagementService {
                 request.getFirstAdminMobile() != null && !request.getFirstAdminMobile().isBlank()
                         ? request.getFirstAdminMobile().trim() : null,
                 temporaryPassword);
+        tenantRepository.save(tenant);
         TenantProvisioningStatusResponse provisioningStatus = runProvisioning(tenant, plan, inputs, principal, false);
         failIfNotProvisioned(tenantId, provisioningStatus, principal);
         Tenant provisionedTenant = markProvisioned(tenant, principal);
