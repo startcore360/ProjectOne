@@ -213,7 +213,7 @@ class UserCreationControllerTest {
     }
 
     @Test
-    @DisplayName("ACT-USER_CREATE-GUARD: User plan limit reached throws PLAN_LIMIT_REACHED (WF-14)")
+    @DisplayName("ACT-USER_CREATE-GUARD: at 100% of the user limit, 409 USER_LIMIT_REACHED (WF-14, E1-S5)")
     void actUserCreate_guard_planLimitReached() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID);
         CreateUserRequest req = new CreateUserRequest(
@@ -228,12 +228,29 @@ class UserCreationControllerTest {
         when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
 
         assertThatThrownBy(() -> controller.createUser(TENANT_ID, req, auth))
-                .isInstanceOf(BusinessRuleViolationException.class)
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
                 .satisfies(ex -> {
-                    BusinessRuleViolationException bre = (BusinessRuleViolationException) ex;
-                    assertThat(bre.getErrorCode()).isEqualTo("PLAN_LIMIT_REACHED");
-                    assertThat(bre.getMessage()).contains("WF-14");
+                    com.edu360.api.exception.ApiException api = (com.edu360.api.exception.ApiException) ex;
+                    assertThat(api.getErrorCode()).isEqualTo("USER_LIMIT_REACHED");
+                    assertThat(api.getStatus().value()).isEqualTo(409);
+                    assertThat(api.getMessage()).contains("WF-14");
                 });
+    }
+
+    @Test
+    @DisplayName("E1-S5: a limit the Product Owner raised above the plan is the one enforced")
+    void userLimit_usesTheTenantsOwnLimit() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID);
+        CreateUserRequest req = new CreateUserRequest(
+                UserType.STAFF, "Anita Sharma", "new.user@northbridge.edu.in", null, null, null, ScopeType.TENANT, null, null
+        );
+        when(userAccountRepository.countByIdTenantIdAndStatusNot(TENANT_ID, UserAccountStatus.DEACTIVATED)).thenReturn(60L);
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).userLimit(60).build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+
+        assertThatThrownBy(() -> controller.createUser(TENANT_ID, req, auth))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasMessageContaining("60 of 60");
     }
 
     @Test

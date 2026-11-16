@@ -211,6 +211,12 @@ export const userManagementService = {
   unlockUser: (tenantId: string, userId: string, institutionId: string) =>
     api.post<ActionResponse>(`/tenants/${tenantId}/users/${userId}/unlock`, { institutionId }),
 
+  // E1-S5: accounts in use against the tenant's user limit, and "Request upgrade" (a BILLING ticket).
+  getUserLimit: (tenantId: string) =>
+    api.get<{ limit: number | null; active: number; percent: number }>(`/tenants/${tenantId}/user-limit`),
+  requestUpgrade: (tenantId: string, note?: string) =>
+    api.post<{ ticketId?: string }>(`/tenants/${tenantId}/upgrade-requests`, { note }),
+
   // POST /api/tenants/{tenantId}/users/{userId}/mfa-reset (USER_MFA_RESET, MFA-01) - removes the
   // user's authenticator and backup codes; their next sign-in sets up a new authenticator.
   resetMfa: (tenantId: string, userId: string, institutionId: string, reason: string) =>

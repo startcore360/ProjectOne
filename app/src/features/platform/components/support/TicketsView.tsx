@@ -30,6 +30,7 @@ export function TicketsView() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -195,7 +196,9 @@ export function TicketsView() {
       t.subject.toLowerCase().includes(query.toLowerCase()) ||
       t.raisedByName.toLowerCase().includes(query.toLowerCase());
     const matchesStatus = statusFilter === "All" || t.status === statusFilter;
-    return matchesQuery && matchesStatus;
+    // E1-S5: e.g. "Billing" shows upgrade requests from tenants' Users pages.
+    const matchesCategory = categoryFilter === "All" || t.category === categoryFilter;
+    return matchesQuery && matchesStatus && matchesCategory;
   });
 
   const openTickets = tickets.filter((t) => ["NEW", "TRIAGED", "ASSIGNED", "ESCALATED"].includes(t.status)).length;
@@ -247,6 +250,17 @@ export function TicketsView() {
               <option value="ESCALATED">Escalated</option>
               <option value="RESOLVED">Resolved</option>
               <option value="CLOSED">Closed</option>
+            </select>
+          </label>
+          <label className="app-select-label">
+            Category{" "}
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="All">All</option>
+              {["LOGIN", "ACCESS", "DATA", "BILLING", "PERFORMANCE", "BUG", "OTHER"].map((category) => (
+                <option key={category} value={category}>
+                  {category.charAt(0) + category.slice(1).toLowerCase()}
+                </option>
+              ))}
             </select>
           </label>
         </div>
