@@ -12,6 +12,8 @@ export interface CreateTenantDraft {
   firstAdminEmail: string;
   firstAdminMobile: string;
   firstAdminNationalIdLast4: string;
+  retentionMonths: number;
+  backupRetentionDays: number;
 }
 
 export interface CreateTenantModalProps {
@@ -97,6 +99,27 @@ export function CreateTenantModal({
             A subscription plan must exist before a tenant can be created. Configure a plan first, then retry.
           </Notice>
         )}
+        <div className="app-form-grid">
+          <TextField
+            id="tenant-retention-months"
+            label="Data retention (months)"
+            type="number"
+            required
+            value={String(draft.retentionMonths)}
+            onChange={(e) => setDraft({ ...draft, retentionMonths: Number(e.target.value) })}
+          />
+          <TextField
+            id="tenant-backup-retention-days"
+            label="Backup retention (days)"
+            type="number"
+            required
+            value={String(draft.backupRetentionDays)}
+            onChange={(e) => setDraft({ ...draft, backupRetentionDays: Number(e.target.value) })}
+          />
+        </div>
+        <small className="app-field-hint">
+          Set at creation: data retention 1–240 months; backup retention 7–3650 days. Later changes require Data Protection Officer approval.
+        </small>
         <div className="app-form-grid">
           <label className="app-form-field">
             Database isolation
