@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SupportSessionRepository extends JpaRepository<SupportSession, UUID> {
     Optional<SupportSession> findBySupportSessionIdAndEndedAtIsNull(UUID supportSessionId);
+    Optional<SupportSession> findFirstByPlatformUserIdAndEndedAtIsNullOrderByIssuedAtDesc(UUID platformUserId);
+    java.util.List<SupportSession> findByGrantIdAndEndedAtIsNull(UUID grantId);
 }
