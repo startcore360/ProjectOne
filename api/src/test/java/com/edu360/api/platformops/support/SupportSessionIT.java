@@ -39,6 +39,11 @@ class SupportSessionIT {
     private void ensureMigrations() throws Exception {
         try (Connection conn = DriverManager.getConnection(POSTGRES_URL, POSTGRES_USER, POSTGRES_PASSWORD);
              Statement st = conn.createStatement()) {
+            try (ResultSet rs = st.executeQuery(
+                    "SELECT EXISTS (SELECT 1 FROM ref.action_catalog WHERE action_code='SUPPORT_ACCESS_USE')")) {
+                rs.next();
+                if (!rs.getBoolean(1)) st.execute(readSql("05_ref_data.sql"));
+            }
             try (ResultSet rs = st.executeQuery("SELECT to_regclass('platform.support_session') IS NOT NULL")) {
                 rs.next();
                 if (!rs.getBoolean(1)) st.execute(readSql("40_v41_support_session.sql"));
