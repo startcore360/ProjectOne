@@ -20,4 +20,8 @@ public class LoginRequest {
 
     @Pattern(regexp = "^$|^[0-9]{6}$", message = "The authenticator code is 6 digits")
     private String totp;
+
+    /** MFA-01: a one-time backup code, used instead of totp when the authenticator is lost. */
+    @Pattern(regexp = "^$|^[A-Za-z0-9\\- ]{10,14}$", message = "A backup code looks like K7QD4-9MXRT")
+    private String recoveryCode;
 }

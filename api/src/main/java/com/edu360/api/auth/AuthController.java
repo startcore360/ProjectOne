@@ -59,6 +59,11 @@ public class AuthController {
     @Operation(summary = "Sign in - which tenant or the platform is resolved from the request's hostname")
     public ResponseEntity<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request,
                                                      HttpServletRequest httpRequest) {
+        if (request.getRecoveryCode() != null && !request.getRecoveryCode().isBlank()) {
+            // MFA-01: never returns tokens - it answers MFA_ENROLMENT_REQUIRED or an error.
+            return ResponseEntity.ok(authService.loginWithRecoveryCode(httpRequest, request.getEmail(),
+                    request.getPassword(), request.getRecoveryCode(), httpRequest.getRemoteAddr()));
+        }
         AuthTokenResponse response = authService.login(httpRequest, request.getEmail(), request.getPassword(), request.getTotp(),
                 httpRequest.getRemoteAddr());
         return ResponseEntity.ok(response);
@@ -66,12 +71,30 @@ public class AuthController {
 
     @PostMapping("/mfa/enrol")
     @Operation(summary = "Finish setting up the authenticator app from the sign-in screen (after MFA_ENROLMENT_REQUIRED)")
-    public ResponseEntity<Map<String, String>> confirmMfaEnrolment(@Valid @RequestBody MfaEnrolRequest request,
+    public ResponseEntity<Map<String, Object>> confirmMfaEnrolment(@Valid @RequestBody MfaEnrolRequest request,
                                                                    HttpServletRequest httpRequest) {
-        authService.confirmMfaEnrolment(httpRequest, request.getEmail(), request.getPassword(),
-                request.getEnrolmentId(), request.getCode(), request.getDeviceName(), httpRequest.getRemoteAddr());
-        return ResponseEntity.ok(Map.of("status", "ENROLLED",
-                "message", "Authenticator added. Enter the next code from your app to sign in."));
+        java.util.List<String> recoveryCodes = authService.confirmMfaEnrolment(httpRequest, request.getEmail(),
+                request.getPassword(), request.getEnrolmentId(), request.getCode(), request.getDeviceName(),
+                httpRequest.getRemoteAddr());
+        // The backup codes are in this one answer only (MFA-01); nothing else ever returns them.
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .body(Map.of("status", "ENROLLED",
+                        "message", "Authenticator added. Save your backup codes, then enter the next code from your app to sign in.",
+                        "recoveryCodes", recoveryCodes == null ? java.util.List.of() : recoveryCodes));
+    }
+
+    @PostMapping("/mfa/recovery-codes")
+    @Operation(summary = "Get a new set of backup codes (MFA-01); the current password is required again")
+    public ResponseEntity<Map<String, Object>> issueRecoveryCodes(
+            @Valid @RequestBody com.edu360.api.auth.dto.RecoveryCodesRequest request,
+            Authentication authentication, HttpServletRequest httpRequest) {
+        if (authentication == null || !(authentication.getCredentials() instanceof Jwt jwt)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        java.util.List<String> codes = authService.issueRecoveryCodes(authentication.getPrincipal(), jwt.getSubject(),
+                request.getCurrentPassword(), httpRequest.getRemoteAddr());
+        return ResponseEntity.ok().header("Cache-Control", "no-store").body(Map.of("recoveryCodes", codes));
     }
 
     @PostMapping({"/internal/identity-events", "/v1/internal/identity-events"})

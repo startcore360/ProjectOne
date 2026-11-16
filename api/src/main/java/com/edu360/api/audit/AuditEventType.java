@@ -19,6 +19,12 @@ public enum AuditEventType {
     /** MFA-ENROL: the user set up their authenticator app in the EDU 360 sign-in screen
      *  (auth/AuthService.confirmMfaEnrolment, via the Keycloak edu360-otp extension). */
     MFA_ENROLLED,
+    /** MFA-01: an admin reset someone's two-step login (old authenticator and backup codes removed). */
+    USER_MFA_RESET,
+    /** MFA-01: a one-time backup code was used to sign in; a new authenticator is set up next. */
+    MFA_RECOVERY_CODE_USED,
+    /** MFA-01: a new set of backup codes was issued (earlier codes stop working). */
+    MFA_RECOVERY_CODES_ISSUED,
     INSTITUTION_CREATED_DRAFT,
     INSTITUTION_ID_FORMAT_UPDATED,
     INSTITUTION_ACTIVATED,

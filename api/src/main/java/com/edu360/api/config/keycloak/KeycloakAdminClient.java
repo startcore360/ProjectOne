@@ -622,6 +622,32 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * MFA-01: removes every authenticator ("otp" credential) the user holds, so the next sign-in
+     * sets up a new one through the existing in-app enrolment. The password is never touched.
+     * Returns how many authenticators were removed.
+     */
+    @SuppressWarnings("unchecked")
+    public int removeOtpCredentials(String realm, String keycloakUserId) {
+        String adminToken = fetchMasterAdminAccessToken();
+        String base = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId + "/credentials";
+        List<Map<String, Object>> body = restClient.get().uri(base)
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .body(List.class);
+        int removed = 0;
+        for (Map<String, Object> credential : body == null ? List.<Map<String, Object>>of() : body) {
+            if ("otp".equalsIgnoreCase(String.valueOf(credential.get("type"))) && credential.get("id") != null) {
+                restClient.delete().uri(base + "/" + credential.get("id"))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .retrieve()
+                        .toBodilessEntity();
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    /**
      * Sets (value non-null) or removes (value null) one user attribute, keeping every other field
      * - same GET-then-PUT reason as setMustChangePasswordAttribute.
      */
