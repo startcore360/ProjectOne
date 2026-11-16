@@ -584,7 +584,9 @@ public class TenantManagementService {
     @Transactional
     public PlanResponse createPlan(CreatePlanRequest request, PlatformPrincipal principal) {
         if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
-            if (request.priceAmount() != null && request.priceAmount().compareTo(BigDecimal.ZERO) > 0) {
+            if ((request.priceAmount() != null && request.priceAmount().compareTo(BigDecimal.ZERO) != 0)
+                    || (request.pricingType() != null && !"PER_STUDENT_YEAR".equals(request.pricingType()))
+                    || (request.currencyCode() != null && !"INR".equalsIgnoreCase(request.currencyCode()))) {
                 throw new UnauthorizedException("Rule [F-4]: only the Product Owner can configure plan pricing.");
             }
         }
