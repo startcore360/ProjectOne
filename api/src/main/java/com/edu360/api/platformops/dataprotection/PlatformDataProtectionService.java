@@ -169,7 +169,7 @@ public class PlatformDataProtectionService {
 
     private ExportRequestResponse toExportResponse(ExportRequest r) {
         return new ExportRequestResponse(r.getExportRequestId(), r.getTenantId(), r.getRequestedByKind(), r.getStatus(),
-                r.getFileRef(), r.getDownloadExpiresAt(), r.getCreatedAt());
+                r.getFileRef(), r.getDownloadExpiresAt(), r.getCreatedAt(), r.getRowVersion());
     }
 
     // ------------------------------------------------------------------ deletion (L-01)
