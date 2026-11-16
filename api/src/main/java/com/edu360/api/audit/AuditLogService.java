@@ -19,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.edu360.api.config.CorrelationContext;
 import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.config.SupportPrincipal;
 import com.edu360.api.tenant.TenantContext;
 /** Required audit writer. Tenant events commit or roll back with the business transaction. */
 @Service
@@ -43,6 +44,30 @@ public class AuditLogService {
    legacy.save(AuditLog.builder().eventType(type).userId(userId).email(email).ipAddress(ip).details(details)
     .actorRoleCode(role).scopeType(scope).institutionId(institution).correlationId(correlation).build());
   }catch(Exception ex){log.error("Audit write failed for {}",type,ex);throw new AuditFailureException("Required audit event could not be recorded; the request was not completed.",ex);}
+ }
+ public void recordSupportView(SupportPrincipal support,String requestPath){
+  try{
+   if(support==null||support.platformUserId()==null||support.tenantId()==null||support.grantId()==null||support.sessionId()==null)
+    throw new IllegalArgumentException("Support audit requires a verified support principal.");
+   if(tenant==null||!support.tenantId().equals(TenantContext.currentTenantId()))
+    throw new IllegalStateException("Support audit requires the matching tenant audit store and context.");
+   UUID event=UUID.randomUUID();Instant now=Instant.now();String correlation=bound(CorrelationContext.get());
+   Map<String,Object> values=new LinkedHashMap<>();
+   values.put("ticket_id",support.ticketId().toString());
+   values.put("support_session_id",support.sessionId().toString());
+   values.put("request_path",requestPath);
+   String newJson=json(values);
+   String hash=sha(String.join("|",support.tenantId().toString(),event.toString(),now.toString(),
+    support.platformUserId().toString(),support.grantId().toString(),"VIEW_SENSITIVE","SUPPORT_ACCESS_USE",
+    "SUPPORT_SESSION",support.sessionId().toString(),String.valueOf(newJson),correlation));
+   tenant.append(new TenantAuditEvent(support.tenantId(),event,support.institutionId(),now,
+    "SUPPORT_UNDER_GRANT",support.platformUserId(),null,support.grantId(),"VIEW_SENSITIVE",
+    "SUPPORT_ACCESS_USE","SUPPORT_SESSION",support.sessionId(),null,"P","SUCCESS",null,newJson,
+    correlation,hash));
+  }catch(Exception ex){
+   log.error("Support session audit write failed",ex);
+   throw new AuditFailureException("Required support audit event could not be recorded; the request was not completed.",ex);
+  }
  }
  public void record(AuditEntry entry){
   try{
