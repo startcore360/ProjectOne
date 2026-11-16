@@ -1372,14 +1372,47 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
 
-        String planName = getPlanName(tenant.getPlanId());
-        return TenantSettingsResponse.from(tenant, planName);
+        Plan plan = tenant.getPlanId() == null ? null : planRepository.findById(tenant.getPlanId()).orElse(null);
+        return TenantSettingsResponse.from(tenant, plan == null ? "Custom Plan" : plan.getPlanName(), plan);
     }
 
     @Transactional
     public TenantSettingsResponse updateTenantSettings(UUID tenantId, UpdateTenantSettingsRequest request, PlatformPrincipal principal) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
+        Plan plan = tenant.getPlanId() == null ? null : planRepository.findById(tenant.getPlanId()).orElse(null);
+
+        // E1-S3 (WF-06, R2-14): a limit above the plan is the Product Owner's decision only.
+        if (plan != null && principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
+            List<String> beyond = new java.util.ArrayList<>();
+            if (exceeds(request.userLimit(), plan.getUserLimit(), tenant.getUserLimit())) beyond.add("userLimit");
+            if (exceeds(request.storageLimitGb(), plan.getStorageLimitGb(), tenant.getStorageLimitGb())) beyond.add("storageLimitGb");
+            if (exceeds(request.smsLimit(), plan.getSmsLimit(), tenant.getSmsLimit())) beyond.add("smsLimit");
+            if (exceeds(request.apiLimit(), plan.getApiLimit(), tenant.getApiLimit())) beyond.add("apiLimit");
+            if (!beyond.isEmpty()) {
+                platformAuditWriter.record(principal, tenantId, "TENANT_SETTINGS_UPDATED", "UPDATE",
+                        "TENANT_SETTINGS", "TENANT", tenantId, "DENIED",
+                        Map.of("beyondPlan", Map.of("new", String.join(",", beyond))));
+                throw new ApiException(HttpStatus.FORBIDDEN, "BEYOND_PLAN_PO_ONLY",
+                        "Beyond the plan - only the Product Owner can set " + String.join(", ", beyond)
+                                + " above the tenant's plan.");
+            }
+        }
+        // A custom domain needs a plan that includes it - for everyone, the Product Owner too.
+        String requestedDomain = request.customDomain() == null ? null : request.customDomain().trim().toLowerCase();
+        if (requestedDomain != null && !requestedDomain.isEmpty()
+                && !requestedDomain.equals(tenant.getCustomDomain())
+                && (plan == null || !plan.isCustomDomainAllowed())) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "CUSTOM_DOMAIN_NOT_IN_PLAN",
+                    "This tenant's plan does not include a custom domain. Change the plan first.");
+        }
+        Map<String, Map<String, Object>> changes = new LinkedHashMap<>();
+        trackChange(changes, "userLimit", tenant.getUserLimit(), request.userLimit());
+        trackChange(changes, "storageLimitGb", tenant.getStorageLimitGb(), request.storageLimitGb());
+        trackChange(changes, "smsLimit", tenant.getSmsLimit(), request.smsLimit());
+        trackChange(changes, "apiLimit", tenant.getApiLimit(), request.apiLimit());
+        trackChange(changes, "customDomain", tenant.getCustomDomain(), requestedDomain);
+        trackChange(changes, "analyticsOptOut", tenant.isAnalyticsOptOut(), request.analyticsOptOut());
 
         if (request.timeZone() != null && !request.timeZone().isBlank()) {
             tenant.setTimeZone(request.timeZone().trim());
@@ -1410,10 +1443,25 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
         tenant.setUpdatedBy(principal.platformUserId());
         Tenant saved = tenantRepository.save(tenant);
 
-        platformAuditWriter.record(principal, tenantId, "TENANT_SETTINGS_UPDATED", "TENANT_SETTINGS", "TENANT", tenantId);
+        platformAuditWriter.record(principal, tenantId, "TENANT_SETTINGS_UPDATED", "UPDATE", "TENANT_SETTINGS",
+                "TENANT", tenantId, PlatformAuditWriter.SUCCESS, changes);
 
-        String planName = getPlanName(saved.getPlanId());
-        return TenantSettingsResponse.from(saved, planName);
+        return TenantSettingsResponse.from(saved, plan == null ? "Custom Plan" : plan.getPlanName(), plan);
+    }
+
+    /** True when a new value is above the plan and actually raises the tenant's current value. */
+    private static boolean exceeds(Integer requested, Integer planLimit, Integer current) {
+        return requested != null && planLimit != null && requested > planLimit
+                && (current == null || requested > current || current <= planLimit);
+    }
+
+    private static void trackChange(Map<String, Map<String, Object>> changes, String field, Object oldValue, Object newValue) {
+        if (newValue != null && !java.util.Objects.equals(oldValue, newValue)) {
+            Map<String, Object> change = new java.util.HashMap<>();
+            change.put("old", oldValue);
+            change.put("new", newValue);
+            changes.put(field, change);
+        }
     }
 
     private String getPlanName(UUID planId) {

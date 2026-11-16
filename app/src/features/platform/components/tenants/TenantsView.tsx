@@ -74,7 +74,7 @@ import { CreateTenantModal, type CreateTenantDraft } from "./CreateTenantModal";
 import { TenantCredentialsNotice, type CreatedTenantCredentials } from "./TenantCredentialsNotice";
 import { ActivateTenantModal } from "./ActivateTenantModal";
 import { SuspendTenantModal, ArchiveTenantModal } from "./TenantLifecycleModals";
-import { TenantSettingsModal, type TenantSettingsDraft } from "./TenantSettingsModal";
+import { TenantSettingsModal, type TenantPlanLimits, type TenantSettingsDraft } from "./TenantSettingsModal";
 import { TenantDataProtectionModal } from "./TenantDataProtectionModal";
 import { TenantUsageModal } from "./TenantUsageModal";
 import { TenantSetupModal } from "./TenantSetupModal";
@@ -88,6 +88,9 @@ export function TenantsView() {
   const canManageLifecycle = can("TENANT_SUSPEND_ARCHIVE");
   const canEditSettings = can("TENANT_SETTINGS");
   const canCreate = can("TENANT_CREATE");
+  // E1-S3: going above the plan's limits is the Product Owner's decision only.
+  const { role: platformRole } = usePlatformAccess();
+  const [settingsPlan, setSettingsPlan] = useState<TenantPlanLimits | null>(null);
   // E1-S2: the tenant whose setup steps are open.
   const [setupTarget, setSetupTarget] = useState<Tenant | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -443,6 +446,14 @@ export function TenantsView() {
           userLimit: res.data.userLimit || 1000,
           storageLimitGb: res.data.storageLimitGb || 50,
         });
+        setSettingsPlan({
+          userLimit: res.data.planUserLimit ?? null,
+          storageLimitGb: res.data.planStorageLimitGb ?? null,
+          customDomainAllowed: Boolean(res.data.customDomainAllowed),
+          currentUserLimit: res.data.userLimit ?? null,
+          currentStorageLimitGb: res.data.storageLimitGb ?? null,
+          currentCustomDomain: res.data.customDomain ?? "",
+        });
       }
     } catch {
       setSettingsError("Could not load current settings.");
@@ -706,6 +717,8 @@ export function TenantsView() {
         loadingSettings={loadingSettings}
         savingSettings={savingSettings}
         settingsError={settingsError}
+        plan={settingsPlan}
+        isProductOwner={platformRole === "PRODUCT_OWNER"}
       />
 
       <TenantDataProtectionModal

@@ -134,6 +134,13 @@ export type TenantSettings = {
   storageLimitGb?: number;
   smsLimit?: number;
   apiLimit?: number;
+  // E1-S3: the plan's own limits, shown beside each field.
+  planUserLimit?: number | null;
+  planStorageLimitGb?: number | null;
+  planSmsLimit?: number | null;
+  planApiLimit?: number | null;
+  customDomainAllowed?: boolean;
+  brandingColorsAllowed?: boolean;
 };
 
 export type UpdateTenantSettingsPayload = {
