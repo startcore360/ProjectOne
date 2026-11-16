@@ -20,6 +20,8 @@ run edu360_v4_test 30_v41_exam_day_event_type.sql > /dev/null
 run edu360_v4_test 32_v41_staff_login_aliases.sql > /dev/null
 run edu360_v4_test 40_v41_support_session.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/40t_tests_support_session.sql" > /dev/null  # E4 support-session storage and OD-15 categories
+run edu360_v4_test 41_v41_support_readable.sql > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/41t_tests_support_readable.sql" > /dev/null  # OpenAPI x-support-readable allow-list
 run edu360_v4_test 36_v41_plan_commercial.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/36t_tests_plan_commercial.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/07_tests_extra.sql" > /dev/null      # new connection: settings never set (DB-55..59)
@@ -49,6 +51,8 @@ run edu360_v4_ref 32_v41_staff_login_aliases.sql > /dev/null
 run edu360_v4_ref 33_v41_study_material_leadership_grants.sql > /dev/null
 run edu360_v4_ref 40_v41_support_session.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/40t_tests_support_session.sql" > /dev/null
+run edu360_v4_ref 41_v41_support_readable.sql > /dev/null
+$PSQL -q -d edu360_v4_ref -f "$D/41t_tests_support_readable.sql" > /dev/null
 run edu360_v4_ref 36_v41_plan_commercial.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/36t_tests_plan_commercial.sql" > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/33t_tests_study_material_leadership_grants.sql" > /dev/null
