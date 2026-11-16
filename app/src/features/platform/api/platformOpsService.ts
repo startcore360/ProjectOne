@@ -134,7 +134,7 @@ export type SupportTicketItem = {
   description: string;
   priority: string;
   category: string;
-  status: "NEW" | "ASSIGNED" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  status: "NEW" | "TRIAGED" | "ASSIGNED" | "ESCALATED" | "RESOLVED" | "CLOSED";
   assignedTo?: string;
   resolutionNote?: string;
   createdAt: string;
@@ -280,7 +280,7 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async updateSupportTicket(ticketId: string, payload: { status?: string; assignedTo?: string; resolutionNote?: string }): Promise<SupportTicketItem> {
+  async updateSupportTicket(ticketId: string, payload: { status?: string; assignedTo?: string; resolutionNote?: string; priority?: string; category?: string }): Promise<SupportTicketItem> {
     const res = await api.patch<SupportTicketItem>(`/platform/support-tickets/${ticketId}`, payload);
     return res.data;
   },
