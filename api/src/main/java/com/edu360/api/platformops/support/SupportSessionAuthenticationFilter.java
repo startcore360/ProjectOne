@@ -154,7 +154,7 @@ public class SupportSessionAuthenticationFilter extends OncePerRequestFilter {
                     "LIST", Set.of(claims.institutionId()), null, null, null, false);
         }
         SupportPrincipal principal = new SupportPrincipal(claims.platformUserId(), claims.tenantId(),
-                claims.ticketId(), claims.grantId(), claims.sessionId(), claims.institutionId());
+                claims.ticketId(), claims.grantId(), claims.sessionId(), claims.institutionId(), null);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, token, List.of()));
 
