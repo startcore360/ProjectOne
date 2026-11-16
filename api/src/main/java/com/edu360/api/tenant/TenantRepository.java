@@ -14,6 +14,9 @@ public interface TenantRepository extends JpaRepository<Tenant, java.util.UUID> 
      *  and, in production, by real subdomain-based routing before login even starts. */
     Optional<Tenant> findBySubdomain(String subdomain);
 
+    /** Exact custom-domain match used by the request Host binding check. */
+    Optional<Tenant> findByCustomDomainIgnoreCase(String customDomain);
+
     long countByState(TenantState state);
 
     long countByAnalyticsOptOut(boolean analyticsOptOut);
