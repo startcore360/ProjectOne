@@ -389,7 +389,7 @@ export function InvoicesView() {
                 <td>
                   <RowMenu>
                     <MenuAction onClick={() => void openInvoiceLines(inv)}>View lines</MenuAction>
-                    {inv.status === "DRAFT" && isProductOwner && (
+                    {inv.status === "DRAFT" && isProductOwner && canManageInvoice && (
                       <MenuAction onClick={() => handleApprove(inv)}>Approve</MenuAction>
                     )}
                     {inv.status === "APPROVED" && canManageInvoice && (

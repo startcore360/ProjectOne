@@ -216,6 +216,20 @@ class PlatformBillingControllerTest {
         verify(idempotencyService).release(any(), any());
     }
 
+
+    @Test
+    void ACT_INVOICE_APPROVAL_GUARD_onlyDraftInvoicesCanBeApproved() {
+        UUID invoiceId = UUID.randomUUID();
+        when(idempotencyService.claim(any(), any(), any(), any())).thenReturn(
+                new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(
+                Invoice.builder().invoiceId(invoiceId).status("SENT").build()));
+        assertThatThrownBy(() -> controller.approveInvoice(invoiceId, "approve-key-003", authFor(PlatformRole.PRODUCT_OWNER)))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVOICE_NOT_DRAFT");
+        verify(idempotencyService).release(any(), any());
+    }
+
     @Test
     void ACT_INVOICE_SEND_GUARD_requiresProductOwnerApproval() {
         UUID invoiceId = UUID.randomUUID();

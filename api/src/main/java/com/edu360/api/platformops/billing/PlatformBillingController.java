@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
@@ -112,6 +113,7 @@ public class PlatformBillingController {
     }
 
     @PostMapping("/{id}/approval")
+    @Transactional(transactionManager = "platformTransactionManager")
     public ResponseEntity<InvoiceResponse> approveInvoice(
             @PathVariable UUID id, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
