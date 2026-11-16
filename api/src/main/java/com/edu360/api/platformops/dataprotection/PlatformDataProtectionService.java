@@ -20,6 +20,7 @@ import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRe
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.RetentionChangeRequestResponse;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.RetentionPolicyResponse;
 import com.edu360.api.platformops.PlatformNotificationService;
+import com.edu360.api.platformops.PlatformConcurrency;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantRepository;
@@ -54,6 +55,7 @@ public class PlatformDataProtectionService {
     private final TenantRepository tenantRepository;
     private final PlatformAuditWriter auditWriter;
     private final PlatformNotificationService notificationService;
+    private final PlatformConcurrency platformConcurrency;
     private final TenantIssuerAuthenticationManagerResolver tenantIssuerResolver;
 
     /**
@@ -81,6 +83,13 @@ public class PlatformDataProtectionService {
         auditWriter.record(principal, tenantId, "TENANT_EXPORT_REQUESTED", "TENANT_EXPORT_REQUEST", "EXPORT_REQUEST",
                 saved.getExportRequestId());
         return toExportResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public ExportRequestResponse getExportRequest(UUID exportRequestId) {
+        ExportRequest request = exportRequestRepository.findById(exportRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Export request not found: " + exportRequestId));
+        return toExportResponse(request);
     }
 
     @Transactional(readOnly = true)
@@ -113,9 +122,10 @@ public class PlatformDataProtectionService {
      */
     @Transactional
     public ExportRequestResponse decideExportRequest(UUID exportRequestId, String decision, String remark,
-            PlatformPrincipal principal) {
+            String ifMatch, PlatformPrincipal principal) {
         ExportRequest request = exportRequestRepository.findById(exportRequestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Export request not found: " + exportRequestId));
+        platformConcurrency.requireIfMatch(ifMatch, request.getRowVersion() == null ? 0 : request.getRowVersion());
         if (!"REQUESTED".equals(request.getStatus())) {
             throw new BusinessRuleViolationException("ALREADY_ACTIONED",
                     "This export request was already decided (" + request.getStatus() + ").");

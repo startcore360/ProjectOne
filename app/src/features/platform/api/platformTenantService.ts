@@ -144,6 +144,7 @@ export type ExportRequestDto = {
   fileRef?: string;
   downloadExpiresAt?: string;
   createdAt: string;
+  rowVersion: number;
 };
 
 export type DeletionRequestDto = {

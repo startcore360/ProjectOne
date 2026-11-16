@@ -35,6 +35,7 @@ import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platformops.PlatformAccessLookup;
 import com.edu360.api.platformops.PlatformPermissionService;
+import com.edu360.api.platformops.PlatformConcurrency;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.CreateDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.DecideDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.DeletionRequestResponse;
@@ -59,6 +60,7 @@ class PlatformDeletionRequestControllerTest {
     private PlatformDataProtectionController dataProtectionController;
     private PlatformIdempotencyService idempotencyService;
     private ObjectMapper objectMapper;
+    private PlatformConcurrency platformConcurrency;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID PO_USER_ID = UUID.randomUUID();
@@ -76,6 +78,7 @@ class PlatformDeletionRequestControllerTest {
         notificationService = mock(com.edu360.api.platformops.PlatformNotificationService.class);
         idempotencyService = mock(PlatformIdempotencyService.class);
         objectMapper = new ObjectMapper();
+        platformConcurrency = new PlatformConcurrency();
         auditLogService = mock(AuditLogService.class);
 
         PlatformPermissionService permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(PlatformAccessLookup.standardRolesOnly());
@@ -89,11 +92,12 @@ class PlatformDeletionRequestControllerTest {
                 tenantRepo,
                 platformAuditWriter,
                 tenantIssuerResolver,
-                notificationService
+                notificationService,
+                platformConcurrency
         );
 
         controller = new PlatformDeletionRequestController(dataProtectionService, permissionService);
-        dataProtectionController = new PlatformDataProtectionController(dataProtectionService, permissionService, idempotencyService, objectMapper);
+        dataProtectionController = new PlatformDataProtectionController(dataProtectionService, permissionService, idempotencyService, objectMapper, platformConcurrency);
     }
 
     private Authentication authFor(UUID userId, PlatformRole role) {
@@ -261,7 +265,7 @@ class PlatformDeletionRequestControllerTest {
         when(exportRequestRepo.save(any(ExportRequest.class))).thenAnswer(inv -> inv.getArgument(0));
 
         var response = dataProtectionController.decideExportRequest(
-                exportId, new DecideDeletionRequestDto("APPROVED", null),
+                exportId, new DecideDeletionRequestDto("APPROVED", null), "\"1\"",
                 authFor(DPO_USER_ID, PlatformRole.DATA_PROTECTION_OFFICER));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -327,7 +331,7 @@ class PlatformDeletionRequestControllerTest {
     @DisplayName("D5: completed tenant export request replays without creating a second request")
     void exportRequestReplaysStoredResponse() {
         var stored = new com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse(
-                UUID.randomUUID(), TENANT_ID, "PRODUCT_OWNER", "REQUESTED", null, null, Instant.now());
+                UUID.randomUUID(), TENANT_ID, "PRODUCT_OWNER", "REQUESTED", null, null, Instant.now(), 1);
         UUID claimId = UUID.randomUUID();
         when(idempotencyService.claim(eq(PO_USER_ID), eq("requestTenantExportPlatform"),
                 eq("export-key-123"), any())).thenReturn(new PlatformIdempotencyService.Claim(
@@ -339,6 +343,28 @@ class PlatformDeletionRequestControllerTest {
         assertThat(response.getBody()).isEqualTo(stored);
         verifyNoInteractions(exportRequestRepo);
         verify(idempotencyService, never()).complete(any(), any(), anyInt(), any());
+    }
+
+
+    @Test
+    @DisplayName("D5: export decisions reject a stale If-Match version")
+    void exportDecisionRejectsStaleIfMatch() {
+        UUID exportId = UUID.randomUUID();
+        ExportRequest request = ExportRequest.builder()
+                .exportRequestId(exportId).tenantId(TENANT_ID).requestedByUserId(PO_USER_ID)
+                .requestedByKind("PRODUCT_OWNER").status("REQUESTED").rowVersion(3)
+                .createdAt(Instant.now()).createdBy(PO_USER_ID).updatedAt(Instant.now()).updatedBy(PO_USER_ID).build();
+        when(exportRequestRepo.findById(exportId)).thenReturn(Optional.of(request));
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> dataProtectionController.decideExportRequest(exportId,
+                        new DecideDeletionRequestDto("APPROVED", null), "\"2\"",
+                        authFor(DPO_USER_ID, PlatformRole.DATA_PROTECTION_OFFICER)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(error.getErrorCode()).isEqualTo("VERSION_CONFLICT");
+        verify(exportRequestRepo, never()).save(any(ExportRequest.class));
     }
 
 

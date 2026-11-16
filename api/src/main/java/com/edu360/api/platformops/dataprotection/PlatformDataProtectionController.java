@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
+import com.edu360.api.platformops.PlatformConcurrency;
 import com.edu360.api.idempotency.PlatformIdempotencyService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.CreateRetentionChangeRequest;
@@ -43,6 +44,7 @@ public class PlatformDataProtectionController {
     private final PlatformPermissionService permissionService;
     private final PlatformIdempotencyService idempotencyService;
     private final ObjectMapper objectMapper;
+    private final PlatformConcurrency platformConcurrency;
 
     @PostMapping("/tenants/{tenantId}/export")
     public ResponseEntity<ExportRequestResponse> exportTenant(
@@ -87,15 +89,26 @@ public class PlatformDataProtectionController {
         return ResponseEntity.ok(dataProtectionService.listAllExports(status, tenantId));
     }
 
+    @GetMapping("/export-requests/{id}")
+    public ResponseEntity<ExportRequestResponse> getExportRequest(@PathVariable UUID id, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
+        ExportRequestResponse response = dataProtectionService.getExportRequest(id);
+        return ResponseEntity.ok()
+                .eTag(platformConcurrency.etag(response.rowVersion()))
+                .body(response);
+    }
+
     /** Approval only changes request status and notifies the requester; A5 owns export execution. */
     @PostMapping("/export-requests/{id}/decision")
     public ResponseEntity<ExportRequestResponse> decideExportRequest(
             @PathVariable UUID id,
             @Valid @RequestBody DecideDeletionRequestDto request,
+            @RequestHeader("If-Match") String ifMatch,
             Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
-        return ResponseEntity.ok(dataProtectionService.decideExportRequest(id, request.decision(), request.remark(), principal));
+        return ResponseEntity.ok(dataProtectionService.decideExportRequest(id, request.decision(), request.remark(), ifMatch, principal));
     }
 
     @GetMapping("/tenants/{tenantId}/retention")

@@ -19,7 +19,8 @@ public final class DataProtectionDtos {
             String status,
             UUID fileRef,
             Instant downloadExpiresAt,
-            Instant createdAt
+            Instant createdAt,
+            Integer rowVersion
     ) {}
 
     public record DeletionRequestResponse(
