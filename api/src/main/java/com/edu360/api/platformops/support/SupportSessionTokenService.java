@@ -78,8 +78,7 @@ public class SupportSessionTokenService {
             if (!ISSUER.equals(c.getIssuer())
                     || !"support".equals(c.getStringClaim("typ"))
                     || !"READ".equals(c.getStringClaim("scope"))
-                    || c.getExpirationTime() == null
-                    || !c.getExpirationTime().toInstant().isAfter(Instant.now())) {
+                    || c.getExpirationTime() == null) {
                 return Optional.empty();
             }
             return Optional.of(new Claims(
