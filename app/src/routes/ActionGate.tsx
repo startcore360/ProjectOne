@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import EmptyState from "../design-system/components/EmptyState";
 import Spinner from "../design-system/components/Spinner";
 import { useTenantAccess } from "../features/profile/hooks/useTenantAccess";
+import { useSupportSession } from "../features/support/useSupportSession";
 
 type ActionGateProps = {
   anyOf: readonly string[];
@@ -10,6 +11,8 @@ type ActionGateProps = {
 
 export default function ActionGate({ anyOf, children }: ActionGateProps) {
   const { canAny, loading } = useTenantAccess();
+  const { isSupportSession } = useSupportSession();
+  if (isSupportSession) return <>{children}</>;
   if (loading) return <Spinner label="Checking access…" />;
   if (!canAny(anyOf)) {
     return (
