@@ -45,6 +45,8 @@ import com.edu360.api.platformops.billing.Invoice;
 import com.edu360.api.platformops.billing.InvoiceRepository;
 import com.edu360.api.platformops.billing.PlatformBillingController;
 import com.edu360.api.platformops.billing.PlatformBillingService;
+import com.edu360.api.idempotency.PlatformIdempotencyService;
+import tools.jackson.databind.json.JsonMapper;
 import com.edu360.api.platformops.billing.dto.ApplyDiscountRequest;
 import com.edu360.api.platformops.billing.dto.CreateInvoiceRequest;
 import com.edu360.api.platformops.billing.dto.InvoiceResponse;
@@ -128,6 +130,7 @@ class PlatformActionTest {
     private InvoiceRepository invoiceRepository;
     private PlatformBillingService billingService;
     private PlatformBillingController billingController;
+    private PlatformIdempotencyService billingIdempotencyService;
 
     private SupportTicketRepository ticketRepository;
     private SupportAccessGrantRepository grantRepository;
@@ -186,7 +189,11 @@ class PlatformActionTest {
         );
 
         billingService = new PlatformBillingService(invoiceRepository, platformAuditWriter);
-        billingController = new PlatformBillingController(billingService, permissionService);
+        billingIdempotencyService = mock(PlatformIdempotencyService.class);
+        when(billingIdempotencyService.claim(any(), any(), any(), any())).thenReturn(
+                new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        billingController = new PlatformBillingController(billingService, permissionService, billingIdempotencyService,
+                JsonMapper.builder().findAndAddModules().build());
 
         ticketRepository = mock(SupportTicketRepository.class);
         grantRepository = mock(SupportAccessGrantRepository.class);
@@ -612,8 +619,8 @@ class PlatformActionTest {
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("2000.00"), "Founder school discount");
-        ResponseEntity<InvoiceResponse> res = billingController.applyDiscount(invoiceId, req, auth(PlatformRole.PRODUCT_OWNER));
+        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("20.00"), "Founder school discount");
+        ResponseEntity<InvoiceResponse> res = billingController.applyDiscount(invoiceId, req, "action-discount-allow", auth(PlatformRole.PRODUCT_OWNER));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody().discountAmount()).isEqualTo(new BigDecimal("2000.00"));
@@ -623,7 +630,7 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-DENY: Billing Manager cannot give discounts under Rule F-4")
     void actDiscountApply_deny() {
         ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("500.00"), "Rebate");
-        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, auth(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, "action-discount-deny", auth(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
@@ -631,7 +638,7 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-SCOPE: Tenant principal rejected")
     void actDiscountApply_scope() {
         ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("500.00"), "Rebate");
-        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, tenantAuth(tenantId)))
+        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, "action-discount-scope", tenantAuth(tenantId)))
                 .isInstanceOfAny(UnauthorizedException.class, ClassCastException.class);
     }
 
@@ -642,10 +649,10 @@ class PlatformActionTest {
                 .subtotalAmount(new BigDecimal("5000.00")).discountAmount(BigDecimal.ZERO).build();
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
 
-        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("6000.00"), "Over 100%");
-        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, auth(PlatformRole.PRODUCT_OWNER)))
+        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("101.00"), "Over 100%");
+        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, "action-discount-guard", auth(PlatformRole.PRODUCT_OWNER)))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("Rule ck_invoice_r2");
+                .hasMessageContaining("between 0.01 and 100");
     }
 
     // =========================================================================
