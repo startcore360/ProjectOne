@@ -186,7 +186,7 @@ class PlatformActionTest {
         ticketRepository = mock(SupportTicketRepository.class);
         grantRepository = mock(SupportAccessGrantRepository.class);
         supportService = new PlatformSupportService(ticketRepository, grantRepository, platformAuditWriter, auditLogService);
-        supportController = new PlatformSupportController(supportService, permissionService);
+        supportController = new PlatformSupportController(supportService, mock(com.edu360.api.platformops.support.SupportSessionService.class), permissionService);
         permissionEvaluatorService = mock(PermissionEvaluatorService.class);
         tenantSupportController = new TenantSupportController(supportService, permissionEvaluatorService);
 
