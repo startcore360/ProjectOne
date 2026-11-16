@@ -133,7 +133,7 @@ export function TicketsView() {
         ticket_number: ticketNumber,
         platform_origin: window.location.origin,
       });
-      opened.location.replace(`${tenantOrigin}/#${fragment.toString()}`);
+      opened.location.replace(`${tenantOrigin}/support#${fragment.toString()}`);
       setMessage(`Opened a read-only session for ticket ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`);
     } catch (err: unknown) {
       opened.close();
