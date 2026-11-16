@@ -1,6 +1,5 @@
 package com.edu360.api.identity;
 
-import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -44,8 +43,6 @@ import lombok.RequiredArgsConstructor;
 public class TopUserService {
 
     private static final Logger log = LoggerFactory.getLogger(TopUserService.class);
-    private static final SecureRandom RANDOM = new SecureRandom();
-    private static final String CHAR_POOL = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
     private static final Set<String> ALLOWED_TOP_ROLES = Set.of(
             "MANAGEMENT",
@@ -207,10 +204,6 @@ public class TopUserService {
     }
 
     private String generateTemporaryPassword() {
-        StringBuilder sb = new StringBuilder(12);
-        for (int i = 0; i < 12; i++) {
-            sb.append(CHAR_POOL.charAt(RANDOM.nextInt(CHAR_POOL.length())));
-        }
-        return sb.toString();
+        return com.edu360.api.auth.TemporaryPasswordGenerator.generate();
     }
 }

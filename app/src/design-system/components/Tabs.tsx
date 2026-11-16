@@ -1,4 +1,4 @@
-export interface TabItem {
+﻿export interface TabItem {
   id: string;
   label: string;
   count?: number;
@@ -28,7 +28,7 @@ export function Tabs({
     <div
       role={isTabList ? "tablist" : "group"}
       aria-label={ariaLabel}
-      className={`platform-tabs ${className}`.trim()}
+      className={`app-tabs ${className}`.trim()}
       style={{
         display: "flex",
         gap: "4px",

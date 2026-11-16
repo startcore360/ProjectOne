@@ -295,10 +295,8 @@ public class StaffDirectoryService {
         if (!java.util.Set.of("SUBJECT_ALLOCATE", "HOD_ASSIGN", "MENTOR_ASSIGN", "CLASS_TEACHER_ASSIGN").contains(action)) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED", "Unsupported teacher lookup purpose.");
         }
-        boolean departmentScope = "MENTOR_ASSIGN".equals(action);
-        RbacScope scope = activeScope(departmentScope ? ScopeType.DEPARTMENT : ScopeType.INSTITUTION,
-                institutionId, departmentScope ? departmentId : null);
-        permissions.authorize(actor, action, scope, RbacTarget.NONE);
+        permissions.authorize(actor, action, teacherLookupScope(actor, action, institutionId, departmentId),
+                RbacTarget.NONE);
         record TeacherRole(UUID userId, String designation, UUID departmentId) {}
         List<TeacherRole> existingTeacherRoles = jdbc.query("""
                 SELECT ura.user_account_id, rd.role_name, ura.department_id
@@ -599,6 +597,18 @@ public class StaffDirectoryService {
                 : departmentId == null ? RbacScope.institution(institutionId)
                 : RbacScope.department(institutionId, departmentId);
         permissions.authorize(actor, action, scope, RbacTarget.NONE);
+    }
+
+    /**
+     * Scope matching is exact, so an institution-wide holder (College Admin, Principal) must be checked at
+     * institution scope and a department holder (HOD) at its department. Institution scope is tried first.
+     */
+    private RbacScope teacherLookupScope(RbacPrincipal actor, String action, UUID institutionId, UUID departmentId) {
+        RbacScope institutionScope = RbacScope.institution(institutionId);
+        if (departmentId == null || permissions.can(actor, action, institutionScope, RbacTarget.NONE).allowed()) {
+            return institutionScope;
+        }
+        return RbacScope.department(institutionId, departmentId);
     }
 
     private static RbacScope activeScope(ScopeType type, UUID institutionId, UUID departmentId) {

@@ -18,7 +18,7 @@ export function ErrorState({
     <section role="alert" className={cn("eds-error-state", className)}>
       <h3 className="eds-error-state__title">{title}</h3>
       <p className="eds-error-state__message">{message}</p>
-      {action ? <div className="mt-3">{action}</div> : null}
+      {action ? <div style={{ marginTop: "var(--space-3)" }}>{action}</div> : null}
     </section>
   );
 }

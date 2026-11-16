@@ -19,7 +19,13 @@ import com.edu360.api.audit.AuditFailureException;
 import org.springframework.dao.DataAccessException;
 
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -214,6 +220,34 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Input validation constraint violated.", request);
     }
 
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        log.warn("Missing request parameter: {}", ex.getParameterName());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Required parameter '" + ex.getParameterName() + "' is missing.", request);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingHeader(MissingRequestHeaderException ex, HttpServletRequest request) {
+        log.warn("Missing request header: {}", ex.getHeaderName());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Required header '" + ex.getHeaderName() + "' is missing.", request);
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    public ResponseEntity<Map<String, Object>> handleMultipartException(Exception ex, HttpServletRequest request) {
+        log.warn("Multipart request error: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "A valid multipart file must be provided.", request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(FeatureNotAvailableException.class)
     public ResponseEntity<Map<String, Object>> handleNotAvailable(FeatureNotAvailableException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_IMPLEMENTED, ex.getCode(), ex.getMessage(), request);
@@ -230,6 +264,7 @@ public class GlobalExceptionHandler {
         body.put("error", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("message", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("correlationId", correlationId);
+        body.put("detail", ex.getClass().getName() + ": " + ex.getMessage());
         if (request != null) {
             body.put("path", request.getRequestURI());
         }

@@ -24,6 +24,7 @@ import {
   Toast,
   toast,
 } from "../../../design-system/components";
+import { ErrorState } from "../../../components/feedback/ErrorState";
 import {
   AddAcademicSessionModal,
   AddMasterEventModal,
@@ -110,13 +111,10 @@ function IdField({
 /** Shows the no-tenant-identity denial state shared by every screen in this file. */
 function NoTenantNotice() {
   return (
-    <div className="eds-error-state" role="alert">
-      <h3 className="eds-error-state__title">Permission denied</h3>
-      <p className="eds-error-state__message">
-        This action is tenant-scoped and requires a signed-in institution identity. Your current
-        session has no tenant to act within.
-      </p>
-    </div>
+    <ErrorState
+      title="Permission denied"
+      message="This action is tenant-scoped and requires a signed-in institution identity. Your current session has no tenant to act within."
+    />
   );
 }
 
@@ -124,25 +122,15 @@ function ResultBanner({ status, message }: { status: Status; message: string }) 
   if (status === "idle" || status === "busy" || !message) return null;
   if (status === "success") {
     return (
-      <div className="platform-inline-notice" role="status">
+      <div className="app-inline-notice" role="status">
         {message}
       </div>
     );
   }
   if (status === "denied") {
-    return (
-      <div className="eds-error-state" role="alert">
-        <h3 className="eds-error-state__title">Permission denied</h3>
-        <p className="eds-error-state__message">{message}</p>
-      </div>
-    );
+    return <ErrorState title="Permission denied" message={message} />;
   }
-  return (
-    <div className="eds-error-state" role="alert">
-      <h3 className="eds-error-state__title">Could not complete this action</h3>
-      <p className="eds-error-state__message">{message}</p>
-    </div>
-  );
+  return <ErrorState title="Could not complete this action" message={message} />;
 }
 
 /** Centralises the submit → request → status/message plumbing shared by all six actions. */
@@ -222,7 +210,7 @@ export function HodAssignmentPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader title="Assign Head of Department" description="Choose a department and an active faculty member in the current institution." />
       {!tenantId || !institutionId ? <NoTenantNotice /> : (
         <Panel title="Department HOD" description="The picker is scoped to the active institution and validates faculty assignments on the server.">
@@ -283,7 +271,7 @@ export function MentorAssignmentPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader title="Assign mentor" description="Assign an active faculty member as mentor for a college section in the current department." />
       {!tenantId || !institutionId || !departmentId ? <NoTenantNotice /> : (
         <Panel title="Section mentor" description="Sections and faculty are limited to the active department.">
@@ -342,9 +330,9 @@ export function ClassTeacherAssignmentPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader title="Assign Class Teacher" description="Assign a class teacher to a school section." />
-      <div className="platform-policy-callout">
+      <div className="app-callout">
         <span aria-hidden="true">ⓘ</span>
         <div><strong>This assigns a section, not a class</strong><p>The backend currently builds CLASS_TEACHER_ASSIGN against sections, not classes — an open product decision (OD-24). This screen matches the stored unit.</p></div>
       </div>
@@ -382,7 +370,7 @@ export function StudentLoginSwitchPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Student login switch"
         description="Enable or disable view-only student access for a school class."
@@ -393,7 +381,7 @@ export function StudentLoginSwitchPage() {
         <Panel title="Class student-login" description="There is no class picker yet; paste the class ID.">
           <form onSubmit={submit} noValidate>
             <IdField id="class-id" label="Class ID" value={classId} onChange={setClassId} />
-            <label className="platform-form-field" style={{ marginTop: "var(--space-3)" }}>
+            <label className="app-form-field" style={{ marginTop: "var(--space-3)" }}>
               <input
                 type="checkbox"
                 checked={enabled}
@@ -545,7 +533,7 @@ export function CalendarEventsPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Local calendar events"
         description="Manage academic sessions, university holidays, and institution-specific calendar events."
@@ -567,13 +555,13 @@ export function CalendarEventsPage() {
                 + New Academic Session
               </Button>
             </div>
-            {sessionsError && <div className="platform-inline-error">{sessionsError}</div>}
+            {sessionsError && <div className="app-inline-error">{sessionsError}</div>}
             {sessions !== null && sessions.length === 0 && (
-              <p className="platform-sample-note">No academic sessions found.</p>
+              <p className="app-sample-note">No academic sessions found.</p>
             )}
             {sessions !== null && sessions.length > 0 && (
-              <div className="platform-table-wrap">
-                <table className="platform-table">
+              <div className="app-table-wrap">
+                <table className="app-table">
                   <thead>
                     <tr>
                       <th>Session Label</th>
@@ -612,13 +600,13 @@ export function CalendarEventsPage() {
                 + Add Master Event
               </Button>
             </div>
-            {masterEventsError && <div className="platform-inline-error">{masterEventsError}</div>}
+            {masterEventsError && <div className="app-inline-error">{masterEventsError}</div>}
             {masterEvents !== null && masterEvents.length === 0 && (
-              <p className="platform-sample-note">No master calendar events found.</p>
+              <p className="app-sample-note">No master calendar events found.</p>
             )}
             {masterEvents !== null && masterEvents.length > 0 && (
-              <div className="platform-table-wrap">
-                <table className="platform-table">
+              <div className="app-table-wrap">
+                <table className="app-table">
                   <thead>
                     <tr>
                       <th>Title</th>
@@ -679,8 +667,8 @@ export function CalendarEventsPage() {
                 icon="calendar"
               />
             ) : (
-              <div className="platform-table-wrap">
-                <table className="platform-table">
+              <div className="app-table-wrap">
+                <table className="app-table">
                   <thead>
                     <tr>
                       <th>Title</th>
@@ -737,7 +725,7 @@ export function CalendarEventsPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Founder's Day"
               />
-              <div className="platform-form-grid">
+              <div className="app-form-grid">
                 <DateField
                   id="cal-start-date"
                   label="Start date"
@@ -931,7 +919,7 @@ export function WeeklyOffRulesPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Weekly-off rules"
         description="Set the institution’s weekly day off, including alternate-week patterns."
@@ -966,12 +954,12 @@ export function WeeklyOffRulesPage() {
             </div>
             {listStatus === "error" || listStatus === "denied" ? (
               <Notice tone="danger">
-                <div className="platform-feedback-row">
+                <div className="app-feedback-row">
                   <span>{listMessage || "Weekly-off rules could not be loaded."}</span>
                   <Button variant="secondary" size="sm" onClick={() => void loadRules()}>Retry</Button>
                 </div>
               </Notice>
-            ) : listStatus === "busy" ? <p className="platform-empty-note" role="status">Loading weekly-off rules…</p> : null}
+            ) : listStatus === "busy" ? <p className="app-empty-note" role="status">Loading weekly-off rules…</p> : null}
           </Panel>
 
           <Panel title="Current weekly-off rules">
@@ -995,8 +983,8 @@ export function WeeklyOffRulesPage() {
                 icon="clock"
               />
             ) : (
-              <div className="platform-table-wrap">
-                <table className="platform-table">
+              <div className="app-table-wrap">
+                <table className="app-table">
                   <thead>
                     <tr>
                       <th>Day</th>
@@ -1026,7 +1014,7 @@ export function WeeklyOffRulesPage() {
 
           <Panel title="Add a weekly-off rule">
             <form onSubmit={submit} noValidate>
-              <label className="platform-form-field">
+              <label className="app-form-field">
                 Day of week
                 <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}>
                   {DAY_OPTIONS.map((d) => (
@@ -1036,7 +1024,7 @@ export function WeeklyOffRulesPage() {
                   ))}
                 </select>
               </label>
-              <label className="platform-form-field">
+              <label className="app-form-field">
                 Occurrence
                 <select value={occurrence} onChange={(e) => setOccurrence(e.target.value)}>
                   <option value="ALL">Every week</option>
@@ -1044,7 +1032,7 @@ export function WeeklyOffRulesPage() {
                   <option value="EVEN">Even weeks only</option>
                 </select>
               </label>
-              <div className="platform-form-grid">
+              <div className="app-form-grid">
                 <DateField
                   id="weekly-off-effective-from"
                   label="Effective from"
@@ -1232,7 +1220,7 @@ export function AcademicStructurePage() {
   const isSchool = selectedInst?.institutionType === "SCHOOL" || user?.roleCode === "SCHOOL_ADMIN";
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Academic structure"
         description={isSchool ? "Manage school classes, sections and academic sessions." : "Create and manage academic departments and degree programmes."}
@@ -1296,9 +1284,9 @@ export function AcademicStructurePage() {
             title="School classes"
             description="Create the year groups or grades used by this school. Display order controls how classes are presented."
           >
-            <div className="platform-form">
+            <div className="app-form">
               <form onSubmit={createSchoolClass}>
-                <div className="platform-form-grid">
+                <div className="app-form-grid">
                   <TextField
                     id="school-class-name"
                     label="Class or grade name"
@@ -1319,17 +1307,17 @@ export function AcademicStructurePage() {
                     onChange={(event) => setClassOrderDraft(event.target.value)}
                   />
                 </div>
-                <div className="platform-inline-actions">
+                <div className="app-inline-actions">
                   <Button type="submit" busy={classSaving}>Create class</Button>
                 </div>
               </form>
             </div>
-            {loading ? <p className="platform-empty-note" role="status">Loading classes and sections…</p> : null}
+            {loading ? <p className="app-empty-note" role="status">Loading classes and sections…</p> : null}
             {!loading && !error && schoolClasses.length === 0 ? (
               <EmptyState title="No classes configured" description="Create the first class or grade for this school." />
             ) : schoolClasses.length > 0 ? (
-              <div className="platform-table-wrap">
-                <table className="platform-table">
+              <div className="app-table-wrap">
+                <table className="app-table">
                   <thead><tr><th>Class or grade</th><th>Display order</th><th>Student access</th><th>Status</th></tr></thead>
                   <tbody>
                     {schoolClasses.map((schoolClass) => (
@@ -1353,15 +1341,15 @@ export function AcademicStructurePage() {
             {schoolSessions.length === 0 ? (
               <Notice tone="warning">
                 No academic sessions are available for this school yet. Set up an academic session in Calendar and return here to create sections.
-                <div className="platform-inline-actions">
+                <div className="app-inline-actions">
                   <a href="/university/setup/calendar-events">Open calendar and academic sessions</a>
                 </div>
               </Notice>
             ) : schoolClasses.length === 0 ? (
               <EmptyState title="Create a class first" description="Sections belong to a school class. Create at least one class before adding sections." />
             ) : (
-              <form onSubmit={createSchoolSection} className="platform-form">
-                <div className="platform-form-grid">
+              <form onSubmit={createSchoolSection} className="app-form">
+                <div className="app-form-grid">
                   <SelectField
                     id="school-section-class"
                     label="Class or grade"
@@ -1394,7 +1382,7 @@ export function AcademicStructurePage() {
                     placeholder="For example, A"
                   />
                 </div>
-                <div className="platform-inline-actions">
+                <div className="app-inline-actions">
                   <Button type="submit" busy={sectionSaving}>Create section</Button>
                 </div>
               </form>
@@ -1402,8 +1390,8 @@ export function AcademicStructurePage() {
             {!loading && !error && schoolSections.length === 0 && schoolClasses.length > 0 && schoolSessions.length > 0 ? (
               <EmptyState title="No sections configured" description="Create the first section for a class and academic session." />
             ) : schoolSections.length > 0 ? (
-              <div className="platform-table-wrap">
-                <table className="platform-table">
+              <div className="app-table-wrap">
+                <table className="app-table">
                   <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Status</th></tr></thead>
                   <tbody>
                     {schoolSections.map((section) => (
@@ -1421,7 +1409,7 @@ export function AcademicStructurePage() {
           </Panel>
 
           <Panel title="School setup shortcuts" description="Continue with teacher assignments and weekly calendar rules.">
-            <div className="platform-inline-actions">
+            <div className="app-inline-actions">
               <a href="/university/setup/class-teacher">Assign class teachers</a>
               <a href="/university/setup/weekly-off">Configure weekly off</a>
               <a href="/university/setup/calendar-events">Manage academic sessions and calendar events</a>
@@ -1445,10 +1433,10 @@ export function AcademicStructurePage() {
               </div>
 
               {departments.length === 0 ? (
-                <p className="platform-sample-note">No departments found for this institution.</p>
+                <p className="app-sample-note">No departments found for this institution.</p>
               ) : (
-                <div className="platform-table-wrap">
-                  <table className="platform-table">
+                <div className="app-table-wrap">
+                  <table className="app-table">
                     <thead>
                       <tr>
                         <th>Code</th>
@@ -1493,10 +1481,10 @@ export function AcademicStructurePage() {
               </div>
 
               {programs.length === 0 ? (
-                <p className="platform-sample-note">No degree programs found for this institution.</p>
+                <p className="app-sample-note">No degree programs found for this institution.</p>
               ) : (
-                <div className="platform-table-wrap">
-                  <table className="platform-table">
+                <div className="app-table-wrap">
+                  <table className="app-table">
                     <thead>
                       <tr>
                         <th>Program Code</th>
@@ -1675,7 +1663,7 @@ export function TermLockPage() {
   if (!tenantId) return <NoTenantNotice />;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Term lock management"
         description="Lock academic terms to protect marks and attendance records. Temporary unlocks require justification and expire automatically."
@@ -1685,7 +1673,7 @@ export function TermLockPage() {
       {lockFormError && <Notice tone="danger">{lockFormError}</Notice>}
       {feedback && (
         <Notice tone={feedback.tone} className="mb-4">
-          <div className="platform-feedback-row">
+          <div className="app-feedback-row">
             <span>{feedback.message}</span>
             <Button variant="tertiary" size="sm" onClick={() => setFeedback(null)}>Dismiss</Button>
           </div>
@@ -1693,7 +1681,7 @@ export function TermLockPage() {
       )}
 
       <Panel title="Lock academic term" description="Authorized principals can lock a term after final marks and attendance have been submitted.">
-        <form onSubmit={handleLockSubmit} className="platform-form" noValidate>
+        <form onSubmit={handleLockSubmit} className="app-form" noValidate>
           {institutions.length > 0 && (
             <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
               <SelectField
@@ -1716,7 +1704,7 @@ export function TermLockPage() {
               </SelectField>
             </div>
           )}
-          <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
+          <div className="app-form-grid" style={{ marginBottom: "var(--space-3)" }}>
             <IdField
               id="term-lock-inst-id"
               label="Institution ID"
@@ -1739,7 +1727,7 @@ export function TermLockPage() {
               error={fieldErrors.academicSessionId}
             />
           </div>
-          <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
+          <div className="app-form-grid" style={{ marginBottom: "var(--space-3)" }}>
             <TextField
               id="term-lock-sem-id"
               label="Semester ID (Optional)"
@@ -1768,7 +1756,7 @@ export function TermLockPage() {
       </Panel>
 
       <Panel title="Active term locks" description="Review locked terms. Principals can temporarily unlock for grievances or corrections.">
-        {loading && <p className="platform-empty-note">Loading locks...</p>}
+        {loading && <p className="app-empty-note">Loading locks...</p>}
         {lockLoadError ? (
           <Notice tone="danger">{lockLoadError} <Button variant="secondary" size="sm" onClick={() => fetchLocks(institutionId)}>Retry</Button></Notice>
         ) : !isValidUuid(institutionId) ? (
@@ -1780,8 +1768,8 @@ export function TermLockPage() {
             icon="lock"
           />
         ) : loading ? null : (
-          <div className="platform-table-wrap">
-            <table className="platform-table">
+          <div className="app-table-wrap">
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>Session ID</th>
@@ -1814,7 +1802,7 @@ export function TermLockPage() {
                           Unlock Term
                         </Button>
                       ) : (
-                        <span style={{ fontSize: "0.8rem", color: "var(--color-muted)" }}>Unlocked</span>
+                        <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Unlocked</span>
                       )}
                     </td>
                   </tr>
@@ -2045,7 +2033,7 @@ export function DelegationsApprovalsPage() {
   if (!tenantId) return <NoTenantNotice />;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Approvals & delegations"
         description="Delegate approval authority for a defined period or review several requests together."
@@ -2053,7 +2041,7 @@ export function DelegationsApprovalsPage() {
 
       {feedback && (
         <Notice tone={feedback.tone} className="mb-4">
-          <div className="platform-feedback-row">
+          <div className="app-feedback-row">
             <span>{feedback.message}</span>
             <Button variant="tertiary" size="sm" onClick={() => setFeedback(null)}>Dismiss</Button>
           </div>
@@ -2065,7 +2053,7 @@ export function DelegationsApprovalsPage() {
         title="Delegate approval authority"
         description="Hand over your approval responsibilities to an eligible colleague for a defined period."
       >
-        <form onSubmit={handleCreateDelegation} className="platform-form" noValidate>
+        <form onSubmit={handleCreateDelegation} className="app-form" noValidate>
           <TextField
             id="delegate-user-id"
             label="Delegate User Account ID (UUID) *"
@@ -2088,7 +2076,7 @@ export function DelegationsApprovalsPage() {
             ]}
           />
 
-          <div className="platform-form-grid">
+          <div className="app-form-grid">
             <DateTimeField
               id="delegation-start"
               label="Effective From *"
@@ -2121,7 +2109,7 @@ export function DelegationsApprovalsPage() {
         title="Bulk approval decision"
         description="Review and decide several eligible requests together, with an optional comment."
       >
-        <form onSubmit={handleBulkDecision} className="platform-form" noValidate>
+        <form onSubmit={handleBulkDecision} className="app-form" noValidate>
           <TextAreaField
             id="bulk-request-ids"
             label="Approval Request IDs (comma-separated UUIDs) *"
@@ -2134,7 +2122,7 @@ export function DelegationsApprovalsPage() {
             error={bulkFieldErrors.approvalRequestIds}
           />
 
-          <div className="platform-form-grid">
+          <div className="app-form-grid">
             <SelectField
               id="bulk-decision-type"
               label="Decision"
@@ -2170,7 +2158,7 @@ export function DelegationsApprovalsPage() {
           title="Pending approval requests (Inbox)"
           description="Pending approval steps awaiting your review or authorized delegation."
         >
-          {inboxLoading && <p className="platform-empty-note">Loading pending approvals...</p>}
+          {inboxLoading && <p className="app-empty-note">Loading pending approvals...</p>}
           {inboxError && <Notice tone="danger">{inboxError} <Button variant="secondary" size="sm" onClick={fetchInbox}>Retry</Button></Notice>}
           {!inboxLoading && !inboxError && inboxItems.length === 0 ? (
             <EmptyState
@@ -2179,8 +2167,8 @@ export function DelegationsApprovalsPage() {
               icon="check-circle"
             />
           ) : inboxLoading || inboxError ? null : (
-            <div className="platform-table-wrap">
-              <table className="platform-table">
+            <div className="app-table-wrap">
+              <table className="app-table">
                 <thead>
                   <tr>
                     <th>Step #</th>
@@ -2225,7 +2213,7 @@ export function DelegationsApprovalsPage() {
 
       <div style={{ marginTop: "var(--space-4)" }}>
         <Panel title="My active delegations" description="Review approval responsibilities you have delegated. You cannot approve your own request.">
-          {loading && <p className="platform-empty-note">Loading delegations...</p>}
+          {loading && <p className="app-empty-note">Loading delegations...</p>}
           {delegationsError && <Notice tone="danger">{delegationsError} <Button variant="secondary" size="sm" onClick={fetchDelegations}>Retry</Button></Notice>}
           {!loading && !delegationsError && delegations.length === 0 ? (
             <EmptyState
@@ -2234,8 +2222,8 @@ export function DelegationsApprovalsPage() {
               icon="user"
             />
           ) : loading || delegationsError ? null : (
-            <div className="platform-table-wrap">
-              <table className="platform-table">
+            <div className="app-table-wrap">
+              <table className="app-table">
                 <thead>
                   <tr>
                     <th>Delegate User ID</th>
@@ -2270,7 +2258,7 @@ export function DelegationsApprovalsPage() {
                             Cancel Delegation
                           </Button>
                         ) : (
-                          <span style={{ fontSize: "0.8rem", color: "var(--color-muted)" }}>Cancelled</span>
+                          <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Cancelled</span>
                         )}
                       </td>
                     </tr>
@@ -2364,7 +2352,7 @@ export function AcademicGovernancePage() {
   if (!tenantId) return <NoTenantNotice />;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Academic setup & governance"
         description="Configure curriculum requirements, grading schemes, subject allocations and year-end student promotions."
@@ -2402,14 +2390,14 @@ export function AcademicGovernancePage() {
         />
       )}
 
-      {loading && <p className="platform-empty-note">Loading academic configuration...</p>}
+      {loading && <p className="app-empty-note">Loading academic configuration...</p>}
       {loadError && !loading && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={fetchCurrentTab}>Retry</Button></Notice>}
 
       <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" tabIndex={0} hidden={activeTab !== "rules"}>
       {!loading && !loadError && activeTab === "rules" && (
         <Panel title="Curriculum and programme rules" description="Versioned curriculum requirements set by the Registrar.">
-          <div className="platform-table-wrap">
-            <table className="platform-table">
+          <div className="app-table-wrap">
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>Rule Set ID</th>
@@ -2443,8 +2431,8 @@ export function AcademicGovernancePage() {
       <div id="panel-grading" role="tabpanel" aria-labelledby="tab-grading" tabIndex={0} hidden={activeTab !== "grading"}>
       {!loading && !loadError && activeTab === "grading" && (
         <Panel title="Grading schemes" description="University-wide or standalone institution grade points and bands.">
-          <div className="platform-table-wrap">
-            <table className="platform-table">
+          <div className="app-table-wrap">
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>Scheme Name</th>
@@ -2476,8 +2464,8 @@ export function AcademicGovernancePage() {
       <div id="panel-allocation" role="tabpanel" aria-labelledby="tab-allocation" tabIndex={0} hidden={activeTab !== "allocation"}>
       {!loading && !loadError && activeTab === "allocation" && (
         <Panel title="Subject allocations" description="Allocate courses to teachers for specific class sections or elective subject groups.">
-          <div className="platform-table-wrap">
-            <table className="platform-table">
+          <div className="app-table-wrap">
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>Offering ID</th>
@@ -2509,8 +2497,8 @@ export function AcademicGovernancePage() {
       <div id="panel-promotion" role="tabpanel" aria-labelledby="tab-promotion" tabIndex={0} hidden={activeTab !== "promotion"}>
       {!loading && !loadError && activeTab === "promotion" && (
         <Panel title="Year-end promotions" description="Promote students across academic sessions; Principal approves before execution.">
-          <div className="platform-table-wrap">
-            <table className="platform-table">
+          <div className="app-table-wrap">
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>From Session</th>

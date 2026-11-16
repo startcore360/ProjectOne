@@ -1,12 +1,13 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import {
   Button,
+  Notice,
   Panel,
   StatusBadge,
   DataTable,
   SearchBox,
-  Notice,
 } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { formatTimestamp, readErrorMessage, type FetchStatus } from "../common/types";
@@ -126,7 +127,7 @@ export function IntegrationTypesView() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Integration types"
         description="The catalogue of integration types a tenant may enable (e.g. SMS, payments). Type catalogue only - never a tenant's own keys or webhooks."
@@ -142,18 +143,19 @@ export function IntegrationTypesView() {
           </Button>
         }
       />
-      {message && (
-        <div className="platform-inline-notice" role="status">
-          {message}
-        </div>
+      {message && <Notice tone="success">{message}</Notice>}
+      {status === "error" && (
+        <ErrorState
+          message={`Could not load integration types: ${errorMessage}`}
+          action={<Button variant="secondary" onClick={() => void load()}>Retry</Button>}
+        />
       )}
-      {status === "error" && <Notice tone="danger">Could not load integration types: {errorMessage}</Notice>}
       <Panel title="Allowed integration types" description="platform.integration_type">
-        <div className="platform-toolbar">
+        <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search by code or description" />
         </div>
         {status === "loading" ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading integration types" />
           </div>
         ) : (

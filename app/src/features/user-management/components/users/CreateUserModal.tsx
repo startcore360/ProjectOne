@@ -74,7 +74,7 @@ export function CreateUserModal({
       size="lg"
     >
       <form onSubmit={handleSubmit}>
-        <div className="platform-form-grid">
+        <div className="app-form-grid">
           <TextField
             id="create-display-name"
             label="Full name"
@@ -134,7 +134,7 @@ export function CreateUserModal({
             error={fieldErrors.initialRoleCode}
           />
         </div>
-        <p className="platform-modal-note">
+        <p className="app-note">
           This form provisions a general user account. For admissions, student profile creation and section enrolment, use the separate Create student profile workflow.
         </p>
 
@@ -144,7 +144,7 @@ export function CreateUserModal({
         </div>
 
         <div
-          className="platform-modal-note"
+          className="app-note"
           style={{
             marginTop: "0.75rem",
             fontSize: "0.8rem",

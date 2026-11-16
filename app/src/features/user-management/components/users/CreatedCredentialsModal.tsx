@@ -99,7 +99,7 @@ export function CreatedCredentialsModal({
         )}
 
         {user.twoStepLoginRequired && (
-          <div className="platform-modal-note" style={{ fontSize: "0.8rem", color: "#e11d48" }}>
+          <div className="app-note" style={{ fontSize: "0.8rem", color: "var(--color-status-danger-fg)" }}>
             Two-step login (MFA) will be required at the user's first sign-in.
           </div>
         )}

@@ -84,6 +84,8 @@ class StaffDocumentServiceTest {
         UserRoleAssignment active = mock(UserRoleAssignment.class);
         when(active.getScopeType()).thenReturn(ScopeType.TENANT);
         when(permissions.activeAssignment(any(RbacPrincipal.class))).thenReturn(Optional.of(active));
+        when(profiles.findByIdTenantIdAndIdStaffProfileId(tenantId, staffProfileId))
+                .thenReturn(Optional.of(mock(StaffProfile.class)));
         when(jdbc.queryForObject(any(String.class), eq(Boolean.class), eq(tenantId), eq(staffProfileId)))
                 .thenReturn(true);
         when(documents.findByIdTenantIdAndStaffProfileIdOrderByCreatedAtDesc(tenantId, staffProfileId))

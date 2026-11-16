@@ -64,9 +64,9 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
 
   const selected = children.find((child) => child.studentProfileId === value);
   return (
-    <div className="guardian-dashboard">
+    <div className="app-page app-page--narrow">
       <Panel title="Your linked children" description="Choose a child to view the information currently shared with your account.">
-        <div className="guardian-dashboard__selector">
+        <div className="app-list-toolbar">
           <SelectField
             id="guardian-child-select"
             label="Child"
@@ -77,15 +77,15 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
               label: child.studentCode,
             }))}
           />
-          <span className="guardian-dashboard__count">{children.length} active {children.length === 1 ? "child" : "children"}</span>
+          <span className="app-list-toolbar__count">{children.length} active {children.length === 1 ? "child" : "children"}</span>
         </div>
       </Panel>
       {selected && (
         <Panel title="Selected child" description="Read-only profile information available to your guardian account.">
-          <div className="guardian-child-card">
-            <div className="guardian-child-card__avatar" aria-hidden="true">{selected.studentCode.slice(0, 1).toUpperCase()}</div>
-            <div className="guardian-child-card__identity">
-              <span className="guardian-child-card__eyebrow">STUDENT PROFILE</span>
+          <div className="app-child-card">
+            <div className="app-child-card__avatar" aria-hidden="true">{selected.studentCode.slice(0, 1).toUpperCase()}</div>
+            <div className="app-child-card__identity">
+              <span className="app-child-card__eyebrow">STUDENT PROFILE</span>
               <h2>{selected.studentCode}</h2>
               <p>Student code</p>
             </div>

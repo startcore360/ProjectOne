@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
 
 export interface DepartmentOption {
@@ -64,7 +64,7 @@ export function AddProgramModal({
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
           <label htmlFor="prog-dept-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
             Owning Department
           </label>
@@ -101,7 +101,7 @@ export function AddProgramModal({
             placeholder="e.g. Bachelor of Technology in Computer Science"
           />
         </div>
-        <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
           <div>
             <TextField
               id="prog-duration-input"

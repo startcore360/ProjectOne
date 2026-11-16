@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Button,
@@ -100,6 +100,33 @@ export function ConfirmDialog({
   );
 }
 
+function MoreActionsMenu({ items }: { items: { label: string; onClick: () => void }[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <Button variant="secondary" onClick={() => setOpen((v) => !v)} aria-haspopup="true" aria-expanded={open}>
+        More ▾
+      </Button>
+      {open && (
+        <div role="menu" style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50, background: "var(--color-bg-surface)", border: "1px solid var(--color-border-divider)", borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-2)", minWidth: "220px", padding: "4px 0" }} onClick={() => setOpen(false)}>
+          {items.map((item) => (
+            <button key={item.label} role="menuitem" onClick={item.onClick} style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 16px", background: "none", border: "none", cursor: "pointer", fontSize: "0.875rem", color: "var(--color-text-primary)" }}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserListPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [scope, setScope] = useState<ActingScope>({ scopeType: "TENANT" });
@@ -117,7 +144,7 @@ export function UserListPage() {
 
   if (!tenantId) {
     return (
-      <div className="platform-page">
+      <div className="app-page">
         <PageHeader title="Users & roles" description="Manage tenant user accounts within your permitted scope." />
         <ErrorState
           title="Not available"
@@ -160,24 +187,20 @@ export function UserListPage() {
   );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Users & roles"
         description="View and manage tenant user accounts within your permitted scope."
         actions={
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <Button variant="secondary" onClick={() => setShowCreateCheck(true)}>
-              Check if I can create a user
-            </Button>
-            <Button variant="secondary" onClick={() => setShowCreateStudentModal(true)}>
-              Create student profile
-            </Button>
-            <Button variant="secondary" onClick={() => setShowBulkModal(true)}>
-              Bulk import user accounts
-            </Button>
-            <Button variant="secondary" onClick={() => setShowGovernanceModal(true)}>
-              Create governance user
-            </Button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <MoreActionsMenu
+              items={[
+                { label: "Check if I can create a user", onClick: () => setShowCreateCheck(true) },
+                { label: "Create student profile", onClick: () => setShowCreateStudentModal(true) },
+                { label: "Bulk import user accounts", onClick: () => setShowBulkModal(true) },
+                { label: "Create governance user", onClick: () => setShowGovernanceModal(true) },
+              ]}
+            />
             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
               Create user
             </Button>
@@ -190,7 +213,7 @@ export function UserListPage() {
         description="State the scope your own role assignment is acting in, then load the register."
       >
         <form
-          className="platform-toolbar"
+          className="app-toolbar"
           style={{ flexDirection: "column", alignItems: "stretch" }}
           onSubmit={(e) => {
             e.preventDefault();
@@ -230,7 +253,7 @@ export function UserListPage() {
           title="User register"
           description={`${filtered.length} of ${users.length} user${users.length === 1 ? "" : "s"} in this scope`}
         >
-          <div className="platform-toolbar">
+          <div className="app-toolbar">
             <SearchBox
               value={query}
               onChange={setQuery}
@@ -410,7 +433,7 @@ export function UserDetailPage() {
 
   if (!tenantId || !userId) {
     return (
-      <div className="platform-page">
+      <div className="app-page">
         <PageHeader title="User detail" description="Manage tenant user accounts and their profile details." />
         <ErrorState
           title="Not available"
@@ -514,7 +537,7 @@ export function UserDetailPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="User detail"
         description="View, edit and manage a single user account. Sensitive changes are checked against your active role and institution scope."
@@ -531,7 +554,7 @@ export function UserDetailPage() {
           description="State the scope your own role assignment is acting in, then load this user."
         >
           <form
-            className="platform-toolbar"
+            className="app-toolbar"
             style={{ flexDirection: "column", alignItems: "stretch" }}
             onSubmit={submitScope}
           >
@@ -570,7 +593,7 @@ export function UserDetailPage() {
             action={<StatusBadge status={user.status} />}
           >
             <form
-              className="platform-form-grid"
+              className="app-form-grid"
               style={{ padding: "0 var(--space-5) var(--space-5)" }}
               onSubmit={saveEdit}
             >
@@ -597,7 +620,7 @@ export function UserDetailPage() {
                 onChange={(e) => setFields({ ...fields, mobile: e.target.value })}
               />
               {user.status === "DEACTIVATED" ? (
-                <div className="platform-modal-note" style={{ gridColumn: "1 / -1" }}>
+                <div className="app-note" style={{ gridColumn: "1 / -1" }}>
                   This account is deactivated. Deactivation is permanent in this system (no
                   reactivate), so it can no longer be edited.
                 </div>
@@ -662,7 +685,7 @@ export function UserDetailPage() {
                 </Button>
               </div>
               {user.status === "DEACTIVATED" && (
-                <p className="platform-empty-inline">This user is already deactivated.</p>
+                <p className="app-empty-inline">This user is already deactivated.</p>
               )}
               {actionBanner && (
                 <div style={{ marginTop: "var(--space-3)" }}>
@@ -776,7 +799,7 @@ export function UserDetailPage() {
             }}
           />
         </div>
-        {copyNotice && <p className="platform-empty-inline" style={{ marginTop: "8px" }}>{copyNotice}</p>}
+        {copyNotice && <p className="app-empty-inline" style={{ marginTop: "8px" }}>{copyNotice}</p>}
       </Modal>
     </div>
   );

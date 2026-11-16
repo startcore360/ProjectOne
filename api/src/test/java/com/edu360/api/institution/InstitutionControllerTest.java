@@ -48,6 +48,7 @@ import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.tenant.IsolationMode;
 import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.tenant.TenantRepository;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * Action & Guard tests for:
@@ -102,6 +103,8 @@ class InstitutionControllerTest {
                 approvalInboxService
         );
 
+        ReflectionTestUtils.setField(institutionService, "institutionIdFormatService",
+                mock(InstitutionIdFormatService.class));
         controller = new InstitutionController(institutionService);
         TenantContext.set(TENANT_ID, IsolationMode.SHARED, null, "ALL", java.util.Set.of(), "UNIVERSITY_ADMIN", ScopeType.TENANT);
     }

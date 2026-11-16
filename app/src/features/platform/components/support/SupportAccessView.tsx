@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Icon } from "../../../../components/ui/Icon";
 import { Panel, StatusBadge, DataTable, Button, Notice } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import {
   platformOpsService,
@@ -55,7 +56,7 @@ export function SupportAccessView() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Support access"
         description="Support access is ticket-bound, read-only, revocable and limited to 24 hours."
@@ -63,13 +64,13 @@ export function SupportAccessView() {
 
       {message && <Notice tone="success">{message}</Notice>}
       {error && (
-        <div className="eds-error-state" role="alert">
-          <p className="eds-error-state__message">{error}</p>
-          <Button variant="secondary" onClick={() => void loadGrants()}>Retry</Button>
-        </div>
+        <ErrorState
+          message={error}
+          action={<Button variant="secondary" onClick={() => void loadGrants()}>Retry</Button>}
+        />
       )}
 
-      <div className="platform-policy-callout">
+      <div className="app-callout">
         <span aria-hidden="true">
           <Icon name="shield" size={15} />
         </span>
@@ -84,11 +85,11 @@ export function SupportAccessView() {
 
       <Panel title="Active Support Grants" description="Tenant-authorized diagnostic access windows">
         {loading ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading active grants..." />
           </div>
         ) : error ? null : grants.length === 0 ? (
-          <p className="platform-empty-inline">No active support sessions or grants currently open.</p>
+          <p className="app-empty-inline">No active support sessions or grants currently open.</p>
         ) : (
           <DataTable headers={["Ticket #", "Tenant ID", "Granted At", "Access Ends", "Status", "Actions"]}>
             {grants.map((g) => {
@@ -98,7 +99,7 @@ export function SupportAccessView() {
                 <tr key={g.supportAccessGrantId}>
                   <td>
                     <strong>{ticket?.ticketNumber ?? g.ticketId.substring(0, 8)}</strong>
-                    {ticket && <small className="platform-cell-sub">{ticket.subject}</small>}
+                    {ticket && <small className="app-cell-sub">{ticket.subject}</small>}
                   </td>
                   <td>{g.tenantId}</td>
                   <td>{new Date(g.grantedAt).toLocaleString()}</td>

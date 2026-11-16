@@ -68,7 +68,7 @@ export function InstitutionIdFormatsModal({ tenantId, institution, onClose, onSa
     <Modal isOpen={Boolean(institution)} onClose={onClose} title="Institution ID formats" titleId="institution-id-formats-title" size="md">
       {institution && (
         <form onSubmit={submit}>
-          <p className="platform-modal-note">{institution.institutionName} · {institution.institutionCode}</p>
+          <p className="app-note">{institution.institutionName} · {institution.institutionCode}</p>
           {error && <Notice tone="danger">{error}</Notice>}
           {loading ? <p role="status">Loading ID formats…</p> : (
             <>
@@ -81,7 +81,7 @@ export function InstitutionIdFormatsModal({ tenantId, institution, onClose, onSa
                 onChange={(event) => setStudentFormat(event.target.value.toUpperCase())}
                 hint={formats?.studentFormatLocked ? "Locked after the first student ID was generated." : "Use {YYYY}, {YY}, {INST}, and exactly one {SEQ:n} token (n = 3–10)."}
               />
-              <p className="platform-modal-note" aria-live="polite">Preview only: {preview(studentFormat, institution.institutionCode)}</p>
+              <p className="app-note" aria-live="polite">Preview only: {preview(studentFormat, institution.institutionCode)}</p>
               <TextField
                 id="edit-staff-id-format"
                 label="Staff ID format (optional)"
@@ -90,7 +90,7 @@ export function InstitutionIdFormatsModal({ tenantId, institution, onClose, onSa
                 onChange={(event) => setStaffFormat(event.target.value.toUpperCase())}
                 hint={formats?.staffFormatLocked ? "Locked after the first staff ID was generated." : "Leave blank when HR will enter staff codes manually."}
               />
-              {staffFormat && <p className="platform-modal-note" aria-live="polite">Preview only: {preview(staffFormat, institution.institutionCode)}</p>}
+              {staffFormat && <p className="app-note" aria-live="polite">Preview only: {preview(staffFormat, institution.institutionCode)}</p>}
             </>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>

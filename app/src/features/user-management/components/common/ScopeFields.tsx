@@ -1,4 +1,4 @@
-import { SelectField, TextField } from "../../../../design-system/components";
+﻿import { SelectField, TextField } from "../../../../design-system/components";
 import type { ActingScope, ScopeType } from "../../api/userManagementService";
 
 export interface ScopeFieldsProps {
@@ -9,7 +9,7 @@ export interface ScopeFieldsProps {
 
 export function ScopeFields({ scope, onChange, idPrefix }: ScopeFieldsProps) {
   return (
-    <div className="platform-form-grid">
+    <div className="app-form-grid">
       <SelectField
         id={`${idPrefix}-scope-type`}
         label="Acting scope"

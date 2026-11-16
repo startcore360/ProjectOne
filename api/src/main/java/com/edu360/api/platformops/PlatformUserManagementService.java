@@ -9,7 +9,6 @@ import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.exception.BusinessRuleViolationException;
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -47,8 +46,6 @@ import lombok.RequiredArgsConstructor;
 public class PlatformUserManagementService {
 
     private static final Logger log = LoggerFactory.getLogger(PlatformUserManagementService.class);
-    private static final String CHAR_POOL = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final PlatformUserRepository platformUserRepository;
     private final KeycloakAdminClient keycloakAdminClient;
@@ -188,10 +185,6 @@ public class PlatformUserManagementService {
     }
 
     private String generateTemporaryPassword() {
-        StringBuilder sb = new StringBuilder(12);
-        for (int i = 0; i < 12; i++) {
-            sb.append(CHAR_POOL.charAt(RANDOM.nextInt(CHAR_POOL.length())));
-        }
-        return sb.toString();
+        return com.edu360.api.auth.TemporaryPasswordGenerator.generate();
     }
 }

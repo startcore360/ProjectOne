@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Spinner } from "../../../../components/ui";
 import { Icon } from "../../../../components/ui/Icon";
 import { PageHeader } from "../../../../components/layout/PageHeader";
-import { MetricCard, Notice } from "../../../../design-system/components";
+import { Button, MetricCard } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   readErrorMessage,
   type FetchStatus,
@@ -15,9 +16,11 @@ export function UsageCountsView() {
   const [status, setStatus] = useState<FetchStatus>("loading");
   const [data, setData] = useState<UsageCounts | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setStatus("loading");
     api
       .get("/platform/usage-counts")
       .then((res) => {
@@ -33,18 +36,23 @@ export function UsageCountsView() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryCount]);
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Usage counts"
         description="Anonymous, combined platform usage numbers. No per-tenant or per-user figures are shown here."
       />
-      {status === "error" && <Notice tone="danger">Could not load usage counts: {errorMessage}</Notice>}
+      {status === "error" && (
+        <ErrorState
+          message={`Could not load usage counts: ${errorMessage}`}
+          action={<Button variant="secondary" onClick={() => setRetryCount((c) => c + 1)}>Retry</Button>}
+        />
+      )}
 
       {status === "loading" ? (
-        <div className="platform-empty-inline">
+        <div className="app-empty-inline">
           <Spinner label="Loading usage counts" />
         </div>
       ) : (
@@ -64,7 +72,7 @@ export function UsageCountsView() {
             </div>
 
             {data.totalUserCountGap && (
-              <p className="platform-sample-note" style={{ marginTop: "var(--space-4)", color: "var(--color-text-muted)" }}>
+              <p className="app-sample-note" style={{ marginTop: "var(--space-4)", color: "var(--color-text-muted)" }}>
                 <span aria-hidden="true" style={{ color: "var(--color-text-muted)" }}>
                   <Icon name="info" size={14} />
                 </span>

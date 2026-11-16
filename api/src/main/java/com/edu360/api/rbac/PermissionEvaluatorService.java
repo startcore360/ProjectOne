@@ -221,6 +221,9 @@ public class PermissionEvaluatorService {
         boolean hasAction = roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
                 principal.tenantId(), active.getRoleDefinitionId(), actionCode);
         if (!hasAction) {
+            log.warn("ACTION_NOT_GRANTED for tenant={}, roleDefinitionId={}, actionCode={}, activeRole={}",
+                    principal.tenantId(), active.getRoleDefinitionId(), actionCode,
+                    activeRole != null ? activeRole.getRoleCode() : "null");
             return PermissionDecision.deny("ACTION_NOT_GRANTED",
                     "The active role for this scope does not hold action " + actionCode + ".");
         }

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
 
 export interface AcademicSessionOption {
@@ -64,7 +64,7 @@ export function AddMasterEventModal({
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
           <label htmlFor="master-event-session-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
             Academic Session
           </label>
@@ -92,7 +92,7 @@ export function AddMasterEventModal({
             />
           )}
         </div>
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
           <label htmlFor="master-event-type-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
             Event Type
           </label>
@@ -117,12 +117,12 @@ export function AddMasterEventModal({
             placeholder="e.g. Odd Semester 2026 or Diwali Break"
           />
         </div>
-        <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
-          <label className="platform-form-field">
+        <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
+          <label className="app-form-field">
             Start Date
             <input type="date" value={masterEventStart} onChange={(e) => setMasterEventStart(e.target.value)} required />
           </label>
-          <label className="platform-form-field">
+          <label className="app-form-field">
             End Date
             <input type="date" value={masterEventEnd} onChange={(e) => setMasterEventEnd(e.target.value)} required />
           </label>

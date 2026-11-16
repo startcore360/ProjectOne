@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { Button, DateField, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export interface AddAcademicSessionModalProps {
@@ -65,7 +65,7 @@ export function AddAcademicSessionModal({
             placeholder="e.g. 2026-27"
           />
         </div>
-        <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
           <TextField
             id="session-academic-year"
             label="Academic year"
@@ -88,7 +88,7 @@ export function AddAcademicSessionModal({
             ]}
           />
         </div>
-        <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
           <DateField
             id="session-start-date"
             label="Start date"

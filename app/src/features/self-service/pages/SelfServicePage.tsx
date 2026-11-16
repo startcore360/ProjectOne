@@ -24,6 +24,7 @@ export default function SelfServicePage() {
   const tenantId = authUser?.tenantId ?? "";
 
   const [activeTab, setActiveTab] = useState<"notices" | "leaves" | "notifications">("notices");
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(["notices"]));
 
   // Each section loads and fails independently so the other tabs remain usable
   // when a single API call returns an error (e.g. leave-balances 403).
@@ -86,9 +87,10 @@ export default function SelfServicePage() {
     }
   }, [tenantId]);
 
+  // Load notices on mount (default tab). Load other tabs only on first activation.
   useEffect(() => { void loadNotices(); }, [loadNotices]);
-  useEffect(() => { void loadLeaves(); }, [loadLeaves]);
-  useEffect(() => { void loadNotifications(); }, [loadNotifications]);
+  useEffect(() => { if (loadedTabs.has("leaves")) void loadLeaves(); }, [loadLeaves, loadedTabs]);
+  useEffect(() => { if (loadedTabs.has("notifications")) void loadNotifications(); }, [loadNotifications, loadedTabs]);
 
   const tabItems = [
     { id: "notices", label: `Campus Notices (${notices.length})` },
@@ -97,7 +99,7 @@ export default function SelfServicePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="app-page">
       <PageHeader
         title="Self-Service Portal"
         description="Access institutional notices, check remaining leave balances, and review your notifications."
@@ -107,7 +109,11 @@ export default function SelfServicePage() {
       <Tabs
         items={tabItems}
         activeId={activeTab}
-        onChange={(id) => setActiveTab(id as "notices" | "leaves" | "notifications")}
+        onChange={(id) => {
+          const tab = id as "notices" | "leaves" | "notifications";
+          setActiveTab(tab);
+          setLoadedTabs((prev) => { const next = new Set(prev); next.add(tab); return next; });
+        }}
       />
 
       {/* Each panel has id="panel-{id}" and role="tabpanel" matching the Tabs component's
@@ -118,10 +124,10 @@ export default function SelfServicePage() {
         role="tabpanel"
         aria-labelledby="tab-notices"
         hidden={activeTab !== "notices"}
-        className="space-y-4"
+        className="app-stack"
       >
         {noticesLoading && (
-          <div className="flex justify-center p-12"><Spinner /></div>
+          <div className="app-spinner-center"><Spinner /></div>
         )}
         {noticesError && !noticesLoading && (
           <ErrorState
@@ -137,16 +143,16 @@ export default function SelfServicePage() {
             />
           ) : (
             notices.map((n) => (
-              <div key={n.noticeId} className="self-service-card self-service-card--notice">
-                <div className="self-service-card__header">
-                  <h3 className="self-service-card__title">{n.title}</h3>
-                  <div className="self-service-card__badges">
+              <div key={n.noticeId} className="app-card app-card--notice">
+                <div className="app-card__header">
+                  <h3 className="app-card__title">{n.title}</h3>
+                  <div className="app-card__badges">
                     <Badge tone="info">{n.noticeKind.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</Badge>
                     <Badge tone="neutral">{n.noticeLevel.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</Badge>
                   </div>
                 </div>
-                <p className="self-service-card__body">{n.body}</p>
-                <div className="self-service-card__meta">
+                <p className="app-card__body">{n.body}</p>
+                <div className="app-card__meta">
                   Authored by: {n.authoredActiveRole} • {n.publishedAt ? new Date(n.publishedAt).toLocaleDateString() : "Just now"}
                 </div>
               </div>
@@ -160,10 +166,10 @@ export default function SelfServicePage() {
         role="tabpanel"
         aria-labelledby="tab-leaves"
         hidden={activeTab !== "leaves"}
-        className="space-y-6"
+        className="app-stack"
       >
         {leavesLoading && (
-          <div className="flex justify-center p-12"><Spinner /></div>
+          <div className="app-spinner-center"><Spinner /></div>
         )}
         {leavesError && !leavesLoading && (
           <ErrorState
@@ -174,15 +180,13 @@ export default function SelfServicePage() {
         {!leavesLoading && !leavesError && (
           <>
             <div>
-              <h3 className="self-service-section-title">Leave Balances</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h3 className="app-section-title">Leave Balances</h3>
+              <div className="kpi-grid">
                 {balances.length === 0 ? (
-                  <div className="col-span-3">
-                    <EmptyState
-                      title="No leave balance records found."
-                      description="Your account currently has no allocated leave quotas."
-                    />
-                  </div>
+                  <EmptyState
+                    title="No leave balance records found."
+                    description="Your account currently has no allocated leave quotas."
+                  />
                 ) : (
                   balances.map((b) => (
                     <MetricCard
@@ -198,7 +202,7 @@ export default function SelfServicePage() {
               </div>
             </div>
             <div>
-              <h3 className="self-service-section-title">Leave Requests</h3>
+              <h3 className="app-section-title">Leave Requests</h3>
               <DataTable
                 headers={["Dates", "Days", "Reason", "Status"]}
                 empty={requests.length === 0}
@@ -206,14 +210,10 @@ export default function SelfServicePage() {
               >
                 {requests.map((r) => (
                   <tr key={r.leaveRequestId}>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {r.startDate} to {r.endDate}
-                    </td>
-                    <td className="px-4 py-3">{r.daysCounted} ({r.unit})</td>
-                    <td className="px-4 py-3">{r.reason}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={r.status} />
-                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>{r.startDate} to {r.endDate}</td>
+                    <td>{r.daysCounted} ({r.unit})</td>
+                    <td>{r.reason}</td>
+                    <td><StatusBadge status={r.status} /></td>
                   </tr>
                 ))}
               </DataTable>
@@ -227,10 +227,10 @@ export default function SelfServicePage() {
         role="tabpanel"
         aria-labelledby="tab-notifications"
         hidden={activeTab !== "notifications"}
-        className="space-y-3"
+        className="app-stack--sm"
       >
         {notificationsLoading && (
-          <div className="flex justify-center p-12"><Spinner /></div>
+          <div className="app-spinner-center"><Spinner /></div>
         )}
         {notificationsError && !notificationsLoading && (
           <ErrorState
@@ -246,11 +246,11 @@ export default function SelfServicePage() {
             />
           ) : (
             notifications.map((n) => (
-              <div key={n.notificationId} className="self-service-card self-service-card--notification">
-                <div className="self-service-card__content">
-                  <div className="self-service-card__title">{n.title}</div>
-                  {n.body && <div className="self-service-card__body">{n.body}</div>}
-                  <div className="self-service-card__meta">
+              <div key={n.notificationId} className="app-card app-card--notification">
+                <div className="app-card__content">
+                  <div className="app-card__title">{n.title}</div>
+                  {n.body && <div className="app-card__body">{n.body}</div>}
+                  <div className="app-card__meta">
                     {new Date(n.createdAt).toLocaleString()}
                   </div>
                 </div>

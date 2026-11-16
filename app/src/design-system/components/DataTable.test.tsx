@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+﻿import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DataTable } from "./DataTable";
 
@@ -25,7 +25,7 @@ describe("DataTable", () => {
       <DataTable headers={["Name", "Details"]} empty emptyMessage="No records yet." />,
     );
     expect(screen.getByText("No records yet.")).toBeInTheDocument();
-    expect(document.querySelector(".platform-table-cards")).not.toBeInTheDocument();
+    expect(document.querySelector(".app-table-cards")).not.toBeInTheDocument();
 
     rerender(
       <DataTable headers={["Name", "Details"]}>
@@ -33,6 +33,6 @@ describe("DataTable", () => {
       </DataTable>,
     );
     // matchMedia is mocked to desktop in setup.tsx so cards never render
-    expect(document.querySelector(".platform-table-cards")).not.toBeInTheDocument();
+    expect(document.querySelector(".app-table-cards")).not.toBeInTheDocument();
   });
 });

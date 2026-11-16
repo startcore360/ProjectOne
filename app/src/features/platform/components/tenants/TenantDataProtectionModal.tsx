@@ -160,7 +160,7 @@ export function TenantDataProtectionModal({
         {notice && <Notice tone={notice.tone}>{notice.message}</Notice>}
 
         {/* Tab Navigation */}
-        <div style={{ display: "flex", gap: "var(--space-2)", borderBottom: "1px solid var(--border-subtle)" }}>
+        <div style={{ display: "flex", gap: "var(--space-2)", borderBottom: "1px solid var(--color-border-divider)" }}>
           <Button
             variant={activeTab === "export" ? "primary" : "secondary"}
             size="sm"
@@ -197,7 +197,7 @@ export function TenantDataProtectionModal({
         {activeTab === "export" && (
           <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ margin: 0, fontSize: "var(--fs-body-sm)", color: "var(--text-secondary)" }}>
+              <p style={{ margin: 0, fontSize: "var(--fs-body-sm)", color: "var(--color-text-muted)" }}>
                 Export tenant data bundle adhering to standard legal export specifications.
               </p>
               <Button size="sm" onClick={handleTriggerExport} disabled={exporting}>
@@ -224,7 +224,7 @@ export function TenantDataProtectionModal({
                     <td>{exp.completedAt ? new Date(exp.completedAt).toLocaleString() : "Processing"}</td>
                     <td>
                       {exp.downloadUrl && (exp.downloadUrl.startsWith("https://") || exp.downloadUrl.startsWith("/")) ? (
-                        <a href={exp.downloadUrl} target="_blank" rel="noreferrer" style={{ color: "var(--color-primary-600, #2563eb)" }}>
+                        <a href={exp.downloadUrl} target="_blank" rel="noreferrer" style={{ color: "var(--color-text-brand)" }}>
                           Download Zip
                         </a>
                       ) : (
@@ -242,7 +242,7 @@ export function TenantDataProtectionModal({
         {activeTab === "retention" && (
           <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ margin: 0, fontSize: "var(--fs-body-sm)", color: "var(--text-secondary)" }}>
+              <p style={{ margin: 0, fontSize: "var(--fs-body-sm)", color: "var(--color-text-muted)" }}>
                 Data retention periods for this tenant. Alterations require Data Protection Officer verification.
               </p>
               <Button size="sm" onClick={() => setShowRetentionForm(!showRetentionForm)}>
@@ -254,10 +254,10 @@ export function TenantDataProtectionModal({
               <form
                 onSubmit={handleSubmitRetentionChange}
                 style={{
-                  background: "var(--surface-muted, #f8fafc)",
+                  background: "var(--color-bg-subtle)",
                   padding: "var(--space-3)",
                   borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
+                  border: "1px solid var(--color-border-divider)",
                   display: "grid",
                   gap: "var(--space-3)",
                 }}

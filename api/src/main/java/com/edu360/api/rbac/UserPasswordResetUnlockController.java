@@ -1,7 +1,5 @@
 package com.edu360.api.rbac;
 
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +39,6 @@ import jakarta.validation.Valid;
 @Tag(name = "Users", description = "USER_PASSWORD_RESET_UNLOCK - reset a password or unlock an account")
 public class UserPasswordResetUnlockController {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final TenantRepository tenantRepository;
@@ -170,8 +167,6 @@ public class UserPasswordResetUnlockController {
     }
 
     private String generateTemporaryPassword() {
-        byte[] randomBytes = new byte[18];
-        RANDOM.nextBytes(randomBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+        return com.edu360.api.auth.TemporaryPasswordGenerator.generate();
     }
 }

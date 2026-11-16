@@ -121,6 +121,12 @@ export const academicService = {
     return res.data;
   },
 
+  // Get current student status
+  getStudentStatus: async (tenantId: string, studentId: string): Promise<StudentStatusItem> => {
+    const res = await api.get<StudentStatusItem>(`/v1/tenants/${tenantId}/students/${studentId}`);
+    return res.data;
+  },
+
   // Student status change
   changeStudentStatus: async (
     tenantId: string,

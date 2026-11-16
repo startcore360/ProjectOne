@@ -1,14 +1,18 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
   DataTable,
   MetricCard,
+  Modal,
   Notice,
   Panel,
+  SelectField,
   StatusBadge,
+  TextField,
 } from "../../../../design-system/components";
 import { Spinner } from "../../../../components/ui";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   platformOpsService,
   type SecurityPolicyItem,
@@ -110,7 +114,7 @@ export function SecurityPolicyView() {
       setMessage("Security incident logged.");
       setShowIncidentModal(false);
       setIncidentTitle("");
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to log security incident");
     } finally {
@@ -125,14 +129,14 @@ export function SecurityPolicyView() {
         closureNote: newStatus === "CLOSED" ? "Resolved by Data Protection / Security Officer" : undefined,
       });
       setMessage(`Incident marked as ${newStatus}.`);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update incident status");
     }
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Security Policy & Incidents"
         description="Global platform authentication controls, password complexity rules, session timeouts, and security incident tracking."
@@ -144,7 +148,7 @@ export function SecurityPolicyView() {
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error && <ErrorState message={error} action={<Button variant="secondary" onClick={() => void loadData()}>Retry</Button>} />}
 
       <div className="kpi-grid">
         <MetricCard
@@ -173,11 +177,11 @@ export function SecurityPolicyView() {
         />
       </div>
 
-      <div className="platform-two-col">
+      <div className="app-two-col">
         {/* Policy Configuration Form */}
         <Panel title="Platform Security Rules" description="Set security baseline enforced across realms">
           {loading ? (
-            <div className="platform-empty-inline">
+            <div className="app-empty-inline">
               <Spinner label="Loading policy..." />
             </div>
           ) : (
@@ -187,7 +191,7 @@ export function SecurityPolicyView() {
                   <span>Minimum Password Length</span>
                   <input
                     type="number"
-                    className="platform-input"
+                    className="app-input"
                     value={minPasswordLength}
                     onChange={(e) => setMinPasswordLength(Number(e.target.value))}
                     min="8"
@@ -202,7 +206,7 @@ export function SecurityPolicyView() {
                     <span>Max Failed Logins</span>
                     <input
                       type="number"
-                      className="platform-input"
+                      className="app-input"
                       value={maxFailedLogins}
                       onChange={(e) => setMaxFailedLogins(Number(e.target.value))}
                       min="3"
@@ -215,7 +219,7 @@ export function SecurityPolicyView() {
                     <span>Lockout Duration (mins)</span>
                     <input
                       type="number"
-                      className="platform-input"
+                      className="app-input"
                       value={lockoutMinutes}
                       onChange={(e) => setLockoutMinutes(Number(e.target.value))}
                       min="5"
@@ -230,7 +234,7 @@ export function SecurityPolicyView() {
                     <span>Idle Session Timeout (mins)</span>
                     <input
                       type="number"
-                      className="platform-input"
+                      className="app-input"
                       value={idleSessionTimeoutMinutes}
                       onChange={(e) => setIdleSessionTimeoutMinutes(Number(e.target.value))}
                       min="5"
@@ -242,7 +246,7 @@ export function SecurityPolicyView() {
                     <span>Backup Retention (days)</span>
                     <input
                       type="number"
-                      className="platform-input"
+                      className="app-input"
                       value={defaultBackupRetentionDays}
                       onChange={(e) => setDefaultBackupRetentionDays(Number(e.target.value))}
                       min="30"
@@ -297,14 +301,14 @@ export function SecurityPolicyView() {
         {/* Incidents Panel */}
         <Panel title="Security Incidents" description="Active threat reports and containment log">
           {incidents.length === 0 ? (
-            <p className="platform-empty-inline">No security incidents logged.</p>
+            <p className="app-empty-inline">No security incidents logged.</p>
           ) : (
             <DataTable headers={["Title", "Severity", "Status", "Actions"]}>
               {incidents.map((inc) => (
                 <tr key={inc.securityIncidentId}>
                   <td>
                     <strong>{inc.title}</strong>
-                    <small className="platform-cell-sub">
+                    <small className="app-cell-sub">
                       Detected {new Date(inc.detectedAt).toLocaleDateString()}
                     </small>
                   </td>
@@ -343,60 +347,56 @@ export function SecurityPolicyView() {
       </div>
 
       {/* New Incident Modal */}
-      {showIncidentModal && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Log Security Incident">
-            <header>
-              <h2>Log Security Incident</h2>
-              <p>Report an anomaly, breach attempt, or suspicious platform activity.</p>
-            </header>
-            <form onSubmit={handleCreateIncident}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Incident Summary / Title</span>
-                  <input
-                    type="text"
-                    className="platform-input"
-                    value={incidentTitle}
-                    onChange={(e) => setIncidentTitle(e.target.value)}
-                    placeholder="e.g. Unusual brute-force attempt on admin auth"
-                    required
-                  />
-                </label>
-                <label className="field-label">
-                  <span>Severity Level</span>
-                  <select
-                    className="platform-input"
-                    value={incidentSeverity}
-                    onChange={(e) => setIncidentSeverity(e.target.value)}
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
-                  </select>
-                </label>
-                <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={incidentExternalNotify}
-                    onChange={(e) => setIncidentExternalNotify(e.target.checked)}
-                  />
-                  <span>CERT-In / External authority notification required</span>
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setShowIncidentModal(false)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submittingIncident}>
-                  {submittingIncident ? "Logging..." : "Submit Incident Report"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showIncidentModal}
+        onClose={() => setShowIncidentModal(false)}
+        kicker="SECURITY"
+        title="Log Security Incident"
+        titleId="log-incident-title"
+        description="Report an anomaly, breach attempt, or suspicious platform activity."
+        size="sm"
+      >
+        <form onSubmit={handleCreateIncident}>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <TextField
+              id="incident-title"
+              label="Incident Summary / Title"
+              value={incidentTitle}
+              onChange={(e) => setIncidentTitle(e.target.value)}
+              placeholder="e.g. Unusual brute-force attempt on admin auth"
+              required
+            />
+            <SelectField
+              id="incident-severity"
+              label="Severity Level"
+              value={incidentSeverity}
+              onChange={(e) => setIncidentSeverity(e.target.value)}
+              options={[
+                { value: "LOW", label: "Low" },
+                { value: "MEDIUM", label: "Medium" },
+                { value: "HIGH", label: "High" },
+                { value: "CRITICAL", label: "Critical" },
+              ]}
+            />
+            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={incidentExternalNotify}
+                onChange={(e) => setIncidentExternalNotify(e.target.checked)}
+              />
+              <span>CERT-In / External authority notification required</span>
+            </label>
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setShowIncidentModal(false)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={submittingIncident}>
+              Submit Incident Report
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

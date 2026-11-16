@@ -1,14 +1,18 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
   DataTable,
   MetricCard,
+  Modal,
   Notice,
   Panel,
   SearchBox,
+  SelectField,
   StatusBadge,
+  TextField,
 } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import {
   platformOpsService,
@@ -17,6 +21,58 @@ import {
 } from "../../api/platformOpsService";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
+
+function RowMenu({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+      <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)} aria-haspopup="true" aria-expanded={open}>
+        ⋯
+      </Button>
+      {open && (
+        <div
+          role="menu"
+          style={{
+            position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50,
+            background: "var(--color-bg-surface)", border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-2)",
+            minWidth: "140px", padding: "4px 0",
+          }}
+          onClick={() => setOpen(false)}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onClick}
+      style={{
+        display: "block", width: "100%", textAlign: "left",
+        padding: "8px 14px", background: "none", border: "none",
+        fontSize: "var(--fs-body-sm)", color: "var(--color-text)", cursor: "pointer",
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function InvoicesView() {
   const { can, role } = usePlatformAccess();
@@ -54,7 +110,7 @@ export function InvoicesView() {
   const [discountAmount, setDiscountAmount] = useState(5000);
   const [applyingDiscount, setApplyingDiscount] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -73,11 +129,11 @@ export function InvoicesView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+  }, [loadData]);
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -87,7 +143,7 @@ export function InvoicesView() {
       await platformOpsService.createInvoice(createDraft);
       setMessage("Invoice created successfully.");
       setShowCreate(false);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create invoice");
     } finally {
@@ -99,7 +155,7 @@ export function InvoicesView() {
     try {
       await platformOpsService.sendInvoice(inv.invoiceId);
       setMessage(`Invoice ${inv.invoiceNumber} marked as SENT.`);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to send invoice");
     }
@@ -109,7 +165,7 @@ export function InvoicesView() {
     try {
       await platformOpsService.flagOverdue(inv.invoiceId);
       setMessage(`Invoice ${inv.invoiceNumber} flagged as overdue.`);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to flag overdue");
     }
@@ -128,7 +184,7 @@ export function InvoicesView() {
       setMessage(`Payment recorded for ${payInvoice.invoiceNumber}.`);
       setPayInvoice(null);
       setPaymentRef("");
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to record payment");
     } finally {
@@ -145,7 +201,7 @@ export function InvoicesView() {
       await platformOpsService.applyDiscount(discountInvoice.invoiceId, Number(discountAmount));
       setMessage(`Discount applied to ${discountInvoice.invoiceNumber}.`);
       setDiscountInvoice(null);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to apply discount");
     } finally {
@@ -168,7 +224,7 @@ export function InvoicesView() {
   const overdueCount = invoices.filter((i) => !!i.overdueFlaggedAt).length;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Invoices & Billing"
         description="Tenant subscription invoicing, payment recording, overdue flagging and Product Owner discounts."
@@ -180,10 +236,10 @@ export function InvoicesView() {
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error && <ErrorState message={error} action={<Button variant="secondary" onClick={() => void loadData()}>Retry</Button>} />}
 
       <div className="kpi-grid">
-        <MetricCard label="Total Invoices" value={invoices.length} note="Platform-wide" mark="book" />
+        <MetricCard label="Total Invoices" value={invoices.length} note="app-wide" mark="book" />
         <MetricCard
           label="Total Billed"
           value={`₹${totalInvoiced.toLocaleString("en-IN")}`}
@@ -205,40 +261,36 @@ export function InvoicesView() {
       </div>
 
       <Panel title="Platform Invoices" description="Manage invoices across all tenants">
-        <div className="platform-toolbar" style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+        <div className="app-toolbar" style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <SearchBox
             value={query}
             onChange={(val) => setQuery(val)}
             placeholder="Search invoice number..."
           />
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--fs-body-sm)", color: "var(--color-text-muted)" }}>Status:</span>
-            {["All", "DRAFT", "SENT", "PAID"].map((st) => (
-              <Button
-                key={st}
-                size="sm"
-                variant={statusFilter === st ? "primary" : "secondary"}
-                onClick={() => setStatusFilter(st)}
-              >
-                {st}
-              </Button>
-            ))}
-          </div>
+          <label className="app-select-label">
+            Status{" "}
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="All">All</option>
+              <option value="DRAFT">Draft</option>
+              <option value="SENT">Sent</option>
+              <option value="PAID">Paid</option>
+            </select>
+          </label>
         </div>
 
         {loading ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading invoices..." />
           </div>
         ) : filteredInvoices.length === 0 ? (
-          <p className="platform-empty-inline">No invoices found matching criteria.</p>
+          <p className="app-empty-inline">No invoices found matching criteria.</p>
         ) : (
           <DataTable headers={["Invoice #", "Period", "Amount", "Status", "Flags", "Actions"]}>
             {filteredInvoices.map((inv) => (
               <tr key={inv.invoiceId}>
                 <td>
                   <strong>{inv.invoiceNumber}</strong>
-                  <small className="platform-cell-sub">Tenant: {inv.tenantId.substring(0, 8)}...</small>
+                  <small className="app-cell-sub">Tenant: {inv.tenantId.substring(0, 8)}...</small>
                 </td>
                 <td>
                   {inv.periodStart} to {inv.periodEnd}
@@ -246,7 +298,7 @@ export function InvoicesView() {
                 <td>
                   <strong>₹{Number(inv.totalAmount).toLocaleString("en-IN")}</strong>
                   {Number(inv.discountAmount) > 0 && (
-                    <small className="platform-cell-sub" style={{ color: "var(--color-status-success-fg)" }}>
+                    <small className="app-cell-sub" style={{ color: "var(--color-status-success-fg)" }}>
                       -₹{Number(inv.discountAmount).toLocaleString("en-IN")} discount
                     </small>
                   )}
@@ -262,28 +314,20 @@ export function InvoicesView() {
                   )}
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <RowMenu>
                     {inv.status === "DRAFT" && canManageInvoice && (
-                      <Button size="sm" variant="secondary" onClick={() => handleSend(inv)}>
-                        Send
-                      </Button>
+                      <MenuAction onClick={() => handleSend(inv)}>Send</MenuAction>
                     )}
                     {inv.status !== "PAID" && canManageInvoice && (
-                      <Button size="sm" variant="secondary" onClick={() => setPayInvoice(inv)}>
-                        Record Pay
-                      </Button>
+                      <MenuAction onClick={() => setPayInvoice(inv)}>Record payment</MenuAction>
                     )}
                     {inv.status !== "PAID" && !inv.overdueFlaggedAt && (
-                      <Button size="sm" variant="secondary" onClick={() => handleFlagOverdue(inv)}>
-                        Flag Overdue
-                      </Button>
+                      <MenuAction onClick={() => handleFlagOverdue(inv)}>Flag overdue</MenuAction>
                     )}
                     {isProductOwner && inv.status !== "PAID" && canApplyDiscount && (
-                      <Button size="sm" variant="secondary" onClick={() => setDiscountInvoice(inv)}>
-                        Discount
-                      </Button>
+                      <MenuAction onClick={() => setDiscountInvoice(inv)}>Apply discount</MenuAction>
                     )}
-                  </div>
+                  </RowMenu>
                 </td>
               </tr>
             ))}
@@ -292,156 +336,142 @@ export function InvoicesView() {
       </Panel>
 
       {/* Create Invoice Modal */}
-      {showCreate && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Create Invoice">
-            <header>
-              <h2>Create Tenant Invoice</h2>
-              <p>Issue a new billing statement for an enrolled tenant institution.</p>
-            </header>
-            <form onSubmit={handleCreate}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Tenant Institution</span>
-                  <select
-                    className="platform-input"
-                    value={createDraft.tenantId}
-                    onChange={(e) => setCreateDraft({ ...createDraft, tenantId: e.target.value })}
-                    required
-                  >
-                    {tenants.map((t) => (
-                      <option key={t.tenantId} value={t.tenantId}>
-                        {t.tenantName} ({t.subdomain})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <label className="field-label">
-                    <span>Period Start</span>
-                    <input
-                      type="date"
-                      className="platform-input"
-                      value={createDraft.periodStart}
-                      onChange={(e) => setCreateDraft({ ...createDraft, periodStart: e.target.value })}
-                      required
-                    />
-                  </label>
-                  <label className="field-label">
-                    <span>Period End</span>
-                    <input
-                      type="date"
-                      className="platform-input"
-                      value={createDraft.periodEnd}
-                      onChange={(e) => setCreateDraft({ ...createDraft, periodEnd: e.target.value })}
-                      required
-                    />
-                  </label>
-                </div>
-                <label className="field-label">
-                  <span>Subtotal Amount (₹ INR)</span>
-                  <input
-                    type="number"
-                    className="platform-input"
-                    value={createDraft.subtotalAmount}
-                    onChange={(e) => setCreateDraft({ ...createDraft, subtotalAmount: Number(e.target.value) })}
-                    min="1"
-                    required
-                  />
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={creating}>
-                  {creating ? "Creating..." : "Save Draft Invoice"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        kicker="BILLING"
+        title="Create Tenant Invoice"
+        titleId="create-invoice-title"
+        description="Issue a new billing statement for an enrolled tenant institution."
+        size="sm"
+      >
+        <form onSubmit={handleCreate}>
+          <div style={{ display: "grid", gap: "12px" }}>
+            {/* Raw <select> kept — dynamic tenant options not suitable for static DS SelectField options array */}
+            <label className="field-label">
+              <span>Tenant Institution</span>
+              <select
+                className="app-input"
+                value={createDraft.tenantId}
+                onChange={(e) => setCreateDraft({ ...createDraft, tenantId: e.target.value })}
+                required
+              >
+                {tenants.map((t) => (
+                  <option key={t.tenantId} value={t.tenantId}>
+                    {t.tenantName} ({t.subdomain})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <TextField
+                id="invoice-period-start"
+                label="Period Start"
+                type="date"
+                value={createDraft.periodStart}
+                onChange={(e) => setCreateDraft({ ...createDraft, periodStart: e.target.value })}
+                required
+              />
+              <TextField
+                id="invoice-period-end"
+                label="Period End"
+                type="date"
+                value={createDraft.periodEnd}
+                onChange={(e) => setCreateDraft({ ...createDraft, periodEnd: e.target.value })}
+                required
+              />
+            </div>
+            <TextField
+              id="invoice-subtotal"
+              label="Subtotal Amount (₹ INR)"
+              type="number"
+              value={String(createDraft.subtotalAmount)}
+              onChange={(e) => setCreateDraft({ ...createDraft, subtotalAmount: Number(e.target.value) })}
+              required
+            />
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={creating}>
+              Save Draft Invoice
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Record Payment Modal */}
-      {payInvoice && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Record Payment">
-            <header>
-              <h2>Record Payment · {payInvoice.invoiceNumber}</h2>
-              <p>Amount due: ₹{Number(payInvoice.totalAmount).toLocaleString("en-IN")}</p>
-            </header>
-            <form onSubmit={handleRecordPayment}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Payment Mode</span>
-                  <select
-                    className="platform-input"
-                    value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value)}
-                  >
-                    <option value="GATEWAY">Payment Gateway</option>
-                    <option value="OFFLINE">Offline Bank Transfer / Cheque</option>
-                  </select>
-                </label>
-                <label className="field-label">
-                  <span>Payment Reference / UTR Number</span>
-                  <input
-                    type="text"
-                    className="platform-input"
-                    placeholder="e.g. UTR20261107009823"
-                    value={paymentRef}
-                    onChange={(e) => setPaymentRef(e.target.value)}
-                    required
-                  />
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setPayInvoice(null)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={recordingPay}>
-                  {recordingPay ? "Recording..." : "Confirm Payment"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={!!payInvoice}
+        onClose={() => setPayInvoice(null)}
+        kicker="PAYMENT"
+        title={payInvoice ? `Record Payment · ${payInvoice.invoiceNumber}` : "Record Payment"}
+        titleId="record-payment-title"
+        description={payInvoice ? `Amount due: ₹${Number(payInvoice.totalAmount).toLocaleString("en-IN")}` : undefined}
+        size="sm"
+      >
+        <form onSubmit={handleRecordPayment}>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <SelectField
+              id="payment-mode"
+              label="Payment Mode"
+              value={paymentMode}
+              onChange={(e) => setPaymentMode(e.target.value)}
+              options={[
+                { value: "GATEWAY", label: "Payment Gateway" },
+                { value: "OFFLINE", label: "Offline Bank Transfer / Cheque" },
+              ]}
+            />
+            <TextField
+              id="payment-ref"
+              label="Payment Reference / UTR Number"
+              placeholder="e.g. UTR20261107009823"
+              value={paymentRef}
+              onChange={(e) => setPaymentRef(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setPayInvoice(null)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={recordingPay}>
+              Confirm Payment
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Apply Discount Modal */}
-      {discountInvoice && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Apply Discount">
-            <header>
-              <h2>Apply Discount (Product Owner only)</h2>
-              <p>Invoice {discountInvoice.invoiceNumber} · Subtotal: ₹{discountInvoice.subtotalAmount}</p>
-            </header>
-            <form onSubmit={handleApplyDiscount}>
-              <label className="field-label">
-                <span>Discount Amount (₹ INR)</span>
-                <input
-                  type="number"
-                  className="platform-input"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                  max={discountInvoice.subtotalAmount}
-                  min="1"
-                  required
-                />
-              </label>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setDiscountInvoice(null)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={applyingDiscount}>
-                  {applyingDiscount ? "Applying..." : "Apply Discount"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={!!discountInvoice}
+        onClose={() => setDiscountInvoice(null)}
+        kicker="DISCOUNT"
+        title="Apply Discount (Product Owner only)"
+        titleId="apply-discount-title"
+        description={discountInvoice ? `Invoice ${discountInvoice.invoiceNumber} · Subtotal: ₹${discountInvoice.subtotalAmount}` : undefined}
+        size="sm"
+      >
+        <form onSubmit={handleApplyDiscount}>
+          <TextField
+            id="discount-amount"
+            label="Discount Amount (₹ INR)"
+            type="number"
+            value={String(discountAmount)}
+            onChange={(e) => setDiscountAmount(Number(e.target.value))}
+            required
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setDiscountInvoice(null)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={applyingDiscount}>
+              Apply Discount
+            </Button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </div>
   );
 }

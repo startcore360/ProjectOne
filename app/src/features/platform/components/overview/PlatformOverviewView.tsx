@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Button, MetricCard, Panel, StatusBadge } from "../../../../design-system/components";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Spinner } from "../../../../components/ui";
 import { Icon } from "../../../../components/ui/Icon";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { platformUserService, type PlatformUserItem } from "../../api/platformUserService";
 import { platformOpsService, type PlatformAuditLogItem } from "../../api/platformOpsService";
@@ -36,21 +37,21 @@ export function PlatformOverviewView() {
   const trialTenants = tenants.filter((t) => t.state === "TRIAL");
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Platform overview"
         description="Tenant lifecycle, platform access, integrations and service health at a glance."
       />
 
       {error && !loading && (
-        <div className="eds-error-state" role="alert">
-          <p className="eds-error-state__message">{error}</p>
-          <Button variant="secondary" onClick={() => { setLoading(true); setError(""); setRetryKey((value) => value + 1); }}>Retry</Button>
-        </div>
+        <ErrorState
+          message={error}
+          action={<Button variant="secondary" onClick={() => { setLoading(true); setError(""); setRetryKey((value) => value + 1); }}>Retry</Button>}
+        />
       )}
 
       {loading ? (
-        <div className="platform-empty-inline">
+        <div className="app-empty-inline">
           <Spinner label="Loading platform overview..." />
         </div>
       ) : error ? null : (
@@ -72,15 +73,15 @@ export function PlatformOverviewView() {
             <MetricCard label="Platform users" value={users.length} note="Admin and support accounts" mark="users" />
           </div>
 
-          <div className="platform-two-col">
+          <div className="app-two-col">
             <Panel title="Enrolled Tenants" description="Registered institutions on EDU 360">
-              <div className="platform-list">
+              <div className="app-list">
                 {tenants.slice(0, 5).map((tenant) => (
-                  <div className="platform-list-row" key={tenant.tenantId}>
-                    <span className="platform-list-icon">
+                  <div className="app-list-row" key={tenant.tenantId}>
+                    <span className="app-list-icon">
                       <Icon name="book" size={16} />
                     </span>
-                    <span className="platform-list-copy">
+                    <span className="app-list-copy">
                       <strong>{tenant.tenantName}</strong>
                       <small>
                         {tenant.subdomain} · {tenant.tenantType} · Plan: {tenant.planName}
@@ -90,19 +91,19 @@ export function PlatformOverviewView() {
                   </div>
                 ))}
                 {tenants.length === 0 && (
-                  <p className="platform-empty-inline">No tenants enrolled yet.</p>
+                  <p className="app-empty-inline">No tenants enrolled yet.</p>
                 )}
               </div>
             </Panel>
 
-            <Panel title="Platform activity" description="Latest platform-scope audit events">
-              <div className="platform-list">
+            <Panel title="Platform activity" description="Latest app-scope audit events">
+              <div className="app-list">
                 {auditLogs.slice(0, 5).map((event) => (
-                  <div className="platform-list-row" key={event.auditOutboxId}>
-                    <span className="platform-list-icon">
+                  <div className="app-list-row" key={event.auditOutboxId}>
+                    <span className="app-list-icon">
                       <Icon name="clock" size={16} />
                     </span>
-                    <span className="platform-list-copy">
+                    <span className="app-list-copy">
                       <strong>{event.operation}</strong>
                       <small>
                         {event.actorKind} · {new Date(event.occurredAt).toLocaleDateString()}
@@ -112,7 +113,7 @@ export function PlatformOverviewView() {
                   </div>
                 ))}
                 {auditLogs.length === 0 && (
-                  <p className="platform-empty-inline">No platform events recorded yet.</p>
+                  <p className="app-empty-inline">No platform events recorded yet.</p>
                 )}
               </div>
             </Panel>

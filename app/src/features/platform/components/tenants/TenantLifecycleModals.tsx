@@ -1,6 +1,5 @@
 import type { FormEvent } from "react";
-import { Button, Kicker, TextField } from "../../../../design-system/components";
-import { Icon } from "../../../../components/ui/Icon";
+import { Button, Modal, TextField } from "../../../../design-system/components";
 import type { Tenant } from "../common/types";
 
 export interface SuspendTenantModalProps {
@@ -22,49 +21,37 @@ export function SuspendTenantModal({
   setSuspendReason,
   suspending,
 }: SuspendTenantModalProps) {
-  if (!isOpen || !tenant) return null;
-
   return (
-    <div
-      className="platform-modal-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={isOpen && !!tenant}
+      onClose={onClose}
+      kicker="TENANT SUSPENSION"
+      title={tenant ? `Suspend Tenant: ${tenant.name}` : "Suspend Tenant"}
+      titleId="tenant-suspend-title"
+      description="Suspends login access for the tenant's institutions immediately."
+      size="sm"
     >
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-suspend-title">
-        <header>
-          <div>
-            <Kicker>TENANT SUSPENSION</Kicker>
-            <h2 id="tenant-suspend-title">Suspend Tenant: {tenant.name}</h2>
-            <p>Suspends login access for the tenant's institutions immediately.</p>
-          </div>
-          <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={16} />
-          </button>
-        </header>
-        <form onSubmit={onSubmit}>
-          <div style={{ marginBottom: "1rem" }}>
-            <TextField
-              id="suspend-reason-input"
-              label="Reason for suspension *"
-              required
-              value={suspendReason}
-              onChange={(e) => setSuspendReason(e.target.value)}
-              placeholder="e.g. Non-payment, regulatory investigation, policy violation"
-            />
-          </div>
-          <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-            <Button type="button" variant="secondary" onClick={onClose} disabled={suspending}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" busy={suspending}>
-              Confirm Suspension
-            </Button>
-          </footer>
-        </form>
-      </section>
-    </div>
+      <form onSubmit={onSubmit}>
+        <div style={{ marginBottom: "1rem" }}>
+          <TextField
+            id="suspend-reason-input"
+            label="Reason for suspension *"
+            required
+            value={suspendReason}
+            onChange={(e) => setSuspendReason(e.target.value)}
+            placeholder="e.g. Non-payment, regulatory investigation, policy violation"
+          />
+        </div>
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={suspending}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" busy={suspending}>
+            Confirm Suspension
+          </Button>
+        </footer>
+      </form>
+    </Modal>
   );
 }
 
@@ -87,48 +74,36 @@ export function ArchiveTenantModal({
   setArchiveReason,
   archiving,
 }: ArchiveTenantModalProps) {
-  if (!isOpen || !tenant) return null;
-
   return (
-    <div
-      className="platform-modal-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={isOpen && !!tenant}
+      onClose={onClose}
+      kicker="TENANT ARCHIVAL"
+      title={tenant ? `Archive Tenant: ${tenant.name}` : "Archive Tenant"}
+      titleId="tenant-archive-title"
+      description="Archives tenant records and prevents operational logins."
+      size="sm"
     >
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-archive-title">
-        <header>
-          <div>
-            <Kicker>TENANT ARCHIVAL</Kicker>
-            <h2 id="tenant-archive-title">Archive Tenant: {tenant.name}</h2>
-            <p>Archives tenant records and prevents operational logins.</p>
-          </div>
-          <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={16} />
-          </button>
-        </header>
-        <form onSubmit={onSubmit}>
-          <div style={{ marginBottom: "1rem" }}>
-            <TextField
-              id="archive-reason-input"
-              label="Reason for archival *"
-              required
-              value={archiveReason}
-              onChange={(e) => setArchiveReason(e.target.value)}
-              placeholder="e.g. Contract elapsed, customer offboarding completed"
-            />
-          </div>
-          <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-            <Button type="button" variant="secondary" onClick={onClose} disabled={archiving}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" busy={archiving}>
-              Confirm Archival
-            </Button>
-          </footer>
-        </form>
-      </section>
-    </div>
+      <form onSubmit={onSubmit}>
+        <div style={{ marginBottom: "1rem" }}>
+          <TextField
+            id="archive-reason-input"
+            label="Reason for archival *"
+            required
+            value={archiveReason}
+            onChange={(e) => setArchiveReason(e.target.value)}
+            placeholder="e.g. Contract elapsed, customer offboarding completed"
+          />
+        </div>
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={archiving}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" busy={archiving}>
+            Confirm Archival
+          </Button>
+        </footer>
+      </form>
+    </Modal>
   );
 }

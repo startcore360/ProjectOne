@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Button, MetricCard, Notice, Panel } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { platformOpsService, type PlatformReportItem } from "../../api/platformOpsService";
@@ -30,44 +31,36 @@ export function ReportsView() {
   };
 
   useEffect(() => {
-    loadReport(reportCode);
+    void loadReport(reportCode);
   }, [reportCode]);
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Platform Reports"
         description="Aggregated platform executive analytics, revenue collections, system throughput, and support SLAs."
       />
 
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error && (
+        <ErrorState
+          message={error}
+          action={<Button variant="secondary" onClick={() => void loadReport(reportCode)}>Retry</Button>}
+        />
+      )}
 
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
-        <Button
-          size="sm"
-          variant={reportCode === "PLATFORM_OVERVIEW" ? "primary" : "secondary"}
-          onClick={() => setReportCode("PLATFORM_OVERVIEW")}
-        >
-          Platform Overview
-        </Button>
-        <Button
-          size="sm"
-          variant={reportCode === "BILLING_REVENUE" ? "primary" : "secondary"}
-          onClick={() => setReportCode("BILLING_REVENUE")}
-        >
-          Billing & Revenue
-        </Button>
-        <Button
-          size="sm"
-          variant={reportCode === "SUPPORT_SLA" ? "primary" : "secondary"}
-          onClick={() => setReportCode("SUPPORT_SLA")}
-        >
-          Support & SLA
-        </Button>
+      <div className="app-toolbar">
+        <label className="app-select-label">
+          Report{" "}
+          <select value={reportCode} onChange={(e) => setReportCode(e.target.value)}>
+            <option value="PLATFORM_OVERVIEW">Platform Overview</option>
+            <option value="BILLING_REVENUE">Billing &amp; Revenue</option>
+            <option value="SUPPORT_SLA">Support &amp; SLA</option>
+          </select>
+        </label>
       </div>
 
       {loading ? (
-        <div className="platform-empty-inline">
+        <div className="app-empty-inline">
           <Spinner label="Generating platform report..." />
         </div>
       ) : report ? (
@@ -78,28 +71,30 @@ export function ReportsView() {
               <p>{Object.entries(report.metrics).filter(([key, value]) => /note|description|message/i.test(key) && typeof value === "string").map(([, value]) => value).join(" ")}</p>
             </Notice>
           )}
-          <div className="kpi-grid">
-            {Object.entries(report.metrics).filter(([key]) => !/note|description|message/i.test(key)).map(([key, val]) => {
-              const formattedLabel = key
-                .replace(/([A-Z])/g, " $1")
-                .replace(/^./, (str) => str.toUpperCase());
-              const displayVal = val == null
-                ? "Not available"
-                : typeof val === "number" && (key.toLowerCase().includes("revenue") || key.toLowerCase().includes("amount") || key.toLowerCase().includes("collections"))
-                  ? `₹${val.toLocaleString("en-IN")}`
-                  : String(val);
+          {Object.entries(report.metrics).filter(([key]) => !/note|description|message/i.test(key)).length > 0 && (
+            <div className="kpi-grid">
+              {Object.entries(report.metrics).filter(([key]) => !/note|description|message/i.test(key)).map(([key, val]) => {
+                const formattedLabel = key
+                  .replace(/([A-Z])/g, " $1")
+                  .replace(/^./, (str) => str.toUpperCase());
+                const displayVal = val == null
+                  ? "Not available"
+                  : typeof val === "number" && (key.toLowerCase().includes("revenue") || key.toLowerCase().includes("amount") || key.toLowerCase().includes("collections"))
+                    ? `₹${val.toLocaleString("en-IN")}`
+                    : String(val);
 
-              return (
-                <MetricCard
-                  key={key}
-                  label={formattedLabel}
-                  value={displayVal}
-                  note={val == null ? "This metric was not returned by the reporting service." : `Report: ${report.reportCode}`}
-                  mark="chart"
-                />
-              );
-            })}
-          </div>
+                return (
+                  <MetricCard
+                    key={key}
+                    label={formattedLabel}
+                    value={displayVal}
+                    note={val == null ? "This metric was not returned by the reporting service." : `Report: ${report.reportCode}`}
+                    mark="chart"
+                  />
+                );
+              })}
+            </div>
+          )}
 
           <Panel title={report.reportName} description={`Generated at ${new Date(report.generatedAt).toLocaleString()}`}>
             <div style={{ padding: "8px 0" }}>

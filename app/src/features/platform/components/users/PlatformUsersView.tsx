@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Button,
   ConfirmDialog,
   DataTable,
+  ErrorState,
   Modal,
   Notice,
   Panel,
   SearchBox,
   StatusBadge,
 } from "../../../../design-system/components";
+import { CreatedCredentialsModal } from "../../../user-management/components/users/CreatedCredentialsModal";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { PLATFORM_ROLE_LABELS, readErrorMessage } from "../common/types";
@@ -68,7 +70,7 @@ function ChangeRoleModal({
         </>
       }
     >
-      <label className="platform-form-field">
+      <label className="app-form-field">
         Platform role
         <select value={choice} onChange={(e) => setChoice(e.target.value)}>
           <RoleOptions customRoles={customRoles} />
@@ -175,7 +177,7 @@ export function PlatformUsersView() {
   );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Platform users"
         description="Manage access for people who operate the EDU 360 platform."
@@ -194,28 +196,39 @@ export function PlatformUsersView() {
           </Button>
         }
       />
-      {createdUser && (
-        <Notice tone="info">
-          Created <strong>{createdUser.fullName}</strong> ({createdUser.email}). Temporary password (shown once):{" "}
-          <strong>{createdUser.tempPassword}</strong>. They must change it at first login.
-        </Notice>
-      )}
+      <CreatedCredentialsModal
+        isOpen={!!createdUser}
+        onClose={() => setCreatedUser(null)}
+        kicker="PLATFORM USER CREATED"
+        title="Platform user created"
+        description="Share this temporary password securely. It will only be shown once."
+        user={{
+          displayName: createdUser?.fullName ?? "",
+          email: createdUser?.email,
+          temporaryPassword: createdUser?.tempPassword,
+        }}
+      />
       {notice && <Notice tone="success">{notice}</Notice>}
       {actionError && <Notice tone="danger">{actionError}</Notice>}
-      {rolesError && <Notice tone="danger">{rolesError} <Button variant="secondary" size="sm" onClick={() => void loadRoles()}>Retry custom roles</Button></Notice>}
+      {rolesError && (
+        <ErrorState
+          message={rolesError}
+          action={<Button variant="secondary" size="sm" onClick={() => void loadRoles()}>Retry custom roles</Button>}
+        />
+      )}
       {loadError && (
-        <Notice tone="danger">
-          {loadError}{" "}
-          <Button variant="secondary" size="sm" onClick={loadUsers}>Try again</Button>
-        </Notice>
+        <ErrorState
+          message={loadError}
+          action={<Button variant="secondary" size="sm" onClick={loadUsers}>Try again</Button>}
+        />
       )}
       <Panel
         title="Platform access"
         description="Platform staff accounts only. Institution users are managed within their institution."
       >
-        <div className="platform-toolbar">
+        <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search name, email or role" />
-          <label className="platform-select-label">
+          <label className="app-select-label">
             Status{" "}
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option>All</option>
@@ -225,7 +238,7 @@ export function PlatformUsersView() {
           </label>
         </div>
         {loading ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading platform users" />
           </div>
         ) : loadError ? null : (
@@ -252,7 +265,7 @@ export function PlatformUsersView() {
                       </Button>
                     </div>
                   ) : (
-                    u.platformUserId === myId && <small className="platform-cell-sub">This is you</small>
+                    u.platformUserId === myId && <small className="app-cell-sub">This is you</small>
                   )}
                 </td>
               </tr>

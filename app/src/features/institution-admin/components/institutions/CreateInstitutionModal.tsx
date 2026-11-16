@@ -109,7 +109,7 @@ export function CreateInstitutionModal({
       )}
 
       <form onSubmit={handleCreate}>
-        <div className="platform-form-grid" style={{ marginBottom: "var(--space-3)" }}>
+        <div className="app-form-grid" style={{ marginBottom: "var(--space-3)" }}>
           <SelectField
             id="inst-type"
             label="Institution Kind *"
@@ -158,7 +158,7 @@ export function CreateInstitutionModal({
             hint="Use {YYYY}, {YY}, {INST}, and exactly one {SEQ:n} token (n = 3–10). Literals: A–Z, 0–9, _ and -."
             error={fieldErrors.studentIdFormat}
           />
-          <p className="platform-modal-note" aria-live="polite">
+          <p className="app-note" aria-live="polite">
             Preview only: {studentIdFormat ? studentIdFormat.replaceAll("{INST}", instCode.trim() || "INST").replaceAll("{YYYY}", "2026").replaceAll("{YY}", "26").replace(/\{SEQ:(\d+)\}/g, (_match, width: string) => "1".padStart(Number(width), "0")) : "Enter the format to preview the generated student code."}
           </p>
         </div>
@@ -173,7 +173,7 @@ export function CreateInstitutionModal({
             error={fieldErrors.staffIdFormat}
           />
           {staffIdFormat && (
-            <p className="platform-modal-note" aria-live="polite">
+            <p className="app-note" aria-live="polite">
               Preview only: {staffIdFormat.replaceAll("{INST}", instCode.trim() || "INST").replaceAll("{YYYY}", "2026").replaceAll("{YY}", "26").replace(/\{SEQ:(\d+)\}/g, (_match, width: string) => "1".padStart(Number(width), "0"))}
             </p>
           )}

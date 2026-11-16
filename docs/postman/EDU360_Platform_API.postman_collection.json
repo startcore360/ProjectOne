@@ -1,0 +1,455 @@
+{
+  "info": {
+    "_postman_id": "edu360-platform-v1",
+    "name": "EDU 360 – Platform & Tenant Core API Suite",
+    "description": "Comprehensive API collection for EDU 360 Sprint 1 verification covering Platform Owner authentication, multi-tenant governance, subscription plans, tenant provisioning, audit logs, and operational controls.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.request.headers.has('X-Correlation-ID')) {",
+          "    pm.request.headers.add({",
+          "        key: 'X-Correlation-ID',",
+          "        value: 'pm-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7)",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Authentication & Identity",
+      "item": [
+        {
+          "name": "POST Login (Platform Owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var data = pm.response.json();",
+                  "if (data.accessToken) {",
+                  "    pm.environment.set('token', data.accessToken);",
+                  "    console.log('JWT access token updated in environment');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{ownerPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "GET Current User Profile (/api/auth/me)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        },
+        {
+          "name": "POST Logout (/api/auth/logout)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Self-Service & Sessions",
+      "item": [
+        {
+          "name": "GET User Context (/api/me)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/me", "host": ["{{baseUrl}}"], "path": ["api", "me"] }
+          }
+        },
+        {
+          "name": "GET Active Sessions (/api/me/sessions)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/me/sessions", "host": ["{{baseUrl}}"], "path": ["api", "me", "sessions"] }
+          }
+        },
+        {
+          "name": "GET My Permissions (/api/me/permissions)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/me/permissions", "host": ["{{baseUrl}}"], "path": ["api", "me", "permissions"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Subscription Plans",
+      "item": [
+        {
+          "name": "GET List Plans (/api/platform/plans)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var plans = pm.response.json();",
+                  "if (Array.isArray(plans) && plans.length > 0) {",
+                  "    pm.environment.set('planId', plans[0].planId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/plans", "host": ["{{baseUrl}}"], "path": ["api", "platform", "plans"] }
+          }
+        },
+        {
+          "name": "POST Create Custom Plan (/api/platform/plans)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planName\": \"custom plan {{$timestamp}}\",\n  \"pricingType\": \"PER_MODULE\",\n  \"priceAmount\": 499,\n  \"currencyCode\": \"INR\",\n  \"userLimit\": 100,\n  \"storageLimitGb\": 5,\n  \"smsLimit\": 5000,\n  \"apiLimit\": 10000,\n  \"maxInstitutions\": 1\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/platform/plans", "host": ["{{baseUrl}}"], "path": ["api", "platform", "plans"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Tenants Directory & Lifecycle",
+      "item": [
+        {
+          "name": "GET Tenants Directory (/api/platform/tenants)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.items && data.items.length > 0) {",
+                  "    pm.environment.set('tenantId', data.items[0].tenantId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/platform/tenants?page=0&size=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "platform", "tenants"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "50" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Create Tenant (Trial Mode)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantName\": \"manoj test123 institution\",\n  \"tenantType\": \"STANDALONE_SCHOOL\",\n  \"planId\": \"{{planId}}\",\n  \"subdomain\": \"manoj-test-{{$randomInt}}\",\n  \"isolationMode\": \"SHARED\",\n  \"firstAdminName\": \"Manoj gowda.N\",\n  \"firstAdminEmail\": \"nmanojgowda47@gmail.com\",\n  \"firstAdminMobile\": \"+919341116915\",\n  \"firstAdminNationalIdLast4\": \"8956\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/platform/tenants", "host": ["{{baseUrl}}"], "path": ["api", "platform", "tenants"] }
+          }
+        },
+        {
+          "name": "GET Tenant Settings (/api/platform/tenants/:id/settings)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/platform/tenants/{{tenantId}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "platform", "tenants", "{{tenantId}}", "settings"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Tenant Settings (/api/platform/tenants/:id/settings)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeZone\": \"Asia/Kolkata\",\n  \"dataRegion\": \"IN\",\n  \"analyticsOptOut\": false,\n  \"customDomain\": \"sound-{{$randomInt}}.edu360.local\",\n  \"userLimit\": 1000,\n  \"storageLimitGb\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/platform/tenants/{{tenantId}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "platform", "tenants", "{{tenantId}}", "settings"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Platform Governance & Security",
+      "item": [
+        {
+          "name": "GET Platform Operator Permissions",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/me/permissions", "host": ["{{baseUrl}}"], "path": ["api", "platform", "me", "permissions"] }
+          }
+        },
+        {
+          "name": "GET Security Policy Settings",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/security-policy", "host": ["{{baseUrl}}"], "path": ["api", "platform", "security-policy"] }
+          }
+        },
+        {
+          "name": "GET Security Incidents",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/security-incidents", "host": ["{{baseUrl}}"], "path": ["api", "platform", "security-incidents"] }
+          }
+        },
+        {
+          "name": "GET Backup Status",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/backup-status", "host": ["{{baseUrl}}"], "path": ["api", "platform", "backup-status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Platform Operations & Observability",
+      "item": [
+        {
+          "name": "GET Platform Users",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/platform-users", "host": ["{{baseUrl}}"], "path": ["api", "platform", "platform-users"] }
+          }
+        },
+        {
+          "name": "GET Platform Audit Logs",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/platform/audit-logs?page=0&size=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "platform", "audit-logs"],
+              "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "50" }]
+            }
+          }
+        },
+        {
+          "name": "GET Invoices",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/invoices", "host": ["{{baseUrl}}"], "path": ["api", "platform", "invoices"] }
+          }
+        },
+        {
+          "name": "GET Releases",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/releases", "host": ["{{baseUrl}}"], "path": ["api", "platform", "releases"] }
+          }
+        },
+        {
+          "name": "GET Support Tickets",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/support-tickets", "host": ["{{baseUrl}}"], "path": ["api", "platform", "support-tickets"] }
+          }
+        },
+        {
+          "name": "GET Support Access Grants",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/support-access-grants", "host": ["{{baseUrl}}"], "path": ["api", "platform", "support-access-grants"] }
+          }
+        },
+        {
+          "name": "GET Integration Types",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/integration-types", "host": ["{{baseUrl}}"], "path": ["api", "platform", "integration-types"] }
+          }
+        },
+        {
+          "name": "GET Global Usage Counts",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/usage-counts", "host": ["{{baseUrl}}"], "path": ["api", "platform", "usage-counts"] }
+          }
+        },
+        {
+          "name": "GET Reports Summary (Executive KPIs)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/reports/summary", "host": ["{{baseUrl}}"], "path": ["api", "platform", "reports", "summary"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Roles & Actions Catalogue",
+      "item": [
+        {
+          "name": "GET System Roles",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/roles", "host": ["{{baseUrl}}"], "path": ["api", "platform", "roles"] }
+          }
+        },
+        {
+          "name": "GET Role Actions Catalogue (280 actions)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/role-actions", "host": ["{{baseUrl}}"], "path": ["api", "platform", "role-actions"] }
+          }
+        },
+        {
+          "name": "GET Role Templates",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/platform/role-templates", "host": ["{{baseUrl}}"], "path": ["api", "platform", "role-templates"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Tenant-Scoped Operations",
+      "item": [
+        {
+          "name": "GET Tenant Institutions",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/tenants/{{tenantId}}/institutions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tenants", "{{tenantId}}", "institutions"]
+            }
+          }
+        },
+        {
+          "name": "GET Tenant Roles",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/tenants/{{tenantId}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tenants", "{{tenantId}}", "roles"]
+            }
+          }
+        },
+        {
+          "name": "GET Tenant Users Directory",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/tenants/{{tenantId}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tenants", "{{tenantId}}", "users"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
