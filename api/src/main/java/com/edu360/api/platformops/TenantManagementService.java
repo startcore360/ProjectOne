@@ -642,8 +642,10 @@ public class TenantManagementService {
             if ((request.priceAmount() != null && request.priceAmount().compareTo(plan.getPriceAmount()) != 0)
                     || (request.currencyCode() != null && !request.currencyCode().equalsIgnoreCase(plan.getCurrencyCode()))
                     || (request.pricingType() != null && !request.pricingType().equals(plan.getPricingType()))
-                    || (request.smsUnitAmount() != null && !java.util.Objects.equals(request.smsUnitAmount(), plan.getSmsUnitAmount()))
-                    || (request.storageUnitAmountPerGb() != null && !java.util.Objects.equals(request.storageUnitAmountPerGb(), plan.getStorageUnitAmountPerGb()))) {
+                    || (request.smsUnitAmount() != null && (plan.getSmsUnitAmount() == null
+                            || request.smsUnitAmount().compareTo(plan.getSmsUnitAmount()) != 0))
+                    || (request.storageUnitAmountPerGb() != null && (plan.getStorageUnitAmountPerGb() == null
+                            || request.storageUnitAmountPerGb().compareTo(plan.getStorageUnitAmountPerGb()) != 0))) {
                 throw new UnauthorizedException("Rule [F-4]: only the Product Owner can alter plan pricing.");
             }
         }
