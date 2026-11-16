@@ -1,7 +1,5 @@
 package com.edu360.api.config;
 
-import javax.sql.DataSource;
-
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,12 +25,12 @@ public class SupportSessionFilterConfig {
     private final TenantRepository tenantRepository;
     private final LoginTenantResolver loginTenantResolver;
     private final PlatformAuditWriter platformAuditWriter;
-    private final DataSource dataSource;
+    private final JdbcTemplate jdbcTemplate;
 
     @Bean
     public SupportSessionAuthenticationFilter supportSessionAuthenticationFilter() {
         return new SupportSessionAuthenticationFilter(tokenService, sessionRepository, grantRepository,
-                tenantRepository, new JdbcTemplate(dataSource), platformAuditWriter);
+                tenantRepository, jdbcTemplate, platformAuditWriter);
     }
 
     @Bean
