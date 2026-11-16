@@ -33,6 +33,7 @@ class PlatformSupportControllerTest {
     private AuditLogService auditLogService;
     private PlatformPermissionService permissionService;
     private PlatformSupportService supportService;
+    private SupportSessionService supportSessionService;
     private PlatformSupportController controller;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -45,7 +46,8 @@ class PlatformSupportControllerTest {
         auditLogService = mock(AuditLogService.class);
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         supportService = new PlatformSupportService(ticketRepository, grantRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), auditLogService);
-        controller = new PlatformSupportController(supportService, permissionService);
+        supportSessionService = mock(SupportSessionService.class);
+        controller = new PlatformSupportController(supportService, supportSessionService, permissionService);
     }
 
     private Authentication authFor(PlatformRole role) {
@@ -90,11 +92,15 @@ class PlatformSupportControllerTest {
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(any(), any()))
                 .thenReturn(Optional.of(grant));
+        com.edu360.api.platformops.support.dto.SupportSessionResponse expected =
+                new com.edu360.api.platformops.support.dto.SupportSessionResponse("signed-token", Instant.now().plusSeconds(1800), "https://tenant.edu360.example");
+        when(supportSessionService.open(org.mockito.ArgumentMatchers.eq(ticketId), any())).thenReturn(expected);
 
-        // L-03 / R7: the made-up session token is gone. With a live grant the answer is an honest "not available yet" (501).
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.assumeSupportSession(ticketId, authFor(PlatformRole.SUPPORT_MANAGER)))
-                .isInstanceOfSatisfying(com.edu360.api.exception.FeatureNotAvailableException.class,
-                        ex -> assertThat(ex.getCode()).isEqualTo("SUPPORT_SESSION_NOT_AVAILABLE"));
+        ResponseEntity<com.edu360.api.platformops.support.dto.SupportSessionResponse> response =
+                controller.assumeSupportSession(new com.edu360.api.platformops.support.dto.OpenSupportSessionRequest(ticketId),
+                        authFor(PlatformRole.SUPPORT_MANAGER));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expected);
     }
 
     @Test
@@ -109,8 +115,12 @@ class PlatformSupportControllerTest {
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(any(), any()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> controller.assumeSupportSession(ticketId, authFor(PlatformRole.SUPPORT_MANAGER)))
-                .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("Rule WF-11");
+        when(supportSessionService.open(org.mockito.ArgumentMatchers.eq(ticketId), any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("SUPPORT_GRANT_REQUIRED"));
+        assertThatThrownBy(() -> controller.assumeSupportSession(
+                new com.edu360.api.platformops.support.dto.OpenSupportSessionRequest(ticketId),
+                authFor(PlatformRole.SUPPORT_MANAGER)))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessageContaining("SUPPORT_GRANT_REQUIRED");
     }
 }
