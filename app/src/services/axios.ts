@@ -1,6 +1,25 @@
 import axios from "axios";
 import { getAccessToken } from "./tokenStorage";
 
+export const SUPPORT_SESSION_TOKEN_KEY = "edu360.support-session.token";
+export const SUPPORT_SESSION_EXPIRY_KEY = "edu360.support-session.expires-at";
+export const SUPPORT_SESSION_TICKET_KEY = "edu360.support-session.ticket-number";
+
+// A platform tab hands the short-lived token to this tenant tab in the URL fragment.
+// Fragments are not sent to the web server or included in Referer headers.
+if (typeof window !== "undefined" && window.location.hash.includes("support_session=")) {
+  const fragment = new URLSearchParams(window.location.hash.slice(1));
+  const supportToken = fragment.get("support_session");
+  if (supportToken) {
+    window.sessionStorage.setItem(SUPPORT_SESSION_TOKEN_KEY, supportToken);
+    const expiresAt = fragment.get("expires_at");
+    const ticketNumber = fragment.get("ticket_number");
+    if (expiresAt) window.sessionStorage.setItem(SUPPORT_SESSION_EXPIRY_KEY, expiresAt);
+    if (ticketNumber) window.sessionStorage.setItem(SUPPORT_SESSION_TICKET_KEY, ticketNumber);
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+}
+
 // Tenant identity is resolved by the request hostname, so keep the API origin
 // derived from the active tenant host unless an explicit deployment override exists.
 // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P3): port 8080 below works only locally. Production must call /api on the
@@ -46,6 +65,16 @@ api.interceptors.request.use((config) => {
     requestPath.endsWith("/auth/login") || requestPath.endsWith("/auth/refresh");
   if (isAuthBootstrapRequest) {
     delete config.headers.Authorization;
+    return config;
+  }
+
+  const supportToken = window.sessionStorage.getItem(SUPPORT_SESSION_TOKEN_KEY);
+  if (supportToken) {
+    if (/^\/api\/tenants\/[^/]+(?:\/|$)/.test(requestUrl.pathname)) {
+      config.headers.Authorization = `Bearer ${supportToken}`;
+    } else {
+      delete config.headers.Authorization;
+    }
     return config;
   }
 
