@@ -4,6 +4,7 @@ import { getAccessToken } from "./tokenStorage";
 export const SUPPORT_SESSION_TOKEN_KEY = "edu360.support-session.token";
 export const SUPPORT_SESSION_EXPIRY_KEY = "edu360.support-session.expires-at";
 export const SUPPORT_SESSION_TICKET_KEY = "edu360.support-session.ticket-number";
+export const SUPPORT_SESSION_PLATFORM_ORIGIN_KEY = "edu360.support-session.platform-origin";
 
 // A platform tab hands the short-lived token to this tenant tab in the URL fragment.
 // Fragments are not sent to the web server or included in Referer headers.
@@ -16,6 +17,8 @@ if (typeof window !== "undefined" && window.location.hash.includes("support_sess
     const ticketNumber = fragment.get("ticket_number");
     if (expiresAt) window.sessionStorage.setItem(SUPPORT_SESSION_EXPIRY_KEY, expiresAt);
     if (ticketNumber) window.sessionStorage.setItem(SUPPORT_SESSION_TICKET_KEY, ticketNumber);
+    const platformOrigin = fragment.get("platform_origin");
+    if (platformOrigin) window.sessionStorage.setItem(SUPPORT_SESSION_PLATFORM_ORIGIN_KEY, platformOrigin);
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
   }
 }
