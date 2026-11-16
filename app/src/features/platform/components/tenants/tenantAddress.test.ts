@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { tenantLoginAddress } from "./tenantAddress";
 
 describe("tenantLoginAddress", () => {
@@ -8,7 +8,7 @@ describe("tenantLoginAddress", () => {
   });
 
   it("follows the hyphen style used with one DuckDNS name per tenant", () => {
-    expect(tenantLoginAddress("abc", { protocol: "http:", hostname: "app-edu360.duckdns.org", port: "5173" }))
+    expect(tenantLoginAddress("abc", { protocol: "http:", hostname: "platform-edu360.duckdns.org", port: "5173" }))
       .toBe("http://abc-edu360.duckdns.org:5173");
   });
 

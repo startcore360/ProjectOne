@@ -135,6 +135,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchProfile();
+    // Load once on mount; "Retry" calls fetchProfile directly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const retry = () => {

@@ -12,6 +12,7 @@ import { guardianService } from "../api/guardianService";
 vi.mock("../../institution-admin/api/academicService", () => ({
   academicService: {
     changeStudentStatus: vi.fn(),
+    getStudentStatus: vi.fn(),
   },
 }));
 
@@ -131,13 +132,19 @@ describe("UserListPage", () => {
     await waitFor(() => expect(screen.getByText("Permission denied")).toBeInTheDocument());
   });
 
+  // Secondary user actions live in the page's "More" menu.
+  const openMoreAction = (name: RegExp) => {
+    fireEvent.click(screen.getByRole("button", { name: /More/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name }));
+  };
+
   it("opens the create-user authorization check dialog without claiming to create an account", async () => {
     vi.mocked(userManagementService.checkCreateUserAuthorization).mockResolvedValueOnce({
       data: { actionCode: "USER_CREATE", reasonCode: "ALLOWED", message: "Authorized to create a user in this scope." },
     } as never);
     renderList();
 
-    fireEvent.click(screen.getByRole("button", { name: /Check if I can create a user/i }));
+    openMoreAction(/Check if I can create a user/i);
     expect(screen.getByText(/does not create an account/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Check authorization/i }));
@@ -239,7 +246,7 @@ describe("UserListPage", () => {
     renderList();
 
     // Click Bulk import users
-    fireEvent.click(screen.getByRole("button", { name: /Bulk import user accounts/i }));
+    openMoreAction(/Bulk import user accounts/i);
     expect(screen.getByRole("heading", { name: "Bulk upload user accounts" })).toBeInTheDocument();
     expect(screen.getByText(/This workflow does not create student profiles or enrolments/i)).toBeInTheDocument();
 
@@ -306,7 +313,7 @@ describe("UserListPage", () => {
     renderList();
 
     // Click "Create governance user"
-    fireEvent.click(screen.getByRole("button", { name: /Create governance user/i }));
+    openMoreAction(/Create governance user/i);
 
     const dialog = screen.getByRole("dialog", { name: /Create governance \/ top user/i });
     expect(dialog).toBeInTheDocument();
@@ -627,6 +634,16 @@ describe("UserDetailPage", () => {
       statusChangedAt: "2026-11-07T00:00:00Z",
     });
 
+    // The panel now reads the student's current status before offering a change.
+    (academicService.getStudentStatus as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      studentProfileId: "student-1",
+      institutionId: "inst-1",
+      studentCode: "STU-001",
+      status: "ACTIVE",
+      statusReason: null,
+      statusChangedAt: null,
+    });
+
     const store = storeWithTenantUser("tenant-1");
     render(
       <Provider store={store}>
@@ -634,7 +651,9 @@ describe("UserDetailPage", () => {
       </Provider>
     );
 
-    expect(screen.getByText("Not available from the current student-status endpoint")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(academicService.getStudentStatus).toHaveBeenCalledWith("tenant-1", "student-1");
+    });
 
     const changeBtn = screen.getByRole("button", { name: /Change Student Status/i });
     fireEvent.click(changeBtn);

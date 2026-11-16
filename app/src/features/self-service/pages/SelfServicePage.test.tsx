@@ -121,13 +121,15 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
     });
 
-    const notifsTab = screen.getByRole("tab", { name: /Notifications \(1\)/i });
+    // Notifications load only when their tab is first opened, so the count shows after the click.
+    const notifsTab = screen.getByRole("tab", { name: /Notifications/i });
     fireEvent.click(notifsTab);
 
     await waitFor(() => {
       expect(screen.getByText("Leave approved")).toBeInTheDocument();
       expect(screen.getByText("Your symposium leave was approved.")).toBeInTheDocument();
     });
+    expect(screen.getByRole("tab", { name: /Notifications \(1\)/i })).toBeInTheDocument();
   });
 
   it("isolates API errors: campus notices still render even when leave records fail", async () => {

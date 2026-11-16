@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Spinner } from "../../../../components/ui";
 import { Icon } from "../../../../components/ui/Icon";
 import { PageHeader } from "../../../../components/layout/PageHeader";
@@ -20,7 +20,7 @@ export function UsageCountsView() {
 
   useEffect(() => {
     let active = true;
-    setStatus("loading");
+    // "loading" is set by the initial state and by the Retry handler, not here.
     api
       .get("/platform/usage-counts")
       .then((res) => {
@@ -47,7 +47,7 @@ export function UsageCountsView() {
       {status === "error" && (
         <ErrorState
           message={`Could not load usage counts: ${errorMessage}`}
-          action={<Button variant="secondary" onClick={() => setRetryCount((c) => c + 1)}>Retry</Button>}
+          action={<Button variant="secondary" onClick={() => { setStatus("loading"); setRetryCount((c) => c + 1); }}>Retry</Button>}
         />
       )}
 

@@ -402,8 +402,9 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
 
   it("makes the unavailable university user records explicit", () => {
     renderWithStore(<InstitutionUsersPage />);
-    expect(screen.getByText(/No Northbridge University user records are loaded/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Create user/i })).toBeDisabled();
+    expect(screen.getByText(/University-scope user management is not connected in this version/i)).toBeInTheDocument();
+    // The page must not offer to create users it cannot create.
+    expect(screen.queryByRole("button", { name: /Create user/i })).not.toBeInTheDocument();
   });
 
   it("shows an honest empty state when the tenant role catalogue is empty", async () => {

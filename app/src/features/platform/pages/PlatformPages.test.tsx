@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { Provider } from "react-redux";
@@ -200,9 +200,11 @@ describe("Sprint 1 platform screens", () => {
 
     renderWithStore(<TenantsPage />);
     expect(await screen.findByText("Archived School")).toBeInTheDocument();
-    expect(screen.getByText("Archived")).toBeInTheDocument();
-    expect(screen.getByText(new Date(suspendedAt).toLocaleString())).toBeInTheDocument();
-    expect(screen.getByText(new Date(archivedAt).toLocaleString())).toBeInTheDocument();
+    // "Archived" is also a status-filter option, so check it inside the tenant's own row.
+    const row = screen.getByText("Archived School").closest("tr") as HTMLElement;
+    expect(within(row).getByText("Archived")).toBeInTheDocument();
+    expect(within(row).getByText(new Date(suspendedAt).toLocaleString())).toBeInTheDocument();
+    expect(within(row).getByText(new Date(archivedAt).toLocaleString())).toBeInTheDocument();
   });
 
   it("opens the create trial tenant modal with statutory privacy note and fields", () => {
@@ -235,6 +237,9 @@ describe("Sprint 1 platform screens", () => {
     fireEvent.change(screen.getByLabelText(/Primary administrator email/i), { target: { value: "principal@doon.edu" } });
     fireEvent.change(screen.getByLabelText(/Primary contact mobile/i), { target: { value: "+919876543210" } });
     fireEvent.change(screen.getByLabelText(/Aadhaar \/ National ID/i), { target: { value: "7891" } });
+    // PD-9: retention is required at creation, with no default.
+    fireEvent.change(screen.getByLabelText(/Data retention \(months\)/i), { target: { value: "84" } });
+    fireEvent.change(screen.getByLabelText(/Backup retention \(days\)/i), { target: { value: "30" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Submit & create tenant/i }));
 
@@ -245,6 +250,8 @@ describe("Sprint 1 platform screens", () => {
         firstAdminEmail: "principal@doon.edu",
         firstAdminMobile: "+919876543210",
         firstAdminNationalIdLast4: "7891",
+        retentionMonths: 84,
+        backupRetentionDays: 30,
       }));
     });
   });
@@ -271,6 +278,8 @@ describe("Sprint 1 platform screens", () => {
     fireEvent.change(screen.getByLabelText(/Primary administrator email/i), { target: { value: "principal@doon.edu" } });
     fireEvent.change(screen.getByLabelText(/Primary contact mobile/i), { target: { value: "+919876543210" } });
     fireEvent.change(screen.getByLabelText(/Aadhaar \/ National ID/i), { target: { value: "7891" } });
+    fireEvent.change(screen.getByLabelText(/Data retention \(months\)/i), { target: { value: "84" } });
+    fireEvent.change(screen.getByLabelText(/Backup retention \(days\)/i), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: /Submit & create tenant/i }));
 
     expect(await screen.findByText("Edu@abc12345!")).toBeInTheDocument();
@@ -394,7 +403,8 @@ describe("Sprint 1 platform screens", () => {
         email: "priya.nair@edu360.com",
       }));
     });
-    await waitFor(() => expect(screen.getByText("Temp1234Pass")).toBeInTheDocument());
+    // The one-time password is shown in a read-only, copyable field.
+    await waitFor(() => expect(screen.getByDisplayValue("Temp1234Pass")).toBeInTheDocument());
   });
 
   it("hides tenant lifecycle actions from a Platform Admin", async () => {
@@ -436,9 +446,11 @@ describe("Sprint 1 platform screens", () => {
       return Promise.resolve({ data: [] });
     });
     renderWithStore(<TenantsPage />, "PLATFORM_ADMIN");
-    await waitFor(() => {
-      expect(screen.getAllByRole("button", { name: "Settings" }).length).toBeGreaterThan(0);
-    });
+    // Settings lives in each row's "⋯" menu; a Platform Admin can still open it.
+    await waitFor(() => expect(screen.getByText("Greenwood Public School")).toBeInTheDocument());
+    const row = screen.getByText("Greenwood Public School").closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "⋯" }));
+    expect(within(row).getByRole("menuitem", { name: "Settings" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Suspend" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reactivate" })).not.toBeInTheDocument();
@@ -556,7 +568,8 @@ describe("Sprint 1 platform screens", () => {
       },
     });
 
-    render(<PlansPage />);
+    // The plan form reads the caller's role (price fields are Product Owner only), so it needs the store.
+    renderWithStore(<PlansPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /Add subscription plan/i }));
     expect(screen.getByRole("heading", { name: "Add subscription plan" })).toBeInTheDocument();
@@ -665,8 +678,10 @@ describe("Sprint 1 platform screens", () => {
       expect(screen.getByText("Greenwood Public School")).toBeInTheDocument();
     });
 
-    const settingsBtns = screen.getAllByRole("button", { name: /Settings/i });
-    fireEvent.click(settingsBtns[0]);
+    // Settings is in the row's "⋯" menu.
+    const row = screen.getByText("Greenwood Public School").closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "⋯" }));
+    fireEvent.click(within(row).getByRole("menuitem", { name: "Settings" }));
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /Tenant Settings: Greenwood Public School/i })).toBeInTheDocument();
@@ -739,7 +754,8 @@ describe("AuditLogPage (wired to GET /api/platform/audit-logs)", () => {
     mockedApi.get.mockResolvedValue({ data: { items: [], page: 0, size: 100, totalElements: 0, totalPages: 0 } });
     render(<AuditLogPage />);
     await waitFor(() => expect(screen.getByText("No platform audit events recorded yet.")).toBeInTheDocument());
-    expect(mockedApi.get).toHaveBeenCalledWith("/platform/audit-logs", { params: { page: 0, size: 100 } });
+    // The audit log is paged, 25 events per page.
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/audit-logs", { params: { page: 0, size: 25 } });
   });
 
   it("renders real audit rows when the backend returns them", async () => {

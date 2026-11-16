@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
@@ -40,7 +40,7 @@ export function AuditLogView() {
 
   useEffect(() => {
     let active = true;
-    setStatus("loading");
+    // "loading" is set by the initial state and by the Retry / paging handlers, not here.
     api
       .get("/platform/audit-logs", { params: { page, size: PAGE_SIZE } })
       .then((res) => {
@@ -83,7 +83,7 @@ export function AuditLogView() {
         {status === "error" && (
           <ErrorState
             message={`Could not load audit events: ${errorMessage}`}
-            action={<Button variant="secondary" onClick={() => setRetryCount((c) => c + 1)}>Retry</Button>}
+            action={<Button variant="secondary" onClick={() => { setStatus("loading"); setRetryCount((c) => c + 1); }}>Retry</Button>}
           />
         )}
         <div className="app-toolbar">
@@ -135,10 +135,10 @@ export function AuditLogView() {
               <div className="app-pagination">
                 <span>Page {page + 1}{totalCount > 0 ? ` · ${totalCount} total` : ""}</span>
                 <div className="app-pagination__actions">
-                  <Button variant="secondary" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                  <Button variant="secondary" size="sm" disabled={page === 0} onClick={() => { setStatus("loading"); setPage((p) => Math.max(0, p - 1)); }}>
                     Previous
                   </Button>
-                  <Button variant="secondary" size="sm" disabled={events.length < PAGE_SIZE} onClick={() => setPage((p) => p + 1)}>
+                  <Button variant="secondary" size="sm" disabled={events.length < PAGE_SIZE} onClick={() => { setStatus("loading"); setPage((p) => p + 1); }}>
                     Next
                   </Button>
                 </div>

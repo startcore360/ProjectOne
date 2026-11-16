@@ -4,11 +4,15 @@ import { selfServiceApi } from "../../self-service/api/selfServiceApi";
 import { StudentDashboard } from "./StudentDashboard";
 
 vi.mock("../../self-service/api/selfServiceApi", () => ({
-  selfServiceApi: { getNotices: vi.fn() },
+  selfServiceApi: { getNotices: vi.fn(), getLeaveBalances: vi.fn() },
 }));
 
 describe("StudentDashboard", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // The dashboard also loads leave balances for its KPI tile; these tests cover notices only.
+    vi.mocked(selfServiceApi.getLeaveBalances).mockResolvedValue([]);
+  });
 
   it("shows published campus notices returned for the signed-in tenant", async () => {
     vi.mocked(selfServiceApi.getNotices).mockResolvedValue([

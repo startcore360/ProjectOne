@@ -182,7 +182,7 @@ export function HodAssignmentPage() {
   const { status, message, run } = useAction<{ departmentId: string; hodStaffAssignmentId: string }>();
 
   useEffect(() => {
-    if (!tenantId || !institutionId) { setDepartments([]); return undefined; }
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
     let active = true;
     void institutionService.listDepartments(tenantId, institutionId)
       .then((rows) => { if (active) setDepartments(rows); })
@@ -191,7 +191,7 @@ export function HodAssignmentPage() {
   }, [tenantId, institutionId]);
 
   useEffect(() => {
-    if (!tenantId || !institutionId || !departmentId) { setTeachers([]); setStaffAssignmentId(""); return undefined; }
+    if (!tenantId || !institutionId || !departmentId) return undefined; // cleared in the department onChange
     let active = true;
     void staffService.teacherLookup(tenantId, institutionId, "HOD_ASSIGN", departmentId)
       .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
@@ -216,7 +216,7 @@ export function HodAssignmentPage() {
         <Panel title="Department HOD" description="The picker is scoped to the active institution and validates faculty assignments on the server.">
           <form onSubmit={submit} noValidate>
             <SelectField id="hod-department-id" label="Department" required value={departmentId}
-              onChange={(event) => { setDepartmentId(event.target.value); setStaffAssignmentId(""); }}
+              onChange={(event) => { setDepartmentId(event.target.value); setStaffAssignmentId(""); setTeachers([]); }}
               options={[{ value: "", label: "Select a department" }, ...departments.map((d) => ({ value: d.departmentId, label: d.departmentName }))]} />
             <PersonPicker label="New HOD" value={staffAssignmentId}
               options={teachers.map((t) => ({ id: t.staffAssignmentId, name: t.fullName, designation: t.designation, department: t.departmentName ?? undefined }))}
@@ -243,7 +243,7 @@ export function MentorAssignmentPage() {
   const { status, message, run } = useAction<{ sectionId: string; mentorAssignmentId: string; staffAssignmentId: string }>();
 
   useEffect(() => {
-    if (!tenantId || !institutionId) { setSections([]); return undefined; }
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
     let active = true;
     void institutionService.listSections(tenantId, institutionId)
       .then((rows) => { if (active) setSections(rows.filter((row) => row.status === "ACTIVE" && row.semesterId !== null)); })
@@ -252,7 +252,7 @@ export function MentorAssignmentPage() {
   }, [tenantId, institutionId]);
 
   useEffect(() => {
-    if (!tenantId || !institutionId || !departmentId) { setTeachers([]); return undefined; }
+    if (!tenantId || !institutionId || !departmentId) return undefined; // the page shows NoTenantNotice instead
     let active = true;
     void staffService.teacherLookup(tenantId, institutionId, "MENTOR_ASSIGN", departmentId)
       .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
@@ -302,7 +302,7 @@ export function ClassTeacherAssignmentPage() {
   const { status, message, run } = useAction<{ sectionId: string; classTeacherAssignmentId: string; staffAssignmentId: string }>();
 
   useEffect(() => {
-    if (!tenantId || !institutionId) { setSections([]); return undefined; }
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
     let active = true;
     void institutionService.listSections(tenantId, institutionId)
       .then((rows) => { if (active) setSections(rows.filter((row) => row.status === "ACTIVE" && row.classId !== null)); })
@@ -311,7 +311,7 @@ export function ClassTeacherAssignmentPage() {
   }, [tenantId, institutionId]);
 
   useEffect(() => {
-    if (!tenantId || !institutionId) { setTeachers([]); return undefined; }
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
     let active = true;
     void staffService.teacherLookup(tenantId, institutionId, "CLASS_TEACHER_ASSIGN")
       .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })

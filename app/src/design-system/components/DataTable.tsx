@@ -1,4 +1,4 @@
-﻿import { Children, isValidElement, useMemo, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
+﻿import { Children, isValidElement, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
 import Button from "./Button";
 
 type TableCellElement = ReactElement<{ children?: ReactNode; colSpan?: number; rowSpan?: number }>;
@@ -46,10 +46,8 @@ export function DataTable({
   const [selectedPageSize, setSelectedPageSize] = useState(pageSize);
   const pageCount = Math.max(1, Math.ceil(rows.length / selectedPageSize));
   const safePage = Math.min(currentPage, pageCount);
-  const visibleRows = useMemo(
-    () => rows.slice((safePage - 1) * selectedPageSize, safePage * selectedPageSize),
-    [rows, safePage, selectedPageSize],
-  );
+  // `rows` is rebuilt from children on every render, so memoising this slice could never hit.
+  const visibleRows = rows.slice((safePage - 1) * selectedPageSize, safePage * selectedPageSize);
   const visibleCards = visibleRows.filter((row) => cardRows.includes(row));
   const start = rows.length ? (safePage - 1) * selectedPageSize + 1 : 0;
   const end = Math.min(safePage * selectedPageSize, rows.length);

@@ -36,7 +36,7 @@ export function useSupportSession() {
   const [session, setSession] = useState<SupportSessionState | null>(() => readSession());
 
   useEffect(() => {
-    setSession(readSession());
+    // The initial state already holds readSession(); only listen for the end event here.
     const onEnded = () => setSession(null);
     window.addEventListener("edu360:support-session-ended", onEnded);
     return () => window.removeEventListener("edu360:support-session-ended", onEnded);
@@ -55,7 +55,16 @@ export function useSupportSession() {
     window.dispatchEvent(new Event("edu360:support-session-ended"));
   }, []);
 
-  const isExpired = !!session?.expiresAt && new Date(session.expiresAt).getTime() <= Date.now();
+  // Read the clock in a timer, never during render: the timer fires when the session expires,
+  // so the banner and hidden controls update at that moment without a page reload.
+  const expiresAtMs = session?.expiresAt ? new Date(session.expiresAt).getTime() : null;
+  const [expiredAtMs, setExpiredAtMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (expiresAtMs === null) return undefined;
+    const timer = window.setTimeout(() => setExpiredAtMs(expiresAtMs), Math.max(0, expiresAtMs - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [expiresAtMs]);
+  const isExpired = expiresAtMs !== null && expiredAtMs === expiresAtMs;
   return {
     session,
     isSupportSession: !!session && !isExpired,

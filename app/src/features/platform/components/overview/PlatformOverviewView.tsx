@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, MetricCard, Panel, StatusBadge, Notice } from "../../../../design-system/components";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Spinner } from "../../../../components/ui";
@@ -22,7 +22,7 @@ export function PlatformOverviewView() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    // "loading" is set by the initial state and by the Retry handler, not here.
     const tenantRequest = canViewTenants
       ? platformTenantService.getTenants().then((res) => (Array.isArray(res.data) ? res.data : res.data?.items ?? []))
       : Promise.resolve([] as TenantItem[]);

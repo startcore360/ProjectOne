@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Button, Panel, DataTable, Notice } from "../../../../design-system/components";
@@ -30,7 +30,7 @@ export function BackupStatusView() {
 
   useEffect(() => {
     let active = true;
-    setStatus("loading");
+    // "loading" is set by the initial state and by the Retry handler, not here.
     api
       .get("/platform/backup-status")
       .then((res) => {
@@ -54,7 +54,7 @@ export function BackupStatusView() {
       {status === "error" && (
         <ErrorState
           message={`Could not load backup status: ${errorMessage}`}
-          action={<Button variant="secondary" onClick={() => setRetryCount((c) => c + 1)}>Retry</Button>}
+          action={<Button variant="secondary" onClick={() => { setStatus("loading"); setRetryCount((c) => c + 1); }}>Retry</Button>}
         />
       )}
       {data && !data.wiredToRealBackupSystem && (
