@@ -33,6 +33,15 @@ class PlatformIdempotencyServiceTest {
     }
 
     @Test
+    void reportsUnavailablePlatformStoreWhenNoPlatformDataSourceExists() {
+        PlatformIdempotencyService service = new PlatformIdempotencyService((javax.sql.DataSource) null, mapper);
+        ApiException error = assertThrows(ApiException.class,
+                () -> service.claim(UUID.randomUUID(), "TENANT_CREATE", "valid-key-123", Map.of()));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, error.getStatus());
+        assertEquals("IDEMPOTENCY_STORE_UNAVAILABLE", error.getErrorCode());
+    }
+
+    @Test
     void rejectsInvalidKeyBeforeDatabaseAccess() {
         var dataSource = new org.springframework.jdbc.datasource.DriverManagerDataSource("jdbc:h2:mem:unused");
         PlatformIdempotencyService service = new PlatformIdempotencyService(dataSource, mapper);

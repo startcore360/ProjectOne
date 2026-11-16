@@ -9,6 +9,8 @@ import java.util.UUID;
 
 import javax.sql.DataSource;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -32,10 +34,16 @@ public class PlatformIdempotencyService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
 
+    @Autowired
     public PlatformIdempotencyService(
-            @Qualifier("platformDataSource") DataSource dataSource,
+            @Qualifier("platformDataSource") ObjectProvider<DataSource> dataSourceProvider,
             ObjectMapper mapper) {
-        this.jdbc = new JdbcTemplate(dataSource);
+        this(dataSourceProvider.getIfAvailable(), mapper);
+    }
+
+    /** Direct constructor for isolated tests; the test profile has no edu_platform pool. */
+    public PlatformIdempotencyService(DataSource dataSource, ObjectMapper mapper) {
+        this.jdbc = dataSource == null ? null : new JdbcTemplate(dataSource);
         this.mapper = mapper.copy().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     }
 
@@ -53,6 +61,7 @@ public class PlatformIdempotencyService {
                     "Idempotency-Key must contain 8 to 100 characters.");
         }
 
+        JdbcTemplate jdbc = requireJdbc();
         String requestHash = requestHash(requestBody, mapper);
         UUID proposedId = UUID.randomUUID();
         try {
@@ -106,6 +115,7 @@ public class PlatformIdempotencyService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "IDEMPOTENCY_CLAIM_REQUIRED",
                     "A claimed platform idempotency key is required.");
         }
+        JdbcTemplate jdbc = requireJdbc();
         try {
             String json = mapper.writeValueAsString(responseBody);
             int updated = jdbc.update("""
@@ -124,13 +134,21 @@ public class PlatformIdempotencyService {
 
     @Transactional(transactionManager = "platformTransactionManager", propagation = Propagation.REQUIRES_NEW)
     public void release(UUID callerUserId, UUID claimId) {
-        if (callerUserId == null || claimId == null) {
+        if (callerUserId == null || claimId == null || jdbc == null) {
             return;
         }
         jdbc.update("""
                 DELETE FROM platform.idempotency_key
                 WHERE platform_idempotency_key_id = ? AND caller_user_id = ? AND status = 'IN_PROGRESS'
                 """, claimId, callerUserId);
+    }
+
+    private JdbcTemplate requireJdbc() {
+        if (jdbc == null) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "IDEMPOTENCY_STORE_UNAVAILABLE",
+                    "The platform idempotency store is unavailable in this runtime.");
+        }
+        return jdbc;
     }
 
     static String requestHash(Object requestBody, ObjectMapper mapper) {
