@@ -429,7 +429,12 @@ class PlatformTenantControllerTest {
                 60,
                 6000,
                 12000,
-                2
+                2,
+                true,
+                true,
+                6,
+                new BigDecimal("0.05"),
+                new BigDecimal("12.50")
         );
 
         ResponseEntity<PlanResponse> response = controller.createPlan(request, authFor(PlatformRole.PRODUCT_OWNER));
@@ -451,7 +456,12 @@ class PlatformTenantControllerTest {
                 50,
                 5000,
                 10000,
-                1
+                1,
+                false,
+                false,
+                12,
+                null,
+                null
         );
 
         assertThatThrownBy(() -> controller.createPlan(request, authFor(PlatformRole.PLATFORM_ADMIN)))
@@ -470,13 +480,20 @@ class PlatformTenantControllerTest {
 
         UpdatePlanRequest request = new UpdatePlanRequest(
                 "Updated Standard Plan",
-                existing.getPriceAmount(), // unchanged price
-                "INR",
+                null, // Platform Admin omits price; existing price must remain unchanged
+                null,
+                null,
+                null,
                 2000,
                 100,
                 10000,
                 20000,
                 3,
+                null,
+                null,
+                null,
+                null,
+                null,
                 "ACTIVE"
         );
 
@@ -499,12 +516,18 @@ class PlatformTenantControllerTest {
         UpdatePlanRequest request = new UpdatePlanRequest(
                 "Standard Plan",
                 new BigDecimal("9999.00"), // altered price!
+                null,
                 "INR",
                 1000,
                 50,
                 5000,
                 10000,
                 1,
+                null,
+                null,
+                null,
+                null,
+                null,
                 "ACTIVE"
         );
 
@@ -615,7 +638,7 @@ class PlatformTenantControllerTest {
         Authentication supportAuth = authFor(PlatformRole.SUPPORT_MANAGER);
 
         assertThatThrownBy(() -> controller.createPlan(
-                new CreatePlanRequest("Test", "FLAT", BigDecimal.ZERO, "INR", null, null, null, null, null),
+                new CreatePlanRequest("Test", "FLAT", BigDecimal.ZERO, "INR", null, null, null, null, null, null, null, null, null, null),
                 supportAuth))
                 .isInstanceOf(UnauthorizedException.class);
 
