@@ -75,6 +75,9 @@ export type InvoiceItem = {
   createdAt: string;
 };
 
+export type BillingCycleSkippedTenant = { tenantId: string; reason: string };
+export type BillingCycleResponse = { created: InvoiceItem[]; skipped: BillingCycleSkippedTenant[] };
+
 export type InvoiceLineItem = {
   invoiceLineId: string;
   invoiceId: string;
@@ -216,6 +219,11 @@ export const platformOpsService = {
   },
 
   // Billing & Invoices
+  async createBillingCycle(payload: { periodStart: string; periodEnd: string }, idempotencyKey: string): Promise<BillingCycleResponse> {
+    const res = await api.post<BillingCycleResponse>("/platform/billing-cycles", payload, { headers: { "Idempotency-Key": idempotencyKey } });
+    return res.data;
+  },
+
   async listInvoices(tenantId?: string): Promise<InvoiceItem[]> {
     const query = tenantId ? `?tenantId=${tenantId}` : "";
     const res = await api.get<InvoiceItem[]>(`/platform/invoices${query}`);

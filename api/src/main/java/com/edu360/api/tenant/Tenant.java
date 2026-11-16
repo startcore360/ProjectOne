@@ -1,6 +1,7 @@
 package com.edu360.api.tenant;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -106,6 +107,12 @@ public class Tenant {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "next_renewal_at")
+    private LocalDate nextRenewalAt;
+
+    @Column(name = "pending_plan_id")
+    private UUID pendingPlanId;
 
     @Column(name = "created_at", nullable = false)
     @Builder.Default

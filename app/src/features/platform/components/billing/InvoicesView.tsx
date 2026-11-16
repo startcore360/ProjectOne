@@ -19,6 +19,7 @@ import {
   type InvoiceItem,
   type CreateInvoicePayload,
   type InvoiceLineItem,
+  type BillingCycleResponse,
 } from "../../api/platformOpsService";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
@@ -95,6 +96,12 @@ export function InvoicesView() {
   const [lineQuantity, setLineQuantity] = useState("1");
   const [lineUnitAmount, setLineUnitAmount] = useState("0");
   const [savingLine, setSavingLine] = useState(false);
+  const [showBillingCycle, setShowBillingCycle] = useState(false);
+  const [runningBillingCycle, setRunningBillingCycle] = useState(false);
+  const [cyclePeriodStart, setCyclePeriodStart] = useState(new Date().toISOString().substring(0, 7) + "-01");
+  const [cyclePeriodEnd, setCyclePeriodEnd] = useState(new Date().toISOString().substring(0, 10));
+  const [cycleIdempotencyKey, setCycleIdempotencyKey] = useState("");
+  const [cycleResult, setCycleResult] = useState<BillingCycleResponse | null>(null);
 
   // Create Invoice Modal
   const [showCreate, setShowCreate] = useState(false);
@@ -144,6 +151,26 @@ export function InvoicesView() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const handleRunBillingCycle = async (e: FormEvent) => {
+    e.preventDefault();
+    setRunningBillingCycle(true);
+    setError("");
+    try {
+      const result = await platformOpsService.createBillingCycle({
+        periodStart: cyclePeriodStart,
+        periodEnd: cyclePeriodEnd,
+      }, cycleIdempotencyKey);
+      setCycleResult(result);
+      setMessage(`Billing cycle completed: ${result.created.length} invoice(s) created, ${result.skipped.length} skipped.`);
+      setShowBillingCycle(false);
+      void loadData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to run billing cycle");
+    } finally {
+      setRunningBillingCycle(false);
+    }
+  };
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -307,13 +334,19 @@ export function InvoicesView() {
         description="Tenant subscription invoicing, payment recording, overdue flagging and Product Owner discounts."
         actions={
           canManageInvoice && (
-            <Button onClick={() => setShowCreate(true)}>Create Invoice</Button>
+            <>
+              <Button variant="secondary" onClick={() => { setCycleIdempotencyKey(crypto.randomUUID()); setCycleResult(null); setShowBillingCycle(true); }}>Run billing cycle</Button>
+              <Button onClick={() => setShowCreate(true)}>Create Invoice</Button>
+            </>
           )
         }
       />
 
       {message && <Notice tone="success">{message}</Notice>}
       {error && <ErrorState message={error} action={<Button variant="secondary" onClick={() => void loadData()}>Retry</Button>} />}
+      {cycleResult && cycleResult.skipped.length > 0 && (
+        <Notice tone="info">Skipped tenants: {cycleResult.skipped.map((item) => `${item.tenantId.substring(0, 8)} (${item.reason})`).join(", ")}</Notice>
+      )}
 
       <div className="kpi-grid">
         <MetricCard label="Total Invoices" value={invoices.length} note="app-wide" mark="book" />
@@ -421,6 +454,22 @@ export function InvoicesView() {
           </DataTable>
         )}
       </Panel>
+
+      <Modal isOpen={showBillingCycle} onClose={() => setShowBillingCycle(false)} kicker="BILLING"
+        title="Run billing cycle"
+        description="Create draft invoices for active tenants whose renewal dates fall within this period. Only recorded usage rows are billed."
+        size="sm">
+        <form onSubmit={handleRunBillingCycle}>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <TextField id="billing-cycle-period-start" label="Period start" type="date" value={cyclePeriodStart} onChange={(e) => setCyclePeriodStart(e.target.value)} required />
+            <TextField id="billing-cycle-period-end" label="Period end" type="date" value={cyclePeriodEnd} onChange={(e) => setCyclePeriodEnd(e.target.value)} required />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" type="button" onClick={() => setShowBillingCycle(false)}>Cancel</Button>
+            <Button type="submit" busy={runningBillingCycle}>Generate draft invoices</Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Create Invoice Modal */}
       <Modal

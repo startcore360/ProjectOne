@@ -15,4 +15,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     List<Invoice> findByStatus(String status);
     List<Invoice> findByStatusIn(List<String> statuses);
     boolean existsByTenantIdAndStatus(UUID tenantId, String status);
+    boolean existsByTenantIdAndPeriodStartAndPeriodEnd(UUID tenantId, java.time.LocalDate periodStart, java.time.LocalDate periodEnd);
 }
