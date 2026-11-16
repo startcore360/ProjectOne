@@ -22,6 +22,8 @@ import org.springframework.security.core.Authentication;
 
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
+import com.edu360.api.idempotency.PlatformIdempotencyService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platform.PlatformRole;
@@ -39,6 +41,7 @@ class PlatformBillingControllerTest {
     private AuditLogService auditLogService;
     private PlatformPermissionService permissionService;
     private PlatformBillingService billingService;
+    private PlatformIdempotencyService idempotencyService;
     private PlatformBillingController controller;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -48,10 +51,11 @@ class PlatformBillingControllerTest {
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
         invoiceLineRepository = mock(InvoiceLineRepository.class);
+        idempotencyService = mock(PlatformIdempotencyService.class);
         auditLogService = mock(AuditLogService.class);
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         billingService = new PlatformBillingService(invoiceRepository, invoiceLineRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
-        controller = new PlatformBillingController(billingService, permissionService);
+        controller = new PlatformBillingController(billingService, permissionService, idempotencyService, new ObjectMapper());
     }
 
     private Authentication authFor(PlatformRole role) {
@@ -183,6 +187,54 @@ class PlatformBillingControllerTest {
                 .isInstanceOf(com.edu360.api.exception.ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "INVOICE_LINE_NOT_REMOVABLE");
         org.mockito.Mockito.verify(invoiceLineRepository, org.mockito.Mockito.never()).delete(any(InvoiceLine.class));
+    }
+
+
+    @Test
+    void ACT_INVOICE_APPROVAL_ALLOW_productOwner() {
+        UUID invoiceId = UUID.randomUUID();
+        Invoice invoice = Invoice.builder().invoiceId(invoiceId).status("DRAFT").build();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(idempotencyService.claim(any(), any(), any(), any())).thenReturn(
+                new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        ResponseEntity<InvoiceResponse> response = controller.approveInvoice(invoiceId, "approve-key-001", authFor(PlatformRole.PRODUCT_OWNER));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().status()).isEqualTo("APPROVED");
+        assertThat(response.getBody().approvedBy()).isEqualTo(USER_ID);
+        assertThat(response.getBody().approvedAt()).isNotNull();
+        verify(idempotencyService).complete(any(), any(), org.mockito.ArgumentMatchers.eq(200), any());
+    }
+
+    @Test
+    void ACT_INVOICE_APPROVAL_DENY_billingManager() {
+        UUID invoiceId = UUID.randomUUID();
+        when(idempotencyService.claim(any(), any(), any(), any())).thenReturn(
+                new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        assertThatThrownBy(() -> controller.approveInvoice(invoiceId, "approve-key-002", authFor(PlatformRole.BILLING_MANAGER)))
+                .isInstanceOf(UnauthorizedException.class);
+        verify(idempotencyService).release(any(), any());
+    }
+
+    @Test
+    void ACT_INVOICE_SEND_GUARD_requiresProductOwnerApproval() {
+        UUID invoiceId = UUID.randomUUID();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(Invoice.builder().invoiceId(invoiceId).status("DRAFT").build()));
+        assertThatThrownBy(() -> controller.sendInvoice(invoiceId, authFor(PlatformRole.BILLING_MANAGER)))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "APPROVAL_REQUIRED");
+    }
+
+    @Test
+    void ACT_INVOICE_SEND_ALLOW_afterApproval() {
+        UUID invoiceId = UUID.randomUUID();
+        Invoice invoice = Invoice.builder().invoiceId(invoiceId).status("APPROVED").build();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        ResponseEntity<InvoiceResponse> response = controller.sendInvoice(invoiceId, authFor(PlatformRole.BILLING_MANAGER));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().status()).isEqualTo("SENT");
+        assertThat(response.getBody().sentAt()).isNotNull();
     }
 
     @Test

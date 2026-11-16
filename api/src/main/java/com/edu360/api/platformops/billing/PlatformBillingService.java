@@ -200,10 +200,34 @@ public class PlatformBillingService {
     }
 
     @Transactional
+    public InvoiceResponse approveInvoice(UUID invoiceId, PlatformPrincipal principal) {
+        if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
+            throw new UnauthorizedException("Only the Product Owner may approve a platform invoice.");
+        }
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
+        if (!"DRAFT".equals(invoice.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "INVOICE_NOT_DRAFT", "Only a DRAFT invoice can be approved.");
+        }
+        Instant now = Instant.now();
+        invoice.setStatus("APPROVED");
+        invoice.setApprovedBy(principal.platformUserId());
+        invoice.setApprovedAt(now);
+        invoice.setUpdatedAt(now);
+        invoice.setUpdatedBy(principal.platformUserId());
+        Invoice saved = invoiceRepository.save(invoice);
+        platformAuditWriter.record(principal, "INVOICE_APPROVED", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
+        return InvoiceResponse.fromEntity(saved);
+    }
+
+    @Transactional
     public InvoiceResponse sendInvoice(UUID invoiceId, PlatformPrincipal principal) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
 
+        if (!"APPROVED".equals(invoice.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_REQUIRED", "Product Owner approval is required before an invoice can be sent.");
+        }
         Instant now = Instant.now();
         invoice.setStatus("SENT");
         invoice.setSentAt(now);

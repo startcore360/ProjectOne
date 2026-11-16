@@ -59,6 +59,15 @@ public class Invoice {
     @Column(name = "status", nullable = false)
     private String status;
 
+    @Column(name = "approved_by")
+    private UUID approvedBy;
+
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
+    @Column(name = "due_at")
+    private LocalDate dueAt;
+
     @Column(name = "sent_at")
     private Instant sentAt;
 

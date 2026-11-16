@@ -159,6 +159,16 @@ export function InvoicesView() {
     }
   };
 
+  const handleApprove = async (inv: InvoiceItem) => {
+    try {
+      await platformOpsService.approveInvoice(inv.invoiceId, `invoice-approval-${inv.invoiceId}`);
+      setMessage(`Invoice ${inv.invoiceNumber} approved.`);
+      void loadData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to approve invoice");
+    }
+  };
+
   const handleSend = async (inv: InvoiceItem) => {
     try {
       await platformOpsService.sendInvoice(inv.invoiceId);
@@ -334,6 +344,7 @@ export function InvoicesView() {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="All">All</option>
               <option value="DRAFT">Draft</option>
+              <option value="APPROVED">Approved</option>
               <option value="SENT">Sent</option>
               <option value="PAID">Paid</option>
             </select>
@@ -378,7 +389,10 @@ export function InvoicesView() {
                 <td>
                   <RowMenu>
                     <MenuAction onClick={() => void openInvoiceLines(inv)}>View lines</MenuAction>
-                    {inv.status === "DRAFT" && canManageInvoice && (
+                    {inv.status === "DRAFT" && isProductOwner && (
+                      <MenuAction onClick={() => handleApprove(inv)}>Approve</MenuAction>
+                    )}
+                    {inv.status === "APPROVED" && canManageInvoice && (
                       <MenuAction onClick={() => handleSend(inv)}>Send</MenuAction>
                     )}
                     {inv.status !== "PAID" && canManageInvoice && (

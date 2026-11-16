@@ -3,6 +3,10 @@ package com.edu360.api.platformops.billing;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.bind.annotation.RequestHeader;
+import com.edu360.api.idempotency.PlatformIdempotencyService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,6 +37,8 @@ public class PlatformBillingController {
 
     private final PlatformBillingService billingService;
     private final PlatformPermissionService permissionService;
+    private final PlatformIdempotencyService idempotencyService;
+    private final ObjectMapper objectMapper;
 
     @GetMapping
     public ResponseEntity<List<InvoiceResponse>> listInvoices(
@@ -103,6 +109,27 @@ public class PlatformBillingController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "OVERDUE_FLAG");
         return ResponseEntity.ok(billingService.flagOverdue(id, principal));
+    }
+
+    @PostMapping("/{id}/approval")
+    public ResponseEntity<InvoiceResponse> approveInvoice(
+            @PathVariable UUID id, @RequestHeader("Idempotency-Key") String idempotencyKey, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "INVOICE_MANAGE");
+        PlatformIdempotencyService.Claim claim = idempotencyService.claim(principal.platformUserId(),
+                "INVOICE_APPROVAL", idempotencyKey, java.util.Map.of("invoiceId", id));
+        if (claim.replay()) {
+            InvoiceResponse replay = objectMapper.convertValue(claim.responseBody(), InvoiceResponse.class);
+            return ResponseEntity.status(claim.responseStatus() == null ? HttpStatus.OK : HttpStatus.valueOf(claim.responseStatus())).body(replay);
+        }
+        try {
+            InvoiceResponse approved = billingService.approveInvoice(id, principal);
+            idempotencyService.complete(principal.platformUserId(), claim.id(), HttpStatus.OK.value(), approved);
+            return ResponseEntity.ok(approved);
+        } catch (RuntimeException ex) {
+            idempotencyService.release(principal.platformUserId(), claim.id());
+            throw ex;
+        }
     }
 
     @PostMapping({"/{id}/send", "/{id}/sending"})

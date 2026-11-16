@@ -64,6 +64,9 @@ export type InvoiceItem = {
   totalAmount: number;
   currencyCode: string;
   status: "DRAFT" | "APPROVED" | "SENT" | "PAID";
+  approvedBy?: string;
+  approvedAt?: string;
+  dueAt?: string;
   sentAt?: string;
   paidAt?: string;
   paymentMode?: string;
@@ -231,6 +234,13 @@ export const platformOpsService = {
 
   async removeInvoiceLine(invoiceId: string, lineId: string): Promise<InvoiceItem> {
     const res = await api.delete<InvoiceItem>(`/platform/invoices/${invoiceId}/lines/${lineId}`);
+    return res.data;
+  },
+
+  async approveInvoice(invoiceId: string, idempotencyKey: string): Promise<InvoiceItem> {
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/approval`, {}, {
+      headers: { "Idempotency-Key": idempotencyKey },
+    });
     return res.data;
   },
 
