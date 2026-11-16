@@ -78,6 +78,26 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * Deletes a tenant realm during reverse-order provisioning compensation.
+     * Missing realms are treated as already compensated so retries remain idempotent.
+     */
+    public void deleteRealm(String realm) {
+        String adminToken = fetchMasterAdminAccessToken();
+        try {
+            restClient.delete()
+                    .uri(properties.getBaseUrl() + "/admin/realms/" + realm)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode() != HttpStatusCode.valueOf(404)) {
+                throw new KeycloakProvisioningException(
+                        "Failed to remove tenant realm '" + realm + "' during compensation.", ex);
+            }
+        }
+    }
+
+    /**
      * Provisions a new Keycloak realm and frontend client for a tenant.
      * Idempotent: if the realm or client already exists, completes without error.
      */
