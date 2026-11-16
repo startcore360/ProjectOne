@@ -10,6 +10,8 @@ public record UpdatePlanRequest(
 
         BigDecimal priceAmount,
 
+        String pricingType,
+
         String currencyCode,
 
         Integer userLimit,
@@ -21,6 +23,16 @@ public record UpdatePlanRequest(
         Integer apiLimit,
 
         Integer maxInstitutions,
+
+        Boolean customDomainAllowed,
+
+        Boolean brandingColorsAllowed,
+
+        Integer billingCycleMonths,
+
+        BigDecimal smsUnitAmount,
+
+        BigDecimal storageUnitAmountPerGb,
 
         String status
 ) {}
