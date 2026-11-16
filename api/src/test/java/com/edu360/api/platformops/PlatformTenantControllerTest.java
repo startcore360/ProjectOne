@@ -588,7 +588,7 @@ class PlatformTenantControllerTest {
                 null, null, "FLAT", "USD", null, null, null, null, null,
                 null, null, null, null, null, null
         );
-        com.edu360.api.exception.ApiException error = org.junit.jupiter.Assertions.assertThrows(
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
                 com.edu360.api.exception.ApiException.class,
                 () -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)));
         assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
