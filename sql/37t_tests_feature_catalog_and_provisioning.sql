@@ -44,7 +44,9 @@ BEGIN
     END IF;
 
     SELECT count(*) INTO v_count
-      FROM (VALUES
+      FROM (
+          SELECT DISTINCT module_code, requires_module_code
+          FROM (VALUES
         ('INSTITUTION_SETUP','USERS_ACCESS'),
         ('TIMETABLE','USERS_ACCESS'),
         ('ATTENDANCE','USERS_ACCESS'),
@@ -81,12 +83,13 @@ BEGIN
         ('FEES','INSTITUTION_SETUP'),
         ('LEAVE','USERS_ACCESS'),
         ('RISK','ATTENDANCE')
-      ) AS expected(module_code, requires_module_code)
+          ) AS expected_seed(module_code, requires_module_code)
+      ) expected
       JOIN ref.module_dependency actual
         ON actual.module_code = expected.module_code
        AND actual.requires_module_code = expected.requires_module_code
        AND actual.kind = 'REQUIRED';
-    IF v_count <> 36 THEN
-        RAISE EXCEPTION 'E2_S2_REQUIRED_MODULE_DEPENDENCIES_INCOMPLETE: expected 36, found %', v_count;
+    IF v_count <> 35 THEN
+        RAISE EXCEPTION 'E2_S2_REQUIRED_MODULE_DEPENDENCIES_INCOMPLETE: expected 35, found %', v_count;
     END IF;
 END $$;
