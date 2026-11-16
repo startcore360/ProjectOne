@@ -139,6 +139,7 @@ class PlatformTenantControllerTest {
                 .smsLimit(5000)
                 .apiLimit(10000)
                 .status("ACTIVE")
+                .rowVersion(1)
                 .build();
     }
 
