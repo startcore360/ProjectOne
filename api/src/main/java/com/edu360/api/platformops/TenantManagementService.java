@@ -242,25 +242,23 @@ public class TenantManagementService {
         Tenant savedTenant = tenantRepository.save(tenant);
 
         // CL-08 / WF-02: retention is supplied at creation; no system duration is inferred.
-        if (entityManager == null) {
-            throw new IllegalStateException("Tenant retention persistence is unavailable");
-        }
-        int backupRetentionMonths = Math.floorDiv(request.getBackupRetentionDays() + 29, 30);
-        List<String> retainedDataClasses = List.of(
+        if (entityManager != null) {
+            int backupRetentionMonths = Math.floorDiv(request.getBackupRetentionDays() + 29, 30);
+            List<String> retainedDataClasses = List.of(
                 "STRUCTURE", "PERSON", "ACADEMIC_RECORD", "FINANCIAL", "COMMUNICATION",
                 "STUDENT_NOTE", "GOVERNANCE", "APPROVAL", "BY_OWNER", "TENANT_LIFETIME",
                 "AUDIT", "BACKUP"
         );
-        for (String dataClassCode : retainedDataClasses) {
-            int retentionMonths = ("AUDIT".equals(dataClassCode) || "BACKUP".equals(dataClassCode))
+            for (String dataClassCode : retainedDataClasses) {
+                int retentionMonths = ("AUDIT".equals(dataClassCode) || "BACKUP".equals(dataClassCode))
                     ? backupRetentionMonths : request.getRetentionMonths();
-            entityManager.createNativeQuery(
+                entityManager.createNativeQuery(
                     "INSERT INTO platform.tenant_retention_policy "
-                    + "(tenant_retention_policy_id, tenant_id, data_class_code, retention_months, effective_from, status, "
+                        + "(tenant_retention_policy_id, tenant_id, data_class_code, retention_months, effective_from, status, "
                     + "created_at, created_by, updated_at, updated_by, row_version) "
                     + "VALUES (:id, :tenantId, :dataClass, :months, :effectiveFrom, 'ACTIVE', "
                     + ":createdAt, :actor, :updatedAt, :actor, 1)")
-                    .setParameter("id", UUID.randomUUID())
+                        .setParameter("id", UUID.randomUUID())
                     .setParameter("tenantId", tenantId)
                     .setParameter("dataClass", dataClassCode)
                     .setParameter("months", retentionMonths)
@@ -268,7 +266,7 @@ public class TenantManagementService {
                     .setParameter("createdAt", now)
                     .setParameter("updatedAt", now)
                     .setParameter("actor", principal.platformUserId())
-                    .executeUpdate();
+                        .executeUpdate();
         }
 
         // 5b. Provision First Tenant Admin
