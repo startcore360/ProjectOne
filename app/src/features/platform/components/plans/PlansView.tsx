@@ -72,12 +72,12 @@ export function PlansView() {
         customDomainAllowed: createDraft.customDomainAllowed,
         brandingColorsAllowed: createDraft.brandingColorsAllowed,
         billingCycleMonths: createDraft.billingCycleMonths,
-        smsUnitAmount: Number(createDraft.smsUnitAmount),
-        storageUnitAmountPerGb: Number(createDraft.storageUnitAmountPerGb),
         ...(canConfigurePricing ? {
           pricingType: createDraft.pricingType,
           priceAmount: Number(createDraft.priceAmount),
           currencyCode: createDraft.currencyCode,
+          smsUnitAmount: Number(createDraft.smsUnitAmount),
+          storageUnitAmountPerGb: Number(createDraft.storageUnitAmountPerGb),
         } : {}),
       };
       if (editingPlan) {
