@@ -292,6 +292,12 @@ public class PlatformBillingService {
     }
 
     @Transactional(readOnly = true)
+    public List<InvoiceResponse> listOverdueInvoices() {
+        return invoiceRepository.findByStatusAndDueAtBeforeOrderByDueAtAsc("SENT",
+                LocalDate.now(ZoneId.of("Asia/Kolkata"))).stream().map(InvoiceResponse::fromEntity).toList();
+    }
+
+    @Transactional(readOnly = true)
     public InvoiceResponse getInvoice(UUID invoiceId) {
         return invoiceRepository.findById(invoiceId)
                 .map(InvoiceResponse::fromEntity)

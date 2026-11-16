@@ -80,6 +80,7 @@ export function InvoicesView() {
   const { can, role } = usePlatformAccess();
   const canManageInvoice = can("INVOICE_MANAGE");
   const canApplyDiscount = can("DISCOUNT_APPLY");
+  const canFlagOverdue = can("OVERDUE_FLAG");
   const isProductOwner = role === "PRODUCT_OWNER";
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
@@ -211,7 +212,7 @@ export function InvoicesView() {
   const handleFlagOverdue = async (inv: InvoiceItem) => {
     try {
       await platformOpsService.flagOverdue(inv.invoiceId);
-      setMessage(`Invoice ${inv.invoiceNumber} flagged as overdue.`);
+      setMessage(`Invoice ${inv.invoiceNumber} flagged for suspension review.`);
       void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to flag overdue");
@@ -317,7 +318,7 @@ export function InvoicesView() {
     const matchesQuery =
       inv.invoiceNumber.toLowerCase().includes(query.toLowerCase()) ||
       inv.tenantId.toLowerCase().includes(query.toLowerCase());
-    const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
+    const matchesStatus = statusFilter === "All" || (statusFilter === "OVERDUE" ? inv.overdue : inv.status === statusFilter);
     return matchesQuery && matchesStatus;
   });
 
@@ -325,7 +326,7 @@ export function InvoicesView() {
   const totalPaid = invoices
     .filter((i) => i.status === "PAID")
     .reduce((sum, i) => sum + Number(i.totalAmount || 0), 0);
-  const overdueCount = invoices.filter((i) => !!i.overdueFlaggedAt).length;
+  const overdueCount = invoices.filter((i) => i.overdue).length;
 
   return (
     <div className="app-page">
@@ -363,9 +364,9 @@ export function InvoicesView() {
           mark="check-circle"
         />
         <MetricCard
-          label="Overdue Flagged"
+          label="Past Due"
           value={overdueCount}
-          note="Requires attention"
+          note="Sent invoices beyond due date"
           mark="alert"
         />
       </div>
@@ -384,6 +385,7 @@ export function InvoicesView() {
               <option value="DRAFT">Draft</option>
               <option value="APPROVED">Approved</option>
               <option value="SENT">Sent</option>
+              <option value="OVERDUE">Overdue</option>
               <option value="PAID">Paid</option>
             </select>
           </label>
@@ -415,11 +417,11 @@ export function InvoicesView() {
                   )}
                 </td>
                 <td>
-                  <StatusBadge value={inv.status} />
+                  <StatusBadge value={inv.overdue ? "OVERDUE" : inv.status} />
                 </td>
                 <td>
                   {inv.overdueFlaggedAt ? (
-                    <span style={{ color: "var(--color-status-danger-fg)", fontWeight: "bold" }}>OVERDUE</span>
+                    <span style={{ color: "var(--color-status-danger-fg)", fontWeight: "bold" }}>REVIEW FLAGGED</span>
                   ) : (
                     "—"
                   )}
@@ -436,8 +438,8 @@ export function InvoicesView() {
                     {inv.status !== "PAID" && canManageInvoice && (
                       <MenuAction onClick={() => setPayInvoice(inv)}>Record payment</MenuAction>
                     )}
-                    {inv.status !== "PAID" && !inv.overdueFlaggedAt && (
-                      <MenuAction onClick={() => handleFlagOverdue(inv)}>Flag overdue</MenuAction>
+                    {inv.overdue && canFlagOverdue && !inv.overdueFlaggedAt && (
+                      <MenuAction onClick={() => handleFlagOverdue(inv)}>Flag for suspension review</MenuAction>
                     )}
                     {isProductOwner && (inv.status === "DRAFT" || inv.status === "APPROVED") && canApplyDiscount && (
                       <MenuAction onClick={() => {

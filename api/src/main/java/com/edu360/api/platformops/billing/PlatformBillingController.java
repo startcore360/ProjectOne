@@ -51,6 +51,13 @@ public class PlatformBillingController {
         return ResponseEntity.ok(billingService.listInvoices(tenantId));
     }
 
+    @GetMapping("/overdue")
+    public ResponseEntity<List<InvoiceResponse>> listOverdueInvoices(Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "INVOICE_MANAGE");
+        return ResponseEntity.ok(billingService.listOverdueInvoices());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable UUID id, Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();

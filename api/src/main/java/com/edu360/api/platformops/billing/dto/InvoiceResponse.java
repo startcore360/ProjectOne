@@ -25,6 +25,7 @@ public record InvoiceResponse(
         Instant sentAt,
         Instant paidAt,
         Instant overdueFlaggedAt,
+        boolean overdue,
         Integer rowVersion
 ) {
     public static InvoiceResponse fromEntity(Invoice i) {
@@ -46,6 +47,7 @@ public record InvoiceResponse(
                 i.getSentAt(),
                 i.getPaidAt(),
                 i.getOverdueFlaggedAt(),
+                "SENT".equals(i.getStatus()) && i.getDueAt() != null && i.getDueAt().isBefore(LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))),
                 i.getRowVersion()
         );
     }

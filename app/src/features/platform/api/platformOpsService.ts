@@ -72,6 +72,7 @@ export type InvoiceItem = {
   paymentMode?: string;
   paymentReference?: string;
   overdueFlaggedAt?: string;
+  overdue: boolean;
   createdAt: string;
 };
 
