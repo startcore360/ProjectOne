@@ -192,6 +192,34 @@ class PlatformTenantControllerTest {
     }
 
     @Test
+    void act_tenantCreate_rejectsReservedSubdomain() {
+        TenantCreateRequest request = sampleRequest();
+        request.setSubdomain("platform");
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.createTenant(request, authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(error.getErrorCode()).isEqualTo("SUBDOMAIN_RESERVED");
+        org.mockito.Mockito.verifyNoInteractions(keycloakAdminClient);
+    }
+
+    @Test
+    void act_tenantCreate_rejectsInvalidSubdomain() {
+        TenantCreateRequest request = sampleRequest();
+        request.setSubdomain("bad_name");
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.createTenant(request, authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(error.getErrorCode()).isEqualTo("SUBDOMAIN_INVALID");
+        org.mockito.Mockito.verifyNoInteractions(keycloakAdminClient);
+    }
+
+    @Test
     void act_tenantCreate_provisionsFirstAdminAndRole() {
         com.edu360.api.identity.UserAccountRepository userRepo = mock(com.edu360.api.identity.UserAccountRepository.class);
         com.edu360.api.identity.UserIdentityLinkRepository linkRepo = mock(com.edu360.api.identity.UserIdentityLinkRepository.class);
