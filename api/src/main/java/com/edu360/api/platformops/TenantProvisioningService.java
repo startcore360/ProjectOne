@@ -26,6 +26,8 @@ import javax.sql.DataSource;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import com.edu360.api.config.keycloak.KeycloakProvisioningException;
+
 /**
  * Coordinates resumable tenant setup as an ordered saga.
  *
@@ -105,7 +107,8 @@ public class TenantProvisioningService {
                 markDone(tenantId, actorId, step.stepCode());
                 completedThisAttempt.add(step);
             } catch (Exception ex) {
-                markFailed(tenantId, actorId, step.stepCode());
+                markFailed(tenantId, actorId, step.stepCode(),
+                        ex instanceof KeycloakProvisioningException ? "KEYCLOAK_UNAVAILABLE" : FAILED_ERROR_CODE);
                 log.error("Tenant provisioning failed for tenant {} at step {}", tenantId, step.stepCode());
                 compensateCompleted(tenantId, actorId, actions, completedThisAttempt);
                 return getStatus(tenantId);
@@ -204,9 +207,9 @@ public class TenantProvisioningService {
                 "status = 'DONE', last_error_code = NULL, finished_at = ?", Instant.now());
     }
 
-    private void markFailed(UUID tenantId, UUID actorId, String stepCode) {
+    private void markFailed(UUID tenantId, UUID actorId, String stepCode, String errorCode) {
         updateStep(tenantId, actorId, stepCode,
-                "status = 'FAILED', last_error_code = ?, finished_at = ?", FAILED_ERROR_CODE, Instant.now());
+                "status = 'FAILED', last_error_code = ?, finished_at = ?", errorCode, Instant.now());
     }
 
     private void markCompensated(UUID tenantId, UUID actorId, String stepCode) {
