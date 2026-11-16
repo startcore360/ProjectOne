@@ -92,14 +92,29 @@ public class PlatformBillingController {
     }
 
     @PostMapping({"/{id}/discounts", "/{id}/discount"})
+    @Transactional(transactionManager = "platformTransactionManager")
     public ResponseEntity<InvoiceResponse> applyDiscount(
             @PathVariable UUID id,
             @Valid @RequestBody ApplyDiscountRequest req,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             Authentication auth
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "DISCOUNT_APPLY");
-        return ResponseEntity.ok(billingService.applyDiscount(id, req, principal));
+        PlatformIdempotencyService.Claim claim = idempotencyService.claim(principal.platformUserId(),
+                "INVOICE_DISCOUNT", idempotencyKey, java.util.Map.of("invoiceId", id, "request", req));
+        if (claim.replay()) {
+            InvoiceResponse replay = objectMapper.convertValue(claim.responseBody(), InvoiceResponse.class);
+            return ResponseEntity.status(claim.responseStatus() == null ? HttpStatus.OK : HttpStatus.valueOf(claim.responseStatus())).body(replay);
+        }
+        try {
+            InvoiceResponse discounted = billingService.applyDiscount(id, req, principal);
+            idempotencyService.complete(principal.platformUserId(), claim.id(), HttpStatus.OK.value(), discounted);
+            return ResponseEntity.ok(discounted);
+        } catch (RuntimeException ex) {
+            idempotencyService.release(principal.platformUserId(), claim.id());
+            throw ex;
+        }
     }
 
     @PostMapping({"/{id}/overdue-flags", "/{id}/overdue-flag"})

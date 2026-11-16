@@ -33,6 +33,8 @@ import com.edu360.api.platformops.billing.dto.CreateInvoiceRequest;
 import com.edu360.api.platformops.billing.dto.InvoiceResponse;
 import com.edu360.api.platformops.billing.dto.AddInvoiceLineRequest;
 import com.edu360.api.platformops.billing.dto.InvoiceLineResponse;
+import com.edu360.api.platformops.role.PlatformAuditWriter;
+import static org.mockito.ArgumentMatchers.eq;
 
 class PlatformBillingControllerTest {
 
@@ -42,6 +44,7 @@ class PlatformBillingControllerTest {
     private PlatformPermissionService permissionService;
     private PlatformBillingService billingService;
     private PlatformIdempotencyService idempotencyService;
+    private PlatformAuditWriter platformAuditWriter;
     private PlatformBillingController controller;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -52,9 +55,10 @@ class PlatformBillingControllerTest {
         invoiceRepository = mock(InvoiceRepository.class);
         invoiceLineRepository = mock(InvoiceLineRepository.class);
         idempotencyService = mock(PlatformIdempotencyService.class);
+        platformAuditWriter = mock(PlatformAuditWriter.class);
         auditLogService = mock(AuditLogService.class);
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
-        billingService = new PlatformBillingService(invoiceRepository, invoiceLineRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
+        billingService = new PlatformBillingService(invoiceRepository, invoiceLineRepository, platformAuditWriter);
         controller = new PlatformBillingController(billingService, permissionService, idempotencyService, new ObjectMapper());
     }
 
@@ -100,18 +104,23 @@ class PlatformBillingControllerTest {
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("2000.00"), "Annual promotional rebate");
-        ResponseEntity<InvoiceResponse> res = controller.applyDiscount(invoiceId, req, authFor(PlatformRole.PRODUCT_OWNER));
+        when(idempotencyService.claim(any(), any(), any(), any())).thenReturn(new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("20.00"), "Annual promotional rebate");
+        ResponseEntity<InvoiceResponse> res = controller.applyDiscount(invoiceId, req, "discount-key-001", authFor(PlatformRole.PRODUCT_OWNER));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody().discountAmount()).isEqualTo(new BigDecimal("2000.00"));
         assertThat(res.getBody().totalAmount()).isEqualTo(new BigDecimal("8000.00"));
+        verify(idempotencyService).complete(any(), any(), eq(200), any());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), org.mockito.ArgumentMatchers.isNull(),
+                eq("DISCOUNT_APPLIED"), eq("UPDATE"), eq("DISCOUNT_APPLY"), eq("INVOICE"), eq(invoiceId), eq(PlatformAuditWriter.SUCCESS),
+                org.mockito.ArgumentMatchers.argThat(changes -> "Annual promotional rebate".equals(changes.get("reason").get("new"))));
     }
 
     @Test
     void ACT_DISCOUNT_APPLY_DENY_billingManager_RuleF4() {
         UUID invoiceId = UUID.randomUUID();
-        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("1000.00"), "Rebate");
+        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("10.00"), "Rebate");
 
         // Billing Manager is denied applying discounts by permission service & Rule F-4
         assertThatThrownBy(() -> controller.applyDiscount(invoiceId, req, authFor(PlatformRole.BILLING_MANAGER)))
@@ -129,11 +138,12 @@ class PlatformBillingControllerTest {
 
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
 
-        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("6000.00"), "Too high");
+        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("101.00"), "Too high");
 
-        assertThatThrownBy(() -> controller.applyDiscount(invoiceId, req, authFor(PlatformRole.PRODUCT_OWNER)))
+        when(idempotencyService.claim(any(), any(), any(), any())).thenReturn(new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        assertThatThrownBy(() -> controller.applyDiscount(invoiceId, req, "discount-key-002", authFor(PlatformRole.PRODUCT_OWNER)))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("Rule ck_invoice_r2");
+                .hasMessageContaining("between 0.01 and 100");
     }
 
 
@@ -249,6 +259,23 @@ class PlatformBillingControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().status()).isEqualTo("SENT");
         assertThat(response.getBody().sentAt()).isNotNull();
+    }
+
+
+    @Test
+    void ACT_DISCOUNT_APPLY_GUARD_sentInvoiceIsNotDiscountable() {
+        UUID invoiceId = UUID.randomUUID();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(Invoice.builder()
+                .invoiceId(invoiceId).status("SENT").subtotalAmount(new BigDecimal("100.00"))
+                .discountAmount(BigDecimal.ZERO).build()));
+        when(idempotencyService.claim(any(), any(), any(), any())).thenReturn(
+                new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        assertThatThrownBy(() -> controller.applyDiscount(invoiceId,
+                new ApplyDiscountRequest(new BigDecimal("10"), "Late discount"),
+                "discount-key-003", authFor(PlatformRole.PRODUCT_OWNER)))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVOICE_NOT_DISCOUNTABLE");
+        verify(idempotencyService).release(any(), any());
     }
 
     @Test

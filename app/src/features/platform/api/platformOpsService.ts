@@ -87,6 +87,11 @@ export type InvoiceLineItem = {
   createdAt: string;
 };
 
+export type ApplyDiscountPayload = {
+  discountPercent: number;
+  reason: string;
+};
+
 export type AddInvoiceLinePayload = {
   description: string;
   quantity: number;
@@ -249,8 +254,10 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async applyDiscount(invoiceId: string, discountAmount: number): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/discounts`, { discountAmount });
+  async applyDiscount(invoiceId: string, payload: ApplyDiscountPayload, idempotencyKey: string): Promise<InvoiceItem> {
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/discounts`, payload, {
+      headers: { "Idempotency-Key": idempotencyKey },
+    });
     return res.data;
   },
 

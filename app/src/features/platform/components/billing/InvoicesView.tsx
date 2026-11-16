@@ -115,7 +115,9 @@ export function InvoicesView() {
 
   // Discount Modal
   const [discountInvoice, setDiscountInvoice] = useState<InvoiceItem | null>(null);
-  const [discountAmount, setDiscountAmount] = useState(5000);
+  const [discountPercent, setDiscountPercent] = useState("10");
+  const [discountReason, setDiscountReason] = useState("");
+  const [discountIdempotencyKey, setDiscountIdempotencyKey] = useState("");
   const [applyingDiscount, setApplyingDiscount] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -216,7 +218,10 @@ export function InvoicesView() {
     setApplyingDiscount(true);
     setError("");
     try {
-      await platformOpsService.applyDiscount(discountInvoice.invoiceId, Number(discountAmount));
+      await platformOpsService.applyDiscount(discountInvoice.invoiceId, {
+        discountPercent: Number(discountPercent),
+        reason: discountReason.trim(),
+      }, discountIdempotencyKey);
       setMessage(`Discount applied to ${discountInvoice.invoiceNumber}.`);
       setDiscountInvoice(null);
       void loadData();
@@ -401,8 +406,13 @@ export function InvoicesView() {
                     {inv.status !== "PAID" && !inv.overdueFlaggedAt && (
                       <MenuAction onClick={() => handleFlagOverdue(inv)}>Flag overdue</MenuAction>
                     )}
-                    {isProductOwner && inv.status !== "PAID" && canApplyDiscount && (
-                      <MenuAction onClick={() => setDiscountInvoice(inv)}>Apply discount</MenuAction>
+                    {isProductOwner && (inv.status === "DRAFT" || inv.status === "APPROVED") && canApplyDiscount && (
+                      <MenuAction onClick={() => {
+                        setDiscountInvoice(inv);
+                        setDiscountPercent("10");
+                        setDiscountReason("");
+                        setDiscountIdempotencyKey(crypto.randomUUID());
+                      }}>Apply discount</MenuAction>
                     )}
                   </RowMenu>
                 </td>
@@ -576,14 +586,23 @@ export function InvoicesView() {
         size="sm"
       >
         <form onSubmit={handleApplyDiscount}>
-          <TextField
-            id="discount-amount"
-            label="Discount Amount (₹ INR)"
-            type="number"
-            value={String(discountAmount)}
-            onChange={(e) => setDiscountAmount(Number(e.target.value))}
-            required
-          />
+          <div style={{ display: "grid", gap: "12px" }}>
+            <TextField
+              id="discount-percent"
+              label="Discount percentage (%)"
+              type="number"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(e.target.value)}
+              required
+            />
+            <TextField
+              id="discount-reason"
+              label="Reason"
+              value={discountReason}
+              onChange={(e) => setDiscountReason(e.target.value)}
+              required
+            />
+          </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
             <Button variant="secondary" onClick={() => setDiscountInvoice(null)} type="button">
               Cancel

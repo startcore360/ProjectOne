@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -169,19 +170,34 @@ public class PlatformBillingService {
 
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
-
-        if (req.discountAmount().compareTo(invoice.getSubtotalAmount()) > 0) {
-            throw new BusinessRuleViolationException("Rule ck_invoice_r2: discount_amount cannot exceed subtotal_amount");
+        if (!"DRAFT".equals(invoice.getStatus()) && !"APPROVED".equals(invoice.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "INVOICE_NOT_DISCOUNTABLE",
+                    "Discounts can only be applied while an invoice is DRAFT or APPROVED.");
+        }
+        if (req.discountPercent() == null || req.discountPercent().compareTo(new BigDecimal("0.01")) < 0
+                || req.discountPercent().compareTo(new BigDecimal("100.00")) > 0) {
+            throw new BusinessRuleViolationException("INVALID_DISCOUNT_PERCENT",
+                    "Discount percentage must be between 0.01 and 100.");
         }
 
-        invoice.setDiscountAmount(req.discountAmount());
+        BigDecimal previousDiscount = invoice.getDiscountAmount() == null ? BigDecimal.ZERO : invoice.getDiscountAmount();
+        BigDecimal discountAmount = invoice.getSubtotalAmount()
+                .multiply(req.discountPercent())
+                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+        invoice.setDiscountAmount(discountAmount);
         invoice.setDiscountAppliedBy(principal.platformUserId());
-        invoice.setTotalAmount(invoice.getSubtotalAmount().subtract(req.discountAmount()));
+        invoice.setTotalAmount(invoice.getSubtotalAmount().subtract(discountAmount));
         invoice.setUpdatedAt(Instant.now());
         invoice.setUpdatedBy(principal.platformUserId());
 
         Invoice saved = invoiceRepository.save(invoice);
-        platformAuditWriter.record(principal, "DISCOUNT_APPLIED", "DISCOUNT_APPLY", "INVOICE", saved.getInvoiceId());
+        platformAuditWriter.record(principal, null, "DISCOUNT_APPLIED", "UPDATE", "DISCOUNT_APPLY",
+                "INVOICE", saved.getInvoiceId(), com.edu360.api.platformops.role.PlatformAuditWriter.SUCCESS,
+                Map.of(
+                        "discount_percent", Map.of("new", req.discountPercent()),
+                        "discount_amount", Map.of("old", previousDiscount, "new", discountAmount),
+                        "reason", Map.of("new", req.reason().trim())
+                ));
         return InvoiceResponse.fromEntity(saved);
     }
 
