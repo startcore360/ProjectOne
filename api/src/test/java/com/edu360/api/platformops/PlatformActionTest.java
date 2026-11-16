@@ -83,12 +83,15 @@ import com.edu360.api.platformops.support.SupportAccessGrant;
 import com.edu360.api.platformops.support.SupportAccessGrantRepository;
 import com.edu360.api.platformops.support.SupportTicket;
 import com.edu360.api.platformops.support.SupportTicketRepository;
+import com.edu360.api.platformops.support.SupportSessionService;
 import com.edu360.api.platformops.support.TenantSupportController;
 import com.edu360.api.platformops.support.dto.CreateSupportTicketRequest;
 import com.edu360.api.platformops.support.dto.GrantSupportAccessRequest;
 import com.edu360.api.platformops.support.dto.SupportAccessGrantResponse;
 import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
+import com.edu360.api.platformops.support.dto.OpenSupportSessionRequest;
+import com.edu360.api.platformops.support.dto.SupportSessionResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.tenant.IsolationMode;
 import com.edu360.api.tenant.Tenant;
@@ -129,6 +132,7 @@ class PlatformActionTest {
     private SupportAccessGrantRepository grantRepository;
     private PlatformSupportService supportService;
     private PlatformSupportController supportController;
+    private SupportSessionService supportSessionService;
     private PermissionEvaluatorService permissionEvaluatorService;
     private TenantSupportController tenantSupportController;
 
@@ -186,7 +190,8 @@ class PlatformActionTest {
         ticketRepository = mock(SupportTicketRepository.class);
         grantRepository = mock(SupportAccessGrantRepository.class);
         supportService = new PlatformSupportService(ticketRepository, grantRepository, platformAuditWriter, auditLogService);
-        supportController = new PlatformSupportController(supportService, mock(com.edu360.api.platformops.support.SupportSessionService.class), permissionService);
+        supportSessionService = mock(SupportSessionService.class);
+        supportController = new PlatformSupportController(supportService, supportSessionService, permissionService);
         permissionEvaluatorService = mock(PermissionEvaluatorService.class);
         tenantSupportController = new TenantSupportController(supportService, permissionEvaluatorService);
 
@@ -832,23 +837,26 @@ class PlatformActionTest {
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(eq(ticketId), any())).thenReturn(Optional.of(grant));
 
-        // L-03 / R7: the made-up session token is gone. With a live grant the answer is an honest "not available yet" (501).
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, auth(PlatformRole.SUPPORT_MANAGER)))
-                .isInstanceOfSatisfying(com.edu360.api.exception.FeatureNotAvailableException.class,
-                        ex -> assertThat(ex.getCode()).isEqualTo("SUPPORT_SESSION_NOT_AVAILABLE"));
+        SupportSessionResponse expected = new SupportSessionResponse(
+                "signed-token", Instant.now().plusSeconds(1800), "https://tenant.edu360.example");
+        when(supportSessionService.open(eq(ticketId), any())).thenReturn(expected);
+        ResponseEntity<SupportSessionResponse> response = supportController.assumeSupportSession(
+                new OpenSupportSessionRequest(ticketId), auth(PlatformRole.SUPPORT_MANAGER));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expected);
     }
 
     @Test
     @DisplayName("ACT-SUPPORT_ACCESS_USE-DENY: Billing Manager lacking SUPPORT_ACCESS_USE denied")
     void actSupportAccessUse_deny() {
-        assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, auth(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> supportController.assumeSupportSession(new OpenSupportSessionRequest(ticketId), auth(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-SUPPORT_ACCESS_USE-SCOPE: Tenant principal rejected")
     void actSupportAccessUse_scope() {
-        assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, tenantAuth(tenantId)))
+        assertThatThrownBy(() -> supportController.assumeSupportSession(new OpenSupportSessionRequest(ticketId), tenantAuth(tenantId)))
                 .isInstanceOfAny(UnauthorizedException.class, ClassCastException.class);
     }
 
@@ -859,9 +867,12 @@ class PlatformActionTest {
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(eq(ticketId), any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, auth(PlatformRole.SUPPORT_MANAGER)))
-                .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("No active support access grant");
+        when(supportSessionService.open(eq(ticketId), any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("SUPPORT_GRANT_REQUIRED"));
+        assertThatThrownBy(() -> supportController.assumeSupportSession(
+                new OpenSupportSessionRequest(ticketId), auth(PlatformRole.SUPPORT_MANAGER)))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessageContaining("SUPPORT_GRANT_REQUIRED");
     }
 
     // =========================================================================

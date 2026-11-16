@@ -35,7 +35,7 @@ class TokenHostMismatchIT {
                 .thenReturn(new LoginTenantResolver.TenantLogin(hostTenant));
         TokenHostMatchingFilter filter = new TokenHostMatchingFilter(resolver);
         SupportPrincipal support = new SupportPrincipal(UUID.randomUUID(), tokenTenantId, UUID.randomUUID(),
-                UUID.randomUUID(), UUID.randomUUID(), null);
+                UUID.randomUUID(), UUID.randomUUID(), null, null);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(support, "signed-support-token", List.of()));
 
@@ -57,7 +57,7 @@ class TokenHostMismatchIT {
                 .thenReturn(new LoginTenantResolver.TenantLogin(hostTenant));
         TokenHostMatchingFilter filter = new TokenHostMatchingFilter(resolver);
         SupportPrincipal support = new SupportPrincipal(UUID.randomUUID(), tenantId, UUID.randomUUID(),
-                UUID.randomUUID(), UUID.randomUUID(), null);
+                UUID.randomUUID(), UUID.randomUUID(), null, null);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(support, "signed-support-token", List.of()));
 

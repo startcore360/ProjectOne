@@ -51,7 +51,7 @@ class SupportPrincipalFilterBypassTest {
         ActiveRoleRequiredFilter filter = new ActiveRoleRequiredFilter();
         TenantContext.set(TENANT_ID, IsolationMode.SHARED, null, "ALL", java.util.Set.of(), null, null, null, true);
         authenticate(new SupportPrincipal(PLATFORM_USER_ID, TENANT_ID, UUID.randomUUID(),
-                UUID.randomUUID(), UUID.randomUUID(), null));
+                UUID.randomUUID(), UUID.randomUUID(), null, null));
         MockHttpServletResponse supportResponse = new MockHttpServletResponse();
         filter.doFilter(request("GET"), supportResponse, new MockFilterChain());
         assertThat(supportResponse.getStatus()).isEqualTo(200);
@@ -66,7 +66,7 @@ class SupportPrincipalFilterBypassTest {
     void passwordFilterAllowsSupportPrincipalButStillBlocksTenantNeedingPasswordChange() throws Exception {
         MustChangePasswordFilter filter = new MustChangePasswordFilter();
         authenticate(new SupportPrincipal(PLATFORM_USER_ID, TENANT_ID, UUID.randomUUID(),
-                UUID.randomUUID(), UUID.randomUUID(), null));
+                UUID.randomUUID(), UUID.randomUUID(), null, null));
         MockHttpServletResponse supportResponse = new MockHttpServletResponse();
         filter.doFilter(request("POST"), supportResponse, new MockFilterChain());
         assertThat(supportResponse.getStatus()).isEqualTo(200);
@@ -82,7 +82,7 @@ class SupportPrincipalFilterBypassTest {
         TenantRepository tenants = mock(TenantRepository.class);
         TrialReadOnlyFilter filter = new TrialReadOnlyFilter(tenants, java.time.Clock.systemUTC());
         authenticate(new SupportPrincipal(PLATFORM_USER_ID, TENANT_ID, UUID.randomUUID(),
-                UUID.randomUUID(), UUID.randomUUID(), null));
+                UUID.randomUUID(), UUID.randomUUID(), null, null));
         MockHttpServletResponse supportResponse = new MockHttpServletResponse();
         filter.doFilter(request("POST"), supportResponse, new MockFilterChain());
         assertThat(supportResponse.getStatus()).isEqualTo(200);
