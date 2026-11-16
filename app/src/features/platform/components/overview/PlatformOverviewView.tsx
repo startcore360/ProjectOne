@@ -84,7 +84,7 @@ export function PlatformOverviewView() {
             </div>
           )}
 
-          {workspaceMessage && <Panel title="Your workspace" description={workspaceMessage} />}
+          {workspaceMessage && <Panel title="Your workspace" description={workspaceMessage}><p>{workspaceMessage}</p></Panel>}
 
           {(canViewTenants || canViewAudit) && (
           <div className="app-two-col">

@@ -52,6 +52,7 @@ import com.edu360.api.platformops.dto.TenantResponse;
 import com.edu360.api.platformops.dto.TenantSettingsResponse;
 import com.edu360.api.platformops.dto.UpdatePlanRequest;
 import com.edu360.api.platformops.dto.UpdateTenantSettingsRequest;
+import com.edu360.api.platformops.role.PlatformAuditWriter;
 import com.edu360.api.rbac.AssignmentStatus;
 import com.edu360.api.rbac.RoleAction;
 import com.edu360.api.rbac.RoleActionId;
