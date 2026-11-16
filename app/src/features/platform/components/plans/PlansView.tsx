@@ -65,7 +65,7 @@ export function PlansView() {
       const payload = {
         planName: createDraft.planName.trim(),
         pricingType: createDraft.pricingType,
-        priceAmount: canConfigurePricing ? Number(createDraft.priceAmount) : 0,
+        priceAmount: canConfigurePricing ? Number(createDraft.priceAmount) : (editingPlan?.priceAmount ?? 0),
         currencyCode: createDraft.currencyCode,
         userLimit: Number(createDraft.userLimit),
         storageLimitGb: Number(createDraft.storageLimitGb),
