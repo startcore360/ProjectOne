@@ -646,7 +646,7 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-GUARD: Discount exceeding subtotal rejected under Rule ck_invoice_r2")
     void actDiscountApply_guard() {
         Invoice invoice = Invoice.builder().invoiceId(invoiceId).tenantId(tenantId)
-                .subtotalAmount(new BigDecimal("5000.00")).discountAmount(BigDecimal.ZERO).build();
+                .subtotalAmount(new BigDecimal("5000.00")).discountAmount(BigDecimal.ZERO).status("DRAFT").build();
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
 
         ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("101.00"), "Over 100%");
