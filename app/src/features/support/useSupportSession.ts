@@ -37,6 +37,9 @@ export function useSupportSession() {
 
   useEffect(() => {
     setSession(readSession());
+    const onEnded = () => setSession(null);
+    window.addEventListener("edu360:support-session-ended", onEnded);
+    return () => window.removeEventListener("edu360:support-session-ended", onEnded);
   }, []);
 
   const endSupportSession = useCallback(() => {
@@ -49,6 +52,7 @@ export function useSupportSession() {
     window.sessionStorage.removeItem(SUPPORT_SESSION_TICKET_KEY);
     window.sessionStorage.removeItem(SUPPORT_SESSION_PLATFORM_ORIGIN_KEY);
     setSession(null);
+    window.dispatchEvent(new Event("edu360:support-session-ended"));
   }, []);
 
   const isExpired = !!session?.expiresAt && new Date(session.expiresAt).getTime() <= Date.now();
