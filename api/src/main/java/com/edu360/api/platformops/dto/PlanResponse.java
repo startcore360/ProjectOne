@@ -16,6 +16,11 @@ public record PlanResponse(
         Integer smsLimit,
         Integer apiLimit,
         Integer maxInstitutions,
+        boolean customDomainAllowed,
+        boolean brandingColorsAllowed,
+        Integer billingCycleMonths,
+        BigDecimal smsUnitAmount,
+        BigDecimal storageUnitAmountPerGb,
         String status
 ) {
     public static PlanResponse from(Plan plan) {
@@ -30,6 +35,11 @@ public record PlanResponse(
                 plan.getSmsLimit(),
                 plan.getApiLimit(),
                 plan.getMaxInstitutions(),
+                plan.isCustomDomainAllowed(),
+                plan.isBrandingColorsAllowed(),
+                plan.getBillingCycleMonths(),
+                plan.getSmsUnitAmount(),
+                plan.getStorageUnitAmountPerGb(),
                 plan.getStatus()
         );
     }
