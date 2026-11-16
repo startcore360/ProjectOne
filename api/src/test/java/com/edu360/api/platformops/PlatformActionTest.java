@@ -234,7 +234,8 @@ class PlatformActionTest {
     void actPlanManage_allow() {
         CreatePlanRequest req = new CreatePlanRequest(
                 "Growth Plan", "PER_STUDENT_YEAR", new BigDecimal("799.00"), "INR",
-                2500, 100, 10000, 25000, 10
+                2500, 100, 10000, 25000, 10,
+                false, false, 12, null, null
         );
         when(planRepository.save(any(Plan.class))).thenAnswer(inv -> {
             Plan p = inv.getArgument(0);
@@ -252,7 +253,8 @@ class PlatformActionTest {
     void actPlanManage_deny() {
         CreatePlanRequest req = new CreatePlanRequest(
                 "School Tier", "PER_STUDENT_YEAR", new BigDecimal("499.00"), "INR",
-                1000, 50, 5000, 10000, 5
+                1000, 50, 5000, 10000, 5,
+                false, false, 12, null, null
         );
 
         assertThatThrownBy(() -> tenantController.createPlan(req, auth(PlatformRole.PLATFORM_ADMIN)))
@@ -264,7 +266,8 @@ class PlatformActionTest {
     @DisplayName("ACT-PLAN_MANAGE-SCOPE: Non-platform principal rejected")
     void actPlanManage_scope() {
         CreatePlanRequest req = new CreatePlanRequest(
-                "Tier", "FLAT", new BigDecimal("1000.00"), "INR", 100, 10, 1000, 1000, 1
+                "Tier", "FLAT", new BigDecimal("1000.00"), "INR", 100, 10, 1000, 1000, 1,
+                false, false, 12, null, null
         );
         assertThatThrownBy(() -> tenantController.createPlan(req, tenantAuth(tenantId)))
                 .isInstanceOf(UnauthorizedException.class);
@@ -278,8 +281,8 @@ class PlatformActionTest {
         when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
 
         UpdatePlanRequest req = new UpdatePlanRequest(
-                "New Name", new BigDecimal("200.00"), "INR",
-                100, 10, 1000, 1000, 5, "ACTIVE"
+                "New Name", new BigDecimal("200.00"), null, "INR",
+                100, 10, 1000, 1000, 5, null, null, null, null, null, "ACTIVE"
         );
         assertThatThrownBy(() -> tenantController.updatePlan(planId, req, auth(PlatformRole.PLATFORM_ADMIN)))
                 .isInstanceOf(UnauthorizedException.class)
