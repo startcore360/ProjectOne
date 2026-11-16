@@ -643,10 +643,19 @@ public class TenantManagementService {
         return PlanResponse.from(saved);
     }
 
-    @Transactional
-    public PlanResponse updatePlan(UUID planId, UpdatePlanRequest request, PlatformPrincipal principal) {
+    @Transactional(readOnly = true)
+    public PlanResponse getPlan(UUID planId) {
         Plan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("Plan " + planId + " was not found."));
+        return PlanResponse.from(plan);
+    }
+
+    @Transactional
+    public PlanResponse updatePlan(UUID planId, UpdatePlanRequest request, PlatformPrincipal principal, String ifMatch) {
+        Plan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan " + planId + " was not found."));
+
+        new PlatformConcurrency().requireIfMatch(ifMatch, plan.getRowVersion() == null ? 0 : plan.getRowVersion());
 
         boolean priceChangeAttempted = (request.priceAmount() != null
                 && (plan.getPriceAmount() == null || request.priceAmount().compareTo(plan.getPriceAmount()) != 0))

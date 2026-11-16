@@ -21,7 +21,8 @@ public record PlanResponse(
         Integer billingCycleMonths,
         BigDecimal smsUnitAmount,
         BigDecimal storageUnitAmountPerGb,
-        String status
+        String status,
+        Integer rowVersion
 ) {
     public static PlanResponse from(Plan plan) {
         return new PlanResponse(
@@ -40,7 +41,8 @@ public record PlanResponse(
                 plan.getBillingCycleMonths(),
                 plan.getSmsUnitAmount(),
                 plan.getStorageUnitAmountPerGb(),
-                plan.getStatus()
+                plan.getStatus(),
+                plan.getRowVersion()
         );
     }
 }

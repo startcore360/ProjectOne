@@ -81,7 +81,7 @@ export function PlansView() {
         } : {}),
       };
       if (editingPlan) {
-        await platformTenantService.updatePlan(editingPlan.planId, payload);
+        await platformTenantService.updatePlan(editingPlan.planId, payload, editingPlan.rowVersion);
       } else {
         await platformTenantService.createPlan(payload);
       }

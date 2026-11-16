@@ -514,7 +514,7 @@ class PlatformTenantControllerTest {
                 null, // storageUnitAmountPerGb
                 "ACTIVE"
         );
-        ResponseEntity<PlanResponse> response = controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN));
+        ResponseEntity<PlanResponse> response = controller.updatePlan(planId, request, "\"1\"", authFor(PlatformRole.PLATFORM_ADMIN));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().planName()).isEqualTo("Updated Standard Plan");
@@ -595,6 +595,42 @@ class PlatformTenantControllerTest {
                 () -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)));
         assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
         verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
+    }
+
+
+    @Test
+    void getPlanReturnsStrongEtagFromRowVersion() {
+        UUID planId = UUID.randomUUID();
+        Plan plan = samplePlan();
+        plan.setPlanId(planId);
+        plan.setRowVersion(4);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        ResponseEntity<PlanResponse> response = controller.getPlan(planId, authFor(PlatformRole.PLATFORM_ADMIN));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"4\"");
+        assertThat(response.getBody().rowVersion()).isEqualTo(4);
+    }
+
+    @Test
+    void updatePlanRejectsStaleIfMatchVersion() {
+        UUID planId = UUID.randomUUID();
+        Plan plan = samplePlan();
+        plan.setPlanId(planId);
+        plan.setRowVersion(4);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        UpdatePlanRequest request = new UpdatePlanRequest(
+                "Updated Standard Plan", null, null, null, 2000, null, null, null, null,
+                null, null, null, null, null, null);
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, "\"3\"", authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(error.getErrorCode()).isEqualTo("VERSION_CONFLICT");
+        verify(planRepository, org.mockito.Mockito.never()).save(any(Plan.class));
     }
 
     @Test

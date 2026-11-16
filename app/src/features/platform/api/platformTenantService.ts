@@ -21,6 +21,7 @@ export type PlanItem = {
   smsUnitAmount?: number;
   storageUnitAmountPerGb?: number;
   status: string;
+  rowVersion: number;
 };
 
 export type TenantItem = {

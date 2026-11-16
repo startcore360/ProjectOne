@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
@@ -71,17 +72,27 @@ public class PlatformTenantController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @GetMapping("/plans/{planId}")
+    @Operation(summary = "Get subscription plan with an ETag")
+    public ResponseEntity<PlanResponse> getPlan(@PathVariable UUID planId, Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "PLAN_MANAGE");
+        PlanResponse response = tenantManagementService.getPlan(planId);
+        return ResponseEntity.ok().eTag(new PlatformConcurrency().etag(response.rowVersion())).body(response);
+    }
+
     @PutMapping("/plans/{planId}")
-    @Operation(summary = "Update subscription plan (PLAN_MANAGE / Rule F-4)")
+    @Operation(summary = "Update subscription plan (PLAN_MANAGE / Rule F-4 / If-Match)")
     public ResponseEntity<PlanResponse> updatePlan(
             @PathVariable UUID planId,
             @Valid @RequestBody UpdatePlanRequest request,
+            @RequestHeader("If-Match") String ifMatch,
             Authentication authentication) {
 
         PlatformPrincipal principal = requirePlatformPrincipal(authentication);
         platformPermissionService.authorize(principal, "PLAN_MANAGE");
 
-        PlanResponse updated = tenantManagementService.updatePlan(planId, request, principal);
+        PlanResponse updated = tenantManagementService.updatePlan(planId, request, principal, ifMatch);
         return ResponseEntity.ok(updated);
     }
 
