@@ -24,5 +24,15 @@ public record CreatePlanRequest(
 
         Integer apiLimit,
 
-        Integer maxInstitutions
+        Integer maxInstitutions,
+
+        Boolean customDomainAllowed,
+
+        Boolean brandingColorsAllowed,
+
+        Integer billingCycleMonths,
+
+        BigDecimal smsUnitAmount,
+
+        BigDecimal storageUnitAmountPerGb
 ) {}
