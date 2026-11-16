@@ -442,6 +442,11 @@ class PlatformTenantControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().planName()).isEqualTo("Custom High School Plan");
         assertThat(response.getBody().priceAmount()).isEqualTo(new BigDecimal("650.00"));
+        assertThat(response.getBody().customDomainAllowed()).isTrue();
+        assertThat(response.getBody().brandingColorsAllowed()).isTrue();
+        assertThat(response.getBody().billingCycleMonths()).isEqualTo(6);
+        assertThat(response.getBody().smsUnitAmount()).isEqualByComparingTo("0.05");
+        assertThat(response.getBody().storageUnitAmountPerGb()).isEqualByComparingTo("12.50");
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq("CREATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(response.getBody().planId()));
     }
 
@@ -502,6 +507,7 @@ class PlatformTenantControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().planName()).isEqualTo("Updated Standard Plan");
         assertThat(response.getBody().userLimit()).isEqualTo(2000);
+        assertThat(response.getBody().priceAmount()).isEqualByComparingTo(existing.getPriceAmount());
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq("UPDATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
     }
 
@@ -529,6 +535,23 @@ class PlatformTenantControllerTest {
                 null,
                 null,
                 "ACTIVE"
+        );
+
+        assertThatThrownBy(() -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("Rule [F-4]");
+    }
+
+    @Test
+    void DENY_platformAdminCannotSetSmsOrStorageUnitPricing() {
+        UUID planId = UUID.randomUUID();
+        Plan existing = samplePlan();
+        existing.setPlanId(planId);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(existing));
+
+        UpdatePlanRequest request = new UpdatePlanRequest(
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, new BigDecimal("0.10"), null, null
         );
 
         assertThatThrownBy(() -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)))
