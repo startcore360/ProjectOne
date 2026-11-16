@@ -181,7 +181,7 @@ class PlatformActionTest {
         planEntitlementRepository = mock(PlanEntitlementRepository.class);
         tenantEntitlementRepository = mock(TenantEntitlementRepository.class);
         featureToggleController = new PlatformFeatureToggleController(
-                permissionService, planEntitlementRepository, tenantEntitlementRepository, platformAuditWriter
+                permissionService, planEntitlementRepository, tenantEntitlementRepository, tenantRepository, platformAuditWriter
         );
 
         billingService = new PlatformBillingService(invoiceRepository, platformAuditWriter);

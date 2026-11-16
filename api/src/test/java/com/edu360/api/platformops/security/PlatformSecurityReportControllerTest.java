@@ -38,7 +38,7 @@ class PlatformSecurityReportControllerTest {
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         auditLogService = mock(AuditLogService.class);
         securityPolicyController = new PlatformSecurityPolicyController(permissionService, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), null);
-        featureToggleController = new PlatformFeatureToggleController(permissionService, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
+        featureToggleController = new PlatformFeatureToggleController(permissionService, null, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
         reportController = new PlatformReportController(permissionService);
     }
 
