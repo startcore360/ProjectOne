@@ -31,7 +31,7 @@ describe("TenantDataProtectionModal", () => {
   it("requests deletion through the approval chain without claiming the tenant was deleted", async () => {
     render(<TenantDataProtectionModal isOpen onClose={vi.fn()} tenant={tenant} />);
     fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
-    fireEvent.change(screen.getByLabelText(/Type Northfield School/i), { target: { value: "Northfield School" } });
+    fireEvent.change(screen.getByPlaceholderText("Northfield School"), { target: { value: "Northfield School" } });
     fireEvent.click(screen.getByRole("button", { name: "Request deletion" }));
 
     await waitFor(() => {

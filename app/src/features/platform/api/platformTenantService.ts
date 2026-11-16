@@ -202,7 +202,7 @@ export const platformTenantService = {
   listExports: (tenantId: string) =>
     api.get(`/platform/tenants/${tenantId}/export`),
   requestTenantDeletion: (tenantId: string, origin = "PRODUCT_OWNER") =>
-    api.post(`/platform/deletion-requests`, { tenantId, origin }),
+    api.post<DeletionRequestDto>(`/platform/deletion-requests`, { tenantId, origin }),
   getRetentionPolicies: (tenantId: string) =>
     api.get(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>

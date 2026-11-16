@@ -20,7 +20,6 @@ export function TenantDataProtectionModal({
   isOpen,
   onClose,
   tenant,
-  onTenantDeleted,
 }: TenantDataProtectionModalProps) {
   const [activeTab, setActiveTab] = useState<"export" | "retention" | "deletion">("export");
   const [loading, setLoading] = useState(false);
@@ -340,7 +339,7 @@ export function TenantDataProtectionModal({
 
         {/* Deletion Tab */}
         {activeTab === "deletion" && (
-          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+          <form onSubmit={handleConfirmDeletion} style={{ display: "grid", gap: "var(--space-3)" }}>
             <Notice tone="danger">
               <strong>Deletion request only.</strong> This step does not delete or purge tenant data.
             </Notice>
@@ -367,7 +366,7 @@ export function TenantDataProtectionModal({
                 {deleting ? "Submitting request..." : "Request deletion"}
               </Button>
             </div>
-          </div>
+          </form>
         )}
       </div>
     </Modal>
