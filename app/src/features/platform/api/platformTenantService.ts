@@ -198,13 +198,13 @@ export const platformTenantService = {
   updateTenantSettings: (tenantId: string, data: UpdateTenantSettingsPayload) =>
     api.patch<TenantSettings>(`/platform/tenants/${tenantId}/settings`, data),
   exportTenant: (tenantId: string) =>
-    api.post(`/platform/tenants/${tenantId}/export`),
+    api.post<ExportRequestDto>(`/platform/tenants/${tenantId}/export`),
   listExports: (tenantId: string) =>
-    api.get(`/platform/tenants/${tenantId}/export`),
+    api.get<ExportRequestDto[]>(`/platform/tenants/${tenantId}/export`),
   requestTenantDeletion: (tenantId: string, origin = "PRODUCT_OWNER") =>
     api.post<DeletionRequestDto>(`/platform/deletion-requests`, { tenantId, origin }),
   getRetentionPolicies: (tenantId: string) =>
-    api.get(`/platform/tenants/${tenantId}/retention`),
+    api.get<RetentionPolicyDto[]>(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>
     api.post(`/platform/tenants/${tenantId}/retention-change-requests`, data),
   getTenantUsage: (tenantId: string) =>
