@@ -39,6 +39,10 @@ export function TicketsView() {
   const [resolvingTicket, setResolvingTicket] = useState<SupportTicketItem | null>(null);
   const [resolutionNote, setResolutionNote] = useState("");
   const [submittingResolve, setSubmittingResolve] = useState(false);
+  const [triagingTicket, setTriagingTicket] = useState<SupportTicketItem | null>(null);
+  const [triagePriority, setTriagePriority] = useState("MEDIUM");
+  const [triageCategory, setTriageCategory] = useState("OTHER");
+  const [submittingTriage, setSubmittingTriage] = useState(false);
 
 
   const loadData = useCallback(async () => {
@@ -97,6 +101,32 @@ export function TicketsView() {
     }
   };
 
+  const handleOpenTriage = (ticket: SupportTicketItem) => {
+    setTriagingTicket(ticket);
+    setTriagePriority(ticket.priority || "MEDIUM");
+    setTriageCategory(ticket.category || "OTHER");
+  };
+
+  const handleConfirmTriage = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!triagingTicket) return;
+    setSubmittingTriage(true);
+    setError("");
+    try {
+      await platformOpsService.updateSupportTicket(triagingTicket.supportTicketId, {
+        priority: triagePriority,
+        category: triageCategory,
+      });
+      setMessage(`Ticket ${triagingTicket.ticketNumber} triaged as ${triageCategory} / ${triagePriority}.`);
+      setTriagingTicket(null);
+      void loadData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to triage ticket");
+    } finally {
+      setSubmittingTriage(false);
+    }
+  };
+
   const handleConfirmResolve = async (e: FormEvent) => {
     e.preventDefault();
     if (!resolvingTicket) return;
@@ -152,7 +182,7 @@ export function TicketsView() {
     return matchesQuery && matchesStatus;
   });
 
-  const openTickets = tickets.filter((t) => t.status === "NEW" || t.status === "ASSIGNED" || t.status === "IN_PROGRESS").length;
+  const openTickets = tickets.filter((t) => ["NEW", "TRIAGED", "ASSIGNED", "ESCALATED"].includes(t.status)).length;
   const resolvedTickets = tickets.filter((t) => t.status === "RESOLVED" || t.status === "CLOSED").length;
 
   return (
@@ -196,8 +226,9 @@ export function TicketsView() {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="All">All</option>
               <option value="NEW">New</option>
+              <option value="TRIAGED">Triaged</option>
               <option value="ASSIGNED">Assigned</option>
-              <option value="IN_PROGRESS">In progress</option>
+              <option value="ESCALATED">Escalated</option>
               <option value="RESOLVED">Resolved</option>
               <option value="CLOSED">Closed</option>
             </select>
@@ -225,6 +256,7 @@ export function TicketsView() {
                   <td style={{ maxWidth: "260px" }}>
                     <strong>{t.subject}</strong>
                     <small className="app-cell-sub">{t.description}</small>
+                    <small className="app-cell-sub">Category: {t.category || "Not triaged"}</small>
                     {t.resolutionNote && (
                       <p style={{ margin: "4px 0 0", color: "var(--color-status-success-fg)", fontSize: "12px" }}>
                         Resolution: {t.resolutionNote}
@@ -264,20 +296,17 @@ export function TicketsView() {
                         </Button>
                       )}
                       {t.status === "NEW" && canManageTickets && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleUpdateStatus(t, "IN_PROGRESS")}
-                        >
-                          Start
+                        <Button size="sm" variant="secondary" onClick={() => handleOpenTriage(t)}>
+                          Triage
                         </Button>
                       )}
-                      {(t.status === "NEW" || t.status === "IN_PROGRESS") && canManageTickets && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleUpdateStatus(t, "RESOLVED")}
-                        >
+                      {t.status === "TRIAGED" && canManageTickets && (
+                        <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(t, "ASSIGNED")}>
+                          Assign
+                        </Button>
+                      )}
+                      {(t.status === "ASSIGNED" || t.status === "ESCALATED") && canManageTickets && (
+                        <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(t, "RESOLVED")}>
                           Resolve
                         </Button>
                       )}
@@ -336,6 +365,44 @@ export function TicketsView() {
               resize: "vertical",
             }}
           />
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!triagingTicket}
+        onClose={() => setTriagingTicket(null)}
+        kicker="SUPPORT TRIAGE"
+        title={`Triage · ${triagingTicket?.ticketNumber ?? ""}`}
+        description={triagingTicket?.subject ?? "Set the ticket category and priority."}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setTriagingTicket(null)} disabled={submittingTriage}>
+              Cancel
+            </Button>
+            <Button form="triage-ticket-form" type="submit" busy={submittingTriage}>
+              Save triage
+            </Button>
+          </>
+        }
+      >
+        <form id="triage-ticket-form" onSubmit={handleConfirmTriage}>
+          <label style={{ display: "block", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", marginBottom: "var(--space-1)" }}>
+            Category
+          </label>
+          <select value={triageCategory} onChange={(e) => setTriageCategory(e.target.value)} required>
+            {["LOGIN", "ACCESS", "DATA", "BILLING", "PERFORMANCE", "BUG", "OTHER"].map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+          <label style={{ display: "block", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", margin: "12px 0 4px" }}>
+            Priority
+          </label>
+          <select value={triagePriority} onChange={(e) => setTriagePriority(e.target.value)} required>
+            {["LOW", "MEDIUM", "HIGH", "CRITICAL"].map((priority) => (
+              <option key={priority} value={priority}>{priority}</option>
+            ))}
+          </select>
         </form>
       </Modal>
     </div>
