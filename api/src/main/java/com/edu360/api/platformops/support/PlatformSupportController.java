@@ -22,6 +22,7 @@ import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.SupportSessionResponse;
 import com.edu360.api.platformops.support.dto.OpenSupportSessionRequest;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
+import com.edu360.api.platformops.support.dto.EscalateSupportTicketRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -60,6 +61,14 @@ public class PlatformSupportController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "SUPPORT_TICKET_MANAGE");
         return ResponseEntity.ok(supportService.updateTicket(id, req, principal));
+    }
+
+    @PostMapping("/support-tickets/{id}/escalation")
+    public ResponseEntity<SupportTicketResponse> escalateTicket(@PathVariable UUID id,
+            @Valid @RequestBody EscalateSupportTicketRequest request, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "SUPPORT_TICKET_MANAGE");
+        return ResponseEntity.ok(supportService.escalateTicket(id, request, principal));
     }
 
     @PostMapping("/support-sessions")

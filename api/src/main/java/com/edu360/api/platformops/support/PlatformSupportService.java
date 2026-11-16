@@ -13,6 +13,11 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.config.PlatformPrincipal;
+import com.edu360.api.platform.PlatformRole;
+import com.edu360.api.platform.PlatformUser;
+import com.edu360.api.platform.PlatformUserRepository;
+import com.edu360.api.platform.PlatformUserStatus;
+import com.edu360.api.platformops.PlatformNotificationService;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.platformops.support.dto.CreateSupportTicketRequest;
@@ -20,6 +25,7 @@ import com.edu360.api.platformops.support.dto.GrantSupportAccessRequest;
 import com.edu360.api.platformops.support.dto.SupportAccessGrantResponse;
 import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
+import com.edu360.api.platformops.support.dto.EscalateSupportTicketRequest;
 import com.edu360.api.selfservice.InAppNotifier;
 
 @Service
@@ -32,6 +38,8 @@ public class PlatformSupportService {
     private JdbcTemplate settingsJdbc;
     private InAppNotifier inAppNotifier;
     private SupportSessionService supportSessionService;
+    private PlatformNotificationService platformNotificationService;
+    private PlatformUserRepository platformUserRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformSupportService(
@@ -52,6 +60,13 @@ public class PlatformSupportService {
         this.settingsJdbc = settingsJdbc;
         this.inAppNotifier = inAppNotifier;
         this.supportSessionService = supportSessionService;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setPlatformNotificationDependencies(PlatformNotificationService platformNotificationService,
+                                                    PlatformUserRepository platformUserRepository) {
+        this.platformNotificationService = platformNotificationService;
+        this.platformUserRepository = platformUserRepository;
     }
 
     @Transactional
@@ -145,6 +160,33 @@ public class PlatformSupportService {
                     "SUPPORT_TICKET", saved.getSupportTicketId(), null, "NORMAL",
                     "support-ticket:" + saved.getSupportTicketId() + ":" + status);
         }
+        return SupportTicketResponse.fromEntity(saved);
+    }
+
+    @Transactional
+    public SupportTicketResponse escalateTicket(UUID ticketId, EscalateSupportTicketRequest request,
+                                                PlatformPrincipal principal) {
+        if (request == null || request.to() == null || !List.of("ENGINEERING", "RELEASE_MANAGER").contains(request.to()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_ESCALATION_TARGET");
+        if (request.note() == null || request.note().isBlank())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SUPPORT_TICKET_ESCALATION_NOTE_REQUIRED");
+        SupportTicket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
+        if ("CLOSED".equals(ticket.getStatus()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "SUPPORT_TICKET_CLOSED");
+        if (platformNotificationService == null || platformUserRepository == null)
+            throw new IllegalStateException("Platform notification dependencies are unavailable for support escalation.");
+        Instant now = Instant.now();
+        ticket.setStatus("ESCALATED"); ticket.setEscalatedAt(now); ticket.setUpdatedAt(now);
+        ticket.setUpdatedBy(principal.platformUserId());
+        SupportTicket saved = ticketRepository.save(ticket);
+        platformAuditWriter.record(principal, "SUPPORT_TICKET_ESCALATED", "SUPPORT_TICKET_MANAGE", "SUPPORT_TICKET", saved.getSupportTicketId());
+        List<PlatformUser> recipients = new java.util.ArrayList<>(platformUserRepository.findAllByPlatformRoleAndStatus(PlatformRole.PRODUCT_OWNER, PlatformUserStatus.ACTIVE));
+        if ("RELEASE_MANAGER".equals(request.to())) recipients.addAll(platformUserRepository.findAllByPlatformRoleAndStatus(PlatformRole.RELEASE_MANAGER, PlatformUserStatus.ACTIVE));
+        String body = saved.getTicketNumber() + " was escalated to " + request.to() + ". " + request.note().trim();
+        for (PlatformUser recipient : recipients) platformNotificationService.notify(recipient.getPlatformUserId(),
+                "SUPPORT_TICKET_ESCALATED", "Support ticket escalated", body, "SUPPORT_TICKET",
+                saved.getSupportTicketId(), "HIGH", principal.platformUserId());
         return SupportTicketResponse.fromEntity(saved);
     }
 

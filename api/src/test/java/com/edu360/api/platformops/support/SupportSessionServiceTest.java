@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -73,7 +74,8 @@ class SupportSessionServiceTest {
 
         var claims = tokenService.verify(response.token()).orElseThrow();
         assertThat(response.tenantLoginAddress()).isEqualTo("https://tenant.edu360.local");
-        assertThat(response.expiresAt()).isEqualTo(claims.expiresAt());
+        assertThat(response.expiresAt().truncatedTo(ChronoUnit.SECONDS))
+                .isEqualTo(claims.expiresAt().truncatedTo(ChronoUnit.SECONDS));
         assertThat(response.expiresAt()).isBeforeOrEqualTo(Instant.now().plusSeconds(3600));
         assertThat(response.expiresAt()).isBeforeOrEqualTo(grantExpiry);
         assertThat(claims.tenantId()).isEqualTo(tenantId);

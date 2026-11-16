@@ -739,15 +739,15 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-SUPPORT_TICKET_MANAGE-ALLOW: Support Manager updates ticket")
     void actSupportTicketManage_allow() {
-        SupportTicket ticket = SupportTicket.builder().supportTicketId(ticketId).tenantId(tenantId).status("OPEN").build();
+        SupportTicket ticket = SupportTicket.builder().supportTicketId(ticketId).tenantId(tenantId).status("NEW").build();
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateSupportTicketRequest req = new UpdateSupportTicketRequest("IN_PROGRESS", userId, "Investigating logs");
+        UpdateSupportTicketRequest req = new UpdateSupportTicketRequest("ASSIGNED", userId, "Investigating logs");
         ResponseEntity<SupportTicketResponse> res = supportController.updateTicket(ticketId, req, auth(PlatformRole.SUPPORT_MANAGER));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody().status()).isEqualTo("IN_PROGRESS");
+        assertThat(res.getBody().status()).isEqualTo("ASSIGNED");
     }
 
     @Test

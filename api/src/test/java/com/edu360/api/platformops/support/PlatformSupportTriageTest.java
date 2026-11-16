@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,8 +22,13 @@ import org.springframework.web.server.ResponseStatusException;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platform.PlatformRole;
+import com.edu360.api.platform.PlatformUser;
+import com.edu360.api.platform.PlatformUserRepository;
+import com.edu360.api.platform.PlatformUserStatus;
+import com.edu360.api.platformops.PlatformNotificationService;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
+import com.edu360.api.platformops.support.dto.EscalateSupportTicketRequest;
 import com.edu360.api.selfservice.InAppNotifier;
 
 class PlatformSupportTriageTest {
@@ -33,6 +39,8 @@ class PlatformSupportTriageTest {
     private final JdbcTemplate settings = mock(JdbcTemplate.class);
     private final InAppNotifier notifier = mock(InAppNotifier.class);
     private final SupportSessionService sessions = mock(SupportSessionService.class);
+    private final PlatformNotificationService platformNotifications = mock(PlatformNotificationService.class);
+    private final PlatformUserRepository platformUsers = mock(PlatformUserRepository.class);
     private PlatformSupportService service;
     private PlatformPrincipal actor;
     private UUID ticketId;
@@ -42,6 +50,7 @@ class PlatformSupportTriageTest {
     void setUp() {
         service = new PlatformSupportService(tickets, grants, platformAudit, tenantAudit);
         service.setSupportDependencies(settings, notifier, sessions);
+        service.setPlatformNotificationDependencies(platformNotifications, platformUsers);
         actor = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.SUPPORT_MANAGER, "support@example.test", false);
         ticketId = UUID.randomUUID();
         requesterId = UUID.randomUUID();
@@ -82,6 +91,42 @@ class PlatformSupportTriageTest {
                 new UpdateSupportTicketRequest(null, null, null, "HIGH", "GENERAL"), actor))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
                         ex -> assertThat(ex.getStatusCode().value()).isEqualTo(400));
+    }
+
+    @Test
+    void escalationToEngineeringNotifiesProductOwnerAndPersistsEscalation() {
+        SupportTicket ticket = ticket("ASSIGNED"); UUID ownerId = UUID.randomUUID();
+        PlatformUser owner = mock(PlatformUser.class); when(owner.getPlatformUserId()).thenReturn(ownerId);
+        when(tickets.findById(ticketId)).thenReturn(Optional.of(ticket));
+        when(tickets.save(any(SupportTicket.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(platformUsers.findAllByPlatformRoleAndStatus(PlatformRole.PRODUCT_OWNER, PlatformUserStatus.ACTIVE)).thenReturn(List.of(owner));
+        var response = service.escalateTicket(ticketId, new EscalateSupportTicketRequest("ENGINEERING", "Requires engineering investigation"), actor);
+        assertThat(response.status()).isEqualTo("ESCALATED"); assertThat(response.escalatedAt()).isNotNull();
+        verify(platformNotifications).notify(eq(ownerId), eq("SUPPORT_TICKET_ESCALATED"), eq("Support ticket escalated"),
+                eq("SUP-2026-ABCDE was escalated to ENGINEERING. Requires engineering investigation"),
+                eq("SUPPORT_TICKET"), eq(ticketId), eq("HIGH"), eq(actor.platformUserId()));
+    }
+
+    @Test
+    void escalationToReleaseManagerNotifiesProductOwnerAndReleaseManagers() {
+        SupportTicket ticket = ticket("ASSIGNED"); UUID ownerId = UUID.randomUUID(); UUID rmId = UUID.randomUUID();
+        PlatformUser owner = mock(PlatformUser.class); PlatformUser releaseManager = mock(PlatformUser.class);
+        when(owner.getPlatformUserId()).thenReturn(ownerId); when(releaseManager.getPlatformUserId()).thenReturn(rmId);
+        when(tickets.findById(ticketId)).thenReturn(Optional.of(ticket));
+        when(tickets.save(any(SupportTicket.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(platformUsers.findAllByPlatformRoleAndStatus(PlatformRole.PRODUCT_OWNER, PlatformUserStatus.ACTIVE)).thenReturn(List.of(owner));
+        when(platformUsers.findAllByPlatformRoleAndStatus(PlatformRole.RELEASE_MANAGER, PlatformUserStatus.ACTIVE)).thenReturn(List.of(releaseManager));
+        service.escalateTicket(ticketId, new EscalateSupportTicketRequest("RELEASE_MANAGER", "Release regression requires triage"), actor);
+        verify(platformNotifications).notify(eq(ownerId), eq("SUPPORT_TICKET_ESCALATED"), any(), any(), eq("SUPPORT_TICKET"), eq(ticketId), eq("HIGH"), eq(actor.platformUserId()));
+        verify(platformNotifications).notify(eq(rmId), eq("SUPPORT_TICKET_ESCALATED"), any(), any(), eq("SUPPORT_TICKET"), eq(ticketId), eq("HIGH"), eq(actor.platformUserId()));
+    }
+
+    @Test
+    void closedTicketCannotBeEscalated() {
+        when(tickets.findById(ticketId)).thenReturn(Optional.of(ticket("CLOSED")));
+        assertThatThrownBy(() -> service.escalateTicket(ticketId, new EscalateSupportTicketRequest("ENGINEERING", "Late issue"), actor))
+                .isInstanceOfSatisfying(ResponseStatusException.class, ex -> assertThat(ex.getStatusCode().value()).isEqualTo(409));
+        org.mockito.Mockito.verifyNoInteractions(platformNotifications);
     }
 
     @Test

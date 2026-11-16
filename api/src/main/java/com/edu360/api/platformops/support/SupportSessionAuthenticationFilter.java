@@ -98,7 +98,8 @@ public class SupportSessionAuthenticationFilter extends OncePerRequestFilter {
         SupportSession session = sessionRepository.findBySupportSessionIdAndEndedAtIsNull(claims.sessionId()).orElse(null);
         if (session == null || !session.getPlatformUserId().equals(claims.platformUserId())
                 || !session.getGrantId().equals(claims.grantId())
-                || !session.getExpiresAt().equals(claims.expiresAt())) {
+                || !session.getExpiresAt().truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+                        .equals(claims.expiresAt().truncatedTo(java.time.temporal.ChronoUnit.SECONDS))) {
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "SUPPORT_SESSION_ENDED");
             return;
         }

@@ -43,6 +43,10 @@ export function TicketsView() {
   const [triagePriority, setTriagePriority] = useState("MEDIUM");
   const [triageCategory, setTriageCategory] = useState("OTHER");
   const [submittingTriage, setSubmittingTriage] = useState(false);
+  const [escalatingTicket, setEscalatingTicket] = useState<SupportTicketItem | null>(null);
+  const [escalationTarget, setEscalationTarget] = useState<"ENGINEERING" | "RELEASE_MANAGER">("ENGINEERING");
+  const [escalationNote, setEscalationNote] = useState("");
+  const [submittingEscalation, setSubmittingEscalation] = useState(false);
 
 
   const loadData = useCallback(async () => {
@@ -145,6 +149,18 @@ export function TicketsView() {
     } finally {
       setSubmittingResolve(false);
     }
+  };
+
+  const handleConfirmEscalation = async (e: FormEvent) => {
+    e.preventDefault(); if (!escalatingTicket) return;
+    const note = escalationNote.trim(); if (!note) { setError("An escalation note is required."); return; }
+    setSubmittingEscalation(true); setError("");
+    try {
+      await platformOpsService.escalateSupportTicket(escalatingTicket.supportTicketId, { to: escalationTarget, note });
+      setMessage(`Ticket ${escalatingTicket.ticketNumber} escalated to ${escalationTarget.replace("_", " ")}.`);
+      setEscalatingTicket(null); setEscalationNote(""); void loadData();
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Failed to escalate ticket"); }
+    finally { setSubmittingEscalation(false); }
   };
 
   const handleAssumeSession = async (ticketId: string, ticketNumber: string) => {
@@ -305,6 +321,9 @@ export function TicketsView() {
                           Assign
                         </Button>
                       )}
+                      {(t.status === "TRIAGED" || t.status === "ASSIGNED") && canManageTickets && (
+                        <Button size="sm" variant="secondary" onClick={() => { setEscalatingTicket(t); setEscalationTarget("ENGINEERING"); setEscalationNote(""); }}>Escalate</Button>
+                      )}
                       {(t.status === "ASSIGNED" || t.status === "ESCALATED") && canManageTickets && (
                         <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(t, "RESOLVED")}>
                           Resolve
@@ -365,6 +384,21 @@ export function TicketsView() {
               resize: "vertical",
             }}
           />
+        </form>
+      </Modal>
+
+      <Modal isOpen={!!escalatingTicket} onClose={() => setEscalatingTicket(null)} kicker="SUPPORT ESCALATION"
+        title={`Escalate · ${escalatingTicket?.ticketNumber ?? ""}`}
+        description="Route this ticket to Engineering or the Release Manager. The Product Owner is always notified."
+        size="sm"
+        footer={<><Button variant="secondary" onClick={() => setEscalatingTicket(null)} disabled={submittingEscalation}>Cancel</Button><Button form="escalate-ticket-form" type="submit" busy={submittingEscalation}>Confirm escalation</Button></>}>
+        <form id="escalate-ticket-form" onSubmit={handleConfirmEscalation}>
+          <label>Escalate to</label>
+          <select value={escalationTarget} onChange={(e) => setEscalationTarget(e.target.value as "ENGINEERING" | "RELEASE_MANAGER")}>
+            <option value="ENGINEERING">Engineering</option><option value="RELEASE_MANAGER">Release Manager</option>
+          </select>
+          <label>Escalation note</label>
+          <textarea rows={4} value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} placeholder="Explain why this ticket needs escalation..." required />
         </form>
       </Modal>
 

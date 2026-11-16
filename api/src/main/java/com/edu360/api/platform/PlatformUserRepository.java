@@ -1,5 +1,6 @@
 package com.edu360.api.platform;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +20,6 @@ public interface PlatformUserRepository extends JpaRepository<PlatformUser, UUID
     long countByPlatformRoleIdAndStatus(UUID platformRoleId, PlatformUserStatus status);
 
     long countByPlatformRoleAndStatus(PlatformRole platformRole, PlatformUserStatus status);
+
+    List<PlatformUser> findAllByPlatformRoleAndStatus(PlatformRole platformRole, PlatformUserStatus status);
 }
