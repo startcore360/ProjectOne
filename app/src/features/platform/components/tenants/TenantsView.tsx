@@ -136,8 +136,8 @@ export function TenantsView() {
     firstAdminEmail: "",
     firstAdminMobile: "",
     firstAdminNationalIdLast4: "",
-    retentionMonths: 12,
-    backupRetentionDays: 90,
+    retentionMonths: "",
+    backupRetentionDays: "",
   });
 
   const loadTenants = async () => {
@@ -212,6 +212,14 @@ export function TenantsView() {
     event.preventDefault();
     setCreateError("");
     setMessage("");
+    if (draft.retentionMonths === "" || draft.retentionMonths < 1 || draft.retentionMonths > 240) {
+      setCreateError("Enter data retention between 1 and 240 months.");
+      return;
+    }
+    if (draft.backupRetentionDays === "" || draft.backupRetentionDays < 7 || draft.backupRetentionDays > 3650) {
+      setCreateError("Enter backup retention between 7 and 3650 days.");
+      return;
+    }
     const selectedPlanId = draft.planId || plans[0]?.planId;
     if (!selectedPlanId) {
       setCreateError("No subscription plan is available. Create or enable a plan before creating a tenant.");
@@ -258,8 +266,8 @@ export function TenantsView() {
         firstAdminEmail: "",
         firstAdminMobile: "",
         firstAdminNationalIdLast4: "",
-        retentionMonths: 12,
-        backupRetentionDays: 90,
+        retentionMonths: "",
+        backupRetentionDays: "",
       });
       void loadTenants();
     } catch (err: unknown) {
