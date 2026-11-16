@@ -96,15 +96,7 @@ public class PlatformSupportService {
             ticket.setPriority(req.priority());
         }
         if (req.category() != null) {
-            if (settingsJdbc == null) {
-                throw new IllegalStateException("The support_ticket_categories setting is unavailable.");
-            }
-            Boolean allowed = settingsJdbc.queryForObject(
-                    "SELECT EXISTS (SELECT 1 FROM ref.setting_definition d CROSS JOIN LATERAL jsonb_array_elements_text(d.default_value) AS c(category) WHERE d.setting_key = ? AND c.category = ?)",
-                    Boolean.class, "support_ticket_categories", req.category());
-            if (!Boolean.TRUE.equals(allowed)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_CATEGORY");
-            }
+            validateCategory(req.category());
             ticket.setCategory(req.category());
         }
 
@@ -227,6 +219,18 @@ public class PlatformSupportService {
         return ticketRepository.findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(tenantId, raisedByUserId).stream()
                 .map(SupportTicketResponse::fromEntity)
                 .toList();
+    }
+
+    private void validateCategory(String category) {
+        if (settingsJdbc == null) {
+            throw new IllegalStateException("The support_ticket_categories setting is unavailable.");
+        }
+        Boolean allowed = settingsJdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM ref.setting_definition d CROSS JOIN LATERAL jsonb_array_elements_text(d.default_value) AS c(category) WHERE d.setting_key = ? AND c.category = ?)",
+                Boolean.class, "support_ticket_categories", category);
+        if (!Boolean.TRUE.equals(allowed)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_CATEGORY");
+        }
     }
 
     @Transactional(readOnly = true)
