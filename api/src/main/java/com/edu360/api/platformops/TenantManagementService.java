@@ -722,7 +722,12 @@ public class TenantManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
         requireTransition(tenant, TenantState.SUSPENDED);
 
+        Instant now = Instant.now();
         tenant.setState(TenantState.SUSPENDED);
+        tenant.setSuspendedAt(now);
+        tenant.setArchivedAt(null);
+        tenant.setUpdatedAt(now);
+        tenant.setUpdatedBy(principal.platformUserId());
         tenantRepository.save(tenant);
 
         if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {
@@ -741,7 +746,11 @@ public class TenantManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
         requireTransition(tenant, TenantState.ARCHIVED);
 
+        Instant now = Instant.now();
         tenant.setState(TenantState.ARCHIVED);
+        tenant.setArchivedAt(now);
+        tenant.setUpdatedAt(now);
+        tenant.setUpdatedBy(principal.platformUserId());
         tenantRepository.save(tenant);
 
         if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {
@@ -760,7 +769,12 @@ public class TenantManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
         requireTransition(tenant, TenantState.ACTIVE);
 
+        Instant now = Instant.now();
         tenant.setState(TenantState.ACTIVE);
+        tenant.setSuspendedAt(null);
+        tenant.setArchivedAt(null);
+        tenant.setUpdatedAt(now);
+        tenant.setUpdatedBy(principal.platformUserId());
         tenantRepository.save(tenant);
 
         if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {

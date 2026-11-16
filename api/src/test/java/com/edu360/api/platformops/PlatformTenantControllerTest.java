@@ -617,6 +617,8 @@ class PlatformTenantControllerTest {
                 tenantId, new TenantLifecycleActionRequest("Overdue fee settlement"), authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(suspendRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(suspendRes.getBody().state()).isEqualTo(TenantState.SUSPENDED);
+        assertThat(tenant.getSuspendedAt()).isNotNull();
+        assertThat(tenant.getArchivedAt()).isNull();
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SUSPENDED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
 
         // Reactivate
@@ -624,6 +626,8 @@ class PlatformTenantControllerTest {
                 tenantId, authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(reactivateRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(reactivateRes.getBody().state()).isEqualTo(TenantState.ACTIVE);
+        assertThat(tenant.getSuspendedAt()).isNull();
+        assertThat(tenant.getArchivedAt()).isNull();
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_REACTIVATED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
     }
 
@@ -648,6 +652,8 @@ class PlatformTenantControllerTest {
                 tenantId, new TenantLifecycleActionRequest("Institution merger closed"), authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(archiveRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(archiveRes.getBody().state()).isEqualTo(TenantState.ARCHIVED);
+        assertThat(tenant.getArchivedAt()).isNotNull();
+        assertThat(tenant.getSuspendedAt()).isNull();
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_ARCHIVED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
     }
 
