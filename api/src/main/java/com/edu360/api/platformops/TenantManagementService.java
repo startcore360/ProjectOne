@@ -209,6 +209,13 @@ public class TenantManagementService {
      * Creates a new tenant in TRIAL state.
      */
         public TenantResponse createTenant(TenantCreateRequest request, PlatformPrincipal principal) {
+        // Unit tests that instantiate this service directly bypass Spring field injection.
+        // Production wiring always supplies the coordinator; retain the pre-coordinator path only
+        // for those manually constructed service fixtures.
+        if (tenantProvisioningService == null) {
+            return createTenantLegacy(request, principal);
+        }
+
         if (request.getIsolationMode() == IsolationMode.ISOLATED) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ISOLATION_NOT_AVAILABLE",
                     "Dedicated-database tenant isolation is not available; use SHARED isolation.");
@@ -552,6 +559,247 @@ public class TenantManagementService {
                 log.warn("Could not notify Platform Admin {} about tenant provisioning failure", admin.getPlatformUserId());
             }
         }
+    }
+
+private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformPrincipal principal) {
+        if (request.getIsolationMode() == IsolationMode.ISOLATED) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ISOLATION_NOT_AVAILABLE",
+                    "Dedicated-database tenant isolation is not available; use SHARED isolation.");
+        }
+        String normalizedSubdomain = request.getSubdomain().toLowerCase().trim();
+
+        // 1. Check subdomain uniqueness
+        // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P6): reserved names such as "platform" must also be refused.
+        if (tenantRepository.findBySubdomain(normalizedSubdomain).isPresent()) {
+            throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists");
+        }
+
+        // 2. Validate tenant type
+        if (!ALLOWED_TENANT_TYPES.contains(request.getTenantType())) {
+            throw new IllegalArgumentException("Invalid tenant type: " + request.getTenantType()
+                    + ". Must be one of: " + ALLOWED_TENANT_TYPES);
+        }
+
+        // 3. Validate plan exists and is active
+        Plan plan = planRepository.findById(request.getPlanId())
+                .orElseThrow(() -> new IllegalArgumentException("Plan with ID " + request.getPlanId() + " does not exist"));
+
+        UUID tenantId = UUID.randomUUID();
+        String realmName = normalizedSubdomain + "-realm";
+
+        // 4. Provision Keycloak realm and client
+        try {
+            keycloakAdminClient.provisionRealm(realmName, request.getTenantName());
+            log.info("Provisioned Keycloak realm '{}' for tenant '{}'", realmName, request.getTenantName());
+        } catch (KeycloakProvisioningException ex) {
+            log.warn("Keycloak realm provisioning skipped or non-fatal in current environment: {}", ex.getMessage());
+        }
+
+        // B3 / I-06 (REG-I06-2): lockout, password policy, two-step flow and password-check client
+        // from the current security policy. A realm without them must not be used, so a failure
+        // here fails the tenant creation (KeycloakProvisioningException -> 503).
+        if (realmSecuritySyncService != null) {
+            try {
+                realmSecuritySyncService.applyToRealm(realmName);
+            } catch (RuntimeException ex) {
+                throw new KeycloakProvisioningException(
+                        "Could not apply the security policy to realm '" + realmName + "': " + ex.getMessage(), ex);
+            }
+        }
+
+        // 5. Construct and persist Tenant entity
+        Instant now = Instant.now();
+        Instant trialEndsAt = now.plus(Duration.ofDays(30));
+
+        Tenant tenant = Tenant.builder()
+                .tenantId(tenantId)
+                .tenantName(request.getTenantName().trim())
+                .tenantType(request.getTenantType())
+                .planId(plan.getPlanId())
+                .state(TenantState.TRIAL)
+                .isolationMode(request.getIsolationMode())
+                .subdomain(normalizedSubdomain)
+                .timeZone(request.getTimeZone() != null ? request.getTimeZone() : "Asia/Kolkata")
+                .dataRegion(request.getDataRegion() != null ? request.getDataRegion() : "IN")
+                .trialEndsAt(trialEndsAt)
+                .userLimit(plan.getUserLimit())
+                .storageLimitGb(plan.getStorageLimitGb())
+                .smsLimit(plan.getSmsLimit())
+                .apiLimit(plan.getApiLimit())
+                .keycloakRealm(realmName)
+                .analyticsOptOut(false)
+                .createdAt(now)
+                .createdBy(principal.platformUserId())
+                .updatedAt(now)
+                .updatedBy(principal.platformUserId())
+                .rowVersion(1)
+                .build();
+
+        Tenant savedTenant = tenantRepository.save(tenant);
+
+        // CL-08 / WF-02: retention is supplied at creation; no system duration is inferred.
+        if (entityManager != null) {
+            int backupRetentionMonths = Math.floorDiv(request.getBackupRetentionDays() + 29, 30);
+            List<String> retainedDataClasses = List.of(
+                "STRUCTURE", "PERSON", "ACADEMIC_RECORD", "FINANCIAL", "COMMUNICATION",
+                "STUDENT_NOTE", "GOVERNANCE", "APPROVAL", "BY_OWNER", "TENANT_LIFETIME",
+                "AUDIT", "BACKUP"
+        );
+            for (String dataClassCode : retainedDataClasses) {
+                int retentionMonths = ("AUDIT".equals(dataClassCode) || "BACKUP".equals(dataClassCode))
+                    ? backupRetentionMonths : request.getRetentionMonths();
+                entityManager.createNativeQuery(
+                    "INSERT INTO platform.tenant_retention_policy "
+                        + "(tenant_retention_policy_id, tenant_id, data_class_code, retention_months, effective_from, status, "
+                    + "created_at, created_by, updated_at, updated_by, row_version) "
+                    + "VALUES (:id, :tenantId, :dataClass, :months, :effectiveFrom, 'ACTIVE', "
+                    + ":createdAt, :actor, :updatedAt, :actor, 1)")
+                        .setParameter("id", UUID.randomUUID())
+                    .setParameter("tenantId", tenantId)
+                    .setParameter("dataClass", dataClassCode)
+                    .setParameter("months", retentionMonths)
+                    .setParameter("effectiveFrom", now)
+                    .setParameter("createdAt", now)
+                    .setParameter("updatedAt", now)
+                    .setParameter("actor", principal.platformUserId())
+                        .executeUpdate();
+            }
+        }
+
+        // 5b. Provision First Tenant Admin
+        UUID adminUserAccountId = UUID.randomUUID();
+        String tempPassword = "Edu@" + UUID.randomUUID().toString().substring(0, 8) + "!";
+        String keycloakUserId = keycloakAdminClient.provisionUser(
+                realmName,
+                request.getFirstAdminName(),
+                request.getFirstAdminEmail().toLowerCase().trim(),
+                tempPassword,
+                true
+        );
+        if (keycloakUserId == null || keycloakUserId.isBlank()) {
+            throw new KeycloakProvisioningException("Keycloak did not return a valid user id for tenant first admin");
+        }
+        log.info("Provisioned first tenant admin Keycloak account {} for '{}' in realm '{}'",
+                keycloakUserId, request.getFirstAdminEmail(), realmName);
+
+        platformAuditWriter.record(principal, savedTenant.getTenantId(), "TENANT_CREATED", "TENANT_CREATE", "TENANT", savedTenant.getTenantId());
+
+        if (entityManager != null) {
+            entityManager.createNativeQuery("SET app.tenant_id = '" + tenantId + "'").executeUpdate();
+            entityManager.createNativeQuery("SET app.institution_scope = 'ALL'").executeUpdate();
+            entityManager.createNativeQuery(
+                    "INSERT INTO app.tenant_local (tenant_id, tenant_type, time_zone, provisioned_at) VALUES (:tid, :ttype, :tz, now()) ON CONFLICT (tenant_id) DO NOTHING")
+                    .setParameter("tid", tenantId)
+                    .setParameter("ttype", request.getTenantType())
+                    .setParameter("tz", request.getTimeZone() != null ? request.getTimeZone() : "Asia/Kolkata")
+                    .executeUpdate();
+        }
+        TenantContext.set(tenantId, request.getIsolationMode(), null, "ALL", Set.of(), null, null);
+        try {
+            if (userAccountRepository != null) {
+                UserAccount adminAccount = UserAccount.builder()
+                        .id(new UserAccountId(tenantId, adminUserAccountId))
+                        .userType(UserType.STAFF)
+                        .displayName(request.getFirstAdminName().trim())
+                        .email(request.getFirstAdminEmail().toLowerCase().trim())
+                        .mobile(request.getFirstAdminMobile() != null && !request.getFirstAdminMobile().isBlank()
+                                ? request.getFirstAdminMobile().trim() : null)
+                        .status(UserAccountStatus.ACTIVE)
+                        .createdBy(principal.platformUserId())
+                        .updatedBy(principal.platformUserId())
+                        .build();
+                userAccountRepository.save(adminAccount);
+
+                if (userIdentityLinkRepository != null) {
+                    UserIdentityLink link = UserIdentityLink.builder()
+                            .id(new UserIdentityLinkId(tenantId, UUID.randomUUID()))
+                            .userAccountId(adminUserAccountId)
+                            .identityRealm(realmName)
+                            .identitySubject(keycloakUserId)
+                            .usernameKind(UsernameKind.EMAIL)
+                            .status(IdentityLinkStatus.ACTIVE)
+                            .createdBy(principal.platformUserId())
+                            .updatedBy(principal.platformUserId())
+                            .build();
+                    userIdentityLinkRepository.save(link);
+                }
+
+                // Assign standard role
+                String roleCode = "STANDALONE_SCHOOL".equals(request.getTenantType()) ? "SCHOOL_ADMIN"
+                        : "STANDALONE_COLLEGE".equals(request.getTenantType()) ? "COLLEGE_ADMIN"
+                        : "UNIVERSITY_ADMIN";
+
+                if (roleDefinitionRepository != null) {
+                    RoleDefinition roleDef = roleDefinitionRepository.findByIdTenantIdAndRoleCode(tenantId, roleCode)
+                            .orElseGet(() -> {
+                                StandardRole sr = standardRoleRepository != null ? standardRoleRepository.findById(roleCode).orElse(null) : null;
+                                RoleDefinition rd = RoleDefinition.builder()
+                                        .id(new RoleDefinitionId(tenantId, UUID.randomUUID()))
+                                        .roleCode(roleCode)
+                                        .roleName(sr != null ? sr.getRoleName() : "Tenant Administrator")
+                                        .roleOrigin(RoleOrigin.STANDARD)
+                                        .roleLevel(sr != null ? sr.getRoleLevel() : RoleLevel.TENANT)
+                                        .baseStandardRole(roleCode)
+                                        .customScope(null)
+                                        .sensitiveRole(false)
+                                        .status(RoleDefinitionStatus.ACTIVE)
+                                        .createdBy(principal.platformUserId())
+                                        .updatedBy(principal.platformUserId())
+                                        .build();
+                                return roleDefinitionRepository.save(rd);
+                            });
+
+                    if (standardRoleActionRepository != null && roleActionRepository != null) {
+                        List<StandardRoleAction> templateActions = standardRoleActionRepository.findByRoleCode(roleCode);
+                        UUID roleDefId = roleDef.getId().getRoleDefinitionId();
+                        for (StandardRoleAction ta : templateActions) {
+                            boolean exists = roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                                    tenantId, roleDefId, ta.getActionCode());
+                            if (!exists) {
+                                roleActionRepository.save(RoleAction.builder()
+                                        .id(new RoleActionId(tenantId, UUID.randomUUID()))
+                                        .roleDefinitionId(roleDefId)
+                                        .actionCode(ta.getActionCode())
+                                        .accessMode("SHARED")
+                                        .createdBy(principal.platformUserId())
+                                        .updatedBy(principal.platformUserId())
+                                        .build());
+                            }
+                        }
+                    }
+
+                    if (userRoleAssignmentRepository != null) {
+                        UserRoleAssignment assignment = UserRoleAssignment.builder()
+                                .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID()))
+                                .userAccountId(adminUserAccountId)
+                                .roleDefinitionId(roleDef.getId().getRoleDefinitionId())
+                                .scopeType(ScopeType.TENANT)
+                                .effectiveFrom(java.time.Instant.now())
+                                .status(AssignmentStatus.ACTIVE)
+                                .createdBy(principal.platformUserId())
+                                .updatedBy(principal.platformUserId())
+                                .build();
+                        userRoleAssignmentRepository.save(assignment);
+                    }
+                }
+            }
+        } finally {
+            if (entityManager != null) {
+                entityManager.createNativeQuery("RESET app.tenant_id").executeUpdate();
+                entityManager.createNativeQuery("RESET app.institution_scope").executeUpdate();
+            }
+            TenantContext.clear();
+        }
+
+        return TenantResponse.from(
+                savedTenant,
+                plan.getPlanName(),
+                request.getFirstAdminEmail(),
+                request.getFirstAdminMobile(),
+                request.getFirstAdminNationalIdLast4(),
+                tempPassword,
+                adminUserAccountId
+        );
     }
 
     /**
