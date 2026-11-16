@@ -10,6 +10,7 @@ import {
   type SupportTicketItem,
 } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
+import { SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY } from "../../../../services/axios";
 
 export function SupportAccessView() {
   const { can } = usePlatformAccess();
@@ -46,10 +47,37 @@ export function SupportAccessView() {
     loadGrants();
   }, []);
 
+  useEffect(() => {
+    const onSupportSessionEnd = (event: MessageEvent) => {
+      const expectedOrigin = window.sessionStorage.getItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+      if (event.origin !== expectedOrigin || event.data?.type !== "EDU360_SUPPORT_SESSION_END") return;
+      void platformOpsService.endCurrentSupportSession().then(() => {
+        window.sessionStorage.removeItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+        setMessage("The read-only support session has ended.");
+      }).catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not end support session."));
+    };
+    window.addEventListener("message", onSupportSessionEnd);
+    return () => window.removeEventListener("message", onSupportSessionEnd);
+  }, []);
+
   const handleAssume = async (ticketId: string, ticketNumber: string) => {
     try {
       const res = await platformOpsService.assumeSupportSession(ticketId);
-      setMessage(`Read-only session assumed for ${ticketNumber}. Token active until ${new Date(res.expiresAt).toLocaleTimeString()}.`);
+      const tenantOrigin = new URL(res.tenantLoginAddress).origin;
+      window.sessionStorage.setItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY, tenantOrigin);
+      const fragment = new URLSearchParams({
+        support_session: res.token,
+        expires_at: res.expiresAt,
+        ticket_number: ticketNumber,
+        platform_origin: window.location.origin,
+      });
+      const opened = window.open(`${tenantOrigin}/#${fragment.toString()}`, "_blank");
+      if (!opened) {
+        await platformOpsService.endCurrentSupportSession();
+        window.sessionStorage.removeItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+        throw new Error("The tenant tab was blocked by the browser. Allow pop-ups and try again.");
+      }
+      setMessage(`Opened a read-only session for ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not assume session");
     }
