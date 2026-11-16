@@ -33,6 +33,9 @@ public class SupportSessionService {
     @Value("${app.support-session.tenant-scheme:https}")
     private String tenantScheme;
 
+    @Value("${app.support-session.tenant-port:}")
+    private String tenantPort;
+
     @Transactional
     public void endCurrent(PlatformPrincipal actor) {
         SupportSession session = sessionRepository
@@ -89,7 +92,7 @@ public class SupportSessionService {
         String loginHost = tenant.getCustomDomain() != null && !tenant.getCustomDomain().isBlank()
                 ? tenant.getCustomDomain()
                 : tenant.getSubdomain() + "." + tenantBaseDomain;
-        String loginAddress = tenantScheme + "://" + loginHost;
+        String loginAddress = tenantScheme + "://" + loginHost + tenantPort;
         return new SupportSessionResponse(token, expiresAt, loginAddress);
     }
 }
