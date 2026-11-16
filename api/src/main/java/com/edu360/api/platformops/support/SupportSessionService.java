@@ -84,8 +84,8 @@ public class SupportSessionService {
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 .build();
-        sessionRepository.save(session);
         String token = tokenService.issue(session, grant, actor);
+        sessionRepository.save(session);
         platformAuditWriter.record(actor, grant.getTenantId(), "SUPPORT_SESSION_STARTED",
                 "SUPPORT_ACCESS_USE", "SUPPORT_SESSION", sessionId);
 
