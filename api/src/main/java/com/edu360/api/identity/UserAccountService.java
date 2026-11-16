@@ -308,7 +308,8 @@ public class UserAccountService {
     public UserLimit currentUserLimit(UUID tenantId) {
         long active = userAccountRepository.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED);
         Integer limit = tenantRepository.findById(tenantId)
-                .map(tenant -> tenant.getUserLimit() != null ? tenant.getUserLimit()
+                // 0 or empty means "not set on the tenant": fall back to the plan's limit.
+                .map(tenant -> tenant.getUserLimit() != null && tenant.getUserLimit() > 0 ? tenant.getUserLimit()
                         : tenant.getPlanId() == null ? null
                         : planRepository.findById(tenant.getPlanId()).map(com.edu360.api.platform.Plan::getUserLimit).orElse(null))
                 .orElse(null);
