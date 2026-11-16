@@ -45,6 +45,8 @@ export type TenantItem = {
   firstAdminMobile?: string;
   firstAdminNationalIdLast4?: string;
   createdAt: string;
+  suspendedAt?: string;
+  archivedAt?: string;
   // Present only on the create response. It's never stored or returned again.
   firstAdminTemporaryPassword?: string;
 };

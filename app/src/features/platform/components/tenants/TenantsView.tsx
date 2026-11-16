@@ -159,6 +159,8 @@ export function TenantsView() {
         status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : "Suspended",
         gates: t.state === "TRIAL" ? 1 : 0,
         updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
+        suspendedAt: t.suspendedAt,
+        archivedAt: t.archivedAt,
       })));
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : "Unable to load tenants. Please retry.");
@@ -512,7 +514,7 @@ export function TenantsView() {
           <p className="app-empty-inline">Tenant data is unavailable until the request succeeds.</p>
         ) : (
           <DataTable
-            headers={["Institution", "Type", "Plan", "Status", "Open gates", "Last updated", "Action"]}
+            headers={["Institution", "Type", "Plan", "Status", "Open gates", "Last updated", "Suspended at", "Archived at", "Action"]}
             empty={!filtered.length}
           >
             {filtered.map((tenant) => (
@@ -534,6 +536,8 @@ export function TenantsView() {
                   )}
                 </td>
                 <td>{tenant.updated}</td>
+                <td>{tenant.suspendedAt ? new Date(tenant.suspendedAt).toLocaleString() : "—"}</td>
+                <td>{tenant.archivedAt ? new Date(tenant.archivedAt).toLocaleString() : "—"}</td>
                 <td>
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                     {canActivate && tenant.status === "Trial" && (

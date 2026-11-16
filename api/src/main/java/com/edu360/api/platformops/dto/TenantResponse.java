@@ -30,7 +30,9 @@ public record TenantResponse(
         String firstAdminNationalIdLast4,
         Instant createdAt,
         String firstAdminTemporaryPassword,
-        UUID firstAdminUserId
+        UUID firstAdminUserId,
+        Instant suspendedAt,
+        Instant archivedAt
 ) {
     public static TenantResponse from(Tenant tenant, String planName, String adminEmail, String adminMobile, String nationalIdLast4) {
         return from(tenant, planName, adminEmail, adminMobile, nationalIdLast4, null, null);
@@ -68,7 +70,9 @@ public record TenantResponse(
                 nationalIdLast4,
                 tenant.getCreatedAt(),
                 firstAdminTemporaryPassword,
-                firstAdminUserId
+                firstAdminUserId,
+                tenant.getSuspendedAt(),
+                tenant.getArchivedAt()
         );
     }
 }

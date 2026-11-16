@@ -161,6 +161,28 @@ describe("Sprint 1 platform screens", () => {
     expect(screen.queryByText("Greenwood Public School")).not.toBeInTheDocument();
   });
 
+
+  it("shows suspension and archival timestamps in the tenant register", async () => {
+    const suspendedAt = "2026-11-02T10:30:00Z";
+    const archivedAt = "2026-11-03T11:45:00Z";
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes("/platform/tenants")) {
+        return Promise.resolve({ data: { items: [{
+          tenantId: "TEN-ARCH", tenantName: "Archived School", tenantType: "STANDALONE_SCHOOL",
+          planName: "Standard", state: "ARCHIVED", isolationMode: "SHARED", subdomain: "archived",
+          timeZone: "Asia/Kolkata", dataRegion: "IN", keycloakRealm: "archived-realm",
+          createdAt: "2026-11-01T00:00:00Z", suspendedAt, archivedAt,
+        }] } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<TenantsPage />);
+    expect(await screen.findByText("Archived School")).toBeInTheDocument();
+    expect(screen.getByText(new Date(suspendedAt).toLocaleString())).toBeInTheDocument();
+    expect(screen.getByText(new Date(archivedAt).toLocaleString())).toBeInTheDocument();
+  });
+
   it("opens the create trial tenant modal with statutory privacy note and fields", () => {
     renderWithStore(<TenantsPage />);
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));

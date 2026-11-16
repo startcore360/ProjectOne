@@ -8,6 +8,8 @@ export type Tenant = {
   status: "Active" | "Trial" | "Suspended";
   gates: number;
   updated: string;
+  suspendedAt?: string;
+  archivedAt?: string;
 };
 
 export type PlatformUser = {
