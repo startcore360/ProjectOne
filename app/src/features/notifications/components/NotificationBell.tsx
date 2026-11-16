@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
@@ -11,7 +11,7 @@ const MAX_VISIBLE = 10;
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * Header bell for tenant users (staff, students, parents). Platform-console users have no
+ * Header bell for tenant users (staff, students, parents). app-console users have no
  * tenant notifications and never see it. The server owns the data and the read state; this
  * component only shows what `GET /me/notifications` returns.
  *
@@ -76,7 +76,7 @@ export function NotificationBell() {
       <button
         ref={buttonRef}
         type="button"
-        className="platform-icon-button notif-bell__button"
+        className="app-icon-button notif-bell__button"
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -94,7 +94,7 @@ export function NotificationBell() {
               <div><h2>Notifications</h2>{pendingApprovalCount > 0 && <p className="notif-bell__state" role="status">{pendingApprovalCount} approval{pendingApprovalCount === 1 ? "" : "s"} awaiting your decision</p>}</div>
               <div className="notif-bell__head-actions">
                 {hasUnread && <button type="button" className="notif-bell__link" onClick={() => void markAllRead()}>Mark all read</button>}
-                <button type="button" className="platform-icon-button notif-bell__close" onClick={close} aria-label="Close notifications">
+                <button type="button" className="app-icon-button notif-bell__close" onClick={close} aria-label="Close notifications">
                   <Icon name="x" size={16} />
                 </button>
               </div>

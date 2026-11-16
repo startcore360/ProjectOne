@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+﻿import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../../components/ui/Icon";
 import Kicker from "./Kicker";
@@ -22,12 +22,8 @@ export interface ModalProps {
   closeOnBackdrop?: boolean;
 }
 
-const sizeClasses: Record<ModalSize, string> = {
-  sm: "max-w-[440px]",
-  md: "max-w-[560px]",
-  lg: "max-w-[720px]",
-  xl: "max-w-[900px]",
-};
+// Width is controlled exclusively by the data-size CSS attribute selectors in components.css.
+// No Tailwind utility classes needed here — having both mechanisms caused cascade conflicts.
 
 export function Modal({
   isOpen,
@@ -100,7 +96,7 @@ export function Modal({
 
   const modalElement = (
     <div
-      className="platform-modal-backdrop"
+      className="app-modal-backdrop"
       role="presentation"
       onMouseDown={(e) => {
         if (closeOnBackdrop && e.target === e.currentTarget) {
@@ -116,7 +112,7 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         data-size={size}
         tabIndex={-1}
-        className={`platform-modal ${sizeClasses[size]} ${className}`.trim()}
+        className={`app-modal ${className}`.trim()}
       >
         {(title || kicker || description) && (
           <header>
@@ -127,7 +123,7 @@ export function Modal({
             </div>
             <button
               type="button"
-              className="platform-icon-button platform-modal__close"
+              className="app-icon-button app-modal__close"
               onClick={onClose}
               aria-label="Close"
             >
@@ -135,8 +131,8 @@ export function Modal({
             </button>
           </header>
         )}
-        <div className="platform-modal__body">{children}</div>
-        {footer && <footer className="platform-modal__footer">{footer}</footer>}
+        <div className="app-modal__body">{children}</div>
+        {footer && <footer className="app-modal__footer">{footer}</footer>}
       </section>
     </div>
   );

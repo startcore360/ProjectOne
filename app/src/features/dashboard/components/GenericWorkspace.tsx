@@ -1,4 +1,4 @@
-import { Icon } from "../../../components/ui/Icon";
+﻿import { Icon } from "../../../components/ui/Icon";
 import { PageHeader } from "../../../design-system/components";
 
 export interface GenericWorkspaceProps {
@@ -46,10 +46,10 @@ export function GenericWorkspace({ name, userType }: GenericWorkspaceProps) {
     scope: "Institution workspace",
   };
   return (
-    <div className="workspace-dashboard">
+    <div className="app-dashboard">
       <PageHeader title={`Welcome, ${name}.`} description={content.title} />
-      <section className="student-panel workspace-state">
-        <span className="student-panel__chevron">
+      <section className="app-dash-card app-welcome-state">
+        <span className="app-dash-card__chevron">
           <Icon name="home" size={20} />
         </span>
         <h2>Your workspace is ready</h2>

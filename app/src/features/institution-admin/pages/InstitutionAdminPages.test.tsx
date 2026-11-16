@@ -212,8 +212,8 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     fireEvent.click(screen.getAllByRole("button", { name: "ID formats" })[0]);
 
     expect(await screen.findByDisplayValue("{INST}-{YYYY}-{SEQ:4}")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Student ID format"), { target: { value: "{INST}-{YY}-{SEQ:5}" } });
-    fireEvent.change(screen.getByLabelText("Staff ID format (optional)"), { target: { value: "{INST}-ST-{YY}-{SEQ:4}" } });
+    fireEvent.change(screen.getByLabelText(/Student ID format/i), { target: { value: "{INST}-{YY}-{SEQ:5}" } });
+    fireEvent.change(screen.getByLabelText(/Staff ID format/i), { target: { value: "{INST}-ST-{YY}-{SEQ:4}" } });
     fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
 
     await waitFor(() => {

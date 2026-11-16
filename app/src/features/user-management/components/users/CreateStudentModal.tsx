@@ -182,7 +182,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
       size="lg"
     >
       <form onSubmit={handleSubmit} noValidate>
-        <div className="platform-form-grid">
+        <div className="app-form-grid">
           <TextField
             id="student-full-name"
             label="Student full name"
@@ -204,7 +204,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
               hint="Enter the institution ID supplied by your academic administrator."
               error={fieldErrors.institutionId}
             />
-            <div className="platform-inline-actions">
+            <div className="app-inline-actions">
               <Button type="button" variant="secondary" size="sm" onClick={() => void loadAcademicOptions()} busy={optionsLoading} disabled={optionsLoading || !isUuid(institutionId)}>
                 {optionsLoading ? "Loading options…" : "Load sessions and sections"}
               </Button>
@@ -247,7 +247,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
 
           {canChooseSection ? (
             <SelectField
-              id="student-section-id"
+              id="app-section-id"
               label="Section"
               required
               value={sectionId}
@@ -263,7 +263,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
             </SelectField>
           ) : (
             <TextField
-              id="student-section-id"
+              id="app-section-id"
               label="Section ID (UUID)"
               required
               value={sectionId}
@@ -302,7 +302,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
         </div>
         {optionsError && (
           <Notice tone="warning">
-            <div className="platform-feedback-row">
+            <div className="app-feedback-row">
               <span>{optionsError} You may enter known UUIDs manually, but the server will verify the institution, session and section are active and belong together.</span>
               <Button type="button" variant="secondary" size="sm" onClick={() => void loadAcademicOptions()} disabled={optionsLoading} busy={optionsLoading}>Retry</Button>
             </div>
@@ -311,11 +311,11 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
         {optionsLoadedFor && !optionsError && activeSessions.length > 0 && activeSectionsForSession.length === 0 && academicSessionId && (
           <Notice tone="warning">No active sections were returned for this session. Enter a known section UUID if one has already been created.</Notice>
         )}
-        <p className="platform-modal-note">
+        <p className="app-note">
           The institution and academic session must be active, and the section must belong to both. Student profiles are created separately from general user accounts; login provisioning follows institution and class settings.
         </p>
         {formError && <Notice tone="danger">{formError}</Notice>}
-        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+        <footer>
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
           <Button type="submit" busy={submitting}>Create student profile</Button>
         </footer>

@@ -217,7 +217,6 @@ public class UserBulkUploadService {
             if (userType == null || userType.isBlank()) {
                 rowErrors.add(new RowValidationError("userType", "REQUIRED_FIELD", "User type is required"));
             } else {
-                String normalizedType = userType.trim().toUpperCase();
                 if ("FACULTY".equals(normalizedType) || "TEACHER".equals(normalizedType)) {
                     // Mapped to STAFF
                 } else {

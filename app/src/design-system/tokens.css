@@ -213,7 +213,7 @@
   --sidebar-width: 232px;
   --sidebar-rail: 72px;
   --topbar-height: 64px;
-  --content-max: 1280px;
+  --content-max: 1440px;
   --reading-max: 72ch;
   --elevation-0: none;
   --elevation-card: 0 4px 14px rgba(36, 65, 54, 0.05);
@@ -238,6 +238,88 @@
 }
 
 /* Dark semantic mapping is marked PROPOSED in the master specification; retained but not activated by default. */
+/* CSS-level OS dark mode: applies before JS loads so dark-OS users never see a flash of light.
+   The :not([data-theme="light"]) guard ensures an explicit user choice of "light" wins over the OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: var(--p-dk-canvas);
+    --color-bg-surface: var(--p-dk-surface);
+    --color-bg-subtle: var(--p-dk-surface-2);
+    --color-bg-subtle-strong: var(--p-dk-surface-3);
+    --color-bg-input: var(--p-dk-canvas);
+    --color-bg-brand-soft: var(--p-dk-brand-soft);
+    --color-bg-accent-soft: var(--p-dk-accent-soft);
+    --color-bg-info-soft: var(--p-dk-blue-soft);
+    --color-bg-rose-soft: var(--p-dk-rose-soft);
+    --color-bg-warm: var(--p-dk-rose-soft);
+    --color-bg-disabled: var(--p-dk-surface-2);
+    --color-text: var(--p-dk-text);
+    --color-text-muted: var(--p-dk-muted);
+    --color-text-brand: var(--p-dk-brand);
+    --color-text-brand-strong: var(--p-dk-brand-strong);
+    --color-text-on-brand: #172720;
+    --color-text-on-accent: #2a2010;
+    --color-text-on-danger: #2a1210;
+    --color-text-disabled: #7f9188;
+    --color-border-divider: var(--p-dk-border);
+    --color-border-control: var(--p-dk-control);
+    --color-border-disabled: var(--p-dk-border);
+    --color-action-primary: var(--p-dk-brand);
+    --color-action-primary-hover: var(--p-dk-brand-strong);
+    --color-action-accent: var(--p-dk-accent);
+    --color-action-accent-hover: #f0cb96;
+    --color-action-danger: #f0a49a;
+    --color-action-danger-hover: #f6bfb7;
+    --color-accent: var(--p-dk-accent);
+    --color-focus: #7db7ea;
+    --color-overlay: rgba(0, 0, 0, 0.66);
+    --color-hero-bg: var(--p-dk-hero);
+    --color-hero-text: #f0f5ef;
+    --color-hero-muted: #d5e2da;
+    --color-hero-kicker: var(--p-dk-brand-strong);
+    --color-toast-bg: #0d1512;
+    --color-toast-text: var(--p-dk-text);
+    --color-toast-success: #9fd3b2;
+    --color-toast-danger: #f0a49a;
+    --color-toast-info: #a9cbe3;
+    --color-toast-hover: rgba(237, 244, 239, 0.08);
+    --color-spinner-track-on-brand: rgba(23, 39, 32, 0.3);
+    --color-status-success-fg: #9fd3b2;
+    --color-status-success-bg: #1e3428;
+    --color-status-success-border: #4f8463;
+    --color-status-warning-fg: #e8c987;
+    --color-status-warning-bg: #3a3020;
+    --color-status-warning-border: #8e7543;
+    --color-status-danger-fg: #f0a49a;
+    --color-status-danger-bg: #3d2321;
+    --color-status-danger-border: #a0574d;
+    --color-status-info-fg: #a9cbe3;
+    --color-status-info-bg: #1f3140;
+    --color-status-info-border: #557c96;
+    --color-status-neutral-fg: var(--p-dk-text);
+    --color-status-neutral-bg: var(--p-dk-surface-2);
+    --color-status-neutral-border: var(--p-dk-control);
+    --color-dv-1: #a7d0ba;
+    --color-dv-2: #86b4da;
+    --color-dv-3: #e9bc7d;
+    --color-dv-4: #e58a7e;
+    --color-dv-5: #b3a3d6;
+    --color-dv-6: #7fc3c8;
+    --color-dv-grid: var(--p-dk-border);
+    --color-seq-1: #2c4237;
+    --color-seq-2: #3e6450;
+    --color-seq-3: #6a9a85;
+    --color-seq-4: #a7d0ba;
+    --color-seq-5: #c1e0cd;
+    --elevation-card: 0 4px 14px rgba(0, 0, 0, 0.14);
+    --elevation-raised: 0 22px 70px rgba(0, 0, 0, 0.28);
+    --elevation-1: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --elevation-2: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --elevation-3: 0 16px 48px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+}
+
 [data-theme="dark"] {
   --color-bg-canvas: var(--p-dk-canvas);
   --color-bg-surface: var(--p-dk-surface);
@@ -273,12 +355,13 @@
   --color-hero-text: #f0f5ef;
   --color-hero-muted: #d5e2da;
   --color-hero-kicker: var(--p-dk-brand-strong);
-  --color-toast-bg: var(--p-dk-text);
-  --color-toast-text: var(--p-dk-surface);
-  --color-toast-success: #2d6154;
-  --color-toast-danger: #9b4038;
-  --color-toast-info: #234b61;
-  --color-toast-hover: rgba(28, 40, 36, 0.1);
+  --color-toast-bg: #0d1512;
+  --color-toast-text: var(--p-dk-text);
+  --color-toast-success: #9fd3b2;
+  --color-toast-danger: #f0a49a;
+  --color-toast-info: #a9cbe3;
+  --color-toast-hover: rgba(237, 244, 239, 0.08);
+  --color-text-on-accent: #2a2010;
   --color-spinner-track-on-brand: rgba(23, 39, 32, 0.3);
   --color-status-success-fg: #9fd3b2;
   --color-status-success-bg: #1e3428;

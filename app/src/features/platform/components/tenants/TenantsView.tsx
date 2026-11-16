@@ -1,14 +1,66 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+﻿import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Button,
+  ConfirmDialog,
   MetricCard,
   Panel,
   StatusBadge,
   DataTable,
   SearchBox,
 } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
+
+function RowMenu({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+      <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)} aria-haspopup="true" aria-expanded={open}>
+        ⋯
+      </Button>
+      {open && (
+        <div
+          role="menu"
+          style={{
+            position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50,
+            background: "var(--color-bg-surface)", border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-2)",
+            minWidth: "140px", padding: "4px 0",
+          }}
+          onClick={() => setOpen(false)}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onClick}
+      style={{
+        display: "block", width: "100%", textAlign: "left",
+        padding: "7px 14px", background: "none", border: "none", cursor: "pointer",
+        fontSize: "var(--fs-body)", color: "var(--color-text)",
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+    >
+      {children}
+    </button>
+  );
+}
 import type { Tenant } from "../common/types";
 import {
   platformTenantService,
@@ -203,7 +255,7 @@ export function TenantsView() {
         firstAdminMobile: "",
         firstAdminNationalIdLast4: "",
       });
-      loadTenants();
+      void loadTenants();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       const errDetail = e.response?.data?.error || e.message || "Failed to create tenant";
@@ -236,7 +288,7 @@ export function TenantsView() {
       setTenants((prev) =>
         prev.map((t) => (t.id === selectedTenant.id ? { ...t, status: "Active" as const, gates: 0 } : t))
       );
-      loadTenants();
+      void loadTenants();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       const errDetail = e.response?.data?.error || e.message || "Failed to activate tenant";
@@ -260,7 +312,7 @@ export function TenantsView() {
       await platformTenantService.suspendTenant(selectedTenant.id, suspendReason.trim() || undefined);
       setMessage(`Tenant "${selectedTenant.name}" has been SUSPENDED.`);
       setShowSuspend(false);
-      loadTenants();
+      void loadTenants();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       setCreateError(e.response?.data?.error || e.message || "Failed to suspend tenant");
@@ -283,7 +335,7 @@ export function TenantsView() {
       await platformTenantService.archiveTenant(selectedTenant.id, archiveReason.trim() || undefined);
       setMessage(`Tenant "${selectedTenant.name}" has been ARCHIVED.`);
       setShowArchive(false);
-      loadTenants();
+      void loadTenants();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       setCreateError(e.response?.data?.error || e.message || "Failed to archive tenant");
@@ -292,14 +344,22 @@ export function TenantsView() {
     }
   };
 
-  const handleConfirmReactivate = async (tenant: Tenant) => {
+  const [reactivateTarget, setReactivateTarget] = useState<Tenant | null>(null);
+  const [reactivating, setReactivating] = useState(false);
+
+  const handleConfirmReactivate = async () => {
+    if (!reactivateTarget) return;
+    setReactivating(true);
     try {
-      await platformTenantService.reactivateTenant(tenant.id);
-      setMessage(`Tenant "${tenant.name}" reactivated to ACTIVE state.`);
-      loadTenants();
+      await platformTenantService.reactivateTenant(reactivateTarget.id);
+      setMessage(`Tenant "${reactivateTarget.name}" reactivated to ACTIVE state.`);
+      setReactivateTarget(null);
+      void loadTenants();
     } catch (err: unknown) {
       const e = err as { message?: string };
       setMessage(`Failed to reactivate tenant: ${e.message}`);
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -343,7 +403,7 @@ export function TenantsView() {
       });
       setMessage(`Settings updated for tenant "${selectedTenant.name}".`);
       setShowSettings(false);
-      loadTenants();
+      void loadTenants();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       setSettingsError(e.response?.data?.error || e.message || "Failed to update tenant settings");
@@ -363,7 +423,7 @@ export function TenantsView() {
   );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Tenants"
         description="Manage institution tenancy and review the steps required before go-live."
@@ -383,19 +443,19 @@ export function TenantsView() {
         <TenantCredentialsNotice credentials={createdCredentials} onDismiss={() => setCreatedCredentials(null)} />
       )}
       {loadError && (
-        <div className="eds-error-state" role="alert">
-          <p className="eds-error-state__message">{loadError}</p>
-          <Button variant="secondary" onClick={() => void loadTenants()}>Retry tenant list</Button>
-        </div>
+        <ErrorState
+          message={loadError}
+          action={<Button variant="secondary" onClick={() => void loadTenants()}>Retry tenant list</Button>}
+        />
       )}
       {plansError && (
-        <div className="eds-error-state" role="alert">
-          <p className="eds-error-state__message">{plansError}</p>
-          <Button variant="secondary" onClick={() => void loadPlans()}>Retry plans</Button>
-        </div>
+        <ErrorState
+          message={plansError}
+          action={<Button variant="secondary" onClick={() => void loadPlans()}>Retry plans</Button>}
+        />
       )}
       {message && (
-        <div className="platform-inline-notice" role="status">
+        <div className="app-inline-notice" role="status">
           {message}
         </div>
       )}
@@ -416,11 +476,11 @@ export function TenantsView() {
       </div>
       <Panel
         title="Tenant register"
-        description="A platform-level register. Tenant academic records are not shown here."
+        description="A app-level register. Tenant academic records are not shown here."
       >
-        <div className="platform-toolbar">
+        <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search by institution or ID" />
-          <label className="platform-select-label">
+          <label className="app-select-label">
             Status{" "}
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option>All</option>
@@ -431,11 +491,11 @@ export function TenantsView() {
           </label>
         </div>
         {loading && tenants.length === 0 ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading tenants" />
           </div>
         ) : loadError && tenants.length === 0 ? (
-          <p className="platform-empty-inline">Tenant data is unavailable until the request succeeds.</p>
+          <p className="app-empty-inline">Tenant data is unavailable until the request succeeds.</p>
         ) : (
           <DataTable
             headers={["Institution", "Type", "Plan", "Status", "Open gates", "Last updated", "Action"]}
@@ -445,7 +505,7 @@ export function TenantsView() {
               <tr key={tenant.id}>
                 <td>
                   <strong>{tenant.name}</strong>
-                  <small className="platform-cell-sub">{tenant.id}</small>
+                  <small className="app-cell-sub">{tenant.id}</small>
                 </td>
                 <td>{tenant.type}</td>
                 <td>{tenant.plan}</td>
@@ -461,50 +521,26 @@ export function TenantsView() {
                 </td>
                 <td>{tenant.updated}</td>
                 <td>
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                     {canActivate && tenant.status === "Trial" && (
-                      <Button variant="secondary" onClick={() => handleOpenActivate(tenant)}>
-                        Activate
-                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => handleOpenActivate(tenant)}>Activate</Button>
                     )}
                     {canManageLifecycle && tenant.status === "Active" && (
-                      <Button variant="secondary" onClick={() => handleOpenSuspend(tenant)}>
-                        Suspend
-                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => handleOpenSuspend(tenant)}>Suspend</Button>
                     )}
                     {canManageLifecycle && tenant.status === "Suspended" && (
                       <>
-                        <Button variant="secondary" onClick={() => handleConfirmReactivate(tenant)}>
-                          Reactivate
-                        </Button>
-                        <Button variant="secondary" onClick={() => handleOpenArchive(tenant)}>
-                          Archive
-                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setReactivateTarget(tenant)}>Reactivate</Button>
+                        <Button size="sm" variant="secondary" onClick={() => handleOpenArchive(tenant)}>Archive</Button>
                       </>
                     )}
-                    {canEditSettings && (
-                      <Button variant="secondary" onClick={() => handleOpenSettings(tenant)}>
-                        Settings
-                      </Button>
-                    )}
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setSelectedTenant(tenant);
-                        setShowUsage(true);
-                      }}
-                    >
-                      Usage
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setSelectedTenant(tenant);
-                        setShowDataProtection(true);
-                      }}
-                    >
-                      Compliance
-                    </Button>
+                    <RowMenu>
+                      {canEditSettings && (
+                        <MenuAction onClick={() => handleOpenSettings(tenant)}>Settings</MenuAction>
+                      )}
+                      <MenuAction onClick={() => { setSelectedTenant(tenant); setShowUsage(true); }}>Usage</MenuAction>
+                      <MenuAction onClick={() => { setSelectedTenant(tenant); setShowDataProtection(true); }}>Compliance</MenuAction>
+                    </RowMenu>
                   </div>
                 </td>
               </tr>
@@ -583,6 +619,17 @@ export function TenantsView() {
         isOpen={showUsage}
         onClose={() => setShowUsage(false)}
         tenant={selectedTenant}
+      />
+
+      <ConfirmDialog
+        isOpen={!!reactivateTarget}
+        onClose={() => setReactivateTarget(null)}
+        onConfirm={() => void handleConfirmReactivate()}
+        title={`Reactivate ${reactivateTarget?.name ?? "tenant"}?`}
+        message="This restores login access for all users of this institution immediately."
+        confirmLabel="Reactivate"
+        confirmTone="primary"
+        busy={reactivating}
       />
     </div>
   );

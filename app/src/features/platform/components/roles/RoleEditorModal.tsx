@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
 import { PLATFORM_ROLE_LABELS, readErrorMessage } from "../common/types";
 import type { PlatformRole } from "../../api/platformUserService";
@@ -129,7 +129,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
     >
       {error && <Notice tone="danger">{error}</Notice>}
       <TextField
-        id="platform-role-name"
+        id="app-role-name"
         label="Role name"
         required
         maxLength={100}
@@ -139,8 +139,8 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
         error={nameError}
       />
       {!role && (
-        <div className="platform-form-grid">
-          <label className="platform-form-field">
+        <div className="app-form-grid">
+          <label className="app-form-field">
             Start from template
             <select value={templateId} onChange={(e) => chooseTemplate(e.target.value)}>
               <option value="">Blank</option>
@@ -151,7 +151,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
               ))}
             </select>
           </label>
-          <label className="platform-form-field">
+          <label className="app-form-field">
             Based on
             <select value={base} onChange={(e) => chooseBase(e.target.value as PlatformRole)}>
               {CUSTOMISABLE_ROLES.map((value) => (
@@ -164,12 +164,12 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
         </div>
       )}
       <PermissionPicker catalog={catalog} base={base} selected={selected} onChange={setSelected} />
-      <p className="platform-field-hint" aria-live="polite">
+      <p className="app-field-hint" aria-live="polite">
         {count} {count === 1 ? "permission" : "permissions"} chosen. "Only this person" means you step in with a reason
         to do that work yourself. You can take any permission back at any time.
       </p>
       {!role && (
-        <label className="platform-form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <label className="app-form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
           <input
             type="checkbox"
             checked={updateTemplate}

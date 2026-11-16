@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import {
   Button,
   ConfirmDialog,
@@ -104,7 +104,7 @@ export function RolesView() {
     );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Platform roles"
         description="Build roles from templates, choose what each one can do, and take access back at any time."
@@ -118,7 +118,7 @@ export function RolesView() {
       {actionError && <Notice tone="danger">{actionError}</Notice>}
 
       {loading ? (
-        <div className="platform-empty-inline">
+        <div className="app-empty-inline">
           <Spinner label="Loading platform roles" />
         </div>
       ) : loadError ? (

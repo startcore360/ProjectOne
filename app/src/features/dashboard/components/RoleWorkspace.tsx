@@ -1,12 +1,23 @@
+import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
-import { PageHeader, Kpi } from "../../../design-system/components";
+import { PageHeader, Kpi, Panel } from "../../../design-system/components";
+import { useAppSelector } from "../../../store/hooks";
+import { useNotifications } from "../../notifications/hooks/useNotifications";
 import {
   roleDashboardByCode,
   roleOverrides,
   familyCopy,
   familyMetrics,
+  familyQuickActions,
   NO_HERO_ROLES,
 } from "../../role-previews/roleDashboardCatalog";
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export interface RoleWorkspaceProps {
   name: string;
@@ -14,6 +25,9 @@ export interface RoleWorkspaceProps {
 }
 
 export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
+  const tenantId = useAppSelector((s) => s.auth.user?.tenantId ?? null);
+  const { pendingApprovalCount } = useNotifications(tenantId);
+
   const role = roleDashboardByCode(roleCode);
   if (!role) return null;
   const content = roleOverrides[role.code] ?? {
@@ -22,19 +36,21 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
     focus: role.purpose,
     metrics: familyMetrics[role.family],
   };
+  const quickActions = familyQuickActions[role.family] ?? [];
   const showHero = !NO_HERO_ROLES.has(role.code);
+
   return (
-    <div className="workspace-dashboard">
+    <div className="app-dashboard app-page">
       {showHero ? (
         <section className="hero" aria-labelledby="workspace-hero-title">
           <div>
             <p className="kicker">{role.name}</p>
             <h2 className="hero__title" id="workspace-hero-title">
-              Good morning, {name}.
+              {greeting()}, {name}.
             </h2>
             <p>{content.focus}</p>
-            <a className="hero__cta" href="#workspace-queue">
-              View work queue status
+            <a className="hero__cta" href="#workspace-actions">
+              Quick navigation
               <Icon name="send" size={16} />
             </a>
           </div>
@@ -45,38 +61,49 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
           </div>
         </section>
       ) : (
-        <PageHeader title={`Good morning, ${name}.`} description={role.name} />
+        <PageHeader title={`${greeting()}, ${name}.`} description={role.name} />
       )}
-      <section className="student-section" aria-labelledby="workspace-glance">
-        <div className="student-section__heading">
-          <div>
-            <p className="student-eyebrow">AT A GLANCE</p>
-            <h2 id="workspace-glance">{content.title}</h2>
+
+      <Panel
+        title={content.title}
+        description={
+          pendingApprovalCount > 0
+            ? `${pendingApprovalCount} pending approval${pendingApprovalCount !== 1 ? "s" : ""} · AT A GLANCE`
+            : "AT A GLANCE · Key metrics for this role"
+        }
+      >
+        <div className="app-panel__body">
+          <div className="kpi-grid">
+            {content.metrics.map((label, i) => (
+              <Kpi
+                key={label}
+                label={label}
+                value={i === 0 && pendingApprovalCount > 0 && label.toLowerCase().includes("approv") ? String(pendingApprovalCount) : "—"}
+                context={i === 0 ? "Live data not yet connected" : "Awaiting backend integration"}
+                icon={i === 1 ? "clock" : i === 2 ? "chart" : "home"}
+              />
+            ))}
           </div>
         </div>
-        <div className="kpi-grid">
-          {content.metrics.map((label, i) => (
-            <Kpi
-              key={label}
-              label={label}
-              value="—"
-              context={i === 0 ? "Awaiting connected data" : "No live records loaded"}
-              icon={i === 1 ? "clock" : i === 2 ? "chart" : "home"}
-            />
+      </Panel>
+
+      <Panel
+        id="workspace-actions"
+        title="Where would you like to go?"
+        description="QUICK NAVIGATION · Available pages for your role"
+      >
+        <div className="app-action-grid">
+          {quickActions.map((action) => (
+            <Link key={action.href} to={action.href} className="app-action-tile">
+              <span className="app-action-tile__label">{action.label}</span>
+              <span className="app-action-tile__desc">{action.description}</span>
+            </Link>
           ))}
         </div>
-      </section>
-      <section className="student-panel workspace-state" id="workspace-queue">
-        <span className="student-panel__chevron">
-          <Icon name="home" size={20} />
-        </span>
-        <h2>Work queue is not connected yet</h2>
-        <p>
-          Only tasks assigned to {role.name} within its authorised scope will be shown. No sample
-          tasks are presented as live records. Available actions remain controlled by your assigned
-          role and permissions.
+        <p className="app-action-note">
+          Live work-queue data will appear here once backend task integration is complete. Available actions remain controlled by your assigned role and permissions.
         </p>
-      </section>
+      </Panel>
     </div>
   );
 }

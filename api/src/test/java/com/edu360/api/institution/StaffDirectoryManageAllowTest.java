@@ -47,7 +47,7 @@ class StaffDirectoryManageAllowTest {
         ReflectionTestUtils.setField(service, "entityManager", entityManager);
 
         StaffProfileResponse response = service.create(actor, new StaffProfileRequest(
-                "HR-001", "Asha Rao", null, null, null, null, null, "ACTIVE",
+                "HR-001", "Asha Rao", null, null, null, null, null, null, null, "ACTIVE",
                 LocalDate.of(2026, 1, 1), null));
 
         assertThat(response.staffCode()).isEqualTo("HR-001");

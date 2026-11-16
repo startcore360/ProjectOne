@@ -49,6 +49,7 @@ const base = (over: Partial<BellNotification>): BellNotification => ({
 describe("NotificationBell", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(notificationsApi.list).mockResolvedValue([]);
     vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 0 });
     vi.mocked(notificationsApi.pendingApprovalCount).mockResolvedValue(0);
   });
@@ -59,6 +60,7 @@ describe("NotificationBell", () => {
       base({ notificationId: "b", title: "Absence alert", readAt: null }),
       base({ notificationId: "c", title: "Old one", readAt: "2026-11-01T00:00:00Z" }),
     ]);
+    vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 2 });
     renderBell();
     const button = await screen.findByRole("button", { name: "Notifications, 2 unread" });
     fireEvent.click(button);
@@ -67,8 +69,19 @@ describe("NotificationBell", () => {
     expect(screen.getAllByRole("button", { name: /Mark ".*" as read/ })).toHaveLength(2);
   });
 
-  it("includes pending approvals in the bell badge and announces them in the panel", async () => {\n    vi.mocked(notificationsApi.list).mockResolvedValue([]);\n    vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 2 });\n    vi.mocked(notificationsApi.pendingApprovalCount).mockResolvedValue(3);\n    renderBell();\n    const bell = await screen.findByRole("button", { name: "Notifications, 2 unread, 3 pending approvals" });\n    expect(bell).toHaveTextContent("5");\n    fireEvent.click(bell);\n    expect(await screen.findByRole("status")).toHaveTextContent("3 approvals awaiting your decision");\n  });\n\n  it("marks one notification as read and lowers the count", async () => {
+  it("includes pending approvals in the bell badge and announces them in the panel", async () => {
+    vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 2 });
+    vi.mocked(notificationsApi.pendingApprovalCount).mockResolvedValue(3);
+    renderBell();
+    const bell = await screen.findByRole("button", { name: "Notifications, 2 unread, 3 pending approvals" });
+    expect(bell).toHaveTextContent("5");
+    fireEvent.click(bell);
+    expect(await screen.findByRole("status")).toHaveTextContent("3 approvals awaiting your decision");
+  });
+
+  it("marks one notification as read and lowers the count", async () => {
     vi.mocked(notificationsApi.list).mockResolvedValue([base({ readAt: null })]);
+    vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 1 });
     vi.mocked(notificationsApi.markRead).mockResolvedValue();
     renderBell();
     fireEvent.click(await screen.findByRole("button", { name: "Notifications, 1 unread" }));
@@ -79,6 +92,7 @@ describe("NotificationBell", () => {
 
   it("marks everything read", async () => {
     vi.mocked(notificationsApi.list).mockResolvedValue([base({ readAt: null }), base({ notificationId: "b", readAt: null })]);
+    vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 2 });
     vi.mocked(notificationsApi.markAllRead).mockResolvedValue();
     renderBell();
     fireEvent.click(await screen.findByRole("button", { name: "Notifications, 2 unread" }));
@@ -88,6 +102,7 @@ describe("NotificationBell", () => {
 
   it("shows no count and no mark-read controls while the server has no read state", async () => {
     vi.mocked(notificationsApi.list).mockResolvedValue([base({})]);
+    vi.mocked(notificationsApi.summary).mockRejectedValue(new Error("404"));
     renderBell();
     const button = await screen.findByRole("button", { name: "Notifications" });
     fireEvent.click(button);
@@ -96,7 +111,6 @@ describe("NotificationBell", () => {
   });
 
   it("shows the empty state", async () => {
-    vi.mocked(notificationsApi.list).mockResolvedValue([]);
     renderBell();
     fireEvent.click(await screen.findByRole("button", { name: "Notifications" }));
     expect(await screen.findByText("You have no notifications.")).toBeInTheDocument();
@@ -104,13 +118,13 @@ describe("NotificationBell", () => {
 
   it("shows an error state when loading fails", async () => {
     vi.mocked(notificationsApi.list).mockRejectedValue(new Error("boom"));
+    vi.mocked(notificationsApi.summary).mockRejectedValue(new Error("boom"));
     renderBell();
     fireEvent.click(await screen.findByRole("button", { name: "Notifications" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load notifications.");
   });
 
   it("closes on the backdrop and the close button, and returns focus to the bell", async () => {
-    vi.mocked(notificationsApi.list).mockResolvedValue([]);
     renderBell();
     const bell = await screen.findByRole("button", { name: "Notifications" });
     fireEvent.click(bell);
@@ -124,7 +138,6 @@ describe("NotificationBell", () => {
   });
 
   it("closes on Escape", async () => {
-    vi.mocked(notificationsApi.list).mockResolvedValue([]);
     renderBell();
     fireEvent.click(await screen.findByRole("button", { name: "Notifications" }));
     expect(await screen.findByRole("dialog", { name: "Notifications" })).toBeInTheDocument();

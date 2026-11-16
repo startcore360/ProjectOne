@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import { Button, Modal, Notice, Panel, StatusBadge } from "../../../../design-system/components";
+import { Spinner } from "../../../../components/ui";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { academicService } from "../../../institution-admin/api/academicService";
 
@@ -27,7 +28,19 @@ export function StudentStatusPanel({
 }: StudentStatusPanelProps) {
   const currentTenantId = tenantId ?? "";
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusLoadError, setStatusLoadError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (!currentTenantId || !studentId) { setStatusLoading(false); return; }
+    setStatusLoading(true);
+    setStatusLoadError(null);
+    academicService.getStudentStatus(currentTenantId, studentId)
+      .then((data) => { setCurrentStatus(data.status); })
+      .catch((err: unknown) => { setStatusLoadError(getApiErrorMessage(err)); })
+      .finally(() => { setStatusLoading(false); });
+  }, [currentTenantId, studentId]);
   const [newStatus, setNewStatus] = useState("LEAVE_OF_ABSENCE");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -64,16 +77,20 @@ export function StudentStatusPanel({
         </Button>
       }
     >
-      <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
+      <div className="app-panel__body">
         {!currentTenantId && <Notice tone="danger">A tenant identity is required to change student status.</Notice>}
-        {feedback && (
-          <div style={{ marginBottom: "var(--space-3)" }}>
-            <Notice tone={feedback.tone}>{feedback.message}</Notice>
-          </div>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          <span style={{ fontSize: "0.875rem", color: "var(--color-text-muted, #666)" }}>Current Status:</span>
-          {currentStatus ? <StatusBadge status={currentStatus} /> : <span style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>Not available from the current student-status endpoint</span>}
+        {feedback && <Notice tone={feedback.tone}>{feedback.message}</Notice>}
+        <div className="app-panel__status">
+          <span className="app-panel__status-label">Current Status:</span>
+          {statusLoading ? (
+            <Spinner label="Loading status" />
+          ) : statusLoadError ? (
+            <span className="app-panel__status-error">{statusLoadError}</span>
+          ) : currentStatus ? (
+            <StatusBadge status={currentStatus} />
+          ) : (
+            <span className="app-panel__status-label">—</span>
+          )}
         </div>
       </div>
 
@@ -84,20 +101,13 @@ export function StudentStatusPanel({
         title="Change Student Academic Status"
         size="sm"
       >
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "var(--space-3)" }}>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "4px" }}>
-              New Academic Status *
-            </label>
+        <form className="app-form" onSubmit={handleSubmit}>
+          <div className="app-form__field">
+            <label className="app-form__label">New Academic Status *</label>
             <select
+              className="app-form__select"
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid var(--color-border, #ccc)",
-                borderRadius: "var(--radius-md, 4px)",
-              }}
             >
               <option value="ACTIVE">Active (normal standing)</option>
               <option value="LEAVE_OF_ABSENCE">Leave of absence (authorized break)</option>
@@ -109,30 +119,22 @@ export function StudentStatusPanel({
             </select>
           </div>
 
-          <div style={{ marginBottom: "var(--space-4)" }}>
-            <label
-              htmlFor="status-reason"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "4px" }}
-            >
+          <div className="app-form__field">
+            <label htmlFor="status-reason" className="app-form__label">
               Statutory Justification / Reason *
             </label>
             <textarea
               id="status-reason"
               required
               rows={3}
+              className="app-form__textarea"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. Medical leave granted by Academic Council per UGC regulations."
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid var(--color-border, #ccc)",
-                borderRadius: "var(--radius-md, 4px)",
-              }}
             />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
+          <div className="app-form__actions">
             <Button variant="secondary" onClick={() => setShowModal(false)} disabled={saving}>
               Cancel
             </Button>

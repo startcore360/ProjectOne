@@ -114,10 +114,10 @@ export function CreateTopUserModal({
         <div
           style={{
             padding: "0.75rem",
-            backgroundColor: "var(--color-surface-subtle, #f3f4f6)",
+            backgroundColor: "var(--color-bg-subtle)",
             borderRadius: "6px",
             fontSize: "0.8125rem",
-            color: "var(--color-muted)",
+            color: "var(--color-text-muted)",
             marginBottom: "1rem",
           }}
         >

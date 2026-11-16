@@ -30,9 +30,21 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
     if (!tenantId) return;
     setLoading(true);
     try {
-      const [rows, summary] = await Promise.all([notificationsApi.list(tenantId), notificationsApi.summary(tenantId)]);
-      setItems(rows);
-      setUnreadCount(summary.unreadCount);
+      // allSettled: a missing summary endpoint does not block notification items from loading
+      const [listResult, summaryResult] = await Promise.allSettled([
+        notificationsApi.list(tenantId),
+        notificationsApi.summary(tenantId),
+      ]);
+      if (listResult.status === "fulfilled") {
+        setItems(listResult.value);
+        setError(null);
+      } else {
+        setError("Could not load notifications.");
+      }
+      if (summaryResult.status === "fulfilled") {
+        setUnreadCount(summaryResult.value.unreadCount);
+        setHasReadState(true);
+      }
       // Approval inbox is an independent source: its failure must not suppress notifications.
       try {
         const approvalCount = await notificationsApi.pendingApprovalCount(tenantId);
@@ -40,8 +52,6 @@ export function useNotifications(tenantId: string | null | undefined): Notificat
       } catch {
         // Keep the last known approval count; the next poll/focus refresh retries it.
       }
-      setHasReadState(true);
-      setError(null);
     } catch {
       setError("Could not load notifications.");
     } finally {

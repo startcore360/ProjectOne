@@ -21,6 +21,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import com.edu360.api.audit.AuditLogService;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
@@ -95,7 +97,7 @@ class StaffDirectoryIdentityAndConflictTest {
         assertThatThrownBy(() -> service.endAssignment(new RbacPrincipal(tenantId, userId), staffId,
                 assignmentId, "\"1\"", new EndStaffAssignmentRequest(LocalDate.of(2026, 11, 13))))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("STAFF_ASSIGNMENT_IN_USE")
+                .satisfies(e -> assertThat(((BusinessRuleViolationException) e).getErrorCode()).isEqualTo("STAFF_ASSIGNMENT_IN_USE"))
                 .hasMessageContaining(slotId.toString());
 
         verify(assignments, never()).saveAndFlush(any(StaffAssignment.class));
@@ -169,25 +171,52 @@ class StaffDirectoryIdentityAndConflictTest {
     }
 
     @Test
-    void teacherLookupAuthorizesDepartmentScope() {
+    void teacherLookupUsesDepartmentScopeForADepartmentHolder() {
         UUID tenantId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID institutionId = UUID.randomUUID();
         UUID departmentId = UUID.randomUUID();
+        RbacPrincipal hod = new RbacPrincipal(tenantId, userId);
         PermissionEvaluatorService permissions = mock(PermissionEvaluatorService.class);
+        when(permissions.can(hod, "SUBJECT_ALLOCATE", com.edu360.api.rbac.RbacScope.institution(institutionId),
+                com.edu360.api.rbac.RbacTarget.NONE))
+                .thenReturn(com.edu360.api.rbac.PermissionDecision.deny("NO_ACTIVE_ROLE_IN_SCOPE", "department holder"));
+        StaffDirectoryService service = lookupService(permissions);
+
+        service.teacherLookup(hod, institutionId, departmentId, null, 20);
+
+        verify(permissions).authorize(eq(hod), eq("SUBJECT_ALLOCATE"),
+                eq(com.edu360.api.rbac.RbacScope.department(institutionId, departmentId)),
+                eq(com.edu360.api.rbac.RbacTarget.NONE));
+    }
+
+    @Test
+    void teacherLookupKeepsInstitutionScopeForAnInstitutionHolderFilteringByDepartment() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID institutionId = UUID.randomUUID();
+        UUID departmentId = UUID.randomUUID();
+        RbacPrincipal collegeAdmin = new RbacPrincipal(tenantId, userId);
+        PermissionEvaluatorService permissions = mock(PermissionEvaluatorService.class);
+        when(permissions.can(collegeAdmin, "MENTOR_ASSIGN", com.edu360.api.rbac.RbacScope.institution(institutionId),
+                com.edu360.api.rbac.RbacTarget.NONE))
+                .thenReturn(com.edu360.api.rbac.PermissionDecision.allow());
+        StaffDirectoryService service = lookupService(permissions);
+
+        service.teacherLookup(collegeAdmin, institutionId, departmentId, null, 20, "MENTOR_ASSIGN");
+
+        verify(permissions).authorize(eq(collegeAdmin), eq("MENTOR_ASSIGN"),
+                eq(com.edu360.api.rbac.RbacScope.institution(institutionId)),
+                eq(com.edu360.api.rbac.RbacTarget.NONE));
+    }
+
+    private static StaffDirectoryService lookupService(PermissionEvaluatorService permissions) {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         doReturn(List.of()).when(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
-
-        StaffDirectoryService service = new StaffDirectoryService(mock(StaffProfileRepository.class),
+        return new StaffDirectoryService(mock(StaffProfileRepository.class),
                 mock(StaffAssignmentRepository.class), mock(StaffServiceRecordRepository.class),
                 mock(StaffDocumentRepository.class), mock(InstitutionRepository.class),
                 mock(DepartmentRepository.class), mock(InstitutionIdFormatService.class),
                 permissions, mock(AuditLogService.class), jdbc);
-
-        service.teacherLookup(new RbacPrincipal(tenantId, userId), institutionId, departmentId, null, 20);
-
-        verify(permissions).authorize(eq(new RbacPrincipal(tenantId, userId)),
-                eq("SUBJECT_ALLOCATE"), eq(com.edu360.api.rbac.RbacScope.department(institutionId, departmentId)),
-                eq(com.edu360.api.rbac.RbacTarget.NONE));
     }
 }

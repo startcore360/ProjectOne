@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
   DataTable,
   MetricCard,
+  Modal,
   Notice,
   Panel,
   SearchBox,
   StatusBadge,
 } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import {
   platformOpsService,
@@ -77,7 +79,7 @@ export function TicketsView() {
     try {
       await platformOpsService.updateSupportTicket(ticket.supportTicketId, { status: newStatus });
       setMessage(`Ticket ${ticket.ticketNumber} updated to ${newStatus}.`);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update ticket");
     }
@@ -95,7 +97,7 @@ export function TicketsView() {
       });
       setMessage(`Ticket ${resolvingTicket.ticketNumber} marked as RESOLVED.`);
       setResolvingTicket(null);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to resolve ticket");
     } finally {
@@ -128,7 +130,7 @@ export function TicketsView() {
   const resolvedTickets = tickets.filter((t) => t.status === "RESOLVED" || t.status === "CLOSED").length;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Support Tickets"
         description="Tenant problem tickets, resolution audit trails, and ticket-bound read-only diagnostic session assumption."
@@ -136,8 +138,18 @@ export function TicketsView() {
 
       {message && <Notice tone="success">{message}</Notice>}
       {error && <Notice tone="danger">{error}</Notice>}
-      {loadError && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button></Notice>}
-      {grantsError && <Notice tone="danger">Active support grants could not be verified. Session-assumption actions are disabled until this is resolved. {grantsError} <Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button></Notice>}
+      {loadError && (
+        <ErrorState
+          message={loadError}
+          action={<Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button>}
+        />
+      )}
+      {grantsError && (
+        <ErrorState
+          message={`Active support grants could not be verified. Session-assumption actions are disabled until this is resolved. ${grantsError}`}
+          action={<Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button>}
+        />
+      )}
       {assumedToken && (
         <Notice tone="info">
           <strong>Active Support Session:</strong> Temporary diagnostic session key is bound to this window. Access is logged in the tenant audit log.
@@ -145,40 +157,38 @@ export function TicketsView() {
       )}
 
       <div className="kpi-grid">
-        <MetricCard label="Total Tickets" value={loadError ? "—" : tickets.length} note={loadError ? "Unavailable" : "Platform-wide"} mark="book" />
+        <MetricCard label="Total Tickets" value={loadError ? "—" : tickets.length} note={loadError ? "Unavailable" : "app-wide"} mark="book" />
         <MetricCard label="Open Tickets" value={loadError ? "—" : openTickets} note={loadError ? "Unavailable" : "Awaiting resolution"} mark="alert" />
         <MetricCard label="Resolved Tickets" value={loadError ? "—" : resolvedTickets} note={loadError ? "Unavailable" : "SLA satisfied"} mark="check-circle" />
         <MetricCard label="Active Grants" value={grantsError ? "—" : grants.length} note={grantsError ? "Verification unavailable" : "Tenant approved sessions"} mark="shield" />
       </div>
 
       <Panel title="Platform Support Queue" description="Incoming issues raised by tenant representatives">
-        <div className="platform-toolbar" style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+        <div className="app-toolbar">
           <SearchBox
             value={query}
             onChange={(val) => setQuery(val)}
             placeholder="Search ticket #, subject, or requester..."
           />
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--fs-body-sm)", color: "var(--color-text-muted)" }}>Status:</span>
-            {["All", "NEW", "ASSIGNED", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((st) => (
-              <Button
-                key={st}
-                size="sm"
-                variant={statusFilter === st ? "primary" : "secondary"}
-                onClick={() => setStatusFilter(st)}
-              >
-                {st}
-              </Button>
-            ))}
-          </div>
+          <label className="app-select-label">
+            Status{" "}
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="All">All</option>
+              <option value="NEW">New</option>
+              <option value="ASSIGNED">Assigned</option>
+              <option value="IN_PROGRESS">In progress</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+          </label>
         </div>
 
         {loading ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading support tickets..." />
           </div>
         ) : loadError ? null : filteredTickets.length === 0 ? (
-          <p className="platform-empty-inline">No support tickets found matching criteria.</p>
+          <p className="app-empty-inline">No support tickets found matching criteria.</p>
         ) : (
           <DataTable headers={["Ticket #", "Subject", "Requester", "Priority", "Status", "Support Grant", "Actions"]}>
             {filteredTickets.map((t) => {
@@ -187,13 +197,13 @@ export function TicketsView() {
                 <tr key={t.supportTicketId}>
                   <td>
                     <strong>{t.ticketNumber}</strong>
-                    <small className="platform-cell-sub">
+                    <small className="app-cell-sub">
                       {new Date(t.createdAt).toLocaleDateString()}
                     </small>
                   </td>
                   <td style={{ maxWidth: "260px" }}>
                     <strong>{t.subject}</strong>
-                    <small className="platform-cell-sub">{t.description}</small>
+                    <small className="app-cell-sub">{t.description}</small>
                     {t.resolutionNote && (
                       <p style={{ margin: "4px 0 0", color: "var(--color-status-success-fg)", fontSize: "12px" }}>
                         Resolution: {t.resolutionNote}
@@ -202,7 +212,7 @@ export function TicketsView() {
                   </td>
                   <td>
                     {t.raisedByName}
-                    <small className="platform-cell-sub">Tenant: {t.tenantId.substring(0, 8)}...</small>
+                    <small className="app-cell-sub">Tenant: {t.tenantId.substring(0, 8)}...</small>
                   </td>
                   <td>
                     <span style={{ fontWeight: "bold", color: t.priority === "HIGH" ? "var(--color-status-danger-fg)" : "inherit" }}>
@@ -268,38 +278,45 @@ export function TicketsView() {
         )}
       </Panel>
 
-      {/* Resolve Modal */}
-      {resolvingTicket && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Resolve Ticket">
-            <header>
-              <h2>Resolve Ticket · {resolvingTicket.ticketNumber}</h2>
-              <p>Mandatory resolution remark required per Rule ck_support_ticket_r1.</p>
-            </header>
-            <form onSubmit={handleConfirmResolve}>
-              <label className="field-label">
-                <span>Resolution Note</span>
-                <textarea
-                  className="platform-input"
-                  rows={4}
-                  value={resolutionNote}
-                  onChange={(e) => setResolutionNote(e.target.value)}
-                  placeholder="Describe the diagnostics performed and fix applied..."
-                  required
-                />
-              </label>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setResolvingTicket(null)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submittingResolve}>
-                  {submittingResolve ? "Saving..." : "Confirm Resolution"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={!!resolvingTicket}
+        onClose={() => setResolvingTicket(null)}
+        kicker="SUPPORT TICKET"
+        title={`Resolve · ${resolvingTicket?.ticketNumber ?? ""}`}
+        description="Mandatory resolution remark required per Rule ck_support_ticket_r1."
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setResolvingTicket(null)} disabled={submittingResolve}>
+              Cancel
+            </Button>
+            <Button form="resolve-ticket-form" type="submit" busy={submittingResolve}>
+              Confirm resolution
+            </Button>
+          </>
+        }
+      >
+        <form id="resolve-ticket-form" onSubmit={handleConfirmResolve}>
+          <label style={{ display: "block", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", marginBottom: "var(--space-1)" }}>
+            Resolution note
+          </label>
+          <textarea
+            rows={4}
+            value={resolutionNote}
+            onChange={(e) => setResolutionNote(e.target.value)}
+            placeholder="Describe the diagnostics performed and fix applied..."
+            required
+            style={{
+              width: "100%",
+              padding: "var(--space-2) var(--space-3)",
+              border: "1px solid var(--color-border-divider)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--fs-body)",
+              resize: "vertical",
+            }}
+          />
+        </form>
+      </Modal>
     </div>
   );
 }

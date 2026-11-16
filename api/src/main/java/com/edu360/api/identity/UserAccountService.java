@@ -1,6 +1,5 @@
 package com.edu360.api.identity;
 
-import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -50,8 +49,6 @@ import lombok.RequiredArgsConstructor;
 public class UserAccountService {
 
     private static final Logger log = LoggerFactory.getLogger(UserAccountService.class);
-    private static final SecureRandom RANDOM = new SecureRandom();
-    private static final String CHAR_POOL = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
     private final UserAccountRepository userAccountRepository;
     private final UserIdentityLinkRepository userIdentityLinkRepository;
@@ -320,10 +317,6 @@ public class UserAccountService {
     }
 
     private String generateTemporaryPassword() {
-        StringBuilder sb = new StringBuilder("Edu360@");
-        for (int i = 0; i < 6; i++) {
-            sb.append(CHAR_POOL.charAt(RANDOM.nextInt(CHAR_POOL.length())));
-        }
-        return sb.toString();
+        return com.edu360.api.auth.TemporaryPasswordGenerator.generate();
     }
 }

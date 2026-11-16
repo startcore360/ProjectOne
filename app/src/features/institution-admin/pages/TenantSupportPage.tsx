@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useState, type FormEvent } from "react";
 import axios from "axios";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button, Panel, TextField, TextAreaField, SelectField } from "../../../design-system/components";
+import { ErrorState } from "../../../components/feedback/ErrorState";
 
 type Ticket = {
   supportTicketId: string; ticketNumber: string; subject: string; description: string;
@@ -22,6 +23,7 @@ export default function TenantSupportPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -32,7 +34,7 @@ export default function TenantSupportPage() {
 
   const load = useCallback(async () => {
     if (!tenantId) { setLoading(false); return; }
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setErrorStatus(null);
     try {
       const [ticketResponse, grantResponse] = await Promise.all([
         api.get<Ticket[]>(`/tenants/${tenantId}/support-tickets`),
@@ -43,6 +45,7 @@ export default function TenantSupportPage() {
       setTicketId((current) => current || ticketResponse.data[0]?.supportTicketId || "");
     } catch (err) {
       setError(getApiErrorMessage(err));
+      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
     } finally { setLoading(false); }
   }, [tenantId]);
 
@@ -61,7 +64,10 @@ export default function TenantSupportPage() {
       setSubject(""); setDescription("");
       setMessage(`Support ticket ${response.data.ticketNumber} was submitted.`);
       await load();
-    } catch (err) { setError(getApiErrorMessage(err)); }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
+    }
     finally { setSubmitting(false); }
   };
 
@@ -79,7 +85,10 @@ export default function TenantSupportPage() {
       setInstitutionId("");
       setMessage(`Read-only support access was granted for ${hours} hour(s).`);
       await load();
-    } catch (err) { setError(getApiErrorMessage(err)); }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
+    }
     finally { setSubmitting(false); }
   };
 
@@ -89,17 +98,20 @@ export default function TenantSupportPage() {
       await api.post(`/tenants/${tenantId}/support-access-grants/${grantId}/withdrawal`);
       setMessage("Support access was withdrawn immediately.");
       await load();
-    } catch (err) { setError(getApiErrorMessage(err)); }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
+    }
     finally { setSubmitting(false); }
   };
 
-  const forbidden = axios.isAxiosError(error) && (error.response?.status === 403 || error.response?.status === 404);
+  const forbidden = errorStatus === 403 || errorStatus === 404;
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader title="Tenant support" description="Raise support tickets and control temporary, read-only access to your institution's data." />
-      {message && <div className="platform-inline-notice" role="status">{message}</div>}
-      {error && <div className="eds-error-state" role="alert"><h3>{forbidden ? "Access unavailable" : "Could not complete this request"}</h3><p>{error}</p></div>}
-      {!tenantId ? <div className="eds-error-state" role="alert">A tenant sign-in is required to use support.</div> : (
+      {message && <div className="app-inline-notice" role="status">{message}</div>}
+      {error && <ErrorState title={forbidden ? "Access unavailable" : "Could not complete this request"} message={error} />}
+      {!tenantId ? <ErrorState title="Sign-in required" message="A tenant sign-in is required to use support." /> : (
         <>
           <Panel title="Raise a support ticket" description="Describe the issue. Do not include passwords, one-time codes or other secrets.">
             <form onSubmit={raiseTicket} noValidate>
@@ -114,7 +126,7 @@ export default function TenantSupportPage() {
 
           <Panel title="My support tickets" description="Only tickets raised by your signed-in account are listed.">
             {loading ? <p role="status">Loading tickets…</p> : tickets.length === 0 ? <p>No support tickets have been raised by this account.</p> : (
-              <div className="platform-table-wrap"><table className="platform-table">
+              <div className="app-table-wrap"><table className="app-table">
                 <thead><tr><th>Ticket</th><th>Subject</th><th>Status</th><th>Created</th></tr></thead>
                 <tbody>{tickets.map((ticket) => <tr key={ticket.supportTicketId}>
                   <td>{ticket.ticketNumber}</td><td>{ticket.subject}</td><td>{ticket.status}</td><td>{new Date(ticket.createdAt).toLocaleString()}</td>
@@ -134,7 +146,7 @@ export default function TenantSupportPage() {
 
           <Panel title="Support access history" description="Review active, expired and withdrawn grants.">
             {loading ? <p role="status">Loading grants…</p> : grants.length === 0 ? <p>No support access grants have been issued.</p> : (
-              <div className="platform-table-wrap"><table className="platform-table">
+              <div className="app-table-wrap"><table className="app-table">
                 <thead><tr><th>Ticket</th><th>Granted</th><th>Expires</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>{grants.map((grant) => {
                   const active = !grant.withdrawnAt && new Date(grant.expiresAt).getTime() > Date.now();

@@ -1,6 +1,5 @@
-import type { FormEvent } from "react";
-import { Button, Kicker, TextField, Notice } from "../../../../design-system/components";
-import { Icon } from "../../../../components/ui/Icon";
+﻿import type { FormEvent } from "react";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export interface CreatePlanDraft {
   planName: string;
@@ -33,83 +32,71 @@ export function CreatePlanModal({
   creating,
   createError,
 }: CreatePlanModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="platform-modal-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      kicker="NEW SUBSCRIPTION PLAN"
+      title="Add subscription plan"
+      titleId="plan-create-title"
+      description="Platform administrators configure limits and modules; the Product Owner configures pricing."
+      size="sm"
     >
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="plan-create-title">
-        <header>
-          <div>
-            <Kicker>NEW SUBSCRIPTION PLAN</Kicker>
-            <h2 id="plan-create-title">Add subscription plan</h2>
-            <p>Platform administrators configure limits and modules; the Product Owner configures pricing.</p>
-          </div>
-          <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={16} />
-          </button>
-        </header>
-        <form onSubmit={onSubmit}>
-          <TextField
-            id="plan-name"
-            label="Plan Name"
-            required
-            value={createDraft.planName}
-            onChange={(e) => setCreateDraft({ ...createDraft, planName: e.target.value })}
-            placeholder="e.g. Standard School Plan"
+      <form onSubmit={onSubmit}>
+        <TextField
+          id="plan-name"
+          label="Plan Name"
+          required
+          value={createDraft.planName}
+          onChange={(e) => setCreateDraft({ ...createDraft, planName: e.target.value })}
+          placeholder="e.g. Standard School Plan"
+        />
+        <div className="app-form-grid">
+          <SelectField
+            id="plan-pricing-type"
+            label="Pricing Type"
+            value={createDraft.pricingType}
+            onChange={(e) => setCreateDraft({ ...createDraft, pricingType: e.target.value })}
+            options={[
+              { value: "PER_STUDENT_YEAR", label: "Per Student Per Year" },
+              { value: "FLAT", label: "Flat Fee" },
+              { value: "PER_MODULE", label: "Per Module" },
+            ]}
           />
-          <div className="platform-form-grid">
-            <label className="platform-form-field">
-              Pricing Type
-              <select
-                value={createDraft.pricingType}
-                onChange={(e) => setCreateDraft({ ...createDraft, pricingType: e.target.value })}
-              >
-                <option value="PER_STUDENT_YEAR">Per Student Per Year</option>
-                <option value="FLAT">Flat Fee</option>
-                <option value="PER_MODULE">Per Module</option>
-              </select>
-            </label>
-            <TextField
-              id="plan-price"
-              label="Price Amount (₹)"
-              type="number"
-              value={String(createDraft.priceAmount)}
-              onChange={(e) => setCreateDraft({ ...createDraft, priceAmount: Number(e.target.value) })}
-            />
-          </div>
-          <div className="platform-form-grid">
-            <TextField
-              id="plan-user-limit"
-              label="User Limit"
-              type="number"
-              value={String(createDraft.userLimit)}
-              onChange={(e) => setCreateDraft({ ...createDraft, userLimit: Number(e.target.value) })}
-            />
-            <TextField
-              id="plan-storage-limit"
-              label="Storage Limit (GB)"
-              type="number"
-              value={String(createDraft.storageLimitGb)}
-              onChange={(e) => setCreateDraft({ ...createDraft, storageLimitGb: Number(e.target.value) })}
-            />
-          </div>
-          {createError && <Notice tone="danger">{createError}</Notice>}
-          <footer>
-            <Button variant="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" busy={creating}>
-              Create plan
-            </Button>
-          </footer>
-        </form>
-      </section>
-    </div>
+          <TextField
+            id="plan-price"
+            label="Price Amount (₹)"
+            type="number"
+            value={String(createDraft.priceAmount)}
+            onChange={(e) => setCreateDraft({ ...createDraft, priceAmount: Number(e.target.value) })}
+          />
+        </div>
+        <div className="app-form-grid">
+          <TextField
+            id="plan-user-limit"
+            label="User Limit"
+            type="number"
+            value={String(createDraft.userLimit)}
+            onChange={(e) => setCreateDraft({ ...createDraft, userLimit: Number(e.target.value) })}
+          />
+          <TextField
+            id="plan-storage-limit"
+            label="Storage Limit (GB)"
+            type="number"
+            value={String(createDraft.storageLimitGb)}
+            onChange={(e) => setCreateDraft({ ...createDraft, storageLimitGb: Number(e.target.value) })}
+          />
+        </div>
+        {createError && <Notice tone="danger">{createError}</Notice>}
+        <footer>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" busy={creating}>
+            Create plan
+          </Button>
+        </footer>
+      </form>
+    </Modal>
   );
 }

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import axios from "axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
-import "./ProfilePage.css";
 import {
   Button,
   Kicker,
+  Notice,
   TextField,
   Badge,
   Spinner,
@@ -230,12 +230,14 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="profile-page">
+    <div className="app-page app-page--narrow">
       <PageHeader title="My profile" description="View and update your own display name and contact details." />
 
       {loading && (
-        <section className="profile-card">
-          <Spinner label="Loading your profile…" />
+        <section className="app-panel">
+          <div className="app-panel__body app-panel__body--top">
+            <Spinner label="Loading your profile…" />
+          </div>
         </section>
       )}
 
@@ -251,60 +253,58 @@ export default function ProfilePage() {
       )}
 
       {!loading && !loadError && profile && (
-        <section className="profile-card" aria-labelledby="profile-title">
-          <Kicker>{isPlatform ? "PLATFORM ACCOUNT" : "ACCOUNT"}</Kicker>
-          <h2 id="profile-title" className="profile-card__title">
-            Account details
-          </h2>
-
-          <ProfileAvatarSection
-            displayName={profile.displayName}
-            isPlatform={isPlatform}
-            photoLoading={photoLoading}
-            photoObjectUrl={photoObjectUrl}
-            photoUploading={photoUploading}
-            photoSuccess={photoSuccess}
-            photoError={photoError}
-            onPhotoSelected={(e) => void onPhotoSelected(e)}
-          />
-
-          <dl className="profile-readonly">
+        <section className="app-panel" aria-labelledby="profile-title">
+          <header className="app-panel__header">
             <div>
-              <dt>Email</dt>
-              <dd>{profile.email}</dd>
+              <Kicker>{isPlatform ? "PLATFORM ACCOUNT" : "ACCOUNT"}</Kicker>
+              <h2 id="profile-title">Account details</h2>
             </div>
-            <div>
-              <dt>{isPlatform ? "Platform role" : "User type"}</dt>
-              <dd>
-                <Badge tone="info">{(profile.platformRole ?? profile.userType ?? "—").replaceAll("_", " ")}</Badge>
-              </dd>
-            </div>
-          </dl>
+          </header>
 
-          {success && (
-            <div className="profile-message profile-message--success" role="status">
-              Your profile has been updated.
-            </div>
-          )}
-          {saveError && (
-            <div className="profile-message profile-message--error" role="alert">
-              {saveError}
-            </div>
-          )}
-
-          <form onSubmit={submit} noValidate>
-            {Object.keys(fieldErrors).length > 0 && <div className="profile-message profile-message--error" role="alert">Please correct the highlighted fields below.</div>}
-            <TextField
-              id="profile-display-name"
-              label="Display name"
-              required
-              value={displayName}
-              onChange={(e) => { setDisplayName(e.target.value); clearFeedback(); }}
-              error={fieldErrors.displayName}
+          <div className="app-panel__body app-panel__body--top">
+            <ProfileAvatarSection
+              displayName={profile.displayName}
+              isPlatform={isPlatform}
+              photoLoading={photoLoading}
+              photoObjectUrl={photoObjectUrl}
+              photoUploading={photoUploading}
+              photoSuccess={photoSuccess}
+              photoError={photoError}
+              onPhotoSelected={(e) => void onPhotoSelected(e)}
             />
 
-            {!isPlatform && (
-              <>
+            <dl className="app-detail-list">
+              <div>
+                <dt>Email</dt>
+                <dd>{profile.email}</dd>
+              </div>
+              <div>
+                <dt>{isPlatform ? "Platform role" : "User type"}</dt>
+                <dd>
+                  <Badge tone="info">{(profile.platformRole ?? profile.userType ?? "—").replaceAll("_", " ")}</Badge>
+                </dd>
+              </div>
+            </dl>
+
+            {success && <Notice tone="success">Your profile has been updated.</Notice>}
+            {saveError && <Notice tone="danger">{saveError}</Notice>}
+
+            <form onSubmit={submit} noValidate className="app-form-grid">
+              {Object.keys(fieldErrors).length > 0 && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <Notice tone="danger">Please correct the highlighted fields below.</Notice>
+                </div>
+              )}
+              <TextField
+                id="profile-display-name"
+                label="Display name"
+                required
+                value={displayName}
+                onChange={(e) => { setDisplayName(e.target.value); clearFeedback(); }}
+                error={fieldErrors.displayName}
+              />
+
+              {!isPlatform && (
                 <TextField
                   id="profile-mobile"
                   label="Mobile"
@@ -313,13 +313,15 @@ export default function ProfilePage() {
                   onChange={(e) => { setMobile(e.target.value); clearFeedback(); }}
                   error={fieldErrors.mobile}
                 />
-              </>
-            )}
+              )}
 
-            <Button type="submit" busy={saving} className="profile-submit">
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </form>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <Button type="submit" busy={saving}>
+                  {saving ? "Saving…" : "Save changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
         </section>
       )}
     </div>

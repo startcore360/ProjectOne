@@ -342,12 +342,21 @@ public class KeycloakAdminClient {
     }
 
     public void logoutSession(String realm, String sessionId) {
-        String adminToken = fetchMasterAdminAccessToken();
-        restClient.delete()
-                .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/sessions/" + sessionId)
-                .header("Authorization", "Bearer " + adminToken)
-                .retrieve()
-                .toBodilessEntity();
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            restClient.delete()
+                    .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/sessions/" + sessionId)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException.NotFound ignored) {
+            // Idempotent: session is already ended in Keycloak
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode() == HttpStatusCode.valueOf(404)) {
+                return;
+            }
+            throw ex;
+        }
     }
 
     /**

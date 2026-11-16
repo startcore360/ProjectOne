@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
-import { Panel, DataTable, Notice } from "../../../../design-system/components";
+import { Button, Panel, DataTable, Notice } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { formatTimestamp, readErrorMessage, type FetchStatus } from "../common/types";
 import api from "../../../../services/axios";
 
@@ -25,9 +26,11 @@ export function BackupStatusView() {
   const [status, setStatus] = useState<FetchStatus>("loading");
   const [data, setData] = useState<BackupStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setStatus("loading");
     api
       .get("/platform/backup-status")
       .then((res) => {
@@ -43,12 +46,17 @@ export function BackupStatusView() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryCount]);
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader title="Backup status" description="Per-tenant daily backup and restore-test status." />
-      {status === "error" && <Notice tone="danger">Could not load backup status: {errorMessage}</Notice>}
+      {status === "error" && (
+        <ErrorState
+          message={`Could not load backup status: ${errorMessage}`}
+          action={<Button variant="secondary" onClick={() => setRetryCount((c) => c + 1)}>Retry</Button>}
+        />
+      )}
       {data && !data.wiredToRealBackupSystem && (
         <Notice tone="info">
           <strong>Not connected to a real backup system.</strong> {data.note}
@@ -56,7 +64,7 @@ export function BackupStatusView() {
       )}
       <Panel title="Tenant backup status" description="platform.tenant_backup_status">
         {status === "loading" ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading backup status" />
           </div>
         ) : (

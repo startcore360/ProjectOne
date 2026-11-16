@@ -229,22 +229,22 @@ export function BulkUploadModal({
               Pre-validation results
             </h3>
 
-            <div className="platform-import-summary">
+            <div className="app-stat-row">
               <div style={{ background: "var(--color-bg-subtle, #f8fafc)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary, #64748b)" }}>Total Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.totalRows}</div>
               </div>
-              <div style={{ background: "#ecfdf5", padding: "0.75rem", borderRadius: "6px", textAlign: "center", color: "#065f46" }}>
+              <div style={{ background: "var(--color-status-success-bg)", padding: "0.75rem", borderRadius: "6px", textAlign: "center", color: "var(--color-status-success-fg)" }}>
                 <div style={{ fontSize: "0.75rem" }}>Valid Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.validRows}</div>
               </div>
               <div
                 style={{
-                  background: job.errorRows > 0 ? "#fef2f2" : "var(--color-bg-subtle, #f8fafc)",
+                  background: job.errorRows > 0 ? "var(--color-status-danger-bg)" : "var(--color-bg-subtle)",
                   padding: "0.75rem",
                   borderRadius: "6px",
                   textAlign: "center",
-                  color: job.errorRows > 0 ? "#991b1b" : "inherit",
+                  color: job.errorRows > 0 ? "var(--color-status-danger-fg)" : "inherit",
                 }}
               >
                 <div style={{ fontSize: "0.75rem" }}>Error Rows</div>
@@ -255,7 +255,7 @@ export function BulkUploadModal({
             {/* Error Rows Breakdown Table */}
             {rowErrors.length > 0 && (
               <div style={{ marginBottom: "1rem" }}>
-                <h4 style={{ fontSize: "0.875rem", color: "#991b1b", margin: "0 0 0.5rem" }}>
+                <h4 style={{ fontSize: "0.875rem", color: "var(--color-status-danger-fg)", margin: "0 0 0.5rem" }}>
                   Rows with errors can be corrected and imported later:
                 </h4>
                 <DataTable
@@ -278,10 +278,10 @@ export function BulkUploadModal({
             <div
               style={{
                 padding: "0.625rem 0.875rem",
-                backgroundColor: "var(--color-surface-subtle, #f3f4f6)",
+                backgroundColor: "var(--color-bg-subtle)",
                 borderRadius: "6px",
                 fontSize: "0.8125rem",
-                color: "var(--color-muted)",
+                color: "var(--color-text-muted)",
                 marginBottom: "1rem",
               }}
             >

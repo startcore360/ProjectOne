@@ -102,7 +102,7 @@ export function GuardianManagementPanel({
       setFullName("");
       setMobile("+91");
       setEmail("");
-      fetchLinks();
+      void fetchLinks();
     } catch (err: unknown) {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
@@ -132,7 +132,7 @@ export function GuardianManagementPanel({
       });
       setChangeModalItem(null);
       setChangeReason("");
-      fetchLinks();
+      void fetchLinks();
     } catch (err: unknown) {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
@@ -159,7 +159,7 @@ export function GuardianManagementPanel({
           : "Guardian change request rejected. Existing link preserved.",
       });
       setDecideModalItem(null);
-      fetchLinks();
+      void fetchLinks();
     } catch (err: unknown) {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
@@ -206,7 +206,7 @@ export function GuardianManagementPanel({
                   {link.isPrimary ? (
                     <Badge tone="success">PRIMARY</Badge>
                   ) : (
-                    <span style={{ color: "#999" }}>—</span>
+                    <span style={{ color: "var(--color-text-muted)" }}>—</span>
                   )}
                 </td>
                 <td style={{ padding: "8px" }}>

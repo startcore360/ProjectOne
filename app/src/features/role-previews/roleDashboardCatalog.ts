@@ -1,4 +1,4 @@
-export type RoleLevel = "Platform" | "Tenant" | "University" | "College" | "School" | "External";
+﻿export type RoleLevel = "Platform" | "Tenant" | "University" | "College" | "School" | "External";
 export type DashboardFamily = "platform" | "leadership" | "academic" | "teaching" | "finance" | "people" | "operations" | "governance" | "student" | "family" | "admissions";
 export type RoleProfile = { code: string; name: string; level: RoleLevel; family: DashboardFamily; purpose: string };
 
@@ -96,7 +96,7 @@ export const roleDashboardByCode = (code?: string) => roleDashboardCatalog.find(
 
 // Generic per-family fallback content, used when a role has no roleOverrides entry below.
 export const familyCopy: Record<DashboardFamily, { title: string; focus: string; panels: [string,string,string][] }> = {
-  platform: { title: "Platform operations", focus: "Service health, tenant operations and platform-level work.", panels: [["Tenant portfolio","TENANTS & SERVICES","Tenant lifecycle, plan status and service health"],["Operational queue","NEEDS ATTENTION","Assigned support, release and platform tasks"],["Platform assurance","CONTROL & AUDIT","Security, backups, usage and audit evidence"]] },
+  platform: { title: "Platform operations", focus: "Service health, tenant operations and app-level work.", panels: [["Tenant portfolio","TENANTS & SERVICES","Tenant lifecycle, plan status and service health"],["Operational queue","NEEDS ATTENTION","Assigned support, release and platform tasks"],["Platform assurance","CONTROL & AUDIT","Security, backups, usage and audit evidence"]] },
   leadership: { title: "Institution leadership", focus: "Institution-wide performance, decision queues and accountable oversight.", panels: [["Institution pulse","PERFORMANCE","Academic, attendance, finance and people summaries in authorised scope"],["Approval desk","DECISIONS","Pending approvals, delegated items and due dates"],["Institution priorities","FOLLOW-THROUGH","Operational risks, notices and upcoming milestones"]] },
   academic: { title: "Academic administration", focus: "Academic delivery, examination readiness and department-level coordination.", panels: [["Academic pulse","DELIVERY","Programmes, subjects, timetable and academic progress"],["Examination desk","ASSESSMENT","Schedules, marks workflow and result publication stages"],["Department follow-up","ACADEMIC OPERATIONS","Faculty allocation, syllabus and unresolved academic items"]] },
   teaching: { title: "Teaching workspace", focus: "Assigned classes, teaching preparation, attendance and assessment work.", panels: [["My teaching","CLASSES & TIMETABLE","Assigned classes, subjects and next teaching sessions"],["Assessment queue","MARKS & ASSIGNMENTS","Draft marks, submissions, reviews and evaluation tasks"],["Learner follow-up","CLASS SUPPORT","Attendance exceptions, student leave and parent communication"]] },
@@ -162,6 +162,63 @@ export const roleOverrides: Partial<Record<string,RoleContent>> = {
   ACCREDITATION_COORDINATOR_UNIVERSITY: { title:"University accreditation evidence",focus:"Upload accreditation documents and map evidence; this role does not approve evidence items.",metrics:["Evidence items","Documents to upload","Mappings to complete"],panels:[["Evidence register","ACCREDITATION","Evidence items available within university scope"],["Document uploads","EVIDENCE","Upload and organise accreditation documentation"],["Evidence mapping","TRACEABILITY","Map evidence to standards and requirements; approval remains with the authorised role"]] },
   ACCREDITATION_COORDINATOR_COLLEGE: { title:"College accreditation evidence",focus:"Prepare college accreditation items and evidence for authorised review.",metrics:["Evidence items","Documents to upload","Mappings to complete"],panels:[["Evidence register","ACCREDITATION","College evidence items and assigned standards"],["Document uploads","EVIDENCE","Prepare and organise college accreditation documentation"],["Evidence mapping","TRACEABILITY","Map evidence to standards; approval remains with the authorised role"]] },
   APPLICANT: { title:"Application journey",focus:"Submit an application and track the required information and next steps (Phase 2).",metrics:["Application stage","Documents outstanding","Next required step"],panels:[["Application status","ADMISSIONS","Your submitted application and its current stage"],["Documents and details","REQUIREMENTS","Required profile information and supporting documents"],["Next steps","APPLICANT ACTIONS","Submission actions and communications when the admissions module is enabled"]] }
+};
+
+export type QuickAction = { label: string; href: string; description: string };
+
+export const familyQuickActions: Record<DashboardFamily, QuickAction[]> = {
+  platform: [
+    { label: "Tenants", href: "/platform/tenants", description: "Tenant lifecycle and configuration" },
+    { label: "Platform users", href: "/platform/users", description: "Platform team and roles" },
+    { label: "Audit log", href: "/platform/audit", description: "app-level activity log" },
+  ],
+  leadership: [
+    { label: "Institutions", href: "/university/institutions", description: "Institution management" },
+    { label: "Users & roles", href: "/university/users", description: "People and access" },
+    { label: "Staff directory", href: "/university/staff", description: "Staff records and profiles" },
+  ],
+  academic: [
+    { label: "Academic setup", href: "/university/setup/structure", description: "Departments and programmes" },
+    { label: "Staff directory", href: "/university/staff", description: "Faculty and staff records" },
+    { label: "Roles", href: "/university/roles", description: "Role and permission management" },
+  ],
+  teaching: [
+    { label: "Staff directory", href: "/university/staff", description: "Faculty directory" },
+    { label: "Self-service", href: "/self-service", description: "Leave balances and campus notices" },
+    { label: "Profile", href: "/profile", description: "Your account settings" },
+  ],
+  finance: [
+    { label: "Staff directory", href: "/university/staff", description: "Finance team staff records" },
+    { label: "Users & roles", href: "/university/users", description: "People and access" },
+    { label: "Self-service", href: "/self-service", description: "Leave and campus notices" },
+  ],
+  people: [
+    { label: "Staff directory", href: "/university/staff", description: "All staff records" },
+    { label: "Users & roles", href: "/university/users", description: "User lifecycle and access" },
+    { label: "Self-service", href: "/self-service", description: "Leave requests and notices" },
+  ],
+  operations: [
+    { label: "Self-service", href: "/self-service", description: "Leave balances and notices" },
+    { label: "Staff directory", href: "/university/staff", description: "Staff records" },
+    { label: "Profile", href: "/profile", description: "Your account and settings" },
+  ],
+  governance: [
+    { label: "Users & roles", href: "/university/users", description: "Access and identity records" },
+    { label: "Institutions", href: "/university/institutions", description: "Institution management" },
+    { label: "Roles", href: "/university/roles", description: "Role and permission management" },
+  ],
+  student: [
+    { label: "Self-service portal", href: "/self-service", description: "Campus notices and leave" },
+    { label: "Profile", href: "/profile", description: "Your account settings" },
+  ],
+  family: [
+    { label: "Self-service portal", href: "/self-service", description: "Notices and leave requests" },
+    { label: "Profile", href: "/profile", description: "Account settings" },
+  ],
+  admissions: [
+    { label: "Self-service portal", href: "/self-service", description: "Notices and information" },
+    { label: "Profile", href: "/profile", description: "Your account settings" },
+  ],
 };
 
 // Senior oversight/compliance/portfolio roles - a decorative hero banner doesn't fit a pure

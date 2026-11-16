@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.edu360.api.rbac.PermissionDecision;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,6 +34,7 @@ class StaffDirectoryAuthorizationAllowTest {
         UserRoleAssignment active = mock(UserRoleAssignment.class);
         when(active.getScopeType()).thenReturn(ScopeType.TENANT);
         when(permissions.activeAssignment(actor)).thenReturn(Optional.of(active));
+        when(permissions.can(any(), any(), any(), any())).thenReturn(PermissionDecision.allow());
         when(profiles.searchTenantStaff(tenantId, null, null, null, 50)).thenReturn(List.of());
 
         StaffDirectoryService service = new StaffDirectoryService(profiles,

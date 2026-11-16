@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { Icon } from "../../../components/ui/Icon";
 
 export interface DashboardPanelProps {
@@ -17,14 +17,14 @@ export function DashboardPanel({
   children,
 }: DashboardPanelProps) {
   return (
-    <section className="student-panel" id={id}>
-      <header className="student-panel__header">
+    <section className="app-dash-card" id={id}>
+      <header className="app-dash-card__header">
         <div>
-          <p className="student-eyebrow">{eyebrow}</p>
+          <p className="app-eyebrow">{eyebrow}</p>
           <h2>{title}</h2>
         </div>
         {action && (
-          <a className="student-panel__link" href={action.href}>
+          <a className="app-dash-card__link" href={action.href}>
             {action.label}
           </a>
         )}
@@ -36,8 +36,8 @@ export function DashboardPanel({
 
 export function QuietEmpty({ title, description }: { title: string; description: string }) {
   return (
-    <div className="student-empty">
-      <span className="student-empty__mark">
+    <div className="app-empty">
+      <span className="app-empty__mark">
         <Icon name="book" size={20} />
       </span>
       <div>

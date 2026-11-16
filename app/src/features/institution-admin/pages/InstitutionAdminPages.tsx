@@ -10,6 +10,7 @@ import {
   PageHeader,
 } from "../../../design-system/components";
 import { Icon } from "../../../components/ui/Icon";
+import { ErrorState } from "../../../components/feedback/ErrorState";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
 import { InstitutionIdFormatsModal } from "../components/institutions/InstitutionIdFormatsModal";
@@ -55,10 +56,10 @@ function formatCodeLabel(value: string): string {
 
 function TenantContextNotice() {
   return (
-    <div className="eds-error-state" role="alert">
-      <h3 className="eds-error-state__title">Institution context unavailable</h3>
-      <p className="eds-error-state__message">This page requires a signed-in account linked to a tenant. No tenant-scoped request has been sent.</p>
-    </div>
+    <ErrorState
+      title="Institution context unavailable"
+      message="This page requires a signed-in account linked to a tenant. No tenant-scoped request has been sent."
+    />
   );
 }
 
@@ -172,7 +173,7 @@ export function InstitutionsPage() {
   if (!tenantId) return <TenantContextNotice />;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Institutions"
         description="Register colleges and schools within this tenant. New institutions begin as drafts and require executive approval before going live."
@@ -197,26 +198,9 @@ export function InstitutionsPage() {
       />
 
       {!canManageInstitutions && (
-        <div
-          role="status"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--eds-color-info-border, #bfdbfe)",
-            backgroundColor: "var(--eds-color-info-bg, #eff6ff)",
-            color: "var(--eds-color-info-text, #1e40af)",
-            fontSize: "0.875rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-          }}
-        >
-          <span aria-hidden="true">ℹ</span>
-          <span>
-            <strong>Read-only institution register:</strong> Institution creation and executive approvals are restricted to University Administrators. As a {user?.roleName || "College or School Administrator"}, your assigned institutions are listed below.
-          </span>
-        </div>
+        <Notice tone="info" style={{ marginBottom: "var(--space-4)" }}>
+          <strong>Read-only institution register:</strong> Institution creation and executive approvals are restricted to University Administrators. As a {user?.roleName || "College or School Administrator"}, your assigned institutions are listed below.
+        </Notice>
       )}
 
       {goLiveCheckError && (
@@ -226,19 +210,7 @@ export function InstitutionsPage() {
       )}
 
       {goLiveCheck && !goLiveCheck.ready && (
-        <div
-          role="region"
-          aria-label="Go-Live Readiness Warning"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--eds-color-warning-border, #f59e0b)",
-            backgroundColor: "var(--eds-color-warning-bg, #fffbeb)",
-            color: "var(--eds-color-warning-text, #92400e)",
-            fontSize: "0.875rem",
-          }}
-        >
+        <Notice tone="warning" style={{ marginBottom: "var(--space-4)" }}>
           <strong>Go-live readiness warning:</strong>
           <p style={{ margin: "4px 0" }}>
             The following statutory leave approver settings are missing before institutions/tenant can go live:
@@ -252,48 +224,33 @@ export function InstitutionsPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </Notice>
       )}
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <Notice tone={feedback.tone} style={{ marginBottom: "var(--space-4)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>{feedback.message}</span>
           <button
             onClick={() => setFeedback(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold", color: "inherit" }}
+            aria-label="Dismiss"
           >
             ×
           </button>
-        </div>
+        </Notice>
       )}
 
       {error && (
-        <div className="eds-error-state" role="alert" style={{ marginBottom: "var(--space-4)" }}>
-          <h3 className="eds-error-state__title">Unable to load institutions</h3>
-          <p className="eds-error-state__message">{error}</p>
-          <Button onClick={fetchInstitutions} style={{ marginTop: "var(--space-2)" }}>
-            Retry
-          </Button>
-        </div>
+        <ErrorState
+          title="Unable to load institutions"
+          message={error}
+          action={<Button variant="secondary" onClick={() => void fetchInstitutions()}>Retry</Button>}
+        />
       )}
 
       <Panel title="Institution register" description="University scope · Plan limit enforced [WF-14]">
-        <div className="platform-toolbar" style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-          <label className="platform-search" style={{ flex: 1 }}>
+        <div className="app-toolbar" style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+          <label className="app-search" style={{ flex: 1 }}>
             <span aria-hidden="true">
               <Icon name="search" size={17} />
             </span>
@@ -304,7 +261,7 @@ export function InstitutionsPage() {
               placeholder="Search code, name or city"
             />
           </label>
-          <label className="platform-select-label">
+          <label className="app-select-label">
             Status
             <select
               value={statusFilter}
@@ -321,11 +278,11 @@ export function InstitutionsPage() {
         </div>
 
         {loading && institutions.length === 0 ? (
-          <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-muted)" }}>
+          <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-text-muted)" }}>
             Loading institutions...
           </div>
         ) : error ? null : filtered.length === 0 ? (
-          <div className="platform-admin-empty" style={{ padding: "var(--space-6)", textAlign: "center" }}>
+          <div className="app-admin-empty" style={{ padding: "var(--space-6)", textAlign: "center" }}>
             <span aria-hidden="true">
               <Icon name="shield" size={24} />
             </span>
@@ -334,13 +291,13 @@ export function InstitutionsPage() {
                 ? "No institutions match the filter criteria."
                 : "No institutions registered yet in this tenant."}
             </strong>
-            <p style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+            <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
               Click “Register institution (Draft)” to add your first college or school.
             </p>
           </div>
         ) : (
-          <div className="platform-table-wrap">
-            <table className="platform-table">
+          <div className="app-table-wrap">
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>Code</th>
@@ -364,7 +321,7 @@ export function InstitutionsPage() {
                           style={{
                             display: "block",
                             fontSize: "0.75rem",
-                            color: "var(--color-muted)",
+                            color: "var(--color-text-muted)",
                           }}
                         >
                           External university mode
@@ -378,7 +335,7 @@ export function InstitutionsPage() {
                     </td>
                     <td>
                       {!canManageInstitutions ? (
-                        <span style={{ fontSize: "0.8125rem", color: "var(--color-muted)" }}>
+                        <span style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
                           {institution.status === "ACTIVE" ? "Active" : institution.status}
                         </span>
                       ) : (
@@ -423,7 +380,7 @@ export function InstitutionsPage() {
                             Review Block Decision
                           </Button>
                           {institution.status !== "DRAFT" && institution.status !== "ACTIVE" && (
-                            <span style={{ fontSize: "0.8125rem", color: "var(--color-muted)" }}>
+                            <span style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
                               {institution.status}
                             </span>
                           )}
@@ -523,60 +480,16 @@ export function InstitutionsPage() {
 }
 
 export function InstitutionUsersPage() {
-  const [query, setQuery] = useState("");
-  const [kind, setKind] = useState("All");
-  const emptyMessage =
-    query || kind !== "All"
-      ? "No Northbridge University users match these filters."
-      : "No Northbridge University user records are loaded in this prototype view.";
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Users & roles"
         description="Create institution profiles, assign roles and link guardians. Profile creation and role assignment are separate steps."
-        actions={
-          <Button disabled title="User management API is not connected">
-            Create user
-          </Button>
-        }
       />
-      <Panel
-        title="User register"
-        description="University scope · the current prototype does not supply university user rows."
-      >
-        <div className="platform-toolbar">
-          <label className="platform-search">
-            <span aria-hidden="true">
-              <Icon name="search" size={17} />
-            </span>
-            <span className="visually-hidden">Search</span>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, ID or email"
-            />
-          </label>
-          <label className="platform-select-label">
-            Profile type{" "}
-            <select value={kind} onChange={(e) => setKind(e.target.value)}>
-              <option>All</option>
-              <option>Student</option>
-              <option>Teacher</option>
-              <option>Parent</option>
-            </select>
-          </label>
-        </div>
-        <div className="platform-admin-empty">
-          <span aria-hidden="true">
-            <Icon name="users" size={19} />
-          </span>
-          <strong>{emptyMessage}</strong>
-          <p>
-            When institution records are connected, this register will show only people within the
-            selected university scope.
-          </p>
-        </div>
-      </Panel>
+      <ErrorState
+        title="Not yet available"
+        message="University-scope user management is not connected in this version. Use the tenant-wide Users & Roles screen to manage user accounts."
+      />
     </div>
   );
 }
@@ -636,7 +549,7 @@ export function RolesPermissionsPage() {
   if (!tenantId) return <TenantContextNotice />;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Roles & permissions"
         description="Review standard roles and their permission scope. Standard roles are read-only; custom roles can be managed by authorized administrators."
@@ -648,46 +561,33 @@ export function RolesPermissionsPage() {
       />
 
       {feedback && (
-        <div
-          role="alert"
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            marginBottom: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: `1px solid var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-border, #e0e0e0)`,
-            backgroundColor: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-bg, #f9f9f9)`,
-            color: `var(--eds-color-${feedback.tone === "danger" ? "danger" : "success"}-text, #333)`,
-            fontSize: "0.875rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <Notice tone={feedback.tone} style={{ marginBottom: "var(--space-4)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>{feedback.message}</span>
           <button
             onClick={() => setFeedback(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "bold", color: "inherit" }}
+            aria-label="Dismiss"
           >
             ×
           </button>
-        </div>
+        </Notice>
       )}
 
       <Panel
         title="Role catalogue"
         description="Roles returned by the tenant role catalogue. Standard roles are system-defined; custom roles are tenant-managed."
       >
-        {loading && <p className="platform-empty-note" role="status">Loading roles from catalogue...</p>}
+        {loading && <p className="app-empty-note" role="status">Loading roles from catalogue...</p>}
         {loadError && !loading && (
           <Notice tone="danger">
             {loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRoles()}>Retry</Button>
           </Notice>
         )}
         {!loading && !loadError && roles.length === 0 && (
-          <p className="platform-empty-note">No roles were returned by the tenant role catalogue.</p>
+          <p className="app-empty-note">No roles were returned by the tenant role catalogue.</p>
         )}
-        <div className="platform-toolbar">
-          <label className="platform-search">
+        <div className="app-toolbar">
+          <label className="app-search">
             <span aria-hidden="true">
               <Icon name="search" size={17} />
             </span>
@@ -699,8 +599,8 @@ export function RolesPermissionsPage() {
             />
           </label>
         </div>
-        {!loading && !loadError && roles.length > 0 && <div className="platform-table-wrap">
-          <table className="platform-table">
+        {!loading && !loadError && roles.length > 0 && <div className="app-table-wrap">
+          <table className="app-table">
             <thead>
               <tr>
                 <th>Role</th>
@@ -739,7 +639,7 @@ export function RolesPermissionsPage() {
                         Retire
                       </Button>
                     ) : (
-                      <span style={{ fontSize: "0.8rem", color: "var(--color-muted)" }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
                         {role.type === "Standard" ? "Read-only" : "Retired"}
                       </span>
                     )}
@@ -783,7 +683,7 @@ export function RolesPermissionsPage() {
         }}
       />
 
-      <div className="platform-policy-callout">
+      <div className="app-callout">
         <span aria-hidden="true">
           <Icon name="info" size={15} />
         </span>
@@ -850,7 +750,7 @@ export function MissingRolesPage() {
   if (!tenantId) return <TenantContextNotice />;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Role coverage"
         description="See which roles take responsibility when an institution role has no active holder."
@@ -861,14 +761,14 @@ export function MissingRolesPage() {
 
       {feedback && (
         <Notice tone={feedback.tone}>
-          <div className="platform-feedback-row">
+          <div className="app-feedback-row">
             <span>{feedback.message}</span>
             <Button variant="tertiary" size="sm" onClick={() => setFeedback(null)}>Dismiss</Button>
           </div>
         </Notice>
       )}
 
-      <div className="platform-policy-callout">
+      <div className="app-callout">
         <span aria-hidden="true"><Icon name="info" size={15} /></span>
         <div>
           <strong>How role coverage works</strong>
@@ -890,7 +790,7 @@ export function MissingRolesPage() {
         title="Role coverage by institution level"
         description="Default stand-in roles used when a role has no active holder."
       >
-        {loading && <p className="platform-empty-note" role="status">Loading role coverage rules…</p>}
+        {loading && <p className="app-empty-note" role="status">Loading role coverage rules…</p>}
         {!loading && !loadError && entries.length === 0 && (
           <EmptyState
             icon="shield"
@@ -899,8 +799,8 @@ export function MissingRolesPage() {
           />
         )}
         {!loading && !loadError && entries.length > 0 && (
-          <div className="platform-table-wrap">
-            <table className="platform-table">
+          <div className="app-table-wrap">
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>Missing role</th>
@@ -977,7 +877,7 @@ export function MissingRolesPage() {
         title="Default role coverage rules"
         description="Policy summary. Live role-holder assignments are not included in this view."
       >
-        <div className="platform-roll-grid">
+        <div className="app-roll-grid">
           <article>
             <Kicker>APPROVALS</Kicker>
             <h3>Next-level leader</h3>
@@ -991,7 +891,7 @@ export function MissingRolesPage() {
         </div>
       </Panel>
       <Panel title="Rules that cannot be overridden">
-        <ul className="platform-rule-list">
+        <ul className="app-rule-list">
           <li>Nobody approves their own request.</li>
           <li>A preparer never approves their own work.</li>
           <li>Students, parents, applicants and platform staff never act for an institution role.</li>

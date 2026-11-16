@@ -7,6 +7,7 @@ import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
 import { FileDrop } from "../../../components/common/FileDrop";
+import { CreatedCredentialsModal, type ProvisionedUserCredentials } from "../../user-management/components/users/CreatedCredentialsModal";
 import {
   staffService, type StaffAssignment, type StaffDocument, type StaffProfile,
   type StaffProfilePayload, type StaffServiceRecord,
@@ -65,6 +66,7 @@ export default function StaffRecordsPage() {
     effectiveOn: today(), details: "",
   });
   const [savingService, setSavingService] = useState(false);
+  const [newStaffCreds, setNewStaffCreds] = useState<ProvisionedUserCredentials | null>(null);
 
   const loadDirectory = useCallback(async (search: string) => {
     if (!tenantId) return;
@@ -136,7 +138,14 @@ export default function StaffRecordsPage() {
       await loadDirectory("");
       setSelected(created.staff);
       await loadProfile(created.staff.id);
-      setFeedback({ tone: "success", message: `Staff account created for ${created.login.email}. One-time temporary password: ${created.login.temporaryPassword}. Share it securely with the staff member. ${created.personalEmailVerificationRequired ? "Personal email is saved as a secondary login but remains disabled until ownership verification is implemented." : ""} ${created.login.initialRole ? `Initial role: ${created.login.initialRole}.` : "No role was assigned; assign a staff role before granting application access."}` });
+      setNewStaffCreds({
+        displayName: created.staff.fullName,
+        email: created.login.email,
+        temporaryPassword: created.login.temporaryPassword,
+        message: created.login.initialRole
+          ? `Initial role: ${created.login.initialRole}.`
+          : "No role was assigned — assign a staff role before granting application access.",
+      });
     } catch (error) {
       setCreateError(getApiErrorMessage(error));
     } finally { setCreating(false); }
@@ -236,22 +245,22 @@ export default function StaffRecordsPage() {
     finally { setSavingService(false); }
   };
 
-  if (!tenantId) return <div className="platform-page"><PageHeader title="Staff records" description="Staff profiles and institution assignments." /><ErrorState title="Tenant context unavailable" message="Sign in with an institution account to access staff records." /></div>;
+  if (!tenantId) return <div className="app-page"><PageHeader title="Staff records" description="Staff profiles and institution assignments." /><ErrorState title="Tenant context unavailable" message="Sign in with an institution account to access staff records." /></div>;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader title="Staff records" description="Manage staff profiles, institution assignments, service history and verified documents."
         actions={canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : null} />
       {feedback && <Notice tone={feedback.tone}>{feedback.message}</Notice>}
-      <div className="platform-two-col staff-records-layout">
+      <div className="app-two-col staff-records-layout">
         <Panel title="Staff directory" description="Results are limited to the active role scope.">
-          <div className="platform-toolbar">
+          <div className="app-toolbar">
             <SearchBox value={query} onChange={setQuery} placeholder="Search staff name or code" />
             <Button variant="secondary" size="sm" onClick={() => { setDirectoryPage(1); void loadDirectory(query); }} busy={state === "loading"}>Search</Button>
           </div>
           {state === "loading" && <Spinner label="Loading staff directory" />}
           {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
-          {state === "loaded" && staff.length === 0 && <div className="staff-directory-empty">
+          {state === "loaded" && staff.length === 0 && <div className="">
             <EmptyState title={query ? "No matching staff records" : "Your staff directory is empty"}
               description={query ? "Try a different name or staff code, or clear your search." : "Staff profiles within your active role scope will appear here. Create the first staff profile to begin building the directory."}
               icon="users"
@@ -259,9 +268,9 @@ export default function StaffRecordsPage() {
           </div>}
           {state === "loaded" && staff.length > 0 && (
             <>
-              <div className="staff-directory-summary">
+              <div className="app-list-summary">
                 <span><strong>{staff.length}</strong> staff {staff.length === 1 ? "record" : "records"}</span>
-                <label>Rows per page{" "}
+                <label className="app-pagination__size">Rows per page{" "}
                   <select value={directoryPageSize} onChange={(event) => { setDirectoryPageSize(Number(event.target.value)); setDirectoryPage(1); }}>
                     {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
                   </select>
@@ -272,7 +281,7 @@ export default function StaffRecordsPage() {
                   <div key={person.id} role="listitem">
                     <button type="button"
                       aria-pressed={selected?.id === person.id}
-                      className={`staff-record-list__item ${selected?.id === person.id ? "is-selected" : ""}`}
+                      className={`app-record-item ${selected?.id === person.id ? "is-selected" : ""}`}
                       onClick={() => { setSelected(person); void loadProfile(person.id); }}>
                       <span className="staff-record-list__copy"><strong>{person.fullName}</strong><small>{person.staffCode} · {humanize(person.employmentStatus)}</small></span>
                       <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>{humanize(person.employmentStatus)}</Badge>
@@ -280,7 +289,7 @@ export default function StaffRecordsPage() {
                   </div>
                 ))}
               </div>
-              {staff.length > directoryPageSize && <nav className="staff-directory-pagination" aria-label="Staff directory pagination">
+              {staff.length > directoryPageSize && <nav className="app-pagination" aria-label="Staff directory pagination">
                 <span>Page {directoryPage} of {Math.ceil(staff.length / directoryPageSize)}</span>
                 <div>
                   <Button size="sm" variant="secondary" disabled={directoryPage <= 1} onClick={() => setDirectoryPage((page) => Math.max(1, page - 1))}>Previous</Button>
@@ -289,7 +298,7 @@ export default function StaffRecordsPage() {
               </nav>}
             </>
           )}
-          <div className="platform-inline-actions"><Button size="sm" variant="tertiary" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh directory</Button></div>
+          <div className="app-inline-actions"><Button size="sm" variant="tertiary" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh directory</Button></div>
         </Panel>
 
         <div className="staff-record-detail">
@@ -299,8 +308,8 @@ export default function StaffRecordsPage() {
           {selected && !detailLoading && !detailError && (
             <>
               <Panel title={selected.fullName} description={`${selected.staffCode} · ${humanize(selected.employmentStatus)}`}>
-                {profileDraft && <form onSubmit={saveProfile} className="platform-form">
-                  <div className="platform-form-grid">
+                {profileDraft && <form onSubmit={saveProfile} className="app-form">
+                  <div className="app-form-grid">
                     <TextField id="staff-edit-code" label="Staff code" value={profileDraft.staffCode ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, staffCode: e.target.value })} disabled={!canManage} />
                     <TextField id="staff-edit-name" label="Full name" required value={profileDraft.fullName ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, fullName: e.target.value })} disabled={!canManage} />
                     <TextField id="staff-edit-email" label="Personal email" type="email" value={profileDraft.personalEmail ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, personalEmail: e.target.value })} disabled={!canManage} />
@@ -312,8 +321,8 @@ export default function StaffRecordsPage() {
                     <DateField id="staff-edit-joined" label="Joined on" value={profileDraft.joinedOn ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, joinedOn: e.target.value })} disabled={!canManage} />
                     <DateField id="staff-edit-left" label="Left on" value={profileDraft.leftOn ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, leftOn: e.target.value })} disabled={!canManage} />
                   </div>
-                  {canManage && <div className="platform-inline-actions"><Button type="submit" busy={savingProfile}>Save profile</Button></div>}
-                  <p className="platform-modal-note">Updates use the server version tag. Reload before saving if another administrator changed this record.</p>
+                  {canManage && <div className="app-inline-actions"><Button type="submit" busy={savingProfile}>Save profile</Button></div>}
+                  <p className="app-note">Updates use the server version tag. Reload before saving if another administrator changed this record.</p>
                 </form>}
               </Panel>
 
@@ -323,14 +332,14 @@ export default function StaffRecordsPage() {
                     {assignments.map((item) => <tr key={item.id}><td>{item.designation}</td><td><code>{item.institutionId ?? "Tenant-wide"}</code></td><td><code>{item.departmentId ?? "—"}</code></td><td>{item.effectiveFrom}</td><td><Badge tone={item.status === "ACTIVE" ? "success" : "neutral"}>{humanize(item.status)}</Badge></td></tr>)}
                   </DataTable>
                 )}
-                {canManage && <form onSubmit={addAssignment} className="platform-form staff-form-divider">
-                  <div className="platform-form-grid">
+                {canManage && <form onSubmit={addAssignment} className="app-form app-form-divider">
+                  <div className="app-form-grid">
                     <TextField id="staff-inst-id" label="Institution ID (optional)" value={assignmentDraft.institutionId} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, institutionId: e.target.value })} />
                     <TextField id="staff-dept-id" label="Department ID (optional)" value={assignmentDraft.departmentId} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, departmentId: e.target.value })} />
                     <TextField id="staff-designation" label="Designation" required value={assignmentDraft.designation} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, designation: e.target.value })} />
                     <DateField id="staff-assignment-start" label="Effective from" required value={assignmentDraft.effectiveFrom} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, effectiveFrom: e.target.value })} />
                   </div>
-                  <div className="platform-inline-actions"><Button type="submit" variant="secondary" busy={savingAssignment}>Add assignment</Button></div>
+                  <div className="app-inline-actions"><Button type="submit" variant="secondary" busy={savingAssignment}>Add assignment</Button></div>
                 </form>}
               </Panel>
 
@@ -340,7 +349,7 @@ export default function StaffRecordsPage() {
                     {documents.map((doc) => <tr key={doc.id}>
                       <td>{humanize(doc.documentType)}</td><td><code>{doc.fileId}</code></td><td>{humanize(doc.verificationStatus)}</td>
                       <td>{canVerify && doc.verificationStatus === "UPLOADED" && doc.createdBy !== userId ? (
-                        <span className="staff-document-actions">
+                        <span className="app-action-group">
                           <Button size="sm" variant="secondary" disabled={verifyingId === doc.id} onClick={() => void verifyDocument(doc, "VERIFIED")}>Verify</Button>
                           <Button size="sm" variant="tertiary" disabled={verifyingId === doc.id} onClick={() => void verifyDocument(doc, "REJECTED")}>Reject</Button>
                         </span>
@@ -348,12 +357,12 @@ export default function StaffRecordsPage() {
                     </tr>)}
                   </DataTable>
                 )}
-                {canManage && <form onSubmit={uploadDocument} className="platform-form staff-form-divider">
-                  <div className="platform-form-grid">
+                {canManage && <form onSubmit={uploadDocument} className="app-form app-form-divider">
+                  <div className="app-form-grid">
                     <SelectField id="staff-doc-type" label="Document type" value={documentType} onChange={(e) => setDocumentType(e.target.value)} options={[{ value: "DEGREE", label: "Degree certificate" }, { value: "ID_PROOF", label: "Identity proof" }, { value: "OTHER", label: "Other" }]} />
                     <FileDrop label="Choose file" onFile={setDocumentFile} accept=".pdf,.png,.jpg,.jpeg" maxBytes={10_485_760} />
                   </div>
-                  <div className="platform-inline-actions"><Button type="submit" variant="secondary" busy={uploading} disabled={!documentFile}>Upload and attach</Button></div>
+                  <div className="app-inline-actions"><Button type="submit" variant="secondary" busy={uploading} disabled={!documentFile}>Upload and attach</Button></div>
                 </form>}
                 {canVerify && documents.some((doc) => doc.verificationStatus === "UPLOADED" && doc.createdBy !== userId) && <TextField id="staff-doc-remark" label="Verification note (optional)" value={verifyRemark} onChange={(e) => setVerifyRemark(e.target.value)} />}
               </Panel>
@@ -364,13 +373,13 @@ export default function StaffRecordsPage() {
                     {records.map((record) => <tr key={record.id}><td>{humanize(record.eventType)}</td><td>{record.effectiveOn}</td><td>{record.details}</td></tr>)}
                   </DataTable>
                 )}
-                {canManage && <form onSubmit={addServiceRecord} className="platform-form staff-form-divider">
-                  <div className="platform-form-grid">
+                {canManage && <form onSubmit={addServiceRecord} className="app-form app-form-divider">
+                  <div className="app-form-grid">
                     <SelectField id="staff-service-event" label="Event type" value={serviceDraft.eventType} onChange={(e) => setServiceDraft({ ...serviceDraft, eventType: e.target.value as typeof serviceDraft.eventType })} options={EVENT_OPTIONS} />
                     <DateField id="staff-service-date" label="Effective date" required value={serviceDraft.effectiveOn} onChange={(e) => setServiceDraft({ ...serviceDraft, effectiveOn: e.target.value })} />
                   </div>
                   <TextAreaField id="staff-service-details" label="Details" required rows={3} value={serviceDraft.details} onChange={(e) => setServiceDraft({ ...serviceDraft, details: e.target.value })} />
-                  <div className="platform-inline-actions"><Button type="submit" variant="secondary" busy={savingService}>Add service record</Button></div>
+                  <div className="app-inline-actions"><Button type="submit" variant="secondary" busy={savingService}>Add service record</Button></div>
                 </form>}
               </Panel>
             </>
@@ -378,10 +387,19 @@ export default function StaffRecordsPage() {
         </div>
       </div>
 
+      <CreatedCredentialsModal
+        isOpen={!!newStaffCreds}
+        user={newStaffCreds ?? { displayName: "" }}
+        onClose={() => setNewStaffCreds(null)}
+        kicker="STAFF ACCOUNT CREATED"
+        title="Staff account provisioned"
+        description="Share this temporary password securely with the staff member. It will only be shown once."
+      />
+
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Add staff member" kicker="STAFF RECORDS" description="Create a staff profile, then add its institution or department assignment." size="lg">
-        <form onSubmit={createStaff} className="platform-form">
+        <form onSubmit={createStaff} className="app-form">
           {createError && <Notice tone="danger">{createError}</Notice>}
-          <div className="platform-form-grid">
+          <div className="app-form-grid">
             <TextField id="new-staff-full-name" label="Full name" required value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} />
             <TextField id="new-staff-code" label="Staff code (optional)" value={draft.staffCode ?? ""} onChange={(e) => setDraft({ ...draft, staffCode: e.target.value })} />
             <TextField id="new-staff-official-email" label="Official email (login)" type="email" required value={draft.officialEmail ?? ""} onChange={(e) => setDraft({ ...draft, officialEmail: e.target.value })} />
@@ -392,7 +410,7 @@ export default function StaffRecordsPage() {
             <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\\D/g, "") })} />
             <DateField id="new-staff-joined-on" label="Joined on" value={draft.joinedOn ?? ""} onChange={(e) => setDraft({ ...draft, joinedOn: e.target.value })} />
           </div>
-          <footer className="platform-modal__footer">
+          <footer className="app-modal__footer">
             <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
             <Button type="submit" busy={creating}>Create staff account and profile</Button>
           </footer>

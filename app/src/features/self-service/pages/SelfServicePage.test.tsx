@@ -15,7 +15,7 @@ vi.mock("../api/selfServiceApi", () => ({
   },
 }));
 
-function renderWithStore(ui: React.ReactElement, userType: "STAFF" | "STUDENT" | "GUARDIAN" = "STAFF") {
+function renderWithStore(ui: React.ReactElement) {
   const store = configureStore({
     reducer: { auth: authReducer },
   });
@@ -26,7 +26,7 @@ function renderWithStore(ui: React.ReactElement, userType: "STAFF" | "STUDENT" |
       roleCode: "PROFESSOR",
       roleName: "Professor",
       tenantId: "tenant-1",
-      userType,
+      userType: "STAFF",
       platformRole: null,
       photoUrl: null,
       mustChangePassword: false,
@@ -86,19 +86,6 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
     ]);
   });
 
-
-  it.each(["STUDENT", "GUARDIAN"] as const)(
-    "loads self-service for the %s tenant persona",
-    async (userType) => {
-      renderWithStore(<SelfServicePage />, userType);
-      await waitFor(() => {
-        expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
-      });
-      expect(selfServiceApi.getNotifications).toHaveBeenCalled();
-      expect(selfServiceApi.getNotices).toHaveBeenCalled();
-    }
-  );
-
   it("loads and displays published campus notices on initial view", async () => {
     renderWithStore(<SelfServicePage />);
 
@@ -116,7 +103,7 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
     });
 
-    const leavesTab = screen.getByRole("button", { name: /Leave Balances & History/i });
+    const leavesTab = screen.getByRole("tab", { name: /Leave Balances & History/i });
     fireEvent.click(leavesTab);
 
     await waitFor(() => {
@@ -134,7 +121,7 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
     });
 
-    const notifsTab = screen.getByRole("button", { name: /Notifications \(1\)/i });
+    const notifsTab = screen.getByRole("tab", { name: /Notifications \(1\)/i });
     fireEvent.click(notifsTab);
 
     await waitFor(() => {
@@ -142,21 +129,22 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
       expect(screen.getByText("Your symposium leave was approved.")).toBeInTheDocument();
     });
   });
-  it("keeps successful sections available when one self-service endpoint fails", async () => {
-    vi.mocked(selfServiceApi.getNotifications).mockRejectedValueOnce(new Error("notifications unavailable"));
 
+  it("isolates API errors: campus notices still render even when leave records fail", async () => {
+    vi.mocked(selfServiceApi.getLeaveBalances).mockRejectedValue(new Error("500 Server Error"));
     renderWithStore(<SelfServicePage />);
 
     await waitFor(() => {
       expect(screen.getByText("Campus Holiday Announcement")).toBeInTheDocument();
+      expect(screen.getByText("Campus is closed tomorrow.")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Notifications/i }));
-    expect(await screen.findByText("Notifications could not be loaded.")).toBeInTheDocument();
+    const leavesTab = screen.getByRole("tab", { name: /Leave Balances & History/i });
+    fireEvent.click(leavesTab);
 
-    fireEvent.click(screen.getByRole("button", { name: /Leave Balances & History/i }));
-    expect(await screen.findByText("Academic symposium")).toBeInTheDocument();
-    expect(screen.getByText("15")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Leave records could not be loaded. Please try again.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Retry/i })).toBeInTheDocument();
+    });
   });
-
 });

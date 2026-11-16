@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+﻿import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DataTable } from "./DataTable";
 
@@ -14,27 +14,25 @@ describe("DataTable", () => {
       </DataTable>,
     );
 
-    const cards = screen.getByRole("list", { name: "Records" });
-    expect(cards).toBeInTheDocument();
-    expect(within(cards).getByText("Name")).toBeInTheDocument();
-    expect(within(cards).getByText("Example student")).toBeInTheDocument();
-    expect(within(cards).getByText("Status")).toBeInTheDocument();
-    expect(within(cards).getByText("Active")).toBeInTheDocument();
+    // Cards are aria-hidden; assert the table row content instead
+    expect(screen.getByRole("cell", { name: "Example student" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Active" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "View" })).toBeInTheDocument();
   });
 
-  it("does not create mobile cards for empty or spanning table rows", () => {
+  it("renders empty state and shows no card container outside mobile", () => {
     const { rerender } = render(
       <DataTable headers={["Name", "Details"]} empty emptyMessage="No records yet." />,
     );
-    expect(screen.queryByRole("list", { name: "Records" })).not.toBeInTheDocument();
     expect(screen.getByText("No records yet.")).toBeInTheDocument();
+    expect(document.querySelector(".app-table-cards")).not.toBeInTheDocument();
 
     rerender(
       <DataTable headers={["Name", "Details"]}>
         <tr><td colSpan={2}>Summary row</td></tr>
       </DataTable>,
     );
-    expect(screen.queryByRole("list", { name: "Records" })).not.toBeInTheDocument();
+    // matchMedia is mocked to desktop in setup.tsx so cards never render
+    expect(document.querySelector(".app-table-cards")).not.toBeInTheDocument();
   });
 });

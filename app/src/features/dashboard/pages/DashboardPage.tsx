@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useAppSelector } from "../../../store/hooks";
 import { roleDashboardByCode } from "../../role-previews/roleDashboardCatalog";
 import {
@@ -21,7 +21,7 @@ export default function DashboardPage() {
   }
 
   if (user?.userType === "GUARDIAN") {
-    return <div className="platform-page">
+    return <div className="app-page">
       <PageHeader title="Parent dashboard" description="Choose a child linked to your account. Only linked student code and status are currently available; academic information is not yet available here." />
       <GuardianChildSwitcher value={selectedChildId} onChange={setSelectedChildId} />
     </div>;

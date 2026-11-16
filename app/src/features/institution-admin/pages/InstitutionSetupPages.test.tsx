@@ -90,8 +90,8 @@ describe("Institution setup action screens", () => {
   it("keeps the HOD action disabled until a department and person are selected", () => {
     renderWithTenant(<HodAssignmentPage />);
     expect(screen.getByRole("button", { name: /assign hod/i })).toBeDisabled();
-    expect(screen.getByLabelText("Department")).toBeInTheDocument();
-    expect(screen.getByLabelText("New HOD")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Department/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/New HOD/i)).toBeInTheDocument();
     expect(api.put).not.toHaveBeenCalled();
   });
 
@@ -109,9 +109,9 @@ describe("Institution setup action screens", () => {
     });
     renderWithTenant(<HodAssignmentPage />);
     await screen.findByRole("option", { name: "Computer Science" });
-    fireEvent.change(screen.getByLabelText("Department"), { target: { value: DEPT_ID } });
+    fireEvent.change(screen.getByLabelText(/Department/i), { target: { value: DEPT_ID } });
     await screen.findByRole("option", { name: /Asha Rao/ });
-    fireEvent.change(screen.getByLabelText("New HOD"), { target: { value: STAFF_ASSIGNMENT_ID } });
+    fireEvent.change(screen.getByLabelText(/New HOD/i), { target: { value: STAFF_ASSIGNMENT_ID } });
     fireEvent.click(screen.getByRole("button", { name: /assign hod/i }));
 
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`, {
@@ -138,20 +138,20 @@ describe("Institution setup action screens", () => {
     });
     renderWithTenant(<MentorAssignmentPage />, TENANT_ID, "HEAD_OF_DEPARTMENT");
     await screen.findByRole("option", { name: "CSE-A" });
-    fireEvent.change(screen.getByLabelText("Section"), { target: { value: SECTION_ID } });
+    fireEvent.change(screen.getByLabelText(/Section/i), { target: { value: SECTION_ID } });
     await screen.findByRole("option", { name: /Asha Rao/ });
-    fireEvent.change(screen.getByLabelText("New mentor"), { target: { value: STAFF_ASSIGNMENT_ID } });
+    fireEvent.change(screen.getByLabelText(/New mentor/i), { target: { value: STAFF_ASSIGNMENT_ID } });
     fireEvent.click(screen.getByRole("button", { name: /assign mentor/i }));
 
     expect(await screen.findByText("Permission denied")).toBeInTheDocument();
-    expect(await screen.findByText(/Not authorized for MENTOR_ASSIGN/i)).toBeInTheDocument();
+    expect(await screen.findByText(/do not have permission/i)).toBeInTheDocument();
   });
 
   it("uses scoped section and person pickers for CLASS_TEACHER_ASSIGN", () => {
     renderWithTenant(<ClassTeacherAssignmentPage />, TENANT_ID, "SCHOOL_ADMIN");
     expect(screen.getByText(/This assigns a section, not a class/i)).toBeInTheDocument();
-    expect(screen.getByLabelText("Section")).toBeInTheDocument();
-    expect(screen.getByLabelText("New Class Teacher")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Section/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/New Class Teacher/i)).toBeInTheDocument();
   });
 
   it("sends the enabled flag for STUDENT_LOGIN_SWITCH", async () => {

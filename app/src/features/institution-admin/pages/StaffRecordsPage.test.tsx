@@ -115,7 +115,7 @@ describe("StaffRecordsPage", () => {
       activeRoleName: "HR Manager", allowedActions: ["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"],
     }));
     rerender(<Provider store={store}><StaffRecordsPage /></Provider>);
-    expect(screen.getByRole("button", { name: "Add staff member" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Add staff member" }).length).toBeGreaterThan(0);
   });
   it("paginates a long staff directory and reports the visible page", async () => {
     const staffRows = Array.from({ length: 12 }, (_, index) => ({

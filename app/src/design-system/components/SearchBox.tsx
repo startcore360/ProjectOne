@@ -1,4 +1,4 @@
-import { Icon } from "../../components/ui/Icon";
+﻿import { Icon } from "../../components/ui/Icon";
 
 export interface SearchBoxProps {
   value: string;
@@ -14,7 +14,7 @@ export function SearchBox({
   className = "",
 }: SearchBoxProps) {
   return (
-    <label className={`platform-search ${className}`.trim()}>
+    <label className={`app-search ${className}`.trim()}>
       <span aria-hidden="true">
         <Icon name="search" size={17} />
       </span>

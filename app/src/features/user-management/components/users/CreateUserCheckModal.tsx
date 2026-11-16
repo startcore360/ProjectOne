@@ -47,7 +47,7 @@ export function CreateUserCheckModal({ tenantId, isOpen, onClose }: CreateUserCh
             </Notice>
           </div>
         )}
-        <div className="platform-modal-note" style={{ marginTop: "12px" }}>
+        <div className="app-note" style={{ marginTop: "12px" }}>
           No account is created by this dialog, regardless of the result shown above.
         </div>
         <footer style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>

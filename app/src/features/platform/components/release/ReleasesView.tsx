@@ -1,15 +1,19 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
   DataTable,
   MetricCard,
+  Modal,
   Notice,
   Panel,
   SearchBox,
   StatusBadge,
+  TextAreaField,
+  TextField,
 } from "../../../../design-system/components";
 import { Spinner } from "../../../../components/ui";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   platformOpsService,
   type ReleaseItem,
@@ -69,7 +73,7 @@ export function ReleasesView() {
       await platformOpsService.createRelease(createDraft);
       setMessage(`Release ${createDraft.versionLabel} created.`);
       setShowCreate(false);
-      loadReleases();
+      void loadReleases();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create release");
     } finally {
@@ -81,7 +85,7 @@ export function ReleasesView() {
     try {
       await platformOpsService.transitionRelease(releaseId, targetStatus);
       setMessage(`Release ${versionLabel} transitioned to ${targetStatus}.`);
-      loadReleases();
+      void loadReleases();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to transition release");
     }
@@ -107,7 +111,7 @@ export function ReleasesView() {
       });
       setMessage(`Release ${editingRelease.versionLabel} updated successfully.`);
       setEditingRelease(null);
-      loadReleases();
+      void loadReleases();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update release");
     } finally {
@@ -126,7 +130,7 @@ export function ReleasesView() {
   const stagingCount = releases.filter((r) => r.status === "STAGING_TESTED").length;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Releases & Deployments"
         description="Version governance, database schema upgrades, staging validation, rollout deployment and hotfix tagging."
@@ -138,7 +142,7 @@ export function ReleasesView() {
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error && <ErrorState message={error} action={<Button variant="secondary" onClick={() => void loadReleases()}>Retry</Button>} />}
 
       <div className="kpi-grid">
         <MetricCard
@@ -153,7 +157,7 @@ export function ReleasesView() {
       </div>
 
       <Panel title="Platform Releases" description="All tracked application and database versions">
-        <div className="platform-toolbar" style={{ marginBottom: "16px" }}>
+        <div className="app-toolbar" style={{ marginBottom: "16px" }}>
           <SearchBox
             value={query}
             onChange={(val) => setQuery(val)}
@@ -162,11 +166,11 @@ export function ReleasesView() {
         </div>
 
         {loading ? (
-          <div className="platform-empty-inline">
+          <div className="app-empty-inline">
             <Spinner label="Loading releases..." />
           </div>
         ) : filteredReleases.length === 0 ? (
-          <p className="platform-empty-inline">No releases recorded yet.</p>
+          <p className="app-empty-inline">No releases recorded yet.</p>
         ) : (
           <DataTable headers={["Version", "Schema Migration", "Notes", "Status", "Actions"]}>
             {filteredReleases.map((r) => (
@@ -178,7 +182,7 @@ export function ReleasesView() {
                       [HOTFIX]
                     </span>
                   )}
-                  <small className="platform-cell-sub">
+                  <small className="app-cell-sub">
                     Created {new Date(r.createdAt).toLocaleDateString()}
                   </small>
                 </td>
@@ -224,118 +228,105 @@ export function ReleasesView() {
       </Panel>
 
       {/* Create Release Modal */}
-      {showCreate && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Create Release">
-            <header>
-              <h2>Create Platform Release</h2>
-              <p>Register a packaged system artifact and target database schema version.</p>
-            </header>
-            <form onSubmit={handleCreate}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Version Label</span>
-                  <input
-                    type="text"
-                    className="platform-input"
-                    value={createDraft.versionLabel}
-                    onChange={(e) => setCreateDraft({ ...createDraft, versionLabel: e.target.value })}
-                    required
-                  />
-                </label>
-                <label className="field-label">
-                  <span>Database Schema Version</span>
-                  <input
-                    type="text"
-                    className="platform-input"
-                    value={createDraft.schemaVersion}
-                    onChange={(e) => setCreateDraft({ ...createDraft, schemaVersion: e.target.value })}
-                    required
-                  />
-                </label>
-                <label className="field-label">
-                  <span>Release Notes</span>
-                  <textarea
-                    className="platform-input"
-                    rows={4}
-                    value={createDraft.releaseNotes}
-                    onChange={(e) => setCreateDraft({ ...createDraft, releaseNotes: e.target.value })}
-                    required
-                  />
-                </label>
-                <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={createDraft.isHotfix}
-                    onChange={(e) => setCreateDraft({ ...createDraft, isHotfix: e.target.checked })}
-                  />
-                  <span>Mark as Emergency Hotfix</span>
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={creating}>
-                  {creating ? "Creating..." : "Save Release"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        kicker="RELEASE MANAGEMENT"
+        title="Create Platform Release"
+        titleId="create-release-title"
+        description="Register a packaged system artifact and target database schema version."
+        size="sm"
+      >
+        <form onSubmit={handleCreate}>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <TextField
+              id="release-version-label"
+              label="Version Label"
+              value={createDraft.versionLabel}
+              onChange={(e) => setCreateDraft({ ...createDraft, versionLabel: e.target.value })}
+              required
+            />
+            <TextField
+              id="release-schema-version"
+              label="Database Schema Version"
+              value={createDraft.schemaVersion}
+              onChange={(e) => setCreateDraft({ ...createDraft, schemaVersion: e.target.value })}
+              required
+            />
+            <TextAreaField
+              id="release-notes"
+              label="Release Notes"
+              rows={4}
+              value={createDraft.releaseNotes}
+              onChange={(e) => setCreateDraft({ ...createDraft, releaseNotes: e.target.value })}
+              required
+            />
+            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={createDraft.isHotfix}
+                onChange={(e) => setCreateDraft({ ...createDraft, isHotfix: e.target.checked })}
+              />
+              <span>Mark as Emergency Hotfix</span>
+            </label>
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={creating}>
+              Save Release
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Release Modal */}
-      {editingRelease && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Edit Release">
-            <header>
-              <h2>Edit Release · {editingRelease.versionLabel}</h2>
-              <p>Update release notes, schema version, or hotfix classification.</p>
-            </header>
-            <form onSubmit={handleSaveEdit}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Schema Version</span>
-                  <input
-                    type="text"
-                    className="platform-input"
-                    value={editSchema}
-                    onChange={(e) => setEditSchema(e.target.value)}
-                    required
-                  />
-                </label>
-                <label className="field-label">
-                  <span>Release Notes</span>
-                  <textarea
-                    className="platform-input"
-                    rows={4}
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    required
-                  />
-                </label>
-                <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={editHotfix}
-                    onChange={(e) => setEditHotfix(e.target.checked)}
-                  />
-                  <span>Emergency Hotfix</span>
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setEditingRelease(null)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={savingEdit}>
-                  {savingEdit ? "Saving..." : "Update Release"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={!!editingRelease}
+        onClose={() => setEditingRelease(null)}
+        kicker="RELEASE MANAGEMENT"
+        title={`Edit Release · ${editingRelease?.versionLabel ?? ""}`}
+        titleId="edit-release-title"
+        description="Update release notes, schema version, or hotfix classification."
+        size="sm"
+      >
+        <form onSubmit={handleSaveEdit}>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <TextField
+              id="edit-release-schema"
+              label="Schema Version"
+              value={editSchema}
+              onChange={(e) => setEditSchema(e.target.value)}
+              required
+            />
+            <TextAreaField
+              id="edit-release-notes"
+              label="Release Notes"
+              rows={4}
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              required
+            />
+            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={editHotfix}
+                onChange={(e) => setEditHotfix(e.target.checked)}
+              />
+              <span>Emergency Hotfix</span>
+            </label>
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setEditingRelease(null)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={savingEdit}>
+              Update Release
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
