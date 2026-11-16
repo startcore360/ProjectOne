@@ -81,6 +81,7 @@ public class PlatformFeatureToggleController {
     public record TenantEntitlementsResponse(
             UUID targetId,
             String targetType,
+            Map<String, Boolean> features,
             Map<String, Boolean> plan,
             Map<String, Boolean> override,
             Map<String, Boolean> effective
@@ -111,7 +112,7 @@ public class PlatformFeatureToggleController {
         }
         Map<String, Boolean> effective = new LinkedHashMap<>(plan);
         effective.putAll(override);
-        return ResponseEntity.ok(new TenantEntitlementsResponse(id, "TENANT", plan, override, effective));
+        return ResponseEntity.ok(new TenantEntitlementsResponse(id, "TENANT", effective, plan, override, effective));
     }
 
     private static String featureKey(String moduleCode, String featureCode) {

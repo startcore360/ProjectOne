@@ -76,6 +76,7 @@ class PlatformFeatureToggleControllerTest {
         ResponseEntity<PlatformFeatureToggleController.TenantEntitlementsResponse> response =
                 controller.getTenantEntitlements(tenantId, auth);
 
+        assertThat(response.getBody().features()).containsEntry("ATTENDANCE:BIOMETRIC", false);
         assertThat(response.getBody().plan()).containsEntry("ATTENDANCE:BIOMETRIC", true);
         assertThat(response.getBody().override()).containsEntry("ATTENDANCE:BIOMETRIC", false);
         assertThat(response.getBody().effective()).containsEntry("ATTENDANCE:BIOMETRIC", false);
