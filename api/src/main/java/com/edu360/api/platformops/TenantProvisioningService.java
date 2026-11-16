@@ -4,7 +4,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -230,7 +229,7 @@ public class TenantProvisioningService {
         inPlatformTransaction(() -> {
             var query = entityManager.createNativeQuery(
                             "UPDATE platform.tenant_provision_step SET " + assignments
-                                    + ", updated_at = :now, updated_by = :actor, row_version = row_version + 1 "
+                                    + ", updated_at = :now, updated_by = :actor "
                                     + "WHERE tenant_id = :tenantId AND step_code = :stepCode")
                     .setParameter("now", Instant.now())
                     .setParameter("actor", actorId)
