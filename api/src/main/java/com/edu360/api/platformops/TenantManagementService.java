@@ -20,6 +20,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.config.PlatformPrincipal;
+import com.edu360.api.auth.TemporaryPasswordGenerator;
+import com.edu360.api.platform.PlatformUser;
+import com.edu360.api.platform.PlatformUserRepository;
+import com.edu360.api.platform.PlatformUserStatus;
+import com.edu360.api.platformops.dataprotection.TenantRetentionPolicy;
+import com.edu360.api.platformops.dataprotection.TenantRetentionPolicyRepository;
+import com.edu360.api.platformops.dto.TenantProvisioningStatusResponse;
+import com.edu360.api.platformops.entitlement.PlanEntitlement;
+import com.edu360.api.platformops.entitlement.PlanEntitlementRepository;
+import com.edu360.api.platformops.entitlement.TenantEntitlement;
+import com.edu360.api.platformops.entitlement.TenantEntitlementRepository;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.config.keycloak.KeycloakProvisioningException;
 import com.edu360.api.exception.ApiException;
@@ -126,6 +137,28 @@ public class TenantManagementService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.edu360.api.platformops.security.RealmSecuritySyncService realmSecuritySyncService;
 
+    /** Additive E1-S2 dependencies; the existing public constructor remains unchanged. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TenantProvisioningService tenantProvisioningService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TenantLocalProvisioningService tenantLocalProvisioningService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TenantRetentionPolicyRepository tenantRetentionPolicyRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PlanEntitlementRepository planEntitlementRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TenantEntitlementRepository tenantEntitlementRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PlatformUserRepository platformUserRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PlatformNotificationService platformNotificationService;
+
     @org.springframework.beans.factory.annotation.Autowired
     public TenantManagementService(
             TenantRepository tenantRepository,
@@ -138,101 +171,46 @@ public class TenantManagementService {
             @org.springframework.beans.factory.annotation.Autowired(required = false) RoleDefinitionRepository roleDefinitionRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) StandardRoleRepository standardRoleRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) StandardRoleActionRepository standardRoleActionRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) RoleActionRepository roleActionRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
-            com.edu360.api.platformops.billing.InvoiceRepository invoiceRepository,
-            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
-    ) {
-        this.tenantRepository = tenantRepository;
-        this.planRepository = planRepository;
-        this.keycloakAdminClient = keycloakAdminClient;
-        this.leaveApproverSettingRepository = leaveApproverSettingRepository;
-        this.institutionRepository = institutionRepository;
-        this.userAccountRepository = userAccountRepository;
-        this.userIdentityLinkRepository = userIdentityLinkRepository;
-        this.roleDefinitionRepository = roleDefinitionRepository;
-        this.standardRoleRepository = standardRoleRepository;
-        this.standardRoleActionRepository = standardRoleActionRepository;
-        this.roleActionRepository = roleActionRepository;
-        this.userRoleAssignmentRepository = userRoleAssignmentRepository;
-        this.platformAuditWriter = platformAuditWriter;
-        this.invoiceRepository = invoiceRepository;
-    }
-
-    /**
-     * Lists active subscription plans for selection during tenant creation.
-     * If no plans are present in the database, seeds default active tiers.
-     */
-    @Transactional
-    public List<PlanResponse> listPlans() {
-        List<Plan> plans = planRepository.findByStatusOrderByPlanNameAsc("ACTIVE");
-        if (plans.isEmpty()) {
-            plans = seedDefaultPlans();
-        }
-        return plans.stream().map(PlanResponse::from).toList();
-    }
-
-    /**
-     * Creates a new tenant in TRIAL state.
-     */
-    @Transactional
-    public TenantResponse createTenant(TenantCreateRequest request, PlatformPrincipal principal) {
+            @org.spr    public TenantResponse createTenant(TenantCreateRequest request, PlatformPrincipal principal) {
         if (request.getIsolationMode() == IsolationMode.ISOLATED) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ISOLATION_NOT_AVAILABLE",
                     "Dedicated-database tenant isolation is not available; use SHARED isolation.");
         }
         String normalizedSubdomain = request.getSubdomain().toLowerCase().trim();
 
-        // 1. Check subdomain uniqueness
-        // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P6): reserved names such as "platform" must also be refused.
         if (tenantRepository.findBySubdomain(normalizedSubdomain).isPresent()) {
             throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists");
         }
-
-        // 2. Validate tenant type
         if (!ALLOWED_TENANT_TYPES.contains(request.getTenantType())) {
             throw new IllegalArgumentException("Invalid tenant type: " + request.getTenantType()
                     + ". Must be one of: " + ALLOWED_TENANT_TYPES);
         }
 
-        // 3. Validate plan exists and is active
         Plan plan = planRepository.findById(request.getPlanId())
                 .orElseThrow(() -> new IllegalArgumentException("Plan with ID " + request.getPlanId() + " does not exist"));
 
+        if (tenantProvisioningService == null || tenantLocalProvisioningService == null
+                || tenantRetentionPolicyRepository == null || planEntitlementRepository == null
+                || tenantEntitlementRepository == null) {
+            throw new IllegalStateException("Tenant provisioning dependencies are not available.");
+        }
+
         UUID tenantId = UUID.randomUUID();
+        UUID adminUserAccountId = UUID.randomUUID();
+        UUID identityLinkId = UUID.randomUUID();
         String realmName = normalizedSubdomain + "-realm";
+        String temporaryPassword = TemporaryPasswordGenerator.generate();
+        String[] keycloakAdminUserId = new String[1];
 
-        // 4. Provision Keycloak realm and client
-        try {
-            keycloakAdminClient.provisionRealm(realmName, request.getTenantName());
-            log.info("Provisioned Keycloak realm '{}' for tenant '{}'", realmName, request.getTenantName());
-        } catch (KeycloakProvisioningException ex) {
-            log.warn("Keycloak realm provisioning skipped or non-fatal in current environment: {}", ex.getMessage());
-        }
-
-        // B3 / I-06 (REG-I06-2): lockout, password policy, two-step flow and password-check client
-        // from the current security policy. A realm without them must not be used, so a failure
-        // here fails the tenant creation (KeycloakProvisioningException -> 503).
-        if (realmSecuritySyncService != null) {
-            try {
-                realmSecuritySyncService.applyToRealm(realmName);
-            } catch (RuntimeException ex) {
-                throw new KeycloakProvisioningException(
-                        "Could not apply the security policy to realm '" + realmName + "': " + ex.getMessage(), ex);
-            }
-        }
-
-        // 5. Construct and persist Tenant entity
         Instant now = Instant.now();
         Instant trialEndsAt = now.plus(Duration.ofDays(30));
-
         Tenant tenant = Tenant.builder()
                 .tenantId(tenantId)
                 .tenantName(request.getTenantName().trim())
                 .tenantType(request.getTenantType())
                 .planId(plan.getPlanId())
-                .state(TenantState.TRIAL)
-                .isolationMode(request.getIsolationMode())
+                .state(TenantState.CREATED)
+                .isolationMode(IsolationMode.SHARED)
                 .subdomain(normalizedSubdomain)
                 .timeZone(request.getTimeZone() != null ? request.getTimeZone() : "Asia/Kolkata")
                 .dataRegion(request.getDataRegion() != null ? request.getDataRegion() : "IN")
@@ -250,132 +228,303 @@ public class TenantManagementService {
                 .rowVersion(1)
                 .build();
 
-        Tenant savedTenant = tenantRepository.save(tenant);
+        Map<String, TenantProvisioningService.StepAction> actions = new LinkedHashMap<>();
 
-        // CL-08 / WF-02: retention is supplied at creation; no system duration is inferred.
-        if (entityManager != null) {
-            int backupRetentionMonths = Math.floorDiv(request.getBackupRetentionDays() + 29, 30);
-            List<String> retainedDataClasses = List.of(
-                "STRUCTURE", "PERSON", "ACADEMIC_RECORD", "FINANCIAL", "COMMUNICATION",
-                "STUDENT_NOTE", "GOVERNANCE", "APPROVAL", "BY_OWNER", "TENANT_LIFETIME",
-                "AUDIT", "BACKUP"
-        );
-            for (String dataClassCode : retainedDataClasses) {
-                int retentionMonths = ("AUDIT".equals(dataClassCode) || "BACKUP".equals(dataClassCode))
-                    ? backupRetentionMonths : request.getRetentionMonths();
-                entityManager.createNativeQuery(
-                    "INSERT INTO platform.tenant_retention_policy "
-                        + "(tenant_retention_policy_id, tenant_id, data_class_code, retention_months, effective_from, status, "
-                    + "created_at, created_by, updated_at, updated_by, row_version) "
-                    + "VALUES (:id, :tenantId, :dataClass, :months, :effectiveFrom, 'ACTIVE', "
-                    + ":createdAt, :actor, :updatedAt, :actor, 1)")
-                        .setParameter("id", UUID.randomUUID())
-                    .setParameter("tenantId", tenantId)
-                    .setParameter("dataClass", dataClassCode)
-                    .setParameter("months", retentionMonths)
-                    .setParameter("effectiveFrom", now)
-                    .setParameter("createdAt", now)
-                    .setParameter("updatedAt", now)
-                    .setParameter("actor", principal.platformUserId())
-                        .executeUpdate();
+        // P01 Registry: the platform tenant row and the shared-database RLS anchor.
+        actions.put("P01_REGISTRY", new TenantProvisioningService.StepAction() {
+            @Override
+            public void execute() {
+                tenantRepository.save(tenant);
+                tenantLocalProvisioningService.registerTenant(
+                        tenantId, request.getTenantType(), request.getTimeZone());
             }
-        }
+        });
 
-        // 5b. Provision First Tenant Admin
-        UUID adminUserAccountId = UUID.randomUUID();
-        String tempPassword = "Edu@" + UUID.randomUUID().toString().substring(0, 8) + "!";
-        String keycloakUserId = keycloakAdminClient.provisionUser(
-                realmName,
-                request.getFirstAdminName(),
-                request.getFirstAdminEmail().toLowerCase().trim(),
-                tempPassword,
-                true
-        );
-        if (keycloakUserId == null || keycloakUserId.isBlank()) {
-            throw new KeycloakProvisioningException("Keycloak did not return a valid user id for tenant first admin");
-        }
-        log.info("Provisioned first tenant admin Keycloak account {} for '{}' in realm '{}'",
-                keycloakUserId, request.getFirstAdminEmail(), realmName);
+        // P02 Retention: preserve the 12 required data classes and make retries idempotent.
+        actions.put("P09_RETENTION", () -> {
+            int backupRetentionMonths = Math.floorDiv(request.getBackupRetentionDays() + 29, 30);
+            List<String> dataClasses = List.of(
+                    "STRUCTURE", "PERSON", "ACADEMIC_RECORD", "FINANCIAL", "COMMUNICATION",
+                    "STUDENT_NOTE", "GOVERNANCE", "APPROVAL", "BY_OWNER", "TENANT_LIFETIME",
+                    "AUDIT", "BACKUP");
+            Instant policyTime = Instant.now();
+            for (String dataClass : dataClasses) {
+                int months = ("AUDIT".equals(dataClass) || "BACKUP".equals(dataClass))
+                        ? backupRetentionMonths : request.getRetentionMonths();
+                TenantRetentionPolicy policy = tenantRetentionPolicyRepository
+                        .findByTenantIdAndDataClassCodeAndStatus(tenantId, dataClass, "ACTIVE")
+                        .orElseGet(() -> TenantRetentionPolicy.builder()
+                                .tenantRetentionPolicyId(UUID.randomUUID())
+                                .tenantId(tenantId)
+                                .dataClassCode(dataClass)
+                                .effectiveFrom(policyTime)
+                                .status("ACTIVE")
+                                .createdAt(policyTime)
+                                .createdBy(principal.platformUserId())
+                                .updatedAt(policyTime)
+                                .updatedBy(principal.platformUserId())
+                                .rowVersion(1)
+                                .build());
+                policy.setRetentionMonths(months);
+                policy.setUpdatedAt(policyTime);
+                policy.setUpdatedBy(principal.platformUserId());
+                tenantRetentionPolicyRepository.save(policy);
+            }
+        });
 
-        platformAuditWriter.record(principal, savedTenant.getTenantId(), "TENANT_CREATED", "TENANT_CREATE", "TENANT", savedTenant.getTenantId());
+        // P03 Entitlements: copy the plan's module and feature rows without overwriting overrides.
+        actions.put("P05_ENTITLEMENTS", () -> {
+            Set<String> existingKeys = new java.util.HashSet<>();
+            tenantEntitlementRepository.findByTenantId(tenantId).forEach(entitlement ->
+                    existingKeys.add(entitlement.getModuleCode() + "|" + Objects.toString(entitlement.getFeatureCode(), "")));
+            Instant entitlementTime = Instant.now();
+            for (PlanEntitlement planEntitlement : planEntitlementRepository.findByPlanId(plan.getPlanId())) {
+                String key = planEntitlement.getModuleCode() + "|"
+                        + Objects.toString(planEntitlement.getFeatureCode(), "");
+                if (existingKeys.add(key)) {
+                    tenantEntitlementRepository.save(TenantEntitlement.builder()
+                            .tenantEntitlementId(UUID.randomUUID())
+                            .tenantId(tenantId)
+                            .moduleCode(planEntitlement.getModuleCode())
+                            .featureCode(planEntitlement.getFeatureCode())
+                            .enabled(planEntitlement.isEnabled())
+                            .createdAt(entitlementTime)
+                            .createdBy(principal.platformUserId())
+                            .updatedAt(entitlementTime)
+                            .updatedBy(principal.platformUserId())
+                            .rowVersion(1)
+                            .build());
+                }
+            }
+        });
 
-        if (entityManager != null) {
-            entityManager.createNativeQuery("SET app.tenant_id = '" + tenantId + "'").executeUpdate();
-            entityManager.createNativeQuery("SET app.institution_scope = 'ALL'").executeUpdate();
-            entityManager.createNativeQuery(
-                    "INSERT INTO app.tenant_local (tenant_id, tenant_type, time_zone, provisioned_at) VALUES (:tid, :ttype, :tz, now()) ON CONFLICT (tenant_id) DO NOTHING")
-                    .setParameter("tid", tenantId)
-                    .setParameter("ttype", request.getTenantType())
-                    .setParameter("tz", request.getTimeZone() != null ? request.getTimeZone() : "Asia/Kolkata")
-                    .executeUpdate();
-        }
-        TenantContext.set(tenantId, request.getIsolationMode(), null, "ALL", Set.of(), null, null);
-        try {
-            if (userAccountRepository != null) {
-                UserAccount adminAccount = UserAccount.builder()
-                        .id(new UserAccountId(tenantId, adminUserAccountId))
-                        .userType(UserType.STAFF)
-                        .displayName(request.getFirstAdminName().trim())
-                        .email(request.getFirstAdminEmail().toLowerCase().trim())
-                        .mobile(request.getFirstAdminMobile() != null && !request.getFirstAdminMobile().isBlank()
-                                ? request.getFirstAdminMobile().trim() : null)
-                        .status(UserAccountStatus.ACTIVE)
-                        .createdBy(principal.platformUserId())
-                        .updatedBy(principal.platformUserId())
-                        .build();
-                userAccountRepository.save(adminAccount);
+        // P04 Keycloak realm. A partially created realm is removed before the step is marked failed.
+        actions.put("P06_IDENTITY_REALM", new TenantProvisioningService.StepAction() {
+            @Override
+            public void execute() {
+                try {
+                    keycloakAdminClient.provisionRealm(realmName, request.getTenantName());
+                    log.info("Provisioned Keycloak realm '{}' for tenant '{}'", realmName, request.getTenantName());
+                } catch (RuntimeException ex) {
+                    try {
+                        keycloakAdminClient.deleteRealm(realmName);
+                    } catch (RuntimeException cleanupFailure) {
+                        log.warn("Could not clean up partially provisioned realm '{}'", realmName);
+                    }
+                    if (ex instanceof KeycloakProvisioningException keycloakException) {
+                        throw keycloakException;
+                    }
+                    throw new KeycloakProvisioningException(
+                            "Could not provision Keycloak realm '" + realmName + "'.", ex);
+                }
+            }
 
-                if (userIdentityLinkRepository != null) {
-                    UserIdentityLink link = UserIdentityLink.builder()
-                            .id(new UserIdentityLinkId(tenantId, UUID.randomUUID()))
+            @Override
+            public void compensate() {
+                keycloakAdminClient.deleteRealm(realmName);
+            }
+        });
+
+        // P05 Realm policy. A realm without the required security baseline is not usable.
+        actions.put("P10_REALM_POLICY", () -> {
+            if (realmSecuritySyncService == null) {
+                throw new KeycloakProvisioningException("Realm security policy service is unavailable.");
+            }
+            try {
+                realmSecuritySyncService.applyToRealm(realmName);
+            } catch (RuntimeException ex) {
+                throw new KeycloakProvisioningException(
+                        "Could not apply the security policy to realm '" + realmName + "'.", ex);
+            }
+        });
+
+        // P06 First admin. The generated password exists only in this request's memory/response.
+        actions.put("P07_FIRST_ADMIN", new TenantProvisioningService.StepAction() {
+            @Override
+            public void execute() {
+                try {
+                    keycloakAdminUserId[0] = keycloakAdminClient.provisionUser(
+                            realmName, request.getFirstAdminName(),
+                            request.getFirstAdminEmail().toLowerCase().trim(), temporaryPassword, true);
+                    if (keycloakAdminUserId[0] == null || keycloakAdminUserId[0].isBlank()) {
+                        throw new KeycloakProvisioningException(
+                                "Keycloak did not return a valid user id for the tenant first admin.");
+                    }
+
+                    if (userAccountRepository == null || userIdentityLinkRepository == null) {
+                        throw new IllegalStateException("Tenant identity repositories are not available.");
+                    }
+                    userAccountRepository.save(UserAccount.builder()
+                            .id(new UserAccountId(tenantId, adminUserAccountId))
+                            .userType(UserType.STAFF)
+                            .displayName(request.getFirstAdminName().trim())
+                            .email(request.getFirstAdminEmail().toLowerCase().trim())
+                            .mobile(request.getFirstAdminMobile() != null && !request.getFirstAdminMobile().isBlank()
+                                    ? request.getFirstAdminMobile().trim() : null)
+                            .status(UserAccountStatus.ACTIVE)
+                            .createdBy(principal.platformUserId())
+                            .updatedBy(principal.platformUserId())
+                            .build());
+                    userIdentityLinkRepository.save(UserIdentityLink.builder()
+                            .id(new UserIdentityLinkId(tenantId, identityLinkId))
                             .userAccountId(adminUserAccountId)
                             .identityRealm(realmName)
-                            .identitySubject(keycloakUserId)
+                            .identitySubject(keycloakAdminUserId[0])
                             .usernameKind(UsernameKind.EMAIL)
                             .status(IdentityLinkStatus.ACTIVE)
                             .createdBy(principal.platformUserId())
                             .updatedBy(principal.platformUserId())
-                            .build();
-                    userIdentityLinkRepository.save(link);
+                            .build());
+                } catch (RuntimeException ex) {
+                    if (keycloakAdminUserId[0] != null && !keycloakAdminUserId[0].isBlank()) {
+                        try {
+                            keycloakAdminClient.deleteUser(realmName, keycloakAdminUserId[0]);
+                        } catch (RuntimeException cleanupFailure) {
+                            log.warn("Could not clean up partially provisioned first admin in realm '{}'", realmName);
+                        }
+                        keycloakAdminUserId[0] = null;
+                    }
+                    throw ex;
                 }
+            }
 
-                // Assign standard role
-                String roleCode = "STANDALONE_SCHOOL".equals(request.getTenantType()) ? "SCHOOL_ADMIN"
-                        : "STANDALONE_COLLEGE".equals(request.getTenantType()) ? "COLLEGE_ADMIN"
-                        : "UNIVERSITY_ADMIN";
+            @Override
+            public void compensate() {
+                if (keycloakAdminUserId[0] != null && !keycloakAdminUserId[0].isBlank()) {
+                    keycloakAdminClient.deleteUser(realmName, keycloakAdminUserId[0]);
+                }
+                UserIdentityLinkId linkId = new UserIdentityLinkId(tenantId, identityLinkId);
+                if (userIdentityLinkRepository != null && userIdentityLinkRepository.existsById(linkId)) {
+                    userIdentityLinkRepository.deleteById(linkId);
+                }
+                UserAccountId accountId = new UserAccountId(tenantId, adminUserAccountId);
+                if (userAccountRepository != null && userAccountRepository.existsById(accountId)) {
+                    userAccountRepository.deleteById(accountId);
+                }
+            }
+        });
 
-                if (roleDefinitionRepository != null) {
-                    RoleDefinition roleDef = roleDefinitionRepository.findByIdTenantIdAndRoleCode(tenantId, roleCode)
-                            .orElseGet(() -> {
-                                StandardRole sr = standardRoleRepository != null ? standardRoleRepository.findById(roleCode).orElse(null) : null;
-                                RoleDefinition rd = RoleDefinition.builder()
-                                        .id(new RoleDefinitionId(tenantId, UUID.randomUUID()))
-                                        .roleCode(roleCode)
-                                        .roleName(sr != null ? sr.getRoleName() : "Tenant Administrator")
-                                        .roleOrigin(RoleOrigin.STANDARD)
-                                        .roleLevel(sr != null ? sr.getRoleLevel() : RoleLevel.TENANT)
-                                        .baseStandardRole(roleCode)
-                                        .customScope(null)
-                                        .sensitiveRole(false)
-                                        .status(RoleDefinitionStatus.ACTIVE)
-                                        .createdBy(principal.platformUserId())
-                                        .updatedBy(principal.platformUserId())
-                                        .build();
-                                return roleDefinitionRepository.save(rd);
-                            });
+        // P07 Standard roles: safe to re-run if a prior attempt stopped part-way through seeding.
+        actions.put("P04_ROLES_SEED", () -> {
+            if (roleDefinitionRepository == null || standardRoleActionRepository == null
+                    || roleActionRepository == null || userRoleAssignmentRepository == null) {
+                throw new IllegalStateException("Tenant standard-role repositories are not available.");
+            }
+            String roleCode = "STANDALONE_SCHOOL".equals(request.getTenantType()) ? "SCHOOL_ADMIN"
+                    : "STANDALONE_COLLEGE".equals(request.getTenantType()) ? "COLLEGE_ADMIN"
+                    : "UNIVERSITY_ADMIN";
+            RoleDefinition roleDefinition = roleDefinitionRepository.findByIdTenantIdAndRoleCode(tenantId, roleCode)
+                    .orElseGet(() -> {
+                        StandardRole standardRole = standardRoleRepository != null
+                                ? standardRoleRepository.findById(roleCode).orElse(null) : null;
+                        return roleDefinitionRepository.save(RoleDefinition.builder()
+                                .id(new RoleDefinitionId(tenantId, UUID.randomUUID()))
+                                .roleCode(roleCode)
+                                .roleName(standardRole != null ? standardRole.getRoleName() : "Tenant Administrator")
+                                .roleOrigin(RoleOrigin.STANDARD)
+                                .roleLevel(standardRole != null ? standardRole.getRoleLevel() : RoleLevel.TENANT)
+                                .baseStandardRole(roleCode)
+                                .customScope(null)
+                                .sensitiveRole(false)
+                                .status(RoleDefinitionStatus.ACTIVE)
+                                .createdBy(principal.platformUserId())
+                                .updatedBy(principal.platformUserId())
+                                .build());
+                    });
 
-                    if (standardRoleActionRepository != null && roleActionRepository != null) {
-                        List<StandardRoleAction> templateActions = standardRoleActionRepository.findByRoleCode(roleCode);
-                        UUID roleDefId = roleDef.getId().getRoleDefinitionId();
-                        for (StandardRoleAction ta : templateActions) {
-                            boolean exists = roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
-                                    tenantId, roleDefId, ta.getActionCode());
-                            if (!exists) {
-                                roleActionRepository.save(RoleAction.builder()
-                                        .id(new RoleActionId(tenantId, UUID.randomUUID()))
-                                        .roleDefinitionId(roleDefId)
-                                        .actionCode(ta.getActionCode())
-                                        .accessMode("SHARED")
+            UUID roleDefinitionId = roleDefinition.getId().getRoleDefinitionId();
+            for (StandardRoleAction standardAction : standardRoleActionRepository.findByRoleCode(roleCode)) {
+                if (!roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                        tenantId, roleDefinitionId, standardAction.getActionCode())) {
+                    roleActionRepository.save(RoleAction.builder()
+                            .id(new RoleActionId(tenantId, UUID.randomUUID()))
+                            .roleDefinitionId(roleDefinitionId)
+                            .actionCode(standardAction.getActionCode())
+                            .accessMode("SHARED")
+                            .createdBy(principal.platformUserId())
+                            .updatedBy(principal.platformUserId())
+                            .build());
+                }
+            }
+
+            boolean assigned = userRoleAssignmentRepository
+                    .findByIdTenantIdAndUserAccountIdAndStatus(tenantId, adminUserAccountId, AssignmentStatus.ACTIVE)
+                    .stream().anyMatch(assignment -> roleDefinitionId.equals(assignment.getRoleDefinitionId()));
+            if (!assigned) {
+                userRoleAssignmentRepository.save(UserRoleAssignment.builder()
+                        .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID()))
+                        .userAccountId(adminUserAccountId)
+                        .roleDefinitionId(roleDefinitionId)
+                        .scopeType(ScopeType.TENANT)
+                        .effectiveFrom(Instant.now())
+                        .status(AssignmentStatus.ACTIVE)
+                        .createdBy(principal.platformUserId())
+                        .updatedBy(principal.platformUserId())
+                        .build());
+            }
+        });
+
+        TenantProvisioningStatusResponse provisioningStatus;
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), null, null);
+        try {
+            provisioningStatus = tenantProvisioningService.provision(tenantId, principal.platformUserId(), actions);
+        } finally {
+            TenantContext.clear();
+        }
+
+        if (!"DONE".equals(provisioningStatus.overallStatus())) {
+            notifyTenantProvisioningFailure(tenantId, principal.platformUserId());
+            boolean keycloakUnavailable = provisioningStatus.steps().stream()
+                    .anyMatch(step -> "KEYCLOAK_UNAVAILABLE".equals(step.lastErrorCode()));
+            if (keycloakUnavailable) {
+                throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "KEYCLOAK_UNAVAILABLE",
+                        "Tenant setup could not reach or configure the identity service. The tenant remains in setup.");
+            }
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROVISIONING_FAILED",
+                    "Tenant setup did not complete. The tenant remains in setup and can be retried.");
+        }
+
+        tenant.setState(TenantState.TRIAL);
+        tenant.setUpdatedAt(Instant.now());
+        tenant.setUpdatedBy(principal.platformUserId());
+        Tenant provisionedTenant = tenantRepository.save(tenant);
+        platformAuditWriter.record(principal, tenantId, "TENANT_CREATED", "TENANT_CREATE", "TENANT", tenantId);
+
+        return TenantResponse.from(
+                provisionedTenant,
+                plan.getPlanName(),
+                request.getFirstAdminEmail(),
+                request.getFirstAdminMobile(),
+                request.getFirstAdminNationalIdLast4(),
+                temporaryPassword,
+                adminUserAccountId
+        );
+    }
+
+    private void notifyTenantProvisioningFailure(UUID tenantId, UUID actorPlatformUserId) {
+        if (platformUserRepository == null || platformNotificationService == null) {
+            return;
+        }
+        List<PlatformUser> admins = platformUserRepository.findAllByPlatformRoleAndStatus(
+                PlatformRole.PLATFORM_ADMIN, PlatformUserStatus.ACTIVE);
+        for (PlatformUser admin : admins) {
+            try {
+                platformNotificationService.notify(
+                        admin.getPlatformUserId(),
+                        "PLATFORM_ALERT",
+                        "Tenant setup failed",
+                        "Provisioning did not complete for tenant " + tenantId + ".",
+                        "TENANT",
+                        tenantId,
+                        "HIGH",
+                        actorPlatformUserId);
+            } catch (RuntimeException ex) {
+                log.warn("Could not notify Platform Admin {} about tenant provisioning failure", admin.getPlatformUserId());
+            }
+        }
+    }
+
+)
                                         .createdBy(principal.platformUserId())
                                         .updatedBy(principal.platformUserId())
                                         .build());
