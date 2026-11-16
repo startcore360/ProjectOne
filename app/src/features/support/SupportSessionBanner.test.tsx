@@ -18,7 +18,7 @@ function seedSupportSession() {
 
 afterEach(() => {
   sessionStorage.clear();
-  delete (window as Window & { opener?: Window }).opener;
+  Object.defineProperty(window, "opener", { configurable: true, value: null });
 });
 
 describe("SupportSessionBanner", () => {
