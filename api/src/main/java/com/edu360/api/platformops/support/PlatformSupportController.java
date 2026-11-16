@@ -12,11 +12,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.support.dto.SupportTicketResponse;
+import com.edu360.api.platformops.support.dto.SupportSessionResponse;
+import com.edu360.api.platformops.support.dto.OpenSupportSessionRequest;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class PlatformSupportController {
 
     private final PlatformSupportService supportService;
+    private final SupportSessionService supportSessionService;
     private final PlatformPermissionService permissionService;
 
     @GetMapping("/support-tickets")
@@ -58,14 +62,13 @@ public class PlatformSupportController {
     }
 
     @PostMapping("/support-sessions")
-    public ResponseEntity<Void> assumeSupportSession(
-            @RequestParam UUID ticketId,
+    public ResponseEntity<SupportSessionResponse> assumeSupportSession(
+            @Valid @RequestBody OpenSupportSessionRequest request,
             Authentication auth
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "SUPPORT_ACCESS_USE");
-        supportService.assumeSupportSession(ticketId, principal); // always ends in 501 until L-03 is built
-        return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.ok(supportSessionService.open(request.ticketId(), principal));
     }
 
     @GetMapping("/support-access-grants")
