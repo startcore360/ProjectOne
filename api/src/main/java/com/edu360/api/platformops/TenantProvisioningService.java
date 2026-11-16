@@ -22,8 +22,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.edu360.api.platformops.dto.TenantProvisioningStatusResponse;
 import com.edu360.api.platformops.dto.TenantProvisioningStepResponse;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import javax.sql.DataSource;
+
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Coordinates resumable tenant setup as an ordered saga.
@@ -51,14 +52,14 @@ public class TenantProvisioningService {
             new StepDefinition(7, "P07", "P04_ROLES_SEED", "Seed the tenant standard roles")
     );
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
+    private final JdbcTemplate jdbcTemplate;
     private final PlatformTransactionManager platformTransactionManager;
 
     public TenantProvisioningService(
-            @Qualifier("platformTransactionManager") PlatformTransactionManager platformTransactionManager) {
+            @Qualifier("platformTransactionManager") PlatformTransactionManager platformTransactionManager,
+            @Qualifier("platformDataSource") DataSource platformDataSource) {
         this.platformTransactionManager = platformTransactionManager;
+        this.jdbcTemplate = new JdbcTemplate(platformDataSource);
     }
 
     /** Persist all seven step rows without overwriting progress from an earlier attempt. */
@@ -67,18 +68,13 @@ public class TenantProvisioningService {
         inPlatformTransaction(() -> {
             Instant now = Instant.now();
             for (StepDefinition step : EXECUTION_ORDER) {
-                entityManager.createNativeQuery(
-                                "INSERT INTO platform.tenant_provision_step "
-                                        + "(tenant_provision_step_id, tenant_id, step_code, status, attempts, "
-                                        + "created_at, created_by, updated_at, updated_by, row_version) "
-                                        + "VALUES (:id, :tenantId, :stepCode, 'PENDING', 0, :now, :actor, :now, :actor, 1) "
-                                        + "ON CONFLICT (tenant_id, step_code) DO NOTHING")
-                        .setParameter("id", UUID.randomUUID())
-                        .setParameter("tenantId", tenantId)
-                        .setParameter("stepCode", step.stepCode())
-                        .setParameter("now", now)
-                        .setParameter("actor", actorId)
-                        .executeUpdate();
+                jdbcTemplate.update(
+                        "INSERT INTO platform.tenant_provision_step "
+                                + "(tenant_provision_step_id, tenant_id, step_code, status, attempts, "
+                                + "created_at, created_by, updated_at, updated_by, row_version) "
+                                + "VALUES (?, ?, ?, 'PENDING', 0, ?, ?, ?, ?, 1) "
+                                + "ON CONFLICT (tenant_id, step_code) DO NOTHING",
+                        UUID.randomUUID(), tenantId, step.stepCode(), now, actorId, now, actorId);
             }
             return null;
         });
@@ -127,22 +123,18 @@ public class TenantProvisioningService {
     /** Returns the seven persisted steps in business execution order, never alphabetical order. */
     public TenantProvisioningStatusResponse getStatus(UUID tenantId) {
         Objects.requireNonNull(tenantId, "tenantId is required");
-        List<?> rows = inPlatformTransaction(() -> entityManager.createNativeQuery(
-                        "SELECT step_code, status, attempts, last_error_code, started_at, finished_at "
-                                + "FROM platform.tenant_provision_step WHERE tenant_id = :tenantId")
-                .setParameter("tenantId", tenantId)
-                .getResultList());
-
-        Map<String, StepState> states = new HashMap<>();
-        for (Object row : rows) {
-            Object[] values = (Object[]) row;
-            states.put(values[0].toString(), new StepState(
-                    values[1].toString(),
-                    ((Number) values[2]).intValue(),
-                    values[3] == null ? null : values[3].toString(),
-                    toInstant(values[4]),
-                    toInstant(values[5])));
-        }
+        Map<String, StepState> states = inPlatformTransaction(() -> {
+            Map<String, StepState> found = new HashMap<>();
+            jdbcTemplate.query(
+                    "SELECT step_code, status, attempts, last_error_code, started_at, finished_at "
+                            + "FROM platform.tenant_provision_step WHERE tenant_id = ?",
+                    rs -> found.put(rs.getString("step_code"), new StepState(
+                            rs.getString("status"), rs.getInt("attempts"), rs.getString("last_error_code"),
+                            rs.getTimestamp("started_at") == null ? null : rs.getTimestamp("started_at").toInstant(),
+                            rs.getTimestamp("finished_at") == null ? null : rs.getTimestamp("finished_at").toInstant())),
+                    tenantId);
+            return found;
+        });
 
         List<TenantProvisioningStepResponse> steps = EXECUTION_ORDER.stream()
                 .map(step -> {
@@ -194,51 +186,46 @@ public class TenantProvisioningService {
 
     private String readStepStatus(UUID tenantId, String stepCode) {
         return inPlatformTransaction(() -> {
-            Object value = entityManager.createNativeQuery(
-                            "SELECT status FROM platform.tenant_provision_step "
-                                    + "WHERE tenant_id = :tenantId AND step_code = :stepCode")
-                    .setParameter("tenantId", tenantId)
-                    .setParameter("stepCode", stepCode)
-                    .getSingleResult();
-            return value.toString();
+            return jdbcTemplate.queryForObject(
+                    "SELECT status FROM platform.tenant_provision_step WHERE tenant_id = ? AND step_code = ?",
+                    String.class, tenantId, stepCode);
         });
     }
 
     private void markRunning(UUID tenantId, UUID actorId, String stepCode) {
         updateStep(tenantId, actorId, stepCode,
                 "status = 'RUNNING', attempts = attempts + 1, last_error_code = NULL, "
-                        + "started_at = :now, finished_at = NULL");
+                        + "started_at = ?, finished_at = NULL", Instant.now());
     }
 
     private void markDone(UUID tenantId, UUID actorId, String stepCode) {
         updateStep(tenantId, actorId, stepCode,
-                "status = 'DONE', last_error_code = NULL, finished_at = :now");
+                "status = 'DONE', last_error_code = NULL, finished_at = ?", Instant.now());
     }
 
     private void markFailed(UUID tenantId, UUID actorId, String stepCode) {
         updateStep(tenantId, actorId, stepCode,
-                "status = 'FAILED', last_error_code = :errorCode, finished_at = :now");
+                "status = 'FAILED', last_error_code = ?, finished_at = ?", FAILED_ERROR_CODE, Instant.now());
     }
 
     private void markCompensated(UUID tenantId, UUID actorId, String stepCode) {
         updateStep(tenantId, actorId, stepCode,
-                "status = 'COMPENSATED', last_error_code = NULL, finished_at = :now");
+                "status = 'COMPENSATED', last_error_code = NULL, finished_at = ?", Instant.now());
     }
 
-    private void updateStep(UUID tenantId, UUID actorId, String stepCode, String assignments) {
+    private void updateStep(UUID tenantId, UUID actorId, String stepCode,
+                            String assignments, Object... assignmentValues) {
         inPlatformTransaction(() -> {
-            var query = entityManager.createNativeQuery(
-                            "UPDATE platform.tenant_provision_step SET " + assignments
-                                    + ", updated_at = :now, updated_by = :actor "
-                                    + "WHERE tenant_id = :tenantId AND step_code = :stepCode")
-                    .setParameter("now", Instant.now())
-                    .setParameter("actor", actorId)
-                    .setParameter("tenantId", tenantId)
-                    .setParameter("stepCode", stepCode);
-            if (assignments.contains(":errorCode")) {
-                query.setParameter("errorCode", FAILED_ERROR_CODE);
-            }
-            int changed = query.executeUpdate();
+            Object[] parameters = java.util.Arrays.copyOf(assignmentValues, assignmentValues.length + 4);
+            int offset = assignmentValues.length;
+            parameters[offset] = Instant.now();
+            parameters[offset + 1] = actorId;
+            parameters[offset + 2] = tenantId;
+            parameters[offset + 3] = stepCode;
+            int changed = jdbcTemplate.update(
+                    "UPDATE platform.tenant_provision_step SET " + assignments
+                            + ", updated_at = ?, updated_by = ? WHERE tenant_id = ? AND step_code = ?",
+                    parameters);
             if (changed != 1) {
                 throw new IllegalStateException("Provisioning step row is missing: " + stepCode);
             }
