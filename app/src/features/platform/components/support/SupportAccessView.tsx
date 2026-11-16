@@ -61,6 +61,11 @@ export function SupportAccessView() {
   }, []);
 
   const handleAssume = async (ticketId: string, ticketNumber: string) => {
+    const opened = window.open("about:blank", "_blank");
+    if (!opened) {
+      setError("The tenant tab was blocked by the browser. Allow pop-ups and try again.");
+      return;
+    }
     try {
       const res = await platformOpsService.assumeSupportSession(ticketId);
       const tenantOrigin = new URL(res.tenantLoginAddress).origin;
@@ -71,14 +76,10 @@ export function SupportAccessView() {
         ticket_number: ticketNumber,
         platform_origin: window.location.origin,
       });
-      const opened = window.open(`${tenantOrigin}/#${fragment.toString()}`, "_blank");
-      if (!opened) {
-        await platformOpsService.endCurrentSupportSession();
-        window.sessionStorage.removeItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
-        throw new Error("The tenant tab was blocked by the browser. Allow pop-ups and try again.");
-      }
+      opened.location.replace(`${tenantOrigin}/#${fragment.toString()}`);
       setMessage(`Opened a read-only session for ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`);
     } catch (err: unknown) {
+      opened.close();
       setError(err instanceof Error ? err.message : "Could not assume session");
     }
   };
