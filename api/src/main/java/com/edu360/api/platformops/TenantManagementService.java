@@ -594,7 +594,9 @@ public class TenantManagementService {
         if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
             if ((request.priceAmount() != null && request.priceAmount().compareTo(BigDecimal.ZERO) != 0)
                     || (request.pricingType() != null && !"PER_STUDENT_YEAR".equals(request.pricingType()))
-                    || (request.currencyCode() != null && !"INR".equalsIgnoreCase(request.currencyCode()))) {
+                    || (request.currencyCode() != null && !"INR".equalsIgnoreCase(request.currencyCode()))
+                    || (request.smsUnitAmount() != null && request.smsUnitAmount().compareTo(BigDecimal.ZERO) != 0)
+                    || (request.storageUnitAmountPerGb() != null && request.storageUnitAmountPerGb().compareTo(BigDecimal.ZERO) != 0)) {
                 throw new UnauthorizedException("Rule [F-4]: only the Product Owner can configure plan pricing.");
             }
         }
@@ -615,8 +617,8 @@ public class TenantManagementService {
                 .customDomainAllowed(Boolean.TRUE.equals(request.customDomainAllowed()))
                 .brandingColorsAllowed(Boolean.TRUE.equals(request.brandingColorsAllowed()))
                 .billingCycleMonths(request.billingCycleMonths() != null ? request.billingCycleMonths() : 12)
-                .smsUnitAmount(request.smsUnitAmount())
-                .storageUnitAmountPerGb(request.storageUnitAmountPerGb())
+                .smsUnitAmount(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.smsUnitAmount() : null)
+                .storageUnitAmountPerGb(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.storageUnitAmountPerGb() : null)
                 .status("ACTIVE")
                 .createdAt(now)
                 .createdBy(principal.platformUserId())
@@ -639,7 +641,9 @@ public class TenantManagementService {
         if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
             if ((request.priceAmount() != null && request.priceAmount().compareTo(plan.getPriceAmount()) != 0)
                     || (request.currencyCode() != null && !request.currencyCode().equalsIgnoreCase(plan.getCurrencyCode()))
-                    || (request.pricingType() != null && !request.pricingType().equals(plan.getPricingType()))) {
+                    || (request.pricingType() != null && !request.pricingType().equals(plan.getPricingType()))
+                    || (request.smsUnitAmount() != null && !java.util.Objects.equals(request.smsUnitAmount(), plan.getSmsUnitAmount()))
+                    || (request.storageUnitAmountPerGb() != null && !java.util.Objects.equals(request.storageUnitAmountPerGb(), plan.getStorageUnitAmountPerGb()))) {
                 throw new UnauthorizedException("Rule [F-4]: only the Product Owner can alter plan pricing.");
             }
         }
@@ -680,10 +684,10 @@ public class TenantManagementService {
         if (request.billingCycleMonths() != null) {
             plan.setBillingCycleMonths(request.billingCycleMonths());
         }
-        if (request.smsUnitAmount() != null) {
+        if (request.smsUnitAmount() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
             plan.setSmsUnitAmount(request.smsUnitAmount());
         }
-        if (request.storageUnitAmountPerGb() != null) {
+        if (request.storageUnitAmountPerGb() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
             plan.setStorageUnitAmountPerGb(request.storageUnitAmountPerGb());
         }
         if (request.status() != null && !request.status().isBlank()) {
