@@ -6,10 +6,15 @@ import { PageHeader } from "../../../../components/layout/PageHeader";
 import { platformTenantService, type PlanItem, type TenantItem } from "../../api/platformTenantService";
 import { CreatePlanModal, type CreatePlanDraft } from "./CreatePlanModal";
 import { usePlatformAccess } from "../../platformAccess";
+import { EntitlementEditor } from "../entitlements/EntitlementEditor";
 
 export function PlansView() {
   const { role } = usePlatformAccess();
   const canConfigurePricing = role === "PRODUCT_OWNER";
+  // E2-S2: module and feature switches per plan (FEATURE_TOGGLE).
+  const { can: canDo } = usePlatformAccess();
+  const canToggleFeatures = canDo("FEATURE_TOGGLE");
+  const [entitlementPlan, setEntitlementPlan] = useState<PlanItem | null>(null);
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [tenants, setTenants] = useState<TenantItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,11 +191,25 @@ export function PlansView() {
                 });
                 setShowCreate(true);
               }}>Edit plan</Button>
+              {canToggleFeatures && (
+                <Button variant="secondary" size="sm" onClick={() => setEntitlementPlan(plan)}>Modules &amp; features</Button>
+              )}
             </article>
           ))}
         </div>
       )}
 
+      {entitlementPlan && (
+        <EntitlementEditor
+          isOpen
+          target="plan"
+          targetId={entitlementPlan.planId}
+          targetName={entitlementPlan.planName}
+          isProductOwner={canConfigurePricing}
+          onClose={() => setEntitlementPlan(null)}
+          onSaved={() => setEntitlementPlan(null)}
+        />
+      )}
       <CreatePlanModal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}

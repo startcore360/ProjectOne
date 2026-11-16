@@ -86,6 +86,7 @@ import { TenantDataProtectionModal } from "./TenantDataProtectionModal";
 import { TenantUsageModal } from "./TenantUsageModal";
 import { TenantSetupModal } from "./TenantSetupModal";
 import { TenantBrandingModal } from "./TenantBrandingModal";
+import { EntitlementEditor } from "../entitlements/EntitlementEditor";
 import { tenantLoginAddress } from "./tenantAddress";
 
 export function TenantsView() {
@@ -103,6 +104,8 @@ export function TenantsView() {
   const [setupTarget, setSetupTarget] = useState<Tenant | null>(null);
   // E1-S4: the tenant whose branding is open.
   const [brandingTarget, setBrandingTarget] = useState<Tenant | null>(null);
+  // E2-S2: the tenant whose module and feature switches are open.
+  const [featuresTarget, setFeaturesTarget] = useState<Tenant | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -640,6 +643,9 @@ export function TenantsView() {
                       {canEditSettings && (
                         <MenuAction onClick={() => setBrandingTarget(tenant)}>Branding</MenuAction>
                       )}
+                      {can("FEATURE_TOGGLE") && (
+                        <MenuAction onClick={() => setFeaturesTarget(tenant)}>Features</MenuAction>
+                      )}
                       {canViewUsage && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowUsage(true); }}>Usage</MenuAction>}
                       {canViewCompliance && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowDataProtection(true); }}>Compliance</MenuAction>}
                     </RowMenu>
@@ -745,6 +751,20 @@ export function TenantsView() {
         tenant={selectedTenant}
       />
 
+      {featuresTarget && (
+        <EntitlementEditor
+          isOpen
+          target="tenant"
+          targetId={featuresTarget.id}
+          targetName={featuresTarget.name}
+          isProductOwner={platformRole === "PRODUCT_OWNER"}
+          onClose={() => setFeaturesTarget(null)}
+          onSaved={(saved) => {
+            setFeaturesTarget(null);
+            setMessage(saved);
+          }}
+        />
+      )}
       {brandingTarget && (
         <TenantBrandingModal
           isOpen
