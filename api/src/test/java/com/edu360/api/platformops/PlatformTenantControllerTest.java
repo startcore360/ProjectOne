@@ -485,23 +485,21 @@ class PlatformTenantControllerTest {
 
         UpdatePlanRequest request = new UpdatePlanRequest(
                 "Updated Standard Plan",
-                null, // Platform Admin omits price; existing price must remain unchanged
-                null,
-                null,
-                null,
-                2000,
-                100,
-                10000,
-                20000,
-                3,
-                null,
-                null,
-                null,
-                null,
-                null,
+                null, // priceAmount: Platform Admin omits price; existing price must remain unchanged
+                null, // pricingType
+                null, // currencyCode
+                2000, // userLimit
+                100, // storageLimitGb
+                10000, // smsLimit
+                20000, // apiLimit
+                3, // maxInstitutions
+                null, // customDomainAllowed
+                null, // brandingColorsAllowed
+                null, // billingCycleMonths
+                null, // smsUnitAmount
+                null, // storageUnitAmountPerGb
                 "ACTIVE"
         );
-
         ResponseEntity<PlanResponse> response = controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
