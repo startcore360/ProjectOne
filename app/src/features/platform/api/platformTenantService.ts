@@ -200,7 +200,9 @@ export const platformTenantService = {
   updateTenantSettings: (tenantId: string, data: UpdateTenantSettingsPayload) =>
     api.patch<TenantSettings>(`/platform/tenants/${tenantId}/settings`, data),
   exportTenant: (tenantId: string) =>
-    api.post<ExportRequestDto>(`/platform/tenants/${tenantId}/export`),
+    api.post<ExportRequestDto>(`/platform/tenants/${tenantId}/export`, {}, {
+      headers: { "Idempotency-Key": `tenant-export-${tenantId}-${crypto.randomUUID()}` },
+    }),
   listExports: (tenantId: string) =>
     api.get<ExportRequestDto[]>(`/platform/tenants/${tenantId}/export`),
   requestTenantDeletion: (tenantId: string, origin = "PRODUCT_OWNER") =>
