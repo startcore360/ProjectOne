@@ -27,7 +27,7 @@ beforeEach(() => {
   service.requestTenantDeletion.mockResolvedValue({
     data: { deletionRequestId: "del-1", tenantId: "tenant-1", origin: "PRODUCT_OWNER", status: "REQUESTED" },
   } as never);
-  service.requestRetentionChange.mockResolvedValue({ data: {} } as never);
+  service.requestRetentionChange.mockResolvedValue({ data: { status: "REQUESTED" } } as never);
 });
 
 describe("TenantDataProtectionModal", () => {

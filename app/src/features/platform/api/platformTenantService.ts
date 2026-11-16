@@ -208,7 +208,7 @@ export const platformTenantService = {
   getRetentionPolicies: (tenantId: string) =>
     api.get<RetentionPolicyDto[]>(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>
-    api.post(`/platform/tenants/${tenantId}/retention-change-requests`, data),
+    api.post<{ status: string }>(`/platform/tenants/${tenantId}/retention-change-requests`, data),
   getTenantUsage: (tenantId: string) =>
     api.get<TenantUsageMonthlyDto[]>(`/platform/tenants/${tenantId}/usage`),
 };

@@ -628,9 +628,6 @@ export function TenantsView() {
         isOpen={showDataProtection}
         onClose={() => setShowDataProtection(false)}
         tenant={selectedTenant}
-        onTenantDeleted={(deletedId) => {
-          setTenants((prev) => prev.filter((t) => t.id !== deletedId));
-        }}
       />
 
       <TenantUsageModal

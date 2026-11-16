@@ -12,7 +12,6 @@ interface TenantDataProtectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   tenant: Tenant | null;
-  onTenantDeleted?: (tenantId: string) => void;
 }
 
 export function TenantDataProtectionModal({
@@ -92,10 +91,10 @@ export function TenantDataProtectionModal({
     setSubmittingRetention(true);
     setNotice(null);
     try {
-      await platformTenantService.requestRetentionChange(tenantId, retentionDraft);
+      const response = await platformTenantService.requestRetentionChange(tenantId, retentionDraft);
       setNotice({
         tone: "success",
-        message: `Retention change requested for ${retentionDraft.dataClassCode} (${retentionDraft.requestedMonths} months). Pending DPO approval.`,
+        message: `Retention change request created. Status: ${response.data.status}. Pending DPO approval.`,
       });
       setShowRetentionForm(false);
       setRetentionDraft({ dataClassCode: "STRUCTURE", requestedMonths: 12, reason: "" });
@@ -125,7 +124,7 @@ export function TenantDataProtectionModal({
       });
       setConfirmName("");
     } catch {
-      setNotice({ tone: "danger", message: "Failed to delete tenant. Please ensure DPO approval or try again." });
+      setNotice({ tone: "danger", message: "Failed to submit tenant deletion request. Please try again." });
     } finally {
       setDeleting(false);
     }
