@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
+import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.SupportPrincipal;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
@@ -39,16 +40,19 @@ public class SupportSessionAuthenticationFilter extends OncePerRequestFilter {
     private final TenantRepository tenantRepository;
     private final JdbcTemplate jdbc;
     private final PlatformAuditWriter platformAuditWriter;
+    private final AuditLogService tenantAuditService;
 
     public SupportSessionAuthenticationFilter(SupportSessionTokenService tokenService,
             SupportSessionRepository sessionRepository, SupportAccessGrantRepository grantRepository,
-            TenantRepository tenantRepository, JdbcTemplate jdbc, PlatformAuditWriter platformAuditWriter) {
+            TenantRepository tenantRepository, JdbcTemplate jdbc, PlatformAuditWriter platformAuditWriter,
+            AuditLogService tenantAuditService) {
         this.tokenService = tokenService;
         this.sessionRepository = sessionRepository;
         this.grantRepository = grantRepository;
         this.tenantRepository = tenantRepository;
         this.jdbc = jdbc;
         this.platformAuditWriter = platformAuditWriter;
+        this.tenantAuditService = tenantAuditService;
     }
 
     @Override
@@ -154,8 +158,8 @@ public class SupportSessionAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, token, List.of()));
 
-        // Platform audit is written for every successful support data view. The tenant-side
-        // SUPPORT_UNDER_GRANT payload is delegated to the shared A1 audit payload service.
+        // Both audit streams are required for every successful support data view.
+        tenantAuditService.recordSupportView(principal, request.getRequestURI());
         platformAuditWriter.record(new PlatformPrincipal(claims.platformUserId(), null, null, false),
                 claims.tenantId(), "SUPPORT_SESSION_VIEW", "SUPPORT_ACCESS_USE", "SUPPORT_SESSION", claims.sessionId());
 
