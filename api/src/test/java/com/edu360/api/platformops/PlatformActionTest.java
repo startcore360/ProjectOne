@@ -1203,7 +1203,11 @@ class PlatformActionTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat((List<?>) response.getBody().metrics().get("monthlyRevenue")).hasSize(12);
+        assertThat(response.getBody().metrics().get("monthlyRevenue").toString())
+                .contains("revenue=0.00").contains("revenue=125.50");
         assertThat((List<?>) response.getBody().metrics().get("monthlyChurn")).hasSize(12);
+        assertThat(response.getBody().metrics().get("monthlyChurn").toString())
+                .contains("churn=0").contains("churn=1");
         assertThat(response.getBody().metrics()).containsEntry("renewalsDueIn60Days", 1);
     }
 
