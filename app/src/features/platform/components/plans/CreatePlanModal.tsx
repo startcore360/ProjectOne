@@ -49,7 +49,7 @@ export function CreatePlanModal({
       title={isEditing ? "Edit subscription plan" : "Add subscription plan"}
       titleId="plan-create-title"
       description="Configure plan pricing, limits, billing cycle and commercial allowances. Pricing is controlled by the Product Owner."
-      size="sm"
+      size="lg"
     >
       <form onSubmit={onSubmit}>
         <TextField
@@ -99,6 +99,29 @@ export function CreatePlanModal({
             type="number"
             value={String(createDraft.storageLimitGb)}
             onChange={(e) => setCreateDraft({ ...createDraft, storageLimitGb: Number(e.target.value) })}
+          />
+        </div>
+        <div className="app-form-grid">
+          <TextField
+            id="plan-sms-limit"
+            label="SMS allowance"
+            type="number"
+            value={String(createDraft.smsLimit)}
+            onChange={(e) => setCreateDraft({ ...createDraft, smsLimit: Number(e.target.value) })}
+          />
+          <TextField
+            id="plan-api-limit"
+            label="API allowance"
+            type="number"
+            value={String(createDraft.apiLimit)}
+            onChange={(e) => setCreateDraft({ ...createDraft, apiLimit: Number(e.target.value) })}
+          />
+          <TextField
+            id="plan-institution-limit"
+            label="Maximum institutions"
+            type="number"
+            value={String(createDraft.maxInstitutions)}
+            onChange={(e) => setCreateDraft({ ...createDraft, maxInstitutions: Number(e.target.value) })}
           />
         </div>
         <div className="app-form-grid">
