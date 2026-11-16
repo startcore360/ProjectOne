@@ -22,8 +22,6 @@ import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
 import com.edu360.api.selfservice.InAppNotifier;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
 public class PlatformSupportService {
 
@@ -144,7 +142,7 @@ public class PlatformSupportService {
 
         SupportTicket saved = ticketRepository.save(ticket);
         platformAuditWriter.record(principal, "SUPPORT_TICKET_UPDATED", "SUPPORT_TICKET_MANAGE", "SUPPORT_TICKET", saved.getSupportTicketId());
-        if (!previousStatus.equals(saved.getStatus())
+        if (!java.util.Objects.equals(previousStatus, saved.getStatus())
                 && ("RESOLVED".equals(saved.getStatus()) || "CLOSED".equals(saved.getStatus()))
                 && inAppNotifier != null) {
             String status = saved.getStatus();
@@ -191,21 +189,6 @@ public class PlatformSupportService {
         tenantAuditService.record(com.edu360.api.audit.AuditEventType.SUPPORT_ACCESS_GRANT_CREATED, null, actorUserId.toString(), null,
                 "Support access grant created for ticket: " + req.ticketId() + " expires at: " + expiresAt);
         return SupportAccessGrantResponse.fromEntity(saved);
-    }
-
-    /**
-     * L-03, rule R7: a real read-only support session is designed (docs/SUPPORT_SESSION_DESIGN.md) but not built yet.
-     * The made-up session token that used to be returned here is gone. The ticket and the grant are still
-     * checked, so the answer is honest about what is missing: the session itself, not the grant.
-     */
-    @Transactional(readOnly = true)
-    public void assumeSupportSession(UUID ticketId, PlatformPrincipal principal) {
-        SupportTicket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
-        grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(ticketId, Instant.now())
-                .orElseThrow(() -> new BusinessRuleViolationException("Rule WF-11: No active support access grant found for ticket " + ticket.getTicketNumber()));
-        throw new com.edu360.api.exception.FeatureNotAvailableException("SUPPORT_SESSION_NOT_AVAILABLE",
-                "Support sessions are not available yet. A tenant grant exists for this ticket, but read-only access to tenant data has not been built.");
     }
 
     @Transactional
