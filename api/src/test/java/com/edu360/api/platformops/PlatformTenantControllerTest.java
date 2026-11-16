@@ -553,7 +553,7 @@ class PlatformTenantControllerTest {
 
         com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
                 com.edu360.api.exception.ApiException.class,
-                () -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)));
+                () -> controller.updatePlan(planId, request, "\"1\"", authFor(PlatformRole.PLATFORM_ADMIN)));
         assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
         verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));

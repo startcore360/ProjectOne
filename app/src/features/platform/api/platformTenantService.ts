@@ -184,7 +184,10 @@ export type TenantUsageMonthlyDto = {
 export const platformTenantService = {
   getPlans: () => api.get<PlanItem[]>("/platform/plans"),
   createPlan: (data: CreatePlanPayload) => api.post<PlanItem>("/platform/plans", data),
-  updatePlan: (planId: string, data: UpdatePlanPayload) => api.put<PlanItem>(`/platform/plans/${planId}`, data),
+  updatePlan: (planId: string, data: UpdatePlanPayload, rowVersion: number) =>
+    api.put<PlanItem>(`/platform/plans/${planId}`, data, {
+      headers: { "If-Match": `"${rowVersion}"` },
+    }),
   getTenants: (page = 0, size = 50) =>
     api.get<TenantPageResponse>(`/platform/tenants?page=${page}&size=${size}`),
   createTenant: (data: TenantCreateRequest) =>
