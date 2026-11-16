@@ -3,7 +3,10 @@ package com.edu360.api.platformops.dataprotection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.edu360.api.idempotency.PlatformIdempotencyService;
 
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
@@ -50,6 +56,8 @@ class PlatformDeletionRequestControllerTest {
     private PlatformDataProtectionService dataProtectionService;
     private PlatformDeletionRequestController controller;
     private PlatformDataProtectionController dataProtectionController;
+    private PlatformIdempotencyService idempotencyService;
+    private ObjectMapper objectMapper;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID PO_USER_ID = UUID.randomUUID();
@@ -65,6 +73,8 @@ class PlatformDeletionRequestControllerTest {
         platformAuditWriter = mock(com.edu360.api.platformops.role.PlatformAuditWriter.class);
         tenantIssuerResolver = mock(com.edu360.api.config.TenantIssuerAuthenticationManagerResolver.class);
         notificationService = mock(com.edu360.api.platformops.PlatformNotificationService.class);
+        idempotencyService = mock(PlatformIdempotencyService.class);
+        objectMapper = new ObjectMapper();
         auditLogService = mock(AuditLogService.class);
 
         PlatformPermissionService permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(PlatformAccessLookup.standardRolesOnly());
@@ -82,7 +92,7 @@ class PlatformDeletionRequestControllerTest {
         );
 
         controller = new PlatformDeletionRequestController(dataProtectionService, permissionService);
-        dataProtectionController = new PlatformDataProtectionController(dataProtectionService, permissionService);
+        dataProtectionController = new PlatformDataProtectionController(dataProtectionService, permissionService, idempotencyService, objectMapper);
     }
 
     private Authentication authFor(UUID userId, PlatformRole role) {
@@ -291,5 +301,44 @@ class PlatformDeletionRequestControllerTest {
         assertThat(response.getBody()).hasSize(1);
         assertThat(response.getBody().get(0).status()).isEqualTo("APPROVED");
     }
+
+    @Test
+    @DisplayName("D5: tenant export request stores and completes the platform idempotency claim")
+    void exportRequestUsesPlatformIdempotencyKey() {
+        when(tenantRepo.findById(TENANT_ID)).thenReturn(Optional.of(
+                Tenant.builder().tenantId(TENANT_ID).tenantName("Test University").state(TenantState.ACTIVE).build()));
+        when(exportRequestRepo.save(any(ExportRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+        UUID claimId = UUID.randomUUID();
+        when(idempotencyService.claim(eq(PO_USER_ID), eq("requestTenantExportPlatform"),
+                eq("export-key-123"), any())).thenReturn(
+                        new PlatformIdempotencyService.Claim(claimId, false, null, null));
+
+        ResponseEntity<com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse> response =
+                dataProtectionController.exportTenant(TENANT_ID, "export-key-123",
+                        authFor(PO_USER_ID, PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().status()).isEqualTo("REQUESTED");
+        verify(idempotencyService).complete(eq(PO_USER_ID), eq(claimId), eq(HttpStatus.OK.value()), any());
+    }
+
+    @Test
+    @DisplayName("D5: completed tenant export request replays without creating a second request")
+    void exportRequestReplaysStoredResponse() {
+        var stored = new com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse(
+                UUID.randomUUID(), TENANT_ID, "PRODUCT_OWNER", "REQUESTED", null, null, Instant.now());
+        UUID claimId = UUID.randomUUID();
+        when(idempotencyService.claim(eq(PO_USER_ID), eq("requestTenantExportPlatform"),
+                eq("export-key-123"), any())).thenReturn(new PlatformIdempotencyService.Claim(
+                        claimId, true, HttpStatus.OK.value(), objectMapper.valueToTree(stored)));
+
+        var response = dataProtectionController.exportTenant(TENANT_ID, "export-key-123",
+                authFor(PO_USER_ID, PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getBody()).isEqualTo(stored);
+        verifyNoInteractions(exportRequestRepo);
+        verify(idempotencyService, never()).complete(any(), any(), any(Integer.class), any());
+    }
+
 
 }

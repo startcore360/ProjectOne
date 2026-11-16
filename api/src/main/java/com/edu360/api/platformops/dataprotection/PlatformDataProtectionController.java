@@ -1,6 +1,7 @@
 package com.edu360.api.platformops.dataprotection;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -11,11 +12,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
+import com.edu360.api.idempotency.PlatformIdempotencyService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.CreateRetentionChangeRequest;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.DecideDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse;
@@ -37,12 +41,32 @@ public class PlatformDataProtectionController {
 
     private final PlatformDataProtectionService dataProtectionService;
     private final PlatformPermissionService permissionService;
+    private final PlatformIdempotencyService idempotencyService;
+    private final ObjectMapper objectMapper;
 
     @PostMapping("/tenants/{tenantId}/export")
-    public ResponseEntity<ExportRequestResponse> exportTenant(@PathVariable UUID tenantId, Authentication auth) {
+    public ResponseEntity<ExportRequestResponse> exportTenant(
+            @PathVariable UUID tenantId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "TENANT_EXPORT_REQUEST");
-        return ResponseEntity.ok(dataProtectionService.exportTenant(tenantId, principal));
+        PlatformIdempotencyService.Claim claim = idempotencyService.claim(
+                principal.platformUserId(), "requestTenantExportPlatform", idempotencyKey,
+                Map.of("tenantId", tenantId));
+        if (claim.replay()) {
+            int status = claim.responseStatus() == null ? HttpStatus.OK.value() : claim.responseStatus();
+            return ResponseEntity.status(status)
+                    .body(objectMapper.convertValue(claim.responseBody(), ExportRequestResponse.class));
+        }
+        try {
+            ExportRequestResponse response = dataProtectionService.exportTenant(tenantId, principal);
+            idempotencyService.complete(principal.platformUserId(), claim.id(), HttpStatus.OK.value(), response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            idempotencyService.release(principal.platformUserId(), claim.id());
+            throw ex;
+        }
     }
 
     @GetMapping("/tenants/{tenantId}/export")
