@@ -5,7 +5,6 @@ import {
   platformTenantService,
   type ExportRequestDto,
   type RetentionPolicyDto,
-  type DeletionRequestDto,
 } from "../../api/platformTenantService";
 import type { Tenant } from "../common/types";
 
@@ -75,7 +74,7 @@ export function TenantDataProtectionModal({
       const res = await platformTenantService.exportTenant(tenantId);
       setNotice({
         tone: "success",
-        message: `Export request created (ID: ${res.data.id}). Status: ${res.data.status}.`,
+        message: `Export request created (ID: ${res.data.exportRequestId}). Status: ${res.data.status}.`,
       });
       // Refresh export history
       const listRes = await platformTenantService.listExports(tenantId);
@@ -214,8 +213,7 @@ export function TenantDataProtectionModal({
                     <td>
                       <StatusBadge value={exp.status} status={exp.status} />
                     </td>
-                    <td>{exp.createdAt ? new Date(exp.createdAt).toLocaleString() : "-"}</td>
-                    <td>{exp.downloadExpiresAt ? new Date(exp.downloadExpiresAt).toLocaleString() : "Not available"}</td>
+                    <td>{exp.createdAt ? new Date(exp.createdAt).toLocaleString() : "—"}</td>
                     <td>{exp.fileRef ?? "Pending"}</td>
                     <td>{exp.downloadExpiresAt ? new Date(exp.downloadExpiresAt).toLocaleString() : "—"}</td>
                   </tr>

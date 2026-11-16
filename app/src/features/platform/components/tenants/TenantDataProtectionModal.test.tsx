@@ -21,6 +21,9 @@ beforeEach(() => {
   vi.resetAllMocks();
   service.listExports.mockResolvedValue({ data: [] } as never);
   service.getRetentionPolicies.mockResolvedValue({ data: [] } as never);
+  service.exportTenant.mockResolvedValue({
+    data: { exportRequestId: "exp-1", tenantId: "tenant-1", requestedByKind: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z" },
+  } as never);
   service.requestTenantDeletion.mockResolvedValue({
     data: { deletionRequestId: "del-1", tenantId: "tenant-1", origin: "PRODUCT_OWNER", status: "REQUESTED" },
   } as never);
@@ -28,6 +31,18 @@ beforeEach(() => {
 });
 
 describe("TenantDataProtectionModal", () => {
+
+  it("shows the backend export request identifier and status", async () => {
+    service.listExports.mockResolvedValue({ data: [] } as never);
+    render(<TenantDataProtectionModal isOpen onClose={vi.fn()} tenant={tenant} />);
+    fireEvent.click(screen.getByRole("button", { name: "Trigger New Export" }));
+
+    await waitFor(() => {
+      expect(service.exportTenant).toHaveBeenCalledWith("tenant-1");
+    });
+    expect(await screen.findByText(/Export request created \(ID: exp-1\)/)).toBeInTheDocument();
+  });
+
   it("requests deletion through the approval chain without claiming the tenant was deleted", async () => {
     render(<TenantDataProtectionModal isOpen onClose={vi.fn()} tenant={tenant} />);
     fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
