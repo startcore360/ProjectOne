@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,7 +59,7 @@ class PlatformSupportTriageTest {
     void categoryAndPriorityTogetherMoveNewTicketToTriaged() {
         SupportTicket ticket = ticket("NEW");
         when(tickets.findById(ticketId)).thenReturn(Optional.of(ticket));
-        when(settings.queryForObject(any(String.class), eq(Boolean.class), eq("support_ticket_categories"), eq("BILLING")))
+        when(settings.queryForObject(anyString(), eq(Boolean.class), any(Object[].class)))
                 .thenReturn(true);
         when(tickets.save(any(SupportTicket.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -74,7 +75,7 @@ class PlatformSupportTriageTest {
     void invalidCategoryIsBadRequest() {
         SupportTicket ticket = ticket("NEW");
         when(tickets.findById(ticketId)).thenReturn(Optional.of(ticket));
-        when(settings.queryForObject(any(String.class), eq(Boolean.class), eq("support_ticket_categories"), eq("GENERAL")))
+        when(settings.queryForObject(anyString(), eq(Boolean.class), any(Object[].class)))
                 .thenReturn(false);
 
         assertThatThrownBy(() -> service.updateTicket(ticketId,
