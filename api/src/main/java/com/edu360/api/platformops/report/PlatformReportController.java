@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +81,11 @@ public class PlatformReportController {
     ) {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "PLATFORM_REPORTS_VIEW");
+        boolean revenueReport = "REVENUE".equalsIgnoreCase(reportCode) || "BILLING_REVENUE".equalsIgnoreCase(reportCode);
+        if (revenueReport && principal.platformRole() != PlatformRole.BILLING_MANAGER
+                && principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
+            throw new UnauthorizedException("Revenue reports are restricted to Billing Manager and Product Owner.");
+        }
 
         Map<String, Object> metrics = new HashMap<>();
         if (principal.platformRole() == PlatformRole.BILLING_MANAGER) {
@@ -140,6 +148,10 @@ public class PlatformReportController {
             metrics.put("usageNote", "Storage and API request totals are not measured yet.");
         }
 
+        if (revenueReport) {
+            addRevenueMetrics(metrics);
+        }
+
         return ResponseEntity.ok(new PlatformReportResponse(
                 reportCode,
                 "Platform Report: " + reportCode,
@@ -182,6 +194,65 @@ public class PlatformReportController {
                 "INR",
                 metrics
         ));
+    }
+
+
+    /**
+     * E3-S7: paid revenue and tenant churn are grouped into the trailing twelve calendar months.
+     * Empty months are emitted as zero so the Revenue tab has a stable twelve-month axis.
+     */
+    private void addRevenueMetrics(Map<String, Object> metrics) {
+        YearMonth currentMonth = YearMonth.now(ZoneOffset.UTC);
+        YearMonth firstMonth = currentMonth.minusMonths(11);
+        Map<YearMonth, BigDecimal> revenueByMonth = new LinkedHashMap<>();
+        Map<YearMonth, Integer> churnByMonth = new LinkedHashMap<>();
+        for (int i = 0; i < 12; i++) {
+            YearMonth month = firstMonth.plusMonths(i);
+            revenueByMonth.put(month, BigDecimal.ZERO.setScale(2));
+            churnByMonth.put(month, 0);
+        }
+
+        if (invoiceRepository != null) {
+            for (Invoice invoice : invoiceRepository.findByStatus("PAID")) {
+                if (invoice.getPaidAt() == null) continue;
+                YearMonth paidMonth = YearMonth.from(invoice.getPaidAt().atZone(ZoneOffset.UTC));
+                if (revenueByMonth.containsKey(paidMonth)) {
+                    revenueByMonth.compute(paidMonth, (month, total) ->
+                            total.add(invoice.getTotalAmount() == null ? BigDecimal.ZERO : invoice.getTotalAmount()));
+                }
+            }
+        }
+
+        if (tenantRepository != null) {
+            for (com.edu360.api.tenant.Tenant tenant : tenantRepository.findAll()) {
+                Instant churnedAt = tenant.getArchivedAt() != null ? tenant.getArchivedAt() : tenant.getDeletedAt();
+                if (churnedAt == null) continue;
+                YearMonth churnMonth = YearMonth.from(churnedAt.atZone(ZoneOffset.UTC));
+                if (churnByMonth.containsKey(churnMonth)) {
+                    churnByMonth.compute(churnMonth, (month, count) -> count + 1);
+                }
+            }
+            LocalDate today = LocalDate.now(ZoneOffset.UTC);
+            List<com.edu360.api.tenant.Tenant> renewals = tenantRepository.findByStateAndNextRenewalAtBetween(
+                    TenantState.ACTIVE, today, today.plusDays(60));
+            metrics.put("renewalsDueIn60Days", renewals.size());
+            metrics.put("renewalsDue", renewals.stream().map(tenant -> Map.<String, Object>of(
+                    "tenantId", tenant.getTenantId().toString(),
+                    "tenantName", tenant.getTenantName(),
+                    "renewalDate", tenant.getNextRenewalAt().toString())).toList());
+        } else {
+            metrics.put("renewalsDueIn60Days", 0);
+            metrics.put("renewalsDue", List.of());
+        }
+
+        List<Map<String, Object>> monthlyRevenue = new ArrayList<>();
+        List<Map<String, Object>> monthlyChurn = new ArrayList<>();
+        revenueByMonth.forEach((month, amount) -> monthlyRevenue.add(Map.of(
+                "month", month.toString(), "revenue", amount.setScale(2, java.math.RoundingMode.HALF_UP))));
+        churnByMonth.forEach((month, count) -> monthlyChurn.add(Map.of(
+                "month", month.toString(), "churn", count)));
+        metrics.put("monthlyRevenue", monthlyRevenue);
+        metrics.put("monthlyChurn", monthlyChurn);
     }
 
     /** Mean hours from raised to closed over closed tickets; null when no ticket has been closed. */

@@ -71,9 +71,9 @@ export function ReportsView() {
               <p>{Object.entries(report.metrics).filter(([key, value]) => /note|description|message/i.test(key) && typeof value === "string").map(([, value]) => value).join(" ")}</p>
             </Notice>
           )}
-          {Object.entries(report.metrics).filter(([key]) => !/note|description|message/i.test(key)).length > 0 && (
+          {Object.entries(report.metrics).filter(([key]) => !/note|description|message|monthlyRevenue|monthlyChurn|renewalsDue$/i.test(key)).length > 0 && (
             <div className="kpi-grid">
-              {Object.entries(report.metrics).filter(([key]) => !/note|description|message/i.test(key)).map(([key, val]) => {
+              {Object.entries(report.metrics).filter(([key]) => !/note|description|message|monthlyRevenue|monthlyChurn|renewalsDue$/i.test(key)).map(([key, val]) => {
                 const formattedLabel = key
                   .replace(/([A-Z])/g, " $1")
                   .replace(/^./, (str) => str.toUpperCase());
@@ -96,6 +96,58 @@ export function ReportsView() {
             </div>
           )}
 
+          {(reportCode === "BILLING_REVENUE" || reportCode === "REVENUE") && (
+            <Panel title="Revenue" description="Paid invoice revenue across the trailing twelve calendar months">
+              {(() => {
+                const monthly = Array.isArray(report.metrics.monthlyRevenue) ? report.metrics.monthlyRevenue as Array<{ month: string; revenue: number }> : [];
+                const maxValue = Math.max(1, ...monthly.map((item) => Number(item.revenue) || 0));
+                return monthly.length === 0 ? <p className="app-empty-inline">No monthly data returned.</p> : (
+                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${monthly.length}, minmax(0, 1fr))`, gap: "8px", alignItems: "end", minHeight: "190px" }}>
+                    {monthly.map((item) => {
+                      const value = Number(item.revenue) || 0;
+                      const height = Math.max(3, (value / maxValue) * 140);
+                      return <div key={item.month} style={{ display: "grid", gap: "6px", alignItems: "end", textAlign: "center", minWidth: 0 }}>
+                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{value === 0 ? "₹0" : `₹${value.toLocaleString("en-IN", { notation: "compact", maximumFractionDigits: 1 })}`}</small>
+                        <div role="img" aria-label={`${item.month}: ${value} revenue rupees`} style={{ height, background: "var(--color-action-primary)", borderRadius: "5px 5px 0 0", width: "100%" }} />
+                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{item.month.slice(5)}</small>
+                      </div>;
+                    })}
+                  </div>
+                );
+              })()}
+            </Panel>
+          )}
+          {(reportCode === "BILLING_REVENUE" || reportCode === "REVENUE") && (
+            <Panel title="Tenant churn" description="Tenants archived or deleted by month over the trailing twelve months">
+              {(() => {
+                const monthly = Array.isArray(report.metrics.monthlyChurn) ? report.metrics.monthlyChurn as Array<{ month: string; churn: number }> : [];
+                const maxValue = Math.max(1, ...monthly.map((item) => Number(item.churn) || 0));
+                return monthly.length === 0 ? <p className="app-empty-inline">No monthly data returned.</p> : (
+                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${monthly.length}, minmax(0, 1fr))`, gap: "8px", alignItems: "end", minHeight: "190px" }}>
+                    {monthly.map((item) => {
+                      const value = Number(item.churn) || 0;
+                      const height = Math.max(3, (value / maxValue) * 140);
+                      return <div key={item.month} style={{ display: "grid", gap: "6px", alignItems: "end", textAlign: "center", minWidth: 0 }}>
+                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{value}</small>
+                        <div role="img" aria-label={`${item.month}: ${value} tenants churned`} style={{ height, background: "var(--color-action-primary)", borderRadius: "5px 5px 0 0", width: "100%" }} />
+                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{item.month.slice(5)}</small>
+                      </div>;
+                    })}
+                  </div>
+                );
+              })()}
+            </Panel>
+          )}
+          {(reportCode === "BILLING_REVENUE" || reportCode === "REVENUE") && (
+            <Panel title="Renewals due" description="Active tenants with a renewal date in the next 60 days">
+              <strong>{Number(report.metrics.renewalsDueIn60Days ?? 0)} tenants</strong>
+              {Array.isArray(report.metrics.renewalsDue) && report.metrics.renewalsDue.length > 0 ? (
+                <ul style={{ marginBottom: 0 }}>
+                  {(report.metrics.renewalsDue as Array<{ tenantId: string; tenantName: string; renewalDate: string }>).map((item) => <li key={item.tenantId}>{item.tenantName} — {item.renewalDate}</li>)}
+                </ul>
+              ) : <p className="app-empty-inline">No renewals due within 60 days.</p>}
+            </Panel>
+          )}
           <Panel title={report.reportName} description={`Generated at ${new Date(report.generatedAt).toLocaleString()}`}>
             <div style={{ padding: "8px 0" }}>
               <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: "var(--fs-body)" }}>

@@ -1183,6 +1183,31 @@ class PlatformActionTest {
     }
 
     @Test
+    @DisplayName("ACT-PLATFORM_REPORTS_VIEW-ALLOW: Revenue report returns twelve months, churn and upcoming renewals")
+    void actPlatformRevenueReport_allow() {
+        Instant now = Instant.now();
+        Invoice paid = Invoice.builder().invoiceId(UUID.randomUUID()).tenantId(tenantId)
+                .totalAmount(new BigDecimal("125.50")).status("PAID").paidAt(now).build();
+        Tenant archived = Tenant.builder().tenantId(UUID.randomUUID()).tenantName("Archived tenant")
+                .tenantType("STANDALONE_SCHOOL").state(TenantState.ARCHIVED).archivedAt(now).build();
+        Tenant renewing = Tenant.builder().tenantId(UUID.randomUUID()).tenantName("Renewing tenant")
+                .tenantType("STANDALONE_SCHOOL").state(TenantState.ACTIVE)
+                .nextRenewalAt(LocalDate.now().plusDays(30)).build();
+        when(invoiceRepository.findByStatus("PAID")).thenReturn(List.of(paid));
+        when(tenantRepository.findAll()).thenReturn(List.of(archived, renewing));
+        when(tenantRepository.findByStateAndNextRenewalAtBetween(eq(TenantState.ACTIVE), any(), any()))
+                .thenReturn(List.of(renewing));
+
+        ResponseEntity<PlatformReportResponse> response =
+                reportController.getReport("REVENUE", auth(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<?>) response.getBody().metrics().get("monthlyRevenue")).hasSize(12);
+        assertThat((List<?>) response.getBody().metrics().get("monthlyChurn")).hasSize(12);
+        assertThat(response.getBody().metrics()).containsEntry("renewalsDueIn60Days", 1);
+    }
+
+    @Test
     @DisplayName("ACT-PLATFORM_REPORTS_VIEW-DENY: Release Manager lacking PLATFORM_REPORTS_VIEW denied")
     void actPlatformReportsView_deny() {
         assertThatThrownBy(() -> reportController.getReport("FINANCIAL_SUMMARY", auth(PlatformRole.RELEASE_MANAGER)))
