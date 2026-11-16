@@ -283,14 +283,14 @@ class PlatformActionTest {
     @DisplayName("ACT-PLAN_MANAGE-GUARD: Platform Admin cannot alter price on existing plan")
     void actPlanManage_guard() {
         Plan plan = Plan.builder().planId(planId).planName("Old").pricingType("FLAT")
-                .priceAmount(new BigDecimal("100.00")).currencyCode("INR").build();
+                .priceAmount(new BigDecimal("100.00")).currencyCode("INR").rowVersion(1).build();
         when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
 
         UpdatePlanRequest req = new UpdatePlanRequest(
                 "New Name", new BigDecimal("200.00"), null, "INR",
                 100, 10, 1000, 1000, 5, null, null, null, null, null, "ACTIVE"
         );
-        assertThatThrownBy(() -> tenantController.updatePlan(planId, req, auth(PlatformRole.PLATFORM_ADMIN)))
+        assertThatThrownBy(() -> tenantController.updatePlan(planId, req, "\"1\"", auth(PlatformRole.PLATFORM_ADMIN)))
                 .isInstanceOf(ApiException.class)
                 .satisfies(error -> {
                     ApiException apiException = (ApiException) error;

@@ -91,9 +91,9 @@ class PlatformDeletionRequestControllerTest {
                 retentionChangeRequestRepo,
                 tenantRepo,
                 platformAuditWriter,
-                tenantIssuerResolver,
                 notificationService,
-                platformConcurrency
+                platformConcurrency,
+                tenantIssuerResolver
         );
 
         controller = new PlatformDeletionRequestController(dataProtectionService, permissionService);
