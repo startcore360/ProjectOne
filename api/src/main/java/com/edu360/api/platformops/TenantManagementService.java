@@ -112,6 +112,10 @@ public class TenantManagementService {
             "UNIVERSITY_GROUP", "STANDALONE_COLLEGE", "STANDALONE_SCHOOL"
     );
 
+    private static final Set<String> RESERVED_SUBDOMAINS = Set.of(
+            "platform", "www", "api", "admin", "auth", "keycloak", "mail", "static", "status"
+    );
+
     private final TenantRepository tenantRepository;
     private final PlanRepository planRepository;
     private final KeycloakAdminClient keycloakAdminClient;
@@ -209,18 +213,27 @@ public class TenantManagementService {
      * Creates a new tenant in TRIAL state.
      */
         public TenantResponse createTenant(TenantCreateRequest request, PlatformPrincipal principal) {
+        if (request.getIsolationMode() == IsolationMode.ISOLATED) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ISOLATION_NOT_AVAILABLE",
+                    "Dedicated-database tenant isolation is not available; use SHARED isolation.");
+        }
+        String normalizedSubdomain = request.getSubdomain() == null ? ""
+                : request.getSubdomain().toLowerCase().trim();
+        if (!normalizedSubdomain.matches("^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SUBDOMAIN_INVALID",
+                    "Subdomain must contain 3-63 lowercase alphanumeric characters or hyphens and cannot start or end with a hyphen.");
+        }
+        if (RESERVED_SUBDOMAINS.contains(normalizedSubdomain)) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "SUBDOMAIN_RESERVED",
+                    "The subdomain '" + normalizedSubdomain + "' is reserved by the platform.");
+        }
+
         // Unit tests that instantiate this service directly bypass Spring field injection.
         // Production wiring always supplies the coordinator; retain the pre-coordinator path only
         // for those manually constructed service fixtures.
         if (tenantProvisioningService == null) {
             return createTenantLegacy(request, principal);
         }
-
-        if (request.getIsolationMode() == IsolationMode.ISOLATED) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ISOLATION_NOT_AVAILABLE",
-                    "Dedicated-database tenant isolation is not available; use SHARED isolation.");
-        }
-        String normalizedSubdomain = request.getSubdomain().toLowerCase().trim();
 
         if (tenantRepository.findBySubdomain(normalizedSubdomain).isPresent()) {
             throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists");
