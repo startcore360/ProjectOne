@@ -109,7 +109,7 @@ export function ReportsView() {
                       return <div key={item.month} style={{ display: "grid", gap: "6px", alignItems: "end", textAlign: "center", minWidth: 0 }}>
                         <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{value === 0 ? "₹0" : `₹${value.toLocaleString("en-IN", { notation: "compact", maximumFractionDigits: 1 })}`}</small>
                         <div role="img" aria-label={`${item.month}: ${value} revenue rupees`} style={{ height, background: "var(--color-action-primary)", borderRadius: "5px 5px 0 0", width: "100%" }} />
-                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{item.month.slice(5)}</small>
+                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{item.month}</small>
                       </div>;
                     })}
                   </div>
@@ -130,7 +130,7 @@ export function ReportsView() {
                       return <div key={item.month} style={{ display: "grid", gap: "6px", alignItems: "end", textAlign: "center", minWidth: 0 }}>
                         <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{value}</small>
                         <div role="img" aria-label={`${item.month}: ${value} tenants churned`} style={{ height, background: "var(--color-action-primary)", borderRadius: "5px 5px 0 0", width: "100%" }} />
-                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{item.month.slice(5)}</small>
+                        <small style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{item.month}</small>
                       </div>;
                     })}
                   </div>

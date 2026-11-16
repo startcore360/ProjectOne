@@ -1,6 +1,7 @@
 package com.edu360.api.platformops;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
@@ -86,7 +87,10 @@ public class PlatformRenewalReminderService {
                 List<UserRoleAssignment> assignments = userRoleAssignmentRepository
                         .findByIdTenantIdAndRoleDefinitionIdAndStatus(tenant.getTenantId(),
                                 role.getId().getRoleDefinitionId(), AssignmentStatus.ACTIVE);
+                Instant now = Instant.now();
                 for (UserRoleAssignment assignment : assignments) {
+                    if (assignment.getEffectiveFrom() != null && assignment.getEffectiveFrom().isAfter(now)) continue;
+                    if (assignment.getEffectiveTo() != null && !assignment.getEffectiveTo().isAfter(now)) continue;
                     UserAccount account = userAccountRepository.findById(
                             new UserAccountId(tenant.getTenantId(), assignment.getUserAccountId())).orElse(null);
                     if (account == null || account.getStatus() != UserAccountStatus.ACTIVE) continue;
