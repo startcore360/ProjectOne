@@ -21,6 +21,8 @@ import { useProfilePhoto } from "../features/profile/hooks/useProfilePhoto";
 import { roleDashboardByCode } from "../features/role-previews/roleDashboardCatalog";
 import { useTenantAccess } from "../features/profile/hooks/useTenantAccess";
 import { tenantPermissionsService } from "../features/profile/api/tenantPermissionsService";
+import { useSupportSession } from "../features/support/useSupportSession";
+import { SupportSessionBanner } from "../features/support/SupportSessionBanner";
 
 const universityNavigation = [
   { label: "Dashboard", to: "/dashboard", icon: "home" as const, important: true },
@@ -92,6 +94,7 @@ const studentNavigation = [
 
 export default function AppLayout() {
   const user = useAppSelector((s) => s.auth.user);
+  const { isSupportSession } = useSupportSession();
   useLiveSocket(user?.tenantId ?? null, Boolean(user?.platformRole));
   const navigate = useNavigate();
   const location = useLocation();
@@ -231,7 +234,9 @@ export default function AppLayout() {
               ? "University admin"
               : "Workspace";
 
-  const baseNavigation = isPlatformConsole
+  const baseNavigation = isSupportSession
+    ? [{ label: "Dashboard", to: "/dashboard", icon: "home" as const, important: true }, { label: "Support", to: "/support", icon: "help" as const, important: true }]
+    : isPlatformConsole
     ? platformNavigation.filter((item) => !item.anyOf || canAny(item.anyOf))
     : isStudent || user?.userType === "GUARDIAN"
       ? studentNavigation
@@ -428,6 +433,9 @@ export default function AppLayout() {
           <NavLink to="/profile" className="app-topbar__avatar" aria-label={`${name} - view profile`} title="View profile">{avatar}</NavLink>
         </div>
       </div>
-      <main className="app-content"><Outlet /></main>    </div>
+      <main className="app-content">
+        {isSupportSession && <SupportSessionBanner />}
+        <Outlet />
+      </main>    </div>
   </div>;
 }
