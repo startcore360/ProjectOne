@@ -95,6 +95,25 @@ describe("Sprint 1 platform screens", () => {
     });
   });
 
+
+  it("loads only overview data allowed to a Billing Manager", async () => {
+    mockedApi.get.mockResolvedValue({ data: { items: [] } });
+    renderWithStore(<PlatformOverviewPage />, "BILLING_MANAGER");
+
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/tenants")));
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/platform-users");
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
+    expect(screen.getByText(/Billing workspace/)).toBeInTheDocument();
+  });
+
+  it("renders the DPO workspace without calling unrelated admin endpoints", async () => {
+    renderWithStore(<PlatformOverviewPage />, "DATA_PROTECTION_OFFICER");
+    expect(await screen.findByText(/Data protection workspace/)).toBeInTheDocument();
+    expect(mockedApi.get).not.toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/platform-users");
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
+  });
+
   it("filters tenants by search text", async () => {
     mockedApi.get.mockImplementation((url: string) => {
       if (url.includes("/platform/tenants")) {
