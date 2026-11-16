@@ -33,6 +33,7 @@ public class PlatformSupportService {
     private final com.edu360.api.audit.AuditLogService tenantAuditService;
     private JdbcTemplate settingsJdbc;
     private InAppNotifier inAppNotifier;
+    private SupportSessionService supportSessionService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformSupportService(
@@ -48,9 +49,11 @@ public class PlatformSupportService {
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    public void setSupportDependencies(JdbcTemplate settingsJdbc, InAppNotifier inAppNotifier) {
+    public void setSupportDependencies(JdbcTemplate settingsJdbc, InAppNotifier inAppNotifier,
+                                       SupportSessionService supportSessionService) {
         this.settingsJdbc = settingsJdbc;
         this.inAppNotifier = inAppNotifier;
+        this.supportSessionService = supportSessionService;
     }
 
     @Transactional
@@ -217,6 +220,9 @@ public class PlatformSupportService {
         grant.setUpdatedAt(Instant.now());
         grant.setUpdatedBy(actorUserId);
         SupportAccessGrant saved = grantRepository.save(grant);
+        if (supportSessionService != null) {
+            supportSessionService.endForGrant(grantId);
+        }
         tenantAuditService.record(com.edu360.api.audit.AuditEventType.SUPPORT_ACCESS_GRANT_WITHDRAWN, null, actorUserId.toString(), null,
                 "Support access grant withdrawn for ticket: " + grant.getTicketId());
         return SupportAccessGrantResponse.fromEntity(saved);
