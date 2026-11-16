@@ -136,6 +136,8 @@ export function TenantsView() {
     firstAdminEmail: "",
     firstAdminMobile: "",
     firstAdminNationalIdLast4: "",
+    retentionMonths: 12,
+    backupRetentionDays: 90,
   });
 
   const loadTenants = async () => {
@@ -228,6 +230,8 @@ export function TenantsView() {
         firstAdminEmail: draft.firstAdminEmail,
         firstAdminMobile: draft.firstAdminMobile ? draft.firstAdminMobile : undefined,
         firstAdminNationalIdLast4: draft.firstAdminNationalIdLast4 ? draft.firstAdminNationalIdLast4 : undefined,
+        retentionMonths: draft.retentionMonths,
+        backupRetentionDays: draft.backupRetentionDays,
       });
 
       const newTenant = response.data;
@@ -254,6 +258,8 @@ export function TenantsView() {
         firstAdminEmail: "",
         firstAdminMobile: "",
         firstAdminNationalIdLast4: "",
+        retentionMonths: 12,
+        backupRetentionDays: 90,
       });
       void loadTenants();
     } catch (err: unknown) {
