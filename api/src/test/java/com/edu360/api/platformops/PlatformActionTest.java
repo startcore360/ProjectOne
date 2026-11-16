@@ -1192,7 +1192,7 @@ class PlatformActionTest {
                 .tenantType("STANDALONE_SCHOOL").state(TenantState.ARCHIVED).archivedAt(now).build();
         Tenant renewing = Tenant.builder().tenantId(UUID.randomUUID()).tenantName("Renewing tenant")
                 .tenantType("STANDALONE_SCHOOL").state(TenantState.ACTIVE)
-                .nextRenewalAt(LocalDate.now().plusDays(30)).build();
+                .nextRenewalAt(LocalDate.now(java.time.ZoneOffset.UTC).plusDays(30)).build();
         when(invoiceRepository.findByStatus("PAID")).thenReturn(List.of(paid));
         when(tenantRepository.findAll()).thenReturn(List.of(archived, renewing));
         when(tenantRepository.findByStateAndNextRenewalAtBetween(eq(TenantState.ACTIVE), any(), any()))
