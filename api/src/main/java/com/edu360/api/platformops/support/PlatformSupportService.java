@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.config.PlatformPrincipal;
@@ -17,6 +20,7 @@ import com.edu360.api.platformops.support.dto.GrantSupportAccessRequest;
 import com.edu360.api.platformops.support.dto.SupportAccessGrantResponse;
 import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
+import com.edu360.api.selfservice.InAppNotifier;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +31,8 @@ public class PlatformSupportService {
     private final SupportAccessGrantRepository grantRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
     private final com.edu360.api.audit.AuditLogService tenantAuditService;
+    private JdbcTemplate settingsJdbc;
+    private InAppNotifier inAppNotifier;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformSupportService(
@@ -39,6 +45,12 @@ public class PlatformSupportService {
         this.grantRepository = grantRepository;
         this.platformAuditWriter = platformAuditWriter;
         this.tenantAuditService = tenantAuditService;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setSupportDependencies(JdbcTemplate settingsJdbc, InAppNotifier inAppNotifier) {
+        this.settingsJdbc = settingsJdbc;
+        this.inAppNotifier = inAppNotifier;
     }
 
     @Transactional
@@ -55,7 +67,7 @@ public class PlatformSupportService {
                 .subject(req.subject())
                 .description(req.description())
                 .priority(req.priority() != null ? req.priority() : "MEDIUM")
-                .category(req.category() != null ? req.category() : "GENERAL")
+                .category(req.category())
                 .status("NEW")
                 .createdAt(now)
                 .createdBy(actorUserId)
@@ -75,14 +87,42 @@ public class PlatformSupportService {
         SupportTicket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
 
+        String previousStatus = ticket.getStatus();
+        if (req.priority() != null) {
+            if (!List.of("LOW", "MEDIUM", "HIGH", "CRITICAL").contains(req.priority())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_PRIORITY");
+            }
+            ticket.setPriority(req.priority());
+        }
+        if (req.category() != null) {
+            if (settingsJdbc == null) {
+                throw new IllegalStateException("The support_ticket_categories setting is unavailable.");
+            }
+            Boolean allowed = settingsJdbc.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM ref.setting_definition d CROSS JOIN LATERAL jsonb_array_elements_text(d.default_value) AS c(category) WHERE d.setting_key = ? AND c.category = ?)",
+                    Boolean.class, "support_ticket_categories", req.category());
+            if (!Boolean.TRUE.equals(allowed)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_CATEGORY");
+            }
+            ticket.setCategory(req.category());
+        }
+
         if (req.status() != null) {
-            if (("RESOLVED".equals(req.status()) || "CLOSED".equals(req.status())) && (req.resolutionNote() == null || req.resolutionNote().isBlank())) {
+            if (!List.of("NEW", "TRIAGED", "ASSIGNED", "ESCALATED", "RESOLVED", "CLOSED").contains(req.status())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_STATUS");
+            }
+            if (("RESOLVED".equals(req.status()) || "CLOSED".equals(req.status()))
+                    && (req.resolutionNote() == null || req.resolutionNote().isBlank())) {
                 throw new BusinessRuleViolationException("Rule ck_support_ticket_r1: resolution_note is required when status is RESOLVED or CLOSED.");
             }
             ticket.setStatus(req.status());
             if ("CLOSED".equals(req.status())) {
                 ticket.setClosedAt(Instant.now());
             }
+        }
+
+        if ("NEW".equals(ticket.getStatus()) && ticket.getPriority() != null && ticket.getCategory() != null) {
+            ticket.setStatus("TRIAGED");
         }
 
         if (req.assignedTo() != null) {
@@ -101,6 +141,17 @@ public class PlatformSupportService {
 
         SupportTicket saved = ticketRepository.save(ticket);
         platformAuditWriter.record(principal, "SUPPORT_TICKET_UPDATED", "SUPPORT_TICKET_MANAGE", "SUPPORT_TICKET", saved.getSupportTicketId());
+        if (!previousStatus.equals(saved.getStatus())
+                && ("RESOLVED".equals(saved.getStatus()) || "CLOSED".equals(saved.getStatus()))
+                && inAppNotifier != null) {
+            String status = saved.getStatus();
+            String note = saved.getResolutionNote() == null ? "" : saved.getResolutionNote();
+            inAppNotifier.notify(saved.getTenantId(), saved.getRaisedByUserId(), null,
+                    "SUPPORT_TICKET_" + status, "Support ticket " + status,
+                    saved.getTicketNumber() + " is " + status + ". " + note,
+                    "SUPPORT_TICKET", saved.getSupportTicketId(), null, "NORMAL",
+                    "support-ticket:" + saved.getSupportTicketId() + ":" + status);
+        }
         return SupportTicketResponse.fromEntity(saved);
     }
 
@@ -193,7 +244,7 @@ public class PlatformSupportService {
     public List<SupportTicketResponse> listTickets(UUID tenantId) {
         List<SupportTicket> list = (tenantId != null)
                 ? ticketRepository.findByTenantIdOrderByCreatedAtDesc(tenantId)
-                : ticketRepository.findAllByOrderByCreatedAtDesc();
+                : ticketRepository.findAllPrioritizedByPriorityThenAge();
         return list.stream().map(SupportTicketResponse::fromEntity).toList();
     }
 
