@@ -73,13 +73,22 @@ api.interceptors.request.use((config) => {
   }
 
   const supportToken = window.sessionStorage.getItem(SUPPORT_SESSION_TOKEN_KEY);
-  if (supportToken) {
+  const supportExpiry = window.sessionStorage.getItem(SUPPORT_SESSION_EXPIRY_KEY);
+  const supportSessionActive = !!supportToken
+    && (!supportExpiry || new Date(supportExpiry).getTime() > Date.now());
+  if (supportToken && supportSessionActive) {
     if (/^\/api\/tenants\/[^/]+(?:\/|$)/.test(requestUrl.pathname)) {
       config.headers.Authorization = `Bearer ${supportToken}`;
     } else {
       delete config.headers.Authorization;
     }
     return config;
+  }
+  if (supportToken && !supportSessionActive) {
+    window.sessionStorage.removeItem(SUPPORT_SESSION_TOKEN_KEY);
+    window.sessionStorage.removeItem(SUPPORT_SESSION_EXPIRY_KEY);
+    window.sessionStorage.removeItem(SUPPORT_SESSION_TICKET_KEY);
+    window.sessionStorage.removeItem(SUPPORT_SESSION_PLATFORM_ORIGIN_KEY);
   }
 
   const token = getAccessToken();
