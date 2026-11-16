@@ -18,6 +18,9 @@ import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
+import com.edu360.api.tenant.Tenant;
+import com.edu360.api.tenant.TenantRepository;
+import com.edu360.api.exception.ResourceNotFoundException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,18 +35,21 @@ public class PlatformFeatureToggleController {
     private final PlanEntitlementRepository planEntitlementRepository;
     private final TenantEntitlementRepository tenantEntitlementRepository;
     private final PlatformAuditWriter auditWriter;
+    private final TenantRepository tenantRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformFeatureToggleController(
             PlatformPermissionService permissionService,
             @org.springframework.beans.factory.annotation.Autowired(required = false) PlanEntitlementRepository planEntitlementRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) TenantEntitlementRepository tenantEntitlementRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) TenantRepository tenantRepository,
             PlatformAuditWriter auditWriter
     ) {
         this.permissionService = permissionService;
         this.planEntitlementRepository = planEntitlementRepository;
         this.tenantEntitlementRepository = tenantEntitlementRepository;
         this.auditWriter = auditWriter;
+        this.tenantRepository = tenantRepository;
     }
 
     public record EntitlementsUpdateRequest(
@@ -72,20 +78,40 @@ public class PlatformFeatureToggleController {
         return ResponseEntity.ok(new EntitlementsResponse(id, "PLAN", features));
     }
 
+    public record TenantEntitlementsResponse(
+            UUID targetId,
+            String targetType,
+            Map<String, Boolean> plan,
+            Map<String, Boolean> override,
+            Map<String, Boolean> effective
+    ) {}
+
     @GetMapping("/tenants/{id}/entitlements")
-    @Operation(summary = "Read tenant override feature entitlements (FEATURE_TOGGLE)")
-    public ResponseEntity<EntitlementsResponse> getTenantEntitlements(
+    @Operation(summary = "Read tenant plan, override and effective entitlements (FEATURE_TOGGLE)")
+    public ResponseEntity<TenantEntitlementsResponse> getTenantEntitlements(
             @PathVariable UUID id,
             Authentication auth
     ) {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "FEATURE_TOGGLE");
-        Map<String, Boolean> features = new LinkedHashMap<>();
+        if (tenantRepository == null) {
+            throw new IllegalStateException("Tenant directory is unavailable for effective entitlement resolution.");
+        }
+        Tenant tenant = tenantRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + id));
+        Map<String, Boolean> plan = new LinkedHashMap<>();
+        if (planEntitlementRepository != null) {
+            planEntitlementRepository.findByPlanId(tenant.getPlanId()).forEach(entitlement ->
+                    plan.put(featureKey(entitlement.getModuleCode(), entitlement.getFeatureCode()), entitlement.isEnabled()));
+        }
+        Map<String, Boolean> override = new LinkedHashMap<>();
         if (tenantEntitlementRepository != null) {
             tenantEntitlementRepository.findByTenantId(id).forEach(entitlement ->
-                    features.put(featureKey(entitlement.getModuleCode(), entitlement.getFeatureCode()), entitlement.isEnabled()));
+                    override.put(featureKey(entitlement.getModuleCode(), entitlement.getFeatureCode()), entitlement.isEnabled()));
         }
-        return ResponseEntity.ok(new EntitlementsResponse(id, "TENANT", features));
+        Map<String, Boolean> effective = new LinkedHashMap<>(plan);
+        effective.putAll(override);
+        return ResponseEntity.ok(new TenantEntitlementsResponse(id, "TENANT", plan, override, effective));
     }
 
     private static String featureKey(String moduleCode, String featureCode) {

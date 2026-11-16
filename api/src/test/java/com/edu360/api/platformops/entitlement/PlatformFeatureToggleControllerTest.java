@@ -18,6 +18,9 @@ import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
+import com.edu360.api.tenant.Tenant;
+import com.edu360.api.tenant.TenantRepository;
+import com.edu360.api.tenant.TenantState;
 
 class PlatformFeatureToggleControllerTest {
 
@@ -30,13 +33,14 @@ class PlatformFeatureToggleControllerTest {
         PlatformPermissionService permissions = mock(PlatformPermissionService.class);
         PlanEntitlementRepository plans = mock(PlanEntitlementRepository.class);
         TenantEntitlementRepository tenants = mock(TenantEntitlementRepository.class);
+        TenantRepository tenantDirectory = mock(TenantRepository.class);
         when(plans.findByPlanId(planId)).thenReturn(List.of(PlanEntitlement.builder()
                 .planEntitlementId(UUID.randomUUID()).planId(planId).moduleCode("ATTENDANCE")
                 .featureCode("BIOMETRIC").enabled(true).createdAt(Instant.now()).createdBy(userId)
                 .updatedAt(Instant.now()).updatedBy(userId).rowVersion(1).build()));
 
         PlatformFeatureToggleController controller = new PlatformFeatureToggleController(
-                permissions, plans, tenants, mock(PlatformAuditWriter.class));
+                permissions, plans, tenants, tenantDirectory, mock(PlatformAuditWriter.class));
         ResponseEntity<PlatformFeatureToggleController.EntitlementsResponse> response =
                 controller.getPlanEntitlements(planId, auth);
 
@@ -54,17 +58,27 @@ class PlatformFeatureToggleControllerTest {
         PlatformPermissionService permissions = mock(PlatformPermissionService.class);
         PlanEntitlementRepository plans = mock(PlanEntitlementRepository.class);
         TenantEntitlementRepository tenants = mock(TenantEntitlementRepository.class);
+        TenantRepository tenantDirectory = mock(TenantRepository.class);
+        UUID planId = UUID.randomUUID();
+        when(tenantDirectory.findById(tenantId)).thenReturn(java.util.Optional.of(Tenant.builder()
+                .tenantId(tenantId).planId(planId).state(TenantState.ACTIVE).build()));
+        when(plans.findByPlanId(planId)).thenReturn(List.of(PlanEntitlement.builder()
+                .planEntitlementId(UUID.randomUUID()).planId(planId).moduleCode("ATTENDANCE")
+                .featureCode("BIOMETRIC").enabled(true).createdAt(Instant.now()).createdBy(userId)
+                .updatedAt(Instant.now()).updatedBy(userId).rowVersion(1).build()));
         when(tenants.findByTenantId(tenantId)).thenReturn(List.of(TenantEntitlement.builder()
-                .tenantEntitlementId(UUID.randomUUID()).tenantId(tenantId).moduleCode("LIBRARY")
-                .featureCode(null).enabled(false).createdAt(Instant.now()).createdBy(userId)
+                .tenantEntitlementId(UUID.randomUUID()).tenantId(tenantId).moduleCode("ATTENDANCE")
+                .featureCode("BIOMETRIC").enabled(false).createdAt(Instant.now()).createdBy(userId)
                 .updatedAt(Instant.now()).updatedBy(userId).rowVersion(1).build()));
 
         PlatformFeatureToggleController controller = new PlatformFeatureToggleController(
-                permissions, plans, tenants, mock(PlatformAuditWriter.class));
-        ResponseEntity<PlatformFeatureToggleController.EntitlementsResponse> response =
+                permissions, plans, tenants, tenantDirectory, mock(PlatformAuditWriter.class));
+        ResponseEntity<PlatformFeatureToggleController.TenantEntitlementsResponse> response =
                 controller.getTenantEntitlements(tenantId, auth);
 
-        assertThat(response.getBody().features()).containsEntry("LIBRARY", false);
+        assertThat(response.getBody().plan()).containsEntry("ATTENDANCE:BIOMETRIC", true);
+        assertThat(response.getBody().override()).containsEntry("ATTENDANCE:BIOMETRIC", false);
+        assertThat(response.getBody().effective()).containsEntry("ATTENDANCE:BIOMETRIC", false);
         assertThat(response.getBody().targetType()).isEqualTo("TENANT");
         verify(permissions).authorize(principal, "FEATURE_TOGGLE");
     }
