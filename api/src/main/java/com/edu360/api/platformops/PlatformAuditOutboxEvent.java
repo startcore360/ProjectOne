@@ -3,6 +3,10 @@ package com.edu360.api.platformops;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -75,6 +79,10 @@ public class PlatformAuditOutboxEvent {
 
     @Column(nullable = false)
     private String outcome;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "payload", columnDefinition = "jsonb")
+    private JsonNode payload;
 
     @Column(name = "correlation_id", nullable = false)
     private String correlationId;

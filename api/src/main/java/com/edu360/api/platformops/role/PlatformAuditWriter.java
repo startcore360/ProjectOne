@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -14,48 +15,51 @@ import com.edu360.api.config.CorrelationContext;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformAuditOutboxEvent;
 import com.edu360.api.platformops.PlatformAuditOutboxEventRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Writes to platform.audit_outbox, the table the Platform audit screen reads (Addendum rule 18, L-07).
- *
- * Audit is REQUIRED: this writer is never optional and never swallows a failure. A change that cannot be
- * recorded must not happen, so an error here propagates, the request fails with a 500 and its correlation
- * id, and the surrounding transaction rolls the business change back. Every row carries the actor, the
- * D2 action, the entity, the named event type (column event_type, sql/22), the outcome and the correlation id.
- */
+/** Writes platform audit events, including masked old/new field values, to platform.audit_outbox. */
 @Component
 @RequiredArgsConstructor
 public class PlatformAuditWriter {
-
     public static final String SUCCESS = "SUCCESS";
     public static final String DENIED = "DENIED";
     public static final String FAILED = "FAILED";
 
+    private static final Set<String> VALID_OPERATIONS = Set.of(
+            "CREATE", "UPDATE", "DELETE", "APPROVE", "REJECT", "LOGIN", "EXPORT", "DOWNLOAD", "DENIED",
+            "VIEW_SENSITIVE", "CONFIG_CHANGE");
+    private static final Set<String> SENSITIVE_FIELDS = Set.of("password", "secret", "token", "nationalid", "salary");
+    private static final ObjectMapper PAYLOAD_MAPPER = new ObjectMapper();
+
     private final PlatformAuditOutboxEventRepository repository;
 
-    private static final Set<String> VALID_OPERATIONS = Set.of(
-            "CREATE", "UPDATE", "DELETE", "APPROVE", "REJECT", "LOGIN", "EXPORT", "DOWNLOAD", "DENIED", "VIEW_SENSITIVE", "CONFIG_CHANGE"
-    );
-
-    /** Short form: {@code operationOrEvent} is either a D4 operation or a named event (its operation is derived). */
     public void record(PlatformPrincipal actor, String operationOrEvent, String actionCode, String entityType, UUID entityId) {
-        record(actor, null, operationOrEvent, null, actionCode, entityType, entityId, SUCCESS);
+        record(actor, null, operationOrEvent, null, actionCode, entityType, entityId, SUCCESS, Map.of());
     }
 
-    /** Short form for an event about one tenant. */
     public void record(PlatformPrincipal actor, UUID tenantId, String operationOrEvent, String actionCode,
                        String entityType, UUID entityId) {
-        record(actor, tenantId, operationOrEvent, null, actionCode, entityType, entityId, SUCCESS);
+        record(actor, tenantId, operationOrEvent, null, actionCode, entityType, entityId, SUCCESS, Map.of());
+    }
+
+    public void record(PlatformPrincipal actor, UUID tenantId, String eventType, String operation, String actionCode,
+                       String entityType, UUID entityId, String outcome) {
+        record(actor, tenantId, eventType, operation, actionCode, entityType, entityId, outcome, Map.of());
     }
 
     /**
-     * Full form. {@code eventType} may be null when {@code operationOrEvent} already is a plain operation.
-     * When {@code operation} is null it is derived from the event name.
+     * Writes a payload with one old/new pair per changed field. Sensitive keys are masked recursively,
+     * including when they appear inside nested objects or arrays.
      */
     public void record(PlatformPrincipal actor, UUID tenantId, String eventType, String operation, String actionCode,
-                       String entityType, UUID entityId, String outcome) {
+                       String entityType, UUID entityId, String outcome, Map<String, Map<String, Object>> changes) {
         if (actor == null || actor.platformUserId() == null) {
             throw new IllegalStateException("A platform audit event needs an actor.");
         }
@@ -63,13 +67,22 @@ public class PlatformAuditWriter {
         UUID id = UUID.randomUUID();
         String op = operation != null ? normalizeOperation(operation) : normalizeOperation(eventType);
         String event = eventType == null ? null : (eventType.length() > 60 ? eventType.substring(0, 60) : eventType);
-        String corr = CorrelationContext.get();
-        if (corr == null || corr.isBlank()) {
-            corr = id.toString();
+        String correlationId = CorrelationContext.get();
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = id.toString();
         }
-        if (corr.length() > 100) {
-            corr = corr.substring(0, 100);
+        if (correlationId.length() > 100) {
+            correlationId = correlationId.substring(0, 100);
         }
+
+        JsonNode payload = maskedPayload(changes);
+        String payloadJson;
+        try {
+            payloadJson = PAYLOAD_MAPPER.writeValueAsString(payload);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Platform audit payload could not be serialized.", ex);
+        }
+
         repository.save(PlatformAuditOutboxEvent.builder()
                 .auditOutboxId(id)
                 .tenantId(tenantId)
@@ -82,50 +95,79 @@ public class PlatformAuditWriter {
                 .entityType(entityType)
                 .entityId(entityId)
                 .outcome(outcome)
-                .correlationId(corr)
-                .payloadHash(sha256(id + "|" + actor.platformUserId() + "|" + op + "|" + event + "|" + actionCode + "|"
-                        + entityType + "|" + entityId + "|" + outcome + "|" + now))
+                .payload(payload)
+                .correlationId(correlationId)
+                .payloadHash(sha256(id + "|" + actor.platformUserId() + "|" + op + "|" + event + "|" + actionCode
+                        + "|" + entityType + "|" + entityId + "|" + outcome + "|" + payloadJson + "|" + now))
                 .createdBy(actor.platformUserId())
                 .updatedBy(actor.platformUserId())
                 .build());
     }
 
     /** A refused attempt (L-07): written before the refusal is raised. */
-    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    @org.springframework.transaction.annotation.Transactional(
+            propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void recordDenied(PlatformPrincipal actor, String actionCode) {
         record(actor, null, "ACTION_DENIED", "DENIED", actionCode, "PLATFORM_ACTION", actor.platformUserId(), DENIED);
     }
 
-    private static String normalizeOperation(String op) {
-        if (op != null && VALID_OPERATIONS.contains(op)) {
-            return op;
+    private static JsonNode maskedPayload(Map<String, Map<String, Object>> changes) {
+        ObjectNode oldValues = PAYLOAD_MAPPER.createObjectNode();
+        ObjectNode newValues = PAYLOAD_MAPPER.createObjectNode();
+        if (changes != null) {
+            changes.forEach((field, pair) -> {
+                Object oldValue = pair == null ? null : pair.get("old");
+                Object newValue = pair == null ? null : pair.get("new");
+                oldValues.set(field, maskedValue(oldValue, isSensitive(field)));
+                newValues.set(field, maskedValue(newValue, isSensitive(field)));
+            });
         }
-        if (op != null) {
-            String upper = op.toUpperCase();
-            if (upper.contains("REJECT")) {
-                return "REJECT";
-            }
-            if (upper.contains("APPROVE") || upper.endsWith("_APPROVED") || upper.endsWith("_CONFIRMED")) {
-                return "APPROVE";
-            }
-            if (upper.contains("CREATE") || upper.contains("REPORT") || upper.contains("ASSUME") || upper.endsWith("_REQUESTED")) {
-                return "CREATE";
-            }
-            if (upper.contains("DELETE")) {
-                return "DELETE";
-            }
-            if (upper.contains("CONFIG")) {
-                return "CONFIG_CHANGE";
-            }
-            if (upper.contains("EXPORT")) {
-                return "EXPORT";
-            }
-            if (upper.contains("DOWNLOAD")) {
-                return "DOWNLOAD";
-            }
-            if (upper.contains("VIEW")) {
-                return "VIEW_SENSITIVE";
-            }
+        ObjectNode payload = PAYLOAD_MAPPER.createObjectNode();
+        payload.set("old_values", oldValues);
+        payload.set("new_values", newValues);
+        return payload;
+    }
+
+    private static JsonNode maskedValue(Object value, boolean forceMask) {
+        return forceMask ? TextNode.valueOf("***") : maskNested(PAYLOAD_MAPPER.valueToTree(value));
+    }
+
+    private static JsonNode maskNested(JsonNode value) {
+        if (value == null || value.isNull() || value.isValueNode()) {
+            return value == null ? com.fasterxml.jackson.databind.node.NullNode.getInstance() : value.deepCopy();
+        }
+        if (value.isObject()) {
+            ObjectNode masked = PAYLOAD_MAPPER.createObjectNode();
+            value.fields().forEachRemaining(entry -> masked.set(entry.getKey(),
+                    isSensitive(entry.getKey()) ? TextNode.valueOf("***") : maskNested(entry.getValue())));
+            return masked;
+        }
+        if (value.isArray()) {
+            ArrayNode masked = PAYLOAD_MAPPER.createArrayNode();
+            value.forEach(item -> masked.add(maskNested(item)));
+            return masked;
+        }
+        return value.deepCopy();
+    }
+
+    private static boolean isSensitive(String field) {
+        return field != null && SENSITIVE_FIELDS.contains(field.replace("_", "").toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static String normalizeOperation(String operation) {
+        if (operation != null && VALID_OPERATIONS.contains(operation)) {
+            return operation;
+        }
+        if (operation != null) {
+            String upper = operation.toUpperCase(java.util.Locale.ROOT);
+            if (upper.contains("REJECT")) return "REJECT";
+            if (upper.contains("APPROVE") || upper.endsWith("_APPROVED") || upper.endsWith("_CONFIRMED")) return "APPROVE";
+            if (upper.contains("CREATE") || upper.contains("REPORT") || upper.contains("ASSUME") || upper.endsWith("_REQUESTED")) return "CREATE";
+            if (upper.contains("DELETE")) return "DELETE";
+            if (upper.contains("CONFIG")) return "CONFIG_CHANGE";
+            if (upper.contains("EXPORT")) return "EXPORT";
+            if (upper.contains("DOWNLOAD")) return "DOWNLOAD";
+            if (upper.contains("VIEW")) return "VIEW_SENSITIVE";
         }
         return "UPDATE";
     }
