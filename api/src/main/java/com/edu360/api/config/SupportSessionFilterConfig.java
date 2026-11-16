@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
 import com.edu360.api.platformops.support.SupportAccessGrantRepository;
 import com.edu360.api.platformops.support.SupportSessionAuthenticationFilter;
@@ -25,12 +26,13 @@ public class SupportSessionFilterConfig {
     private final TenantRepository tenantRepository;
     private final LoginTenantResolver loginTenantResolver;
     private final PlatformAuditWriter platformAuditWriter;
+    private final AuditLogService tenantAuditService;
     private final JdbcTemplate jdbcTemplate;
 
     @Bean
     public SupportSessionAuthenticationFilter supportSessionAuthenticationFilter() {
         return new SupportSessionAuthenticationFilter(tokenService, sessionRepository, grantRepository,
-                tenantRepository, jdbcTemplate, platformAuditWriter);
+                tenantRepository, jdbcTemplate, platformAuditWriter, tenantAuditService);
     }
 
     @Bean
