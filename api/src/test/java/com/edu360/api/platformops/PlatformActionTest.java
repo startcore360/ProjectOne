@@ -28,6 +28,7 @@ import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
+import com.edu360.api.exception.ApiException;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.DuplicateResourceException;
 import com.edu360.api.exception.ResourceNotFoundException;
@@ -290,8 +291,12 @@ class PlatformActionTest {
                 100, 10, 1000, 1000, 5, null, null, null, null, null, "ACTIVE"
         );
         assertThatThrownBy(() -> tenantController.updatePlan(planId, req, auth(PlatformRole.PLATFORM_ADMIN)))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessageContaining("Rule [F-4]");
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> {
+                    ApiException apiException = (ApiException) error;
+                    assertThat(apiException.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(apiException.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+                });
     }
 
     // =========================================================================
