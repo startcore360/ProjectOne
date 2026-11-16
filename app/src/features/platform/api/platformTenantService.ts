@@ -111,6 +111,16 @@ export type UpdatePlanPayload = {
   status?: string;
 };
 
+export type TenantPlanChangeResponse = {
+  tenantId: string;
+  previousPlanId: string;
+  activePlanId: string;
+  pendingPlanId?: string;
+  effective: "NOW" | "RENEWAL";
+  nextRenewalAt?: string;
+  prorationInvoice?: { invoiceNumber: string; subtotalAmount: number; totalAmount: number };
+};
+
 export type TenantSettings = {
   tenantId: string;
   tenantName: string;
@@ -200,6 +210,8 @@ export const platformTenantService = {
     api.post<TenantItem>(`/platform/tenants/${tenantId}/archive`, { reason }),
   reactivateTenant: (tenantId: string) =>
     api.post<TenantItem>(`/platform/tenants/${tenantId}/reactivation`),
+  changeTenantPlan: (tenantId: string, payload: { planId: string; effective: "NOW" | "RENEWAL" }, idempotencyKey: string) =>
+    api.post<TenantPlanChangeResponse>(`/platform/tenants/${tenantId}/plan-change`, payload, { headers: { "Idempotency-Key": idempotencyKey } }),
   getTenantSettings: (tenantId: string) =>
     api.get<TenantSettings>(`/platform/tenants/${tenantId}/settings`),
   updateTenantSettings: (tenantId: string, data: UpdateTenantSettingsPayload) =>

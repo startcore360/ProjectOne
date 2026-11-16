@@ -5,6 +5,7 @@ export type Tenant = {
   name: string;
   type: string;
   plan: string;
+  planId?: string;
   status: "Active" | "Trial" | "Suspended" | "Archived";
   gates: number;
   updated: string;

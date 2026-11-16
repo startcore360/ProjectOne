@@ -46,8 +46,12 @@ public class PlatformBillingCycleService {
    if(invoiceRepository.existsByTenantIdAndPeriodStartAndPeriodEnd(tenantId,request.periodStart(),request.periodEnd())) {
     skipped.add(new BillingCycleResponse.SkippedTenant(tenantId,"ALREADY_INVOICED")); continue;
    }
-   Plan plan=planRepository.findById(tenant.getPlanId()).orElse(null);
+   UUID invoicePlanId=tenant.getPendingPlanId()!=null?tenant.getPendingPlanId():tenant.getPlanId();
+   Plan plan=planRepository.findById(invoicePlanId).orElse(null);
    if(plan==null) { skipped.add(new BillingCycleResponse.SkippedTenant(tenantId,"PLAN_NOT_FOUND")); continue; }
+   if(tenant.getPendingPlanId()!=null&&!"ACTIVE".equals(plan.getStatus())) {
+    skipped.add(new BillingCycleResponse.SkippedTenant(tenantId,"PENDING_PLAN_NOT_ACTIVE")); continue;
+   }
    if(plan.getBillingCycleMonths()==null||plan.getBillingCycleMonths()<1) {
     skipped.add(new BillingCycleResponse.SkippedTenant(tenantId,"INVALID_BILLING_CYCLE")); continue;
    }

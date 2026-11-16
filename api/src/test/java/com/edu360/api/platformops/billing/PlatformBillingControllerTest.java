@@ -23,7 +23,7 @@ import org.springframework.security.core.Authentication;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.idempotency.PlatformIdempotencyService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platform.PlatformRole;
@@ -59,7 +59,7 @@ class PlatformBillingControllerTest {
         auditLogService = mock(AuditLogService.class);
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         billingService = new PlatformBillingService(invoiceRepository, invoiceLineRepository, platformAuditWriter);
-        controller = new PlatformBillingController(billingService, permissionService, idempotencyService, new ObjectMapper());
+        controller = new PlatformBillingController(billingService, permissionService, idempotencyService, JsonMapper.builder().findAndAddModules().build());
     }
 
     private Authentication authFor(PlatformRole role) {

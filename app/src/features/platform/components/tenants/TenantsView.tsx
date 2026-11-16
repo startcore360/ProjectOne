@@ -7,6 +7,7 @@ import {
   StatusBadge,
   DataTable,
   SearchBox,
+  Modal,
 } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
@@ -114,6 +115,12 @@ export function TenantsView() {
   const [archiving, setArchiving] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showPlanChange, setShowPlanChange] = useState(false);
+  const [planChangePlanId, setPlanChangePlanId] = useState("");
+  const [planChangeEffective, setPlanChangeEffective] = useState<"NOW" | "RENEWAL">("RENEWAL");
+  const [planChangeKey, setPlanChangeKey] = useState("");
+  const [planChangeError, setPlanChangeError] = useState("");
+  const [changingPlan, setChangingPlan] = useState(false);
   const [showDataProtection, setShowDataProtection] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<TenantSettingsDraft>({
@@ -158,6 +165,7 @@ export function TenantsView() {
               ? "College"
               : "University",
         plan: t.planName,
+        planId: t.planId,
         status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : t.state === "ARCHIVED" ? "Archived" : "Suspended",
         gates: t.state === "TRIAL" ? 1 : 0,
         updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
@@ -381,6 +389,37 @@ export function TenantsView() {
     }
   };
 
+  const handleOpenPlanChange = (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    setPlanChangePlanId(plans.find((plan) => plan.status === "ACTIVE" && plan.planId !== tenant.planId)?.planId ?? "");
+    setPlanChangeEffective("RENEWAL");
+    setPlanChangeKey(crypto.randomUUID());
+    setPlanChangeError("");
+    setShowPlanChange(true);
+  };
+
+  const handlePlanChangeSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedTenant || !planChangePlanId) return;
+    setChangingPlan(true);
+    setPlanChangeError("");
+    try {
+      const result = await platformTenantService.changeTenantPlan(selectedTenant.id, {
+        planId: planChangePlanId,
+        effective: planChangeEffective,
+      }, planChangeKey);
+      setMessage(result.data.prorationInvoice
+        ? `Plan upgraded for ${selectedTenant.name}; pro-rata draft invoice ${result.data.prorationInvoice.invoiceNumber} created.`
+        : `Plan change for ${selectedTenant.name} scheduled for renewal.`);
+      setShowPlanChange(false);
+      void loadTenants();
+    } catch (err: unknown) {
+      setPlanChangeError(err instanceof Error ? err.message : "Unable to change tenant plan.");
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
   const handleOpenSettings = async (tenant: Tenant) => {
     setSelectedTenant(tenant);
     setShowSettings(true);
@@ -556,6 +595,9 @@ export function TenantsView() {
                       </>
                     )}
                     <RowMenu>
+                      {canEditSettings && tenant.status === "Active" && (
+                        <MenuAction onClick={() => handleOpenPlanChange(tenant)}>Change plan</MenuAction>
+                      )}
                       {canEditSettings && (
                         <MenuAction onClick={() => handleOpenSettings(tenant)}>Settings</MenuAction>
                       )}
@@ -614,6 +656,35 @@ export function TenantsView() {
         setArchiveReason={setArchiveReason}
         archiving={archiving}
       />
+
+      <Modal isOpen={showPlanChange} onClose={() => setShowPlanChange(false)} kicker="SUBSCRIPTION"
+        title={`Change plan · ${selectedTenant?.name ?? "Tenant"}`}
+        description="Immediate changes are upgrades only and create a pro-rata draft invoice. Downgrades should be scheduled for renewal."
+        size="md">
+        <form onSubmit={handlePlanChangeSubmit}>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <label htmlFor="tenant-plan-change-plan">New plan</label>
+            <select id="tenant-plan-change-plan" value={planChangePlanId} onChange={(e) => setPlanChangePlanId(e.target.value)} required
+              style={{ padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)" }}>
+              <option value="">Select a plan</option>
+              {plans.filter((plan) => plan.status === "ACTIVE" && plan.planId !== selectedTenant?.planId).map((plan) => (
+                <option key={plan.planId} value={plan.planId}>{plan.planName} · {plan.currencyCode} {plan.priceAmount.toLocaleString("en-IN")} · {plan.billingCycleMonths} months</option>
+              ))}
+            </select>
+            <label htmlFor="tenant-plan-change-effective">Effective</label>
+            <select id="tenant-plan-change-effective" value={planChangeEffective} onChange={(e) => setPlanChangeEffective(e.target.value as "NOW" | "RENEWAL")}
+              style={{ padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)" }}>
+              <option value="RENEWAL">At next renewal</option>
+              <option value="NOW">Immediately (upgrade only)</option>
+            </select>
+          </div>
+          {planChangeError && <p role="alert" className="app-error-inline">{planChangeError}</p>}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" type="button" onClick={() => setShowPlanChange(false)}>Cancel</Button>
+            <Button type="submit" busy={changingPlan} disabled={!planChangePlanId}>Save plan change</Button>
+          </div>
+        </form>
+      </Modal>
 
       <TenantSettingsModal
         isOpen={showSettings}

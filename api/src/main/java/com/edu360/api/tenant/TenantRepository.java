@@ -20,6 +20,7 @@ public interface TenantRepository extends JpaRepository<Tenant, java.util.UUID> 
     Optional<Tenant> findByCustomDomainIgnoreCase(String customDomain);
 
     List<Tenant> findByStateAndNextRenewalAtBetween(TenantState state, LocalDate from, LocalDate to);
+    List<Tenant> findByStateAndNextRenewalAtLessThanEqual(TenantState state, LocalDate to);
 
     long countByState(TenantState state);
 

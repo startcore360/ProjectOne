@@ -3,7 +3,7 @@ package com.edu360.api.platformops.billing;
 import java.util.List;
 import java.util.UUID;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.springframework.web.bind.annotation.RequestHeader;
 import com.edu360.api.idempotency.PlatformIdempotencyService;
 
@@ -39,7 +39,7 @@ public class PlatformBillingController {
     private final PlatformBillingService billingService;
     private final PlatformPermissionService permissionService;
     private final PlatformIdempotencyService idempotencyService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     @GetMapping
     public ResponseEntity<List<InvoiceResponse>> listInvoices(
