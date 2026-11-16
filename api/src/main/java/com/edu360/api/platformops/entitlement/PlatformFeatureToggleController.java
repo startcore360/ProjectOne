@@ -1,11 +1,13 @@
 package com.edu360.api.platformops.entitlement;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -53,6 +55,42 @@ public class PlatformFeatureToggleController {
             String targetType,
             Map<String, Boolean> features
     ) {}
+
+    @GetMapping("/plans/{id}/entitlements")
+    @Operation(summary = "Read subscription plan module entitlements (FEATURE_TOGGLE)")
+    public ResponseEntity<EntitlementsResponse> getPlanEntitlements(
+            @PathVariable UUID id,
+            Authentication auth
+    ) {
+        PlatformPrincipal principal = requirePlatformPrincipal(auth);
+        permissionService.authorize(principal, "FEATURE_TOGGLE");
+        Map<String, Boolean> features = new LinkedHashMap<>();
+        if (planEntitlementRepository != null) {
+            planEntitlementRepository.findByPlanId(id).forEach(entitlement ->
+                    features.put(featureKey(entitlement.getModuleCode(), entitlement.getFeatureCode()), entitlement.isEnabled()));
+        }
+        return ResponseEntity.ok(new EntitlementsResponse(id, "PLAN", features));
+    }
+
+    @GetMapping("/tenants/{id}/entitlements")
+    @Operation(summary = "Read tenant override feature entitlements (FEATURE_TOGGLE)")
+    public ResponseEntity<EntitlementsResponse> getTenantEntitlements(
+            @PathVariable UUID id,
+            Authentication auth
+    ) {
+        PlatformPrincipal principal = requirePlatformPrincipal(auth);
+        permissionService.authorize(principal, "FEATURE_TOGGLE");
+        Map<String, Boolean> features = new LinkedHashMap<>();
+        if (tenantEntitlementRepository != null) {
+            tenantEntitlementRepository.findByTenantId(id).forEach(entitlement ->
+                    features.put(featureKey(entitlement.getModuleCode(), entitlement.getFeatureCode()), entitlement.isEnabled()));
+        }
+        return ResponseEntity.ok(new EntitlementsResponse(id, "TENANT", features));
+    }
+
+    private static String featureKey(String moduleCode, String featureCode) {
+        return featureCode == null || featureCode.isBlank() ? moduleCode : moduleCode + ":" + featureCode;
+    }
 
     @PutMapping("/plans/{id}/entitlements")
     @Operation(summary = "Update subscription plan module entitlements (FEATURE_TOGGLE)")
