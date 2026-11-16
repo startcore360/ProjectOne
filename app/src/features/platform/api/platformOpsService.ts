@@ -285,9 +285,16 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async assumeSupportSession(ticketId: string): Promise<{ token: string; expiresAt: string; ticketNumber: string }> {
-    const res = await api.post<{ token: string; expiresAt: string; ticketNumber: string }>(`/platform/support-sessions?ticketId=${ticketId}`);
+  async assumeSupportSession(ticketId: string): Promise<{ token: string; expiresAt: string; tenantLoginAddress: string }> {
+    const res = await api.post<{ token: string; expiresAt: string; tenantLoginAddress: string }>(
+      "/platform/support-sessions",
+      { ticketId },
+    );
     return res.data;
+  },
+
+  async endCurrentSupportSession(): Promise<void> {
+    await api.delete("/platform/support-sessions/current");
   },
 
   async listActiveGrants(): Promise<SupportAccessGrantItem[]> {
