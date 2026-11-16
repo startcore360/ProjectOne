@@ -15,6 +15,11 @@ export type PlanItem = {
   smsLimit?: number;
   apiLimit?: number;
   maxInstitutions?: number;
+  customDomainAllowed: boolean;
+  brandingColorsAllowed: boolean;
+  billingCycleMonths: number;
+  smsUnitAmount?: number;
+  storageUnitAmountPerGb?: number;
   status: string;
 };
 
@@ -78,10 +83,16 @@ export type CreatePlanPayload = {
   smsLimit?: number;
   apiLimit?: number;
   maxInstitutions?: number;
+  customDomainAllowed?: boolean;
+  brandingColorsAllowed?: boolean;
+  billingCycleMonths?: number;
+  smsUnitAmount?: number;
+  storageUnitAmountPerGb?: number;
 };
 
 export type UpdatePlanPayload = {
   planName?: string;
+  pricingType?: string;
   priceAmount?: number;
   currencyCode?: string;
   userLimit?: number;
@@ -89,6 +100,11 @@ export type UpdatePlanPayload = {
   smsLimit?: number;
   apiLimit?: number;
   maxInstitutions?: number;
+  customDomainAllowed?: boolean;
+  brandingColorsAllowed?: boolean;
+  billingCycleMonths?: number;
+  smsUnitAmount?: number;
+  storageUnitAmountPerGb?: number;
   status?: string;
 };
 
