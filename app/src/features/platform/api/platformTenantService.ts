@@ -62,6 +62,8 @@ export type TenantCreateRequest = {
   firstAdminEmail: string;
   firstAdminMobile?: string;
   firstAdminNationalIdLast4?: string;
+  retentionMonths: number;
+  backupRetentionDays: number;
   timeZone?: string;
   dataRegion?: string;
 };
