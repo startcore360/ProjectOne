@@ -39,6 +39,15 @@ class SupportSessionIT {
     private void ensureMigrations() throws Exception {
         try (Connection conn = DriverManager.getConnection(POSTGRES_URL, POSTGRES_USER, POSTGRES_PASSWORD);
              Statement st = conn.createStatement()) {
+            try (ResultSet rs = st.executeQuery("SELECT to_regclass('app.tenant_local') IS NOT NULL")) {
+                rs.next();
+                if (!rs.getBoolean(1)) {
+                    st.execute(readSql("01_schema.sql"));
+                    st.execute(readSql("02_rules.sql"));
+                    st.execute(readSql("03_bindings.sql"));
+                    st.execute(readSql("03b_fk_indexes.sql"));
+                }
+            }
             try (ResultSet rs = st.executeQuery(
                     "SELECT EXISTS (SELECT 1 FROM ref.action_catalog WHERE action_code='SUPPORT_ACCESS_USE')")) {
                 rs.next();
