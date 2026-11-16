@@ -520,7 +520,9 @@ class PlatformTenantControllerTest {
         assertThat(response.getBody().planName()).isEqualTo("Updated Standard Plan");
         assertThat(response.getBody().userLimit()).isEqualTo(2000);
         assertThat(response.getBody().priceAmount()).isEqualByComparingTo(existing.getPriceAmount());
-        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq("UPDATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), org.mockito.ArgumentMatchers.isNull(),
+                eq("PLAN_UPDATED"), eq("UPDATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId),
+                eq(com.edu360.api.platformops.role.PlatformAuditWriter.SUCCESS), any());
     }
 
     @Test

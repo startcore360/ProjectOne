@@ -5,6 +5,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -659,50 +662,69 @@ public class TenantManagementService {
                     "Only the Product Owner can change plan pricing.");
         }
 
+        Map<String, Map<String, Object>> auditChanges = new LinkedHashMap<>();
         if (request.planName() != null && !request.planName().isBlank()) {
-            plan.setPlanName(request.planName().trim());
+            String next = request.planName().trim();
+            addAuditChange(auditChanges, "planName", plan.getPlanName(), next);
+            plan.setPlanName(next);
         }
         if (request.priceAmount() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            addAuditChange(auditChanges, "priceAmount", plan.getPriceAmount(), request.priceAmount());
             plan.setPriceAmount(request.priceAmount());
         }
         if (request.pricingType() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            addAuditChange(auditChanges, "pricingType", plan.getPricingType(), request.pricingType());
             plan.setPricingType(request.pricingType());
         }
         if (request.currencyCode() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER && !request.currencyCode().isBlank()) {
-            plan.setCurrencyCode(request.currencyCode().toUpperCase());
+            String next = request.currencyCode().toUpperCase();
+            addAuditChange(auditChanges, "currencyCode", plan.getCurrencyCode(), next);
+            plan.setCurrencyCode(next);
         }
         if (request.userLimit() != null) {
+            addAuditChange(auditChanges, "userLimit", plan.getUserLimit(), request.userLimit());
             plan.setUserLimit(request.userLimit());
         }
         if (request.storageLimitGb() != null) {
+            addAuditChange(auditChanges, "storageLimitGb", plan.getStorageLimitGb(), request.storageLimitGb());
             plan.setStorageLimitGb(request.storageLimitGb());
         }
         if (request.smsLimit() != null) {
+            addAuditChange(auditChanges, "smsLimit", plan.getSmsLimit(), request.smsLimit());
             plan.setSmsLimit(request.smsLimit());
         }
         if (request.apiLimit() != null) {
+            addAuditChange(auditChanges, "apiLimit", plan.getApiLimit(), request.apiLimit());
             plan.setApiLimit(request.apiLimit());
         }
         if (request.maxInstitutions() != null) {
+            addAuditChange(auditChanges, "maxInstitutions", plan.getMaxInstitutions(), request.maxInstitutions());
             plan.setMaxInstitutions(request.maxInstitutions());
         }
         if (request.customDomainAllowed() != null) {
+            addAuditChange(auditChanges, "customDomainAllowed", plan.isCustomDomainAllowed(), request.customDomainAllowed());
             plan.setCustomDomainAllowed(request.customDomainAllowed());
         }
         if (request.brandingColorsAllowed() != null) {
+            addAuditChange(auditChanges, "brandingColorsAllowed", plan.isBrandingColorsAllowed(), request.brandingColorsAllowed());
             plan.setBrandingColorsAllowed(request.brandingColorsAllowed());
         }
         if (request.billingCycleMonths() != null) {
+            addAuditChange(auditChanges, "billingCycleMonths", plan.getBillingCycleMonths(), request.billingCycleMonths());
             plan.setBillingCycleMonths(request.billingCycleMonths());
         }
         if (request.smsUnitAmount() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            addAuditChange(auditChanges, "smsUnitAmount", plan.getSmsUnitAmount(), request.smsUnitAmount());
             plan.setSmsUnitAmount(request.smsUnitAmount());
         }
         if (request.storageUnitAmountPerGb() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            addAuditChange(auditChanges, "storageUnitAmountPerGb", plan.getStorageUnitAmountPerGb(), request.storageUnitAmountPerGb());
             plan.setStorageUnitAmountPerGb(request.storageUnitAmountPerGb());
         }
         if (request.status() != null && !request.status().isBlank()) {
-            plan.setStatus(request.status().toUpperCase());
+            String next = request.status().toUpperCase();
+            addAuditChange(auditChanges, "status", plan.getStatus(), next);
+            plan.setStatus(next);
         }
 
         plan.setUpdatedAt(Instant.now());
@@ -711,9 +733,20 @@ public class TenantManagementService {
         plan.setRowVersion(currentVersion + 1);
 
         Plan saved = planRepository.save(plan);
-        platformAuditWriter.record(principal, "UPDATE", "PLAN_MANAGE", "PLAN", saved.getPlanId());
+        platformAuditWriter.record(principal, null, "PLAN_UPDATED", "UPDATE", "PLAN_MANAGE", "PLAN", saved.getPlanId(),
+                PlatformAuditWriter.SUCCESS, auditChanges);
 
         return PlanResponse.from(saved);
+    }
+
+    private static void addAuditChange(Map<String, Map<String, Object>> changes, String field, Object oldValue, Object newValue) {
+        if (Objects.equals(oldValue, newValue)) {
+            return;
+        }
+        Map<String, Object> pair = new LinkedHashMap<>();
+        pair.put("old", oldValue);
+        pair.put("new", newValue);
+        changes.put(field, pair);
     }
 
     @Transactional
