@@ -20,10 +20,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.exception.ApiException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Platform-side Idempotency-Key storage. Uses edu_platform and platform.idempotency_key, never the
@@ -32,19 +32,19 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 @Service
 public class PlatformIdempotencyService {
     private final JdbcTemplate jdbc;
-    private final ObjectMapper mapper;
+    private final JsonMapper mapper;
 
     @Autowired
     public PlatformIdempotencyService(
             @Qualifier("platformDataSource") ObjectProvider<DataSource> dataSourceProvider,
-            ObjectMapper mapper) {
+            JsonMapper mapper) {
         this(dataSourceProvider.getIfAvailable(), mapper);
     }
 
     /** Direct constructor for isolated tests; the test profile has no edu_platform pool. */
-    public PlatformIdempotencyService(DataSource dataSource, ObjectMapper mapper) {
+    public PlatformIdempotencyService(DataSource dataSource, JsonMapper mapper) {
         this.jdbc = dataSource == null ? null : new JdbcTemplate(dataSource);
-        this.mapper = mapper.copy().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+        this.mapper = mapper.rebuild().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true).build();
     }
 
     public record Claim(UUID id, boolean replay, Integer responseStatus, JsonNode responseBody) {
@@ -103,7 +103,7 @@ public class PlatformIdempotencyService {
             return new Claim(storedId, true, responseStatus == null ? null : responseStatus.intValue(), responseBody);
         } catch (ApiException ex) {
             throw ex;
-        } catch (DataAccessException | JsonProcessingException ex) {
+        } catch (DataAccessException | JacksonException ex) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "IDEMPOTENCY_STORE_UNAVAILABLE",
                     "The platform idempotency store is temporarily unavailable.");
         }
@@ -127,7 +127,7 @@ public class PlatformIdempotencyService {
             if (updated != 1) {
                 throw requestInProgress();
             }
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             throw new IllegalArgumentException("Response cannot be serialized for idempotent replay.", ex);
         }
     }
@@ -151,11 +151,11 @@ public class PlatformIdempotencyService {
         return jdbc;
     }
 
-    static String requestHash(Object requestBody, ObjectMapper mapper) {
+    static String requestHash(Object requestBody, JsonMapper mapper) {
         try {
             byte[] canonicalJson = mapper.writeValueAsBytes(requestBody);
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonicalJson));
-        } catch (JsonProcessingException | NoSuchAlgorithmException ex) {
+        } catch (JacksonException | NoSuchAlgorithmException ex) {
             throw new IllegalArgumentException("Request body cannot be hashed.", ex);
         }
     }

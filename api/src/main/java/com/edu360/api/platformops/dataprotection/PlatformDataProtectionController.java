@@ -20,7 +20,7 @@ import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.PlatformConcurrency;
 import com.edu360.api.idempotency.PlatformIdempotencyService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.CreateRetentionChangeRequest;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.DecideDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse;
@@ -43,7 +43,7 @@ public class PlatformDataProtectionController {
     private final PlatformDataProtectionService dataProtectionService;
     private final PlatformPermissionService permissionService;
     private final PlatformIdempotencyService idempotencyService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final PlatformConcurrency platformConcurrency;
 
     @PostMapping("/tenants/{tenantId}/export")

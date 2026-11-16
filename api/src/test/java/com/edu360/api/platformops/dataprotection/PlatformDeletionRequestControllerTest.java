@@ -25,7 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.edu360.api.idempotency.PlatformIdempotencyService;
 
 import com.edu360.api.audit.AuditLogService;
@@ -59,7 +59,7 @@ class PlatformDeletionRequestControllerTest {
     private PlatformDeletionRequestController controller;
     private PlatformDataProtectionController dataProtectionController;
     private PlatformIdempotencyService idempotencyService;
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
     private PlatformConcurrency platformConcurrency;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
@@ -77,7 +77,7 @@ class PlatformDeletionRequestControllerTest {
         tenantIssuerResolver = mock(com.edu360.api.config.TenantIssuerAuthenticationManagerResolver.class);
         notificationService = mock(com.edu360.api.platformops.PlatformNotificationService.class);
         idempotencyService = mock(PlatformIdempotencyService.class);
-        objectMapper = new ObjectMapper();
+        objectMapper = JsonMapper.builder().findAndAddModules().build();
         platformConcurrency = new PlatformConcurrency();
         auditLogService = mock(AuditLogService.class);
 

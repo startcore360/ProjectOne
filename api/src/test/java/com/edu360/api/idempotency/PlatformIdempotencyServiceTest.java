@@ -11,12 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
 import com.edu360.api.exception.ApiException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 class PlatformIdempotencyServiceTest {
-    private final ObjectMapper mapper = new ObjectMapper()
-            .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+    private final JsonMapper mapper = JsonMapper.builder()
+            .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+            .build();
 
     @Test
     void hashesEquivalentMapsDeterministically() {
