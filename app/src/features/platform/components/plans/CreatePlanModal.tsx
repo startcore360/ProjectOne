@@ -11,6 +11,11 @@ export interface CreatePlanDraft {
   smsLimit: number;
   apiLimit: number;
   maxInstitutions: number;
+  customDomainAllowed: boolean;
+  brandingColorsAllowed: boolean;
+  billingCycleMonths: number;
+  smsUnitAmount: number;
+  storageUnitAmountPerGb: number;
 }
 
 export interface CreatePlanModalProps {
@@ -21,6 +26,8 @@ export interface CreatePlanModalProps {
   setCreateDraft: React.Dispatch<React.SetStateAction<CreatePlanDraft>>;
   creating: boolean;
   createError: string;
+  canConfigurePricing: boolean;
+  isEditing: boolean;
 }
 
 export function CreatePlanModal({
@@ -31,15 +38,17 @@ export function CreatePlanModal({
   setCreateDraft,
   creating,
   createError,
+  canConfigurePricing,
+  isEditing,
 }: CreatePlanModalProps) {
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="NEW SUBSCRIPTION PLAN"
-      title="Add subscription plan"
+      kicker={isEditing ? "EDIT SUBSCRIPTION PLAN" : "NEW SUBSCRIPTION PLAN"}
+      title={isEditing ? "Edit subscription plan" : "Add subscription plan"}
       titleId="plan-create-title"
-      description="Platform administrators configure limits and modules; the Product Owner configures pricing."
+      description="Configure plan pricing, limits, billing cycle and commercial allowances. Pricing is controlled by the Product Owner."
       size="sm"
     >
       <form onSubmit={onSubmit}>
@@ -51,11 +60,13 @@ export function CreatePlanModal({
           onChange={(e) => setCreateDraft({ ...createDraft, planName: e.target.value })}
           placeholder="e.g. Standard School Plan"
         />
+        <fieldset disabled={!canConfigurePricing} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <div className="app-form-grid">
           <SelectField
             id="plan-pricing-type"
             label="Pricing Type"
             value={createDraft.pricingType}
+            disabled={!canConfigurePricing}
             onChange={(e) => setCreateDraft({ ...createDraft, pricingType: e.target.value })}
             options={[
               { value: "PER_STUDENT_YEAR", label: "Per Student Per Year" },
@@ -68,9 +79,12 @@ export function CreatePlanModal({
             label="Price Amount (₹)"
             type="number"
             value={String(createDraft.priceAmount)}
+            disabled={!canConfigurePricing}
             onChange={(e) => setCreateDraft({ ...createDraft, priceAmount: Number(e.target.value) })}
           />
         </div>
+        </fieldset>
+        {!canConfigurePricing && <Notice tone="info">Pricing, currency and pricing type can only be changed by the Product Owner.</Notice>}
         <div className="app-form-grid">
           <TextField
             id="plan-user-limit"
@@ -87,13 +101,53 @@ export function CreatePlanModal({
             onChange={(e) => setCreateDraft({ ...createDraft, storageLimitGb: Number(e.target.value) })}
           />
         </div>
+        <div className="app-form-grid">
+          <SelectField
+            id="plan-billing-cycle"
+            label="Billing cycle"
+            value={String(createDraft.billingCycleMonths)}
+            onChange={(e) => setCreateDraft({ ...createDraft, billingCycleMonths: Number(e.target.value) })}
+            options={[
+              { value: "1", label: "Monthly" },
+              { value: "3", label: "Quarterly" },
+              { value: "6", label: "Half-yearly" },
+              { value: "12", label: "Yearly" },
+            ]}
+          />
+          <TextField
+            id="plan-sms-unit-amount"
+            label="SMS unit amount (₹)"
+            type="number"
+            value={String(createDraft.smsUnitAmount)}
+            onChange={(e) => setCreateDraft({ ...createDraft, smsUnitAmount: Number(e.target.value) })}
+          />
+          <TextField
+            id="plan-storage-unit-amount"
+            label="Storage unit amount per GB (₹)"
+            type="number"
+            value={String(createDraft.storageUnitAmountPerGb)}
+            onChange={(e) => setCreateDraft({ ...createDraft, storageUnitAmountPerGb: Number(e.target.value) })}
+          />
+        </div>
+        <div className="app-form-grid">
+          <label className="app-form-field">
+            <input type="checkbox" checked={createDraft.customDomainAllowed}
+              onChange={(e) => setCreateDraft({ ...createDraft, customDomainAllowed: e.target.checked })} />
+            Allow custom domain
+          </label>
+          <label className="app-form-field">
+            <input type="checkbox" checked={createDraft.brandingColorsAllowed}
+              onChange={(e) => setCreateDraft({ ...createDraft, brandingColorsAllowed: e.target.checked })} />
+            Allow branding colour overrides
+          </label>
+        </div>
         {createError && <Notice tone="danger">{createError}</Notice>}
         <footer>
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" busy={creating}>
-            Create plan
+            {isEditing ? "Save plan" : "Create plan"}
           </Button>
         </footer>
       </form>
