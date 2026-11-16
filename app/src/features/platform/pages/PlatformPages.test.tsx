@@ -114,6 +114,27 @@ describe("Sprint 1 platform screens", () => {
     expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
   });
 
+
+  it("hides usage and compliance actions from a Billing Manager", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes("/platform/tenants")) {
+        return Promise.resolve({ data: { items: [{
+          tenantId: "TEN-BILL", tenantName: "Billing School", tenantType: "STANDALONE_SCHOOL",
+          planName: "Standard", state: "ACTIVE", isolationMode: "SHARED", subdomain: "billing",
+          timeZone: "Asia/Kolkata", dataRegion: "IN", keycloakRealm: "billing-realm",
+          createdAt: "2026-11-01T00:00:00Z",
+        }] } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<TenantsPage />, "BILLING_MANAGER");
+    expect(await screen.findByText("Billing School")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "⋯" }));
+    expect(screen.queryByRole("menuitem", { name: "Usage" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Compliance" })).not.toBeInTheDocument();
+  });
+
   it("filters tenants by search text", async () => {
     mockedApi.get.mockImplementation((url: string) => {
       if (url.includes("/platform/tenants")) {

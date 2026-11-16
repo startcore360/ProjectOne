@@ -80,6 +80,8 @@ import { tenantLoginAddress } from "./tenantAddress";
 
 export function TenantsView() {
   const { can } = usePlatformAccess();
+  const canViewUsage = can("USAGE_COUNTS_VIEW");
+  const canViewCompliance = can("TENANT_EXPORT_REQUEST") || can("TENANT_SETTINGS");
   const canActivate = can("TENANT_ACTIVATE");
   const canManageLifecycle = can("TENANT_SUSPEND_ARCHIVE");
   const canEditSettings = can("TENANT_SETTINGS");
@@ -557,8 +559,8 @@ export function TenantsView() {
                       {canEditSettings && (
                         <MenuAction onClick={() => handleOpenSettings(tenant)}>Settings</MenuAction>
                       )}
-                      <MenuAction onClick={() => { setSelectedTenant(tenant); setShowUsage(true); }}>Usage</MenuAction>
-                      <MenuAction onClick={() => { setSelectedTenant(tenant); setShowDataProtection(true); }}>Compliance</MenuAction>
+                      {canViewUsage && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowUsage(true); }}>Usage</MenuAction>}
+                      {canViewCompliance && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowDataProtection(true); }}>Compliance</MenuAction>}
                     </RowMenu>
                   </div>
                 </td>
