@@ -10,7 +10,7 @@ import { SupportSessionBanner } from "./SupportSessionBanner";
 
 function seedSupportSession() {
   const payload = btoa(JSON.stringify({ tenant_id: "tenant-1" }));
-  sessionStorage.setItem(SUPPORT_SESSION_TOKEN_KEY, `e30.${payload}.signature`);
+  sessionStorage.setItem(SUPPORT_SESSION_TOKEN_KEY, `test-session-${payload}`);
   sessionStorage.setItem(SUPPORT_SESSION_EXPIRY_KEY, new Date(Date.now() + 60 * 60 * 1000).toISOString());
   sessionStorage.setItem(SUPPORT_SESSION_TICKET_KEY, "SUP-2026-ABCDE");
   sessionStorage.setItem(SUPPORT_SESSION_PLATFORM_ORIGIN_KEY, "https://platform.edu360.local");
