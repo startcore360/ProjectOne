@@ -6,6 +6,7 @@ import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button, Panel, TextField, TextAreaField, SelectField } from "../../../design-system/components";
 import { ErrorState } from "../../../components/feedback/ErrorState";
+import { useSupportSession } from "../../support/useSupportSession";
 
 type Ticket = {
   supportTicketId: string; ticketNumber: string; subject: string; description: string;
@@ -17,7 +18,8 @@ type Grant = {
 };
 
 export default function TenantSupportPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { isSupportSession, tenantId: supportTenantId } = useSupportSession();
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? supportTenantId;
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +35,7 @@ export default function TenantSupportPage() {
   const [institutionId, setInstitutionId] = useState("");
 
   const load = useCallback(async () => {
-    if (!tenantId) { setLoading(false); return; }
+    if (isSupportSession || !tenantId) { setLoading(false); return; }
     setLoading(true); setError(""); setErrorStatus(null);
     try {
       const [ticketResponse, grantResponse] = await Promise.all([
@@ -47,7 +49,7 @@ export default function TenantSupportPage() {
       setError(getApiErrorMessage(err));
       setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
     } finally { setLoading(false); }
-  }, [tenantId]);
+  }, [tenantId, isSupportSession]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -106,6 +108,17 @@ export default function TenantSupportPage() {
   };
 
   const forbidden = errorStatus === 403 || errorStatus === 404;
+  if (isSupportSession) {
+    return (
+      <div className="app-page">
+        <PageHeader title="Support session" description="This tenant tab is operating under a ticket-bound, read-only support grant." />
+        <Panel title="Read-only access is active">
+          <p>Data-changing controls, ticket creation, grant management and withdrawal are unavailable in a support session.</p>
+          <p>Use the tenant navigation to open only the read operations explicitly marked support-readable in the API contract.</p>
+        </Panel>
+      </div>
+    );
+  }
   return (
     <div className="app-page">
       <PageHeader title="Tenant support" description="Raise support tickets and control temporary, read-only access to your institution's data." />
