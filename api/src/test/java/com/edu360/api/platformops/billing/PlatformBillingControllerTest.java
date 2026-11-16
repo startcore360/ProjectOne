@@ -276,6 +276,7 @@ class PlatformBillingControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().status()).isEqualTo("SENT");
         assertThat(response.getBody().sentAt()).isNotNull();
+        assertThat(response.getBody().dueAt()).isEqualTo(LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).plusDays(15));
     }
 
 

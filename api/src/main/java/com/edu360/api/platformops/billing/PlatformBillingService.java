@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,25 +33,31 @@ public class PlatformBillingService {
 
     private final InvoiceRepository invoiceRepository;
     private final InvoiceLineRepository invoiceLineRepository;
+    private final BillingSettingsRepository billingSettingsRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
 
     @Autowired
     public PlatformBillingService(
             InvoiceRepository invoiceRepository,
             InvoiceLineRepository invoiceLineRepository,
+            BillingSettingsRepository billingSettingsRepository,
             com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
     ) {
         this.invoiceRepository = invoiceRepository;
         this.invoiceLineRepository = invoiceLineRepository;
+        this.billingSettingsRepository = billingSettingsRepository;
         this.platformAuditWriter = platformAuditWriter;
     }
 
-    /** Compatibility constructor for existing callers that do not use invoice-line operations. */
-    public PlatformBillingService(
-            InvoiceRepository invoiceRepository,
-            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
-    ) {
-        this(invoiceRepository, null, platformAuditWriter);
+    /** Compatibility constructors for isolated tests and existing non-settings callers. */
+    public PlatformBillingService(InvoiceRepository invoiceRepository, InvoiceLineRepository invoiceLineRepository,
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter) {
+        this(invoiceRepository, invoiceLineRepository, null, platformAuditWriter);
+    }
+
+    public PlatformBillingService(InvoiceRepository invoiceRepository,
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter) {
+        this(invoiceRepository, null, null, platformAuditWriter);
     }
 
     @Transactional(readOnly = true)
@@ -247,6 +254,9 @@ public class PlatformBillingService {
         Instant now = Instant.now();
         invoice.setStatus("SENT");
         invoice.setSentAt(now);
+        int dueDays = billingSettingsRepository == null ? 15 : billingSettingsRepository.findById(1)
+                .map(BillingSettings::getInvoiceDueDays).orElse(15);
+        invoice.setDueAt(LocalDate.ofInstant(now, ZoneId.of("Asia/Kolkata")).plusDays(dueDays));
         invoice.setUpdatedAt(now);
         invoice.setUpdatedBy(principal.platformUserId());
 

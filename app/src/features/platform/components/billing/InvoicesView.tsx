@@ -131,7 +131,7 @@ export function InvoicesView() {
     setLoading(true);
     setError("");
     try {
-      const [invs, tenantRes] = await Promise.all([
+      const [invs, tenantRes, settings] = await Promise.all([
         platformOpsService.listInvoices(),
         platformTenantService.getTenants(),
       ]);

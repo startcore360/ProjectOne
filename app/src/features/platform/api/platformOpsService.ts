@@ -75,6 +75,8 @@ export type InvoiceItem = {
   createdAt: string;
 };
 
+export type BillingSettingsItem = { invoiceDueDays: number };
+
 export type BillingCycleSkippedTenant = { tenantId: string; reason: string };
 export type BillingCycleResponse = { created: InvoiceItem[]; skipped: BillingCycleSkippedTenant[] };
 
@@ -219,6 +221,16 @@ export const platformOpsService = {
   },
 
   // Billing & Invoices
+  async getBillingSettings(): Promise<BillingSettingsItem> {
+    const res = await api.get<BillingSettingsItem>("/platform/billing/settings");
+    return res.data;
+  },
+
+  async updateBillingSettings(invoiceDueDays: number): Promise<BillingSettingsItem> {
+    const res = await api.put<BillingSettingsItem>("/platform/billing/settings", { invoiceDueDays });
+    return res.data;
+  },
+
   async createBillingCycle(payload: { periodStart: string; periodEnd: string }, idempotencyKey: string): Promise<BillingCycleResponse> {
     const res = await api.post<BillingCycleResponse>("/platform/billing-cycles", payload, { headers: { "Idempotency-Key": idempotencyKey } });
     return res.data;
