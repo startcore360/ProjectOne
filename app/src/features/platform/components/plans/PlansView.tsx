@@ -5,13 +5,17 @@ import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { platformTenantService, type PlanItem, type TenantItem } from "../../api/platformTenantService";
 import { CreatePlanModal, type CreatePlanDraft } from "./CreatePlanModal";
+import { usePlatformAccess } from "../../platformAccess";
 
 export function PlansView() {
+  const { role } = usePlatformAccess();
+  const canConfigurePricing = role === "PRODUCT_OWNER";
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [tenants, setTenants] = useState<TenantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<PlanItem | null>(null);
   const [createDraft, setCreateDraft] = useState<CreatePlanDraft>({
     planName: "",
     pricingType: "PER_STUDENT_YEAR",
@@ -22,6 +26,11 @@ export function PlansView() {
     smsLimit: 5000,
     apiLimit: 10000,
     maxInstitutions: 1,
+    customDomainAllowed: false,
+    brandingColorsAllowed: false,
+    billingCycleMonths: 12,
+    smsUnitAmount: 0,
+    storageUnitAmountPerGb: 0,
   });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -53,7 +62,7 @@ export function PlansView() {
     setCreating(true);
     setCreateError("");
     try {
-      await platformTenantService.createPlan({
+      const payload = {
         planName: createDraft.planName.trim(),
         pricingType: createDraft.pricingType,
         priceAmount: Number(createDraft.priceAmount),
@@ -63,8 +72,18 @@ export function PlansView() {
         smsLimit: Number(createDraft.smsLimit),
         apiLimit: Number(createDraft.apiLimit),
         maxInstitutions: Number(createDraft.maxInstitutions),
-      });
-      setMessage(`Plan "${createDraft.planName}" created successfully.`);
+        customDomainAllowed: createDraft.customDomainAllowed,
+        brandingColorsAllowed: createDraft.brandingColorsAllowed,
+        billingCycleMonths: createDraft.billingCycleMonths,
+        smsUnitAmount: Number(createDraft.smsUnitAmount),
+        storageUnitAmountPerGb: Number(createDraft.storageUnitAmountPerGb),
+      };
+      if (editingPlan) {
+        await platformTenantService.updatePlan(editingPlan.planId, payload);
+      } else {
+        await platformTenantService.createPlan(payload);
+      }
+      setMessage(`Plan "${createDraft.planName}" ${editingPlan ? "updated" : "created"} successfully.`);
       setShowCreate(false);
       setCreateDraft({
         planName: "",
@@ -76,7 +95,13 @@ export function PlansView() {
         smsLimit: 5000,
         apiLimit: 10000,
         maxInstitutions: 1,
+        customDomainAllowed: false,
+        brandingColorsAllowed: false,
+        billingCycleMonths: 12,
+        smsUnitAmount: 0,
+        storageUnitAmountPerGb: 0,
       });
+      setEditingPlan(null);
       loadPlans();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create subscription plan.";
@@ -96,6 +121,13 @@ export function PlansView() {
             onClick={() => {
               setMessage("");
               setCreateError("");
+              setEditingPlan(null);
+              setCreateDraft({
+                planName: "", pricingType: "PER_STUDENT_YEAR", priceAmount: 499, currencyCode: "INR",
+                userLimit: 1000, storageLimitGb: 50, smsLimit: 5000, apiLimit: 10000, maxInstitutions: 1,
+                customDomainAllowed: false, brandingColorsAllowed: false, billingCycleMonths: 12,
+                smsUnitAmount: 0, storageUnitAmountPerGb: 0,
+              });
               setShowCreate(true);
             }}
           >
@@ -138,6 +170,20 @@ export function PlansView() {
                 </strong>
               </div>
               <Badge tone="neutral">{plan.status ?? "ACTIVE"}</Badge>
+              <Button variant="secondary" size="sm" onClick={() => {
+                setEditingPlan(plan);
+                setCreateError("");
+                setCreateDraft({
+                  planName: plan.planName, pricingType: plan.pricingType, priceAmount: plan.priceAmount,
+                  currencyCode: plan.currencyCode, userLimit: plan.userLimit ?? 1000,
+                  storageLimitGb: plan.storageLimitGb ?? 50, smsLimit: plan.smsLimit ?? 5000,
+                  apiLimit: plan.apiLimit ?? 10000, maxInstitutions: plan.maxInstitutions ?? 1,
+                  customDomainAllowed: plan.customDomainAllowed, brandingColorsAllowed: plan.brandingColorsAllowed,
+                  billingCycleMonths: plan.billingCycleMonths, smsUnitAmount: plan.smsUnitAmount ?? 0,
+                  storageUnitAmountPerGb: plan.storageUnitAmountPerGb ?? 0,
+                });
+                setShowCreate(true);
+              }}>Edit plan</Button>
             </article>
           ))}
         </div>
@@ -151,6 +197,8 @@ export function PlansView() {
         setCreateDraft={setCreateDraft}
         creating={creating}
         createError={createError}
+        canConfigurePricing={canConfigurePricing}
+        isEditing={Boolean(editingPlan)}
       />
     </div>
   );
