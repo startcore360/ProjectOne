@@ -120,10 +120,10 @@ if ($platformRolesApplied.Trim() -ne "t") {
 }
 foreach ($f in @("12d_v41_platform_role_templates.sql", "14_v41_audit_foundation.sql", "15_v41_user_active_role.sql",
                  "16_v41_tenant_top_post_authority.sql", "18_v41_user_sessions.sql", "20_v41_never_allowed_guard.sql", "22_v41_platform_audit_event_type.sql", "24_v41_sign_in_security.sql", "24d_v41_action_module_map.sql",
-                 "25_sprint2_foundations.sql", "26_v41_student_login_switch_guard.sql", "27_v41_notification_read_state.sql", "28_v41_study_material_view.sql", "29_v41_institution_code_formats.sql", "30_v41_exam_day_event_type.sql", "31_v41_staff_record_view_grants.sql", "32_v41_staff_login_aliases.sql", "33_v41_study_material_leadership_grants.sql")) {
+                 "25_sprint2_foundations.sql", "26_v41_student_login_switch_guard.sql", "27_v41_notification_read_state.sql", "28_v41_study_material_view.sql", "29_v41_institution_code_formats.sql", "30_v41_exam_day_event_type.sql", "31_v41_staff_record_view_grants.sql", "32_v41_staff_login_aliases.sql", "33_v41_study_material_leadership_grants.sql", "40_v41_support_session.sql")) {
     Run-Sql $f
 }
-Write-Host "V4.1 migrations applied (12d through 33)."
+Write-Host "V4.1 migrations applied (12d through 40)."
 
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "ALTER ROLE edu_app WITH PASSWORD '$password'"
 Write-Host "edu_app role credential set."
