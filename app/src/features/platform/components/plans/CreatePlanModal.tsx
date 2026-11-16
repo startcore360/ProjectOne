@@ -142,6 +142,7 @@ export function CreatePlanModal({
             label="SMS unit amount (₹)"
             type="number"
             value={String(createDraft.smsUnitAmount)}
+            disabled={!canConfigurePricing}
             onChange={(e) => setCreateDraft({ ...createDraft, smsUnitAmount: Number(e.target.value) })}
           />
           <TextField
@@ -149,6 +150,7 @@ export function CreatePlanModal({
             label="Storage unit amount per GB (₹)"
             type="number"
             value={String(createDraft.storageUnitAmountPerGb)}
+            disabled={!canConfigurePricing}
             onChange={(e) => setCreateDraft({ ...createDraft, storageUnitAmountPerGb: Number(e.target.value) })}
           />
         </div>
