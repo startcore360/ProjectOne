@@ -19,6 +19,7 @@ import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.Deletion
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.RetentionChangeRequestResponse;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.RetentionPolicyResponse;
+import com.edu360.api.platformops.PlatformNotificationService;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantRepository;
@@ -52,6 +53,7 @@ public class PlatformDataProtectionService {
     private final RetentionChangeRequestRepository retentionChangeRequestRepository;
     private final TenantRepository tenantRepository;
     private final PlatformAuditWriter auditWriter;
+    private final PlatformNotificationService notificationService;
     private final TenantIssuerAuthenticationManagerResolver tenantIssuerResolver;
 
     /**
@@ -86,6 +88,63 @@ public class PlatformDataProtectionService {
         return exportRequestRepository.findByTenantIdOrderByCreatedAtDesc(tenantId).stream()
                 .map(this::toExportResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExportRequestResponse> listAllExports() {
+        return exportRequestRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(this::toExportResponse)
+                .toList();
+    }
+
+    /**
+     * DPO decision only. Approval records state and notifies the requester; the A5 worker polls
+     * APPROVED requests. This method deliberately does not create or enqueue an export job.
+     */
+    @Transactional
+    public ExportRequestResponse decideExportRequest(UUID exportRequestId, String decision, String remark,
+            PlatformPrincipal principal) {
+        ExportRequest request = exportRequestRepository.findById(exportRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Export request not found: " + exportRequestId));
+        if (!"REQUESTED".equals(request.getStatus())) {
+            throw new BusinessRuleViolationException("ALREADY_ACTIONED",
+                    "This export request was already decided (" + request.getStatus() + ").");
+        }
+        if (request.getRequestedByUserId() != null
+                && request.getRequestedByUserId().equals(principal.platformUserId())) {
+            throw new UnauthorizedException("Separation of duties: the requester cannot decide their own export request.");
+        }
+
+        String upperDecision = decision != null ? decision.trim().toUpperCase(java.util.Locale.ROOT) : "";
+        boolean approved = "APPROVED".equals(upperDecision);
+        if (!approved && !"REJECTED".equals(upperDecision)) {
+            throw new BusinessRuleViolationException("INVALID_DECISION", "Decision must be APPROVED or REJECTED.");
+        }
+        if (!approved && (remark == null || remark.isBlank())) {
+            throw new BusinessRuleViolationException("REMARK_REQUIRED", "A rejection remark is mandatory.");
+        }
+
+        Instant now = Instant.now();
+        request.setStatus(upperDecision);
+        request.setDecidedBy(principal.platformUserId());
+        request.setDecisionRemark(remark == null || remark.isBlank() ? null : remark.trim());
+        request.setUpdatedAt(now);
+        request.setUpdatedBy(principal.platformUserId());
+        request.setRowVersion(request.getRowVersion() == null ? 1 : request.getRowVersion() + 1);
+        ExportRequest saved = exportRequestRepository.save(request);
+
+        auditWriter.record(principal, saved.getTenantId(),
+                approved ? "TENANT_EXPORT_APPROVED" : "TENANT_EXPORT_REJECTED",
+                approved ? "APPROVE" : "REJECT", "TENANT_EXPORT_APPROVE",
+                "EXPORT_REQUEST", saved.getExportRequestId(), PlatformAuditWriter.SUCCESS);
+        notificationService.notify(saved.getRequestedByUserId(),
+                approved ? "EXPORT_REQUEST_APPROVED" : "EXPORT_REQUEST_REJECTED",
+                approved ? "Tenant export approved" : "Tenant export rejected",
+                approved
+                        ? "Your export request was approved. The export worker will pick up this APPROVED request."
+                        : "Your export request was rejected. Review the decision remark for details.",
+                "EXPORT_REQUEST", saved.getExportRequestId(), "NORMAL", principal.platformUserId());
+        return toExportResponse(saved);
     }
 
     private ExportRequestResponse toExportResponse(ExportRequest r) {

@@ -51,6 +51,25 @@ public class PlatformDataProtectionController {
         return ResponseEntity.ok(dataProtectionService.listExports(tenantId));
     }
 
+    /** DPO queue: all tenant export requests awaiting review or already decided. */
+    @GetMapping("/export-requests")
+    public ResponseEntity<List<ExportRequestResponse>> listAllExports(Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
+        return ResponseEntity.ok(dataProtectionService.listAllExports());
+    }
+
+    /** Approval only changes request status and notifies the requester; A5 owns export execution. */
+    @PostMapping("/export-requests/{id}/decision")
+    public ResponseEntity<ExportRequestResponse> decideExportRequest(
+            @PathVariable UUID id,
+            @Valid @RequestBody DecideDeletionRequestDto request,
+            Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
+        return ResponseEntity.ok(dataProtectionService.decideExportRequest(id, request.decision(), request.remark(), principal));
+    }
+
     @GetMapping("/tenants/{tenantId}/retention")
     public ResponseEntity<List<RetentionPolicyResponse>> getRetention(@PathVariable UUID tenantId, Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();

@@ -9,4 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ExportRequestRepository extends JpaRepository<ExportRequest, UUID> {
     List<ExportRequest> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     Optional<ExportRequest> findFirstByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+    List<ExportRequest> findAllByOrderByCreatedAtDesc();
 }

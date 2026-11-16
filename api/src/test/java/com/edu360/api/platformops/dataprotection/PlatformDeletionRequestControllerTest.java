@@ -45,9 +45,11 @@ class PlatformDeletionRequestControllerTest {
     private AuditLogService auditLogService;
     private com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
     private com.edu360.api.config.TenantIssuerAuthenticationManagerResolver tenantIssuerResolver;
+    private com.edu360.api.platformops.PlatformNotificationService notificationService;
     private PlatformPermissionService permissionService;
     private PlatformDataProtectionService dataProtectionService;
     private PlatformDeletionRequestController controller;
+    private PlatformDataProtectionController dataProtectionController;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID PO_USER_ID = UUID.randomUUID();
@@ -62,6 +64,7 @@ class PlatformDeletionRequestControllerTest {
         tenantRepo = mock(TenantRepository.class);
         platformAuditWriter = mock(com.edu360.api.platformops.role.PlatformAuditWriter.class);
         tenantIssuerResolver = mock(com.edu360.api.config.TenantIssuerAuthenticationManagerResolver.class);
+        notificationService = mock(com.edu360.api.platformops.PlatformNotificationService.class);
         auditLogService = mock(AuditLogService.class);
 
         PlatformPermissionService permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(PlatformAccessLookup.standardRolesOnly());
@@ -74,10 +77,12 @@ class PlatformDeletionRequestControllerTest {
                 retentionChangeRequestRepo,
                 tenantRepo,
                 platformAuditWriter,
-                tenantIssuerResolver
+                tenantIssuerResolver,
+                notificationService
         );
 
         controller = new PlatformDeletionRequestController(dataProtectionService, permissionService);
+        dataProtectionController = new PlatformDataProtectionController(dataProtectionService, permissionService);
     }
 
     private Authentication authFor(UUID userId, PlatformRole role) {
@@ -225,4 +230,40 @@ class PlatformDeletionRequestControllerTest {
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("must be in PENDING_DPO status to decide");
     }
+    @Test
+    @DisplayName("E0-B13: DPO approval marks request APPROVED, audits and notifies without starting export")
+    void exportApprovalOnlyChangesStatusAuditsAndNotifiesRequester() {
+        UUID exportId = UUID.randomUUID();
+        ExportRequest request = ExportRequest.builder()
+                .exportRequestId(exportId)
+                .tenantId(TENANT_ID)
+                .requestedByUserId(PO_USER_ID)
+                .requestedByKind("PRODUCT_OWNER")
+                .status("REQUESTED")
+                .createdAt(Instant.now())
+                .createdBy(PO_USER_ID)
+                .updatedAt(Instant.now())
+                .updatedBy(PO_USER_ID)
+                .rowVersion(1)
+                .build();
+        when(exportRequestRepo.findById(exportId)).thenReturn(Optional.of(request));
+        when(exportRequestRepo.save(any(ExportRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var response = dataProtectionController.decideExportRequest(
+                exportId, new DecideDeletionRequestDto("APPROVED", null),
+                authFor(DPO_USER_ID, PlatformRole.DATA_PROTECTION_OFFICER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().status()).isEqualTo("APPROVED");
+        assertThat(request.getFileRef()).isNull();
+        assertThat(request.getDownloadExpiresAt()).isNull();
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(TENANT_ID),
+                eq("TENANT_EXPORT_APPROVED"), eq("APPROVE"), eq("TENANT_EXPORT_APPROVE"),
+                eq("EXPORT_REQUEST"), eq(exportId), eq(com.edu360.api.platformops.role.PlatformAuditWriter.SUCCESS));
+        verify(notificationService).notify(eq(PO_USER_ID), eq("EXPORT_REQUEST_APPROVED"),
+                eq("Tenant export approved"),
+                eq("Your export request was approved. The export worker will pick up this APPROVED request."),
+                eq("EXPORT_REQUEST"), eq(exportId), eq("NORMAL"), eq(DPO_USER_ID));
+    }
+
 }
