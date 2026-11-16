@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { profileUpdated } from "../../../store/slices/authSlice";
 import { profileService, type ProfileResponse } from "../api/profileService";
 import { ProfileAvatarSection } from "../components";
+import { BackupCodesSection } from "../../auth/components/BackupCodesSection";
 
 // Same JPEG/PNG + 2 MB rule the backend enforces (ProfileService.uploadTenantPhoto) - checked
 // here too so a bad file never leaves the browser instead of round-tripping for a 400.
@@ -326,6 +327,7 @@ export default function ProfilePage() {
           </div>
         </section>
       )}
+      {profile && <BackupCodesSection />}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { login } from "../../../services/authManager";
 import { clearLogoutReason, getLogoutReason } from "../../../services/logoutNotice";
 import { authService } from "../../../services/modules/authService";
 import { AuthenticatorSetup, type PendingEnrolment } from "../components/AuthenticatorSetup";
+import { BackupCodes } from "../components/BackupCodes";
 // The sign-in screen. Posts straight to this app's own /api/auth/login - Keycloak verifies
 // the password behind the scenes (see docs/KEYCLOAK_MIGRATION_PLAN.md), but this screen is
 // the only thing a user ever sees; there is no redirect to Keycloak's own page.
@@ -23,9 +24,13 @@ export default function LoginPage() {
   });
   // I-01: "code" = password accepted, waiting for the authenticator app code.
   // MFA-ENROL: "enrol" = password accepted, no authenticator yet: set one up right here.
-  const [step, setStep] = useState<"password" | "code" | "enrol">("password");
+  // MFA-01: "backup" = signing in with a one-time backup code; "codes" = new backup codes, shown once.
+  const [step, setStep] = useState<"password" | "code" | "enrol" | "backup" | "codes">("password");
   const [enrolment, setEnrolment] = useState<PendingEnrolment | null>(null);
   const [code, setCode] = useState("");
+  const [backupCode, setBackupCode] = useState("");
+  const [showCodeHelp, setShowCodeHelp] = useState(false);
+  const [newBackupCodes, setNewBackupCodes] = useState<string[]>([]);
   const [enrolmentUrl, setEnrolmentUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const submit = async (e: FormEvent<HTMLFormElement>) => {
@@ -40,8 +45,18 @@ export default function LoginPage() {
       setError("Enter the 6-digit code from your authenticator app.");
       return;
     }
+    if (step === "backup" && backupCode.replace(/[\s-]/g, "").length !== 10) {
+      setError("Enter a backup code, like K7QD4-9MXRT.");
+      return;
+    }
     setBusy(true);
     try {
+      if (step === "backup") {
+        // Always answered with MFA_ENROLMENT_REQUIRED or an error (handled below).
+        await authService.loginWithRecoveryCode(email.trim(), password, backupCode.trim());
+        setError("Sign-in failed. Check your details and try again.");
+        return;
+      }
       const user = await login(email.trim(), password, step === "code" ? code : undefined);
       navigate(user.mustChangePassword ? "/change-password" : "/");
     } catch (err) {
@@ -64,7 +79,11 @@ export default function LoginPage() {
       }
       if (body?.code === "MFA_ENROLMENT_REQUIRED" && body.enrolmentId && body.qrCode && body.secret) {
         // No authenticator yet: set it up in this screen (QR from Keycloak; the secret stays there).
+        if (step === "backup") {
+          setNotice("Backup code accepted. Your old authenticator was removed - set up a new one now.");
+        }
         setEnrolment({ enrolmentId: body.enrolmentId, qrCode: body.qrCode, secret: body.secret });
+        setBackupCode("");
         setStep("enrol");
         setBusy(false);
         return;
@@ -104,6 +123,13 @@ export default function LoginPage() {
       });
       setEnrolment(null);
       setCode("");
+      if (data.recoveryCodes && data.recoveryCodes.length > 0) {
+        // MFA-01: show the new backup codes once, before asking for the next code.
+        setNewBackupCodes(data.recoveryCodes);
+        setStep("codes");
+        setNotice("");
+        return;
+      }
       setStep("code");
       setNotice(data.message ?? "Authenticator added. Enter the next code from your app to sign in.");
     } catch (err) {
@@ -130,20 +156,38 @@ export default function LoginPage() {
     setError("");
   };
 
+  const finishBackupCodes = () => {
+    setNewBackupCodes([]);
+    setStep("code");
+    setNotice("Codes saved. Enter the next code from your authenticator app to sign in.");
+  };
+
+  const useBackupCode = () => {
+    setStep("backup");
+    setShowCodeHelp(false);
+    setError("");
+    setNotice("");
+  };
+
+  const kicker = step === "enrol" ? "ONE-TIME SET-UP" : step === "codes" ? "SAVE YOUR BACKUP CODES" : "WELCOME BACK";
+  const title = step === "enrol" ? "Set up two-step login." : step === "codes" ? "Save your backup codes." : "Welcome back.";
+
   return (
     <main className="auth-screen">
       <div className="auth-brand">
         <Edu360Logo className="auth-brand__logo" />
       </div>
       <section className="auth-card" aria-labelledby="login-title">
-        <Kicker>{step === "enrol" ? "ONE-TIME SET-UP" : "WELCOME BACK"}</Kicker>
+        <Kicker>{kicker}</Kicker>
         <h1 id="login-title" className="auth-card__title">
-          {step === "enrol" ? "Set up two-step login." : "Welcome back."}
+          {title}
         </h1>
         <p className="auth-card__subtitle">
           {step === "enrol"
             ? "Your role needs a code from an authenticator app each time you sign in. It takes about a minute."
-            : "Sign in to continue to your workspace."}
+            : step === "codes"
+              ? "Your authenticator is set up. Keep these backup codes in case you lose your phone."
+              : "Sign in to continue to your workspace."}
         </p>
         {error && (
           <div className="auth-message auth-message--error" role="alert">
@@ -163,7 +207,9 @@ export default function LoginPage() {
             {notice}
           </div>
         )}
-        {step === "enrol" && enrolment ? (
+        {step === "codes" ? (
+          <BackupCodes codes={newBackupCodes} continueLabel="Continue to sign in" onContinue={finishBackupCodes} />
+        ) : step === "enrol" && enrolment ? (
           <AuthenticatorSetup
             enrolment={enrolment}
             busy={busy}
@@ -205,6 +251,46 @@ export default function LoginPage() {
               required
               autoFocus
             />
+          )}
+          {step === "backup" && (
+            <TextField
+              id="login-backup-code"
+              label="Backup code"
+              autoComplete="off"
+              autoCapitalize="characters"
+              maxLength={14}
+              value={backupCode}
+              onChange={(e) => setBackupCode(e.target.value)}
+              placeholder="K7QD4-9MXRT"
+              hint="Each backup code works once. After it, you set up a new authenticator."
+              required
+              autoFocus
+            />
+          )}
+          {(step === "code" || step === "backup") && (
+            <div className="auth-options">
+              {step === "code" ? (
+                <LinkButton onClick={() => setShowCodeHelp((open) => !open)} aria-expanded={showCodeHelp}>
+                  Problem with your code?
+                </LinkButton>
+              ) : (
+                <LinkButton onClick={() => { setStep("code"); setBackupCode(""); setError(""); }}>
+                  Use the authenticator code instead
+                </LinkButton>
+              )}
+            </div>
+          )}
+          {step === "code" && showCodeHelp && (
+            <div className="auth-message" role="region" aria-label="Help with your code">
+              <ul className="auth-help-list">
+                <li>Check that your phone shows the correct time (set it to automatic).</li>
+                <li>
+                  Lost your phone or deleted the app?{" "}
+                  <LinkButton onClick={useBackupCode}>Use a backup code</LinkButton>
+                </li>
+                <li>No backup codes? Ask your administrator to reset your two-step login.</li>
+              </ul>
+            </div>
           )}
           <div className="auth-options -mb-3">
             <LinkButton

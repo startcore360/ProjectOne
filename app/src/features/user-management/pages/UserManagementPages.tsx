@@ -16,6 +16,8 @@ import {
   TextField,
 } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
+import { MfaResetDialog } from "../../auth/components/MfaResetDialog";
+import { serverMessage } from "../../auth/serverMessage";
 import { getApiErrorMessage, type ApiError } from "../../../services/apiHelper";
 import {
   userManagementService,
@@ -386,6 +388,8 @@ export function UserDetailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  // MFA-01: nobody resets their own two-step login (the server refuses it too).
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
 
   const initialScopeType = searchParams.get("scopeType") as ScopeType | null;
   const [scope, setScope] = useState<ActingScope>({
@@ -404,7 +408,8 @@ export function UserDetailPage() {
   const [saveBanner, setSaveBanner] = useState<ActionBanner>(null);
 
   const [actionInstitutionId, setActionInstitutionId] = useState(scope.institutionId ?? "");
-  const [confirming, setConfirming] = useState<"deactivate" | "reset" | "unlock" | null>(null);
+  const [confirming, setConfirming] = useState<"deactivate" | "reset" | "unlock" | "mfa" | null>(null);
+  const [mfaError, setMfaError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [actionBanner, setActionBanner] = useState<ActionBanner>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
@@ -521,6 +526,21 @@ export function UserDetailPage() {
       setConfirming(null);
     } catch (error) {
       setActionBanner({ tone: "danger", message: getApiErrorMessage(error) });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const runMfaReset = async (reason: string) => {
+    setActionBusy(true);
+    setActionBanner(null);
+    setMfaError("");
+    try {
+      const { data } = await userManagementService.resetMfa(tenantId, userId, actionInstitutionId, reason);
+      setActionBanner({ tone: "success", message: data.message });
+      setConfirming(null);
+    } catch (error) {
+      setMfaError(serverMessage(error));
     } finally {
       setActionBusy(false);
     }
@@ -683,6 +703,14 @@ export function UserDetailPage() {
                 >
                   Unlock account
                 </Button>
+                <Button
+                  variant="secondary"
+                  disabled={!actionInstitutionId || user.status === "DEACTIVATED" || userId === currentUserId}
+                  title={userId === currentUserId ? "You cannot reset your own two-step login" : undefined}
+                  onClick={() => { setMfaError(""); setConfirming("mfa"); }}
+                >
+                  Reset two-step login
+                </Button>
               </div>
               {user.status === "DEACTIVATED" && (
                 <p className="app-empty-inline">This user is already deactivated.</p>
@@ -733,6 +761,14 @@ export function UserDetailPage() {
           onCancel={() => setConfirming(null)}
         />
       )}
+      <MfaResetDialog
+        isOpen={confirming === "mfa"}
+        personName={user?.displayName ?? "this user"}
+        busy={actionBusy}
+        error={mfaError}
+        onConfirm={(reason) => void runMfaReset(reason)}
+        onCancel={() => setConfirming(null)}
+      />
       {confirming === "unlock" && (
         <ConfirmDialog
           titleId="confirm-unlock-title"

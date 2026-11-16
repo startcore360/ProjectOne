@@ -19,6 +19,7 @@ import { usePlatformAccess } from "../../platformAccess";
 import { platformUserService, roleChoicePayload, type PlatformUserItem } from "../../api/platformUserService";
 import { platformRoleService, type PlatformRoleItem } from "../../api/platformRoleService";
 import { CreatePlatformUserModal, RoleOptions, type CreatePlatformUserDraft } from "./CreatePlatformUserModal";
+import { MfaResetDialog } from "../../../auth/components/MfaResetDialog";
 
 const EMPTY_DRAFT: CreatePlatformUserDraft = { fullName: "", email: "", roleChoice: "std:PLATFORM_ADMIN" };
 
@@ -103,6 +104,25 @@ export function PlatformUsersView() {
   const [changingRole, setChangingRole] = useState<PlatformUserItem | null>(null);
   const [statusTarget, setStatusTarget] = useState<PlatformUserItem | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
+  // MFA-01 / E8-S4: reset a staff member's two-step login (never your own).
+  const [mfaTarget, setMfaTarget] = useState<PlatformUserItem | null>(null);
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaError, setMfaError] = useState("");
+
+  const resetMfa = async (reason: string) => {
+    if (!mfaTarget) return;
+    setMfaBusy(true);
+    setMfaError("");
+    try {
+      await platformUserService.resetMfa(mfaTarget.platformUserId, reason);
+      setNotice(`${mfaTarget.fullName}'s two-step login was reset. They set up a new authenticator at their next sign-in.`);
+      setMfaTarget(null);
+    } catch (err) {
+      setMfaError(readErrorMessage(err, "Could not reset two-step login."));
+    } finally {
+      setMfaBusy(false);
+    }
+  };
 
   const loadUsers = useCallback(() => {
     setLoading(true);
@@ -263,6 +283,11 @@ export function PlatformUsersView() {
                       <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setStatusTarget(u); }}>
                         {u.status === "ACTIVE" ? "Deactivate" : "Reactivate"}
                       </Button>
+                      {u.status === "ACTIVE" && (
+                        <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setMfaError(""); setMfaTarget(u); }}>
+                          Reset two-step login
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     u.platformUserId === myId && <small className="app-cell-sub">This is you</small>
@@ -274,6 +299,14 @@ export function PlatformUsersView() {
         )}
       </Panel>
 
+      <MfaResetDialog
+        isOpen={!!mfaTarget}
+        personName={mfaTarget?.fullName ?? ""}
+        busy={mfaBusy}
+        error={mfaError}
+        onConfirm={(reason) => void resetMfa(reason)}
+        onCancel={() => setMfaTarget(null)}
+      />
       <CreatePlatformUserModal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}

@@ -211,6 +211,14 @@ export const userManagementService = {
   unlockUser: (tenantId: string, userId: string, institutionId: string) =>
     api.post<ActionResponse>(`/tenants/${tenantId}/users/${userId}/unlock`, { institutionId }),
 
+  // POST /api/tenants/{tenantId}/users/{userId}/mfa-reset (USER_MFA_RESET, MFA-01) - removes the
+  // user's authenticator and backup codes; their next sign-in sets up a new authenticator.
+  resetMfa: (tenantId: string, userId: string, institutionId: string, reason: string) =>
+    api.post<{ actionCode: string; status: string; message: string }>(
+      `/tenants/${tenantId}/users/${userId}/mfa-reset`,
+      { institutionId, reason },
+    ),
+
   // POST /api/tenants/{tenantId}/students (USER_CREATE) - creates a student profile and active enrolment.
   createStudentProfile: (tenantId: string, payload: StudentCreatePayload) =>
     api.post<StudentProfileResponse>(`/tenants/${tenantId}/students`, payload),

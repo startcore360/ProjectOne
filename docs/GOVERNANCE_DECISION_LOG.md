@@ -239,3 +239,29 @@ instructions being carried out. No code was written or modified as part of this 
   - Backend: `SessionService`, `DeviceDescriptor`, `KeycloakAdminClient.listUserSessions`, and the login flow in `AuthService`.
   - Frontend: the "My sessions" page and the `X-Browser-Id` header sent on sign-in.
 - **Status:** Implemented.
+
+## Decisions in this round — 2026-11-16
+
+**Decided by:** the project owner, in the Claude Code session of 2026-11-16.
+
+### MFA-01 — Getting back in when the authenticator stops working
+
+- **Problem:** a person whose authenticator no longer matches (lost or new phone, deleted app, an old entry in the app) was locked out, with no way back in from the app. The specification did not cover this.
+- **Decision:** three ways back in.
+  1. **Admin reset ("Reset two-step login").**
+     - Tenant users: new action `USER_MFA_RESET`, held by exactly the standard roles that hold `USER_PASSWORD_RESET_UNLOCK`, at the same scope.
+     - Platform staff: the Product Owner, under the existing `PLATFORM_USER_MANAGE`, which is reserved and can't be handed over. This also closes plan story E8-S4 "Reset authenticator".
+     - Nobody resets their own. A reason is required and audited. The person is told in-app. All their sessions end. The password is not changed.
+  2. **Backup codes.**
+     - Everyone with two-step login gets 10 one-time codes when the authenticator is set up. New codes can be issued later from "My profile" after re-entering the password.
+     - Only BCrypt hashes are stored.
+     - A code works once and never issues tokens by itself: it removes the old authenticator and leads straight to setting up a new one.
+     - Wrong codes are limited to 5 per hour per account.
+     - This is how a Product Owner recovers alone.
+  3. **Emergency procedure** (`docs/MFA_EMERGENCY_RESET_RUNBOOK.md`): when someone has lost both the phone and the codes. The reset is recorded and checked afterwards by the Data Protection Officer.
+- **Limits that still apply (TPA-04):** no self-service bypass of the second factor without a backup code; tenant and institution separation unchanged; custom roles are not widened automatically.
+- **Implementation:**
+  - Database: `sql/51_v41_mfa_recovery.sql` (with `51r_`, `51t_`); `USER_MFA_RESET` also listed in `05_ref_data.sql`; reference counts updated (279 → 280 actions, 281 → 282 with roll-down).
+  - Backend: `UserMfaResetController`, `PlatformUserMfaResetController`, `MfaRecoveryService`, `AuthService.loginWithRecoveryCode` / `issueRecoveryCodes`, `KeycloakAdminClient.removeOtpCredentials`.
+  - Frontend: sign-in "Problem with your code?" and "Use a backup code"; backup codes shown once after set-up; "Reset two-step login" on the user detail and platform users screens; "Get new backup codes" on "My profile".
+- **Status:** Implemented.
