@@ -156,7 +156,7 @@ export function TenantsView() {
               ? "College"
               : "University",
         plan: t.planName,
-        status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : "Suspended",
+        status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : t.state === "ARCHIVED" ? "Archived" : "Suspended",
         gates: t.state === "TRIAL" ? 1 : 0,
         updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
         suspendedAt: t.suspendedAt,
@@ -503,6 +503,7 @@ export function TenantsView() {
               <option>Active</option>
               <option>Trial</option>
               <option>Suspended</option>
+              <option>Archived</option>
             </select>
           </label>
         </div>
@@ -546,10 +547,10 @@ export function TenantsView() {
                     {canManageLifecycle && tenant.status === "Active" && (
                       <Button size="sm" variant="secondary" onClick={() => handleOpenSuspend(tenant)}>Suspend</Button>
                     )}
-                    {canManageLifecycle && tenant.status === "Suspended" && (
+                    {canManageLifecycle && (tenant.status === "Suspended" || tenant.status === "Archived") && (
                       <>
                         <Button size="sm" variant="secondary" onClick={() => setReactivateTarget(tenant)}>Reactivate</Button>
-                        <Button size="sm" variant="secondary" onClick={() => handleOpenArchive(tenant)}>Archive</Button>
+                        {tenant.status === "Suspended" && <Button size="sm" variant="secondary" onClick={() => handleOpenArchive(tenant)}>Archive</Button>}
                       </>
                     )}
                     <RowMenu>

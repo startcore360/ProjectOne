@@ -5,7 +5,7 @@ export type Tenant = {
   name: string;
   type: string;
   plan: string;
-  status: "Active" | "Trial" | "Suspended";
+  status: "Active" | "Trial" | "Suspended" | "Archived";
   gates: number;
   updated: string;
   suspendedAt?: string;

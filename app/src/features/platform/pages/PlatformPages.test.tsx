@@ -179,6 +179,7 @@ describe("Sprint 1 platform screens", () => {
 
     renderWithStore(<TenantsPage />);
     expect(await screen.findByText("Archived School")).toBeInTheDocument();
+    expect(screen.getByText("Archived")).toBeInTheDocument();
     expect(screen.getByText(new Date(suspendedAt).toLocaleString())).toBeInTheDocument();
     expect(screen.getByText(new Date(archivedAt).toLocaleString())).toBeInTheDocument();
   });
