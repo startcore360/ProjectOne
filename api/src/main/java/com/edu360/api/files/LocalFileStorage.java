@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
  * while object storage and expiring download links remain a later integration.
  */
 @Component
-public class LocalFileStorage {
+public class LocalFileStorage implements FileStorage {
     private final Path baseDir;
 
     public LocalFileStorage(@Value("${app.file-storage.base-dir:./data/uploads}") String baseDir) {
