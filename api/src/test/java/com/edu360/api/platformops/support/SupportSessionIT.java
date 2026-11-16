@@ -39,29 +39,40 @@ class SupportSessionIT {
     private void ensureMigrations() throws Exception {
         try (Connection conn = DriverManager.getConnection(POSTGRES_URL, POSTGRES_USER, POSTGRES_PASSWORD);
              Statement st = conn.createStatement()) {
+            boolean baseSchemaPresent;
             try (ResultSet rs = st.executeQuery("SELECT to_regclass('app.tenant_local') IS NOT NULL")) {
                 rs.next();
-                if (!rs.getBoolean(1)) {
-                    st.execute(readSql("01_schema.sql"));
-                    st.execute(readSql("02_rules.sql"));
-                    st.execute(readSql("03_bindings.sql"));
-                    st.execute(readSql("03b_fk_indexes.sql"));
-                }
+                baseSchemaPresent = rs.getBoolean(1);
             }
+            if (!baseSchemaPresent) {
+                st.execute(readSql("01_schema.sql"));
+                st.execute(readSql("02_rules.sql"));
+                st.execute(readSql("03_bindings.sql"));
+                st.execute(readSql("03b_fk_indexes.sql"));
+            }
+
+            boolean supportActionPresent;
             try (ResultSet rs = st.executeQuery(
                     "SELECT EXISTS (SELECT 1 FROM ref.action_catalog WHERE action_code='SUPPORT_ACCESS_USE')")) {
                 rs.next();
-                if (!rs.getBoolean(1)) st.execute(readSql("05_ref_data.sql"));
+                supportActionPresent = rs.getBoolean(1);
             }
+            if (!supportActionPresent) st.execute(readSql("05_ref_data.sql"));
+
+            boolean sessionTablePresent;
             try (ResultSet rs = st.executeQuery("SELECT to_regclass('platform.support_session') IS NOT NULL")) {
                 rs.next();
-                if (!rs.getBoolean(1)) st.execute(readSql("40_v41_support_session.sql"));
+                sessionTablePresent = rs.getBoolean(1);
             }
+            if (!sessionTablePresent) st.execute(readSql("40_v41_support_session.sql"));
+
+            boolean readableColumnPresent;
             try (ResultSet rs = st.executeQuery(
                     "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ref' AND table_name='action_catalog' AND column_name='support_readable')")) {
                 rs.next();
-                if (!rs.getBoolean(1)) st.execute(readSql("41_v41_support_readable.sql"));
+                readableColumnPresent = rs.getBoolean(1);
             }
+            if (!readableColumnPresent) st.execute(readSql("41_v41_support_readable.sql"));
         }
     }
 
