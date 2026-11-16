@@ -7,6 +7,8 @@ import com.edu360.api.tenant.IsolationMode;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -46,7 +48,17 @@ public class TenantCreateRequest {
 
     @NotNull(message = "Isolation mode is required")
     @Builder.Default
-    private IsolationMode isolationMode = IsolationMode.ISOLATED;
+    private IsolationMode isolationMode = IsolationMode.SHARED;
+
+    @NotNull(message = "Data retention months is required")
+    @Min(value = 1, message = "Data retention must be at least 1 month")
+    @Max(value = 240, message = "Data retention cannot exceed 240 months")
+    private Integer retentionMonths;
+
+    @NotNull(message = "Backup retention days is required")
+    @Min(value = 7, message = "Backup retention must be at least 7 days")
+    @Max(value = 3650, message = "Backup retention cannot exceed 3650 days")
+    private Integer backupRetentionDays;
 
     @NotBlank(message = "Primary administrator full name is required")
     private String firstAdminName;
