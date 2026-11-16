@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
@@ -22,9 +24,13 @@ public class PlatformTestInfrastructureConfig {
         return sharedDataSource;
     }
 
-    @Bean(name = "platformTransactionManager")
-    public PlatformTransactionManager platformTransactionManager(
-            @Qualifier("transactionManager") PlatformTransactionManager transactionManager) {
-        return transactionManager;
+    @Bean(name = {"transactionManager", "platformTransactionManager"})
+    @org.springframework.context.annotation.Primary
+    public PlatformTransactionManager testTransactionManager(
+            @Qualifier("entityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
+        // Declare both names on this bean. Otherwise this PlatformTransactionManager makes
+        // Boot's conditional default transaction manager back off, leaving the alias target absent.
+        // Both names intentionally resolve to the same JPA manager and test EntityManagerFactory.
+        return new JpaTransactionManager(entityManagerFactory.getObject());
     }
 }
