@@ -171,7 +171,44 @@ public class TenantManagementService {
             @org.springframework.beans.factory.annotation.Autowired(required = false) RoleDefinitionRepository roleDefinitionRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) StandardRoleRepository standardRoleRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false) StandardRoleActionRepository standardRoleActionRepository,
-            @org.spr    public TenantResponse createTenant(TenantCreateRequest request, PlatformPrincipal principal) {
+            @org.springframework.beans.factory.annotation.Autowired(required = false) RoleActionRepository roleActionRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
+            com.edu360.api.platformops.billing.InvoiceRepository invoiceRepository,
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+    ) {
+        this.tenantRepository = tenantRepository;
+        this.planRepository = planRepository;
+        this.keycloakAdminClient = keycloakAdminClient;
+        this.leaveApproverSettingRepository = leaveApproverSettingRepository;
+        this.institutionRepository = institutionRepository;
+        this.userAccountRepository = userAccountRepository;
+        this.userIdentityLinkRepository = userIdentityLinkRepository;
+        this.roleDefinitionRepository = roleDefinitionRepository;
+        this.standardRoleRepository = standardRoleRepository;
+        this.standardRoleActionRepository = standardRoleActionRepository;
+        this.roleActionRepository = roleActionRepository;
+        this.userRoleAssignmentRepository = userRoleAssignmentRepository;
+        this.platformAuditWriter = platformAuditWriter;
+        this.invoiceRepository = invoiceRepository;
+    }
+
+    /**
+     * Lists active subscription plans for selection during tenant creation.
+     * If no plans are present in the database, seeds default active tiers.
+     */
+    @Transactional
+    public List<PlanResponse> listPlans() {
+        List<Plan> plans = planRepository.findByStatusOrderByPlanNameAsc("ACTIVE");
+        if (plans.isEmpty()) {
+            plans = seedDefaultPlans();
+        }
+        return plans.stream().map(PlanResponse::from).toList();
+    }
+
+    /**
+     * Creates a new tenant in TRIAL state.
+     */
+        public TenantResponse createTenant(TenantCreateRequest request, PlatformPrincipal principal) {
         if (request.getIsolationMode() == IsolationMode.ISOLATED) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ISOLATION_NOT_AVAILABLE",
                     "Dedicated-database tenant isolation is not available; use SHARED isolation.");
@@ -230,7 +267,6 @@ public class TenantManagementService {
 
         Map<String, TenantProvisioningService.StepAction> actions = new LinkedHashMap<>();
 
-        // P01 Registry: the platform tenant row and the shared-database RLS anchor.
         actions.put("P01_REGISTRY", new TenantProvisioningService.StepAction() {
             @Override
             public void execute() {
@@ -240,7 +276,6 @@ public class TenantManagementService {
             }
         });
 
-        // P02 Retention: preserve the 12 required data classes and make retries idempotent.
         actions.put("P09_RETENTION", () -> {
             int backupRetentionMonths = Math.floorDiv(request.getBackupRetentionDays() + 29, 30);
             List<String> dataClasses = List.of(
@@ -272,7 +307,6 @@ public class TenantManagementService {
             }
         });
 
-        // P03 Entitlements: copy the plan's module and feature rows without overwriting overrides.
         actions.put("P05_ENTITLEMENTS", () -> {
             Set<String> existingKeys = new java.util.HashSet<>();
             tenantEntitlementRepository.findByTenantId(tenantId).forEach(entitlement ->
@@ -298,7 +332,6 @@ public class TenantManagementService {
             }
         });
 
-        // P04 Keycloak realm. A partially created realm is removed before the step is marked failed.
         actions.put("P06_IDENTITY_REALM", new TenantProvisioningService.StepAction() {
             @Override
             public void execute() {
@@ -325,7 +358,6 @@ public class TenantManagementService {
             }
         });
 
-        // P05 Realm policy. A realm without the required security baseline is not usable.
         actions.put("P10_REALM_POLICY", () -> {
             if (realmSecuritySyncService == null) {
                 throw new KeycloakProvisioningException("Realm security policy service is unavailable.");
@@ -338,7 +370,6 @@ public class TenantManagementService {
             }
         });
 
-        // P06 First admin. The generated password exists only in this request's memory/response.
         actions.put("P07_FIRST_ADMIN", new TenantProvisioningService.StepAction() {
             @Override
             public void execute() {
@@ -404,7 +435,6 @@ public class TenantManagementService {
             }
         });
 
-        // P07 Standard roles: safe to re-run if a prior attempt stopped part-way through seeding.
         actions.put("P04_ROLES_SEED", () -> {
             if (roleDefinitionRepository == null || standardRoleActionRepository == null
                     || roleActionRepository == null || userRoleAssignmentRepository == null) {
@@ -522,48 +552,6 @@ public class TenantManagementService {
                 log.warn("Could not notify Platform Admin {} about tenant provisioning failure", admin.getPlatformUserId());
             }
         }
-    }
-
-)
-                                        .createdBy(principal.platformUserId())
-                                        .updatedBy(principal.platformUserId())
-                                        .build());
-                            }
-                        }
-                    }
-
-                    if (userRoleAssignmentRepository != null) {
-                        UserRoleAssignment assignment = UserRoleAssignment.builder()
-                                .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID()))
-                                .userAccountId(adminUserAccountId)
-                                .roleDefinitionId(roleDef.getId().getRoleDefinitionId())
-                                .scopeType(ScopeType.TENANT)
-                                .effectiveFrom(java.time.Instant.now())
-                                .status(AssignmentStatus.ACTIVE)
-                                .createdBy(principal.platformUserId())
-                                .updatedBy(principal.platformUserId())
-                                .build();
-                        userRoleAssignmentRepository.save(assignment);
-                    }
-                }
-            }
-        } finally {
-            if (entityManager != null) {
-                entityManager.createNativeQuery("RESET app.tenant_id").executeUpdate();
-                entityManager.createNativeQuery("RESET app.institution_scope").executeUpdate();
-            }
-            TenantContext.clear();
-        }
-
-        return TenantResponse.from(
-                savedTenant,
-                plan.getPlanName(),
-                request.getFirstAdminEmail(),
-                request.getFirstAdminMobile(),
-                request.getFirstAdminNationalIdLast4(),
-                tempPassword,
-                adminUserAccountId
-        );
     }
 
     /**
