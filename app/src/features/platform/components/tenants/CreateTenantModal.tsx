@@ -12,8 +12,8 @@ export interface CreateTenantDraft {
   firstAdminEmail: string;
   firstAdminMobile: string;
   firstAdminNationalIdLast4: string;
-  retentionMonths: number;
-  backupRetentionDays: number;
+  retentionMonths: number | "";
+  backupRetentionDays: number | "";
 }
 
 export interface CreateTenantModalProps {
@@ -106,7 +106,7 @@ export function CreateTenantModal({
             type="number"
             required
             value={String(draft.retentionMonths)}
-            onChange={(e) => setDraft({ ...draft, retentionMonths: Number(e.target.value) })}
+            onChange={(e) => setDraft({ ...draft, retentionMonths: e.target.value === "" ? "" : Number(e.target.value) })}
           />
           <TextField
             id="tenant-backup-retention-days"
@@ -114,7 +114,7 @@ export function CreateTenantModal({
             type="number"
             required
             value={String(draft.backupRetentionDays)}
-            onChange={(e) => setDraft({ ...draft, backupRetentionDays: Number(e.target.value) })}
+            onChange={(e) => setDraft({ ...draft, backupRetentionDays: e.target.value === "" ? "" : Number(e.target.value) })}
           />
         </div>
         <small className="app-field-hint">
