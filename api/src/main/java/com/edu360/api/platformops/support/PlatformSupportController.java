@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,6 +70,14 @@ public class PlatformSupportController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "SUPPORT_ACCESS_USE");
         return ResponseEntity.ok(supportSessionService.open(request.ticketId(), principal));
+    }
+
+    @DeleteMapping("/support-sessions/current")
+    public ResponseEntity<Void> endCurrentSupportSession(Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "SUPPORT_ACCESS_USE");
+        supportSessionService.endCurrent(principal);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/support-access-grants")
