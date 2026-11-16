@@ -21,7 +21,6 @@ run edu360_v4_test 32_v41_staff_login_aliases.sql > /dev/null
 run edu360_v4_test 40_v41_support_session.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/40t_tests_support_session.sql" > /dev/null  # E4 support-session storage and OD-15 categories
 run edu360_v4_test 36_v41_plan_commercial.sql > /dev/null
-run edu360_v4_test 37_v41_feature_catalog_and_provisioning.sql > /dev/null
 run edu360_v4_test 38_v41_invoice_approval_and_renewal.sql > /dev/null
 run edu360_v4_test 39_v41_billing_settings.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/38t_tests_invoice_approval_and_renewal.sql" > /dev/null
@@ -29,7 +28,6 @@ $PSQL -q -d edu360_v4_test -f "$D/39t_tests_billing_settings.sql" > /dev/null
 run edu360_v4_test 49_v41_platform_notification.sql > /dev/null
 run edu360_v4_test 50_v41_platform_audit_payload_idempotency.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/36t_tests_plan_commercial.sql" > /dev/null
-$PSQL -q -d edu360_v4_test -f "$D/37t_tests_feature_catalog_and_provisioning.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/49t_tests_platform_notification.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/50t_tests_platform_audit_payload_idempotency.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/07_tests_extra.sql" > /dev/null      # new connection: settings never set (DB-55..59)
