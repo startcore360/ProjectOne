@@ -49,8 +49,7 @@ public class TenantAdminInvoiceNotifier {
    for(RoleDefinition role:roleRepository.findByIdTenantId(tenant.getTenantId())) {
     if(role.getStatus()!=RoleDefinitionStatus.ACTIVE) continue;
     String code=role.getRoleCode();
-    boolean admin=role.getRoleLevel()==com.edu360.api.rbac.RoleLevel.TENANT
-      || code.endsWith("_ADMIN") || "IT_ADMINISTRATOR".equals(code);
+    boolean admin=code.endsWith("_ADMIN") || "IT_ADMINISTRATOR".equals(code);
     if(!admin) continue;
     List<UserRoleAssignment> assignments=assignmentRepository.findByIdTenantIdAndRoleDefinitionIdAndStatus(
       tenant.getTenantId(),role.getId().getRoleDefinitionId(),AssignmentStatus.ACTIVE);
