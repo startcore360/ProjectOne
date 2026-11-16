@@ -572,6 +572,11 @@ public class TenantManagementService {
                 .smsLimit(request.smsLimit() != null ? request.smsLimit() : 5000)
                 .apiLimit(request.apiLimit() != null ? request.apiLimit() : 10000)
                 .maxInstitutions(request.maxInstitutions() != null ? request.maxInstitutions() : 1)
+                .customDomainAllowed(Boolean.TRUE.equals(request.customDomainAllowed()))
+                .brandingColorsAllowed(Boolean.TRUE.equals(request.brandingColorsAllowed()))
+                .billingCycleMonths(request.billingCycleMonths() != null ? request.billingCycleMonths() : 12)
+                .smsUnitAmount(request.smsUnitAmount())
+                .storageUnitAmountPerGb(request.storageUnitAmountPerGb())
                 .status("ACTIVE")
                 .createdAt(now)
                 .createdBy(principal.platformUserId())
@@ -592,7 +597,9 @@ public class TenantManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Plan " + planId + " was not found."));
 
         if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
-            if (request.priceAmount() != null && request.priceAmount().compareTo(plan.getPriceAmount()) != 0) {
+            if ((request.priceAmount() != null && request.priceAmount().compareTo(plan.getPriceAmount()) != 0)
+                    || (request.currencyCode() != null && !request.currencyCode().equalsIgnoreCase(plan.getCurrencyCode()))
+                    || (request.pricingType() != null && !request.pricingType().equals(plan.getPricingType()))) {
                 throw new UnauthorizedException("Rule [F-4]: only the Product Owner can alter plan pricing.");
             }
         }
@@ -603,7 +610,10 @@ public class TenantManagementService {
         if (request.priceAmount() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
             plan.setPriceAmount(request.priceAmount());
         }
-        if (request.currencyCode() != null && !request.currencyCode().isBlank()) {
+        if (request.pricingType() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            plan.setPricingType(request.pricingType());
+        }
+        if (request.currencyCode() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER && !request.currencyCode().isBlank()) {
             plan.setCurrencyCode(request.currencyCode().toUpperCase());
         }
         if (request.userLimit() != null) {
@@ -620,6 +630,21 @@ public class TenantManagementService {
         }
         if (request.maxInstitutions() != null) {
             plan.setMaxInstitutions(request.maxInstitutions());
+        }
+        if (request.customDomainAllowed() != null) {
+            plan.setCustomDomainAllowed(request.customDomainAllowed());
+        }
+        if (request.brandingColorsAllowed() != null) {
+            plan.setBrandingColorsAllowed(request.brandingColorsAllowed());
+        }
+        if (request.billingCycleMonths() != null) {
+            plan.setBillingCycleMonths(request.billingCycleMonths());
+        }
+        if (request.smsUnitAmount() != null) {
+            plan.setSmsUnitAmount(request.smsUnitAmount());
+        }
+        if (request.storageUnitAmountPerGb() != null) {
+            plan.setStorageUnitAmountPerGb(request.storageUnitAmountPerGb());
         }
         if (request.status() != null && !request.status().isBlank()) {
             plan.setStatus(request.status().toUpperCase());
