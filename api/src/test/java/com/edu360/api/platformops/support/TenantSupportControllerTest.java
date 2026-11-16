@@ -234,17 +234,24 @@ class TenantSupportControllerTest {
 
         // 3. Platform support assumes the session
         PlatformSupportService service = new PlatformSupportService(ticketRepository, grantRepository, mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), mock(AuditLogService.class));
+        SupportSessionService sessionService = mock(SupportSessionService.class);
+        com.edu360.api.platformops.support.dto.SupportSessionResponse sessionResponse =
+                new com.edu360.api.platformops.support.dto.SupportSessionResponse("signed-token",
+                        Instant.now().plusSeconds(1800), "https://tenant.edu360.example");
+        when(sessionService.open(eq(ticketId), any())).thenReturn(sessionResponse);
         PlatformSupportController platformController = new PlatformSupportController(
                 service,
+                sessionService,
                 com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly())
         );
 
         PlatformPrincipal supportStaff = new PlatformPrincipal(UUID.randomUUID(), PlatformRole.SUPPORT_MANAGER, "support@platform.edu360.local", false);
         Authentication platformAuth = new UsernamePasswordAuthenticationToken(supportStaff, null, List.of());
 
-        // L-03 / R7: a live grant exists, but the real read-only session is not built, so the answer is an honest 501.
-        assertThatThrownBy(() -> platformController.assumeSupportSession(ticketId, platformAuth))
-                .isInstanceOfSatisfying(com.edu360.api.exception.FeatureNotAvailableException.class,
-                        ex -> assertThat(ex.getCode()).isEqualTo("SUPPORT_SESSION_NOT_AVAILABLE"));
+        ResponseEntity<com.edu360.api.platformops.support.dto.SupportSessionResponse> session =
+                platformController.assumeSupportSession(
+                        new com.edu360.api.platformops.support.dto.OpenSupportSessionRequest(ticketId), platformAuth);
+        assertThat(session.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(session.getBody()).isEqualTo(sessionResponse);
     }
 }
