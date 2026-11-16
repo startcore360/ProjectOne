@@ -116,6 +116,8 @@ class PlatformTenantControllerTest {
                 .planId(PLAN_ID)
                 .subdomain("dwps-delhi")
                 .isolationMode(IsolationMode.ISOLATED)
+                .retentionMonths(12)
+                .backupRetentionDays(90)
                 .firstAdminName("Dr. Sunita Sharma")
                 .firstAdminEmail("principal@dwps-delhi.edu")
                 .firstAdminMobile("+919876543210")
