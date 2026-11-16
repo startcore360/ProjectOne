@@ -13,6 +13,13 @@ import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 
+/** E1-S7: whole days left in a trial (0 once it has ended), or null when no end date is known. */
+function trialDaysLeft(trialEndsAt?: string): number | null {
+  if (!trialEndsAt) return null;
+  const ms = new Date(trialEndsAt).getTime() - Date.now();
+  return ms <= 0 ? 0 : Math.ceil(ms / 86_400_000);
+}
+
 function RowMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -180,6 +187,7 @@ export function TenantsView() {
         status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : t.state === "ARCHIVED" ? "Archived"
           : t.state === "CREATED" ? "Setup failed" : "Suspended",
         subdomain: t.subdomain,
+        trialEndsAt: t.trialEndsAt,
         gates: t.state === "TRIAL" ? 1 : 0,
         updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
         suspendedAt: t.suspendedAt,
@@ -589,7 +597,11 @@ export function TenantsView() {
                 <td>{tenant.type}</td>
                 <td>{tenant.plan}</td>
                 <td>
-                  <StatusBadge value={tenant.status} />
+                  {/* E1-S7: a trial past its end date is read-only for its users. */}
+                  <StatusBadge value={tenant.status === "Trial" && trialDaysLeft(tenant.trialEndsAt) === 0 ? "Trial ended" : tenant.status} />
+                  {tenant.status === "Trial" && (trialDaysLeft(tenant.trialEndsAt) ?? 0) > 0 && (
+                    <small className="app-cell-sub">{trialDaysLeft(tenant.trialEndsAt)} days left</small>
+                  )}
                 </td>
                 <td>
                   {tenant.gates ? (

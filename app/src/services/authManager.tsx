@@ -6,6 +6,7 @@ import { tenantPermissionsService } from "../features/profile/api/tenantPermissi
 import { authService, type AuthUserResponse } from "./modules/authService";
 import { setLogoutReason } from "./logoutNotice";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./tokenStorage";
+import { clearTrialExpired } from "./trialNotice";
 
 const toAuthUser = (data: AuthUserResponse): AuthUser => ({
   id: data.id, displayName: data.displayName, tenantId: data.tenantId,
@@ -16,6 +17,7 @@ const toAuthUser = (data: AuthUserResponse): AuthUser => ({
 export const login = async (email: string, password: string, totp?: string) => {
   const { data } = await authService.login(email, password, totp);
   setTokens(data.accessToken, data.refreshToken);
+  clearTrialExpired(); // E1-S7: a fresh sign-in (e.g. after activation) starts without the old banner
   const user = toAuthUser(data.user);
   store.dispatch(setUser(user));
   store.dispatch(clearTenantPermissions());
@@ -30,6 +32,7 @@ export const logout = async () => {
   try { await authService.logout(); }
   finally {
     clearTokens();
+    clearTrialExpired();
     store.dispatch(clearUser());
     store.dispatch(setPlatformPermissions(null));
     store.dispatch(clearTenantPermissions());

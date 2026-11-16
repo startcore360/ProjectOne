@@ -24,6 +24,7 @@ import { tenantPermissionsService } from "../features/profile/api/tenantPermissi
 import { useSupportSession } from "../features/support/useSupportSession";
 import { SupportSessionBanner } from "../features/support/SupportSessionBanner";
 import { useTenantBranding } from "../features/branding/useTenantBranding";
+import { TrialExpiredBanner } from "../features/branding/TrialExpiredBanner";
 
 const universityNavigation = [
   { label: "Dashboard", to: "/dashboard", icon: "home" as const, important: true },
@@ -446,6 +447,7 @@ export default function AppLayout() {
       </div>
       <main className="app-content">
         {isSupportSession && <SupportSessionBanner />}
+        {!user?.platformRole && <TrialExpiredBanner />}
         <Outlet />
       </main>    </div>
   </div>;

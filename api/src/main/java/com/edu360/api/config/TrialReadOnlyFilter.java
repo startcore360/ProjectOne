@@ -52,22 +52,29 @@ public class TrialReadOnlyFilter extends OncePerRequestFilter {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof TenantPrincipal principal
                 && !SAFE_METHODS.contains(request.getMethod())
-                && !ALLOWED_PATHS.contains(request.getRequestURI())
-                && trialHasEnded(principal)) {
-            response.setStatus(HttpStatus.FORBIDDEN.value());
-            response.setContentType("application/json");
-            response.getWriter().write("{\"status\":403,\"error\":\"TRIAL_EXPIRED\",\"code\":\"TRIAL_EXPIRED\","
-                    + "\"message\":\"The trial has ended. This workspace is read-only until it is paid and activated.\"}");
-            return;
+                && !ALLOWED_PATHS.contains(request.getRequestURI())) {
+            Instant endedAt = trialEndedAt(principal);
+            if (endedAt != null) {
+                response.setStatus(HttpStatus.FORBIDDEN.value());
+                response.setContentType("application/json");
+                // E1-S7: trialEndsAt lets the screen say "Trial ended on {date}". An Instant's
+                // toString is plain ISO-8601 with no quotes or backslashes, so it is safe in JSON.
+                response.getWriter().write("{\"status\":403,\"error\":\"TRIAL_EXPIRED\",\"code\":\"TRIAL_EXPIRED\","
+                        + "\"trialEndsAt\":\"" + endedAt + "\","
+                        + "\"message\":\"The trial has ended. This workspace is read-only until it is paid and activated.\"}");
+                return;
+            }
         }
         filterChain.doFilter(request, response);
     }
 
-    private boolean trialHasEnded(TenantPrincipal principal) {
+    /** When the tenant's trial ended, or null while it is still running (or not a trial). */
+    private Instant trialEndedAt(TenantPrincipal principal) {
         Tenant tenant = tenantRepository.findById(principal.tenantId()).orElse(null);
-        return tenant != null
+        boolean ended = tenant != null
                 && tenant.getState() == TenantState.TRIAL
                 && tenant.getTrialEndsAt() != null
                 && tenant.getTrialEndsAt().isBefore(Instant.now(clock));
+        return ended ? tenant.getTrialEndsAt() : null;
     }
 }
