@@ -266,4 +266,30 @@ class PlatformDeletionRequestControllerTest {
                 eq("EXPORT_REQUEST"), eq(exportId), eq("NORMAL"), eq(DPO_USER_ID));
     }
 
+    @Test
+    @DisplayName("E0-B13: DPO export queue filters by status and tenant")
+    void exportQueueFiltersByStatusAndTenant() {
+        ExportRequest row = ExportRequest.builder()
+                .exportRequestId(UUID.randomUUID())
+                .tenantId(TENANT_ID)
+                .requestedByUserId(PO_USER_ID)
+                .requestedByKind("PRODUCT_OWNER")
+                .status("APPROVED")
+                .createdAt(Instant.now())
+                .createdBy(PO_USER_ID)
+                .updatedAt(Instant.now())
+                .updatedBy(PO_USER_ID)
+                .rowVersion(1)
+                .build();
+        when(exportRequestRepo.findByStatusAndTenantIdOrderByCreatedAtDesc("APPROVED", TENANT_ID))
+                .thenReturn(List.of(row));
+
+        var response = dataProtectionController.listAllExports(" approved ", TENANT_ID,
+                authFor(DPO_USER_ID, PlatformRole.DATA_PROTECTION_OFFICER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().get(0).status()).isEqualTo("APPROVED");
+    }
+
 }

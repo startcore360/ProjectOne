@@ -91,10 +91,20 @@ public class PlatformDataProtectionService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExportRequestResponse> listAllExports() {
-        return exportRequestRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toExportResponse)
-                .toList();
+    public List<ExportRequestResponse> listAllExports(String status, UUID tenantId) {
+        String normalizedStatus = status == null || status.isBlank()
+                ? null : status.trim().toUpperCase(java.util.Locale.ROOT);
+        List<ExportRequest> requests;
+        if (normalizedStatus != null && tenantId != null) {
+            requests = exportRequestRepository.findByStatusAndTenantIdOrderByCreatedAtDesc(normalizedStatus, tenantId);
+        } else if (normalizedStatus != null) {
+            requests = exportRequestRepository.findByStatusOrderByCreatedAtDesc(normalizedStatus);
+        } else if (tenantId != null) {
+            requests = exportRequestRepository.findByTenantIdOrderByCreatedAtDesc(tenantId);
+        } else {
+            requests = exportRequestRepository.findAllByOrderByCreatedAtDesc();
+        }
+        return requests.stream().map(this::toExportResponse).toList();
     }
 
     /**

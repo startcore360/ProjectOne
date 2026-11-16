@@ -10,4 +10,6 @@ public interface ExportRequestRepository extends JpaRepository<ExportRequest, UU
     List<ExportRequest> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     Optional<ExportRequest> findFirstByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     List<ExportRequest> findAllByOrderByCreatedAtDesc();
+    List<ExportRequest> findByStatusOrderByCreatedAtDesc(String status);
+    List<ExportRequest> findByStatusAndTenantIdOrderByCreatedAtDesc(String status, UUID tenantId);
 }

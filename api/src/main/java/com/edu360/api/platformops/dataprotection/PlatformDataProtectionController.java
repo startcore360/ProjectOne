@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
@@ -53,10 +54,13 @@ public class PlatformDataProtectionController {
 
     /** DPO queue: all tenant export requests awaiting review or already decided. */
     @GetMapping("/export-requests")
-    public ResponseEntity<List<ExportRequestResponse>> listAllExports(Authentication auth) {
+    public ResponseEntity<List<ExportRequestResponse>> listAllExports(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID tenantId,
+            Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
-        return ResponseEntity.ok(dataProtectionService.listAllExports());
+        return ResponseEntity.ok(dataProtectionService.listAllExports(status, tenantId));
     }
 
     /** Approval only changes request status and notifies the requester; A5 owns export execution. */
