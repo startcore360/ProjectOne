@@ -128,10 +128,11 @@ public class TenantProvisioningService {
             jdbcTemplate.query(
                     "SELECT step_code, status, attempts, last_error_code, started_at, finished_at "
                             + "FROM platform.tenant_provision_step WHERE tenant_id = ?",
-                    rs -> found.put(rs.getString("step_code"), new StepState(
-                            rs.getString("status"), rs.getInt("attempts"), rs.getString("last_error_code"),
-                            rs.getTimestamp("started_at") == null ? null : rs.getTimestamp("started_at").toInstant(),
-                            rs.getTimestamp("finished_at") == null ? null : rs.getTimestamp("finished_at").toInstant())),
+                    (org.springframework.jdbc.core.RowCallbackHandler) rs -> found.put(rs.getString("step_code"),
+                            new StepState(
+                                    rs.getString("status"), rs.getInt("attempts"), rs.getString("last_error_code"),
+                                    rs.getTimestamp("started_at") == null ? null : rs.getTimestamp("started_at").toInstant(),
+                                    rs.getTimestamp("finished_at") == null ? null : rs.getTimestamp("finished_at").toInstant())),
                     tenantId);
             return found;
         });
