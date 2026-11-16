@@ -61,7 +61,10 @@ describe("TenantDataProtectionModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Request Policy Change" }));
 
     const select = await screen.findByLabelText("Data Category");
-    expect(select.querySelectorAll("option")).toHaveLength(14);
-    expect(screen.queryByRole("option", { name: "STUDENT_RECORDS" })).not.toBeInTheDocument();
+    expect(Array.from((select as HTMLSelectElement).options).map((option) => option.value)).toEqual([
+      "STRUCTURE", "PERSON", "ACADEMIC_RECORD", "FINANCIAL", "COMMUNICATION",
+      "STUDENT_NOTE", "GOVERNANCE", "APPROVAL", "AUDIT", "BACKUP",
+      "OPERATIONAL", "BY_OWNER", "TENANT_LIFETIME", "REFERENCE",
+    ]);
   });
 });

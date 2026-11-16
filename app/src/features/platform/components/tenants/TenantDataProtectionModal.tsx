@@ -248,10 +248,11 @@ export function TenantDataProtectionModal({
               >
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
+                    <label htmlFor="retention-data-class" style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
                       Data Category
                     </label>
                     <select
+                      id="retention-data-class"
                       className="form-control"
                       value={retentionDraft.dataClassCode}
                       onChange={(e) => setRetentionDraft({ ...retentionDraft, dataClassCode: e.target.value })}
