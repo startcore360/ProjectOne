@@ -23,4 +23,4 @@ BEGIN
         SELECT 1 FROM pg_trigger
          WHERE tgname='trg_user_account_email_alias_guard' AND NOT tgisinternal
     ) THEN RAISE EXCEPTION 'PRIMARY_EMAIL_COLLISION_GUARD_MISSING'; END IF;
-END$;
+END$$;
