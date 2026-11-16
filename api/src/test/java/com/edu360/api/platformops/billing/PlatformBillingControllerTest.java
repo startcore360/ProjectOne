@@ -117,13 +117,30 @@ class PlatformBillingControllerTest {
                 org.mockito.ArgumentMatchers.argThat(changes -> "Annual promotional rebate".equals(changes.get("reason").get("new"))));
     }
 
+
+    @Test
+    void ACT_DISCOUNT_APPLY_ALLOW_approvedInvoice() {
+        UUID invoiceId = UUID.randomUUID();
+        Invoice invoice = Invoice.builder().invoiceId(invoiceId).subtotalAmount(new BigDecimal("50000.00"))
+                .discountAmount(BigDecimal.ZERO).totalAmount(new BigDecimal("50000.00")).status("APPROVED").build();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(idempotencyService.claim(any(), any(), any(), any())).thenReturn(
+                new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        ResponseEntity<InvoiceResponse> response = controller.applyDiscount(invoiceId,
+                new ApplyDiscountRequest(new BigDecimal("10.00"), "Renewal incentive"),
+                "discount-key-approved", authFor(PlatformRole.PRODUCT_OWNER));
+        assertThat(response.getBody().discountAmount()).isEqualByComparingTo("5000.00");
+        assertThat(response.getBody().totalAmount()).isEqualByComparingTo("45000.00");
+    }
+
     @Test
     void ACT_DISCOUNT_APPLY_DENY_billingManager_RuleF4() {
         UUID invoiceId = UUID.randomUUID();
         ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("10.00"), "Rebate");
 
         // Billing Manager is denied applying discounts by permission service & Rule F-4
-        assertThatThrownBy(() -> controller.applyDiscount(invoiceId, req, authFor(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> controller.applyDiscount(invoiceId, req, "discount-key-deny", authFor(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
