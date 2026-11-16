@@ -45,12 +45,9 @@ class SupportSessionAuthenticationFilterTest {
 
     private Fixture fixture(Instant expiry) {
         SupportSessionTokenService tokenService = new SupportSessionTokenService("0123456789abcdef0123456789abcdef");
-        SupportSession session = mock(SupportSession.class);
-        when(session.getSupportSessionId()).thenReturn(SESSION_ID);
-        when(session.getGrantId()).thenReturn(GRANT_ID);
-        when(session.getPlatformUserId()).thenReturn(PLATFORM_USER_ID);
-        when(session.getIssuedAt()).thenReturn(Instant.now().minusSeconds(5));
-        when(session.getExpiresAt()).thenReturn(expiry);
+        SupportSession session = SupportSession.builder()
+                .supportSessionId(SESSION_ID).grantId(GRANT_ID).platformUserId(PLATFORM_USER_ID)
+                .issuedAt(Instant.now().minusSeconds(5)).expiresAt(expiry).build();
 
         SupportAccessGrant grant = mock(SupportAccessGrant.class);
         when(grant.getSupportAccessGrantId()).thenReturn(GRANT_ID);
