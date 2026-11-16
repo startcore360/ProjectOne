@@ -77,6 +77,7 @@ import { SuspendTenantModal, ArchiveTenantModal } from "./TenantLifecycleModals"
 import { TenantSettingsModal, type TenantSettingsDraft } from "./TenantSettingsModal";
 import { TenantDataProtectionModal } from "./TenantDataProtectionModal";
 import { TenantUsageModal } from "./TenantUsageModal";
+import { TenantSetupModal } from "./TenantSetupModal";
 import { tenantLoginAddress } from "./tenantAddress";
 
 export function TenantsView() {
@@ -86,6 +87,9 @@ export function TenantsView() {
   const canActivate = can("TENANT_ACTIVATE");
   const canManageLifecycle = can("TENANT_SUSPEND_ARCHIVE");
   const canEditSettings = can("TENANT_SETTINGS");
+  const canCreate = can("TENANT_CREATE");
+  // E1-S2: the tenant whose setup steps are open.
+  const [setupTarget, setSetupTarget] = useState<Tenant | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -166,7 +170,10 @@ export function TenantsView() {
               : "University",
         plan: t.planName,
         planId: t.planId,
-        status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : t.state === "ARCHIVED" ? "Archived" : "Suspended",
+        // E1-S2: CREATED means setup has not finished (it was wrongly shown as "Suspended").
+        status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : t.state === "ARCHIVED" ? "Archived"
+          : t.state === "CREATED" ? "Setup failed" : "Suspended",
+        subdomain: t.subdomain,
         gates: t.state === "TRIAL" ? 1 : 0,
         updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
         suspendedAt: t.suspendedAt,
@@ -582,6 +589,9 @@ export function TenantsView() {
                 <td>{tenant.archivedAt ? new Date(tenant.archivedAt).toLocaleString() : "—"}</td>
                 <td>
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    {tenant.status === "Setup failed" && (canCreate || canEditSettings) && (
+                      <Button size="sm" variant="secondary" onClick={() => setSetupTarget(tenant)}>Setup</Button>
+                    )}
                     {canActivate && tenant.status === "Trial" && (
                       <Button size="sm" variant="secondary" onClick={() => handleOpenActivate(tenant)}>Activate</Button>
                     )}
@@ -704,6 +714,30 @@ export function TenantsView() {
         tenant={selectedTenant}
       />
 
+      {setupTarget && (
+        <TenantSetupModal
+          isOpen
+          tenantId={setupTarget.id}
+          tenantName={setupTarget.name}
+          canRetry={canCreate}
+          onClose={() => setSetupTarget(null)}
+          onRetried={(tenant) => {
+            setSetupTarget(null);
+            setMessage(`Setup of "${tenant.tenantName}" finished. It is now in TRIAL.`);
+            setCreatedCredentials(
+              tenant.firstAdminTemporaryPassword
+                ? {
+                    tenantName: tenant.tenantName,
+                    adminEmail: tenant.firstAdminEmail ?? "",
+                    loginAddress: tenantLoginAddress(tenant.subdomain, window.location),
+                    temporaryPassword: tenant.firstAdminTemporaryPassword,
+                  }
+                : null,
+            );
+            void loadTenants();
+          }}
+        />
+      )}
       <TenantUsageModal
         isOpen={showUsage}
         onClose={() => setShowUsage(false)}

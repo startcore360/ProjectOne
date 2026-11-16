@@ -191,8 +191,32 @@ export type TenantUsageMonthlyDto = {
   isFinal: boolean;
 };
 
+// E1-S2: the seven tenant setup steps, in the order they run.
+export type ProvisioningStep = {
+  executionOrder: number;
+  planStep: string;
+  stepCode: string;
+  description: string;
+  status: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "COMPENSATED";
+  attempts: number;
+  lastErrorCode: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+export type ProvisioningStatus = {
+  tenantId: string;
+  overallStatus: "DONE" | "FAILED" | "RUNNING" | "PENDING";
+  retryable: boolean;
+  steps: ProvisioningStep[];
+};
+
 export const platformTenantService = {
   getPlans: () => api.get<PlanItem[]>("/platform/plans"),
+  getProvisioning: (tenantId: string) =>
+    api.get<ProvisioningStatus>(`/platform/tenants/${tenantId}/provisioning`),
+  // May return a new one-time temporary password for the first admin (PD-10).
+  retryProvisioning: (tenantId: string, retention?: { retentionMonths: number; backupRetentionDays: number }) =>
+    api.post<TenantItem>(`/platform/tenants/${tenantId}/provisioning/retry`, retention ?? {}),
   createPlan: (data: CreatePlanPayload) => api.post<PlanItem>("/platform/plans", data),
   updatePlan: (planId: string, data: UpdatePlanPayload, rowVersion: number) =>
     api.put<PlanItem>(`/platform/plans/${planId}`, data, {
