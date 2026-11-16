@@ -18,6 +18,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.edu360.api.platformops.support.SupportSessionAuthenticationFilter;
+
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -44,6 +46,8 @@ public class SecurityConfig {
     private final TenantIssuerAuthenticationManagerResolver tenantIssuerAuthenticationManagerResolver;
     private final MustChangePasswordFilter mustChangePasswordFilter;
     private final TrialReadOnlyFilter trialReadOnlyFilter;
+    private final SupportSessionAuthenticationFilter supportSessionAuthenticationFilter;
+    private final TokenHostMatchingFilter tokenHostMatchingFilter;
     private final Environment environment;
 
     @Value("${app.cors.allowed-origin:http://localhost:5173}")
@@ -104,7 +108,9 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(
                                 new JwtIssuerAuthenticationManagerResolver(tenantIssuerAuthenticationManagerResolver)))
-                .addFilterAfter(mustChangePasswordFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterBefore(supportSessionAuthenticationFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(tokenHostMatchingFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(mustChangePasswordFilter, TokenHostMatchingFilter.class)
                 .addFilterAfter(trialReadOnlyFilter, MustChangePasswordFilter.class);
         return http.build();
     }
