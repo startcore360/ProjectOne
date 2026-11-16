@@ -608,7 +608,7 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-ALLOW: Product Owner applies valid promotional discount")
     void actDiscountApply_allow() {
         Invoice invoice = Invoice.builder().invoiceId(invoiceId).tenantId(tenantId)
-                .subtotalAmount(new BigDecimal("10000.00")).discountAmount(BigDecimal.ZERO).build();
+                .subtotalAmount(new BigDecimal("10000.00")).discountAmount(BigDecimal.ZERO).status("DRAFT").build();
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 

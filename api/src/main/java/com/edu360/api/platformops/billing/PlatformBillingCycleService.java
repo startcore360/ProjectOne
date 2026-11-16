@@ -55,7 +55,7 @@ public class PlatformBillingCycleService {
    if(plan.getBillingCycleMonths()==null||plan.getBillingCycleMonths()<1) {
     skipped.add(new BillingCycleResponse.SkippedTenant(tenantId,"INVALID_BILLING_CYCLE")); continue;
    }
-   LocalDate usageFrom=request.periodStart().withDayOfMonth(1), usageTo=request.periodEnd().withDayOfMonth(1);
+   LocalDate usageFrom=request.periodStart().withDayOfMonth(1), usageTo=request.periodEnd();
    List<TenantUsageMonthly> usage=usageRepository.findByTenantIdAndUsageMonthBetweenOrderByUsageMonthAsc(tenantId,usageFrom,usageTo);
    List<TenantUsageMonthly> billable=usage.stream().filter(r->!r.isFinal())
     .filter(r->"SMS_SENT".equals(r.getMetricCode())||"STORAGE_GB_PEAK".equals(r.getMetricCode())).toList();

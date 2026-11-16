@@ -151,6 +151,7 @@ class PlatformBillingControllerTest {
                 .invoiceId(invoiceId)
                 .subtotalAmount(new BigDecimal("5000.00"))
                 .discountAmount(BigDecimal.ZERO)
+                .status("DRAFT")
                 .build();
 
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
