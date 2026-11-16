@@ -18,6 +18,7 @@ import {
   type SupportAccessGrantItem,
 } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
+import { SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY } from "../../../../services/axios";
 
 export function TicketsView() {
   const { can } = usePlatformAccess();
@@ -39,8 +40,6 @@ export function TicketsView() {
   const [resolutionNote, setResolutionNote] = useState("");
   const [submittingResolve, setSubmittingResolve] = useState(false);
 
-  // Assumed Session Alert
-  const [assumedToken, setAssumedToken] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -68,6 +67,19 @@ export function TicketsView() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const onSupportSessionEnd = (event: MessageEvent) => {
+      const expectedOrigin = window.sessionStorage.getItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+      if (event.origin !== expectedOrigin || event.data?.type !== "EDU360_SUPPORT_SESSION_END") return;
+      void platformOpsService.endCurrentSupportSession().then(() => {
+        window.sessionStorage.removeItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+        setMessage("The read-only support session has ended.");
+      }).catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not end support session."));
+    };
+    window.addEventListener("message", onSupportSessionEnd);
+    return () => window.removeEventListener("message", onSupportSessionEnd);
+  }, []);
 
   const handleUpdateStatus = async (ticket: SupportTicketItem, newStatus: string) => {
     if (newStatus === "RESOLVED" || newStatus === "CLOSED") {
@@ -108,8 +120,21 @@ export function TicketsView() {
   const handleAssumeSession = async (ticketId: string, ticketNumber: string) => {
     try {
       const res = await platformOpsService.assumeSupportSession(ticketId);
-      setAssumedToken(res.token);
-      setMessage(`Assumed read-only session for ticket ${ticketNumber}. Token active until ${new Date(res.expiresAt).toLocaleTimeString()}.`);
+      const tenantOrigin = new URL(res.tenantLoginAddress).origin;
+      window.sessionStorage.setItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY, tenantOrigin);
+      const fragment = new URLSearchParams({
+        support_session: res.token,
+        expires_at: res.expiresAt,
+        ticket_number: ticketNumber,
+        platform_origin: window.location.origin,
+      });
+      const opened = window.open(`${tenantOrigin}/#${fragment.toString()}`, "_blank");
+      if (!opened) {
+        await platformOpsService.endCurrentSupportSession();
+        window.sessionStorage.removeItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+        throw new Error("The tenant tab was blocked by the browser. Allow pop-ups and try again.");
+      }
+      setMessage(`Opened a read-only session for ticket ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to assume support session. Ensure tenant granted access.");
     }
@@ -149,11 +174,6 @@ export function TicketsView() {
           message={`Active support grants could not be verified. Session-assumption actions are disabled until this is resolved. ${grantsError}`}
           action={<Button variant="secondary" size="sm" onClick={() => void loadData()}>Retry</Button>}
         />
-      )}
-      {assumedToken && (
-        <Notice tone="info">
-          <strong>Active Support Session:</strong> Temporary diagnostic session key is bound to this window. Access is logged in the tenant audit log.
-        </Notice>
       )}
 
       <div className="kpi-grid">
