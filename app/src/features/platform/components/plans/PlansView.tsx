@@ -64,9 +64,6 @@ export function PlansView() {
     try {
       const payload = {
         planName: createDraft.planName.trim(),
-        pricingType: createDraft.pricingType,
-        priceAmount: canConfigurePricing ? Number(createDraft.priceAmount) : (editingPlan?.priceAmount ?? 0),
-        currencyCode: createDraft.currencyCode,
         userLimit: Number(createDraft.userLimit),
         storageLimitGb: Number(createDraft.storageLimitGb),
         smsLimit: Number(createDraft.smsLimit),
@@ -77,6 +74,11 @@ export function PlansView() {
         billingCycleMonths: createDraft.billingCycleMonths,
         smsUnitAmount: Number(createDraft.smsUnitAmount),
         storageUnitAmountPerGb: Number(createDraft.storageUnitAmountPerGb),
+        ...(canConfigurePricing ? {
+          pricingType: createDraft.pricingType,
+          priceAmount: Number(createDraft.priceAmount),
+          currencyCode: createDraft.currencyCode,
+        } : {}),
       };
       if (editingPlan) {
         await platformTenantService.updatePlan(editingPlan.planId, payload);
