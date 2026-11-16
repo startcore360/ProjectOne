@@ -5,6 +5,7 @@ import {
   platformTenantService,
   type ExportRequestDto,
   type RetentionPolicyDto,
+  type DeletionRequestDto,
 } from "../../api/platformTenantService";
 import type { Tenant } from "../common/types";
 
@@ -33,7 +34,7 @@ export function TenantDataProtectionModal({
   const [retentionPolicies, setRetentionPolicies] = useState<RetentionPolicyDto[]>([]);
   const [showRetentionForm, setShowRetentionForm] = useState(false);
   const [retentionDraft, setRetentionDraft] = useState({
-    dataClassCode: "STUDENT_RECORDS",
+    dataClassCode: "STRUCTURE",
     requestedMonths: 12,
     reason: "",
   });
@@ -41,7 +42,6 @@ export function TenantDataProtectionModal({
 
   // Deletion State
   const [confirmName, setConfirmName] = useState("");
-  const [deletionReason, setDeletionReason] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   const tenantId = tenant?.id;
@@ -50,7 +50,6 @@ export function TenantDataProtectionModal({
     if (!isOpen || !tenantId) return;
     setNotice(null);
     setConfirmName("");
-    setDeletionReason("");
 
     if (activeTab === "export") {
       setLoading(true);
@@ -101,7 +100,7 @@ export function TenantDataProtectionModal({
         message: `Retention change requested for ${retentionDraft.dataClassCode} (${retentionDraft.requestedMonths} months). Pending DPO approval.`,
       });
       setShowRetentionForm(false);
-      setRetentionDraft({ dataClassCode: "STUDENT_RECORDS", requestedMonths: 12, reason: "" });
+      setRetentionDraft({ dataClassCode: "STRUCTURE", requestedMonths: 12, reason: "" });
       const listRes = await platformTenantService.getRetentionPolicies(tenantId);
       setRetentionPolicies(listRes.data || []);
     } catch {
@@ -121,17 +120,12 @@ export function TenantDataProtectionModal({
     setDeleting(true);
     setNotice(null);
     try {
-      await platformTenantService.deleteTenant(tenantId, deletionReason);
+      const response = await platformTenantService.requestTenantDeletion(tenantId, "PRODUCT_OWNER");
       setNotice({
         tone: "success",
-        message: `Tenant ${tenant.name} has been queued for deletion / purged successfully.`,
+        message: `Deletion request ${response.data.deletionRequestId} created. Status: ${response.data.status}. Next: Product Owner confirmation, then Data Protection Officer decision.`,
       });
-      if (onTenantDeleted) {
-        onTenantDeleted(tenantId);
-      }
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      setConfirmName("");
     } catch {
       setNotice({ tone: "danger", message: "Failed to delete tenant. Please ensure DPO approval or try again." });
     } finally {
@@ -209,28 +203,22 @@ export function TenantDataProtectionModal({
               <Spinner label="Loading export records" />
             ) : (
               <DataTable
-                headers={["Export ID", "Status", "Requested At", "Completed At", "Download URL"]}
+                headers={["Export ID", "Requested By", "Status", "Requested At", "File Ref", "Download Expires"]}
                 empty={exports.length === 0}
               >
                 {exports.map((exp) => (
-                  <tr key={exp.id}>
+                  <tr key={exp.exportRequestId}>
                     <td>
-                      <code>{exp.id.slice(0, 8)}...</code>
+                      <code>{exp.exportRequestId.slice(0, 8)}...</code>
                     </td>
+                    <td>{exp.requestedByKind}</td>
                     <td>
-                      <StatusBadge value={exp.status === "COMPLETED" ? "Success" : exp.status === "FAILED" ? "Denied" : "Trial"} status={exp.status} />
+                      <StatusBadge value={exp.status} status={exp.status} />
                     </td>
-                    <td>{exp.requestedAt ? new Date(exp.requestedAt).toLocaleString() : "-"}</td>
-                    <td>{exp.completedAt ? new Date(exp.completedAt).toLocaleString() : "Processing"}</td>
-                    <td>
-                      {exp.downloadUrl && (exp.downloadUrl.startsWith("https://") || exp.downloadUrl.startsWith("/")) ? (
-                        <a href={exp.downloadUrl} target="_blank" rel="noreferrer" style={{ color: "var(--color-text-brand)" }}>
-                          Download Zip
-                        </a>
-                      ) : (
-                        <span style={{ color: "var(--color-text-muted)" }}>-</span>
-                      )}
-                    </td>
+                    <td>{exp.createdAt ? new Date(exp.createdAt).toLocaleString() : "-"}</td>
+                    <td>{exp.downloadExpiresAt ? new Date(exp.downloadExpiresAt).toLocaleString() : "Not available"}</td>
+                    <td>{exp.fileRef ?? "Pending"}</td>
+                    <td>{exp.downloadExpiresAt ? new Date(exp.downloadExpiresAt).toLocaleString() : "—"}</td>
                   </tr>
                 ))}
               </DataTable>
@@ -272,10 +260,20 @@ export function TenantDataProtectionModal({
                       value={retentionDraft.dataClassCode}
                       onChange={(e) => setRetentionDraft({ ...retentionDraft, dataClassCode: e.target.value })}
                     >
-                      <option value="STUDENT_RECORDS">Student Records</option>
-                      <option value="ATTENDANCE_LOGS">Attendance Logs</option>
-                      <option value="FINANCIAL_LEDGERS">Financial Ledgers</option>
-                      <option value="AUDIT_TRAILS">Audit Trails</option>
+                      <option value="STRUCTURE">Structure</option>
+                      <option value="PERSON">Person</option>
+                      <option value="ACADEMIC_RECORD">Academic Record</option>
+                      <option value="FINANCIAL">Financial</option>
+                      <option value="COMMUNICATION">Communication</option>
+                      <option value="STUDENT_NOTE">Student Note</option>
+                      <option value="GOVERNANCE">Governance</option>
+                      <option value="APPROVAL">Approval</option>
+                      <option value="AUDIT">Audit</option>
+                      <option value="BACKUP">Backup</option>
+                      <option value="OPERATIONAL">Operational</option>
+                      <option value="BY_OWNER">By Owner</option>
+                      <option value="TENANT_LIFETIME">Tenant Lifetime</option>
+                      <option value="REFERENCE">Reference</option>
                     </select>
                   </div>
                   <div>
@@ -320,18 +318,18 @@ export function TenantDataProtectionModal({
               <Spinner label="Loading retention policies" />
             ) : (
               <DataTable
-                headers={["Data Category", "Retention Period (Days)", "Last Updated", "Status"]}
+                headers={["Data Class", "Retention (Months)", "Effective From", "Status"]}
                 empty={retentionPolicies.length === 0}
               >
                 {retentionPolicies.map((rp) => (
-                  <tr key={rp.id}>
+                  <tr key={rp.tenantRetentionPolicyId}>
                     <td>
-                      <strong>{rp.dataCategory}</strong>
+                      <strong>{rp.dataClassCode}</strong>
                     </td>
-                    <td>{rp.retentionPeriodDays} days</td>
-                    <td>{rp.updatedAt ? new Date(rp.updatedAt).toLocaleDateString() : "Default"}</td>
+                    <td>{rp.retentionMonths} months</td>
+                    <td>{rp.effectiveFrom ? new Date(rp.effectiveFrom).toLocaleDateString() : "—"}</td>
                     <td>
-                      <StatusBadge value="Active" />
+                      <StatusBadge value={rp.status} status={rp.status} />
                     </td>
                   </tr>
                 ))}
@@ -342,14 +340,17 @@ export function TenantDataProtectionModal({
 
         {/* Deletion Tab */}
         {activeTab === "deletion" && (
-          <form onSubmit={handleConfirmDeletion} style={{ display: "grid", gap: "var(--space-3)" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <Notice tone="danger">
-              <strong>Caution: Permanent Action.</strong> Tenant deletion purges tenant schemas, disables identity links, and initiates cold-storage archival under GDPR/DPDP rules.
+              <strong>Deletion request only.</strong> This step does not delete or purge tenant data.
+            </Notice>
+            <Notice tone="info">
+              Workflow: Requested → Product Owner confirmation → Data Protection Officer decision.
             </Notice>
 
             <div>
               <label style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
-                Type <strong>{tenant.name}</strong> to confirm deletion
+                Type <strong>{tenant.name}</strong> to request deletion
               </label>
               <input
                 type="text"
@@ -361,26 +362,12 @@ export function TenantDataProtectionModal({
               />
             </div>
 
-            <div>
-              <label style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
-                Justification / Regulatory Reason
-              </label>
-              <textarea
-                className="form-control"
-                rows={3}
-                value={deletionReason}
-                onChange={(e) => setDeletionReason(e.target.value)}
-                placeholder="e.g. Contract expiration, institution closure, right to be forgotten"
-                required
-              />
-            </div>
-
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
               <Button variant="danger" type="submit" disabled={deleting || confirmName !== tenant.name}>
-                {deleting ? "Deleting tenant..." : "Delete Tenant Permanently"}
+                {deleting ? "Submitting request..." : "Request deletion"}
               </Button>
             </div>
-          </form>
+          </div>
         )}
       </div>
     </Modal>

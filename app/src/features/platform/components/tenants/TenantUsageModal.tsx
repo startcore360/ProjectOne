@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, Button, DataTable, MetricCard } from "../../../../design-system/components";
+import { Modal, Button, DataTable } from "../../../../design-system/components";
 import { Spinner } from "../../../../components/ui";
 import { platformTenantService, type TenantUsageMonthlyDto } from "../../api/platformTenantService";
 import type { Tenant } from "../common/types";
@@ -41,7 +41,6 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
 
   if (!tenant) return null;
 
-  const latest = usageList[0] || null;
 
   return (
     <Modal
@@ -65,60 +64,21 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
           <Spinner label="Loading usage metrics" />
         ) : (
           <>
-            {latest && (
-              <div className="kpi-grid">
-                <MetricCard
-                  label="Active Users"
-                  value={latest.activeUserCount}
-                  note={`Period: ${latest.usageYear}-${String(latest.usageMonth).padStart(2, "0")}`}
-                  mark="users"
-                />
-                <MetricCard
-                  label="Storage Used"
-                  value={`${latest.storageUsedGb.toFixed(1)} GB`}
-                  note="Cloud Object & DB"
-                  mark="download"
-                />
-                <MetricCard
-                  label="Total Logins"
-                  value={latest.loginCount.toLocaleString()}
-                  note="Monthly auth sessions"
-                  mark="lock"
-                />
-                <MetricCard
-                  label="API Calls"
-                  value={latest.apiCallCount.toLocaleString()}
-                  note="Platform requests"
-                  mark="refresh"
-                />
-              </div>
-            )}
-
             <div style={{ display: "grid", gap: "var(--space-2)" }}>
               <h4 style={{ margin: 0, fontSize: "var(--fs-body)", color: "var(--text-primary)" }}>
                 Monthly Historical Records
               </h4>
               <DataTable
-                headers={[
-                  "Billing Period",
-                  "Active Users",
-                  "Storage (GB)",
-                  "Logins",
-                  "API Calls",
-                  "Bandwidth (GB)",
-                ]}
+                headers={["Usage Month", "Metric", "Quantity", "Computed At", "Final"]}
                 empty={usageList.length === 0}
               >
                 {usageList.map((u) => (
-                  <tr key={u.id}>
-                    <td>
-                      <strong>{`${u.usageYear}-${String(u.usageMonth).padStart(2, "0")}`}</strong>
-                    </td>
-                    <td>{u.activeUserCount}</td>
-                    <td>{u.storageUsedGb.toFixed(2)} GB</td>
-                    <td>{u.loginCount.toLocaleString()}</td>
-                    <td>{u.apiCallCount.toLocaleString()}</td>
-                    <td>{u.bandwidthGb.toFixed(2)} GB</td>
+                  <tr key={u.tenantUsageMonthlyId}>
+                    <td><strong>{u.usageMonth.slice(0, 7)}</strong></td>
+                    <td>{u.metricCode}</td>
+                    <td>{Number(u.quantity).toLocaleString()}</td>
+                    <td>{u.computedAt ? new Date(u.computedAt).toLocaleString() : "—"}</td>
+                    <td>{u.isFinal ? "Yes" : "No"}</td>
                   </tr>
                 ))}
               </DataTable>

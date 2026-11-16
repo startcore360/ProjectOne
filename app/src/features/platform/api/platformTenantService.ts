@@ -135,34 +135,46 @@ export type UpdateTenantSettingsPayload = {
 };
 
 export type ExportRequestDto = {
-  id: string;
+  exportRequestId: string;
   tenantId: string;
+  requestedByKind: string;
   status: string;
-  downloadUrl?: string;
-  requestedAt: string;
-  completedAt?: string;
+  fileRef?: string;
+  downloadExpiresAt?: string;
+  createdAt: string;
+};
+
+export type DeletionRequestDto = {
+  deletionRequestId: string;
+  tenantId: string;
+  origin: string;
+  status: string;
+  poConfirmedAt?: string;
+  retentionEndsAt?: string;
+  deletedAt?: string;
+  createdAt: string;
+  purgeStatus?: string;
+  dpoDecidedAt?: string;
+  dpoRemark?: string;
 };
 
 export type RetentionPolicyDto = {
-  id: string;
+  tenantRetentionPolicyId: string;
   tenantId: string;
-  dataCategory: string;
-  dataClassCode?: string;
-  retentionPeriodDays: number;
-  retentionMonths?: number;
-  updatedAt?: string;
+  dataClassCode: string;
+  retentionMonths: number;
+  effectiveFrom: string;
+  status: string;
 };
 
 export type TenantUsageMonthlyDto = {
-  id: string;
+  tenantUsageMonthlyId: string;
   tenantId: string;
-  usageYear: number;
-  usageMonth: number;
-  activeUserCount: number;
-  storageUsedGb: number;
-  loginCount: number;
-  apiCallCount: number;
-  bandwidthGb: number;
+  usageMonth: string;
+  metricCode: string;
+  quantity: number;
+  computedAt: string;
+  isFinal: boolean;
 };
 
 export const platformTenantService = {
@@ -189,12 +201,12 @@ export const platformTenantService = {
     api.post(`/platform/tenants/${tenantId}/export`),
   listExports: (tenantId: string) =>
     api.get(`/platform/tenants/${tenantId}/export`),
-  deleteTenant: (tenantId: string, origin = "PRODUCT_OWNER") =>
-    api.delete(`/platform/tenants/${tenantId}?origin=${origin}`),
+  requestTenantDeletion: (tenantId: string, origin = "PRODUCT_OWNER") =>
+    api.post(`/platform/deletion-requests`, { tenantId, origin }),
   getRetentionPolicies: (tenantId: string) =>
     api.get(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>
-    api.post(`/platform/tenants/${tenantId}/retention`, data),
+    api.post(`/platform/tenants/${tenantId}/retention-change-requests`, data),
   getTenantUsage: (tenantId: string) =>
-    api.get(`/platform/tenants/${tenantId}/usage`),
+    api.get<TenantUsageMonthlyDto[]>(`/platform/tenants/${tenantId}/usage`),
 };
