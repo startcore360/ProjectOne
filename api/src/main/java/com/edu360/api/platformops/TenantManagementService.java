@@ -267,6 +267,7 @@ public class TenantManagementService {
                     .setParameter("updatedAt", now)
                     .setParameter("actor", principal.platformUserId())
                         .executeUpdate();
+            }
         }
 
         // 5b. Provision First Tenant Admin
