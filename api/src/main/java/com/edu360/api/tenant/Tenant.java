@@ -88,6 +88,18 @@ public class Tenant {
     @Column(name = "branding_logo_file_ref")
     private UUID brandingLogoFileRef;
 
+    /** E1-S4: FileStorage key of the logo (never sent to clients) and its checked content type. */
+    @Column(name = "branding_logo_storage_key")
+    private String brandingLogoStorageKey;
+
+    @Column(name = "branding_logo_content_type")
+    private String brandingLogoContentType;
+
+    /** E1-S4: {"primary":"#RRGGBB","accent":"#RRGGBB"}, only on plans that allow colours. */
+    @Column(name = "branding_colors", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private String brandingColors;
+
     /** Unique per tenant — used by bootstrap resolver to validate issuer JWKS. */
     @Column(name = "keycloak_realm", unique = true)
     private String keycloakRealm;

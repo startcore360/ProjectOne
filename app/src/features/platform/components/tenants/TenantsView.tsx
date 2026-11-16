@@ -78,6 +78,7 @@ import { TenantSettingsModal, type TenantPlanLimits, type TenantSettingsDraft } 
 import { TenantDataProtectionModal } from "./TenantDataProtectionModal";
 import { TenantUsageModal } from "./TenantUsageModal";
 import { TenantSetupModal } from "./TenantSetupModal";
+import { TenantBrandingModal } from "./TenantBrandingModal";
 import { tenantLoginAddress } from "./tenantAddress";
 
 export function TenantsView() {
@@ -93,6 +94,8 @@ export function TenantsView() {
   const [settingsPlan, setSettingsPlan] = useState<TenantPlanLimits | null>(null);
   // E1-S2: the tenant whose setup steps are open.
   const [setupTarget, setSetupTarget] = useState<Tenant | null>(null);
+  // E1-S4: the tenant whose branding is open.
+  const [brandingTarget, setBrandingTarget] = useState<Tenant | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -622,6 +625,9 @@ export function TenantsView() {
                       {canEditSettings && (
                         <MenuAction onClick={() => handleOpenSettings(tenant)}>Settings</MenuAction>
                       )}
+                      {canEditSettings && (
+                        <MenuAction onClick={() => setBrandingTarget(tenant)}>Branding</MenuAction>
+                      )}
                       {canViewUsage && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowUsage(true); }}>Usage</MenuAction>}
                       {canViewCompliance && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowDataProtection(true); }}>Compliance</MenuAction>}
                     </RowMenu>
@@ -727,6 +733,18 @@ export function TenantsView() {
         tenant={selectedTenant}
       />
 
+      {brandingTarget && (
+        <TenantBrandingModal
+          isOpen
+          tenantId={brandingTarget.id}
+          tenantName={brandingTarget.name}
+          onClose={() => setBrandingTarget(null)}
+          onSaved={(saved) => {
+            setBrandingTarget(null);
+            setMessage(saved);
+          }}
+        />
+      )}
       {setupTarget && (
         <TenantSetupModal
           isOpen

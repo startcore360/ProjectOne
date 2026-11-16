@@ -23,6 +23,7 @@ import { useTenantAccess } from "../features/profile/hooks/useTenantAccess";
 import { tenantPermissionsService } from "../features/profile/api/tenantPermissionsService";
 import { useSupportSession } from "../features/support/useSupportSession";
 import { SupportSessionBanner } from "../features/support/SupportSessionBanner";
+import { useTenantBranding } from "../features/branding/useTenantBranding";
 
 const universityNavigation = [
   { label: "Dashboard", to: "/dashboard", icon: "home" as const, important: true },
@@ -62,6 +63,7 @@ const schoolNavigation = [
 
 const platformNavigation = [
   { label: "Overview", to: "/platform", icon: "home" as const, important: true, anyOf: null },
+  { label: "My sessions", to: "/sessions", icon: "lock" as const, important: false, anyOf: null },
   { label: "Tenants", to: "/platform/tenants", icon: "building" as const, important: true, anyOf: PLATFORM_PAGE_ACTIONS.tenants },
   { label: "Plans & billing", to: "/platform/plans", icon: "wallet" as const, important: true, anyOf: PLATFORM_PAGE_ACTIONS.plans },
   { label: "Invoices", to: "/platform/invoices", icon: "file-text" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.invoices },
@@ -95,6 +97,8 @@ const studentNavigation = [
 export default function AppLayout() {
   const user = useAppSelector((s) => s.auth.user);
   const { isSupportSession } = useSupportSession();
+  // E1-S4: tenant users see their tenant's logo and colours; the platform console never does.
+  const { logoUrl: tenantLogoUrl } = useTenantBranding(user?.platformRole ? null : user?.tenantId);
   useLiveSocket(user?.tenantId ?? null, Boolean(user?.platformRole));
   const navigate = useNavigate();
   const location = useLocation();
@@ -345,6 +349,13 @@ export default function AppLayout() {
           <Edu360Logo variant="mark" className={`app-brand__mark${logoSpin === "cw" ? " app-brand__mark--spin-cw" : logoSpin === "ccw" ? " app-brand__mark--spin-ccw" : ""}`} />
         </button>
         <NavLink className="app-brand__name" to={isPlatformConsole ? "/platform" : "/dashboard"}>EDU <strong>360</strong></NavLink>
+        {tenantLogoUrl && !sidebarCollapsed && (
+          <img
+            src={tenantLogoUrl}
+            alt="Institution logo"
+            style={{ maxHeight: "var(--space-6)", maxWidth: "96px", objectFit: "contain", marginLeft: "auto" }}
+          />
+        )}
       </div>
       <p className="app-sidebar__label">{scopeLabel}</p>
       <div className="app-nav-wrap">
