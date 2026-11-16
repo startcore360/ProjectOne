@@ -29,10 +29,13 @@ import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.billing.dto.ApplyDiscountRequest;
 import com.edu360.api.platformops.billing.dto.CreateInvoiceRequest;
 import com.edu360.api.platformops.billing.dto.InvoiceResponse;
+import com.edu360.api.platformops.billing.dto.AddInvoiceLineRequest;
+import com.edu360.api.platformops.billing.dto.InvoiceLineResponse;
 
 class PlatformBillingControllerTest {
 
     private InvoiceRepository invoiceRepository;
+    private InvoiceLineRepository invoiceLineRepository;
     private AuditLogService auditLogService;
     private PlatformPermissionService permissionService;
     private PlatformBillingService billingService;
@@ -44,9 +47,10 @@ class PlatformBillingControllerTest {
     @BeforeEach
     void setUp() {
         invoiceRepository = mock(InvoiceRepository.class);
+        invoiceLineRepository = mock(InvoiceLineRepository.class);
         auditLogService = mock(AuditLogService.class);
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
-        billingService = new PlatformBillingService(invoiceRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
+        billingService = new PlatformBillingService(invoiceRepository, invoiceLineRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
         controller = new PlatformBillingController(billingService, permissionService);
     }
 
@@ -126,6 +130,59 @@ class PlatformBillingControllerTest {
         assertThatThrownBy(() -> controller.applyDiscount(invoiceId, req, authFor(PlatformRole.PRODUCT_OWNER)))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("Rule ck_invoice_r2");
+    }
+
+
+    @Test
+    void ACT_INVOICE_LINES_ALLOW_listAndAddOtherLine_recalculatesSubtotal() {
+        UUID invoiceId = UUID.randomUUID();
+        Invoice invoice = Invoice.builder().invoiceId(invoiceId).tenantId(TENANT_ID).invoiceNumber("INV-LINES")
+                .periodStart(LocalDate.of(2026, 1, 1)).periodEnd(LocalDate.of(2026, 1, 31))
+                .subtotalAmount(new BigDecimal("100.00")).discountAmount(BigDecimal.ZERO)
+                .totalAmount(new BigDecimal("100.00")).currencyCode("INR").status("DRAFT").build();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(invoiceLineRepository.saveAndFlush(any(InvoiceLine.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(invoiceLineRepository.findByInvoiceIdOrderByCreatedAtAsc(invoiceId)).thenAnswer(inv -> {
+            InvoiceLine line = org.mockito.Mockito.mockingDetails(invoiceLineRepository).getInvocations().stream()
+                    .filter(call -> call.getMethod().getName().equals("saveAndFlush"))
+                    .map(call -> (InvoiceLine) call.getArgument(0)).findFirst().orElseThrow();
+            return List.of(line);
+        });
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<InvoiceResponse> response = controller.addInvoiceLine(invoiceId,
+                new AddInvoiceLineRequest("Additional onboarding support", new BigDecimal("2"), new BigDecimal("25.00")),
+                authFor(PlatformRole.BILLING_MANAGER));
+
+        assertThat(response.getBody().subtotalAmount()).isEqualByComparingTo("50.00");
+        assertThat(response.getBody().totalAmount()).isEqualByComparingTo("50.00");
+        verify(invoiceLineRepository).saveAndFlush(any(InvoiceLine.class));
+    }
+
+    @Test
+    void ACT_INVOICE_LINES_DENY_sentInvoiceCannotBeEdited() {
+        UUID invoiceId = UUID.randomUUID();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(Invoice.builder()
+                .invoiceId(invoiceId).status("SENT").discountAmount(BigDecimal.ZERO).build()));
+        assertThatThrownBy(() -> controller.addInvoiceLine(invoiceId,
+                new AddInvoiceLineRequest("Late fee", BigDecimal.ONE, BigDecimal.TEN),
+                authFor(PlatformRole.BILLING_MANAGER)))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVOICE_NOT_DRAFT");
+        org.mockito.Mockito.verifyNoInteractions(invoiceLineRepository);
+    }
+
+    @Test
+    void ACT_INVOICE_LINES_GUARD_onlyOtherLinesCanBeRemoved() {
+        UUID invoiceId = UUID.randomUUID(), lineId = UUID.randomUUID();
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(Invoice.builder()
+                .invoiceId(invoiceId).status("DRAFT").discountAmount(BigDecimal.ZERO).build()));
+        when(invoiceLineRepository.findByInvoiceLineIdAndInvoiceId(lineId, invoiceId)).thenReturn(Optional.of(
+                InvoiceLine.builder().invoiceLineId(lineId).invoiceId(invoiceId).lineType("PLAN").lineAmount(BigDecimal.TEN).build()));
+        assertThatThrownBy(() -> controller.removeInvoiceLine(invoiceId, lineId, authFor(PlatformRole.BILLING_MANAGER)))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVOICE_LINE_NOT_REMOVABLE");
+        org.mockito.Mockito.verify(invoiceLineRepository, org.mockito.Mockito.never()).delete(any(InvoiceLine.class));
     }
 
     @Test

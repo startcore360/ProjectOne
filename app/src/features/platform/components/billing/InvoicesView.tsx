@@ -18,6 +18,7 @@ import {
   platformOpsService,
   type InvoiceItem,
   type CreateInvoicePayload,
+  type InvoiceLineItem,
 } from "../../api/platformOpsService";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
@@ -87,6 +88,13 @@ export function InvoicesView() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [lineInvoice, setLineInvoice] = useState<InvoiceItem | null>(null);
+  const [invoiceLines, setInvoiceLines] = useState<InvoiceLineItem[]>([]);
+  const [loadingLines, setLoadingLines] = useState(false);
+  const [lineDescription, setLineDescription] = useState("");
+  const [lineQuantity, setLineQuantity] = useState("1");
+  const [lineUnitAmount, setLineUnitAmount] = useState("0");
+  const [savingLine, setSavingLine] = useState(false);
 
   // Create Invoice Modal
   const [showCreate, setShowCreate] = useState(false);
@@ -209,6 +217,60 @@ export function InvoicesView() {
     }
   };
 
+  const openInvoiceLines = async (invoice: InvoiceItem) => {
+    setLineInvoice(invoice);
+    setInvoiceLines([]);
+    setLoadingLines(true);
+    setError("");
+    try {
+      setInvoiceLines(await platformOpsService.listInvoiceLines(invoice.invoiceId));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load invoice lines");
+    } finally {
+      setLoadingLines(false);
+    }
+  };
+
+  const handleAddOtherLine = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!lineInvoice) return;
+    setSavingLine(true);
+    setError("");
+    try {
+      const updated = await platformOpsService.addInvoiceLine(lineInvoice.invoiceId, {
+        description: lineDescription.trim(),
+        quantity: Number(lineQuantity),
+        unitAmount: Number(lineUnitAmount),
+      });
+      setLineInvoice(updated);
+      setInvoiceLines(await platformOpsService.listInvoiceLines(lineInvoice.invoiceId));
+      setLineDescription("");
+      setLineQuantity("1");
+      setLineUnitAmount("0");
+      void loadData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to add invoice line");
+    } finally {
+      setSavingLine(false);
+    }
+  };
+
+  const handleRemoveOtherLine = async (line: InvoiceLineItem) => {
+    if (!lineInvoice) return;
+    setSavingLine(true);
+    setError("");
+    try {
+      const updated = await platformOpsService.removeInvoiceLine(lineInvoice.invoiceId, line.invoiceLineId);
+      setLineInvoice(updated);
+      setInvoiceLines(await platformOpsService.listInvoiceLines(lineInvoice.invoiceId));
+      void loadData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to remove invoice line");
+    } finally {
+      setSavingLine(false);
+    }
+  };
+
   const filteredInvoices = invoices.filter((inv) => {
     const matchesQuery =
       inv.invoiceNumber.toLowerCase().includes(query.toLowerCase()) ||
@@ -315,6 +377,7 @@ export function InvoicesView() {
                 </td>
                 <td>
                   <RowMenu>
+                    <MenuAction onClick={() => void openInvoiceLines(inv)}>View lines</MenuAction>
                     {inv.status === "DRAFT" && canManageInvoice && (
                       <MenuAction onClick={() => handleSend(inv)}>Send</MenuAction>
                     )}
@@ -399,6 +462,51 @@ export function InvoicesView() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Invoice lines drawer */}
+      <Modal
+        isOpen={!!lineInvoice}
+        onClose={() => setLineInvoice(null)}
+        kicker="INVOICE REVIEW"
+        title={lineInvoice ? `Invoice lines · ${lineInvoice.invoiceNumber}` : "Invoice lines"}
+        description={lineInvoice ? `Subtotal ₹${Number(lineInvoice.subtotalAmount).toLocaleString("en-IN")} · Total ₹${Number(lineInvoice.totalAmount).toLocaleString("en-IN")}` : undefined}
+        size="lg"
+      >
+        {loadingLines ? <Spinner label="Loading invoice lines..." /> : invoiceLines.length === 0 ? (
+          <p className="app-empty-inline">No invoice lines have been recorded.</p>
+        ) : (
+          <DataTable headers={["Type", "Description", "Quantity", "Unit amount", "Line amount", ""]}>
+            {invoiceLines.map((line) => (
+              <tr key={line.invoiceLineId}>
+                <td><StatusBadge value={line.lineType} /></td>
+                <td>{line.description}</td>
+                <td>{Number(line.quantity).toLocaleString("en-IN")}</td>
+                <td>₹{Number(line.unitAmount).toLocaleString("en-IN")}</td>
+                <td><strong>₹{Number(line.lineAmount).toLocaleString("en-IN")}</strong></td>
+                <td>{line.lineType === "OTHER" && lineInvoice?.status === "DRAFT" && canManageInvoice && (
+                  <Button size="sm" variant="secondary" disabled={savingLine} onClick={() => void handleRemoveOtherLine(line)}>Remove</Button>
+                )}</td>
+              </tr>
+            ))}
+          </DataTable>
+        )}
+        {lineInvoice?.status === "DRAFT" && canManageInvoice && (
+          <form onSubmit={handleAddOtherLine} style={{ display: "grid", gap: "12px", marginTop: "20px", borderTop: "1px solid var(--color-border-divider)", paddingTop: "16px" }}>
+            <strong>Add an OTHER line</strong>
+            <TextField id="invoice-line-description" label="Description" value={lineDescription} onChange={(e) => setLineDescription(e.target.value)} required />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <TextField id="invoice-line-quantity" label="Quantity" type="number" value={lineQuantity} onChange={(e) => setLineQuantity(e.target.value)} required />
+              <TextField id="invoice-line-unit-amount" label="Unit amount (₹)" type="number" value={lineUnitAmount} onChange={(e) => setLineUnitAmount(e.target.value)} required />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Button type="submit" busy={savingLine}>Add line</Button>
+            </div>
+          </form>
+        )}
+        {lineInvoice && lineInvoice.status !== "DRAFT" && (
+          <Notice tone="info">This invoice is read-only. Lines can only be changed while the invoice is DRAFT.</Notice>
+        )}
       </Modal>
 
       {/* Record Payment Modal */}

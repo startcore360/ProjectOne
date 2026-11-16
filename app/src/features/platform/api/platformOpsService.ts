@@ -72,6 +72,24 @@ export type InvoiceItem = {
   createdAt: string;
 };
 
+export type InvoiceLineItem = {
+  invoiceLineId: string;
+  invoiceId: string;
+  lineType: string;
+  description: string;
+  quantity: number;
+  unitAmount: number;
+  lineAmount: number;
+  tenantUsageMonthlyId?: string;
+  createdAt: string;
+};
+
+export type AddInvoiceLinePayload = {
+  description: string;
+  quantity: number;
+  unitAmount: number;
+};
+
 export type CreateInvoicePayload = {
   tenantId: string;
   periodStart: string;
@@ -198,6 +216,21 @@ export const platformOpsService = {
 
   async createInvoice(payload: CreateInvoicePayload): Promise<InvoiceItem> {
     const res = await api.post<InvoiceItem>("/platform/invoices", payload);
+    return res.data;
+  },
+
+  async listInvoiceLines(invoiceId: string): Promise<InvoiceLineItem[]> {
+    const res = await api.get<InvoiceLineItem[]>(`/platform/invoices/${invoiceId}/lines`);
+    return res.data;
+  },
+
+  async addInvoiceLine(invoiceId: string, payload: AddInvoiceLinePayload): Promise<InvoiceItem> {
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/lines`, payload);
+    return res.data;
+  },
+
+  async removeInvoiceLine(invoiceId: string, lineId: string): Promise<InvoiceItem> {
+    const res = await api.delete<InvoiceItem>(`/platform/invoices/${invoiceId}/lines/${lineId}`);
     return res.data;
   },
 

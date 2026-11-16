@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,6 +20,8 @@ import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.billing.dto.ApplyDiscountRequest;
 import com.edu360.api.platformops.billing.dto.CreateInvoiceRequest;
 import com.edu360.api.platformops.billing.dto.InvoiceResponse;
+import com.edu360.api.platformops.billing.dto.AddInvoiceLineRequest;
+import com.edu360.api.platformops.billing.dto.InvoiceLineResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +59,29 @@ public class PlatformBillingController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "INVOICE_MANAGE");
         return ResponseEntity.status(HttpStatus.CREATED).body(billingService.createInvoice(req, principal));
+    }
+
+    @GetMapping("/{id}/lines")
+    public ResponseEntity<List<InvoiceLineResponse>> listInvoiceLines(@PathVariable UUID id, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "INVOICE_MANAGE");
+        return ResponseEntity.ok(billingService.listInvoiceLines(id));
+    }
+
+    @PostMapping("/{id}/lines")
+    public ResponseEntity<InvoiceResponse> addInvoiceLine(
+            @PathVariable UUID id, @Valid @RequestBody AddInvoiceLineRequest req, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "INVOICE_MANAGE");
+        return ResponseEntity.ok(billingService.addOtherInvoiceLine(id, req, principal));
+    }
+
+    @DeleteMapping("/{id}/lines/{lineId}")
+    public ResponseEntity<InvoiceResponse> removeInvoiceLine(
+            @PathVariable UUID id, @PathVariable UUID lineId, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "INVOICE_MANAGE");
+        return ResponseEntity.ok(billingService.removeOtherInvoiceLine(id, lineId, principal));
     }
 
     @PostMapping({"/{id}/discounts", "/{id}/discount"})
