@@ -34,6 +34,29 @@ public class SupportSessionService {
     private String tenantScheme;
 
     @Transactional
+    public void endCurrent(PlatformPrincipal actor) {
+        SupportSession session = sessionRepository
+                .findFirstByPlatformUserIdAndEndedAtIsNullOrderByIssuedAtDesc(actor.platformUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("No active support session exists for this platform user."));
+        String reason = session.getExpiresAt().isAfter(Instant.now()) ? "ENDED" : "EXPIRED";
+        session.setEndedAt(Instant.now());
+        session.setEndReason(reason);
+        sessionRepository.save(session);
+        platformAuditWriter.record(actor, "SUPPORT_SESSION_ENDED", "SUPPORT_ACCESS_USE",
+                "SUPPORT_SESSION", session.getSupportSessionId());
+    }
+
+    @Transactional
+    public void endForGrant(UUID grantId) {
+        Instant now = Instant.now();
+        for (SupportSession session : sessionRepository.findByGrantIdAndEndedAtIsNull(grantId)) {
+            session.setEndedAt(now);
+            session.setEndReason("WITHDRAWN");
+            sessionRepository.save(session);
+        }
+    }
+
+    @Transactional
     public SupportSessionResponse open(UUID ticketId, PlatformPrincipal actor) {
         var ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
