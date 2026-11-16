@@ -12,12 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.config.keycloak.KeycloakProvisioningException;
+import com.edu360.api.exception.ApiException;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.DuplicateResourceException;
 import com.edu360.api.exception.ResourceNotFoundException;
@@ -65,6 +67,7 @@ import com.edu360.api.rbac.StandardRoleRepository;
 import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.UserRoleAssignmentId;
 import com.edu360.api.rbac.UserRoleAssignmentRepository;
+import com.edu360.api.tenant.IsolationMode;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.tenant.TenantRepository;
@@ -170,6 +173,10 @@ public class TenantManagementService {
      */
     @Transactional
     public TenantResponse createTenant(TenantCreateRequest request, PlatformPrincipal principal) {
+        if (request.getIsolationMode() == IsolationMode.ISOLATED) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ISOLATION_NOT_AVAILABLE",
+                    "Dedicated-database tenant isolation is not available; use SHARED isolation.");
+        }
         String normalizedSubdomain = request.getSubdomain().toLowerCase().trim();
 
         // 1. Check subdomain uniqueness
@@ -638,16 +645,18 @@ public class TenantManagementService {
         Plan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("Plan " + planId + " was not found."));
 
-        if (principal.platformRole() != PlatformRole.PRODUCT_OWNER) {
-            if ((request.priceAmount() != null && request.priceAmount().compareTo(plan.getPriceAmount()) != 0)
-                    || (request.currencyCode() != null && !request.currencyCode().equalsIgnoreCase(plan.getCurrencyCode()))
-                    || (request.pricingType() != null && !request.pricingType().equals(plan.getPricingType()))
-                    || (request.smsUnitAmount() != null && (plan.getSmsUnitAmount() == null
-                            || request.smsUnitAmount().compareTo(plan.getSmsUnitAmount()) != 0))
-                    || (request.storageUnitAmountPerGb() != null && (plan.getStorageUnitAmountPerGb() == null
-                            || request.storageUnitAmountPerGb().compareTo(plan.getStorageUnitAmountPerGb()) != 0))) {
-                throw new UnauthorizedException("Rule [F-4]: only the Product Owner can alter plan pricing.");
-            }
+        boolean priceChangeAttempted = (request.priceAmount() != null
+                && (plan.getPriceAmount() == null || request.priceAmount().compareTo(plan.getPriceAmount()) != 0))
+                || (request.currencyCode() != null && !request.currencyCode().equalsIgnoreCase(plan.getCurrencyCode()))
+                || (request.pricingType() != null && !request.pricingType().equals(plan.getPricingType()))
+                || (request.smsUnitAmount() != null && (plan.getSmsUnitAmount() == null
+                        || request.smsUnitAmount().compareTo(plan.getSmsUnitAmount()) != 0))
+                || (request.storageUnitAmountPerGb() != null && (plan.getStorageUnitAmountPerGb() == null
+                        || request.storageUnitAmountPerGb().compareTo(plan.getStorageUnitAmountPerGb()) != 0));
+        if (principal.platformRole() != PlatformRole.PRODUCT_OWNER && priceChangeAttempted) {
+            platformAuditWriter.recordDenied(principal, "PLAN_MANAGE", "PLAN", planId);
+            throw new ApiException(HttpStatus.FORBIDDEN, "PRICE_CHANGE_PO_ONLY",
+                    "Only the Product Owner can change plan pricing.");
         }
 
         if (request.planName() != null && !request.planName().isBlank()) {

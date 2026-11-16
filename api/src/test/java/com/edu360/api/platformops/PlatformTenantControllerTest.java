@@ -115,7 +115,7 @@ class PlatformTenantControllerTest {
                 .tenantType("STANDALONE_SCHOOL")
                 .planId(PLAN_ID)
                 .subdomain("dwps-delhi")
-                .isolationMode(IsolationMode.ISOLATED)
+                .isolationMode(IsolationMode.SHARED)
                 .retentionMonths(12)
                 .backupRetentionDays(90)
                 .firstAdminName("Dr. Sunita Sharma")
@@ -165,7 +165,7 @@ class PlatformTenantControllerTest {
         assertThat(body.subdomain()).isEqualTo("dwps-delhi");
         assertThat(body.state()).isEqualTo(TenantState.TRIAL);
         assertThat(body.keycloakRealm()).isEqualTo("dwps-delhi-realm");
-        assertThat(body.isolationMode()).isEqualTo(IsolationMode.ISOLATED);
+        assertThat(body.isolationMode()).isEqualTo(IsolationMode.SHARED);
         assertThat(body.userLimit()).isEqualTo(1000);
         assertThat(body.firstAdminEmail()).isEqualTo("principal@dwps-delhi.edu");
         assertThat(body.firstAdminMobile()).isEqualTo("+919876543210");
@@ -174,6 +174,20 @@ class PlatformTenantControllerTest {
 
         verify(keycloakAdminClient).provisionRealm("dwps-delhi-realm", "Delhi World Public School");
         verify(tenantRepository).save(any(Tenant.class));
+    }
+
+    @Test
+    void act_tenantCreate_rejectsIsolatedModeBeforeProvisioning() {
+        TenantCreateRequest request = sampleRequest();
+        request.setIsolationMode(IsolationMode.ISOLATED);
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.createTenant(request, authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(error.getErrorCode()).isEqualTo("ISOLATION_NOT_AVAILABLE");
+        org.mockito.Mockito.verifyNoInteractions(keycloakAdminClient);
     }
 
     @Test
@@ -535,9 +549,12 @@ class PlatformTenantControllerTest {
                 "ACTIVE"
         );
 
-        assertThatThrownBy(() -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessageContaining("Rule [F-4]");
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)));
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+        verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
     }
 
     @Test
@@ -552,9 +569,30 @@ class PlatformTenantControllerTest {
                 null, null, null, new BigDecimal("0.10"), null, null
         );
 
-        assertThatThrownBy(() -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessageContaining("Rule [F-4]");
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)));
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+        verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
+    }
+
+    @Test
+    void DENY_platformAdminCannotAlterCurrencyOrPricingType() {
+        UUID planId = UUID.randomUUID();
+        Plan existing = samplePlan();
+        existing.setPlanId(planId);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(existing));
+
+        UpdatePlanRequest request = new UpdatePlanRequest(
+                null, null, "FLAT", "USD", null, null, null, null, null,
+                null, null, null, null, null, null
+        );
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)));
+        assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+        verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
     }
 
     @Test

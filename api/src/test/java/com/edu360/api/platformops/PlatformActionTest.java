@@ -306,7 +306,7 @@ class PlatformActionTest {
                 .tenantType("STANDALONE_SCHOOL")
                 .planId(planId)
                 .subdomain("dps-delhi")
-                .isolationMode(IsolationMode.ISOLATED)
+                .isolationMode(IsolationMode.SHARED)
                 .firstAdminName("Principal Sharma")
                 .firstAdminEmail("principal@dps-delhi.edu")
                 .timeZone("Asia/Kolkata")

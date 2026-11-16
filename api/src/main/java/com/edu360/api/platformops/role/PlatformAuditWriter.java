@@ -111,6 +111,13 @@ public class PlatformAuditWriter {
         record(actor, null, "ACTION_DENIED", "DENIED", actionCode, "PLATFORM_ACTION", actor.platformUserId(), DENIED);
     }
 
+    /** A denied attempt against a specific platform resource. */
+    @org.springframework.transaction.annotation.Transactional(
+            propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void recordDenied(PlatformPrincipal actor, String actionCode, String entityType, UUID entityId) {
+        record(actor, null, "ACTION_DENIED", "DENIED", actionCode, entityType, entityId, DENIED);
+    }
+
     private static JsonNode maskedPayload(Map<String, Map<String, Object>> changes) {
         ObjectNode oldValues = PAYLOAD_MAPPER.createObjectNode();
         ObjectNode newValues = PAYLOAD_MAPPER.createObjectNode();

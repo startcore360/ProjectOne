@@ -44,4 +44,23 @@ class PlatformAuditWriterTest {
         assertFalse(payload.toString().contains("old-secret"));
         assertFalse(payload.toString().contains("new-secret"));
     }
+    @Test
+    void recordsDeniedResourceAttemptWithDeniedOutcome() {
+        PlatformAuditOutboxEventRepository repository = mock(PlatformAuditOutboxEventRepository.class);
+        PlatformAuditWriter writer = new PlatformAuditWriter(repository);
+        UUID actorId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        PlatformPrincipal actor = new PlatformPrincipal(actorId, null, "owner@example.test", false);
+
+        writer.recordDenied(actor, "PLAN_MANAGE", "PLAN", planId);
+
+        ArgumentCaptor<PlatformAuditOutboxEvent> captor = ArgumentCaptor.forClass(PlatformAuditOutboxEvent.class);
+        verify(repository).save(captor.capture());
+        assertEquals("DENIED", captor.getValue().getOutcome());
+        assertEquals("DENIED", captor.getValue().getOperation());
+        assertEquals("PLAN_MANAGE", captor.getValue().getActionCode());
+        assertEquals("PLAN", captor.getValue().getEntityType());
+        assertEquals(planId, captor.getValue().getEntityId());
+    }
+
 }

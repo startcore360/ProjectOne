@@ -60,30 +60,46 @@ export function CreatePlanModal({
           onChange={(e) => setCreateDraft({ ...createDraft, planName: e.target.value })}
           placeholder="e.g. Standard School Plan"
         />
-        <fieldset disabled={!canConfigurePricing} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-        <div className="app-form-grid">
-          <SelectField
-            id="plan-pricing-type"
-            label="Pricing Type"
-            value={createDraft.pricingType}
-            disabled={!canConfigurePricing}
-            onChange={(e) => setCreateDraft({ ...createDraft, pricingType: e.target.value })}
-            options={[
-              { value: "PER_STUDENT_YEAR", label: "Per Student Per Year" },
-              { value: "FLAT", label: "Flat Fee" },
-              { value: "PER_MODULE", label: "Per Module" },
-            ]}
-          />
-          <TextField
-            id="plan-price"
-            label="Price Amount (₹)"
-            type="number"
-            value={String(createDraft.priceAmount)}
-            disabled={!canConfigurePricing}
-            onChange={(e) => setCreateDraft({ ...createDraft, priceAmount: Number(e.target.value) })}
-          />
-        </div>
-        </fieldset>
+        {canConfigurePricing && (
+          <fieldset style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+            <div className="app-form-grid">
+              <SelectField
+                id="plan-pricing-type"
+                label="Pricing Type"
+                value={createDraft.pricingType}
+                onChange={(e) => setCreateDraft({ ...createDraft, pricingType: e.target.value })}
+                options={[
+                  { value: "PER_STUDENT_YEAR", label: "Per Student Per Year" },
+                  { value: "FLAT", label: "Flat Fee" },
+                  { value: "PER_MODULE", label: "Per Module" },
+                ]}
+              />
+              <TextField
+                id="plan-price"
+                label="Price Amount (₹)"
+                type="number"
+                value={String(createDraft.priceAmount)}
+                onChange={(e) => setCreateDraft({ ...createDraft, priceAmount: Number(e.target.value) })}
+              />
+            </div>
+            <div className="app-form-grid">
+              <TextField
+                id="plan-sms-unit-amount"
+                label="SMS unit amount (₹)"
+                type="number"
+                value={String(createDraft.smsUnitAmount)}
+                onChange={(e) => setCreateDraft({ ...createDraft, smsUnitAmount: Number(e.target.value) })}
+              />
+              <TextField
+                id="plan-storage-unit-amount"
+                label="Storage unit amount per GB (₹)"
+                type="number"
+                value={String(createDraft.storageUnitAmountPerGb)}
+                onChange={(e) => setCreateDraft({ ...createDraft, storageUnitAmountPerGb: Number(e.target.value) })}
+              />
+            </div>
+          </fieldset>
+        )}
         {!canConfigurePricing && <Notice tone="info">Pricing, currency and pricing type can only be changed by the Product Owner.</Notice>}
         <div className="app-form-grid">
           <TextField
@@ -136,22 +152,6 @@ export function CreatePlanModal({
               { value: "6", label: "Half-yearly" },
               { value: "12", label: "Yearly" },
             ]}
-          />
-          <TextField
-            id="plan-sms-unit-amount"
-            label="SMS unit amount (₹)"
-            type="number"
-            value={String(createDraft.smsUnitAmount)}
-            disabled={!canConfigurePricing}
-            onChange={(e) => setCreateDraft({ ...createDraft, smsUnitAmount: Number(e.target.value) })}
-          />
-          <TextField
-            id="plan-storage-unit-amount"
-            label="Storage unit amount per GB (₹)"
-            type="number"
-            value={String(createDraft.storageUnitAmountPerGb)}
-            disabled={!canConfigurePricing}
-            onChange={(e) => setCreateDraft({ ...createDraft, storageUnitAmountPerGb: Number(e.target.value) })}
           />
         </div>
         <div className="app-form-grid">
