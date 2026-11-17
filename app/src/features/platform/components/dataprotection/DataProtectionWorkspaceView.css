@@ -1,0 +1,25 @@
+.data-protection-workspace {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.data-protection-workspace__queue {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.data-protection-workspace__decision-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.data-protection-workspace__request-details {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.data-protection-workspace__decision-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

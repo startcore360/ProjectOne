@@ -168,8 +168,15 @@ public class PlatformDataProtectionService {
     }
 
     private ExportRequestResponse toExportResponse(ExportRequest r) {
-        return new ExportRequestResponse(r.getExportRequestId(), r.getTenantId(), r.getRequestedByKind(), r.getStatus(),
+        return new ExportRequestResponse(r.getExportRequestId(), r.getTenantId(), tenantName(r.getTenantId()),
+                r.getRequestedByKind(), r.getStatus(),
                 r.getFileRef(), r.getDownloadExpiresAt(), r.getCreatedAt(), r.getRowVersion());
+    }
+
+    private String tenantName(UUID tenantId) {
+        return tenantRepository.findById(tenantId)
+                .map(Tenant::getTenantName)
+                .orElse("Unknown tenant");
     }
 
     // ------------------------------------------------------------------ deletion (L-01)
@@ -331,6 +338,7 @@ public class PlatformDataProtectionService {
         return new DeletionRequestResponse(
                 r.getDeletionRequestId(),
                 r.getTenantId(),
+                tenantName(r.getTenantId()),
                 r.getOrigin(),
                 r.getStatus(),
                 r.getPoConfirmedAt(),
@@ -458,7 +466,8 @@ public class PlatformDataProtectionService {
     }
 
     private RetentionChangeRequestResponse toRetentionResponse(RetentionChangeRequest r) {
-        return new RetentionChangeRequestResponse(r.getRetentionChangeRequestId(), r.getTenantId(), r.getDataClassCode(),
+        return new RetentionChangeRequestResponse(r.getRetentionChangeRequestId(), r.getTenantId(),
+                tenantName(r.getTenantId()), r.getDataClassCode(),
                 r.getCurrentMonths(), r.getRequestedMonths(), r.getReason(), r.getStatus(), r.getDecidedAt(), r.getCreatedAt());
     }
 }

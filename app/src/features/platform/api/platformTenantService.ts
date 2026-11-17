@@ -157,6 +157,7 @@ export type UpdateTenantSettingsPayload = {
 export type ExportRequestDto = {
   exportRequestId: string;
   tenantId: string;
+  tenantName: string;
   requestedByKind: string;
   status: string;
   fileRef?: string;
@@ -168,6 +169,7 @@ export type ExportRequestDto = {
 export type DeletionRequestDto = {
   deletionRequestId: string;
   tenantId: string;
+  tenantName: string;
   origin: string;
   status: string;
   poConfirmedAt?: string;
@@ -256,6 +258,9 @@ export const platformTenantService = {
     api.get<ExportRequestDto[]>(`/platform/tenants/${tenantId}/export`),
   requestTenantDeletion: (tenantId: string, origin = "PRODUCT_OWNER") =>
     api.post<DeletionRequestDto>(`/platform/deletion-requests`, { tenantId, origin }),
+  listDeletionRequests: () => api.get<DeletionRequestDto[]>("/platform/deletion-requests"),
+  confirmTenantDeletion: (requestId: string) =>
+    api.post<DeletionRequestDto>(`/platform/deletion-requests/${requestId}/confirm`),
   getRetentionPolicies: (tenantId: string) =>
     api.get<RetentionPolicyDto[]>(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>

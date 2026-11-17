@@ -83,6 +83,7 @@ export const PLATFORM_PAGE_ACTIONS = {
   reports: ["PLATFORM_REPORTS_VIEW"],
   security: ["SECURITY_POLICY_SET"],
   tickets: ["SUPPORT_TICKET_MANAGE", "SUPPORT_ACCESS_USE"],
+  dataProtection: ["TENANT_EXPORT_APPROVE", "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE"],
 };
 
 export function usePlatformAccess() {

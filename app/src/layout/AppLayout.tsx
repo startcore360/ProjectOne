@@ -81,6 +81,7 @@ const platformNavigation = [
   { label: "Security policy", to: "/platform/security-policy", icon: "key" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.security },
   { label: "Integrations", to: "/platform/integration-types", icon: "cpu" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.integrations },
   { label: "Releases", to: "/platform/releases", icon: "package" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.releases },
+  { label: "Data protection", to: "/platform/data-protection", icon: "shield" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.dataProtection },
 ];
 
 const workspaceNavigation = [

@@ -26,6 +26,7 @@ import {
   ReportsPage,
   SecurityPolicyPage,
   TicketsPage,
+  DataProtectionWorkspacePage,
 } from "../features/platform/pages/PlatformPages";
 import {
   InstitutionsPage,
@@ -154,6 +155,9 @@ export default function AppRoutes() {
             </Route>
             <Route element={<PlatformPageGate anyOf={PLATFORM_PAGE_ACTIONS.integrations} />}>
               <Route path="/platform/integration-types" element={<IntegrationTypesPage />} />
+            </Route>
+            <Route element={<PlatformPageGate anyOf={PLATFORM_PAGE_ACTIONS.dataProtection} />}>
+              <Route path="/platform/data-protection" element={<DataProtectionWorkspacePage />} />
             </Route>
           </Route>
         </Route>

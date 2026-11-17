@@ -162,6 +162,18 @@ class PlatformDeletionRequestControllerTest {
     }
 
     @Test
+    @DisplayName("E5-S1: DPO can read the deletion queue without receiving Product Owner decision rights")
+    void dpoCanListDeletionQueue() {
+        when(deletionRequestRepo.findAll()).thenReturn(Collections.emptyList());
+
+        ResponseEntity<List<DeletionRequestResponse>> response =
+                controller.listDeletionRequests(authFor(DPO_USER_ID, PlatformRole.DATA_PROTECTION_OFFICER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
+
+    @Test
     @DisplayName("C8 / D1: Product Owner cannot decide tenant deletion (DPO only)")
     void testProductOwner_cannotApproveDeletion() {
         Authentication poAuth = authFor(PO_USER_ID, PlatformRole.PRODUCT_OWNER);
@@ -331,7 +343,7 @@ class PlatformDeletionRequestControllerTest {
     @DisplayName("D5: completed tenant export request replays without creating a second request")
     void exportRequestReplaysStoredResponse() {
         var stored = new com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse(
-                UUID.randomUUID(), TENANT_ID, "PRODUCT_OWNER", "REQUESTED", null, null, Instant.now(), 1);
+                UUID.randomUUID(), TENANT_ID, "Test University", "PRODUCT_OWNER", "REQUESTED", null, null, Instant.now(), 1);
         UUID claimId = UUID.randomUUID();
         when(idempotencyService.claim(eq(PO_USER_ID), eq("requestTenantExportPlatform"),
                 eq("export-key-123"), any())).thenReturn(new PlatformIdempotencyService.Claim(

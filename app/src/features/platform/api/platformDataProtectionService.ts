@@ -1,0 +1,31 @@
+import api from "../../../services/axios";
+import type { DeletionRequestDto, ExportRequestDto } from "./platformTenantService";
+
+export type RetentionChangeRequestDto = {
+  retentionChangeRequestId: string;
+  tenantId: string;
+  tenantName: string;
+  dataClassCode: string;
+  currentMonths: number | null;
+  requestedMonths: number;
+  reason: string;
+  status: string;
+  decidedAt?: string;
+  createdAt: string;
+};
+
+export type DataProtectionDecision = "APPROVED" | "REJECTED";
+
+export const platformDataProtectionService = {
+  listExports: () => api.get<ExportRequestDto[]>("/platform/export-requests"),
+  listDeletions: () => api.get<DeletionRequestDto[]>("/platform/deletion-requests"),
+  listRetentionChanges: () => api.get<RetentionChangeRequestDto[]>("/platform/retention-change-requests"),
+  decideExport: (id: string, decision: DataProtectionDecision, remark: string, rowVersion: number) =>
+    api.post(`/platform/export-requests/${id}/decision`, { decision, remark }, {
+      headers: { "If-Match": `"${rowVersion}"` },
+    }),
+  decideDeletion: (id: string, decision: DataProtectionDecision, remark: string) =>
+    api.post(`/platform/deletion-requests/${id}/decision`, { decision, remark }),
+  decideRetentionChange: (id: string, decision: DataProtectionDecision, remark: string) =>
+    api.post(`/platform/retention-change-requests/${id}/decision`, { decision, remark }),
+};

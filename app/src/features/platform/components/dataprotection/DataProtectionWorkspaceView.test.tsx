@@ -1,0 +1,117 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Provider } from "react-redux";
+import { configureStore } from "@reduxjs/toolkit";
+import authReducer, { setUser } from "../../../../store/slices/authSlice";
+import { DataProtectionWorkspacePage } from "./DataProtectionWorkspaceView";
+import { platformDataProtectionService } from "../../api/platformDataProtectionService";
+
+vi.mock("../../api/platformDataProtectionService", () => ({
+  platformDataProtectionService: {
+    listExports: vi.fn(),
+    listDeletions: vi.fn(),
+    listRetentionChanges: vi.fn(),
+    decideExport: vi.fn(),
+    decideDeletion: vi.fn(),
+    decideRetentionChange: vi.fn(),
+  },
+}));
+
+const service = vi.mocked(platformDataProtectionService);
+
+function renderForRole(platformRole: "DATA_PROTECTION_OFFICER" | "PLATFORM_ADMIN") {
+  const store = configureStore({ reducer: { auth: authReducer } });
+  store.dispatch(setUser({
+    id: "platform-user-1",
+    displayName: "Platform User",
+    tenantId: null,
+    userType: null,
+    platformRole,
+    roleCode: null,
+    roleName: null,
+    photoUrl: null,
+    mustChangePassword: false,
+  }));
+  return render(<Provider store={store}><DataProtectionWorkspacePage /></Provider>);
+}
+
+const exportRow = {
+  exportRequestId: "exp-1",
+  tenantId: "tenant-1",
+  tenantName: "Northfield School",
+  requestedByKind: "PRODUCT_OWNER",
+  status: "REQUESTED",
+  createdAt: "2026-11-01T00:00:00Z",
+  rowVersion: 2,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  service.listExports.mockResolvedValue({ data: [] } as never);
+  service.listDeletions.mockResolvedValue({ data: [] } as never);
+  service.listRetentionChanges.mockResolvedValue({ data: [] } as never);
+  service.decideExport.mockResolvedValue({ data: {} } as never);
+  service.decideDeletion.mockResolvedValue({ data: {} } as never);
+  service.decideRetentionChange.mockResolvedValue({ data: {} } as never);
+});
+
+describe("DataProtectionWorkspacePage", () => {
+  it("loads the queues, displays tenant names, and opens a review modal for the DPO", async () => {
+    service.listExports.mockResolvedValue({ data: [exportRow] } as never);
+
+    renderForRole("DATA_PROTECTION_OFFICER");
+
+    expect(await screen.findByText("Northfield School")).toBeInTheDocument();
+    expect(screen.queryByText("tenant-1")).not.toBeInTheDocument();
+    expect(service.listDeletions).toHaveBeenCalledTimes(1);
+    expect(service.listRetentionChanges).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(screen.getByRole("dialog", { name: "Review data protection request" })).toBeInTheDocument();
+  });
+
+  it("does not show Review to a non-DPO role", async () => {
+    service.listExports.mockResolvedValue({ data: [exportRow] } as never);
+
+    renderForRole("PLATFORM_ADMIN");
+
+    expect(await screen.findByText("Northfield School")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+  });
+
+  it("shows the design-system error state when a queue request fails", async () => {
+    service.listExports.mockRejectedValueOnce(new Error("network failure"));
+
+    renderForRole("DATA_PROTECTION_OFFICER");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Data protection queues unavailable");
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("blocks rejection without a remark and enables it when a remark is entered", async () => {
+    service.listExports.mockResolvedValue({ data: [exportRow] } as never);
+
+    renderForRole("DATA_PROTECTION_OFFICER");
+    fireEvent.click(await screen.findByRole("button", { name: "Review" }));
+
+    fireEvent.change(screen.getByLabelText("Decision"), { target: { value: "REJECTED" } });
+    const rejectButton = screen.getByRole("button", { name: "Reject request" });
+    expect(rejectButton).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Decision remark (Required)"), {
+      target: { value: "Insufficient supporting information." },
+    });
+    expect(rejectButton).toBeEnabled();
+  });
+
+  it("closes the review modal on Escape", async () => {
+    service.listExports.mockResolvedValue({ data: [exportRow] } as never);
+
+    renderForRole("DATA_PROTECTION_OFFICER");
+    fireEvent.click(await screen.findByRole("button", { name: "Review" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});

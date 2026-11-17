@@ -55,7 +55,7 @@ public class PlatformDeletionRequestController {
     @Operation(summary = "List all deletion requests")
     public ResponseEntity<List<DeletionRequestResponse>> listDeletionRequests(Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
-        permissionService.authorize(principal, "TENANT_DELETION_REQUEST");
+        permissionService.authorizeAny(principal, List.of("TENANT_DELETION_REQUEST", "TENANT_DELETION_APPROVE"));
         return ResponseEntity.ok(dataProtectionService.listDeletionRequests());
     }
 
@@ -66,7 +66,7 @@ public class PlatformDeletionRequestController {
             Authentication auth
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
-        permissionService.authorize(principal, "TENANT_DELETION_REQUEST");
+        permissionService.authorizeAny(principal, List.of("TENANT_DELETION_REQUEST", "TENANT_DELETION_APPROVE"));
         return ResponseEntity.ok(dataProtectionService.getDeletionRequest(id));
     }
 

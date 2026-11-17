@@ -15,6 +15,7 @@ public final class DataProtectionDtos {
     public record ExportRequestResponse(
             UUID exportRequestId,
             UUID tenantId,
+            String tenantName,
             String requestedByKind,
             String status,
             UUID fileRef,
@@ -26,6 +27,7 @@ public final class DataProtectionDtos {
     public record DeletionRequestResponse(
             UUID deletionRequestId,
             UUID tenantId,
+            String tenantName,
             String origin,
             String status,
             Instant poConfirmedAt,
@@ -49,6 +51,7 @@ public final class DataProtectionDtos {
     public record RetentionChangeRequestResponse(
             UUID retentionChangeRequestId,
             UUID tenantId,
+            String tenantName,
             String dataClassCode,
             Integer currentMonths,
             Integer requestedMonths,

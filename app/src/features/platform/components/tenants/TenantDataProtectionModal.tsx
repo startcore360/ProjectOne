@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Modal, Button, DataTable, Notice, StatusBadge } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { Modal, Button, DataTable, Notice, StatusBadge, Spinner } from "../../../../design-system/components";
+import { usePlatformAccess } from "../../platformAccess";
 import {
   platformTenantService,
   type ExportRequestDto,
+  type DeletionRequestDto,
   type RetentionPolicyDto,
 } from "../../api/platformTenantService";
 import type { Tenant } from "../common/types";
@@ -40,8 +41,11 @@ export function TenantDataProtectionModal({
   // Deletion State
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deletionRequests, setDeletionRequests] = useState<DeletionRequestDto[]>([]);
 
   const tenantId = tenant?.id;
+  const { can } = usePlatformAccess();
+  const canConfirmDeletion = can("TENANT_DELETION_CONFIRM");
 
   useEffect(() => {
     if (!isOpen || !tenantId) return;
@@ -61,6 +65,13 @@ export function TenantDataProtectionModal({
         .getRetentionPolicies(tenantId)
         .then((res) => setRetentionPolicies(res.data || []))
         .catch(() => setNotice({ tone: "danger", message: "Failed to load retention policies." }))
+        .finally(() => setLoading(false));
+    } else if (activeTab === "deletion") {
+      setLoading(true);
+      platformTenantService
+        .listDeletionRequests()
+        .then((res) => setDeletionRequests((res.data || []).filter((item) => item.tenantId === tenantId)))
+        .catch(() => setNotice({ tone: "danger", message: "Failed to load tenant deletion requests." }))
         .finally(() => setLoading(false));
     }
   }, [isOpen, tenantId, activeTab]);
@@ -123,8 +134,28 @@ export function TenantDataProtectionModal({
         message: `Deletion request ${response.data.deletionRequestId} created. Status: ${response.data.status}. Next: Product Owner confirmation, then Data Protection Officer decision.`,
       });
       setConfirmName("");
+      const requests = await platformTenantService.listDeletionRequests();
+      setDeletionRequests((requests.data || []).filter((item) => item.tenantId === tenantId));
     } catch {
       setNotice({ tone: "danger", message: "Failed to submit tenant deletion request. Please try again." });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleConfirmExistingDeletion = async (requestId: string) => {
+    setDeleting(true);
+    setNotice(null);
+    try {
+      const response = await platformTenantService.confirmTenantDeletion(requestId);
+      setNotice({
+        tone: "success",
+        message: `Deletion request confirmed. Status: ${response.data.status}. It is now awaiting DPO review.`,
+      });
+      const requests = await platformTenantService.listDeletionRequests();
+      setDeletionRequests((requests.data || []).filter((item) => item.tenantId === tenantId));
+    } catch {
+      setNotice({ tone: "danger", message: "Failed to confirm the deletion request. Refresh and try again." });
     } finally {
       setDeleting(false);
     }
@@ -337,6 +368,7 @@ export function TenantDataProtectionModal({
 
         {/* Deletion Tab */}
         {activeTab === "deletion" && (
+          <>
           <form onSubmit={handleConfirmDeletion} style={{ display: "grid", gap: "var(--space-3)" }}>
             <Notice tone="danger">
               <strong>Deletion request only.</strong> This step does not delete or purge tenant data.
@@ -365,6 +397,31 @@ export function TenantDataProtectionModal({
               </Button>
             </div>
           </form>
+          <section aria-label="Existing deletion requests" style={{ display: "grid", gap: "var(--space-2)" }}>
+            <h3 style={{ margin: 0 }}>Existing deletion requests</h3>
+            {loading ? <Spinner label="Loading deletion requests" /> : (
+              <DataTable
+                headers={["Request ID", "Status", "Requested At", "PO Confirmed", "Action"]}
+                empty={deletionRequests.length === 0}
+                emptyMessage="No deletion requests for this tenant."
+              >
+                {deletionRequests.map((request) => (
+                  <tr key={request.deletionRequestId}>
+                    <td><code>{request.deletionRequestId.slice(0, 8)}…</code></td>
+                    <td><StatusBadge value={request.status} status={request.status} /></td>
+                    <td>{request.createdAt ? new Date(request.createdAt).toLocaleString() : "—"}</td>
+                    <td>{request.poConfirmedAt ? new Date(request.poConfirmedAt).toLocaleString() : "—"}</td>
+                    <td>{request.status === "REQUESTED" && canConfirmDeletion ? (
+                      <Button size="sm" onClick={() => void handleConfirmExistingDeletion(request.deletionRequestId)} disabled={deleting}>
+                        {deleting ? "Confirming…" : "Confirm request"}
+                      </Button>
+                    ) : "—"}</td>
+                  </tr>
+                ))}
+              </DataTable>
+            )}
+          </section>
+          </>
         )}
       </div>
     </Modal>
