@@ -267,7 +267,6 @@ public class GlobalExceptionHandler {
         body.put("error", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("message", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("correlationId", correlationId);
-        body.put("detail", ex.getClass().getName() + ": " + ex.getMessage());
         if (request != null) {
             body.put("path", request.getRequestURI());
         }
