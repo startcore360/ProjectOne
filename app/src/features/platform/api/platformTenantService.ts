@@ -179,6 +179,8 @@ export type DeletionRequestDto = {
   purgeStatus?: string;
   dpoDecidedAt?: string;
   dpoRemark?: string;
+  retentionWaivedAt?: string;
+  retentionWaiverReason?: string;
 };
 
 export type RetentionPolicyDto = {
@@ -259,8 +261,14 @@ export const platformTenantService = {
   requestTenantDeletion: (tenantId: string, origin = "PRODUCT_OWNER") =>
     api.post<DeletionRequestDto>(`/platform/deletion-requests`, { tenantId, origin }),
   listDeletionRequests: () => api.get<DeletionRequestDto[]>("/platform/deletion-requests"),
-  confirmTenantDeletion: (requestId: string) =>
-    api.post<DeletionRequestDto>(`/platform/deletion-requests/${requestId}/confirm`),
+  confirmTenantDeletion: (
+    requestId: string,
+    options: { waiveRetentionWait?: boolean; waiverReason?: string } = {},
+  ) =>
+    api.post<DeletionRequestDto>(`/platform/deletion-requests/${requestId}/confirm`, {
+      waiveRetentionWait: options.waiveRetentionWait ?? false,
+      waiverReason: options.waiveRetentionWait ? options.waiverReason : undefined,
+    }),
   getRetentionPolicies: (tenantId: string) =>
     api.get<RetentionPolicyDto[]>(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>

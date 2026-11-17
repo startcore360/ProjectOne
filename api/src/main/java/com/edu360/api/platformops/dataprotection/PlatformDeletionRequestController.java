@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
+import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ConfirmDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.CreateDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.DecideDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.DeletionRequestResponse;
@@ -71,14 +72,23 @@ public class PlatformDeletionRequestController {
     }
 
     @PostMapping("/{id}/confirm")
-    @Operation(summary = "Product Owner confirms tenant deletion request (TENANT_DELETION_CONFIRM)")
+    @Operation(summary = "Product Owner confirms tenant deletion request (TENANT_DELETION_CONFIRM); "
+            + "optional body waives the retention wait with a reason (PD-7)")
     public ResponseEntity<DeletionRequestResponse> confirmDeletion(
             @PathVariable UUID id,
+            @Valid @RequestBody(required = false) ConfirmDeletionRequestDto request,
             Authentication auth
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "TENANT_DELETION_CONFIRM");
-        return ResponseEntity.ok(dataProtectionService.confirmTenantDeletion(id, principal));
+        boolean waive = request != null && request.waiveRetentionWait();
+        String reason = request == null ? null : request.waiverReason();
+        return ResponseEntity.ok(dataProtectionService.confirmTenantDeletion(id, waive, reason, principal));
+    }
+
+    /** Body-less confirmation (no waiver); kept for callers and tests that confirm without options. */
+    public ResponseEntity<DeletionRequestResponse> confirmDeletion(UUID id, Authentication auth) {
+        return confirmDeletion(id, null, auth);
     }
 
     @PostMapping("/{id}/decision")

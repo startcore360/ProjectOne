@@ -1,5 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Modal, Button, DataTable, Notice, StatusBadge, Spinner } from "../../../../design-system/components";
+import {
+  Modal,
+  Button,
+  CheckboxField,
+  DataTable,
+  Notice,
+  StatusBadge,
+  Spinner,
+  TextAreaField,
+} from "../../../../design-system/components";
 import { usePlatformAccess } from "../../platformAccess";
 import {
   platformTenantService,
@@ -42,6 +51,10 @@ export function TenantDataProtectionModal({
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deletionRequests, setDeletionRequests] = useState<DeletionRequestDto[]>([]);
+  // E5-S2: the request the Product Owner is about to confirm, and the optional PD-7 retention waiver.
+  const [confirmTarget, setConfirmTarget] = useState<DeletionRequestDto | null>(null);
+  const [waiveRetentionWait, setWaiveRetentionWait] = useState(false);
+  const [waiverReason, setWaiverReason] = useState("");
 
   const tenantId = tenant?.id;
   const { can } = usePlatformAccess();
@@ -143,15 +156,28 @@ export function TenantDataProtectionModal({
     }
   };
 
-  const handleConfirmExistingDeletion = async (requestId: string) => {
+  const openConfirmation = (request: DeletionRequestDto) => {
+    setConfirmTarget(request);
+    setWaiveRetentionWait(false);
+    setWaiverReason("");
+  };
+
+  const handleConfirmExistingDeletion = async (requestId: string, origin: string) => {
+    const waive = origin === "PRODUCT_OWNER" && waiveRetentionWait;
     setDeleting(true);
     setNotice(null);
     try {
-      const response = await platformTenantService.confirmTenantDeletion(requestId);
+      const response = await platformTenantService.confirmTenantDeletion(requestId, {
+        waiveRetentionWait: waive,
+        waiverReason: waive ? waiverReason.trim() : undefined,
+      });
       setNotice({
         tone: "success",
-        message: `Deletion request confirmed. Status: ${response.data.status}. It is now awaiting DPO review.`,
+        message: waive
+          ? `Deletion request confirmed with the retention wait waived. Status: ${response.data.status}. It goes to the Data Protection Officer once the tenant export is ready.`
+          : `Deletion request confirmed. Status: ${response.data.status}. It goes to the Data Protection Officer once the tenant export is ready and the retention period has ended.`,
       });
+      setConfirmTarget(null);
       const requests = await platformTenantService.listDeletionRequests();
       setDeletionRequests((requests.data || []).filter((item) => item.tenantId === tenantId));
     } catch {
@@ -374,7 +400,8 @@ export function TenantDataProtectionModal({
               <strong>Deletion request only.</strong> This step does not delete or purge tenant data.
             </Notice>
             <Notice tone="info">
-              Workflow: Requested → Product Owner confirmation → Data Protection Officer decision.
+              Workflow: Requested → Product Owner confirmation → tenant export ready → retention period ends
+              (or the Product Owner waives the wait) → Data Protection Officer decision.
             </Notice>
 
             <div>
@@ -412,15 +439,69 @@ export function TenantDataProtectionModal({
                     <td>{request.createdAt ? new Date(request.createdAt).toLocaleString() : "—"}</td>
                     <td>{request.poConfirmedAt ? new Date(request.poConfirmedAt).toLocaleString() : "—"}</td>
                     <td>{request.status === "REQUESTED" && canConfirmDeletion ? (
-                      <Button size="sm" onClick={() => void handleConfirmExistingDeletion(request.deletionRequestId)} disabled={deleting}>
-                        {deleting ? "Confirming…" : "Confirm request"}
+                      <Button size="sm" variant="secondary" onClick={() => openConfirmation(request)} disabled={deleting}>
+                        Confirm request
                       </Button>
-                    ) : "—"}</td>
+                    ) : request.status === "EXPORT_DONE" && request.retentionEndsAt
+                      ? `Waiting: retention ends ${request.retentionEndsAt}`
+                      : "—"}</td>
                   </tr>
                 ))}
               </DataTable>
             )}
           </section>
+          {confirmTarget && canConfirmDeletion && (
+            <section
+              aria-label="Confirm deletion request"
+              style={{
+                display: "grid",
+                gap: "var(--space-3)",
+                padding: "var(--space-3)",
+                border: "1px solid var(--color-border-divider)",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <h3 style={{ margin: 0 }}>Confirm deletion request {confirmTarget.deletionRequestId.slice(0, 8)}…</h3>
+              <p style={{ margin: 0, color: "var(--color-text-muted)" }}>
+                Confirming starts the tenant export. The request goes to the Data Protection Officer only after the
+                export is ready and the retention period has ended.
+              </p>
+              {confirmTarget.origin === "PRODUCT_OWNER" && (
+                <>
+                  <CheckboxField
+                    id="deletion-waive-retention"
+                    label="Waive the retention wait"
+                    hint="The Data Protection Officer can then decide as soon as the export is ready. A reason is required and is recorded."
+                    checked={waiveRetentionWait}
+                    onChange={(event) => setWaiveRetentionWait(event.target.checked)}
+                  />
+                  {waiveRetentionWait && (
+                    <TextAreaField
+                      id="deletion-waiver-reason"
+                      label="Waiver reason"
+                      value={waiverReason}
+                      onChange={(event) => setWaiverReason(event.target.value)}
+                      rows={3}
+                      maxLength={900}
+                      required
+                    />
+                  )}
+                </>
+              )}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
+                <Button variant="secondary" onClick={() => setConfirmTarget(null)} disabled={deleting}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => void handleConfirmExistingDeletion(confirmTarget.deletionRequestId, confirmTarget.origin)}
+                  disabled={deleting || (waiveRetentionWait && !waiverReason.trim())}
+                  busy={deleting}
+                >
+                  Confirm deletion request
+                </Button>
+              </div>
+            </section>
+          )}
           </>
         )}
       </div>

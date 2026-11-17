@@ -114,4 +114,33 @@ describe("DataProtectionWorkspacePage", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("E5-S2: shows the retention wait and no Review button while a deletion is EXPORT_DONE", async () => {
+    service.listDeletions.mockResolvedValue({ data: [{
+      deletionRequestId: "del-1", tenantId: "tenant-1", tenantName: "Northfield School",
+      origin: "PRODUCT_OWNER", status: "EXPORT_DONE", retentionEndsAt: "2027-01-01",
+      createdAt: "2026-11-01T00:00:00Z",
+    }] } as never);
+
+    renderForRole("DATA_PROTECTION_OFFICER");
+    fireEvent.click(await screen.findByRole("tab", { name: /Deletion requests/ }));
+
+    expect(await screen.findByText("Waiting: retention ends 2027-01-01")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+  });
+
+  it("E5-S2: shows the Product Owner's waiver reason to the DPO when reviewing", async () => {
+    service.listDeletions.mockResolvedValue({ data: [{
+      deletionRequestId: "del-2", tenantId: "tenant-1", tenantName: "Northfield School",
+      origin: "PRODUCT_OWNER", status: "PENDING_DPO", retentionEndsAt: "2027-01-01",
+      retentionWaivedAt: "2026-11-02T00:00:00Z", retentionWaiverReason: "Approved closure plan",
+      createdAt: "2026-11-01T00:00:00Z",
+    }] } as never);
+
+    renderForRole("DATA_PROTECTION_OFFICER");
+    fireEvent.click(await screen.findByRole("tab", { name: /Deletion requests/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Review" }));
+
+    expect(screen.getByText("Approved closure plan")).toBeInTheDocument();
+  });
 });

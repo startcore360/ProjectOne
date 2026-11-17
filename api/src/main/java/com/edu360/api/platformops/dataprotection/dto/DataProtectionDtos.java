@@ -7,6 +7,7 @@ import java.util.UUID;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 public final class DataProtectionDtos {
 
@@ -36,7 +37,9 @@ public final class DataProtectionDtos {
             Instant createdAt,
             String purgeStatus,
             Instant dpoDecidedAt,
-            String dpoRemark
+            String dpoRemark,
+            Instant retentionWaivedAt,
+            String retentionWaiverReason
     ) {}
 
     public record RetentionPolicyResponse(
@@ -71,6 +74,12 @@ public final class DataProtectionDtos {
             @NotNull(message = "tenantId is required") UUID tenantId,
             String origin,
             String reason
+    ) {}
+
+    /** Optional body for the Product Owner confirmation (E5-S2, PD-7 waiver). No body means no waiver. */
+    public record ConfirmDeletionRequestDto(
+            boolean waiveRetentionWait,
+            @Size(max = 900, message = "waiverReason must be at most 900 characters") String waiverReason
     ) {}
 
     public record DecideDeletionRequestDto(

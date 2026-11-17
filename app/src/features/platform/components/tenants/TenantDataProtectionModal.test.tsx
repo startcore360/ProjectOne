@@ -49,7 +49,7 @@ beforeEach(() => {
   service.requestTenantDeletion.mockResolvedValue({
     data: { deletionRequestId: "del-1", tenantId: "tenant-1", origin: "PRODUCT_OWNER", status: "REQUESTED" },
   } as never);
-  service.confirmTenantDeletion.mockResolvedValue({ data: { deletionRequestId: "del-1", tenantId: "tenant-1", status: "PENDING_DPO" } } as never);
+  service.confirmTenantDeletion.mockResolvedValue({ data: { deletionRequestId: "del-1", tenantId: "tenant-1", status: "PO_CONFIRMED" } } as never);
   service.requestRetentionChange.mockResolvedValue({ data: { status: "REQUESTED" } } as never);
 });
 
@@ -100,7 +100,57 @@ describe("TenantDataProtectionModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
 
     fireEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
-    await waitFor(() => expect(service.confirmTenantDeletion).toHaveBeenCalledWith("del-1"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm deletion request" }));
+    await waitFor(() => expect(service.confirmTenantDeletion).toHaveBeenCalledWith("del-1", {
+      waiveRetentionWait: false,
+      waiverReason: undefined,
+    }));
+    expect(await screen.findByText(/once the tenant export is ready and the retention period has ended/)).toBeInTheDocument();
+  });
+
+  it("E5-S2: requires a reason before the Product Owner can waive the retention wait", async () => {
+    service.listDeletionRequests.mockResolvedValue({ data: [{
+      deletionRequestId: "del-1", tenantId: "tenant-1", tenantName: "Northfield School",
+      origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z",
+    }] } as never);
+    renderModal("PRODUCT_OWNER");
+    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Waive the retention wait/ }));
+    const confirm = screen.getByRole("button", { name: "Confirm deletion request" });
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Waiver reason (Required)"), { target: { value: "  Approved closure plan  " } });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+    await waitFor(() => expect(service.confirmTenantDeletion).toHaveBeenCalledWith("del-1", {
+      waiveRetentionWait: true,
+      waiverReason: "Approved closure plan",
+    }));
+  });
+
+  it("E5-S2: offers no waiver on a request that did not come from the Product Owner", async () => {
+    service.listDeletionRequests.mockResolvedValue({ data: [{
+      deletionRequestId: "del-2", tenantId: "tenant-1", tenantName: "Northfield School",
+      origin: "TENANT_ADMIN", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z",
+    }] } as never);
+    renderModal("PRODUCT_OWNER");
+    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
+
+    expect(screen.queryByRole("checkbox", { name: /Waive the retention wait/ })).not.toBeInTheDocument();
+  });
+
+  it("E5-S2: shows the retention wait once the export is done", async () => {
+    service.listDeletionRequests.mockResolvedValue({ data: [{
+      deletionRequestId: "del-3", tenantId: "tenant-1", tenantName: "Northfield School",
+      origin: "PRODUCT_OWNER", status: "EXPORT_DONE", retentionEndsAt: "2027-11-17", createdAt: "2026-11-01T00:00:00Z",
+    }] } as never);
+    renderModal("PRODUCT_OWNER");
+    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+
+    expect(await screen.findByText("Waiting: retention ends 2027-11-17")).toBeInTheDocument();
   });
 
   it("does not show Product Owner confirmation controls to a DPO", async () => {

@@ -24,7 +24,7 @@ import type { DeletionRequestDto, ExportRequestDto } from "../../api/platformTen
 type QueueTab = "exports" | "deletions" | "retention";
 type DecisionTarget =
   | { kind: "export"; id: string; tenantId: string; tenantName: string; rowVersion: number }
-  | { kind: "deletion"; id: string; tenantId: string; tenantName: string }
+  | { kind: "deletion"; id: string; tenantId: string; tenantName: string; waiverReason?: string }
   | { kind: "retention"; id: string; tenantId: string; tenantName: string };
 
 const TAB_LABELS: Record<QueueTab, string> = {
@@ -172,10 +172,13 @@ export function DataProtectionWorkspacePage() {
                     <td>{item.origin}</td>
                     <td><StatusBadge value={item.status} status={item.status} /></td>
                     <td>{item.poConfirmedAt ? new Date(item.poConfirmedAt).toLocaleString() : "—"}</td>
-                    <td>{item.retentionEndsAt ?? "Not set"}</td>
+                    <td>{item.status === "EXPORT_DONE" && item.retentionEndsAt
+                      ? `Waiting: retention ends ${item.retentionEndsAt}`
+                      : item.retentionEndsAt ?? "Not set"}
+                      {item.retentionWaivedAt ? " (wait waived by Product Owner)" : ""}</td>
                     <td>{item.status === "PENDING_DPO" ? reviewButton(canReviewDeletion, {
                       kind: "deletion", id: item.deletionRequestId, tenantId: item.tenantId,
-                      tenantName: item.tenantName,
+                      tenantName: item.tenantName, waiverReason: item.retentionWaiverReason,
                     }) : "—"}</td>
                   </tr>
                 ))}
@@ -230,6 +233,9 @@ export function DataProtectionWorkspacePage() {
               <p><strong>Tenant:</strong> {target.tenantName}</p>
               <p><strong>Request ID:</strong> <code>{target.id}</code></p>
               <p><strong>Request type:</strong> {target.kind}</p>
+              {target.kind === "deletion" && target.waiverReason && (
+                <p><strong>Retention wait waived by the Product Owner:</strong> {target.waiverReason}</p>
+              )}
             </div>
             <SelectField
               id="data-protection-decision"

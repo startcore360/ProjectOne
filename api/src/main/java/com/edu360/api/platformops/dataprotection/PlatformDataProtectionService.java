@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -31,8 +33,10 @@ import lombok.RequiredArgsConstructor;
 /**
  * Tenant data-protection chains on the platform side (D1 Part II, D5, AP-23, CL-07).
  *
- * Deletion (L-01, decision PD-7 "mark now, purge later"): request, then the Product Owner confirms (an export
- * request is recorded), then the Data Protection Officer decides. On approval the tenant is LOCKED at once
+ * Deletion (L-01, decision PD-7 "mark now, purge later"): request, then the Product Owner confirms (PO_CONFIRMED,
+ * an export request is linked or created), then the daily readiness job moves it to EXPORT_DONE once the export is
+ * produced and to PENDING_DPO once the retention date has passed or the PO waived the wait (E5-S2), then the Data
+ * Protection Officer decides. On approval the tenant is LOCKED at once
  * (state DELETED: no sign-in, every API call refused, issuer cache evicted) and the request is marked APPROVED
  * with purgeStatus PURGE_PENDING until retentionEndsAt. The real purge job and the deletion certificate belong
  * to a later sprint, so no certificate is issued or mentioned here, and deleted_at stays empty.
@@ -47,6 +51,16 @@ import lombok.RequiredArgsConstructor;
 public class PlatformDataProtectionService {
 
     static final List<String> OPEN_DELETION_STATUSES = List.of("REQUESTED", "PO_CONFIRMED", "EXPORT_DONE", "PENDING_DPO", "APPROVED");
+    /** Statuses the daily readiness job looks at (E5-S2). */
+    static final List<String> READINESS_STATUSES = List.of("PO_CONFIRMED", "EXPORT_DONE");
+    /** An existing export the deletion can wait on: still in progress, or produced and downloadable. */
+    static final Set<String> LINKABLE_EXPORT_STATUSES = Set.of("REQUESTED", "APPROVED", "GENERATING", "READY");
+    /**
+     * The export has been produced. READY expires to EXPIRED after 24 h (E5-S3) while a deletion can wait months
+     * for its retention date, so once produced the export gate stays met.
+     */
+    static final Set<String> PRODUCED_EXPORT_STATUSES = Set.of("READY", "EXPIRED");
+    static final int MAX_WAIVER_REASON_LENGTH = 900;
 
     private final ExportRequestRepository exportRequestRepository;
     private final DeletionRequestRepository deletionRequestRepository;
@@ -214,6 +228,18 @@ public class PlatformDataProtectionService {
 
     @Transactional
     public DeletionRequestResponse confirmTenantDeletion(UUID deletionRequestId, PlatformPrincipal principal) {
+        return confirmTenantDeletion(deletionRequestId, false, null, principal);
+    }
+
+    /**
+     * E5-S2: the Product Owner confirms. The request becomes PO_CONFIRMED (not PENDING_DPO); the daily
+     * {@link DeletionReadinessJob} moves it on once the export is produced and the retention date has passed.
+     * PD-7 exception: on a PRODUCT_OWNER request the PO may waive the retention wait with a reason. The waiver
+     * only skips the date gate; the export gate, the DPO-only decision and separation of duties still apply.
+     */
+    @Transactional
+    public DeletionRequestResponse confirmTenantDeletion(UUID deletionRequestId, boolean waiveRetentionWait,
+            String waiverReason, PlatformPrincipal principal) {
         DeletionRequest req = deletionRequestRepository.findById(deletionRequestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Deletion request not found: " + deletionRequestId));
 
@@ -222,29 +248,112 @@ public class PlatformDataProtectionService {
                     "Deletion request must be in REQUESTED status to confirm (current: " + req.getStatus() + ")");
         }
 
+        String reason = waiverReason == null ? "" : waiverReason.trim();
+        if (waiveRetentionWait) {
+            if (!"PRODUCT_OWNER".equals(req.getOrigin())) {
+                throw new BusinessRuleViolationException("RETENTION_WAIVER_NOT_ALLOWED",
+                        "The retention wait can only be waived on a deletion request raised by the Product Owner.");
+            }
+            if (reason.isEmpty()) {
+                throw new BusinessRuleViolationException("REMARK_REQUIRED",
+                        "A reason is required to waive the retention wait.");
+            }
+            if (reason.length() > MAX_WAIVER_REASON_LENGTH) {
+                throw new BusinessRuleViolationException("REMARK_TOO_LONG",
+                        "The waiver reason must be at most " + MAX_WAIVER_REASON_LENGTH + " characters.");
+            }
+        } else if (!reason.isEmpty()) {
+            throw new BusinessRuleViolationException("INVALID_RETENTION_WAIVER",
+                    "A waiver reason can only be given when the retention wait is waived.");
+        }
+
         Instant now = Instant.now();
         // The date comes from the tenant's own retention setting. With none set (OD-06 durations are not
         // decided yet) we refuse rather than invent a date.
         LocalDate retentionEndsAt = retentionEndDate(req.getTenantId(), now);
 
+        // Reuse the tenant's latest export only while it can still become (or already is) the deletion export;
+        // a rejected, failed or expired one would leave the request waiting forever, so start a new one.
         List<ExportRequest> exports = exportRequestRepository.findByTenantIdOrderByCreatedAtDesc(req.getTenantId());
-        UUID exportId = exports.isEmpty()
-                ? exportTenant(req.getTenantId(), principal).exportRequestId()
-                : exports.get(0).getExportRequestId();
+        UUID exportId = !exports.isEmpty() && LINKABLE_EXPORT_STATUSES.contains(exports.get(0).getStatus())
+                ? exports.get(0).getExportRequestId()
+                : exportTenant(req.getTenantId(), principal).exportRequestId();
 
         req.setExportRequestId(exportId);
         req.setRetentionEndsAt(retentionEndsAt);
         req.setPoConfirmedBy(principal.platformUserId());
         req.setPoConfirmedAt(now);
-        req.setStatus("PENDING_DPO");
+        if (waiveRetentionWait) {
+            req.setRetentionWaivedBy(principal.platformUserId());
+            req.setRetentionWaivedAt(now);
+            req.setRetentionWaiverReason(reason);
+        }
+        req.setStatus("PO_CONFIRMED");
         req.setUpdatedAt(now);
         req.setUpdatedBy(principal.platformUserId());
         req.setRowVersion(req.getRowVersion() + 1);
 
         DeletionRequest saved = deletionRequestRepository.save(req);
-        auditWriter.record(principal, saved.getTenantId(), "TENANT_DELETION_CONFIRMED", "TENANT_DELETION_CONFIRM",
-                "DELETION_REQUEST", deletionRequestId);
+        auditWriter.record(principal, saved.getTenantId(), "TENANT_DELETION_CONFIRMED", "APPROVE",
+                "TENANT_DELETION_CONFIRM", "DELETION_REQUEST", deletionRequestId, PlatformAuditWriter.SUCCESS,
+                Map.of("status", Map.of("old", "REQUESTED", "new", "PO_CONFIRMED"),
+                        "retention_waived", Map.of("old", false, "new", waiveRetentionWait)));
         return toDeletionResponse(saved);
+    }
+
+    /**
+     * E5-S2 daily readiness sweep (AP-23). Two separate gates:
+     * PO_CONFIRMED → EXPORT_DONE once the linked export has been produced;
+     * EXPORT_DONE → PENDING_DPO once {@code retention_ends_at <= today} or a Product Owner waiver is recorded.
+     * Both steps can happen in one run. Returns the number of status changes made.
+     */
+    @Transactional
+    public int advanceDeletionReadiness(LocalDate today) {
+        int transitions = 0;
+        for (DeletionRequest request : deletionRequestRepository.findReadinessCandidatesForUpdate(READINESS_STATUSES)) {
+            if ("PO_CONFIRMED".equals(request.getStatus())) {
+                if (!exportProduced(request)) {
+                    continue;
+                }
+                moveReadiness(request, "EXPORT_DONE", "TENANT_DELETION_EXPORT_DONE");
+                transitions++;
+            }
+            if ("EXPORT_DONE".equals(request.getStatus()) && (retentionMet(request, today) || hasWaiver(request))) {
+                moveReadiness(request, "PENDING_DPO", "TENANT_DELETION_READY_FOR_DPO");
+                transitions++;
+            }
+        }
+        return transitions;
+    }
+
+    private void moveReadiness(DeletionRequest request, String nextStatus, String eventType) {
+        String previous = request.getStatus();
+        request.setStatus(nextStatus);
+        request.setUpdatedAt(Instant.now());
+        request.setUpdatedBy(PlatformAuditWriter.SYSTEM_ACTOR_ID);
+        request.setRowVersion(request.getRowVersion() == null ? 1 : request.getRowVersion() + 1);
+        DeletionRequest saved = deletionRequestRepository.save(request);
+        auditWriter.recordSystem(saved.getTenantId(), eventType, "UPDATE", "TENANT_DELETION_CONFIRM",
+                "DELETION_REQUEST", saved.getDeletionRequestId(), PlatformAuditWriter.SUCCESS,
+                Map.of("status", Map.of("old", previous, "new", nextStatus)));
+    }
+
+    private boolean exportProduced(DeletionRequest request) {
+        return request.getExportRequestId() != null
+                && exportRequestRepository.findById(request.getExportRequestId())
+                        .map(e -> PRODUCED_EXPORT_STATUSES.contains(e.getStatus()))
+                        .orElse(false);
+    }
+
+    private static boolean retentionMet(DeletionRequest request, LocalDate today) {
+        return request.getRetentionEndsAt() != null && !request.getRetentionEndsAt().isAfter(today);
+    }
+
+    private static boolean hasWaiver(DeletionRequest request) {
+        return "PRODUCT_OWNER".equals(request.getOrigin())
+                && request.getRetentionWaivedAt() != null
+                && request.getRetentionWaiverReason() != null
+                && !request.getRetentionWaiverReason().isBlank();
     }
 
     /** Longest retention among the tenant's active policies, counted from {@code from}. */
@@ -277,6 +386,9 @@ public class PlatformDataProtectionService {
 
         Instant now = Instant.now();
         String upperDecision = decision != null ? decision.trim().toUpperCase() : "";
+        if (remark != null && remark.trim().length() > 1000) {
+            throw new BusinessRuleViolationException("REMARK_TOO_LONG", "The decision remark must be at most 1000 characters.");
+        }
 
         if ("REJECTED".equals(upperDecision)) {
             if (remark == null || remark.trim().isBlank()) {
@@ -290,6 +402,16 @@ public class PlatformDataProtectionService {
                     "TENANT_DELETION_APPROVE", "DELETION_REQUEST", deletionRequestId, PlatformAuditWriter.SUCCESS);
             return toDeletionResponse(saved);
         } else if ("APPROVED".equals(upperDecision)) {
+            // Defence in depth: PENDING_DPO is normally reached only through the readiness job.
+            if (!exportProduced(req)) {
+                throw new BusinessRuleViolationException("EXPORT_NOT_READY",
+                        "The tenant export must be produced before deletion can be approved.");
+            }
+            if (!retentionMet(req, LocalDate.now(ZoneOffset.UTC)) && !hasWaiver(req)) {
+                throw new BusinessRuleViolationException("RETENTION_NOT_MET",
+                        "The retention period has not ended and no Product Owner waiver is recorded.");
+            }
+            req.setDpoRemark(remark == null || remark.isBlank() ? null : remark.trim());
             req.setStatus("APPROVED");
             stampDecision(req, principal, now);
             DeletionRequest saved = deletionRequestRepository.save(req);
@@ -347,7 +469,9 @@ public class PlatformDataProtectionService {
                 r.getCreatedAt(),
                 purgeStatus,
                 r.getDpoDecidedAt(),
-                r.getDpoRemark()
+                r.getDpoRemark(),
+                r.getRetentionWaivedAt(),
+                r.getRetentionWaiverReason()
         );
     }
 
