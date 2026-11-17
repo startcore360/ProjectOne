@@ -237,7 +237,7 @@ Sources: D1 §11.1 steps 15–16; §11.4; D7 flow 15; D2 rows 210–213; D6 E2E-
 - On RESOLVED/CLOSED, write a tenant in-app notification to `raised_by_user_id` using the existing notifier; include the resolution note.
 - **AC:** requester's bell shows "Ticket SUP-… resolved".
 
-### E4-S5 Support dashboard — E9-S3.
+### E4-S5 Support dashboard — E9-S4.
 
 ---
 

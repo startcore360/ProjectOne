@@ -482,8 +482,13 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-TENANT_SETTINGS-ALLOW: Platform Admin updates tenant settings")
     void actTenantSettings_allow() {
-        Tenant tenant = Tenant.builder().tenantId(tenantId).build();
+        // E1-S3: the custom domain needs a plan that includes it; the limits stay within the plan.
+        UUID settingsPlanId = UUID.randomUUID();
+        Tenant tenant = Tenant.builder().tenantId(tenantId).planId(settingsPlanId).build();
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(planRepository.findById(settingsPlanId)).thenReturn(Optional.of(Plan.builder().planId(settingsPlanId)
+                .planName("Custom domain plan").userLimit(1000).storageLimitGb(50).smsLimit(5000).apiLimit(10000)
+                .customDomainAllowed(true).build()));
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateTenantSettingsRequest req = new UpdateTenantSettingsRequest(

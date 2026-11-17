@@ -41,6 +41,7 @@ describe("BackupCodesSection (MFA-01)", () => {
   it("asks for the current password before issuing codes", async () => {
     const issue = vi.spyOn(authService, "issueRecoveryCodes");
     render(<BackupCodesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Generate new codes/ }));
     fireEvent.click(screen.getByRole("button", { name: /Get new backup codes/ }));
     expect(await screen.findByText("Enter your current password.")).toBeTruthy();
     expect(issue).not.toHaveBeenCalled();
@@ -51,6 +52,7 @@ describe("BackupCodesSection (MFA-01)", () => {
       data: { recoveryCodes: ["AAAAA-BBBBB", "CCCCC-DDDDD"] },
     } as never);
     render(<BackupCodesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Generate new codes/ }));
     fireEvent.change(screen.getByLabelText(/Current password/), { target: { value: "pw-123456" } });
     fireEvent.click(screen.getByRole("button", { name: /Get new backup codes/ }));
 
@@ -69,8 +71,25 @@ describe("BackupCodesSection (MFA-01)", () => {
       } as AxiosResponse),
     );
     render(<BackupCodesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Generate new codes/ }));
     fireEvent.change(screen.getByLabelText(/Current password/), { target: { value: "pw-123456" } });
     fireEvent.click(screen.getByRole("button", { name: /Get new backup codes/ }));
     expect(await screen.findByText(/Set up two-step login first/)).toBeTruthy();
+  });
+
+  it("does not show technical 404 details when backup codes are unavailable", async () => {
+    vi.spyOn(authService, "issueRecoveryCodes").mockRejectedValueOnce(
+      new AxiosError("404", "ERR_BAD_REQUEST", undefined, undefined, {
+        status: 404,
+        data: { error: "Resource not found: api/auth/mfa/recovery-codes" },
+      } as AxiosResponse),
+    );
+    render(<BackupCodesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Generate new codes/ }));
+    fireEvent.change(screen.getByLabelText(/Current password/), { target: { value: "pw-123456" } });
+    fireEvent.click(screen.getByRole("button", { name: /Get new backup codes/ }));
+
+    expect(await screen.findByText("Backup codes are not available right now. Please try again later.")).toBeTruthy();
+    expect(screen.queryByText(/Resource not found/)).toBeNull();
   });
 });

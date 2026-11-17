@@ -79,17 +79,25 @@ export function DataTable({
         </div>
       )}
       {paginated && <nav className="app-pagination" aria-label="Table pagination">
-        <span className="app-pagination__range">Showing {start}–{end} of {rows.length}</span>
-        <label className="app-pagination__size">Rows per page
-          <select value={selectedPageSize} onChange={(event) => { setSelectedPageSize(Number(event.target.value)); setCurrentPage(1); }}>
+        <span className="app-pagination__range">{isMobile ? `${start}–${end} of ${rows.length}` : `Showing ${start}–${end} of ${rows.length}`}</span>
+        <label className="app-pagination__size">{isMobile ? "Rows" : "Rows per page"}
+          <select aria-label="Rows per page" value={selectedPageSize} onChange={(event) => { setSelectedPageSize(Number(event.target.value)); setCurrentPage(1); }}>
             {Array.from(new Set([...pageSizeOptions, selectedPageSize])).sort((a, b) => a - b).map((size) => <option key={size} value={size}>{size}</option>)}
           </select>
         </label>
-        <div className="app-pagination__actions">
-          <Button size="sm" variant="secondary" disabled={safePage <= 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Previous</Button>
-          <span aria-live="polite">Page {safePage} of {pageCount}</span>
-          <Button size="sm" variant="secondary" disabled={safePage >= pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}>Next</Button>
-        </div>
+        {isMobile ? (
+          <div className="app-pagination__mobile-actions">
+            <Button size="sm" variant="tertiary" aria-label="Previous page" disabled={safePage <= 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>‹</Button>
+            <span className="app-pagination__page" aria-live="polite" aria-label={`Page ${safePage} of ${pageCount}`}>{safePage} / {pageCount}</span>
+            <Button size="sm" variant="tertiary" aria-label="Next page" disabled={safePage >= pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}>›</Button>
+          </div>
+        ) : (
+          <div className="app-pagination__actions">
+            <Button size="sm" variant="secondary" disabled={safePage <= 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Previous</Button>
+            <span aria-live="polite">Page {safePage} of {pageCount}</span>
+            <Button size="sm" variant="secondary" disabled={safePage >= pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}>Next</Button>
+          </div>
+        )}
       </nav>}
     </div>
   );

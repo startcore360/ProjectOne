@@ -18,6 +18,7 @@ import {
 import { useAppSelector } from "../../../store/hooks";
 import { MfaResetDialog } from "../../auth/components/MfaResetDialog";
 import { serverMessage } from "../../auth/serverMessage";
+import { UserLimitBanner } from "../components/users/UserLimitBanner";
 import { getApiErrorMessage, type ApiError } from "../../../services/apiHelper";
 import {
   userManagementService,
@@ -209,6 +210,8 @@ export function UserListPage() {
           </div>
         }
       />
+
+      <UserLimitBanner tenantId={tenantId} />
 
       <Panel
         title="Choose a scope"

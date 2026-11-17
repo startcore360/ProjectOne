@@ -33,6 +33,9 @@ vi.mock("../api/userManagementService", () => ({
     deactivateUser: vi.fn(),
     resetPassword: vi.fn(),
     unlockUser: vi.fn(),
+    // E1-S5: the Users page reads the user limit for its banner; no limit means no banner.
+    getUserLimit: vi.fn(() => Promise.resolve({ data: { limit: null, active: 0, percent: 0 } })),
+    requestUpgrade: vi.fn(),
     checkCreateUserAuthorization: vi.fn(),
     createUser: vi.fn(),
     getImportTemplate: vi.fn(),

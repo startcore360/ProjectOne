@@ -286,23 +286,35 @@ public class UserAccountService {
         return CreateUserResponse.from(saved, tempPassword, "STUDENT");
     }
 
+    /**
+     * WF-14 / E1-S5: at 100% of the tenant's user limit no more accounts can be created. The limit
+     * is the tenant's own (which the Product Owner may have raised above the plan, E1-S3), falling
+     * back to the plan's. Answered as 409 USER_LIMIT_REACHED so the screen can offer an upgrade.
+     */
     private void enforcePlanUserLimit(UUID tenantId) {
-        long activeUserCount = userAccountRepository.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED);
+        UserLimit limit = currentUserLimit(tenantId);
+        if (limit.limit() != null && limit.active() >= limit.limit()) {
+            throw new com.edu360.api.exception.ApiException(org.springframework.http.HttpStatus.CONFLICT,
+                    "USER_LIMIT_REACHED",
+                    "User limit reached: " + limit.active() + " of " + limit.limit()
+                            + " active accounts are in use. Request an upgrade to add more [WF-14].");
+        }
+    }
 
-        tenantRepository.findById(tenantId).ifPresent(tenant -> {
-            if (tenant.getPlanId() != null) {
-                planRepository.findById(tenant.getPlanId()).ifPresent(plan -> {
-                    Integer userLimit = plan.getUserLimit();
-                    if (userLimit != null && activeUserCount >= userLimit) {
-                        throw new BusinessRuleViolationException(
-                                "PLAN_LIMIT_REACHED",
-                                "Plan limit reached: maximum " + userLimit
-                                        + " active user accounts allowed under plan '" + plan.getPlanName() + "' [WF-14]."
-                        );
-                    }
-                });
-            }
-        });
+    /** E1-S5: how many accounts are in use against the tenant's limit (null limit = no limit set). */
+    public record UserLimit(Integer limit, long active, int percent) {
+    }
+
+    public UserLimit currentUserLimit(UUID tenantId) {
+        long active = userAccountRepository.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED);
+        Integer limit = tenantRepository.findById(tenantId)
+                // 0 or empty means "not set on the tenant": fall back to the plan's limit.
+                .map(tenant -> tenant.getUserLimit() != null && tenant.getUserLimit() > 0 ? tenant.getUserLimit()
+                        : tenant.getPlanId() == null ? null
+                        : planRepository.findById(tenant.getPlanId()).map(com.edu360.api.platform.Plan::getUserLimit).orElse(null))
+                .orElse(null);
+        int percent = limit == null || limit <= 0 ? 0 : (int) Math.min(999, (active * 100) / limit);
+        return new UserLimit(limit, active, percent);
     }
 
     private RbacScope resolveActingScope(CreateUserRequest request) {

@@ -13,6 +13,13 @@ import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 
+/** E1-S7: whole days left in a trial (0 once it has ended), or null when no end date is known. */
+function trialDaysLeft(trialEndsAt?: string): number | null {
+  if (!trialEndsAt) return null;
+  const ms = new Date(trialEndsAt).getTime() - Date.now();
+  return ms <= 0 ? 0 : Math.ceil(ms / 86_400_000);
+}
+
 function RowMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -74,9 +81,12 @@ import { CreateTenantModal, type CreateTenantDraft } from "./CreateTenantModal";
 import { TenantCredentialsNotice, type CreatedTenantCredentials } from "./TenantCredentialsNotice";
 import { ActivateTenantModal } from "./ActivateTenantModal";
 import { SuspendTenantModal, ArchiveTenantModal } from "./TenantLifecycleModals";
-import { TenantSettingsModal, type TenantSettingsDraft } from "./TenantSettingsModal";
+import { TenantSettingsModal, type TenantPlanLimits, type TenantSettingsDraft } from "./TenantSettingsModal";
 import { TenantDataProtectionModal } from "./TenantDataProtectionModal";
 import { TenantUsageModal } from "./TenantUsageModal";
+import { TenantSetupModal } from "./TenantSetupModal";
+import { TenantBrandingModal } from "./TenantBrandingModal";
+import { EntitlementEditor } from "../entitlements/EntitlementEditor";
 import { tenantLoginAddress } from "./tenantAddress";
 
 export function TenantsView() {
@@ -86,6 +96,16 @@ export function TenantsView() {
   const canActivate = can("TENANT_ACTIVATE");
   const canManageLifecycle = can("TENANT_SUSPEND_ARCHIVE");
   const canEditSettings = can("TENANT_SETTINGS");
+  const canCreate = can("TENANT_CREATE");
+  // E1-S3: going above the plan's limits is the Product Owner's decision only.
+  const { role: platformRole } = usePlatformAccess();
+  const [settingsPlan, setSettingsPlan] = useState<TenantPlanLimits | null>(null);
+  // E1-S2: the tenant whose setup steps are open.
+  const [setupTarget, setSetupTarget] = useState<Tenant | null>(null);
+  // E1-S4: the tenant whose branding is open.
+  const [brandingTarget, setBrandingTarget] = useState<Tenant | null>(null);
+  // E2-S2: the tenant whose module and feature switches are open.
+  const [featuresTarget, setFeaturesTarget] = useState<Tenant | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -166,7 +186,11 @@ export function TenantsView() {
               : "University",
         plan: t.planName,
         planId: t.planId,
-        status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : t.state === "ARCHIVED" ? "Archived" : "Suspended",
+        // E1-S2: CREATED means setup has not finished (it was wrongly shown as "Suspended").
+        status: t.state === "ACTIVE" ? "Active" : t.state === "TRIAL" ? "Trial" : t.state === "ARCHIVED" ? "Archived"
+          : t.state === "CREATED" ? "Setup failed" : "Suspended",
+        subdomain: t.subdomain,
+        trialEndsAt: t.trialEndsAt,
         gates: t.state === "TRIAL" ? 1 : 0,
         updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
         suspendedAt: t.suspendedAt,
@@ -436,6 +460,14 @@ export function TenantsView() {
           userLimit: res.data.userLimit || 1000,
           storageLimitGb: res.data.storageLimitGb || 50,
         });
+        setSettingsPlan({
+          userLimit: res.data.planUserLimit ?? null,
+          storageLimitGb: res.data.planStorageLimitGb ?? null,
+          customDomainAllowed: Boolean(res.data.customDomainAllowed),
+          currentUserLimit: res.data.userLimit ?? null,
+          currentStorageLimitGb: res.data.storageLimitGb ?? null,
+          currentCustomDomain: res.data.customDomain ?? "",
+        });
       }
     } catch {
       setSettingsError("Could not load current settings.");
@@ -568,7 +600,11 @@ export function TenantsView() {
                 <td>{tenant.type}</td>
                 <td>{tenant.plan}</td>
                 <td>
-                  <StatusBadge value={tenant.status} />
+                  {/* E1-S7: a trial past its end date is read-only for its users. */}
+                  <StatusBadge value={tenant.status === "Trial" && trialDaysLeft(tenant.trialEndsAt) === 0 ? "Trial ended" : tenant.status} />
+                  {tenant.status === "Trial" && (trialDaysLeft(tenant.trialEndsAt) ?? 0) > 0 && (
+                    <small className="app-cell-sub">{trialDaysLeft(tenant.trialEndsAt)} days left</small>
+                  )}
                 </td>
                 <td>
                   {tenant.gates ? (
@@ -582,6 +618,9 @@ export function TenantsView() {
                 <td>{tenant.archivedAt ? new Date(tenant.archivedAt).toLocaleString() : "—"}</td>
                 <td>
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    {tenant.status === "Setup failed" && (canCreate || canEditSettings) && (
+                      <Button size="sm" variant="secondary" onClick={() => setSetupTarget(tenant)}>Setup</Button>
+                    )}
                     {canActivate && tenant.status === "Trial" && (
                       <Button size="sm" variant="secondary" onClick={() => handleOpenActivate(tenant)}>Activate</Button>
                     )}
@@ -600,6 +639,12 @@ export function TenantsView() {
                       )}
                       {canEditSettings && (
                         <MenuAction onClick={() => handleOpenSettings(tenant)}>Settings</MenuAction>
+                      )}
+                      {canEditSettings && (
+                        <MenuAction onClick={() => setBrandingTarget(tenant)}>Branding</MenuAction>
+                      )}
+                      {can("FEATURE_TOGGLE") && (
+                        <MenuAction onClick={() => setFeaturesTarget(tenant)}>Features</MenuAction>
                       )}
                       {canViewUsage && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowUsage(true); }}>Usage</MenuAction>}
                       {canViewCompliance && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowDataProtection(true); }}>Compliance</MenuAction>}
@@ -696,6 +741,8 @@ export function TenantsView() {
         loadingSettings={loadingSettings}
         savingSettings={savingSettings}
         settingsError={settingsError}
+        plan={settingsPlan}
+        isProductOwner={platformRole === "PRODUCT_OWNER"}
       />
 
       <TenantDataProtectionModal
@@ -704,6 +751,56 @@ export function TenantsView() {
         tenant={selectedTenant}
       />
 
+      {featuresTarget && (
+        <EntitlementEditor
+          isOpen
+          target="tenant"
+          targetId={featuresTarget.id}
+          targetName={featuresTarget.name}
+          isProductOwner={platformRole === "PRODUCT_OWNER"}
+          onClose={() => setFeaturesTarget(null)}
+          onSaved={(saved) => {
+            setFeaturesTarget(null);
+            setMessage(saved);
+          }}
+        />
+      )}
+      {brandingTarget && (
+        <TenantBrandingModal
+          isOpen
+          tenantId={brandingTarget.id}
+          tenantName={brandingTarget.name}
+          onClose={() => setBrandingTarget(null)}
+          onSaved={(saved) => {
+            setBrandingTarget(null);
+            setMessage(saved);
+          }}
+        />
+      )}
+      {setupTarget && (
+        <TenantSetupModal
+          isOpen
+          tenantId={setupTarget.id}
+          tenantName={setupTarget.name}
+          canRetry={canCreate}
+          onClose={() => setSetupTarget(null)}
+          onRetried={(tenant) => {
+            setSetupTarget(null);
+            setMessage(`Setup of "${tenant.tenantName}" finished. It is now in TRIAL.`);
+            setCreatedCredentials(
+              tenant.firstAdminTemporaryPassword
+                ? {
+                    tenantName: tenant.tenantName,
+                    adminEmail: tenant.firstAdminEmail ?? "",
+                    loginAddress: tenantLoginAddress(tenant.subdomain, window.location),
+                    temporaryPassword: tenant.firstAdminTemporaryPassword,
+                  }
+                : null,
+            );
+            void loadTenants();
+          }}
+        />
+      )}
       <TenantUsageModal
         isOpen={showUsage}
         onClose={() => setShowUsage(false)}

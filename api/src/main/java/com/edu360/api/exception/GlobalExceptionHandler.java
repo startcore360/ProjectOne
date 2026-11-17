@@ -194,6 +194,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> mapDatabaseFailure(Throwable ex, HttpServletRequest request) {
+        log.error("Database failure occurred during request {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         String message = ex.getMessage();
         Throwable cause = ex.getCause();
         while (cause != null && cause.getMessage() != null) { message = cause.getMessage(); cause = cause.getCause(); }

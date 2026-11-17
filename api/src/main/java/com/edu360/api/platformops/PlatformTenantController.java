@@ -179,6 +179,30 @@ public class PlatformTenantController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @GetMapping("/tenants/{tenantId}/provisioning")
+    @Operation(summary = "The tenant's setup steps P01-P07 in run order, with status and error (E1-S2)")
+    public ResponseEntity<com.edu360.api.platformops.dto.TenantProvisioningStatusResponse> getProvisioningStatus(
+            @PathVariable UUID tenantId, Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorizeAny(principal, List.of("TENANT_CREATE", "TENANT_SETTINGS"));
+        return ResponseEntity.ok(tenantManagementService.getProvisioningStatus(tenantId));
+    }
+
+    @PostMapping("/tenants/{tenantId}/provisioning/retry")
+    @Operation(summary = "Retry a failed tenant setup from the first step that is not DONE (TENANT_CREATE, E1-S2)")
+    public ResponseEntity<TenantResponse> retryProvisioning(
+            @PathVariable UUID tenantId,
+            @Valid @RequestBody(required = false) com.edu360.api.platformops.dto.TenantProvisioningRetryRequest request,
+            Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "TENANT_CREATE");
+        TenantResponse response = tenantManagementService.retryProvisioning(tenantId,
+                request == null ? null : request.retentionMonths(),
+                request == null ? null : request.backupRetentionDays(), principal);
+        // May carry a one-time temporary password (PD-10): never cache it.
+        return ResponseEntity.ok().header("Cache-Control", "no-store").body(response);
+    }
+
     @GetMapping("/tenants")
     @Operation(summary = "List all tenants with pagination")
     public ResponseEntity<TenantPageResponse> listTenants(

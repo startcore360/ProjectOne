@@ -1,8 +1,8 @@
 # Prompt for the "EDU 360 Final" project — split the platform work into agent prompts
 
-> **Before pasting:** commit the current work (including `docs/` and `CLAUDE.md`, now un-ignored) and merge `manoj_feature` into `sprint-2-development`, so the agents get the latest code and documents when they pull.
-> Paste everything below the line into a new chat in the claude.ai project "EDU 360 Final".
-> **Attach these files to that chat**. The project sources are dated 30 Oct 2026 and don't contain them, and that chat cannot read the repository:
+> Works with any AI agent. Paste everything below the line into the planning agent.
+> - **If the agent can open the repository** (checked out on `sprint-2-development`), no attachments are needed. It reads the files below from the repo.
+> - **If it can't open the repository** (a plain chat), attach these files:
 > 1. `docs/PLATFORM_COMPLETION_PLAN.md` (the epics, stories and acceptance criteria — the main input)
 > 2. `docs/GOVERNANCE_DECISION_LOG.md`
 > 3. `docs/TOP_POST_AUTHORITY_RULES.md`

@@ -45,7 +45,13 @@ public class LoginTenantResolver {
     }
 
     public Resolution resolve(HttpServletRequest request) {
-        String host = request.getServerName();
+        String host = request.getHeader("Host");
+        if (host != null && host.contains(":")) {
+            host = host.split(":")[0].trim();
+        }
+        if (host == null || host.isBlank()) {
+            host = request.getServerName();
+        }
         String label = stripLocalDevSuffix(host);
 
         if (label.equals(keycloakProperties.getPlatformHostLabel())) {

@@ -76,7 +76,7 @@ public class TenantProvisioningService {
                                 + "created_at, created_by, updated_at, updated_by, row_version) "
                                 + "VALUES (?, ?, ?, 'PENDING', 0, ?, ?, ?, ?, 1) "
                                 + "ON CONFLICT (tenant_id, step_code) DO NOTHING",
-                        UUID.randomUUID(), tenantId, step.stepCode(), now, actorId, now, actorId);
+                        UUID.randomUUID(), tenantId, step.stepCode(), Timestamp.from(now), actorId, Timestamp.from(now), actorId);
             }
             return null;
         });
@@ -199,22 +199,22 @@ public class TenantProvisioningService {
     private void markRunning(UUID tenantId, UUID actorId, String stepCode) {
         updateStep(tenantId, actorId, stepCode,
                 "status = 'RUNNING', attempts = attempts + 1, last_error_code = NULL, "
-                        + "started_at = ?, finished_at = NULL", Instant.now());
+                        + "started_at = ?, finished_at = NULL", Timestamp.from(Instant.now()));
     }
 
     private void markDone(UUID tenantId, UUID actorId, String stepCode) {
         updateStep(tenantId, actorId, stepCode,
-                "status = 'DONE', last_error_code = NULL, finished_at = ?", Instant.now());
+                "status = 'DONE', last_error_code = NULL, finished_at = ?", Timestamp.from(Instant.now()));
     }
 
     private void markFailed(UUID tenantId, UUID actorId, String stepCode, String errorCode) {
         updateStep(tenantId, actorId, stepCode,
-                "status = 'FAILED', last_error_code = ?, finished_at = ?", errorCode, Instant.now());
+                "status = 'FAILED', last_error_code = ?, finished_at = ?", errorCode, Timestamp.from(Instant.now()));
     }
 
     private void markCompensated(UUID tenantId, UUID actorId, String stepCode) {
         updateStep(tenantId, actorId, stepCode,
-                "status = 'COMPENSATED', last_error_code = NULL, finished_at = ?", Instant.now());
+                "status = 'COMPENSATED', last_error_code = NULL, finished_at = ?", Timestamp.from(Instant.now()));
     }
 
     private void updateStep(UUID tenantId, UUID actorId, String stepCode,
@@ -222,7 +222,7 @@ public class TenantProvisioningService {
         inPlatformTransaction(() -> {
             Object[] parameters = java.util.Arrays.copyOf(assignmentValues, assignmentValues.length + 4);
             int offset = assignmentValues.length;
-            parameters[offset] = Instant.now();
+            parameters[offset] = Timestamp.from(Instant.now());
             parameters[offset + 1] = actorId;
             parameters[offset + 2] = tenantId;
             parameters[offset + 3] = stepCode;

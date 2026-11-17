@@ -6,7 +6,9 @@ export type Tenant = {
   type: string;
   plan: string;
   planId?: string;
-  status: "Active" | "Trial" | "Suspended" | "Archived";
+  status: "Active" | "Trial" | "Suspended" | "Archived" | "Setup failed";
+  subdomain?: string;
+  trialEndsAt?: string;
   gates: number;
   updated: string;
   suspendedAt?: string;

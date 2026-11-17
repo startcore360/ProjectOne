@@ -52,6 +52,104 @@ public class PlatformFeatureToggleController {
         this.tenantRepository = tenantRepository;
     }
 
+    /** E2-S2: module/feature lists and dependencies; optional so hand-built test fixtures still work. */
+    private EntitlementCatalog catalog;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setCatalog(EntitlementCatalog catalog) {
+        this.catalog = catalog;
+    }
+
+    public record EditorFeature(String featureCode, String key, String description, boolean provisional,
+                                boolean enabled, boolean planEnabled, String source) {}
+
+    public record EditorModule(String moduleCode, String moduleName, int phase, boolean enabled, boolean planEnabled,
+                               String source, java.util.List<String> requires, java.util.List<EditorFeature> features) {}
+
+    public record EntitlementEditorResponse(UUID targetId, String targetType, java.util.List<EditorModule> modules) {}
+
+    @GetMapping("/plans/{id}/entitlement-editor")
+    @Operation(summary = "Plan modules grouped with their features, phase and provisional flag (E2-S2)")
+    public ResponseEntity<EntitlementEditorResponse> getPlanEditor(@PathVariable UUID id, Authentication auth) {
+        permissionService.authorize(requirePlatformPrincipal(auth), "FEATURE_TOGGLE");
+        Map<String, Boolean> plan = planMap(id);
+        return ResponseEntity.ok(new EntitlementEditorResponse(id, "PLAN", editor(plan, plan, Map.of(), false)));
+    }
+
+    @GetMapping("/tenants/{id}/entitlement-editor")
+    @Operation(summary = "Tenant modules: effective value, plan value and whether it is an override (E2-S2)")
+    public ResponseEntity<EntitlementEditorResponse> getTenantEditor(@PathVariable UUID id, Authentication auth) {
+        permissionService.authorize(requirePlatformPrincipal(auth), "FEATURE_TOGGLE");
+        Map<String, Boolean> plan = planMap(tenant(id).getPlanId());
+        Map<String, Boolean> override = overrideMap(id);
+        Map<String, Boolean> effective = new LinkedHashMap<>(plan);
+        effective.putAll(override);
+        return ResponseEntity.ok(new EntitlementEditorResponse(id, "TENANT", editor(effective, plan, override, true)));
+    }
+
+    private java.util.List<EditorModule> editor(Map<String, Boolean> effective, Map<String, Boolean> plan,
+                                                Map<String, Boolean> override, boolean tenantView) {
+        if (catalog == null) {
+            return java.util.List.of();
+        }
+        return catalog.modules().stream().map(m -> new EditorModule(m.moduleCode(), m.moduleName(), m.phase(),
+                on(effective, m.moduleCode()), on(plan, m.moduleCode()),
+                tenantView ? (override.containsKey(m.moduleCode()) ? "OVERRIDE" : "PLAN") : null,
+                m.requires(),
+                m.features().stream().map(f -> {
+                    String key = featureKey(m.moduleCode(), f.featureCode());
+                    return new EditorFeature(f.featureCode(), key, f.description(), f.provisional(), on(effective, key),
+                            on(plan, key), tenantView ? (override.containsKey(key) ? "OVERRIDE" : "PLAN") : null);
+                }).toList())).toList();
+    }
+
+    private static boolean on(Map<String, Boolean> state, String key) {
+        return Boolean.TRUE.equals(state.get(key));
+    }
+
+    private Map<String, Boolean> planMap(UUID planId) {
+        Map<String, Boolean> plan = new LinkedHashMap<>();
+        if (planEntitlementRepository != null && planId != null) {
+            planEntitlementRepository.findByPlanId(planId).forEach(e ->
+                    plan.put(featureKey(e.getModuleCode(), e.getFeatureCode()), e.isEnabled()));
+        }
+        return plan;
+    }
+
+    private Map<String, Boolean> overrideMap(UUID tenantId) {
+        Map<String, Boolean> override = new LinkedHashMap<>();
+        if (tenantEntitlementRepository != null) {
+            tenantEntitlementRepository.findByTenantId(tenantId).forEach(e ->
+                    override.put(featureKey(e.getModuleCode(), e.getFeatureCode()), e.isEnabled()));
+        }
+        return override;
+    }
+
+    private Tenant tenant(UUID id) {
+        if (tenantRepository == null) {
+            throw new IllegalStateException("Tenant directory is unavailable for effective entitlement resolution.");
+        }
+        return tenantRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + id));
+    }
+
+    private Map<String, java.util.Set<String>> requires() {
+        return catalog == null ? Map.of() : EntitlementCatalog.requiresMap(catalog.modules());
+    }
+
+    private static Map<String, Map<String, Object>> changesOf(Map<String, Boolean> before, Map<String, Boolean> requested) {
+        Map<String, Map<String, Object>> changes = new LinkedHashMap<>();
+        requested.forEach((key, value) -> {
+            boolean now = Boolean.TRUE.equals(value);
+            if (on(before, key) != now) {
+                Map<String, Object> c = new java.util.HashMap<>();
+                c.put("old", on(before, key));
+                c.put("new", now);
+                changes.put(key, c);
+            }
+        });
+        return changes;
+    }
+
     public record EntitlementsUpdateRequest(
             Map<String, Boolean> features
     ) {}
@@ -129,6 +227,14 @@ public class PlatformFeatureToggleController {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "FEATURE_TOGGLE");
 
+        // E2-S2: a feature needs its module on; a module needs what it requires and can't be
+        // turned off while another module that needs it is on.
+        Map<String, Boolean> before = planMap(id);
+        Map<String, Boolean> requested = req.features() == null ? Map.of() : req.features();
+        Map<String, Boolean> result = new LinkedHashMap<>(before);
+        result.putAll(requested);
+        EntitlementRules.validate(result, requested, requires());
+
         if (req.features() != null && planEntitlementRepository != null) {
             Instant now = Instant.now();
             for (Map.Entry<String, Boolean> entry : req.features().entrySet()) {
@@ -157,7 +263,8 @@ public class PlatformFeatureToggleController {
             }
         }
 
-        auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "PLAN", id);
+        auditWriter.record(principal, null, "CONFIG_CHANGE", "UPDATE", "FEATURE_TOGGLE", "PLAN", id,
+                PlatformAuditWriter.SUCCESS, changesOf(before, requested));
 
         return ResponseEntity.ok(new EntitlementsResponse(id, "PLAN", req.features()));
     }
@@ -171,6 +278,24 @@ public class PlatformFeatureToggleController {
     ) {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "FEATURE_TOGGLE");
+
+        Map<String, Boolean> requested = req.features() == null ? Map.of() : req.features();
+        Map<String, Boolean> plan = tenantRepository == null ? Map.of() : planMap(tenant(id).getPlanId());
+        Map<String, Boolean> override = overrideMap(id);
+        Map<String, Boolean> before = new LinkedHashMap<>(plan);
+        before.putAll(override);
+        // E2-S2 / WF-06: switching on what the plan leaves off is the Product Owner's decision only.
+        java.util.List<String> beyond = EntitlementRules.beyondPlan(plan, requested);
+        if (!beyond.isEmpty() && principal.platformRole() != com.edu360.api.platform.PlatformRole.PRODUCT_OWNER) {
+            auditWriter.record(principal, id, "CONFIG_CHANGE", "UPDATE", "FEATURE_TOGGLE", "TENANT", id, "DENIED",
+                    Map.of("beyondPlan", Map.of("new", String.join(",", beyond))));
+            throw new com.edu360.api.exception.ApiException(org.springframework.http.HttpStatus.FORBIDDEN,
+                    "BEYOND_PLAN_PO_ONLY", "Beyond the plan - only the Product Owner can turn on "
+                            + String.join(", ", beyond) + " for this tenant.");
+        }
+        Map<String, Boolean> result = new LinkedHashMap<>(before);
+        result.putAll(requested);
+        EntitlementRules.validate(result, requested, requires());
 
         if (req.features() != null && tenantEntitlementRepository != null) {
             Instant now = Instant.now();
@@ -200,7 +325,8 @@ public class PlatformFeatureToggleController {
             }
         }
 
-        auditWriter.record(principal, "CONFIG_CHANGE", "FEATURE_TOGGLE", "TENANT", id);
+        auditWriter.record(principal, id, "CONFIG_CHANGE", "UPDATE", "FEATURE_TOGGLE", "TENANT", id,
+                PlatformAuditWriter.SUCCESS, changesOf(before, requested));
 
         return ResponseEntity.ok(new EntitlementsResponse(id, "TENANT", req.features()));
     }

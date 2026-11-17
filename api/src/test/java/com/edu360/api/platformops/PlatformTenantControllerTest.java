@@ -740,7 +740,10 @@ class PlatformTenantControllerTest {
                 .build();
 
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
-        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(samplePlan()));
+        // E1-S3: a custom domain needs a plan that includes it, and a Platform Admin stays within the plan.
+        Plan plan = samplePlan();
+        plan.setCustomDomainAllowed(true);
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateTenantSettingsRequest request = new UpdateTenantSettingsRequest(
@@ -749,7 +752,7 @@ class PlatformTenantControllerTest {
                 true, // opt out of platform analytics [Rule PV-07]
                 "portal.northbridge.edu",
                 800,
-                100,
+                40,
                 null,
                 null
         );
@@ -761,7 +764,10 @@ class PlatformTenantControllerTest {
         assertThat(response.getBody().analyticsOptOut()).isTrue();
         assertThat(response.getBody().customDomain()).isEqualTo("portal.northbridge.edu");
         assertThat(response.getBody().userLimit()).isEqualTo(800);
-        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SETTINGS_UPDATED"), eq("TENANT_SETTINGS"), eq("TENANT"), eq(tenantId));
+        // E1-S3: the audit row now carries the old and new values.
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SETTINGS_UPDATED"),
+                eq("UPDATE"), eq("TENANT_SETTINGS"), eq("TENANT"), eq(tenantId), eq("SUCCESS"),
+                org.mockito.ArgumentMatchers.argThat(changes -> changes.containsKey("userLimit")));
     }
 
     @Test
