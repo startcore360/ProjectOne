@@ -47,6 +47,7 @@ public class UsageRollupJob {
         Map<String, Long> combined = new LinkedHashMap<>();
         COMBINED.forEach(code -> combined.put(code, 0L));
         boolean complete = true;
+        boolean hasIncludedTenant = false;
         List<Tenant> eligible = tenants.findAll().stream()
                 .filter(t -> t.getState() == TenantState.ACTIVE || t.getState() == TenantState.TRIAL).toList();
         for (Tenant tenant : eligible) {
@@ -62,7 +63,7 @@ public class UsageRollupJob {
             } finally { TenantContext.clear(); }
         }
         // A partial aggregate is never published when an included tenant failed.
-        if (complete) combined.forEach((code, value) -> upsertPlatformDaily(day, code, value));
+        if (complete && hasIncludedTenant) combined.forEach((code, value) -> upsertPlatformDaily(day, code, value));
     }
 
     private Map<String, Long> collect(Timestamp from, Timestamp to) {

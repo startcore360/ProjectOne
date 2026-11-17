@@ -38,7 +38,6 @@ describe("TenantUsageModal", () => {
     expect(screen.getByText("2026-10")).toBeInTheDocument();
     expect(screen.getByText("1,250")).toBeInTheDocument();
     expect(screen.getAllByText("Yes")).toHaveLength(2);
-    expect(screen.getByText("Yes")).toBeInTheDocument();
   });
 
   it("labels unavailable SMS metrics as not measured rather than zero", async () => {
