@@ -146,11 +146,11 @@ class PlatformAuditLogControllerTest {
         response.getBody().writeTo(output);
         String csv = output.toString(java.nio.charset.StandardCharsets.UTF_8);
 
-        assertThat(csv).contains("\\"'\t=cmd\\"")
-                .contains("\\"'+SUM(1,1)\\"")
-                .contains("\\"'=1+1\\"")
-                .contains("\\"'-1+2\\"")
-                .contains("\\"'\r@SUM(A1:A2)\\"");
+        assertThat(csv).contains("\"'\t=cmd\"")
+                .contains("\"'+SUM(1,1)\"")
+                .contains("\"'=1+1\"")
+                .contains("\"'-1+2\"")
+                .contains("\"'\r@SUM(A1:A2)\"");
     }
 
     @Test
