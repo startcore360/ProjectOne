@@ -187,7 +187,7 @@ export function AuditLogView() {
             <input aria-label="To" type="datetime-local" value={draftFilters.to} onChange={(e) => updateDraft("to", e.target.value)} />
           </label>
           <Button variant="secondary" onClick={applyFilters}>Apply filters</Button>
-          <Button variant="secondary" onClick={exportCsv} loading={exporting} disabled={exporting}>Export CSV</Button>
+          <Button variant="secondary" onClick={exportCsv} busy={exporting} disabled={exporting}>Export CSV</Button>
         </div>
         {exportError && <p className="notice notice--danger" role="alert">{exportError}</p>}
         {status === "loading" ? (

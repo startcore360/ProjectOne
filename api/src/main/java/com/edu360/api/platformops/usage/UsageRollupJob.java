@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -65,7 +66,8 @@ public class UsageRollupJob {
 
         for (Tenant tenant : eligible) {
             try {
-                TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef());
+                TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef(),
+                        "ALL", Set.of(), null, null);
                 EventCounts dailyCounts = collectEvents(dayStart, dayEnd);
                 MonthlySnapshot monthlySnapshot = collectMonthly(monthStart, dayEnd);
                 writeMonthly(tenant.getTenantId(), month, day, monthlySnapshot);

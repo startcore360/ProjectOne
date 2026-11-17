@@ -131,7 +131,18 @@ public class PlatformAuditLogController {
         writer.write("\r\n");
     }
 
-    private static String csvCell(String value) {
+    /**
+     * Prevent spreadsheet formula execution for untrusted text while retaining standard CSV
+     * quoting. Excel and other spreadsheet clients treat these leading characters as formulas.
+     */
+    static String csvCell(String value) {
+        if (!value.isEmpty()) {
+            char first = value.charAt(0);
+            if (first == '=' || first == '+' || first == '-' || first == '@'
+                    || first == '\t' || first == '\r') {
+                value = "'" + value;
+            }
+        }
         return "\"" + value.replace("\"", "\"\"") + "\"";
     }
 

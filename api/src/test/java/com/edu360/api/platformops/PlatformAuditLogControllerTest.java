@@ -124,6 +124,36 @@ class PlatformAuditLogControllerTest {
     }
 
     @Test
+    void exportAuditLogs_prefixesFormulaInitiatorsInEveryUntrustedCell() throws Exception {
+        PlatformAuditOutboxEvent event = PlatformAuditOutboxEvent.builder()
+                .auditOutboxId(UUID.randomUUID())
+                .occurredAt(Instant.parse("2026-11-16T12:00:00Z"))
+                .actorKind("\t=cmd")
+                .operation("+SUM(1,1)")
+                .actionCode("=1+1")
+                .entityType("-1+2")
+                .eventType("\r@SUM(A1:A2)")
+                .outcome("SUCCESS")
+                .build();
+        when(auditOutboxEventRepository.countFiltered(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(1L);
+        when(auditOutboxEventRepository.findFiltered(any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(event), PageRequest.of(0, 500), 1));
+
+        ResponseEntity<StreamingResponseBody> response = controller().exportAuditLogs(
+                null, null, null, null, null, null, authFor(PlatformRole.PRODUCT_OWNER));
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        response.getBody().writeTo(output);
+        String csv = output.toString(java.nio.charset.StandardCharsets.UTF_8);
+
+        assertThat(csv).contains("\\"'\t=cmd\\"")
+                .contains("\\"'+SUM(1,1)\\"")
+                .contains("\\"'=1+1\\"")
+                .contains("\\"'-1+2\\"")
+                .contains("\\"'\r@SUM(A1:A2)\\"");
+    }
+
+    @Test
     void exportAuditLogs_rejectsMoreThanFiftyThousandRows() {
         when(auditOutboxEventRepository.countFiltered(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(50_001L);

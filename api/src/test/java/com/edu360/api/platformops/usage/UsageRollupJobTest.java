@@ -3,6 +3,7 @@ package com.edu360.api.platformops.usage;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -44,8 +45,14 @@ class UsageRollupJobTest {
         when(tenant.getState()).thenReturn(TenantState.ACTIVE);
         when(tenant.isAnalyticsOptOut()).thenReturn(false);
         when(tenants.findAll()).thenReturn(List.of(tenant));
-        doReturn(0L).when(tenantJdbc).queryForObject(anyString(), eq(Long.class), any(Object[].class));
-        doReturn(0L).when(tenantJdbc).queryForObject(anyString(), eq(Long.class));
+        doAnswer(invocation -> {
+            org.assertj.core.api.Assertions.assertThat(TenantContext.currentInstitutionScope()).isEqualTo("ALL");
+            return 0L;
+        }).when(tenantJdbc).queryForObject(anyString(), eq(Long.class), any(Object[].class));
+        doAnswer(invocation -> {
+            org.assertj.core.api.Assertions.assertThat(TenantContext.currentInstitutionScope()).isEqualTo("ALL");
+            return 0L;
+        }).when(tenantJdbc).queryForObject(anyString(), eq(Long.class));
         when(monthly.findByTenantIdAndUsageMonthAndMetricCode(any(UUID.class), any(LocalDate.class), anyString()))
                 .thenReturn(Optional.empty());
         when(platformDaily.findByUsageDateAndMetricCode(any(LocalDate.class), anyString()))
