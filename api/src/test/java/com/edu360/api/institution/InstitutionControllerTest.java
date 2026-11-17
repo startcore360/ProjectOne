@@ -264,9 +264,9 @@ class InstitutionControllerTest {
                 .id(new ApprovalRequestId(TENANT_ID, activationRequestId))
                 .currentStepNo((short) 1)
                 .status("PENDING")
-                .processCode("INSTITUTION_ACTIVATION")
+                .processCode("INSTITUTION_ACTIVATE")
                 .build();
-        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATION"))
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATE"))
                 .thenReturn(Optional.of(activationRequest));
         doAnswer(inv -> {
             draftInstitution.setStatus("ACTIVE");
@@ -340,9 +340,9 @@ class InstitutionControllerTest {
                 .id(new ApprovalRequestId(TENANT_ID, activationRequestId))
                 .currentStepNo((short) 1)
                 .status("PENDING")
-                .processCode("INSTITUTION_ACTIVATION")
+                .processCode("INSTITUTION_ACTIVATE")
                 .build();
-        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATION"))
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATE"))
                 .thenReturn(Optional.of(activationRequest));
         doThrow(new BusinessRuleViolationException("GO_LIVE_BLOCKED",
                 "Principal's-leave approver not set for institution " + INSTITUTION_ID + " [C7]"))

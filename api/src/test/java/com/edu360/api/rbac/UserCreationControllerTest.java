@@ -134,7 +134,9 @@ class UserCreationControllerTest {
                 .thenReturn("kc-user-uuid-123");
 
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userAccountRepository.saveAndFlush(any(UserAccount.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userIdentityLinkRepository.save(any(UserIdentityLink.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userIdentityLinkRepository.saveAndFlush(any(UserIdentityLink.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ResponseEntity<CreateUserResponse> response = controller.createUser(TENANT_ID, req, auth);
 
