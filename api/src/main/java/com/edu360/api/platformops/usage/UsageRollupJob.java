@@ -67,7 +67,7 @@ public class UsageRollupJob {
 
     private Map<String, Long> collect(Timestamp from, Timestamp to) {
         Map<String, Long> m = new LinkedHashMap<>();
-        m.put("LOGINS", count("SELECT count(*) FROM app.audit_outbox WHERE occurred_at >= ? AND occurred_at < ? AND action_code='LOGIN_SUCCESS' AND outcome='SUCCESS'", from, to));
+        m.put("LOGINS", count("SELECT count(*) FROM app.audit_outbox WHERE occurred_at >= ? AND occurred_at < ? AND operation='LOGIN' AND entity_type='LOGIN_SUCCESS' AND outcome='SUCCESS'", from, to));
         m.put("ATTENDANCE_MARKED", count("SELECT count(*) FROM app.attendance_entry WHERE created_at >= ? AND created_at < ?", from, to));
         m.put("FEES_PAID_ONLINE", count("SELECT count(*) FROM app.payment WHERE method='GATEWAY' AND status='PAID' AND paid_at >= ? AND paid_at < ?", from, to));
         m.put("ACTIVE_USERS", scalar("SELECT count(*) FROM app.user_account WHERE status='ACTIVE'"));

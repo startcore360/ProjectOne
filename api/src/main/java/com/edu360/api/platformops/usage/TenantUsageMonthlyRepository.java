@@ -12,7 +12,7 @@ public interface TenantUsageMonthlyRepository extends JpaRepository<TenantUsageM
     List<TenantUsageMonthly> findByTenantIdAndUsageMonthBetweenOrderByUsageMonthAsc(UUID tenantId, LocalDate from, LocalDate to);
     Optional<TenantUsageMonthly> findByTenantIdAndUsageMonthAndMetricCode(UUID tenantId, LocalDate usageMonth, String metricCode);
     @Query(value = """
-        SELECT COALESCE(sum(u.quantity),0) FROM platform.tenant_usage_monthly u
+        SELECT sum(u.quantity) FROM platform.tenant_usage_monthly u
         JOIN platform.tenant t ON t.tenant_id=u.tenant_id
         WHERE t.analytics_opt_out=false AND u.usage_month=:month
           AND u.metric_code=:metricCode AND u.measured=true
