@@ -14,6 +14,7 @@ import Edu360Logo from "../assets/Edu360Logo";
 import { ThemeToggle } from "../components/ui";
 import { RoleSwitcher } from "../components/layout/RoleSwitcher";
 import { NotificationBell } from "../features/notifications/components/NotificationBell";
+import { PlatformNotificationBell } from "../features/platform/components/notifications/PlatformNotificationBell";
 import { useLiveSocket } from "../features/live/liveSocket";
 import { SESSION_IDLE_LIMIT_MS, startInactivityTracker } from "../services/inactivityTracker";
 import api from "../services/axios";
@@ -438,7 +439,7 @@ export default function AppLayout() {
       <div className="app-topbar">
         <div className="app-topbar__context"><span>EDU 360</span><span aria-hidden="true">/</span><strong>{contextLabel}</strong></div>
         <div className="app-topbar__tools">
-          {!isPlatformConsole && <NotificationBell />}
+          {isPlatformConsole ? <PlatformNotificationBell /> : <NotificationBell />}
           <div className="app-topbar__role"><RoleSwitcher /></div>
           <ThemeToggle variant="inline" />
           {/* Mobile only (CSS): who is signed in, always visible, one tap to the profile. */}
