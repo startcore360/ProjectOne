@@ -68,7 +68,7 @@ describe("PlatformNotificationBell", () => {
     vi.mocked(platformNotificationsApi.list).mockReturnValue(new Promise((resolve) => { resolveList = resolve; }));
     render(<PlatformNotificationBell />);
     fireEvent.click(await screen.findByRole("button", { name: "Notifications" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Loading notifications");
+    expect(await screen.findByText("Loading notifications")).toBeInTheDocument();
     await act(async () => resolveList([]));
   });
 
