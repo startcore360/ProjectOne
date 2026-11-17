@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,15 +48,19 @@ class PlatformNotificationReadServiceTest {
     }
 
     @Test
-    void marksOneNotificationUsingBothNotificationAndRecipientIds() {
+    void returnsNormallyWhenNotificationIsNotOwnedByRecipient() {
         PlatformNotificationRepository repository = mock(PlatformNotificationRepository.class);
         PlatformNotificationReadService service = new PlatformNotificationReadService(repository);
         UUID recipient = UUID.randomUUID();
         UUID notificationId = UUID.randomUUID();
 
+        when(repository.markReadForRecipient(eq(notificationId), eq(recipient), any(Instant.class))).thenReturn(0);
+
+        // A non-owned notification is deliberately indistinguishable from an already-read/missing row: HTTP returns 204.
         service.markRead(recipient, notificationId);
 
         verify(repository).markReadForRecipient(eq(notificationId), eq(recipient), any(Instant.class));
+        verify(repository, never()).findById(notificationId);
     }
 
     @Test
