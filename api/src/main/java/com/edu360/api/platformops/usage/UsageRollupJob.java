@@ -56,7 +56,10 @@ public class UsageRollupJob {
                 Map<String, Long> values = collect(from, to);
                 writeDaily(tenant.getTenantId(), day, values);
                 writeMonthly(tenant.getTenantId(), month, day);
-                if (!tenant.isAnalyticsOptOut()) COMBINED.forEach(c -> combined.merge(c, values.get(c), Long::sum));
+                if (!tenant.isAnalyticsOptOut()) {
+                    hasIncludedTenant = true;
+                    COMBINED.forEach(c -> combined.merge(c, values.get(c), Long::sum));
+                }
             } catch (Exception ex) {
                 log.error("Usage rollup failed for tenant {}", tenant.getTenantId(), ex);
                 if (!tenant.isAnalyticsOptOut()) complete = false;
