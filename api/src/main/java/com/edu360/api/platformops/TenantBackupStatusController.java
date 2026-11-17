@@ -1,7 +1,10 @@
 package com.edu360.api.platformops;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,6 +39,9 @@ public class TenantBackupStatusController {
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final TenantBackupStatusRepository tenantBackupStatusRepository;
 
+    @Value("${app.backup.stale-threshold-hours:36}")
+    private long staleThresholdHours;
+
     public record TenantBackupStatusResponse(boolean connected, String note, BackupStatusEntryResponse status) {}
 
     @GetMapping
@@ -53,7 +59,7 @@ public class TenantBackupStatusController {
                 RbacTarget.NONE);
 
         return ResponseEntity.ok(tenantBackupStatusRepository.findFirstByTenantId(tenantId)
-                .map(row -> new TenantBackupStatusResponse(true, null, BackupStatusEntryResponse.from(row)))
+                .map(row -> new TenantBackupStatusResponse(true, null, BackupStatusEntryResponse.from(row, Duration.ofHours(staleThresholdHours), Instant.now())))
                 .orElseGet(() -> new TenantBackupStatusResponse(false,
                         "No backup system is connected to this tenant yet, so there is no backup status to show.", null)));
     }

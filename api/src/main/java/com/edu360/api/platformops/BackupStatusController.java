@@ -1,5 +1,9 @@
 package com.edu360.api.platformops;
 
+import java.time.Duration;
+import java.time.Instant;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,6 +41,9 @@ public class BackupStatusController {
     private final PlatformPermissionService platformPermissionService;
     private final TenantBackupStatusRepository tenantBackupStatusRepository;
 
+    @Value("${app.backup.stale-threshold-hours:36}")
+    private long staleThresholdHours;
+
     @GetMapping
     @Operation(summary = "See backup status (BACKUP_STATUS_VIEW)")
     public ResponseEntity<BackupStatusResponse> backupStatus(Authentication authentication) {
@@ -46,13 +53,13 @@ public class BackupStatusController {
         platformPermissionService.authorize(principal, "BACKUP_STATUS_VIEW");
 
         var tenants = tenantBackupStatusRepository.findAllByOrderByTenantId().stream()
-                .map(BackupStatusEntryResponse::from)
+                .map(status -> BackupStatusEntryResponse.from(status, Duration.ofHours(staleThresholdHours), Instant.now()))
                 .toList();
 
-        String note = "platform.tenant_backup_status exists in the schema, but no backup/PITR "
-                + "system in this codebase writes to it yet - this list reflects that real, "
-                + "currently-empty state rather than placeholder timestamps.";
+        String note = tenants.isEmpty()
+                ? "No backup agent has reported a tenant backup yet."
+                : "Backup status is populated from the latest backup-agent reports.";
 
-        return ResponseEntity.ok(new BackupStatusResponse(false, note, tenants));
+        return ResponseEntity.ok(new BackupStatusResponse(!tenants.isEmpty(), note, tenants));
     }
 }

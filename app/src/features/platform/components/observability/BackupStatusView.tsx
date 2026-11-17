@@ -14,6 +14,7 @@ export type BackupStatusEntry = {
   latestRestorableAt: string | null;
   lastRestoreTestAt: string | null;
   lastRestoreTestOutcome: string | null;
+  stale: boolean;
 };
 
 export type BackupStatus = {
@@ -76,6 +77,7 @@ export function BackupStatusView() {
               "Restorable window",
               "Last restore test",
               "Restore test outcome",
+              "Backup freshness",
             ]}
             empty={!data?.tenants.length}
             emptyMessage={
@@ -94,6 +96,7 @@ export function BackupStatusView() {
                 </td>
                 <td>{formatTimestamp(t.lastRestoreTestAt)}</td>
                 <td>{t.lastRestoreTestOutcome ?? "—"}</td>
+                <td>{t.stale ? "Stale" : "Current"}</td>
               </tr>
             ))}
           </DataTable>
