@@ -212,7 +212,7 @@ class PlatformActionTest {
         integrationTypeController = new IntegrationTypeController(permissionService, integrationTypeRepository, platformAuditWriter);
 
         auditOutboxEventRepository = mock(PlatformAuditOutboxEventRepository.class);
-        auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository);
+        auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository, platformAuditWriter);
 
         usageMetricDailyRepository = mock(UsageMetricDailyRepository.class);
         tenantUsageMonthlyRepository = mock(com.edu360.api.platformops.usage.TenantUsageMonthlyRepository.class);
@@ -987,8 +987,8 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-ALLOW: Platform Admin views platform audit logs")
     void actPlatformAuditView_allow() {
-        when(auditOutboxEventRepository.findAllByOrderByOccurredAtDesc(any())).thenReturn(org.springframework.data.domain.Page.empty());
-        var res = auditLogController.listAuditLogs(0, 50, auth(PlatformRole.PLATFORM_ADMIN));
+        when(auditOutboxEventRepository.findFiltered(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(org.springframework.data.domain.Page.empty());
+        var res = auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, auth(PlatformRole.PLATFORM_ADMIN));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
@@ -996,22 +996,22 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-DENY: Billing Manager lacking PLATFORM_AUDIT_VIEW denied")
     void actPlatformAuditView_deny() {
-        assertThatThrownBy(() -> auditLogController.listAuditLogs(0, 50, auth(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, auth(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-SCOPE: Tenant principal rejected")
     void actPlatformAuditView_scope() {
-        assertThatThrownBy(() -> auditLogController.listAuditLogs(0, 50, tenantAuth(tenantId)))
+        assertThatThrownBy(() -> auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, tenantAuth(tenantId)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-GUARD: Audit page size clamped safely")
     void actPlatformAuditView_guard() {
-        when(auditOutboxEventRepository.findAllByOrderByOccurredAtDesc(any())).thenReturn(org.springframework.data.domain.Page.empty());
-        var res = auditLogController.listAuditLogs(-1, 500, auth(PlatformRole.PLATFORM_ADMIN));
+        when(auditOutboxEventRepository.findFiltered(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(org.springframework.data.domain.Page.empty());
+        var res = auditLogController.listAuditLogs(null, null, null, null, null, null, -1, 500, auth(PlatformRole.PLATFORM_ADMIN));
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 

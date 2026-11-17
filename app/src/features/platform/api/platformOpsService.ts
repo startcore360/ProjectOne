@@ -29,6 +29,8 @@ export type PlatformAuditLogItem = {
   entityId?: string;
   outcome: string;
   correlationId?: string;
+  eventType?: string;
+  payload?: Record<string, unknown> | null;
 };
 
 export type UsageMetricSnapshot = {
