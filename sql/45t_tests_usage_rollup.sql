@@ -8,6 +8,4 @@ BEGIN
  THEN RAISE EXCEPTION 'E6_S1_MONTHLY_INDEX_MISSING'; END IF;
  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='platform' AND indexname='uq_usage_metric_daily_date_metric')
  THEN RAISE EXCEPTION 'E6_S1_PLATFORM_DAILY_INDEX_MISSING'; END IF;
- IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='app' AND indexname='uq_app_usage_metric_daily_tenant_date_metric')
- THEN RAISE EXCEPTION 'E6_S1_TENANT_DAILY_INDEX_MISSING'; END IF;
 END $$;

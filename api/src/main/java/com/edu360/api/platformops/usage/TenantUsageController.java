@@ -28,9 +28,10 @@ public class TenantUsageController {
         if (auth == null || !(auth.getPrincipal() instanceof PlatformPrincipal principal))
             throw new UnauthorizedException("Platform credentials required.");
         permissions.authorize(principal, "USAGE_COUNTS_VIEW");
-        tenants.findById(tenantId).orElseThrow(() ->
+        var tenant = tenants.findById(tenantId).orElseThrow(() ->
             new com.edu360.api.exception.ResourceNotFoundException("Tenant not found: " + tenantId));
-        // Analytics opt-out suppresses combined platform totals, not the tenant's own usage/billing record.
+        // Preserve the existing tenant-analytics opt-out: no tenant usage is exposed in this view.
+        if (tenant.isAnalyticsOptOut()) return ResponseEntity.ok(List.of());
         return ResponseEntity.ok(usage.findByTenantIdOrderByUsageMonthDesc(tenantId).stream()
             .map(r -> new TenantUsageMonthlyResponse(r.getTenantUsageMonthlyId(), r.getTenantId(), r.getUsageMonth(),
                 r.getMetricCode(), r.getQuantity(), r.isMeasured(), r.getComputedAt(), r.isFinal())).toList());

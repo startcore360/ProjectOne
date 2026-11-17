@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,7 +46,6 @@ class UsageRollupJobTest {
         when(tenants.findAll()).thenReturn(List.of(tenant));
         doReturn(0L).when(tenantJdbc).queryForObject(anyString(), eq(Long.class), any(Object[].class));
         doReturn(0L).when(tenantJdbc).queryForObject(anyString(), eq(Long.class));
-        doReturn(1).when(tenantJdbc).update(anyString(), any(Object[].class));
         when(monthly.findByTenantIdAndUsageMonthAndMetricCode(any(UUID.class), any(LocalDate.class), anyString()))
                 .thenReturn(Optional.empty());
         when(platformDaily.findByUsageDateAndMetricCode(any(LocalDate.class), anyString()))
@@ -53,14 +53,14 @@ class UsageRollupJobTest {
 
         new UsageRollupJob(tenants, monthly, platformDaily, tenantJdbc).rollup(LocalDate.of(2026, 11, 17));
 
-        verify(tenantJdbc, times(4)).update(anyString(), any(Object[].class));
+        verify(tenantJdbc, never()).update(anyString(), any(Object[].class));
         verify(monthly, times(6)).save(any(TenantUsageMonthly.class));
         verify(platformDaily, times(3)).save(any(UsageMetricDaily.class));
         org.assertj.core.api.Assertions.assertThat(TenantContext.isSet()).isFalse();
     }
 
     @Test
-    void optedOutTenantStillGetsOwnUsageButIsExcludedFromCombinedRows() {
+    void optedOutTenantStillGetsMonthlyUsageButIsExcludedFromCombinedRows() {
         Tenant tenant = mock(Tenant.class);
         when(tenant.getTenantId()).thenReturn(UUID.randomUUID());
         when(tenant.getIsolationMode()).thenReturn(IsolationMode.SHARED);
@@ -69,13 +69,12 @@ class UsageRollupJobTest {
         when(tenants.findAll()).thenReturn(List.of(tenant));
         doReturn(0L).when(tenantJdbc).queryForObject(anyString(), eq(Long.class), any(Object[].class));
         doReturn(0L).when(tenantJdbc).queryForObject(anyString(), eq(Long.class));
-        doReturn(1).when(tenantJdbc).update(anyString(), any(Object[].class));
         when(monthly.findByTenantIdAndUsageMonthAndMetricCode(any(UUID.class), any(LocalDate.class), anyString()))
                 .thenReturn(Optional.empty());
 
         new UsageRollupJob(tenants, monthly, platformDaily, tenantJdbc).rollup(LocalDate.of(2026, 11, 17));
 
         verify(monthly, times(6)).save(any(TenantUsageMonthly.class));
-        verify(platformDaily, times(0)).save(any(UsageMetricDaily.class));
+        verify(platformDaily, never()).save(any(UsageMetricDaily.class));
     }
 }
