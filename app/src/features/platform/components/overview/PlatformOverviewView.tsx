@@ -7,8 +7,15 @@ import { platformTenantService, type TenantItem } from "../../api/platformTenant
 import { platformUserService, type PlatformUserItem } from "../../api/platformUserService";
 import { platformOpsService, type PlatformAuditLogItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
+import { ProductOwnerDashboard } from "./ProductOwnerDashboard";
 
 export function PlatformOverviewView() {
+  const { role } = usePlatformAccess();
+  if (role === "PRODUCT_OWNER") return <ProductOwnerDashboard />;
+  return <LegacyPlatformOverviewView />;
+}
+
+function LegacyPlatformOverviewView() {
   const { can, canAny, role } = usePlatformAccess();
   const canViewTenants = canAny(["TENANT_CREATE", "TENANT_SETTINGS", "TENANT_ACTIVATE", "TENANT_SUSPEND_ARCHIVE", "INVOICE_MANAGE", "SUPPORT_TICKET_MANAGE"]);
   const canViewUsers = can("PLATFORM_USER_MANAGE");

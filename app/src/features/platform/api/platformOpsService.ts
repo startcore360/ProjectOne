@@ -47,6 +47,7 @@ export type UsageCountsResponse = {
 };
 
 export type BackupStatusItem = {
+  stale?: boolean;
   tenantId: string;
   lastDailyBackupAt: string;
   lastBackupOutcome: "SUCCESS" | "FAILED" | "IN_PROGRESS" | string;
@@ -219,8 +220,8 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async getPlatformBackupStatus(): Promise<BackupStatusItem[]> {
-    const res = await api.get<BackupStatusItem[]>("/platform/backup-status");
+  async getPlatformBackupStatus(): Promise<{ wiredToRealBackupSystem: boolean; note: string; tenants: BackupStatusItem[] }> {
+    const res = await api.get<{ wiredToRealBackupSystem: boolean; note: string; tenants: BackupStatusItem[] }>("/platform/backup-status");
     return res.data;
   },
 

@@ -89,9 +89,9 @@ describe("Sprint 1 platform screens", () => {
       return Promise.resolve({ data: { items: [] } });
     });
     renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>);
-    expect(screen.getByRole("heading", { name: "Platform overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Product Owner dashboard" })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("Greenwood Public School")).toBeInTheDocument();
+      expect(screen.getByText("Tenants by state")).toBeInTheDocument();
     });
   });
 
