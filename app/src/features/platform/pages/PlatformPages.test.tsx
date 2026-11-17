@@ -793,23 +793,26 @@ describe("AuditLogPage (wired to GET /api/platform/audit-logs)", () => {
 });
 
 describe("UsageCountsPage (wired to GET /api/platform/usage-counts)", () => {
-  it("shows real counts and marks the flagged gap as not available", async () => {
+  it("shows real counts including materialized active users", async () => {
     mockedApi.get.mockResolvedValue({
       data: {
         totalTenantCount: 4,
+        tenantsInAnalytics: 3,
+        tenantsOptedOut: 1,
         metrics: [
           { metricCode: "LOGINS", value: 120, asOfDate: "2026-11-04" },
           { metricCode: "ATTENDANCE_MARKED", value: null, asOfDate: null },
+          { metricCode: "ACTIVE_USERS", value: 45, asOfDate: "2026-11-01" },
         ],
-        totalUserCountGap: "Not available: cross-tenant RLS boundary.",
       },
     });
     render(<UsageCountsPage />);
     await waitFor(() => expect(screen.getByText("Logins")).toBeInTheDocument());
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("Not available")).toBeInTheDocument();
-    expect(screen.getByText(/Total user count: not available\./)).toBeInTheDocument();
-    expect(screen.getByText(/cross-tenant RLS boundary\./)).toBeInTheDocument();
+    expect(screen.getByText("Active users")).toBeInTheDocument();
+    expect(screen.getByText("45")).toBeInTheDocument();
+    expect(screen.queryByText(/Total user count: not available/)).not.toBeInTheDocument();
   });
 
   it("shows an error state on failure", async () => {

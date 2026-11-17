@@ -26,6 +26,7 @@ describe("TenantUsageModal", () => {
         usageMonth: "2026-10-01",
         metricCode: "API_CALLS",
         quantity: 1250,
+        measured: true,
         computedAt: "2026-11-01T10:00:00Z",
         isFinal: true,
       }],
@@ -36,7 +37,27 @@ describe("TenantUsageModal", () => {
     await waitFor(() => expect(screen.getByText("API_CALLS")).toBeInTheDocument());
     expect(screen.getByText("2026-10")).toBeInTheDocument();
     expect(screen.getByText("1,250")).toBeInTheDocument();
+    expect(screen.getAllByText("Yes")).toHaveLength(2);
     expect(screen.getByText("Yes")).toBeInTheDocument();
+  });
+
+  it("labels unavailable SMS metrics as not measured rather than zero", async () => {
+    service.getTenantUsage.mockResolvedValue({
+      data: [{
+        tenantUsageMonthlyId: "usage-sms",
+        tenantId: "tenant-1",
+        usageMonth: "2026-10-01",
+        metricCode: "SMS_SENT",
+        quantity: 0,
+        measured: false,
+        computedAt: "2026-11-01T10:00:00Z",
+        isFinal: true,
+      }],
+    } as never);
+    render(<TenantUsageModal isOpen onClose={vi.fn()} tenant={tenant} />);
+    await waitFor(() => expect(screen.getByText("SMS_SENT")).toBeInTheDocument());
+    expect(screen.getByText("Not measured")).toBeInTheDocument();
+    expect(screen.getByText("No")).toBeInTheDocument();
   });
 
   it("renders an empty state when no monthly usage rows exist", async () => {

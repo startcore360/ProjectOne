@@ -151,6 +151,7 @@ class PlatformActionTest {
     private PlatformAuditLogController auditLogController;
 
     private UsageMetricDailyRepository usageMetricDailyRepository;
+    private com.edu360.api.platformops.usage.TenantUsageMonthlyRepository tenantUsageMonthlyRepository;
     private UsageCountsController usageCountsController;
 
     private TenantBackupStatusRepository tenantBackupStatusRepository;
@@ -214,7 +215,8 @@ class PlatformActionTest {
         auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository);
 
         usageMetricDailyRepository = mock(UsageMetricDailyRepository.class);
-        usageCountsController = new UsageCountsController(permissionService, tenantRepository, usageMetricDailyRepository);
+        tenantUsageMonthlyRepository = mock(com.edu360.api.platformops.usage.TenantUsageMonthlyRepository.class);
+        usageCountsController = new UsageCountsController(permissionService, tenantRepository, usageMetricDailyRepository, tenantUsageMonthlyRepository);
 
         tenantBackupStatusRepository = mock(TenantBackupStatusRepository.class);
         backupStatusController = new BackupStatusController(permissionService, tenantBackupStatusRepository);
@@ -1047,7 +1049,7 @@ class PlatformActionTest {
     void actUsageCountsView_guard() {
         when(tenantRepository.count()).thenReturn(5L);
         var res = usageCountsController.usageCounts(auth(PlatformRole.PRODUCT_OWNER));
-        assertThat(res.getBody().totalUserCountGap()).contains("break tenant isolation");
+        assertThat(res.getBody().metrics()).anySatisfy(metric -> assertThat(metric.metricCode()).isEqualTo("ACTIVE_USERS"));
     }
 
     // =========================================================================

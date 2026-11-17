@@ -194,6 +194,7 @@ export type TenantUsageMonthlyDto = {
   usageMonth: string;
   metricCode: string;
   quantity: number;
+  measured: boolean;
   computedAt: string;
   isFinal: boolean;
 };

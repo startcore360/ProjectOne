@@ -100,13 +100,15 @@ export type UsageMetric = { metricCode: string; value: number | null; asOfDate: 
 
 export type UsageCounts = {
   totalTenantCount: number;
+  tenantsInAnalytics: number;
+  tenantsOptedOut: number;
   metrics: UsageMetric[];
-  totalUserCountGap: string | null;
 };
 
 export const USAGE_METRIC_LABELS: Record<string, string> = {
   LOGINS: "Logins",
   ATTENDANCE_MARKED: "Attendance marked",
   FEES_PAID_ONLINE: "Fees paid online",
+  ACTIVE_USERS: "Active users",
 };
 

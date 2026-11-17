@@ -32,15 +32,16 @@ export type PlatformAuditLogItem = {
 };
 
 export type UsageMetricSnapshot = {
-  metricName: string;
-  latestValue: number;
-  asOfDate: string;
+  metricCode: string;
+  value: number | null;
+  asOfDate: string | null;
 };
 
 export type UsageCountsResponse = {
   totalTenantCount: number;
+  tenantsInAnalytics: number;
+  tenantsOptedOut: number;
   metrics: UsageMetricSnapshot[];
-  totalUserCountGap?: string;
 };
 
 export type BackupStatusItem = {
