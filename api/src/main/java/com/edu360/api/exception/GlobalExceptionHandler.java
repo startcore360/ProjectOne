@@ -210,8 +210,10 @@ public class GlobalExceptionHandler {
             return buildResponse(HttpStatus.CONFLICT,"DUPLICATE_RESOURCE","A record with this identifier already exists.",request);
         if (msg.contains("foreign key") || msg.contains("referential integrity"))
             return buildResponse(HttpStatus.NOT_FOUND,"REFERENCE_NOT_FOUND","Referenced entity was not found in the current scope.",request);
-        if (ex instanceof DataAccessException && !(ex instanceof org.springframework.dao.DataIntegrityViolationException))
+        if (ex instanceof DataAccessException && !(ex instanceof org.springframework.dao.DataIntegrityViolationException)) {
+            log.error("DataAccessException occurred: {}", ex.getMessage(), ex);
             return buildResponse(HttpStatus.SERVICE_UNAVAILABLE,"DATABASE_UNAVAILABLE","The database could not complete the operation.",request);
+        }
         return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"BUSINESS_RULE_VIOLATION","The requested operation violates a business rule constraint.",request);
     }
 
