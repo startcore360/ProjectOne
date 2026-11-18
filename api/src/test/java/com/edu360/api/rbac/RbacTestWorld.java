@@ -346,7 +346,13 @@ public final class RbacTestWorld {
         lenient().when(userIdentityLinkRepository.findByIdTenantIdAndIdentityRealmAndIdentitySubjectAndStatus(
                 tenantId, tenant.getKeycloakRealm(), subject, IdentityLinkStatus.ACTIVE)).thenReturn(Optional.of(link));
         new TenantUserLookup(userIdentityLinkRepository, userAccountRepository, userRoleAssignmentRepository,
-                roleDefinitionRepository, userActiveRoleRepository)
+                roleDefinitionRepository, userActiveRoleRepository, auditLogService,
+                new org.springframework.transaction.support.TransactionTemplate(new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+                    @Override protected Object doGetTransaction() { return new Object(); }
+                    @Override protected void doBegin(Object tx, org.springframework.transaction.TransactionDefinition def) {}
+                    @Override protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus st) {}
+                    @Override protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus st) {}
+                }))
                 .resolveActiveUser(tenant, tenant.getKeycloakRealm(), subject);
     }
 
