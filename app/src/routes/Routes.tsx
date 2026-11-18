@@ -48,7 +48,7 @@ import {
 import { UserDetailPage, UserListPage } from "../features/user-management/pages/UserManagementPages";
 import TenantSupportPage from "../features/institution-admin/pages/TenantSupportPage";
 import StaffRecordsPage from "../features/institution-admin/pages/StaffRecordsPage";
-import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole } from "../features/platform/platformAccess";
+import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole, platformLandingPath } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
@@ -61,7 +61,7 @@ import { TENANT_ROUTE_ACTIONS } from "./tenantRouteActions";
 // string. platformRole is real, so this branch can be checked for real.
 function RoleHomeRedirect() {
   const platformRole = useAppSelector((state) => state.auth.user?.platformRole);
-  if (canOpenPlatformConsole(platformRole)) return <Navigate to="/platform" replace />;
+  if (canOpenPlatformConsole(platformRole)) return <Navigate to={platformLandingPath(platformRole)} replace />;
   // There is no tenant-side "university admin" role on the backend yet (Foundation item 7,
   // not yet built - no role field exists on AuthUserResponse beyond userType), so that branch
   // can't be satisfied by any real login right now. Default everyone else to the one route

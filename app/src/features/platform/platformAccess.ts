@@ -62,6 +62,17 @@ const STANDARD_ACTIONS: Record<string, string[]> = {
   ],
 };
 
+export function filterPlatformNavigation<T extends { anyOf: string[] | null }>(items: T[], actions: string[]): T[] {
+  const granted = new Set(actions);
+  return items.filter((item) => !item.anyOf || item.anyOf.some((action) => granted.has(action)));
+}
+
+export function platformLandingPath(platformRole: string | null | undefined): string {
+  if (platformRole === "RELEASE_MANAGER") return "/platform/releases";
+  if (platformRole === "DATA_PROTECTION_OFFICER") return "/platform/data-protection";
+  return "/platform";
+}
+
 export const PLATFORM_PAGE_ACTIONS = {
   tenants: [
     "TENANT_CREATE",
@@ -92,6 +103,7 @@ export function usePlatformAccess() {
   const current = stored && stored.userId === user?.id ? stored : null;
   const actions = current?.actions ?? STANDARD_ACTIONS[user?.platformRole ?? ""] ?? null;
   const actionsKey = actions?.join(",") ?? "";
+  const serverActions = current?.actions ?? [];
 
   const can = useCallback((action: string) => actionsKey.split(",").includes(action), [actionsKey]);
   const canAny = useCallback(
@@ -103,6 +115,7 @@ export function usePlatformAccess() {
     role: user?.platformRole ?? null,
     can,
     canAny,
+    permissionsLoaded: current !== null,
     customRoleName: current?.customRoleName ?? null,
     stepInRequired: current?.stepInRequired ?? [],
     steppedIn: current?.steppedIn ?? [],
@@ -116,22 +129,20 @@ type MyPermissions = {
   steppedIn?: string[];
 };
 
-// Fails quietly: the screen keeps the standard rights and the server still checks every call.
+// Navigation fails closed until the server's current action set is available.
 export async function loadPlatformPermissions(dispatch: AppDispatch, userId: string) {
   try {
     const res = await api.get<MyPermissions>("/platform/me/permissions");
-    if (Array.isArray(res?.data?.actions)) {
-      dispatch(
-        setPlatformPermissions({
-          userId,
-          actions: res.data.actions,
-          customRoleName: res.data.customRoleName ?? null,
-          stepInRequired: res.data.stepInRequired ?? [],
-          steppedIn: res.data.steppedIn ?? [],
-        }),
-      );
-    }
+    dispatch(
+      setPlatformPermissions({
+        userId,
+        actions: Array.isArray(res?.data?.actions) ? res.data.actions : [],
+        customRoleName: res.data?.customRoleName ?? null,
+        stepInRequired: res.data?.stepInRequired ?? [],
+        steppedIn: res.data?.steppedIn ?? [],
+      }),
+    );
   } catch {
-    // Nothing to show the user here: every page reports its own errors.
+    dispatch(setPlatformPermissions({ userId, actions: [], customRoleName: null, stepInRequired: [], steppedIn: [] }));
   }
 }
