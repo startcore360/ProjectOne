@@ -9,11 +9,13 @@ import { platformOpsService, type PlatformAuditLogItem } from "../../api/platfor
 import { usePlatformAccess } from "../../platformAccess";
 import { ProductOwnerDashboard } from "./ProductOwnerDashboard";
 import { PlatformAdminDashboard } from "./PlatformAdminDashboard";
+import { BillingManagerDashboard } from "./BillingManagerDashboard";
 
 export function PlatformOverviewView() {
   const { role } = usePlatformAccess();
   if (role === "PRODUCT_OWNER") return <ProductOwnerDashboard />;
   if (role === "PLATFORM_ADMIN") return <PlatformAdminDashboard />;
+  if (role === "BILLING_MANAGER") return <BillingManagerDashboard />;
   return <LegacyPlatformOverviewView />;
 }
 
