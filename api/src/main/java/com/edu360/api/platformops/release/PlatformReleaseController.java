@@ -3,6 +3,7 @@ package com.edu360.api.platformops.release;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,6 +31,12 @@ public class PlatformReleaseController {
 
     private final PlatformReleaseService releaseService;
     private final PlatformPermissionService permissionService;
+    private PlatformReleaseHealthService healthService;
+
+    @Autowired
+    public void setHealthService(PlatformReleaseHealthService healthService) {
+        this.healthService = healthService;
+    }
 
     @GetMapping
     public ResponseEntity<List<ReleaseResponse>> listReleases(Authentication auth) {
@@ -43,6 +50,16 @@ public class PlatformReleaseController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "RELEASE_MANAGE");
         return ResponseEntity.ok(releaseService.getRelease(id));
+    }
+
+    @GetMapping("/{id}/health")
+    public ResponseEntity<ReleaseHealthResponse> getReleaseHealth(@PathVariable UUID id, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "RELEASE_MANAGE");
+        if (healthService == null) {
+            throw new IllegalStateException("Release health service is unavailable.");
+        }
+        return ResponseEntity.ok(healthService.getHealth(id));
     }
 
     @PostMapping

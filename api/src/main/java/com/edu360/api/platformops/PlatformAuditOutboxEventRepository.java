@@ -11,6 +11,9 @@ import org.springframework.data.repository.query.Param;
 public interface PlatformAuditOutboxEventRepository extends JpaRepository<PlatformAuditOutboxEvent, UUID> {
     Page<PlatformAuditOutboxEvent> findAllByOrderByOccurredAtDesc(Pageable pageable);
 
+    long countByOutcomeAndOccurredAtGreaterThanEqualAndOccurredAtLessThan(
+            String outcome, Instant fromAt, Instant toAt);
+
     @Query(value = """
         SELECT e FROM PlatformAuditOutboxEvent e
          WHERE (:tenantId IS NULL OR e.tenantId = :tenantId)

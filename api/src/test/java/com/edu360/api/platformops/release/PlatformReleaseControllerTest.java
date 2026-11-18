@@ -38,6 +38,7 @@ class PlatformReleaseControllerTest {
     private PlatformPermissionService permissionService;
     private PlatformReleaseService releaseService;
     private PlatformReleaseNotificationService releaseNotificationService;
+    private PlatformReleaseHealthService releaseHealthService;
     private PlatformReleaseController controller;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -48,9 +49,11 @@ class PlatformReleaseControllerTest {
         auditLogService = mock(AuditLogService.class);
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         releaseNotificationService = mock(PlatformReleaseNotificationService.class);
+        releaseHealthService = mock(PlatformReleaseHealthService.class);
         releaseService = new PlatformReleaseService(releaseRepository,
                 org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), releaseNotificationService);
         controller = new PlatformReleaseController(releaseService, permissionService);
+        controller.setHealthService(releaseHealthService);
     }
 
     private Authentication authFor(PlatformRole role) {
@@ -100,6 +103,25 @@ class PlatformReleaseControllerTest {
         assertThat(res.getBody().status()).isEqualTo("DEPLOYED");
         assertThat(res.getBody().deployedAt()).isNotNull();
         verify(releaseNotificationService).notifyTenantAdmins(release);
+    }
+
+    @Test
+    void releaseHealthIsAvailableToReleaseManager() {
+        UUID releaseId = UUID.randomUUID();
+        Instant deployedAt = Instant.now().minus(2, ChronoUnit.DAYS);
+        ReleaseHealthResponse.Window before = new ReleaseHealthResponse.Window(
+                deployedAt.minus(24, ChronoUnit.HOURS), deployedAt, 2L, null, true);
+        ReleaseHealthResponse.Window after = new ReleaseHealthResponse.Window(
+                deployedAt, deployedAt.plus(24, ChronoUnit.HOURS), 1L, null, true);
+        ReleaseHealthResponse expected = new ReleaseHealthResponse(
+                releaseId, "v4.3.0", deployedAt, before, after);
+        when(releaseHealthService.getHealth(releaseId)).thenReturn(expected);
+
+        ResponseEntity<ReleaseHealthResponse> response =
+                controller.getReleaseHealth(releaseId, authFor(PlatformRole.RELEASE_MANAGER));
+
+        assertThat(response.getBody()).isEqualTo(expected);
+        verify(releaseHealthService).getHealth(releaseId);
     }
 
     @Test
