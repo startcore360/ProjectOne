@@ -14,7 +14,8 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 public interface ExportRequestRepository extends JpaRepository<ExportRequest, UUID> {
-    List<ExportRequest> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);\n    Optional<ExportRequest> findByExportRequestIdAndTenantId(UUID exportRequestId, UUID tenantId);
+    List<ExportRequest> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+    Optional<ExportRequest> findByExportRequestIdAndTenantId(UUID exportRequestId, UUID tenantId);
     Optional<ExportRequest> findFirstByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     List<ExportRequest> findAllByOrderByCreatedAtDesc();
     List<ExportRequest> findByStatusOrderByCreatedAtDesc(String status);
