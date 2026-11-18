@@ -64,7 +64,7 @@ describe("BillingManagerDashboard tile states", () => {
     renderDashboard();
 
     await waitFor(() => expect(screen.getByText("Invoices overdue")).toBeInTheDocument());
-    expect(screen.getByText("INR 125,000")).toBeInTheDocument();
+    expect(screen.getByText("INR 1,25,000")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getAllByText("1")).toHaveLength(3);
     expect(ops.listInvoices).toHaveBeenCalledTimes(1);
