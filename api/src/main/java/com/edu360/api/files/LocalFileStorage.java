@@ -77,6 +77,23 @@ public class LocalFileStorage implements FileStorage {
         }
     }
 
+    @Override
+    public void delete(String storageKey) {
+        Path target = baseDir.resolve(storageKey).normalize();
+        if (!target.startsWith(baseDir)) throw new IllegalArgumentException("Invalid storage key.");
+        try {
+            if (!Files.exists(target)) return; // idempotent
+            Path realBase = baseDir.toRealPath();
+            Path realTarget = target.toRealPath();
+            if (!realTarget.startsWith(realBase) || !Files.isRegularFile(realTarget)) {
+                throw new IllegalArgumentException("Invalid storage key.");
+            }
+            Files.deleteIfExists(realTarget);
+        } catch (IOException ex) {
+            throw new UncheckedFileStorageException("Could not delete stored file", ex);
+        }
+    }
+
     public static class UncheckedFileStorageException extends RuntimeException {
         public UncheckedFileStorageException(String message, Throwable cause) { super(message, cause); }
     }

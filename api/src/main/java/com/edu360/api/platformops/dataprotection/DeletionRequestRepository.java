@@ -16,6 +16,7 @@ public interface DeletionRequestRepository extends JpaRepository<DeletionRequest
     List<DeletionRequest> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     Optional<DeletionRequest> findFirstByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     boolean existsByTenantIdAndStatusIn(UUID tenantId, java.util.Collection<String> statuses);
+    long countByStatus(String status);
 
     /**
      * Rows the readiness job may move forward, locked for the transaction so two app instances running the

@@ -306,8 +306,10 @@ public class PlatformDataProtectionService {
      * PO_CONFIRMED → EXPORT_DONE once the linked export has been produced;
      * EXPORT_DONE → PENDING_DPO once {@code retention_ends_at <= today} or a Product Owner waiver is recorded.
      * Both steps can happen in one run. Returns the number of status changes made.
+     * Runs on platformTransactionManager: deletion_request is a platform.* table, and its FOR UPDATE lock
+     * must be held by a read-write platform transaction (a plain @Transactional would use the tenant one).
      */
-    @Transactional
+    @Transactional(transactionManager = "platformTransactionManager")
     public int advanceDeletionReadiness(LocalDate today) {
         int transitions = 0;
         for (DeletionRequest request : deletionRequestRepository.findReadinessCandidatesForUpdate(READINESS_STATUSES)) {
