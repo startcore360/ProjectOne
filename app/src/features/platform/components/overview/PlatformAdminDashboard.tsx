@@ -48,15 +48,16 @@ export function PlatformAdminDashboard() {
       catch (error) { set(key, { status: "error", detail: error instanceof Error ? error.message : "Request failed" }); }
     };
     const tenantRead = canAny(["TENANT_CREATE", "TENANT_SETTINGS", "TENANT_ACTIVATE", "TENANT_SUSPEND_ARCHIVE", "INVOICE_MANAGE", "SUPPORT_TICKET_MANAGE"]);
+    let tenantsPromise: Promise<TenantItem[]> | undefined;
+    const loadTenants = () => (tenantsPromise ??= getAllTenants());
     const provisioningRead = canAny(["TENANT_CREATE", "TENANT_SETTINGS"]);
     void load("pendingActivation", tenantRead, async () => {
-      const tenants = await getAllTenants();
+      const tenants = await loadTenants();
       return { status: "ok", value: tenants.filter(tenant => tenant.state === "TRIAL").length };
     });
     void load("failedSetups", provisioningRead, async () => {
-      const tenants = await getAllTenants();
-      const statuses = await Promise.all(tenants.map(tenant => platformTenantService.getProvisioning(tenant.tenantId)));
-      return { status: "ok", value: statuses.filter(response => response.data.overallStatus === "FAILED").length };
+      const tenants = await loadTenants();
+      return { status: "ok", value: tenants.filter(tenant => tenant.state === "CREATED").length };
     });
     void load("openTickets", can("SUPPORT_TICKET_MANAGE"), async () => {
       const tickets: SupportTicketItem[] = await platformOpsService.listSupportTickets();

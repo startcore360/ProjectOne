@@ -16,7 +16,6 @@ vi.mock("../../platformAccess", () => ({ usePlatformAccess: () => access }));
 vi.mock("../../api/platformTenantService", () => ({
   platformTenantService: {
     getTenants: vi.fn(),
-    getProvisioning: vi.fn(),
   },
 }));
 vi.mock("../../api/platformOpsService", () => ({
@@ -38,7 +37,6 @@ function resolveAllEmpty() {
   tenants.getTenants.mockResolvedValue({
     data: { items: [], page: 0, size: 200, totalElements: 0, totalPages: 0 },
   } as never);
-  tenants.getProvisioning.mockResolvedValue({ data: { overallStatus: "DONE" } } as never);
   ops.listSupportTickets.mockResolvedValue([] as never);
   ops.getPlatformBackupStatus.mockResolvedValue({ tenants: [] } as never);
 }
@@ -62,6 +60,26 @@ describe("PlatformAdminDashboard tile states", () => {
     expect(screen.getByText("Loading failed setups...")).toBeInTheDocument();
     expect(screen.getByText("Loading open tickets...")).toBeInTheDocument();
     expect(screen.getByText("Loading backup alerts...")).toBeInTheDocument();
+  });
+
+  it("loads the tenant list once and counts CREATED tenants as failed setups", async () => {
+    tenants.getTenants.mockResolvedValue({
+      data: { items: [
+        { tenantId: "trial-1", state: "TRIAL" },
+        { tenantId: "created-1", state: "CREATED" },
+        { tenantId: "created-2", state: "CREATED" },
+        { tenantId: "active-1", state: "ACTIVE" },
+      ], page: 0, size: 200, totalElements: 4, totalPages: 1 },
+    } as never);
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getByText("Tenants pending activation")).toBeInTheDocument();
+      expect(screen.getByText("Failed setups")).toBeInTheDocument();
+    });
+    expect(tenants.getTenants).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("shows real zero counts for empty tenant, setup and ticket sources", async () => {
