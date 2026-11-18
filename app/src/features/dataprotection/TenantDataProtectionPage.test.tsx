@@ -22,7 +22,7 @@ const service = vi.mocked(tenantDataProtectionService);
 function renderPage(actions = ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"]) {
   const store = configureStore({ reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer } });
   store.dispatch(setUser({
-    id: "tenant-user-1", displayName: "Tenant Admin", tenantId: "tenant-1", userType: "TENANT",
+    id: "tenant-user-1", displayName: "Tenant Admin", tenantId: "tenant-1", userType: "STAFF",
     platformRole: null, roleCode: "SCHOOL_ADMIN", roleName: "School Admin", photoUrl: null, mustChangePassword: false,
   }));
   store.dispatch(setTenantPermissions({
@@ -46,7 +46,7 @@ describe("TenantDataProtectionPage", () => {
     service.listExports.mockResolvedValue({ data: [{
       exportRequestId: "export-1", tenantId: "tenant-1", tenantName: "Northfield", status: "READY",
       requestedByKind: "TENANT_ADMIN", createdAt: "2026-11-01T10:00:00Z",
-      downloadExpiresAt: "2026-11-02T10:00:00Z", rowVersion: 1,
+      downloadExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), rowVersion: 1,
     }] } as never);
     renderPage(["TENANT_EXPORT_REQUEST"]);
 

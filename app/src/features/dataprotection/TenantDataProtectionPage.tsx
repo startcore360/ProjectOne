@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../../services/axios";
 import { getApiErrorMessage } from "../../services/apiHelper";
 import { useAppSelector } from "../../store/hooks";
 import { useTenantAccess } from "../profile/hooks/useTenantAccess";
