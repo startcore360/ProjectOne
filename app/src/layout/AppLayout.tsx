@@ -262,6 +262,7 @@ export default function AppLayout() {
   const academicNavigation = tenantPermissionsLoading ? [] : [
     { label: "Support", to: "/support", icon: "help" as const, important: false, anyOf: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"] },
     { label: "Staff records", to: "/university/staff", icon: "users" as const, important: false, anyOf: ["STAFF_RECORD_VIEW"] },
+    { label: "Data protection", to: "/tenant/data-protection", icon: "shield" as const, important: false, anyOf: ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"] },
   ].filter((item) => canTenantAny(item.anyOf));
   const navigation = isPlatformConsole ? baseNavigation : [...baseNavigation, ...academicNavigation];
 

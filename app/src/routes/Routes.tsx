@@ -48,6 +48,7 @@ import {
 import { UserDetailPage, UserListPage } from "../features/user-management/pages/UserManagementPages";
 import TenantSupportPage from "../features/institution-admin/pages/TenantSupportPage";
 import StaffRecordsPage from "../features/institution-admin/pages/StaffRecordsPage";
+import TenantDataProtectionPage from "../features/dataprotection/TenantDataProtectionPage";
 import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole, platformLandingPath } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
@@ -110,6 +111,7 @@ export default function AppRoutes() {
             <Route path="/university/setup/academic-governance" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicGovernance}><AcademicGovernancePage /></ActionGate>} />
             <Route path="/tenants/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
             <Route path="/tenants/users/:userId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserDetailPage /></ActionGate>} />
+            <Route path="/tenant/data-protection" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.dataProtection}><TenantDataProtectionPage /></ActionGate>} />
           </Route>
         </Route>
         <Route element={<PlatformConsoleRoute />}>
