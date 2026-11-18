@@ -29,7 +29,7 @@ public class AuditLogService {
  private static final Set<String> OUTCOMES=Set.of("SUCCESS","DENIED","FAILED");
  private static final java.util.regex.Pattern UUID_PATTERN=java.util.regex.Pattern.compile("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
  private static final java.util.regex.Pattern SUPPORT_TICKET_PATTERN=java.util.regex.Pattern.compile("(?i)^SUP-\\d{4}-[A-Z0-9]{4,10}$");
- private static final java.util.regex.Pattern CODE_SEQUENCE_PATTERN=java.util.regex.Pattern.compile("(?i)^[A-Z0-9]+(-[A-Z0-9]+)*-\\d{2,4}-\\d{3,6}$");
+ private static final java.util.regex.Pattern CODE_SEQUENCE_PATTERN=java.util.regex.Pattern.compile("(?i)^[A-Z][A-Z0-9_]*(-[A-Z][A-Z0-9_]*)*-((\\d{4}-\\d{3,5})|(\\d{2}-\\d{3,7}))$");
  private final AuditLogRepository legacy; private final TenantAuditStore tenant;
  private final ObjectMapper mapper=new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS,true);
  @Autowired public AuditLogService(AuditLogRepository legacy,TenantAuditStore tenant){this.legacy=legacy;this.tenant=tenant;}
