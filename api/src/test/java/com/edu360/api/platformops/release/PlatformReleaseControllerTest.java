@@ -82,7 +82,8 @@ class PlatformReleaseControllerTest {
         PlatformRelease release = PlatformRelease.builder()
                 .releaseId(releaseId)
                 .versionLabel("v4.0.0")
-                .status("UPLOADED")
+                .status("STAGING_TESTED")
+                .scheduledAt(Instant.now().minus(1, ChronoUnit.HOURS))
                 .build();
 
         when(releaseRepository.findById(releaseId)).thenReturn(Optional.of(release));
