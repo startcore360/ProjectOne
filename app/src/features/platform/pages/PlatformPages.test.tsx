@@ -96,6 +96,36 @@ describe("Sprint 1 platform screens", () => {
   });
 
 
+
+  it("shows the Platform Admin dashboard only for Platform Admin and uses its existing read endpoints", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes("/platform/tenants")) {
+        return Promise.resolve({ data: {
+          items: [{ tenantId: "tenant-pa-1", state: "TRIAL" }],
+          page: 0, size: 200, totalElements: 1, totalPages: 1,
+        } });
+      }
+      if (url.includes("/provisioning")) {
+        return Promise.resolve({ data: { overallStatus: "DONE", steps: [] } });
+      }
+      if (url.includes("/support-tickets")) return Promise.resolve({ data: [] });
+      if (url.includes("/backup-status")) {
+        return Promise.resolve({ data: { wiredToRealBackupSystem: true, note: "", tenants: [{ tenantId: "tenant-pa-1", stale: true }] } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>, "PLATFORM_ADMIN");
+
+    expect(screen.getByRole("heading", { name: "Platform Admin dashboard" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Tenants pending activation")).toBeInTheDocument());
+    expect(screen.getByText("Failed setups")).toBeInTheDocument();
+    expect(screen.getByText("Open tickets")).toBeInTheDocument();
+    expect(screen.getByText("Backup alerts")).toBeInTheDocument();
+    expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
+    expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/backup-status"));
+  });
+
   it("loads only overview data allowed to a Billing Manager", async () => {
     mockedApi.get.mockResolvedValue({ data: { items: [] } });
     renderWithStore(<PlatformOverviewPage />, "BILLING_MANAGER");

@@ -8,10 +8,12 @@ import { platformUserService, type PlatformUserItem } from "../../api/platformUs
 import { platformOpsService, type PlatformAuditLogItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
 import { ProductOwnerDashboard } from "./ProductOwnerDashboard";
+import { PlatformAdminDashboard } from "./PlatformAdminDashboard";
 
 export function PlatformOverviewView() {
   const { role } = usePlatformAccess();
   if (role === "PRODUCT_OWNER") return <ProductOwnerDashboard />;
+  if (role === "PLATFORM_ADMIN") return <PlatformAdminDashboard />;
   return <LegacyPlatformOverviewView />;
 }
 
