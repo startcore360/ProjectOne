@@ -88,7 +88,7 @@ class PlatformReleaseControllerTest {
         when(releaseRepository.findById(releaseId)).thenReturn(Optional.of(release));
         when(releaseRepository.save(any(PlatformRelease.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ReleaseTransitionRequest req = new ReleaseTransitionRequest("DEPLOYED");
+        ReleaseTransitionRequest req = new ReleaseTransitionRequest("DEPLOYED", null);
         ResponseEntity<ReleaseResponse> res = controller.transitionRelease(releaseId, req, authFor(PlatformRole.PRODUCT_OWNER));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
