@@ -388,6 +388,11 @@ export const platformOpsService = {
     await api.delete("/platform/support-sessions/current");
   },
 
+  async getActiveSupportSessionCount(): Promise<{ count: number }> {
+    const res = await api.get<{ count: number }>("/platform/support-sessions/active-count");
+    return res.data;
+  },
+
   async listActiveGrants(): Promise<SupportAccessGrantItem[]> {
     const res = await api.get<SupportAccessGrantItem[]>("/platform/support-access-grants");
     return res.data;

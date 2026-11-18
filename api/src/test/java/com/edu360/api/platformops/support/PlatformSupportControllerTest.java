@@ -56,6 +56,17 @@ class PlatformSupportControllerTest {
     }
 
     @Test
+    void ACT_SUPPORT_ACCESS_USE_GUARD_activeSessionCountReturnsRepositoryCount() {
+        when(supportSessionService.countActiveSessions()).thenReturn(2L);
+
+        ResponseEntity<java.util.Map<String, Long>> response = controller.countActiveSupportSessions(
+                authFor(PlatformRole.SUPPORT_MANAGER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsEntry("count", 2L);
+    }
+
+    @Test
     void ACT_SUPPORT_TICKET_MANAGE_GUARD_resolvedRequiresNote() {
         UUID ticketId = UUID.randomUUID();
         SupportTicket ticket = SupportTicket.builder()

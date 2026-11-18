@@ -53,6 +53,14 @@ class SupportSessionServiceTest {
     }
 
     @Test
+    void countsOnlyUnendedSessionsThatHaveNotExpired() {
+        when(sessions.countByEndedAtIsNullAndExpiresAtAfter(any())).thenReturn(3L);
+
+        assertThat(service.countActiveSessions()).isEqualTo(3L);
+        verify(sessions).countByEndedAtIsNullAndExpiresAtAfter(any());
+    }
+
+    @Test
     void sessionExpiryIsCappedAtOneHourAndTenantGrantExpiry() {
         SupportTicket ticket = SupportTicket.builder().supportTicketId(ticketId).tenantId(tenantId).build();
         SupportAccessGrant grant = mock(SupportAccessGrant.class);

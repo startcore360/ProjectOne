@@ -36,6 +36,11 @@ public class SupportSessionService {
     @Value("${app.support-session.tenant-port:}")
     private String tenantPort;
 
+    @Transactional(readOnly = true)
+    public long countActiveSessions() {
+        return sessionRepository.countByEndedAtIsNullAndExpiresAtAfter(Instant.now());
+    }
+
     @Transactional
     public void endCurrent(PlatformPrincipal actor) {
         SupportSession session = sessionRepository

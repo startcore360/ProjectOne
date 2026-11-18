@@ -1,6 +1,7 @@
 package com.edu360.api.platformops.support;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -79,6 +80,13 @@ public class PlatformSupportController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "SUPPORT_ACCESS_USE");
         return ResponseEntity.ok(supportSessionService.open(request.ticketId(), principal));
+    }
+
+    @GetMapping("/support-sessions/active-count")
+    public ResponseEntity<Map<String, Long>> countActiveSupportSessions(Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "SUPPORT_ACCESS_USE");
+        return ResponseEntity.ok(Map.of("count", supportSessionService.countActiveSessions()));
     }
 
     @DeleteMapping("/support-sessions/current")

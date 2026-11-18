@@ -144,6 +144,27 @@ describe("Sprint 1 platform screens", () => {
     expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
   });
 
+
+  it("routes Support Manager to dashboard data sources without reading support grants", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url === "/platform/support-tickets") {
+        return Promise.resolve({ data: [{ supportTicketId: "ticket-1", priority: "HIGH", status: "NEW" }] });
+      }
+      if (url === "/platform/support-sessions/active-count") {
+        return Promise.resolve({ data: { count: 2 } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>, "SUPPORT_MANAGER");
+
+    expect(screen.getByRole("heading", { name: "Support Manager dashboard" })).toBeInTheDocument();
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith("/platform/support-sessions/active-count"));
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/support-tickets");
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/support-access-grants");
+    expect(mockedApi.get).not.toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
+  });
+
   it("renders the DPO workspace without calling unrelated admin endpoints", async () => {
     renderWithStore(<PlatformOverviewPage />, "DATA_PROTECTION_OFFICER");
     expect(await screen.findByText(/Data protection workspace/)).toBeInTheDocument();
