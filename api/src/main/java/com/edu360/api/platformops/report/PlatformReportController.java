@@ -88,7 +88,8 @@ public class PlatformReportController {
         }
 
         Map<String, Object> metrics = new HashMap<>();
-        if (principal.platformRole() == PlatformRole.BILLING_MANAGER) {
+        if (principal.platformRole() == PlatformRole.BILLING_MANAGER
+                || principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
             if (invoiceRepository != null) {
                 List<Invoice> paidInvoices = invoiceRepository.findByStatus("PAID");
                 // L-06: year to date means paid since 1 January of this year (UTC), not every invoice ever paid.
@@ -98,26 +99,31 @@ public class PlatformReportController {
                         .map(Invoice::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                Instant startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+                Instant startOfMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
                 BigDecimal totalCollectionsThisMonth = paidInvoices.stream()
-                        .filter(i -> i.getPaidAt() != null && i.getPaidAt().isAfter(startOfMonth))
-                        .map(Invoice::getTotalAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                List<Invoice> outstanding = invoiceRepository.findByStatusIn(List.of("SENT", "OVERDUE"));
-                BigDecimal outstandingAmount = outstanding.stream()
+                        .filter(i -> i.getPaidAt() != null && !i.getPaidAt().isBefore(startOfMonth))
                         .map(Invoice::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 metrics.put("totalRevenueYtd", totalRevenueYtd);
                 metrics.put("totalCollectionsThisMonth", totalCollectionsThisMonth);
-                metrics.put("outstandingInvoicesCount", outstanding.size());
-                metrics.put("outstandingAmount", outstandingAmount);
             } else {
                 metrics.put("totalRevenueYtd", BigDecimal.ZERO);
                 metrics.put("totalCollectionsThisMonth", BigDecimal.ZERO);
-                metrics.put("outstandingInvoicesCount", 0);
-                metrics.put("outstandingAmount", BigDecimal.ZERO);
+            }
+
+            if (principal.platformRole() == PlatformRole.BILLING_MANAGER) {
+                if (invoiceRepository != null) {
+                    List<Invoice> outstanding = invoiceRepository.findByStatusIn(List.of("SENT", "OVERDUE"));
+                    BigDecimal outstandingAmount = outstanding.stream()
+                            .map(Invoice::getTotalAmount)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    metrics.put("outstandingInvoicesCount", outstanding.size());
+                    metrics.put("outstandingAmount", outstandingAmount);
+                } else {
+                    metrics.put("outstandingInvoicesCount", 0);
+                    metrics.put("outstandingAmount", BigDecimal.ZERO);
+                }
             }
         } else if (principal.platformRole() == PlatformRole.SUPPORT_MANAGER) {
             long openCount = 0;
