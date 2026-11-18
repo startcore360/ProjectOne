@@ -36,39 +36,44 @@ export function BillingManagerDashboard() {
   useEffect(() => {
     let active = true;
     const set = (key: string, value: MetricState) => { if (active) setMetrics(old => ({ ...old, [key]: value })); };
-    const load = async (keys: string[], permitted: boolean, task: () => Promise<Record<string, MetricState>>) => {
-      if (!permitted) { keys.forEach(key => set(key, { status: "denied" })); return; }
-      try {
-        const values = await task();
-        Object.entries(values).forEach(([key, value]) => set(key, value));
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : "Request failed";
-        keys.forEach(key => set(key, { status: "error", detail }));
-      }
+    const load = async (key: string, permitted: boolean, task: () => Promise<MetricState>) => {
+      if (!permitted) { set(key, { status: "denied" }); return; }
+      try { set(key, await task()); }
+      catch (error) { set(key, { status: "error", detail: error instanceof Error ? error.message : "Request failed" }); }
     };
 
-    void load(["invoicesDue", "invoicesPaid", "invoicesOverdue"], can("INVOICE_MANAGE"), async () => {
-      const invoices: InvoiceItem[] = await platformOpsService.listInvoices();
-      const overdue = invoices.filter(invoice => invoice.overdue || invoice.status === "OVERDUE").length;
-      const paid = invoices.filter(invoice => invoice.status === "PAID").length;
-      const due = invoices.filter(invoice => invoice.status === "SENT" && !invoice.overdue).length;
-      return {
-        invoicesDue: { status: "ok", value: due },
-        invoicesPaid: { status: "ok", value: paid },
-        invoicesOverdue: { status: "ok", value: overdue },
-      };
+    const canManageInvoices = can("INVOICE_MANAGE");
+    let invoicesPromise: Promise<InvoiceItem[]> | undefined;
+    const loadInvoices = () => (invoicesPromise ??= platformOpsService.listInvoices());
+    let overduePromise: Promise<InvoiceItem[]> | undefined;
+    const loadOverdueInvoices = () => (overduePromise ??= platformOpsService.listOverdueInvoices());
+    let revenueReportPromise: Promise<RevenueReport> | undefined;
+    const loadRevenueReport = () => (revenueReportPromise ??= platformOpsService.getReport("REVENUE") as Promise<RevenueReport>);
+
+    void load("invoicesDue", canManageInvoices, async () => {
+      const invoices = await loadInvoices();
+      return { status: "ok", value: invoices.filter(invoice => invoice.status === "SENT" && !invoice.overdue).length };
+    });
+    void load("invoicesPaid", canManageInvoices, async () => {
+      const invoices = await loadInvoices();
+      return { status: "ok", value: invoices.filter(invoice => invoice.status === "PAID").length };
+    });
+    void load("invoicesOverdue", canManageInvoices, async () => {
+      const invoices = await loadOverdueInvoices();
+      return { status: "ok", value: invoices.length };
     });
 
-    void load(["revenue", "renewals"], can("PLATFORM_REPORTS_VIEW"), async () => {
-      const report = await platformOpsService.getReport("REVENUE") as RevenueReport;
+    void load("revenue", can("PLATFORM_REPORTS_VIEW"), async () => {
+      const report = await loadRevenueReport();
       const revenue = formatCurrency(report.currency || "INR", report.metrics?.totalCollectionsThisMonth);
+      return revenue == null ? { status: "not-measured" } : { status: "ok", value: revenue };
+    });
+    void load("renewals", can("PLATFORM_REPORTS_VIEW"), async () => {
+      const report = await loadRevenueReport();
       const renewals = report.metrics?.renewalsDueIn60Days;
-      return {
-        revenue: revenue == null ? { status: "not-measured" } : { status: "ok", value: revenue },
-        renewals: typeof renewals === "number" && Number.isFinite(renewals)
-          ? { status: "ok", value: renewals }
-          : { status: "not-measured" },
-      };
+      return typeof renewals === "number" && Number.isFinite(renewals)
+        ? { status: "ok", value: renewals }
+        : { status: "not-measured" };
     });
 
     return () => { active = false; };

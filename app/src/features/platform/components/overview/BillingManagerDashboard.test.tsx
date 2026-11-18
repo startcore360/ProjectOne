@@ -9,7 +9,7 @@ import { platformOpsService } from "../../api/platformOpsService";
 const access = vi.hoisted(() => ({ can: vi.fn<(action: string) => boolean>() }));
 vi.mock("../../platformAccess", () => ({ usePlatformAccess: () => access }));
 vi.mock("../../api/platformOpsService", () => ({
-  platformOpsService: { listInvoices: vi.fn(), getReport: vi.fn() },
+  platformOpsService: { listInvoices: vi.fn(), listOverdueInvoices: vi.fn(), getReport: vi.fn() },
 }));
 
 const ops = vi.mocked(platformOpsService);
@@ -21,6 +21,7 @@ function renderDashboard() {
 
 function resolveSources() {
   ops.listInvoices.mockResolvedValue([]);
+  ops.listOverdueInvoices.mockResolvedValue([]);
   ops.getReport.mockResolvedValue({
     currency: "INR",
     metrics: { totalCollectionsThisMonth: 0, renewalsDueIn60Days: 0 },
@@ -36,6 +37,7 @@ describe("BillingManagerDashboard tile states", () => {
 
   it("shows independent loading states while each source is pending", () => {
     ops.listInvoices.mockReturnValue(new Promise(() => {}) as never);
+    ops.listOverdueInvoices.mockReturnValue(new Promise(() => {}) as never);
     ops.getReport.mockReturnValue(new Promise(() => {}) as never);
 
     renderDashboard();
@@ -47,13 +49,13 @@ describe("BillingManagerDashboard tile states", () => {
     expect(screen.getByText("Loading renewals due in 60 days...")).toBeInTheDocument();
   });
 
-  it("counts due, paid and overdue invoices and reads revenue and renewals from one report", async () => {
+  it("counts due, paid and overdue invoices and reads revenue and renewals from the REVENUE report", async () => {
     ops.listInvoices.mockResolvedValue([
       { status: "SENT", overdue: false },
-      { status: "SENT", overdue: true },
       { status: "PAID", overdue: false },
       { status: "DRAFT", overdue: false },
     ] as never);
+    ops.listOverdueInvoices.mockResolvedValue([{ status: "SENT", overdue: true }] as never);
     ops.getReport.mockResolvedValue({
       currency: "INR",
       metrics: { totalCollectionsThisMonth: 125000, renewalsDueIn60Days: 3 },
@@ -61,14 +63,12 @@ describe("BillingManagerDashboard tile states", () => {
 
     renderDashboard();
 
-    await waitFor(() => {
-      expect(screen.getByText("Invoices due")).toBeInTheDocument();
-      expect(screen.getByText("Renewals due in 60 days")).toBeInTheDocument();
-    });
-    expect(screen.getByText("125,000")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Invoices overdue")).toBeInTheDocument());
+    expect(screen.getByText("INR 125,000")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getAllByText("1")).toHaveLength(3);
     expect(ops.listInvoices).toHaveBeenCalledTimes(1);
+    expect(ops.listOverdueInvoices).toHaveBeenCalledTimes(1);
     expect(ops.getReport).toHaveBeenCalledTimes(1);
     expect(ops.getReport).toHaveBeenCalledWith("REVENUE");
   });
@@ -77,16 +77,19 @@ describe("BillingManagerDashboard tile states", () => {
     renderDashboard();
 
     await waitFor(() => expect(screen.getByText("Revenue this month")).toBeInTheDocument());
-    expect(screen.getAllByText("0")).toHaveLength(5);
+    expect(screen.getAllByText("0", { exact: true })).toHaveLength(4);
+    expect(screen.getByText("INR 0")).toBeInTheDocument();
   });
 
   it("shows errors independently for invoice and report sources", async () => {
     ops.listInvoices.mockRejectedValue(new Error("invoice source unavailable"));
+    ops.listOverdueInvoices.mockRejectedValue(new Error("overdue source unavailable"));
     ops.getReport.mockRejectedValue(new Error("revenue report unavailable"));
 
     renderDashboard();
 
-    expect(await screen.findAllByText("invoice source unavailable")).toHaveLength(3);
+    expect(await screen.findAllByText("invoice source unavailable")).toHaveLength(2);
+    expect(screen.getByText("overdue source unavailable")).toBeInTheDocument();
     expect(screen.getAllByText("revenue report unavailable")).toHaveLength(2);
   });
 
@@ -96,8 +99,10 @@ describe("BillingManagerDashboard tile states", () => {
     renderDashboard();
 
     await waitFor(() => expect(screen.getAllByText("Not available for this role")).toHaveLength(3));
-    expect(screen.getAllByText("0")).toHaveLength(2);
+    expect(screen.getAllByText("0", { exact: true })).toHaveLength(1);
+    expect(screen.getByText("INR 0")).toBeInTheDocument();
     expect(ops.listInvoices).not.toHaveBeenCalled();
+    expect(ops.listOverdueInvoices).not.toHaveBeenCalled();
     expect(ops.getReport).toHaveBeenCalledTimes(1);
   });
 

@@ -247,6 +247,11 @@ export const platformOpsService = {
     return res.data;
   },
 
+  async listOverdueInvoices(): Promise<InvoiceItem[]> {
+    const res = await api.get<InvoiceItem[]>("/platform/invoices/overdue");
+    return res.data;
+  },
+
   async createInvoice(payload: CreateInvoicePayload): Promise<InvoiceItem> {
     const res = await api.post<InvoiceItem>("/platform/invoices", payload);
     return res.data;

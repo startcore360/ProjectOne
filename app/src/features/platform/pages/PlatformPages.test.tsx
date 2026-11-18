@@ -126,14 +126,22 @@ describe("Sprint 1 platform screens", () => {
     expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/backup-status"));
   });
 
-  it("loads only overview data allowed to a Billing Manager", async () => {
-    mockedApi.get.mockResolvedValue({ data: { items: [] } });
+  it("loads only billing dashboard sources for a Billing Manager", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url === "/platform/reports/REVENUE") {
+        return Promise.resolve({ data: { currency: "INR", metrics: { totalCollectionsThisMonth: 0, renewalsDueIn60Days: 0 } } });
+      }
+      return Promise.resolve({ data: [] });
+    });
     renderWithStore(<PlatformOverviewPage />, "BILLING_MANAGER");
 
-    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/tenants")));
+    expect(screen.getByRole("heading", { name: "Billing Manager dashboard" })).toBeInTheDocument();
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith("/platform/invoices/overdue"));
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/invoices");
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/reports/REVENUE");
+    expect(mockedApi.get).not.toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
     expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/platform-users");
     expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
-    expect(screen.getByText(/Billing workspace/)).toBeInTheDocument();
   });
 
   it("renders the DPO workspace without calling unrelated admin endpoints", async () => {
