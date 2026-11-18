@@ -28,35 +28,24 @@ public class PlatformReleaseService {
     private final PlatformReleaseRepository releaseRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
     private final PlatformReleaseNotificationService releaseNotificationService;
-    private final PlatformSchemaReleaseRepository schemaReleaseRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformReleaseService(
             PlatformReleaseRepository releaseRepository,
             com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter,
-            PlatformReleaseNotificationService releaseNotificationService,
-            PlatformSchemaReleaseRepository schemaReleaseRepository
+            PlatformReleaseNotificationService releaseNotificationService
     ) {
         this.releaseRepository = releaseRepository;
         this.platformAuditWriter = platformAuditWriter;
         this.releaseNotificationService = releaseNotificationService;
-        this.schemaReleaseRepository = schemaReleaseRepository;
     }
 
-    /** Compatibility constructor for fixtures that do not exercise schema-release persistence. */
-    public PlatformReleaseService(
-            PlatformReleaseRepository releaseRepository,
-            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter,
-            PlatformReleaseNotificationService releaseNotificationService
-    ) {
-        this(releaseRepository, platformAuditWriter, releaseNotificationService, null);
-    }
-
+    /** Compatibility constructor for isolated unit fixtures that do not exercise deployment notifications. */
     public PlatformReleaseService(
             PlatformReleaseRepository releaseRepository,
             com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
     ) {
-        this(releaseRepository, platformAuditWriter, null, null);
+        this(releaseRepository, platformAuditWriter, null);
     }
 
     private static final Set<String> VALID_STATUSES = Set.of("UPLOADED", "STAGING_TESTED", "DEPLOYED", "ROLLED_BACK");
@@ -178,32 +167,8 @@ public class PlatformReleaseService {
         release.setUpdatedBy(principal.platformUserId());
 
         PlatformRelease saved = releaseRepository.save(release);
-        if (schemaReleaseRepository != null) {
-            recordSchemaRelease(saved, principal);
-        }
         platformAuditWriter.record(principal, "RELEASE_UPDATED", "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
         return ReleaseResponse.fromEntity(saved);
-    }
-
-    private void recordSchemaRelease(PlatformRelease release, PlatformPrincipal principal) {
-        Instant now = Instant.now();
-        PlatformSchemaRelease schemaRelease = schemaReleaseRepository
-                .findByReleaseIdAndSchemaVersion(release.getReleaseId(), release.getSchemaVersion())
-                .orElseGet(() -> PlatformSchemaRelease.builder()
-                        .schemaReleaseId(UUID.randomUUID())
-                        .releaseId(release.getReleaseId())
-                        .schemaVersion(release.getSchemaVersion())
-                        .createdAt(now)
-                        .createdBy(principal.platformUserId())
-                        .rowVersion(1)
-                        .build());
-
-        List<String> appliedMigrationFiles =
-                schemaReleaseRepository.findAppliedMigrationFilesByReleaseId(release.getReleaseId());
-        schemaRelease.setMigrationFiles(appliedMigrationFiles.toArray(String[]::new));
-        schemaRelease.setUpdatedAt(now);
-        schemaRelease.setUpdatedBy(principal.platformUserId());
-        schemaReleaseRepository.save(schemaRelease);
     }
 
     @Transactional(readOnly = true)

@@ -11,5 +11,4 @@ public interface SupportSessionRepository extends JpaRepository<SupportSession, 
     Optional<SupportSession> findBySupportSessionIdAndEndedAtIsNull(UUID supportSessionId);
     Optional<SupportSession> findFirstByPlatformUserIdAndEndedAtIsNullOrderByIssuedAtDesc(UUID platformUserId);
     java.util.List<SupportSession> findByGrantIdAndEndedAtIsNull(UUID grantId);
-    long countByEndedAtIsNullAndExpiresAtAfter(java.time.Instant now);
 }

@@ -39,7 +39,6 @@ class PlatformReleaseControllerTest {
     private PlatformReleaseService releaseService;
     private PlatformReleaseNotificationService releaseNotificationService;
     private PlatformReleaseHealthService releaseHealthService;
-    private PlatformSchemaReleaseRepository schemaReleaseRepository;
     private PlatformReleaseController controller;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -51,10 +50,8 @@ class PlatformReleaseControllerTest {
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         releaseNotificationService = mock(PlatformReleaseNotificationService.class);
         releaseHealthService = mock(PlatformReleaseHealthService.class);
-        schemaReleaseRepository = mock(PlatformSchemaReleaseRepository.class);
         releaseService = new PlatformReleaseService(releaseRepository,
-                org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class),
-                releaseNotificationService, schemaReleaseRepository);
+                org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), releaseNotificationService);
         controller = new PlatformReleaseController(releaseService, permissionService);
         controller.setHealthService(releaseHealthService);
     }
@@ -211,41 +208,6 @@ class PlatformReleaseControllerTest {
                 new ReleaseTransitionRequest("DEPLOYED", null),
                 authFor(PlatformRole.RELEASE_MANAGER)))
                 .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
-    }
-
-    @Test
-    void updateReleaseRecordsHighestSchemaVersionAndOrderedAppliedMigrationChecksums() {
-        UUID releaseId = UUID.randomUUID();
-        PlatformRelease release = PlatformRelease.builder()
-                .releaseId(releaseId)
-                .versionLabel("v4.4.0")
-                .releaseNotes("Old notes")
-                .status("UPLOADED")
-                .schemaVersion("V41__platform_updates")
-                .build();
-        when(releaseRepository.findById(releaseId)).thenReturn(Optional.of(release));
-        when(releaseRepository.save(any(PlatformRelease.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(schemaReleaseRepository.findByReleaseIdAndSchemaVersion(releaseId, "V42__platform_updates"))
-                .thenReturn(Optional.empty());
-        when(schemaReleaseRepository.findAppliedMigrationFilesByReleaseId(releaseId))
-                .thenReturn(List.of("42_v41_change_a.sql:" + "a".repeat(64),
-                        "43_v41_change_b.sql:" + "b".repeat(64)));
-
-        ResponseEntity<ReleaseResponse> response = controller.updateRelease(
-                releaseId,
-                new com.edu360.api.platformops.release.dto.UpdateReleaseRequest(
-                        "Updated notes", false, "V42__platform_updates"),
-                authFor(PlatformRole.RELEASE_MANAGER));
-
-        assertThat(response.getBody().schemaVersion()).isEqualTo("V42__platform_updates");
-        org.mockito.ArgumentCaptor<PlatformSchemaRelease> saved =
-                org.mockito.ArgumentCaptor.forClass(PlatformSchemaRelease.class);
-        verify(schemaReleaseRepository).save(saved.capture());
-        assertThat(saved.getValue().getReleaseId()).isEqualTo(releaseId);
-        assertThat(saved.getValue().getSchemaVersion()).isEqualTo("V42__platform_updates");
-        assertThat(saved.getValue().getMigrationFiles()).containsExactly(
-                "42_v41_change_a.sql:" + "a".repeat(64),
-                "43_v41_change_b.sql:" + "b".repeat(64));
     }
 
     @Test

@@ -146,9 +146,7 @@ public class TenantDataProtectionService {
      */
     @Transactional(transactionManager = "platformTransactionManager", readOnly = true)
     public InputStream openDownload(UUID tenantId, UUID exportRequestId) {
-        ExportRequest request = exportRequestRepository.findByTenantIdOrderByCreatedAtDesc(tenantId).stream()
-                .filter(candidate -> exportRequestId.equals(candidate.getExportRequestId()))
-                .findFirst()
+        ExportRequest request = exportRequestRepository.findByExportRequestIdAndTenantId(exportRequestId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Export request not found."));
 
         boolean expired = "EXPIRED".equals(request.getStatus())
