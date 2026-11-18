@@ -115,6 +115,7 @@ export function usePlatformAccess() {
     role: user?.platformRole ?? null,
     can,
     canAny,
+    serverActions,
     permissionsLoaded: current !== null,
     customRoleName: current?.customRoleName ?? null,
     stepInRequired: current?.stepInRequired ?? [],
