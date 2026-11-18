@@ -27,6 +27,9 @@ public class AuditLogService {
  private static final Logger log=LoggerFactory.getLogger(AuditLogService.class);
  private static final Set<String> SENSITIVITY=Set.of("N","P","F","H","K");
  private static final Set<String> OUTCOMES=Set.of("SUCCESS","DENIED","FAILED");
+ private static final java.util.regex.Pattern UUID_PATTERN=java.util.regex.Pattern.compile("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+ private static final java.util.regex.Pattern SUPPORT_TICKET_PATTERN=java.util.regex.Pattern.compile("(?i)^SUP-\\d{4}-[A-Z0-9]{4,10}$");
+ private static final java.util.regex.Pattern CODE_SEQUENCE_PATTERN=java.util.regex.Pattern.compile("(?i)^[A-Z0-9]+(-[A-Z0-9]+)*-\\d{2,4}-\\d{3,6}$");
  private final AuditLogRepository legacy; private final TenantAuditStore tenant;
  private final ObjectMapper mapper=new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS,true);
  @Autowired public AuditLogService(AuditLogRepository legacy,TenantAuditStore tenant){this.legacy=legacy;this.tenant=tenant;}
@@ -127,7 +130,7 @@ public class AuditLogService {
  };}
  static String outcomeOf(AuditEventType t){return t==AuditEventType.LOGIN_FAILURE?"FAILED":t==AuditEventType.DENIED_ATTEMPT?"DENIED":"SUCCESS";}
  private String json(Object v){if(v==null)return null;validateSafeValues(v);try{return mapper.writeValueAsString(v);}catch(JsonProcessingException e){throw new IllegalArgumentException("Invalid audit JSON.",e);}}
- private static void validateSafeValues(Object value){
+ static void validateSafeValues(Object value){
   if(value instanceof Map<?,?> map){for(Map.Entry<?,?> e:map.entrySet()){
    String key=String.valueOf(e.getKey()).toLowerCase(java.util.Locale.ROOT).replace("_","").replace("-","");
    if(key.equals("name")||key.endsWith("name")||key.contains("email")||key.contains("phone")||key.contains("mobile")
@@ -137,8 +140,10 @@ public class AuditLogService {
    validateSafeValues(e.getValue());
   }}else if(value instanceof Iterable<?> values){for(Object item:values)validateSafeValues(item);}
   else if(value instanceof String text){
-   // UUID identifiers are not contact details; do not misclassify their digit/hyphen groups as phone numbers.
-   if(text.matches("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))return;
+   // Explicit, known business-code formats (UUIDs, support tickets, institution student/staff codes) are not contact details.
+   if(UUID_PATTERN.matcher(text).matches())return;
+   if(SUPPORT_TICKET_PATTERN.matcher(text).matches())return;
+   if(CODE_SEQUENCE_PATTERN.matcher(text).matches())return;
    String lower=text.toLowerCase(java.util.Locale.ROOT);
    if(lower.contains("http://")||lower.contains("https://")||lower.matches(".*[\\w.+-]+@[\\w.-]+\\.[a-z]{2,}.*")||lower.matches(".*[0-9][0-9 ()+.-]{7,}[0-9].*"))
     throw new IllegalArgumentException("Links and contact details are not permitted in audit values.");
