@@ -65,10 +65,29 @@ public class RequestMetricCollector {
         }
     }
 
+    private static final java.util.Set<String> KNOWN_STATIC_ROUTES = java.util.Set.of(
+            "/error",
+            "/actuator/health",
+            "/actuator/info"
+    );
+
     static String safeRouteTemplate(String routeTemplate) {
         if (routeTemplate == null || routeTemplate.isBlank() || routeTemplate.length() > 300
                 || !routeTemplate.startsWith("/")
                 || !routeTemplate.matches("[A-Za-z0-9_{}/*:.-]+")) {
+            return "/unmatched";
+        }
+
+        if (KNOWN_STATIC_ROUTES.contains(routeTemplate)) {
+            return routeTemplate;
+        }
+
+        // A mapped dynamic route must retain at least one Spring-style path-variable
+        // placeholder. Plain path segments may contain real resource IDs and are rejected.
+        if (!routeTemplate.matches(".*\\\\{[A-Za-z][A-Za-z0-9_]*}.*")
+                || routeTemplate.contains("{}")
+                || routeTemplate.contains("}{")
+                || routeTemplate.contains("{/")) {
             return "/unmatched";
         }
         return routeTemplate;
