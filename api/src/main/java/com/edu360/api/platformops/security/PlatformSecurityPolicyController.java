@@ -248,18 +248,70 @@ public class PlatformSecurityPolicyController {
         return ResponseEntity.ok(SecurityPolicyResponse.of(newPolicy, sync));
     }
 
-    /** I-06: re-push the current policy and the sign-in baseline to every realm (e.g. after a deployment). */
-    @PostMapping("/security-policy/realm-sync")
-    @Operation(summary = "Re-apply the security policy to every Keycloak realm (SECURITY_POLICY_SET)")
-    public ResponseEntity<List<RealmSecuritySyncService.RealmSyncResult>> syncRealms(Authentication auth) {
+    public record ApplyRealmSyncRequest(UUID previewId) {
+    }
+
+    public record RetryRealmSyncRequest(UUID runId) {
+    }
+
+    /** Read-only target and policy preview; Keycloak is not contacted. */
+    @GetMapping("/security-policy/realm-sync/preview")
+    @Operation(summary = "Preview target realms and current security policy without applying changes")
+    public ResponseEntity<RealmSecuritySyncService.RealmSyncPreview> previewRealmSync(Authentication auth) {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "SECURITY_POLICY_SET");
         if (realmSecuritySyncService == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
-        List<RealmSecuritySyncService.RealmSyncResult> results = realmSecuritySyncService.applyToAllRealms();
-        auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
-        return ResponseEntity.ok(results);
+        return ResponseEntity.ok(realmSecuritySyncService.previewAllRealms());
+    }
+
+    /** Applies only the exact realm set and policy values captured by the read-only preview. */
+    @PostMapping("/security-policy/realm-sync")
+    @Operation(summary = "Apply the previewed security policy to every target Keycloak realm")
+    public ResponseEntity<?> syncRealms(@RequestBody ApplyRealmSyncRequest request, Authentication auth) {
+        PlatformPrincipal principal = requirePlatformPrincipal(auth);
+        permissionService.authorize(principal, "SECURITY_POLICY_SET");
+        if (realmSecuritySyncService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        if (request == null || request.previewId() == null) {
+            throw new BusinessRuleViolationException("REALM_SYNC_PREVIEW_REQUIRED", "A current realm sync preview is required.");
+        }
+        try {
+            RealmSecuritySyncService.RealmSyncRunResult result =
+                    realmSecuritySyncService.applyPreviewedRealms(request.previewId());
+            auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of(
+                    "code", "REALM_SYNC_PREVIEW_EXPIRED",
+                    "message", "Preview the current policy and target realms again before applying."));
+        }
+    }
+
+    /** Retry is bound to the server-recorded failed subset of the supplied run. */
+    @PostMapping("/security-policy/realm-sync/retry")
+    @Operation(summary = "Retry only realms that failed in the immediately preceding sync")
+    public ResponseEntity<?> retryFailedRealmSync(@RequestBody RetryRealmSyncRequest request, Authentication auth) {
+        PlatformPrincipal principal = requirePlatformPrincipal(auth);
+        permissionService.authorize(principal, "SECURITY_POLICY_SET");
+        if (realmSecuritySyncService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        if (request == null || request.runId() == null) {
+            throw new BusinessRuleViolationException("REALM_SYNC_RUN_REQUIRED", "A realm sync run id is required.");
+        }
+        try {
+            RealmSecuritySyncService.RealmSyncRunResult result =
+                    realmSecuritySyncService.retryFailedRealms(request.runId());
+            auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of(
+                    "code", "REALM_SYNC_RETRY_NOT_AVAILABLE",
+                    "message", "The previous run is no longer available or has no failed realms."));
+        }
     }
 
     @GetMapping({"/incidents", "/security-incidents"})

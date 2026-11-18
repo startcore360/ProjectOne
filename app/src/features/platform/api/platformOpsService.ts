@@ -135,6 +135,30 @@ export type CreateReleasePayload = {
   schemaVersion: string;
 };
 
+export type RealmSyncPreviewItem = {
+  previewId: string;
+  realms: string[];
+  settings: {
+    minPasswordLength: number;
+    requireDigit: boolean;
+    requireSpecialChar: boolean;
+    maxFailedLogins: number;
+    lockoutMinutes: number;
+    idleSessionTimeoutMinutes: number;
+  };
+};
+
+export type RealmSyncResultItem = {
+  realm: string;
+  applied: boolean;
+  error?: string | null;
+};
+
+export type RealmSyncRunItem = {
+  runId: string;
+  results: RealmSyncResultItem[];
+};
+
 export type SecurityPolicyItem = {
   minPasswordLength: number;
   requireSpecialChar: boolean;
@@ -336,6 +360,21 @@ export const platformOpsService = {
   // Security Policy & Incidents
   async getSecurityPolicy(): Promise<SecurityPolicyItem> {
     const res = await api.get<SecurityPolicyItem>("/platform/security-policy");
+    return res.data;
+  },
+
+  async previewSecurityPolicyRealmSync(): Promise<RealmSyncPreviewItem> {
+    const res = await api.get<RealmSyncPreviewItem>("/platform/security-policy/realm-sync/preview");
+    return res.data;
+  },
+
+  async applySecurityPolicyRealmSync(previewId: string): Promise<RealmSyncRunItem> {
+    const res = await api.post<RealmSyncRunItem>("/platform/security-policy/realm-sync", { previewId });
+    return res.data;
+  },
+
+  async retryFailedSecurityPolicyRealms(runId: string): Promise<RealmSyncRunItem> {
+    const res = await api.post<RealmSyncRunItem>("/platform/security-policy/realm-sync/retry", { runId });
     return res.data;
   },
 
