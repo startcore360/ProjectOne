@@ -322,6 +322,11 @@ export const platformOpsService = {
     return res.data;
   },
 
+  async getPendingDataProtectionCount(): Promise<{ count: number }> {
+    const res = await api.get<{ count: number }>("/platform/data-protection/pending-count");
+    return res.data;
+  },
+
   // Reports
   async getReport(reportCode: string): Promise<PlatformReportItem> {
     const res = await api.get<PlatformReportItem>(`/platform/reports/${reportCode}`);

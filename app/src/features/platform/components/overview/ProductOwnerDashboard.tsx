@@ -39,7 +39,7 @@ export function ProductOwnerDashboard() {
   const [metrics, setMetrics] = useState<Record<string, MetricState>>({
     tenants: { status: "loading" }, revenue: { status: "loading" }, activeUsers: { status: "loading" },
     backups: { status: "loading" }, failedSetups: { status: "loading" }, escalations: { status: "loading" },
-    pendingDp: { status: "not-measured", detail: "awaiting data-protection count endpoint" },
+    pendingDp: { status: "loading" },
     errors: { status: "not-measured" }, failedJobs: { status: "not-measured" },
   });
   useEffect(() => {
@@ -81,6 +81,10 @@ export function ProductOwnerDashboard() {
       const rows = response.tenants;
       if (!Array.isArray(rows) || rows.length === 0 || rows.some(row => typeof row.stale !== "boolean")) return { status: "not-measured" };
       return { status: "ok", value: rows.filter(row => row.stale === true).length };
+    });
+    void load("pendingDp", canAny(["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"]), async () => {
+      const response = await platformOpsService.getPendingDataProtectionCount();
+      return { status: "ok", value: response.count };
     });
     void load("escalations", can("SUPPORT_TICKET_MANAGE"), async () => {
       const tickets = await platformOpsService.listSupportTickets() as unknown as Ticket[];

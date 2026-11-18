@@ -25,6 +25,7 @@ vi.mock("../../api/platformOpsService", () => ({
     getUsageCounts: vi.fn(),
     getPlatformBackupStatus: vi.fn(),
     listSupportTickets: vi.fn(),
+    getPendingDataProtectionCount: vi.fn(),
   },
 }));
 
@@ -48,6 +49,7 @@ function resolveAllEmpty() {
   ops.getUsageCounts.mockResolvedValue({ metrics: [{ metricCode: "ACTIVE_USERS", value: null }] } as never);
   ops.getPlatformBackupStatus.mockResolvedValue({ tenants: [] } as never);
   ops.listSupportTickets.mockResolvedValue([] as never);
+  ops.getPendingDataProtectionCount.mockResolvedValue({ count: 0 } as never);
 }
 
 describe("ProductOwnerDashboard tile states", () => {
@@ -78,7 +80,8 @@ describe("ProductOwnerDashboard tile states", () => {
     await waitFor(() => expect(screen.getByText("0 tenants")).toBeInTheDocument());
     expect(screen.getByText("INR 0")).toBeInTheDocument();
     expect(screen.getByText("Open escalations")).toBeInTheDocument();
-    expect(screen.getByText("Not measured — awaiting data-protection count endpoint")).toBeInTheDocument();
+    expect(screen.getByText("Pending DP approvals")).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
     expect(screen.getAllByText("Not measured").length).toBeGreaterThanOrEqual(2);
   });
 
@@ -89,7 +92,7 @@ describe("ProductOwnerDashboard tile states", () => {
 
     expect(await screen.findByText("report unavailable")).toBeInTheDocument();
     expect(screen.getByText("Pending DP approvals")).toBeInTheDocument();
-    expect(screen.getByText("Not measured — awaiting data-protection count endpoint")).toBeInTheDocument();
+    expect(screen.getByText("Pending DP approvals")).toBeInTheDocument();
   });
 
   it("shows permission-denied state per tile", async () => {
@@ -100,7 +103,7 @@ describe("ProductOwnerDashboard tile states", () => {
 
     await waitFor(() => expect(screen.getAllByText("Not available for this role").length).toBeGreaterThanOrEqual(5));
     expect(screen.getByText("Pending DP approvals")).toBeInTheDocument();
-    expect(screen.getByText("Not measured — awaiting data-protection count endpoint")).toBeInTheDocument();
+    expect(screen.getByText("Not available for this role")).toBeInTheDocument();
   });
 
   it("shows Not measured when active-user data is null or backup rows are absent", async () => {
@@ -116,5 +119,21 @@ describe("ProductOwnerDashboard tile states", () => {
       expect(screen.getByText("Stale backups")).toBeInTheDocument();
       expect(screen.getAllByText("Not measured").length).toBeGreaterThanOrEqual(2);
     });
+  });
+
+  it("loads the pending data-protection count when either export or deletion permission is granted", async () => {
+    access.canAny.mockImplementation(actions => actions.includes("TENANT_EXPORT_REQUEST"));
+    ops.getPendingDataProtectionCount.mockResolvedValue({ count: 7 } as never);
+    renderDashboard();
+    await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
+    expect(ops.getPendingDataProtectionCount).toHaveBeenCalledTimes(1);
+    expect(access.canAny).toHaveBeenCalledWith(["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"]);
+  });
+
+  it("shows a pending data-protection count error without hiding other metrics", async () => {
+    ops.getPendingDataProtectionCount.mockRejectedValue(new Error("DP count unavailable"));
+    renderDashboard();
+    expect(await screen.findByText("DP count unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Revenue this month")).toBeInTheDocument();
   });
 });
