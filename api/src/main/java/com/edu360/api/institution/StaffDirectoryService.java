@@ -64,7 +64,8 @@ public class StaffDirectoryService {
         this.jdbc = jdbc;
     }
 
-    @Transactional(readOnly = true)
+    // read-write on purpose: sensitive views write an audit row in this transaction (JdbcTenantAuditStore)
+    @Transactional
     public StaffListResponse list(RbacPrincipal actor, String query, int limit) {
         validateLimit(limit);
         var active = permissions.activeAssignment(actor)
@@ -128,7 +129,8 @@ public class StaffDirectoryService {
         return StaffProfileResponse.from(saved);
     }
 
-    @Transactional(readOnly = true)
+    // read-write on purpose: sensitive views write an audit row in this transaction (JdbcTenantAuditStore)
+    @Transactional
     public StaffProfileResponse get(RbacPrincipal actor, UUID staffProfileId) {
         StaffProfile profile = findScopedProfile(actor, staffProfileId, "STAFF_RECORD_VIEW");
         var active = permissions.activeAssignment(actor)
