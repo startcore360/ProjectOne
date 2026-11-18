@@ -26,6 +26,8 @@ import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.billing.Invoice;
 import com.edu360.api.platformops.billing.InvoiceRepository;
+import com.edu360.api.tenant.TenantRepository;
+import com.edu360.api.tenant.TenantState;
 import com.edu360.api.platformops.entitlement.PlatformFeatureToggleController;
 import com.edu360.api.platformops.report.PlatformReportController;
 
@@ -143,6 +145,28 @@ class PlatformSecurityReportControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().metrics()).containsEntry(
                 "totalCollectionsThisMonth", new BigDecimal("125.00"));
+    }
+
+
+    @Test
+    void ACT_PLATFORM_REPORTS_VIEW_ALLOW_productOwnerGetsTenantMetricsOnNonRevenueReport() {
+        TenantRepository tenantRepository = mock(TenantRepository.class);
+        when(tenantRepository.countByState(TenantState.ACTIVE)).thenReturn(7L);
+        when(tenantRepository.count()).thenReturn(12L);
+        PlatformReportController controller = new PlatformReportController(
+                permissionService, null, null, null, tenantRepository);
+
+        ResponseEntity<PlatformReportController.PlatformReportResponse> response =
+                controller.getReport("PLATFORM_SUMMARY", authFor(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().metrics())
+                .containsEntry("activeTenants", 7)
+                .containsEntry("totalTenants", 12)
+                .containsKey("storageUsedGb")
+                .containsKey("apiRequestsToday")
+                .containsKey("usageNote")
+                .doesNotContainKey("totalCollectionsThisMonth");
     }
 
     @Test
