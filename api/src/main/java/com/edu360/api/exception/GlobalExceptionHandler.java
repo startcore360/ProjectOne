@@ -265,7 +265,8 @@ public class GlobalExceptionHandler {
         body.put("error", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("message", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("correlationId", correlationId);
-        body.put("detail", ex.getClass().getName() + ": " + ex.getMessage());
+        // E0-B15: never echo the exception class or message to the client (CLAUDE.md: a 500 returns a
+        // generic message). The full exception stays in the server log above, keyed by correlationId.
         if (request != null) {
             body.put("path", request.getRequestURI());
         }
