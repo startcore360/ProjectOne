@@ -217,10 +217,15 @@ public class StaffDirectoryService {
         if (tenantId == null || userAccountId == null || institutionId == null || actorId == null) {
             throw new IllegalArgumentException("Tenant, user, institution and actor are required for staff linkage.");
         }
-        String displayName = jdbc.queryForObject("""
-                SELECT display_name FROM app.user_account
-                 WHERE tenant_id = ? AND user_account_id = ? AND user_type = 'STAFF'
-                """, String.class, tenantId, userAccountId);
+        String displayName;
+        try {
+            displayName = jdbc.queryForObject("""
+                    SELECT display_name FROM app.user_account
+                     WHERE tenant_id = ? AND user_account_id = ? AND user_type = 'STAFF'
+                    """, String.class, tenantId, userAccountId);
+        } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
+            throw new ResourceNotFoundException("Staff user account not found in tenant.");
+        }
         StaffProfile profile = staffProfiles.findByIdTenantIdAndUserAccountId(tenantId, userAccountId)
                 .orElseGet(() -> {
                     int year = LocalDate.now().getYear();

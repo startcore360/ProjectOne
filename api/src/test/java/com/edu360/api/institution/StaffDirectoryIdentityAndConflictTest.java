@@ -24,6 +24,7 @@ import com.edu360.api.audit.AuditLogService;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 
@@ -146,6 +147,36 @@ class StaffDirectoryIdentityAndConflictTest {
         org.assertj.core.api.Assertions.assertThat(assignmentCaptor.getValue().getInstitutionId()).isEqualTo(institutionId);
         org.assertj.core.api.Assertions.assertThat(assignmentCaptor.getValue().getDepartmentId()).isEqualTo(departmentId);
         org.assertj.core.api.Assertions.assertThat(assignmentCaptor.getValue().getDesignation()).isEqualTo("Subject Teacher");
+    }
+
+    @Test
+    void ensureStaffAssignmentThrowsWhenUserAccountNotFoundOrNotStaff() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID institutionId = UUID.randomUUID();
+        UUID departmentId = UUID.randomUUID();
+
+        StaffProfileRepository profiles = mock(StaffProfileRepository.class);
+        StaffAssignmentRepository assignments = mock(StaffAssignmentRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        InstitutionIdFormatService formats = mock(InstitutionIdFormatService.class);
+
+        when(jdbc.queryForObject(anyString(), eq(String.class), eq(tenantId), eq(userId)))
+                .thenThrow(new org.springframework.dao.EmptyResultDataAccessException(1));
+
+        StaffDirectoryService service = new StaffDirectoryService(profiles, assignments,
+                mock(StaffServiceRecordRepository.class), mock(StaffDocumentRepository.class),
+                mock(InstitutionRepository.class), mock(DepartmentRepository.class), formats,
+                mock(PermissionEvaluatorService.class), mock(AuditLogService.class), jdbc);
+
+        assertThatThrownBy(() ->
+                service.ensureStaffAssignment(tenantId, userId, institutionId, departmentId, actorId, "Subject Teacher"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Staff user account not found in tenant.");
+
+        verify(profiles, never()).saveAndFlush(any(StaffProfile.class));
+        verify(assignments, never()).saveAndFlush(any(StaffAssignment.class));
     }
 
     @Test
