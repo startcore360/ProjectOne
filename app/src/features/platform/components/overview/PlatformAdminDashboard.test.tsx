@@ -92,7 +92,7 @@ describe("PlatformAdminDashboard tile states", () => {
     });
     expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText("Failed jobs")).toBeInTheDocument();
-    expect(screen.getByText("Not measured")).toBeInTheDocument();
+    expect(screen.getAllByText("Not measured")).toHaveLength(2);
     expect(screen.getByText("Backup alerts")).toBeInTheDocument();
   });
 
@@ -103,7 +103,7 @@ describe("PlatformAdminDashboard tile states", () => {
 
     expect(await screen.findByText("ticket service unavailable")).toBeInTheDocument();
     expect(screen.getByText("Failed jobs")).toBeInTheDocument();
-    expect(screen.getByText("Not measured")).toBeInTheDocument();
+    expect(screen.getAllByText("Not measured")).toHaveLength(2);
   });
 
   it("denies individual tiles when the corresponding permission is absent", async () => {
