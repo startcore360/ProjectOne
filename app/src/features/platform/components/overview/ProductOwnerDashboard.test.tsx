@@ -81,7 +81,7 @@ describe("ProductOwnerDashboard tile states", () => {
     expect(screen.getByText("INR 0")).toBeInTheDocument();
     expect(screen.getByText("Open escalations")).toBeInTheDocument();
     expect(screen.getByText("Pending DP approvals")).toBeInTheDocument();
-    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getAllByText("0", { exact: true })).toHaveLength(3);
     expect(screen.getAllByText("Not measured").length).toBeGreaterThanOrEqual(2);
   });
 
@@ -103,7 +103,7 @@ describe("ProductOwnerDashboard tile states", () => {
 
     await waitFor(() => expect(screen.getAllByText("Not available for this role").length).toBeGreaterThanOrEqual(5));
     expect(screen.getByText("Pending DP approvals")).toBeInTheDocument();
-    expect(screen.getByText("Not available for this role")).toBeInTheDocument();
+    expect(screen.getAllByText("Not available for this role")).toHaveLength(7);
   });
 
   it("shows Not measured when active-user data is null or backup rows are absent", async () => {
