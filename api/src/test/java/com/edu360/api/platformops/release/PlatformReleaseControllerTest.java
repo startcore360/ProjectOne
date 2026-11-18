@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -36,6 +37,7 @@ class PlatformReleaseControllerTest {
     private AuditLogService auditLogService;
     private PlatformPermissionService permissionService;
     private PlatformReleaseService releaseService;
+    private PlatformReleaseNotificationService releaseNotificationService;
     private PlatformReleaseController controller;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -45,7 +47,9 @@ class PlatformReleaseControllerTest {
         releaseRepository = mock(PlatformReleaseRepository.class);
         auditLogService = mock(AuditLogService.class);
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
-        releaseService = new PlatformReleaseService(releaseRepository, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
+        releaseNotificationService = mock(PlatformReleaseNotificationService.class);
+        releaseService = new PlatformReleaseService(releaseRepository,
+                org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), releaseNotificationService);
         controller = new PlatformReleaseController(releaseService, permissionService);
     }
 
@@ -95,6 +99,7 @@ class PlatformReleaseControllerTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody().status()).isEqualTo("DEPLOYED");
         assertThat(res.getBody().deployedAt()).isNotNull();
+        verify(releaseNotificationService).notifyTenantAdmins(release);
     }
 
     @Test

@@ -27,14 +27,25 @@ public class PlatformReleaseService {
 
     private final PlatformReleaseRepository releaseRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
+    private final PlatformReleaseNotificationService releaseNotificationService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformReleaseService(
             PlatformReleaseRepository releaseRepository,
-            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter,
+            PlatformReleaseNotificationService releaseNotificationService
     ) {
         this.releaseRepository = releaseRepository;
         this.platformAuditWriter = platformAuditWriter;
+        this.releaseNotificationService = releaseNotificationService;
+    }
+
+    /** Compatibility constructor for isolated unit fixtures that do not exercise deployment notifications. */
+    public PlatformReleaseService(
+            PlatformReleaseRepository releaseRepository,
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+    ) {
+        this(releaseRepository, platformAuditWriter, null);
     }
 
     private static final Set<String> VALID_STATUSES = Set.of("UPLOADED", "STAGING_TESTED", "DEPLOYED", "ROLLED_BACK");
@@ -127,6 +138,20 @@ public class PlatformReleaseService {
 
         PlatformRelease saved = releaseRepository.save(release);
         platformAuditWriter.record(principal, "RELEASE_TRANSITIONED_" + target, "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
+        if ("DEPLOYED".equals(target) && releaseNotificationService != null) {
+            Runnable publishReleaseNotes = () -> releaseNotificationService.notifyTenantAdmins(saved);
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                        new org.springframework.transaction.support.TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                publishReleaseNotes.run();
+                            }
+                        });
+            } else {
+                publishReleaseNotes.run();
+            }
+        }
         return ReleaseResponse.fromEntity(saved);
     }
 
