@@ -13,11 +13,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /** Captures only mapped route templates and 5xx status codes; never reads or stores raw URLs. */
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RequiredArgsConstructor
+@Slf4j
 public class RequestMetricFilter extends OncePerRequestFilter {
 
     private final RequestMetricCollector collector;
@@ -28,9 +30,13 @@ public class RequestMetricFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } finally {
-            Object matchedPattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-            String routeTemplate = matchedPattern == null ? "/unmatched" : matchedPattern.toString();
-            collector.record(routeTemplate, response.getStatus());
+            try {
+                Object matchedPattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+                String routeTemplate = matchedPattern == null ? "/unmatched" : matchedPattern.toString();
+                collector.record(routeTemplate, response.getStatus());
+            } catch (RuntimeException exception) {
+                log.warn("Unable to record request metrics; preserving the original request outcome", exception);
+            }
         }
     }
 }

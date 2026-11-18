@@ -84,7 +84,7 @@ public class RequestMetricCollector {
 
         // A mapped dynamic route must retain at least one Spring-style path-variable
         // placeholder. Plain path segments may contain real resource IDs and are rejected.
-        if (!routeTemplate.matches(".*\\\\{[A-Za-z][A-Za-z0-9_]*}.*")
+        if (!routeTemplate.matches(".*\\{[A-Za-z][A-Za-z0-9_]*}.*")
                 || routeTemplate.contains("{}")
                 || routeTemplate.contains("}{")
                 || routeTemplate.contains("{/")) {
