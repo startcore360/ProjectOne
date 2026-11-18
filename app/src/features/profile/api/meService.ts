@@ -24,6 +24,7 @@ export type UserMeResponse = {
   currentRoleName?: string;
   currentAssignmentId?: string;
   roles: UserRoleOption[];
+  idleTimeoutMinutes: number;
 };
 
 export type SwitchActiveRoleResponse = {

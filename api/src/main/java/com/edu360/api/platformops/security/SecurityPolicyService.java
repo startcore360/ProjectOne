@@ -29,6 +29,16 @@ public class SecurityPolicyService {
 
     public static final String SETTING_KEY_SECURITY_POLICY = "security.policy";
 
+    public static final int PRIVILEGED_IDLE_TIMEOUT_MINUTES = 15;
+    public static final int STANDARD_IDLE_TIMEOUT_MINUTES = 60;
+
+    /** Resolves the idle timeout from the caller's active security role class. */
+    public static int idleTimeoutMinutesForRoleCodes(java.util.Collection<String> roleCodes) {
+        return com.edu360.api.auth.MfaRequirementService.requiresMfa(roleCodes)
+                ? PRIVILEGED_IDLE_TIMEOUT_MINUTES
+                : STANDARD_IDLE_TIMEOUT_MINUTES;
+    }
+
     /** D1 values used until the Product Owner saves a policy. */
     public static final SecurityPolicy D1_DEFAULT = new SecurityPolicy(8, false, false, 5, 15, 30, true, 90, 120);
 

@@ -190,10 +190,17 @@ export default function AppLayout() {
   // I-06: the idle limit is the platform security policy value; 30 minutes until it is read.
   const [idleLimitMs, setIdleLimitMs] = useState(SESSION_IDLE_LIMIT_MS);
   useEffect(() => {
-    api.get<{ idleTimeoutMinutes?: number }>("/auth/session-settings")
-      .then(({ data }) => { if (data.idleTimeoutMinutes && data.idleTimeoutMinutes > 0) setIdleLimitMs(data.idleTimeoutMinutes * 60_000); })
-      .catch(() => { /* keep the default limit */ });
-  }, []);
+    const settingsRequest = user?.platformRole
+      ? api.get<{ idleTimeoutMinutes?: number }>("/auth/session-settings")
+      : api.get<{ idleTimeoutMinutes?: number }>("/me");
+    settingsRequest
+      .then(({ data }) => {
+        if (data.idleTimeoutMinutes > 0) {
+          setIdleLimitMs(data.idleTimeoutMinutes * 60_000);
+        }
+      })
+      .catch(() => { /* retain the restrictive privileged timeout */ });
+  }, [user?.id, user?.tenantId, user?.platformRole, effectiveRoleCode]);
   useEffect(() => startInactivityTracker(() => { void idleLogout(); }, idleLimitMs), [idleLimitMs]);
   const signOut = async () => {
     try { await logout(); } catch { /* Always clear the local signed-in view. */ }

@@ -1,5 +1,6 @@
 // If the user does nothing for this long, we treat them as "away" and log them out.
-export const SESSION_IDLE_LIMIT_MS = 30 * 60 * 1000;
+// Fail closed to the privileged limit until the API supplies the caller's role-class value.
+export const SESSION_IDLE_LIMIT_MS = 15 * 60 * 1000;
 
 // Watches for any sign the user is still around (clicking, typing, scrolling, touching
 // the screen) and keeps pushing the "you've been idle too long" timer back. If none of

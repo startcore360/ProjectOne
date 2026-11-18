@@ -300,6 +300,42 @@ class UserMeControllerTest {
     }
 
     @Test
+    @DisplayName("GET /me returns a 60-minute timeout for a standard active role")
+    void getMe_returnsStandardIdleTimeout() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        UserAccount user = UserAccount.builder()
+                .id(new UserAccountId(TENANT_ID, USER_ID))
+                .email("teacher@northbridge.edu.in")
+                .displayName("Teacher")
+                .userType(UserType.STAFF)
+                .build();
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, USER_ID)))
+                .thenReturn(Optional.of(user));
+        UserRoleAssignment assignment = UserRoleAssignment.builder()
+                .id(new UserRoleAssignmentId(TENANT_ID, ASSIGNMENT_1))
+                .userAccountId(USER_ID)
+                .roleDefinitionId(ROLE_DEF_1)
+                .scopeType(ScopeType.INSTITUTION)
+                .status(AssignmentStatus.ACTIVE)
+                .build();
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountId(TENANT_ID, USER_ID))
+                .thenReturn(List.of(assignment));
+        RoleDefinition teacher = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEF_1))
+                .roleCode("TEACHER")
+                .roleName("Teacher")
+                .build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEF_1)))
+                .thenReturn(Optional.of(teacher));
+
+        ResponseEntity<UserMeResponse> response = controller.getMe(TENANT_ID, auth);
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().currentRoleCode()).isEqualTo("TEACHER");
+        assertThat(response.getBody().idleTimeoutMinutes()).isEqualTo(60);
+    }
+
+    @Test
     @DisplayName("GET /me/permissions: Returns active role code and scope type")
     void getPermissions_returnsActiveRoleAndScope() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);

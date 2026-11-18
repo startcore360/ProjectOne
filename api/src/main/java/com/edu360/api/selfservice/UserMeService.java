@@ -211,6 +211,12 @@ public class UserMeService {
             }
         }
 
+        List<String> timeoutRoleCodes = currentRoleCode != null
+                ? List.of(currentRoleCode)
+                : roleOptions.stream().map(UserRoleOption::roleCode).toList();
+        int idleTimeoutMinutes =
+                com.edu360.api.platformops.security.SecurityPolicyService.idleTimeoutMinutesForRoleCodes(timeoutRoleCodes);
+
         return new UserMeResponse(
                 userId,
                 tenantId,
@@ -220,7 +226,8 @@ public class UserMeService {
                 currentRoleCode,
                 currentRoleName,
                 activeAssignmentId,
-                roleOptions
+                roleOptions,
+                idleTimeoutMinutes
         );
     }
 
