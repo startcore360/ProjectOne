@@ -3,8 +3,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -27,6 +29,9 @@ public class AuditLogService {
  private static final Logger log=LoggerFactory.getLogger(AuditLogService.class);
  private static final Set<String> SENSITIVITY=Set.of("N","P","F","H","K");
  private static final Set<String> OUTCOMES=Set.of("SUCCESS","DENIED","FAILED");
+ private static final java.util.regex.Pattern UUID_PATTERN=java.util.regex.Pattern.compile("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+ private static final java.util.regex.Pattern SUPPORT_TICKET_PATTERN=java.util.regex.Pattern.compile("(?i)^SUP-\\d{4}-[A-Z0-9]{4,10}$");
+ private static final java.util.regex.Pattern CODE_SEQUENCE_PATTERN=java.util.regex.Pattern.compile("(?i)^[A-Z][A-Z0-9_]*(-[A-Z][A-Z0-9_]*)*-((\\d{4}-\\d{3,5})|(\\d{2}-\\d{3,7}))$");
  private final AuditLogRepository legacy; private final TenantAuditStore tenant;
  private final ObjectMapper mapper=new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS,true);
  @Autowired public AuditLogService(AuditLogRepository legacy,TenantAuditStore tenant){this.legacy=legacy;this.tenant=tenant;}
@@ -104,6 +109,53 @@ public class AuditLogService {
     oldJson,newJson,correlation,hash));
   }catch(Exception ex){log.error("Structured audit write failed",ex);throw new AuditFailureException("Required audit event could not be recorded; the request was not completed.",ex);}
  }
+ public void recordAll(List<AuditEntry> entries){
+  if(entries==null||entries.isEmpty())return;
+  try{
+   for(AuditEntry entry:entries){
+    if(entry==null||entry.eventType()==null||blank(entry.actionCode())||blank(entry.entityType())||entry.entityId()==null)
+     throw new IllegalArgumentException("Structured audit requires event type, action code, entity type and entity id.");
+    if(entry.sensitivityClass()!=null&&!SENSITIVITY.contains(entry.sensitivityClass()))throw new IllegalArgumentException("Invalid sensitivity class.");
+    if(entry.outcome()!=null&&!OUTCOMES.contains(entry.outcome()))throw new IllegalArgumentException("Invalid audit outcome.");
+    if(entry.recordCount()!=null&&entry.recordCount()<0)throw new IllegalArgumentException("Record count cannot be negative.");
+   }
+   String role=TenantContext.currentActiveRoleCode();
+   if(tenant==null){
+    for(AuditEntry entry:entries){
+     UUID institution=entry.institutionId();
+     if(institution==null){Set<UUID> ids=TenantContext.currentInstitutionIds();institution=ids.isEmpty()?null:ids.iterator().next();}
+     Map<String,Object> fallback=new LinkedHashMap<>();
+     fallback.put("action_code",entry.actionCode());fallback.put("entity_type",entry.entityType());
+     fallback.put("entity_id",entry.entityId().toString());fallback.put("old_values",entry.oldValues());
+     fallback.put("new_values",entry.newValues());fallback.put("record_count",entry.recordCount());
+     fallback.put("sensitivity_class",entry.sensitivityClass());fallback.put("outcome",entry.outcome());
+     legacy.save(AuditLog.builder().eventType(entry.eventType()).actorRoleCode(role)
+       .scopeType(TenantContext.currentActiveScopeType()==null?null:TenantContext.currentActiveScopeType().name())
+       .institutionId(institution).correlationId(bound(CorrelationContext.get()))
+       .details(json(fallback)).build());
+    }
+    return;
+   }
+   TenantPrincipal actor=tenantActor(role);
+   if(actor==null)throw new IllegalStateException("Structured audit requires an authenticated tenant actor with active role.");
+   String correlation=bound(CorrelationContext.get());
+   List<TenantAuditEvent> events=new ArrayList<>(entries.size());
+   for(AuditEntry entry:entries){
+    UUID institution=entry.institutionId();
+    if(institution==null){Set<UUID> ids=TenantContext.currentInstitutionIds();institution=ids.isEmpty()?null:ids.iterator().next();}
+    UUID event=UUID.randomUUID(); Instant now=Instant.now();
+    String oldJson=json(entry.oldValues()),newJson=json(entry.newValues());
+    String operation=operationOf(entry.eventType()),outcome=entry.outcome()==null?"SUCCESS":entry.outcome();
+    String hash=sha(String.join("|",actor.tenantId().toString(),event.toString(),now.toString(),actor.userAccountId().toString(),
+     role,operation,entry.actionCode(),entry.entityType(),entry.entityId().toString(),String.valueOf(entry.recordCount()),
+     String.valueOf(entry.sensitivityClass()),outcome,String.valueOf(oldJson),String.valueOf(newJson),correlation));
+    events.add(new TenantAuditEvent(actor.tenantId(),event,institution,now,actor.userAccountId(),role,operation,
+     entry.actionCode(),entry.entityType(),entry.entityId(),entry.recordCount(),entry.sensitivityClass(),outcome,
+     oldJson,newJson,correlation,hash));
+   }
+   tenant.appendAll(events);
+  }catch(Exception ex){log.error("Structured batch audit write failed",ex);throw new AuditFailureException("Required audit event could not be recorded; the request was not completed.",ex);}
+ }
  private TenantPrincipal tenantActor(String role){
   UUID tenantId=TenantContext.currentTenantId();
   if(tenant==null||tenantId==null||blank(role))return null;
@@ -127,7 +179,7 @@ public class AuditLogService {
  };}
  static String outcomeOf(AuditEventType t){return t==AuditEventType.LOGIN_FAILURE?"FAILED":t==AuditEventType.DENIED_ATTEMPT?"DENIED":"SUCCESS";}
  private String json(Object v){if(v==null)return null;validateSafeValues(v);try{return mapper.writeValueAsString(v);}catch(JsonProcessingException e){throw new IllegalArgumentException("Invalid audit JSON.",e);}}
- private static void validateSafeValues(Object value){
+ static void validateSafeValues(Object value){
   if(value instanceof Map<?,?> map){for(Map.Entry<?,?> e:map.entrySet()){
    String key=String.valueOf(e.getKey()).toLowerCase(java.util.Locale.ROOT).replace("_","").replace("-","");
    if(key.equals("name")||key.endsWith("name")||key.contains("email")||key.contains("phone")||key.contains("mobile")
@@ -137,8 +189,10 @@ public class AuditLogService {
    validateSafeValues(e.getValue());
   }}else if(value instanceof Iterable<?> values){for(Object item:values)validateSafeValues(item);}
   else if(value instanceof String text){
-   // UUID identifiers are not contact details; do not misclassify their digit/hyphen groups as phone numbers.
-   if(text.matches("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))return;
+   // Explicit, known business-code formats (UUIDs, support tickets, institution student/staff codes) are not contact details.
+   if(UUID_PATTERN.matcher(text).matches())return;
+   if(SUPPORT_TICKET_PATTERN.matcher(text).matches())return;
+   if(CODE_SEQUENCE_PATTERN.matcher(text).matches())return;
    String lower=text.toLowerCase(java.util.Locale.ROOT);
    if(lower.contains("http://")||lower.contains("https://")||lower.matches(".*[\\w.+-]+@[\\w.-]+\\.[a-z]{2,}.*")||lower.matches(".*[0-9][0-9 ()+.-]{7,}[0-9].*"))
     throw new IllegalArgumentException("Links and contact details are not permitted in audit values.");

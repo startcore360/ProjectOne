@@ -158,7 +158,7 @@ public class UserAccountService {
                 .updatedBy(principal.userAccountId())
                 .build();
 
-        UserAccount savedAccount = userAccountRepository.save(account);
+        UserAccount savedAccount = userAccountRepository.saveAndFlush(account);
 
         // 8. Persist UserIdentityLink (app.user_identity_link)
         UserIdentityLink identityLink = UserIdentityLink.builder()
@@ -172,7 +172,7 @@ public class UserAccountService {
                 .updatedBy(principal.userAccountId())
                 .build();
 
-        userIdentityLinkRepository.save(identityLink);
+        userIdentityLinkRepository.saveAndFlush(identityLink);
 
         // 9. Assign initial role if requested
         String assignedRole = null;

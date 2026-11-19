@@ -54,6 +54,20 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void unhandledExceptionHidesInternalDetailsAndRetainsCorrelationId() {
+        String sensitiveInternalMessage = "PSQLException: relation 'app.user_account' violates foreign key constraint";
+        var response = handler.handleGeneral(new RuntimeException(sensitiveInternalMessage), null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).containsEntry("code", "INTERNAL_ERROR");
+        assertThat(response.getBody()).containsKey("correlationId");
+        assertThat(response.getBody().get("correlationId")).asString().isNotBlank();
+        assertThat(response.getBody()).doesNotContainKey("detail");
+        assertThat(response.getBody().get("error")).asString().doesNotContain(sensitiveInternalMessage);
+        assertThat(response.getBody().get("message")).asString().doesNotContain(sensitiveInternalMessage);
+    }
+
+    @Test
     void unexpectedErrorsNeverLeakExceptionDetailsToTheClient() {
         var response = handler.handleGeneral(
                 new IllegalStateException("SELECT * FROM app.user_account WHERE secret = 'x'"), null);

@@ -64,7 +64,8 @@ public class StaffDirectoryService {
         this.jdbc = jdbc;
     }
 
-    @Transactional(readOnly = true)
+    // read-write on purpose: sensitive views write an audit row in this transaction (JdbcTenantAuditStore)
+    @Transactional
     public StaffListResponse list(RbacPrincipal actor, String query, int limit) {
         validateLimit(limit);
         var active = permissions.activeAssignment(actor)
@@ -76,8 +77,11 @@ public class StaffDirectoryService {
         List<StaffProfile> profiles = staffProfiles.searchTenantStaff(actor.tenantId(),
                 institutionId, departmentId, normalizeQuery(query), limit);
         boolean includeSensitive = permissions.can(actor, "STAFF_RECORD_MANAGE", scope, RbacTarget.NONE).allowed();
-        if (includeSensitive) {
-            profiles.forEach(profile -> recordSensitiveView(actor, profile, institutionId));
+        if (includeSensitive && !profiles.isEmpty()) {
+            List<AuditEntry> auditEntries = profiles.stream()
+                    .map(profile -> toSensitiveViewEntry(profile, institutionId))
+                    .toList();
+            audit.recordAll(auditEntries);
         }
         List<StaffProfileResponse> items = profiles.stream()
                 .map(profile -> StaffProfileResponse.from(profile, includeSensitive)).toList();
@@ -128,7 +132,8 @@ public class StaffDirectoryService {
         return StaffProfileResponse.from(saved);
     }
 
-    @Transactional(readOnly = true)
+    // read-write on purpose: sensitive views write an audit row in this transaction (JdbcTenantAuditStore)
+    @Transactional
     public StaffProfileResponse get(RbacPrincipal actor, UUID staffProfileId) {
         StaffProfile profile = findScopedProfile(actor, staffProfileId, "STAFF_RECORD_VIEW");
         var active = permissions.activeAssignment(actor)
@@ -217,10 +222,15 @@ public class StaffDirectoryService {
         if (tenantId == null || userAccountId == null || institutionId == null || actorId == null) {
             throw new IllegalArgumentException("Tenant, user, institution and actor are required for staff linkage.");
         }
-        String displayName = jdbc.queryForObject("""
-                SELECT display_name FROM app.user_account
-                 WHERE tenant_id = ? AND user_account_id = ? AND user_type = 'STAFF'
-                """, String.class, tenantId, userAccountId);
+        String displayName;
+        try {
+            displayName = jdbc.queryForObject("""
+                    SELECT display_name FROM app.user_account
+                     WHERE tenant_id = ? AND user_account_id = ? AND user_type = 'STAFF'
+                    """, String.class, tenantId, userAccountId);
+        } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
+            throw new ResourceNotFoundException("Staff user account not found in tenant.");
+        }
         StaffProfile profile = staffProfiles.findByIdTenantIdAndUserAccountId(tenantId, userAccountId)
                 .orElseGet(() -> {
                     int year = LocalDate.now().getYear();
@@ -540,10 +550,14 @@ public class StaffDirectoryService {
                 .map(StaffServiceRecordResponse::from).toList();
     }
 
-    private void recordSensitiveView(RbacPrincipal actor, StaffProfile profile, UUID institutionId) {
-        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
+    private AuditEntry toSensitiveViewEntry(StaffProfile profile, UUID institutionId) {
+        return new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
                 "STAFF_PROFILE", profile.getStaffProfileId(), institutionId, null,
-                Map.of("view", "sensitive_staff_fields"), 1, "P", "SUCCESS"));
+                Map.of("view", "sensitive_staff_fields"), 1, "P", "SUCCESS");
+    }
+
+    private void recordSensitiveView(RbacPrincipal actor, StaffProfile profile, UUID institutionId) {
+        audit.record(toSensitiveViewEntry(profile, institutionId));
     }
 
     private StaffProfile findScopedProfile(RbacPrincipal actor, UUID staffProfileId, String action) {

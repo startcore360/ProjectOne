@@ -83,14 +83,14 @@ public class PlatformAuditLogController {
         UUID exportId = UUID.randomUUID();
         if (matchingRows > MAX_EXPORT_ROWS) {
             platformAuditWriter.record(principal, null, "PLATFORM_AUDIT_EXPORT_REJECTED", "EXPORT",
-                    "PLATFORM_AUDIT_EXPORT", "AUDIT_LOG_EXPORT", exportId, PlatformAuditWriter.FAILED);
+                    "PLATFORM_AUDIT_VIEW", "AUDIT_LOG_EXPORT", exportId, PlatformAuditWriter.FAILED);
             throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
                     "Audit export exceeds the 50,000 row limit; narrow the filters.");
         }
 
         // Record the export itself, then exclude that one event from the exported result set.
         platformAuditWriter.record(principal, null, "PLATFORM_AUDIT_EXPORTED", "EXPORT",
-                "PLATFORM_AUDIT_EXPORT", "AUDIT_LOG_EXPORT", exportId, PlatformAuditWriter.SUCCESS);
+                "PLATFORM_AUDIT_VIEW", "AUDIT_LOG_EXPORT", exportId, PlatformAuditWriter.SUCCESS);
         StreamingResponseBody stream = output -> writeCsv(output, tenantId, actorUserId, action,
                 result, from, to, exportId);
         return ResponseEntity.ok()

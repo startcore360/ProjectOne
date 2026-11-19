@@ -14,10 +14,16 @@ export default defineConfig({
   port: 5173,
   strictPort: true,
   // The leading dot allows every subdomain, so a new tenant needs no change here.
-  // Dev server only. Production is covered in docker/PRODUCTION_TENANT_ROUTING.txt.
+  // ".edu360.localhost" is the recommended local address: browsers send every *.localhost name to
+  // 127.0.0.1 by themselves, so a new tenant opens with no hosts-file step.
+  // ".edu360.local" still works for anyone using the hosts file (docker/dev-hosts-setup.ps1).
   // ".duckdns.org" covers abc-edu360.duckdns.org (one DuckDNS name per tenant, for testing from
   // outside this machine).
-  allowedHosts: [".edu360.local", ".duckdns.org"],
+  //
+  // Dev server only. PRODUCTION does not use Vite: the built files are served behind a reverse
+  // proxy, reached through a wildcard DNS record (*.edu360.com) and a wildcard TLS certificate.
+  // See docker/PRODUCTION_TENANT_ROUTING.txt.
+  allowedHosts: [".edu360.localhost", ".edu360.local", ".duckdns.org"],
 },
   test: {
     environment: "jsdom",

@@ -1,8 +1,16 @@
 package com.edu360.api.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
@@ -16,7 +24,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditFailureException;
+import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.rbac.AssignmentStatus;
 import com.edu360.api.rbac.RoleDefinition;
 import com.edu360.api.rbac.RoleDefinitionId;
@@ -47,6 +62,14 @@ class TenantUserLookupTest {
     @Mock private UserRoleAssignmentRepository assignments;
     @Mock private RoleDefinitionRepository roles;
     @Mock private UserActiveRoleRepository activeRoles;
+    @Mock private AuditLogService auditLogService;
+
+    private final TransactionTemplate transactionTemplate = new TransactionTemplate(new AbstractPlatformTransactionManager() {
+        @Override protected Object doGetTransaction() { return new Object(); }
+        @Override protected void doBegin(Object tx, TransactionDefinition def) {}
+        @Override protected void doCommit(DefaultTransactionStatus st) {}
+        @Override protected void doRollback(DefaultTransactionStatus st) {}
+    });
 
     private Tenant tenant;
     private UserAccount account;
@@ -57,7 +80,7 @@ class TenantUserLookupTest {
         tenant = Tenant.builder().tenantId(TENANT_ID).isolationMode(IsolationMode.SHARED).build();
         account = UserAccount.builder()
                 .id(new UserAccountId(TENANT_ID, USER_ID))
-                .userType(UserType.STAFF).displayName("Test user").status(UserAccountStatus.ACTIVE)
+                .userType(UserType.STAFF).displayName("Test user").email("test@example.com").status(UserAccountStatus.ACTIVE)
                 .build();
         link = UserIdentityLink.builder()
                 .id(new UserIdentityLinkId(TENANT_ID, LINK_ID))
@@ -78,7 +101,7 @@ class TenantUserLookupTest {
     }
 
     private TenantUserLookup lookup() {
-        return new TenantUserLookup(identityLinks, accounts, assignments, roles, activeRoles);
+        return new TenantUserLookup(identityLinks, accounts, assignments, roles, activeRoles, auditLogService, transactionTemplate);
     }
 
     private UserRoleAssignment assignment(UUID assignmentId, ScopeType scope, UUID institutionId) {
@@ -148,5 +171,50 @@ class TenantUserLookupTest {
         assertThat(TenantContext.currentInstitutionIds()).isEmpty();
         assertThat(TenantContext.currentActiveAssignmentId()).isNull();
         assertThat(TenantContext.isActiveRoleRequired()).isFalse();
+    }
+
+    @Test
+    void activationWritesOneAuditRow() {
+        account.setStatus(UserAccountStatus.PENDING_ACTIVATION);
+        when(accounts.updateStatusIfMatches(TENANT_ID, USER_ID, UserAccountStatus.ACTIVE, UserAccountStatus.PENDING_ACTIVATION))
+                .thenReturn(1);
+
+        TenantUserLookup.ResolvedUser resolved = lookup().resolveActiveUser(tenant, "tenant-realm", "subject");
+
+        assertThat(resolved.account().getStatus()).isEqualTo(UserAccountStatus.ACTIVE);
+        verify(accounts).updateStatusIfMatches(TENANT_ID, USER_ID, UserAccountStatus.ACTIVE, UserAccountStatus.PENDING_ACTIVATION);
+        verify(auditLogService).record(
+                eq(AuditEventType.USER_ACTIVATED),
+                isNull(),
+                eq("test@example.com"),
+                isNull(),
+                contains("activated on first login")
+        );
+    }
+
+    @Test
+    void auditFailureLeavesStatusPendingActivationAndFailsRequest() {
+        account.setStatus(UserAccountStatus.PENDING_ACTIVATION);
+        when(accounts.updateStatusIfMatches(TENANT_ID, USER_ID, UserAccountStatus.ACTIVE, UserAccountStatus.PENDING_ACTIVATION))
+                .thenReturn(1);
+        doThrow(new AuditFailureException("Audit sink down", new RuntimeException()))
+                .when(auditLogService).record(any(), any(), any(), any(), any());
+
+        assertThatThrownBy(() -> lookup().resolveActiveUser(tenant, "tenant-realm", "subject"))
+                .isInstanceOf(AuditFailureException.class)
+                .hasMessageContaining("Audit sink down");
+
+        assertThat(account.getStatus()).isEqualTo(UserAccountStatus.PENDING_ACTIVATION);
+    }
+
+    @Test
+    void alreadyActiveUserWritesNoRow() {
+        assertThat(account.getStatus()).isEqualTo(UserAccountStatus.ACTIVE);
+
+        TenantUserLookup.ResolvedUser resolved = lookup().resolveActiveUser(tenant, "tenant-realm", "subject");
+
+        assertThat(resolved.account().getStatus()).isEqualTo(UserAccountStatus.ACTIVE);
+        verify(accounts, never()).updateStatusIfMatches(any(), any(), any(), any());
+        verify(auditLogService, never()).record(any(), any(), any(), any(), any());
     }
 }

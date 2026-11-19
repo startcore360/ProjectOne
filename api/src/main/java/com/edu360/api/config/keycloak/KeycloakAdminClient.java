@@ -129,8 +129,16 @@ public class KeycloakAdminClient {
                     "publicClient", true,
                     "directAccessGrantsEnabled", true,
                     "protocolMappers", List.of(mustChangePasswordClaimMapper()),
-                    // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P7): dev addresses. Must come from configuration.
-                    "redirectUris", List.of("http://*.edu360.local:5173/*", "http://localhost:5173/*"));
+                    // Dev addresses: *.edu360.localhost (no hosts file needed), *.edu360.local (hosts
+                    // file) and plain localhost.
+                    // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P7): must come from configuration
+                    // (app.keycloak.frontend-redirect-uris=${KEYCLOAK_FRONTEND_REDIRECT_URIS}), e.g.
+                    // https://*.edu360.com/* - HTTPS only, the real domain covered by the wildcard
+                    // DNS record and certificate. Verified custom school domains are added on top.
+                    "redirectUris", List.of(
+                            "http://*.edu360.localhost:5173/*",
+                            "http://*.edu360.local:5173/*",
+                            "http://localhost:5173/*"));
             restClient.post()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients")
                     .header("Authorization", "Bearer " + adminToken)

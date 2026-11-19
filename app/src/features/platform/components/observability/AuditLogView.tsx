@@ -155,39 +155,41 @@ export function AuditLogView() {
             action={<Button variant="secondary" onClick={() => { setStatus("loading"); setRetryCount((c) => c + 1); }}>Retry</Button>}
           />
         )}
-        <div className="app-toolbar" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", alignItems: "end" }}>
-          <SearchBox value={query} onChange={setQuery} placeholder="Search this page" />
-          <label className="app-select-label">
+        <div className="audit-log-filter-grid" aria-label="Audit log filters">
+          <SearchBox className="audit-log-filter-search" value={query} onChange={setQuery} placeholder="Search this page" />
+          <label className="audit-log-filter-field">
             Tenant ID
-            <input aria-label="Tenant ID" value={draftFilters.tenantId} onChange={(e) => updateDraft("tenantId", e.target.value)} />
+            <input className="app-input" aria-label="Tenant ID" value={draftFilters.tenantId} onChange={(e) => updateDraft("tenantId", e.target.value)} />
           </label>
-          <label className="app-select-label">
+          <label className="audit-log-filter-field">
             Actor user ID
-            <input aria-label="Actor user ID" value={draftFilters.actorUserId} onChange={(e) => updateDraft("actorUserId", e.target.value)} />
+            <input className="app-input" aria-label="Actor user ID" value={draftFilters.actorUserId} onChange={(e) => updateDraft("actorUserId", e.target.value)} />
           </label>
-          <label className="app-select-label">
+          <label className="audit-log-filter-field">
             Action code
-            <input aria-label="Action code" value={draftFilters.actionCode} onChange={(e) => updateDraft("actionCode", e.target.value)} />
+            <input className="app-input" aria-label="Action code" value={draftFilters.actionCode} onChange={(e) => updateDraft("actionCode", e.target.value)} />
           </label>
-          <label className="app-select-label">
+          <label className="audit-log-filter-field">
             Outcome
-            <select aria-label="Outcome" value={draftFilters.outcome} onChange={(e) => updateDraft("outcome", e.target.value)}>
+            <select className="app-input" aria-label="Outcome" value={draftFilters.outcome} onChange={(e) => updateDraft("outcome", e.target.value)}>
               <option>All</option>
               <option value="SUCCESS">Success</option>
               <option value="DENIED">Denied</option>
               <option value="FAILED">Failed</option>
             </select>
           </label>
-          <label className="app-select-label">
+          <label className="audit-log-filter-field">
             From
-            <input aria-label="From" type="datetime-local" value={draftFilters.from} onChange={(e) => updateDraft("from", e.target.value)} />
+            <input className="app-input" aria-label="From" type="datetime-local" value={draftFilters.from} onChange={(e) => updateDraft("from", e.target.value)} />
           </label>
-          <label className="app-select-label">
+          <label className="audit-log-filter-field">
             To
-            <input aria-label="To" type="datetime-local" value={draftFilters.to} onChange={(e) => updateDraft("to", e.target.value)} />
+            <input className="app-input" aria-label="To" type="datetime-local" value={draftFilters.to} onChange={(e) => updateDraft("to", e.target.value)} />
           </label>
-          <Button variant="secondary" onClick={applyFilters}>Apply filters</Button>
-          <Button variant="secondary" onClick={exportCsv} busy={exporting} disabled={exporting}>Export CSV</Button>
+          <div className="audit-log-filter-actions">
+            <Button variant="primary" onClick={applyFilters}>Apply filters</Button>
+            <Button variant="secondary" onClick={exportCsv} busy={exporting} disabled={exporting}>Export CSV</Button>
+          </div>
         </div>
         {exportError && <p className="notice notice--danger" role="alert">{exportError}</p>}
         {status === "loading" ? (

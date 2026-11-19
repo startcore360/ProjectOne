@@ -20,7 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  * logo and apply the colours. Any signed-in user of that tenant may read it; nobody else.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/branding")
+@RequestMapping({"/v1/tenants/{tenantId}/branding", "/api/tenants/{tenantId}/branding"})
 @Tag(name = "Tenant", description = "The tenant's own branding for the app shell")
 public class TenantBrandingReadController {
 

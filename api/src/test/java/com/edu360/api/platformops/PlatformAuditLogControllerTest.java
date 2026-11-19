@@ -164,7 +164,7 @@ class PlatformAuditLogControllerTest {
                 .hasMessageContaining("50,000");
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), isNull(),
                 org.mockito.ArgumentMatchers.eq("PLATFORM_AUDIT_EXPORT_REJECTED"),
-                org.mockito.ArgumentMatchers.eq("EXPORT"), org.mockito.ArgumentMatchers.eq("PLATFORM_AUDIT_EXPORT"),
+                org.mockito.ArgumentMatchers.eq("EXPORT"), org.mockito.ArgumentMatchers.eq("PLATFORM_AUDIT_VIEW"),
                 org.mockito.ArgumentMatchers.eq("AUDIT_LOG_EXPORT"), any(UUID.class),
                 org.mockito.ArgumentMatchers.eq(PlatformAuditWriter.FAILED));
     }

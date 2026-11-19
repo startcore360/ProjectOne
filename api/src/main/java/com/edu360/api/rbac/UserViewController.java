@@ -74,21 +74,15 @@ public class UserViewController {
                 "USER_VIEW", scope, RbacTarget.NONE);
 
         List<UserSummaryResponse> users;
-        if (scopeType != ScopeType.TENANT && institutionId != null && userRoleAssignmentRepository != null) {
-            Set<UUID> institutionUserIds = userRoleAssignmentRepository
-                    .findByIdTenantIdAndInstitutionIdAndStatus(tenantId, institutionId, AssignmentStatus.ACTIVE)
+        if (scopeType != ScopeType.TENANT && institutionId != null) {
+            users = userAccountRepository
+                    .findByTenantIdAndInstitutionIdAndAssignmentStatus(tenantId, institutionId, AssignmentStatus.ACTIVE)
                     .stream()
-                    .map(UserRoleAssignment::getUserAccountId)
-                    .collect(Collectors.toSet());
-
-            users = userAccountRepository.findAll().stream()
-                    .filter(account -> tenantId.equals(account.getId().getTenantId())
-                            && institutionUserIds.contains(account.getId().getUserAccountId()))
                     .map(this::toSummary)
                     .toList();
         } else {
-            users = userAccountRepository.findAll().stream()
-                    .filter(account -> tenantId.equals(account.getId().getTenantId()))
+            users = userAccountRepository.findByIdTenantId(tenantId)
+                    .stream()
                     .map(this::toSummary)
                     .toList();
         }

@@ -35,7 +35,7 @@ import jakarta.validation.Valid;
  * Enforces T01 (institution scope boundary) and T02 (hierarchy boundary) protection.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/users")
+@RequestMapping({"/v1/tenants/{tenantId}/users", "/api/tenants/{tenantId}/users"})
 @Tag(name = "Users", description = "USER_PASSWORD_RESET_UNLOCK - reset a password or unlock an account")
 public class UserPasswordResetUnlockController {
 

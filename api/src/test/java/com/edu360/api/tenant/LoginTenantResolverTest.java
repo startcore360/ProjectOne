@@ -29,7 +29,7 @@ class LoginTenantResolverTest {
     void setUp() {
         KeycloakProperties props = new KeycloakProperties();
         props.setPlatformRealm("edu360-platform");
-        props.setLocalDevHostSuffix(".edu360.local, -edu360.duckdns.org");
+        props.setLocalDevHostSuffix(".edu360.localhost, .edu360.local, -edu360.duckdns.org");
         resolver = new LoginTenantResolver(props, tenantRepository);
         abc = Tenant.builder().tenantId(UUID.randomUUID()).subdomain("abc").keycloakRealm("abc-realm")
                 .state(TenantState.ACTIVE).build();
@@ -45,6 +45,19 @@ class LoginTenantResolverTest {
     @Test
     void dotStyle_findsTheTenant() {
         assertThat(resolve("abc.edu360.local")).isEqualTo(new LoginTenantResolver.TenantLogin(abc));
+    }
+
+    @Test
+    void localhostStyle_findsTheTenant_withoutAHostsFileEntry() {
+        assertThat(resolve("abc.edu360.localhost")).isEqualTo(new LoginTenantResolver.TenantLogin(abc));
+        assertThat(resolve("platform.edu360.localhost")).isEqualTo(new LoginTenantResolver.PlatformLogin("edu360-platform"));
+    }
+
+    @Test
+    void localhostStyle_refusesNestedAddresses() {
+        when(tenantRepository.findBySubdomain(anyString())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> resolve("x.abc.edu360.localhost")).isInstanceOf(InvalidCredentialsException.class);
+        assertThatThrownBy(() -> resolve("edu360.localhost")).isInstanceOf(InvalidCredentialsException.class);
     }
 
     @Test

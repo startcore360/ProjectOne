@@ -1,5 +1,6 @@
 package com.edu360.api.audit;
 import java.sql.Timestamp;
+import java.util.List;
 import javax.sql.DataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -19,5 +20,16 @@ public class JdbcTenantAuditStore implements TenantAuditStore {
    e.actorKind(),e.actorUserId(),e.activeRoleCode(),e.supportGrantId(),e.operation(),e.actionCode(),e.entityType(),e.entityId(),
    e.recordCount(),e.sensitivityClass(),e.outcome(),e.oldValuesJson(),e.newValuesJson(),
    e.correlationId(),e.payloadHash(),e.actorUserId(),e.actorUserId());
+ }
+ @Override public void appendAll(List<TenantAuditEvent> events){
+  if(events==null||events.isEmpty())return;
+  List<Object[]> batchArgs=events.stream().map(e->new Object[]{
+   e.tenantId(),e.auditEventId(),e.institutionId(),Timestamp.from(e.occurredAt()),
+   e.actorKind(),e.actorUserId(),e.activeRoleCode(),e.supportGrantId(),e.operation(),
+   e.actionCode(),e.entityType(),e.entityId(),e.recordCount(),e.sensitivityClass(),
+   e.outcome(),e.oldValuesJson(),e.newValuesJson(),e.correlationId(),e.payloadHash(),
+   e.actorUserId(),e.actorUserId()
+  }).toList();
+  jdbc.batchUpdate(INSERT,batchArgs);
  }
 }

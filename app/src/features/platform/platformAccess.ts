@@ -102,7 +102,9 @@ export function usePlatformAccess() {
   const stored = useAppSelector((state) => state.platformPermissions?.current);
   const current = stored && stored.userId === user?.id ? stored : null;
   const actions = current?.actions ?? STANDARD_ACTIONS[user?.platformRole ?? ""] ?? null;
-  const actionsKey = actions?.join(",") ?? "";
+  // Sorted so the same set of rights gives the same key: when the server list arrives with the same
+  // actions in a different order, screens that depend on can/canAny do not reload everything.
+  const actionsKey = actions ? [...actions].sort().join(",") : "";
   const serverActions = current?.actions ?? [];
 
   const can = useCallback((action: string) => actionsKey.split(",").includes(action), [actionsKey]);
@@ -117,6 +119,7 @@ export function usePlatformAccess() {
     canAny,
     serverActions,
     permissionsLoaded: current !== null,
+    permissionsFailed: current?.failed === true,
     customRoleName: current?.customRoleName ?? null,
     stepInRequired: current?.stepInRequired ?? [],
     steppedIn: current?.steppedIn ?? [],
@@ -144,6 +147,7 @@ export async function loadPlatformPermissions(dispatch: AppDispatch, userId: str
       }),
     );
   } catch {
-    dispatch(setPlatformPermissions({ userId, actions: [], customRoleName: null, stepInRequired: [], steppedIn: [] }));
+    // Still fail closed (no actions), but remember that this is a failure, not "no rights".
+    dispatch(setPlatformPermissions({ userId, actions: [], customRoleName: null, stepInRequired: [], steppedIn: [], failed: true }));
   }
 }

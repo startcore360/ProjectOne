@@ -264,4 +264,138 @@ class AuditLogServiceTest {
                 service.record(AuditEventType.SESSION_REVOKED, null, "user@test.edu", null, null))
                 .isInstanceOf(AuditFailureException.class);
     }
+
+    @Test
+    void validateSafeValues_blockedPhoneFormats_throwIllegalArgumentException() {
+        List<String> blocked = List.of(
+                "ph-9876543210",
+                "ph-98765-43210",
+                "mob.987.654.3210",
+                "+91 98765 43210",
+                "9876-543-210",
+                "98-7654-3210",
+                "PH-987-654-3210",
+                "MOB-PH-9876-543210"
+        );
+
+        for (String phone : blocked) {
+            assertThatThrownBy(() -> AuditLogService.validateSafeValues(phone))
+                    .as("Expected %s to be blocked as contact details", phone)
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Links and contact details are not permitted in audit values.");
+
+            assertThatThrownBy(() -> AuditLogService.validateSafeValues(Map.of("value", phone)))
+                    .as("Expected %s inside map to be blocked", phone)
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Links and contact details are not permitted in audit values.");
+        }
+    }
+
+    @Test
+    void validateSafeValues_allowedBusinessCodeFormats_doNotThrow() {
+        List<String> allowed = List.of(
+                "SUP-2026-ABCDE",
+                "SUP-2026-00398",
+                UUID.randomUUID().toString(),
+                "c1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+                // Step 2 real values from code, tests, and LIVE_API_VERIFICATION_REPORT.md
+                "SUP-2026-91551",
+                "SUP-2026-E137A",
+                "SUP-2026-626F4",
+                "SUP-2026-CD44A",
+                "SUP-2026-8FE2A",
+                "SUP-2026-0001",
+                "SUP-2026-0002",
+                "SUP-2026-00421",
+                "SUP-2026-00431",
+                "AGY-CHECK1-INST-2026-00004",
+                "AGY-CHECK1-INST-ST-26-0001",
+                "AGY-CHECK1-INST-ST-26-0002"
+        );
+
+        for (String code : allowed) {
+            assertThatCode(() -> AuditLogService.validateSafeValues(code))
+                    .as("Expected %s to be allowed as an explicit business code format", code)
+                    .doesNotThrowAnyException();
+
+            assertThatCode(() -> AuditLogService.validateSafeValues(Map.of("ref", code)))
+                    .as("Expected %s inside map to be allowed", code)
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    @Test
+    void record_structuredAudit_blocksPhoneAndAllowsSupportTicket() {
+        List<TenantAuditEvent> rows = new ArrayList<>();
+        AuditLogService service = new AuditLogService(
+                createRepository(new AtomicReference<>(), new AtomicBoolean(false)), rows::add);
+        UUID tenantId = UUID.randomUUID(), userId = UUID.randomUUID(), sessionId = UUID.randomUUID();
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), "PROFESSOR", ScopeType.TENANT);
+        signIn(tenantId, userId);
+
+        // Blocked phone with separator
+        assertThatThrownBy(() -> service.record(new AuditEntry(AuditEventType.ATTENDANCE_MARKED,
+                "ATTENDANCE_MARK", "ATTENDANCE_SESSION", sessionId, null, null,
+                Map.of("note", "ph-98765-43210"), 1, "P", "SUCCESS")))
+                .isInstanceOf(AuditFailureException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class);
+
+        // Allowed support ticket
+        assertThatCode(() -> service.record(new AuditEntry(AuditEventType.ATTENDANCE_MARKED,
+                "ATTENDANCE_MARK", "ATTENDANCE_SESSION", sessionId, null, null,
+                Map.of("ticket", "SUP-2026-00398"), 1, "P", "SUCCESS")))
+                .doesNotThrowAnyException();
+        assertThat(rows).hasSize(1);
+    }
+
+    @Test
+    void recordAll_savesAllEntriesWithTenantStore() {
+        List<TenantAuditEvent> rows = new ArrayList<>();
+        TenantAuditStore store = new TenantAuditStore() {
+            @Override public void append(TenantAuditEvent event) { rows.add(event); }
+            @Override public void appendAll(List<TenantAuditEvent> events) { rows.addAll(events); }
+        };
+        AuditLogService service = new AuditLogService(
+                createRepository(new AtomicReference<>(), new AtomicBoolean(false)), store);
+        UUID tenantId = UUID.randomUUID(), userId = UUID.randomUUID();
+        UUID entity1 = UUID.randomUUID(), entity2 = UUID.randomUUID(), entity3 = UUID.randomUUID();
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), "PRINCIPAL_COLLEGE", ScopeType.TENANT);
+        signIn(tenantId, userId);
+
+        List<AuditEntry> entries = List.of(
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity1, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS"),
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity2, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS"),
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity3, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS")
+        );
+
+        service.recordAll(entries);
+
+        assertThat(rows).hasSize(3);
+        assertThat(rows.get(0).entityId()).isEqualTo(entity1);
+        assertThat(rows.get(1).entityId()).isEqualTo(entity2);
+        assertThat(rows.get(2).entityId()).isEqualTo(entity3);
+        assertThat(rows.get(0).payloadHash()).isNotEmpty();
+        assertThat(rows.get(1).payloadHash()).isNotEmpty();
+        assertThat(rows.get(2).payloadHash()).isNotEmpty();
+    }
+
+    @Test
+    void recordAll_whenAppendFails_throwsAuditFailureException() {
+        TenantAuditStore store = new TenantAuditStore() {
+            @Override public void append(TenantAuditEvent event) { throw new RuntimeException("DB down"); }
+            @Override public void appendAll(List<TenantAuditEvent> events) { throw new RuntimeException("DB down"); }
+        };
+        AuditLogService service = new AuditLogService(
+                createRepository(new AtomicReference<>(), new AtomicBoolean(false)), store);
+        UUID tenantId = UUID.randomUUID(), userId = UUID.randomUUID(), entity1 = UUID.randomUUID();
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), "PRINCIPAL_COLLEGE", ScopeType.TENANT);
+        signIn(tenantId, userId);
+
+        List<AuditEntry> entries = List.of(
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity1, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS")
+        );
+
+        assertThatThrownBy(() -> service.recordAll(entries))
+                .isInstanceOf(AuditFailureException.class);
+    }
 }

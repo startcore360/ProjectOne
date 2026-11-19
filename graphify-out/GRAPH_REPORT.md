@@ -1,82 +1,81 @@
-# Graph Report - Personal project  (2026-11-16)
+# Graph Report - Personal project  (2026-11-19)
 
 ## Corpus Check
-- 1268 files · ~1,798,008 words
+- 1415 files · ~1,870,280 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 24 file(s) not represented in the graph (top: .properties 7, .css 7, (none) 6)
+- Unclassified: 29 file(s) not represented in the graph (top: .css 10, (none) 7, .properties 7)
 
 ## Summary
-- 9110 nodes · 36233 edges · 355 communities (233 shown, 122 thin omitted)
-- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 4885 edges (avg confidence: 0.86)
+- 10193 nodes · 40804 edges · 382 communities (255 shown, 127 thin omitted)
+- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 5461 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5318e5ec`
+- Built from commit: `85587e8f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Button
-- Notice
+- FileStorage
 - list
 - RbacActionTest
-- com.edu360.api.config.PlatformPrincipal
+- .authorize
 - authManager.tsx
-- InstitutionSetupPages.tsx
+- vitest
 - lombok.NoArgsConstructor
-- org.junit.jupiter.api.DisplayName
+- PlatformActionTest
 - PageHeader
-- PermissionEvaluatorService
+- org.springframework.transaction.annotation.Transactional
 - 4. Deep-Dive Per-Endpoint Logs & Assertion Evidence
-- Institution Structure & Hierarchy
+- mock
 - AuthServiceTest
-- com.edu360.api.config.TenantPrincipal
+- ApprovalRequest
 - TenantManagementService.java
 - RbacTestWorld
 - ScopeType
-- KeycloakAuthClient
+- .decideApproval
 - lombok.RequiredArgsConstructor
 - 4. Endpoint inventory
+- TenantAuditEvent
 - AuditLogService
-- vitest
 - .institution
 - Audit
-- AuthService
+- org.junit.jupiter.api.Test
 - design-system/components/index.ts
-- platformTenantService.ts
-- InstitutionId
+- PlatformUsersView.tsx
+- UserAccountService
 - UserManagementPages.tsx
-- .tenantPrincipal
+- InstitutionSetupActionTest
 - .can
-- .createRelease
+- PlatformReleaseControllerTest
 - Edu360OtpResource
 - PlatformTenantControllerTest
-- org.springframework.transaction.annotation.Transactional
-- BackupStatusControllerTest
+- .tenant
+- TenantBackupStatusRepository
 - Application Configuration & Security
-- RoleDefinition
-- InstitutionSetupActionTest.java
-- org.springframework.transaction.annotation.Transactional
-- InstitutionAdminPages.tsx
+- UserAccountId
+- notblank
+- GuardianLinkService
+- StructureService
 - Application Configuration & Security
 - ProfileService
-- AuditLogService.java
+- org.springframework.http.HttpStatus
 - TenantRoutingDataSource
-- StoredPlatformAccessLookup
+- PlatformAccessLookup
 - PlatformRoleResponse
 - Multi-Tenant Routing & Lifecycle
-- PlatformIdempotencyService
-- UserLeaveBalance
-- .activeAssignment
-- TenantRepository
-- Tenant
-- Platform Operations & Governance
-- AcademicSessionRepository
-- PlatformAuditWriter
-- SessionsPage.tsx
-- .provisionUser
-- ProgramRuleService
+- PlatformBillingControllerTest
 - RbacActionTest.java
+- DataProtectionWorkspaceView.tsx
+- TenantRepository
+- ioexception
+- Platform Operations & Governance
+- .findByTenantIdAndAcademicSessionId
+- PlatformAuditWriter
+- ProfilePage.tsx
+- .createUser
+- AuthControllerTest
 - PlatformPrincipal
 - Core Utilities
 - PlatformUserManagementService
@@ -86,101 +85,102 @@
 - PlatformDataProtectionService
 - Core Utilities
 - .now
-- PlatformAccessLookup
-- UserRoleAssignment
+- MfaRecoveryService
+- .notifyOverdueInvoice
 - EDU 360 CI/CD Engineering Standard
 - ProfileService.java
 - SessionService
 - Application Configuration & Security
 - .as
-- InstitutionSetupActionTest
+- .assignMentor
 - package.json
 - Authentication & Identity Management
 - KeycloakProperties
-- Platform Operations & Governance
+- PlatformAuditLogController
 - instant
-- org.springframework.security.core.Authentication
-- .stepIn
-- KeycloakAdminClient
+- io.swagger.v3.oas.annotations.Operation
+- PlatformStepInService.java
+- KeycloakRealmSecurityService
 - Implementation continuation — 13 November 2026
-- PlatformReportController.java
+- .findByTenantIdAndSectionId
 - Docker Localstack
-- .Github Workflows
+- env
 - EDU 360 — Platform Completion Plan (user stories and acceptance criteria)
 - EDU 360 — Sprint 1 Gap Validation
-- .set
+- PlatformReleaseController
 - Docker Postgres
-- .Github Workflows
+- jobs
 - .Github Workflows
 - .Github Workflows
 - SecurityPolicyService
 - 26. Action list per role (new in Version 3.0)
-- UserLeaveRequest
+- PlatformSecurityPolicyController
 - 26. Action list per role (new in Version 3.0)
-- RbacPrincipal
+- org.springframework.security.core.Authentication
 - Chat A5 — Data protection (Data Protection Officer)
-- components.test.tsx
+- InstitutionSetupPages.tsx
 - EDU 360 V4.0 — Deliverable 1 · Master Product Specification
-- UserBulkUploadControllerTest
-- StudentGuardianLink
+- UserBulkUploadController
+- PlatformTenantPlanChangeServiceTest
 - .Github Workflows
 - React + TypeScript + Vite
 - 5. Data dictionary
 - .Github Workflows
 - LiveWebSocketConfig
-- RegM03SecurityChainTest.java
+- RegM03SecurityChainTest
 - RoleDefinition
 - TenantRoleTemplate
 - 5. Story checklist (236 stories)
 - 8. Functional modules
 - OtpConfirmOutcome
-- name
-- .Github Workflows
-- DeletionRequest
+- steps
+- ci.yml
+- DeletionRequestRepository
 - map
 - Core Utilities
 - Utils
-- 6.2 Resource schemas
+- TenantRoleTemplateAction
 - TemporaryPasswordResponseAdvice.java
 - .decideApproval
 - 8. Functional modules
-- ApprovalRequest
+- ApprovalStep
 - EDU 360 — API Contract Specification
 - components/README.md
 - DevAdminSeeder
+- SelfServiceScopeA08Test.java
 - SessionActivityInterceptorTest
 - 8. Functional modules
 - TenantProvisioningService
-- UserCreationControllerTest.java
-- .set
+- PlatformRole
+- PlatformAuditOutboxEventRepository
 - scripts
-- .usageCounts
+- TenantUsageMonthlyRepository
 - Core Utilities
 - Database Schema & Migrations
 - 4. Logical data model
-- org.springframework.stereotype.Component
+- ModuleEntitlementEnforcer.java
 - ClamAvFileScannerTest.java
 - Part II — EDU 360 Master Product Document, Version 3.3 (consolidated)
 - Core Utilities
 - Core Utilities
 - UserBulkUploadService.java
-- PlatformNotificationService
-- ResourceNotFoundException
+- InvoiceRepository
+- UserPasswordResetUnlockController
 - ReferenceCodeArchitectureTest
 - FileObjectId
 - EDU 360 – Education Management Platform: Final Master Product Document (Version 2.1)
-- TenantIssuerAuthenticationManagerResolver.java
+- TenantProvisioningRetryTest
 - LiveSocketHandler
-- .resolve
+- AuthService
 - 5.4 Institution setup and academic structure
-- Chunk 2 — Platform files and frontend shell
+- Chat A8 — Production readiness and end-to-end tests
 - .updateSettings
-- .upload
+- StudentProfile
 - StructureControllerTest
 - .verify
 - 5.1 Reference data (ref)
 - FileContentInspector
-- StaffDirectoryController
+- .generate
 - Part A – Change table, section by section
 - 13. Role workflows – College level
 - 13. Role workflows – College level
@@ -200,19 +200,26 @@
 - 7. Business rules and approval chains
 - .validate
 - PlanRequestValidationTest.java
-- RegB3SignInTest.java
+- .createGradingScheme
+- TenantSettingsWithinPlanTest
+- .authorize
 - TotpCheckTest.java
 - Chat A2 — Tenant onboarding, plans and entitlements
-- Chat A8 — Production readiness and end-to-end tests
+- uuid
+- TenantBrandingService
+- .grantAccess
+- .today
+- SelfServiceService
 - 19. Change log and decisions
 - 7. Business rules and approval chains
 - EDU 360 — Database Architecture, Logical Data Model, Data Dictionary and Migration Strategy
-- .setStudentLogin
+- InstitutionSetupActionTest
 - EDU 360 – Education Management Platform: Final Master Product Document
 - Audit of Document 1 and Document 2 against V3.3
-- .unlockTerm
+- RoleCustomService
 - Commands
 - EDU360_V4.0_01_Master_Product_Specification.md
+- ExportManifest
 - com.edu360:edu360-otp-extension
 - 12. Role workflows – Tenant and University level
 - 16. System architecture
@@ -224,30 +231,31 @@
 - CursorPage
 - 12. Role workflows – Tenant and University level
 - .create
+- TenantDataProtectionPage.tsx
 - Edu360OtpResourceProviderFactory
-- .handleBusinessRuleViolation
+- AuditFailureException
 - .claim
 - org.springframework.data.jpa.repository.Query
-- IntegrationType.java
+- .set
 - 5.9 Data import, search and IDs
 - EDU 360 V4.0 Spec Package — Summary & Navigation Guide
 - TemporaryPasswordGenerator
 - StaffProfile
-- Override
+- .resetMfa
 - 12. Role workflows – University level
 - 16. System architecture
 - 4. Scope
 - 5.5 Users, roles and access
 - EDU360_V4.0_08_Security_Compliance_and_Final_Validation_Report.md
 - Prompt for the "EDU 360 Final" project — split the platform work into agent prompts
-- 3. The serious gaps, with real-world scenarios
+- PlatformUserMfaResetControllerTest
 - EDU 360: Top Post Authority Rules
-- org.keycloak.models.KeycloakSession
-- LeaveApproverSetting
+- PlatformNotificationReadService
+- Routes.tsx
 - DefaultLiveEventPublisher
 - SupportReadableOperationRegistry.java
-- SecretsManagerProperties
-- How to work in this repository (mandatory)
+- .assignHod
+- .setRule
 - 10. Master role permission matrix (Version 3.3) <!-- A64: was (Version 3.0) -->
 - 11. Role workflows – all roles and Platform level
 - 11. Role workflows – all roles and Platform
@@ -261,10 +269,10 @@
 - Appendix A — C1 Security, Privacy and Risk Assessment (carried forward unchanged)
 - Appendix B — C1 Source Review & Preservation Register (carried forward unchanged)
 - 16. Validation against the documents
-- EDU 360 API
-- InstitutionIdFormatController
-- .openIsolatedPool
-- SupportSessionAuthenticationFilterTest
+- .create
+- RequestMetricCollector
+- PlatformFeatureToggleController
+- E5-S4 — Tenant purge design (reference)
 - 10. Master role permission matrix (Version 2.1)
 - 11. Role workflows – Platform level
 - 14. Role workflows – School level
@@ -275,15 +283,15 @@
 - 6. Data that should be collected
 - .getImportTemplate
 - 10. Master role permission matrix
-- V4-5. Roles, permissions, approvals and templates
+- UserMeController
 - 14. Registers
 - 16. V4.0 validation evidence *(V4.0)*
 - 2. Database architecture
 - EDU 360 — Role and Permission Management Rules (Addendum, approved for next revision)
-- EDU 360 — Sprint 1 Story Status Tracker (Measured 2026-11-07)
-- TenantRoleTemplateAction
+- .createDelegation
+- .validate
 - TenantStepIn
-- RegM01Test.java
+- org.junit.jupiter.api.DisplayName
 - 19. Appendix: decisions resolved and change log
 - 4. Scope
 - V4-11. Security, privacy and compliance
@@ -295,34 +303,57 @@
 - 9. Financial integrity
 - 3. Security, privacy and compliance assessment
 - EDU360 Master Live API Verification Report (Postman / Newman Verified)
-- FeatureNotAvailableException
-- Invoice
-- RetentionChangeRequest
-- .actionCatalog
+- .lockTerm
+- .claim
+- OtpLoginController
+- StudentLoginLookupTest
 - SecurityIncident
 - SupportAccessGrant
 - 10. Security, isolation and sensitive data
-- 11. Internal server errors (HTTP 500)
-- ActiveRoleRequiredException
-- StaffServiceRecord
-- UserNotification
+- .service
+- SupportSessionAuthenticationFilterTest
+- org.springframework.transaction.support.AbstractPlatformTransactionManager
 - 7. State-transition catalogue
 - 04_Database_and_Technical_Architecture/sql/run_all.sh
-- run
-- InstitutionBlockResponse.java
-- NoticeDto.java
+- steps
+- MfaRecoveryService.java
+- ActiveProfileValidatorInitializer.java
+- DenyUnlinkedFileAccessPolicy
+- CalendarEventController
+- MasterCalendarControllerTest
+- TenantProvisioningStatusResponse
+- V4-5. Roles, permissions, approvals and templates
+- EDU 360 — Sprint 1 Story Status Tracker (Measured 2026-11-07)
+- BackupStatusIngestController
+- Override
+- .requestUpgrade
+- UserBulkUploadControllerTest
+- PrintedPasswordPolicy
+- UsernameKind
+- ImportRowError
+- .permissions
+- KeycloakProvisioningException
+- 17. Phase 1 review results
+- Emergency reset of two-step login (decision MFA-01)
+- EDU 360 Sprint 2 Progress
+- Delegation
+- WebMvcConfig.java
+- PlatformCustomRoleStatus
+- Chunk 2 — Platform files and frontend shell
+- .usageCounts
+- PlatformAuditOutboxEvent.java
 
 ## God Nodes (most connected - your core abstractions)
-1. `4. Deep-Dive Per-Endpoint Logs & Assertion Evidence` - 269 edges
-2. `PermissionEvaluatorService` - 191 edges
-3. `AuditLogService` - 185 edges
-4. `RbacPrincipal` - 157 edges
-5. `AuditEventType` - 154 edges
-6. `Button()` - 152 edges
-7. `TenantPrincipal` - 137 edges
-8. `PlatformActionTest` - 132 edges
+1. `4. Deep-Dive Per-Endpoint Logs & Assertion Evidence` - 320 edges
+2. `AuditLogService` - 199 edges
+3. `PermissionEvaluatorService` - 173 edges
+4. `AuditEventType` - 156 edges
+5. `RbacPrincipal` - 155 edges
+6. `react` - 143 edges
+7. `TenantPrincipal` - 134 edges
+8. `PlatformActionTest` - 133 edges
 9. `4. Endpoint inventory` - 128 edges
-10. `TenantRepository` - 123 edges
+10. `Button()` - 116 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Git rules` --references--> `AuditEventType`  [INFERRED]
@@ -339,243 +370,255 @@
 ## Import Cycles
 - None detected.
 
-## Communities (355 total, 122 thin omitted)
+## Communities (382 total, 127 thin omitted)
 
 ### Community 0 - "Button"
 Cohesion: 0.03
-Nodes (150): Button(), ConfirmDialog(), Modal(), Notice(), SelectField(), TextField(), AcademicSessionItem, CreateAcademicSessionPayload (+142 more)
+Nodes (160): Badge(), Button(), Modal(), Notice(), SelectField(), TextField(), AcademicSessionItem, CreateAcademicSessionPayload (+152 more)
+
+### Community 1 - "FileStorage"
+Cohesion: 0.06
+Nodes (14): FileStorage, DictionaryColumn, DocumentFile, ExportArchiveBuilder, ExportJob, ExportRequest, ExportClaim, ExportRequestLifecycleService (+6 more)
 
 ### Community 2 - "list"
-Cohesion: 0.05
-Nodes (6): ApprovalBatchRepository, PlanRepository, StandardRoleActionRepository, RoleRolldownDefaultRepository, LeaveBalanceDto, UserActiveRoleRepository
+Cohesion: 0.03
+Nodes (29): GradingSchemeVersionRepository, ProgramRuleSetRepository, PromotionRunRepository, SubjectAllocationRepository, ApprovalBatchRepository, AuditLogRepository, ImportJobRepository, ImportRowErrorRepository (+21 more)
 
 ### Community 3 - "RbacActionTest"
-Cohesion: 0.09
-Nodes (8): CreateCustomRoleRequest, RbacActionTest, RoleCustomControllerTest, RolldownControllerTest, 2. Comprehensive 67-Story Status Table, Epic 2: Users and roles (17 stories), Epic 3: Institution setup (22 stories), Epic 4: Platform (21 stories)
+Cohesion: 0.07
+Nodes (10): CreateCustomRoleRequest, CreateRolldownOverrideRequest, RolldownOverrideDto, RbacActionTest, RoleCustomControllerTest, RolldownControllerTest, 2. Comprehensive 67-Story Status Table, Epic 2: Users and roles (17 stories) (+2 more)
 
-### Community 4 - "com.edu360.api.config.PlatformPrincipal"
-Cohesion: 0.05
-Nodes (16): AddInvoiceLineRequest, InvoiceLineResponse, InvoiceResponse, RecordPaymentRequest, PlatformBillingController, PlatformBillingService, IntegrationTypeResponse, PlanResponse (+8 more)
+### Community 4 - ".authorize"
+Cohesion: 0.06
+Nodes (13): PlatformDelegationController, PlanResponse, PlatformUserResponse, IntegrationTypeController, PlatformPermissionService, LogoResponses, PlatformTenantBrandingController, PlatformTenantController (+5 more)
 
 ### Community 5 - "authManager.tsx"
-Cohesion: 0.04
-Nodes (70): Edu360Logo(), Edu360LogoProps, LogoStyle, ThemeToggle(), AuthenticatorSetup(), AuthenticatorSetupProps, PendingEnrolment, ChangePasswordPage() (+62 more)
-
-### Community 6 - "InstitutionSetupPages.tsx"
 Cohesion: 0.03
-Nodes (123): PersonPicker(), SectionPicker(), Badge(), DateField(), EmptyState(), Tabs(), TextAreaField(), DashboardPage() (+115 more)
+Nodes (93): @reduxjs/toolkit@^2.13.0, Edu360Logo(), Edu360LogoProps, LogoStyle, RoleSwitcher(), RoleSwitcherProps, mockRoles, AuthenticatorSetup() (+85 more)
+
+### Community 6 - "vitest"
+Cohesion: 0.04
+Nodes (54): react-dom@^19.2.0, Button(), ButtonProps, ButtonSize, ButtonVariant, sizeMap, variantMap, Spinner() (+46 more)
 
 ### Community 7 - "lombok.NoArgsConstructor"
-Cohesion: 0.07
-Nodes (42): GradingSchemeVersionId, ProgramRuleSet, ProgramRuleSetId, PromotionRunId, SubjectAllocation, SubjectAllocationId, ApprovalBatch, ApprovalBatchId (+34 more)
+Cohesion: 0.06
+Nodes (30): GradingSchemeVersionId, ProgramRuleSetId, SubjectAllocationId, ApprovalBatchId, ApprovalRequestId, ApprovalStepId, DelegationId, RecoveryCodesRequest (+22 more)
 
-### Community 8 - "org.junit.jupiter.api.DisplayName"
-Cohesion: 0.04
-Nodes (11): CreateInvoiceRequest, UpdateTenantSettingsRequest, CreateReleaseRequest, CreateSupportTicketRequest, GrantSupportAccessRequest, OpenSupportSessionRequest, SupportSessionResponse, ApprovalInboxServiceActionResolutionTest (+3 more)
+### Community 8 - "PlatformActionTest"
+Cohesion: 0.03
+Nodes (9): CreateInvoiceRequest, TenantLifecycleActionRequest, UpdateTenantSettingsRequest, EntitlementsUpdateRequest, PlatformReportController, PlatformReportResponse, CreateSupportTicketRequest, PlatformActionTest (+1 more)
 
 ### Community 9 - "PageHeader"
-Cohesion: 0.05
-Nodes (125): ErrorState(), PageHeader(), DataTable(), MetricCard(), Panel(), SearchBox(), Status, StatusBadge() (+117 more)
+Cohesion: 0.03
+Nodes (158): ErrorState(), PageHeader(), DataTable(), MetricCard(), SearchBox(), StatusBadge(), MfaResetDialogProps, AddInvoiceLinePayload (+150 more)
 
-### Community 10 - "PermissionEvaluatorService"
-Cohesion: 0.06
-Nodes (28): GradingSchemeService, StudentStatusService, SubjectAllocationService, StudentCreateRequest, StudentCreationService, StudentEnrollmentService, StudentLoginLookup, StudentProfileRepository (+20 more)
+### Community 10 - "org.springframework.transaction.annotation.Transactional"
+Cohesion: 0.05
+Nodes (14): FileAccessPolicy, InstitutionRepository, InstitutionService, LeaveApproverService, MasterCalendarService, StaffDirectoryService, StaffDocumentRepository, StaffDocumentService (+6 more)
 
 ### Community 11 - "4. Deep-Dive Per-Endpoint Logs & Assertion Evidence"
 Cohesion: 0.01
-Nodes (269): 4. Deep-Dive Per-Endpoint Logs & Assertion Evidence, [Endpoint #100] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0/institutions/e71ea58b-97ea-477c-8477-74916bb0671c/classes`, [Endpoint #101] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0/institutions/e71ea58b-97ea-477c-8477-74916bb0671c/classes`, [Endpoint #102] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0/institutions/e71ea58b-97ea-477c-8477-74916bb0671c/sections`, [Endpoint #103] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0/institutions/e71ea58b-97ea-477c-8477-74916bb0671c/sections`, [Endpoint #104] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0/institutions/e71ea58b-97ea-477c-8477-74916bb0671c/subjects`, [Endpoint #105] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0/institutions/e71ea58b-97ea-477c-8477-74916bb0671c/subjects`, [Endpoint #106] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0/institutions/e71ea58b-97ea-477c-8477-74916bb0671c/course-offerings` (+261 more)
+Nodes (320): 4. Deep-Dive Per-Endpoint Logs & Assertion Evidence, [Endpoint #100] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters`, [Endpoint #101] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters`, [Endpoint #102] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes`, [Endpoint #103] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes`, [Endpoint #104] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections`, [Endpoint #105] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections`, [Endpoint #106] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects` (+312 more)
 
-### Community 14 - "com.edu360.api.config.TenantPrincipal"
-Cohesion: 0.05
-Nodes (14): PromotionService, ApprovalCountPublisher, ApprovalInboxService, ApprovalOutcomeHandler, ApprovalRequestRepository, SubjectRef, BulkApprovalResponse, ItemResult (+6 more)
+### Community 12 - "mock"
+Cohesion: 0.07
+Nodes (7): FileObjectRepository, CreateUserCheckResponse, RoleOrigin, CUSTOM, STANDARD, StudentCreationIdFormatGuardTest, TenantUsageControllerTest
+
+### Community 14 - "ApprovalRequest"
+Cohesion: 0.10
+Nodes (10): ApprovalOutcomeHandler, ApprovalRequest, ApprovalRequestRepository, ApprovalRouting, Route, Via, DELEGATION, ROLE (+2 more)
 
 ### Community 15 - "TenantManagementService.java"
-Cohesion: 0.04
-Nodes (26): ApprovalDelegationService, ApprovalRouting, Route, Via, DELEGATION, ROLE, ROLLDOWN, USER (+18 more)
+Cohesion: 0.05
+Nodes (18): MfaRequirementService, TenantIssuerAuthenticationManagerResolver, TenantUserLookup, UserAccountRepository, UserIdentityLinkRepository, TenantPageResponse, TenantResponse, RbacMappingReportService (+10 more)
 
 ### Community 16 - "RbacTestWorld"
 Cohesion: 0.05
-Nodes (15): CreateSubjectAllocationRequest, SubjectAllocationRepository, SubjectAllocationResponse, CreateDelegationRequest, UpdateRoleActionSetRequest, ActiveRoleA02Test, CustomRoleA03Test, ActionRow (+7 more)
+Nodes (12): CreateSubjectAllocationRequest, CreateDelegationRequest, UpdateRoleActionSetRequest, ActiveRoleA02Test, CustomRoleA03Test, ActionRow, RbacTestWorld, StandardRoleRow (+4 more)
 
 ### Community 17 - "ScopeType"
-Cohesion: 0.18
-Nodes (10): CreateUserCheckRequest, UpdateUserRequest, ScopeType, DEPARTMENT, INSTITUTION, TENANT, SwitchActiveRoleResponse, UserMeResponse (+2 more)
-
-### Community 18 - "KeycloakAuthClient"
-Cohesion: 0.17
-Nodes (6): AccountSetupRequiredException, KeycloakAuthClient, PasswordCheck, INVALID, VERIFIED, TokenResult
+Cohesion: 0.14
+Nodes (12): AssignmentStatus, ACTIVE, ENDED, CreateUserCheckRequest, UpdateUserRequest, ScopeType, DEPARTMENT, INSTITUTION (+4 more)
 
 ### Community 19 - "lombok.RequiredArgsConstructor"
-Cohesion: 0.09
-Nodes (24): BulkApproveItem, BulkApproveRequestDto, SessionSettingsController, UnauthorizedException, FileObjectController, TopUserController, CalendarEventController, DepartmentController (+16 more)
+Cohesion: 0.06
+Nodes (23): AuthController, MfaEnrolRequest, SessionSettingsController, UnauthorizedException, FileObjectController, TenantUserLimitController, TopUserController, DepartmentController (+15 more)
 
 ### Community 20 - "4. Endpoint inventory"
 Cohesion: 0.02
 Nodes (128): 4. Endpoint inventory, `academic-sessions` (4), `accreditation-criteria` (1), `accreditation-documents` (4), `approval-requests` (2), `approvals` (2), `assignments` (7), `attendance-correction-requests` (2) (+120 more)
 
-### Community 21 - "AuditLogService"
-Cohesion: 0.06
-Nodes (16): AuditLogRepository, AuditLogService, JdbcTenantAuditStore, TenantAuditEvent, TenantAuditStore, FileAccessPolicy, FileObjectRepository, FileService (+8 more)
+### Community 21 - "TenantAuditEvent"
+Cohesion: 0.18
+Nodes (5): JdbcTenantAuditStore, TenantAuditEvent, TenantAuditStore, TenantAuditStore, TenantAuditStore
 
-### Community 22 - "vitest"
-Cohesion: 0.04
-Nodes (47): Button(), ButtonProps, ButtonSize, ButtonVariant, sizeMap, variantMap, Spinner(), items (+39 more)
+### Community 22 - "AuditLogService"
+Cohesion: 0.06
+Nodes (18): GradingSchemeService, ProgramRuleService, PromotionService, StudentStatusService, SubjectAllocationService, ApprovalDelegationService, ApprovalInboxService, DelegationRepository (+10 more)
 
 ### Community 23 - ".institution"
-Cohesion: 0.10
-Nodes (9): ActionCatalog, ActionCatalogRepository, InstitutionScopeRequest, PermissionEvaluatorServiceTest, UserDeactivationActionTest, UserEditActionTest, UserPasswordResetUnlockActionTest, UserPasswordResetUnlockUnlockActionTest (+1 more)
+Cohesion: 0.06
+Nodes (16): ActionCatalog, ActionCatalogRepository, InstitutionScopeRequest, RbacPrincipal, RbacScope, RbacTarget, RoleActionRepository, UserRequestSupport (+8 more)
 
 ### Community 24 - "Audit"
 Cohesion: 0.02
-Nodes (83): AuditEventType, ACADEMIC_SESSION_CREATED, ACADEMIC_SESSION_UPDATED, ACCOUNT_CREATED, APPROVAL, APPROVAL_BULK_DECIDED, APPROVAL_DELEGATED, APPROVAL_DELEGATION_CANCELLED (+75 more)
+Nodes (87): AuditEventType, ACADEMIC_SESSION_CREATED, ACADEMIC_SESSION_UPDATED, ACCOUNT_CREATED, APPROVAL, APPROVAL_BULK_DECIDED, APPROVAL_DELEGATED, APPROVAL_DELEGATION_CANCELLED (+79 more)
 
-### Community 25 - "AuthService"
-Cohesion: 0.07
-Nodes (7): RoleInfo, ChangePasswordRequest, IdentityEventRequest, LoginRequest, IdentityEventTokenValidator, AuthControllerTest, RegM03Test
+### Community 25 - "org.junit.jupiter.api.Test"
+Cohesion: 0.05
+Nodes (12): ApiApplicationTests, ApprovalInboxServiceActionResolutionTest, TrialReadOnlyFilterTest, InstitutionCodeFormatTest, InstitutionIdFormatServiceTest, BackupStatusFreshnessTest, PlatformPermissionServiceTest, StubLookup (+4 more)
 
 ### Community 26 - "design-system/components/index.ts"
 Cohesion: 0.03
-Nodes (79): App(), Badge(), Icon(), IconName, paths, BadgeProps, BadgeTone, tones (+71 more)
+Nodes (99): App(), EmptyState(), Badge(), Icon(), IconName, paths, BadgeProps, BadgeTone (+91 more)
 
-### Community 27 - "platformTenantService.ts"
-Cohesion: 0.10
-Nodes (24): CreatePlanPayload, DeletionRequestDto, ExportRequestDto, platformTenantService, RetentionPolicyDto, TenantCreateRequest, TenantPageResponse, TenantPlanChangeResponse (+16 more)
+### Community 27 - "PlatformUsersView.tsx"
+Cohesion: 0.06
+Nodes (62): ConfirmDialog(), ErrorState(), MfaResetDialog(), AccessMode, ActionCatalogItem, baseLimitReason(), CreateRolePayload, CUSTOMISABLE_ROLES (+54 more)
 
-### Community 28 - "InstitutionId"
-Cohesion: 0.08
-Nodes (10): BlockDecisionRequest, BlockInstitutionRequest, CreateInstitutionRequest, InstitutionPageResponse, InstitutionResponse, InstitutionId, InstitutionRepository, StudentCreationAuthorizationTest (+2 more)
+### Community 28 - "UserAccountService"
+Cohesion: 0.07
+Nodes (14): InstitutionCodeFormat, StudentCreateRequest, StudentCreationService, StudentEnrollmentService, StudentLoginLookup, StudentProfileRepository, StudentProfileResponse, UserAccountService (+6 more)
 
 ### Community 29 - "UserManagementPages.tsx"
-Cohesion: 0.06
-Nodes (44): EmptyState(), ErrorState(), ErrorStateProps, PageHeader(), PageHeaderProps, Spinner(), SpinnerProps, PlatformRole (+36 more)
+Cohesion: 0.07
+Nodes (24): serverMessage(), GuardianChangeDecision, GuardianChangeRequest, GuardianLinkItem, guardianService, LinkGuardianRequest, UserLimitBanner(), ActionBanner (+16 more)
 
-### Community 30 - ".tenantPrincipal"
-Cohesion: 0.05
-Nodes (12): ChangeStudentStatusRequest, CreateGradingSchemeRequest, CreateProgramRuleSetRequest, PromotionDecisionRequest, LockTermRequest, TermLockResponse, UnlockTermRequest, TermLockRepository (+4 more)
+### Community 30 - "InstitutionSetupActionTest"
+Cohesion: 0.13
+Nodes (6): LockTermRequest, TermLockResponse, UnlockTermRequest, TermLockId, TermLockRepository, TermLockControllerTest
 
 ### Community 31 - ".can"
-Cohesion: 0.13
-Nodes (5): LeaveApproverSetRequest, AssignRoleRequest, PermissionDecision, LeaveApproverControllerTest, RoleAssignmentControllerTest
+Cohesion: 0.22
+Nodes (5): ResourceNotFoundException, LeaveApproverSetRequest, LeaveApproverSettingResponse, PermissionDecision, LeaveApproverControllerTest
 
-### Community 32 - ".createRelease"
+### Community 32 - "PlatformReleaseControllerTest"
 Cohesion: 0.16
-Nodes (6): ReleaseResponse, ReleaseTransitionRequest, UpdateReleaseRequest, PlatformReleaseController, PlatformReleaseRepository, PlatformReleaseService
+Nodes (6): CreateReleaseRequest, ReleaseTransitionRequest, ScheduleReleaseRequest, ReleaseHealthResponse, Window, PlatformReleaseControllerTest
 
 ### Community 34 - "PlatformTenantControllerTest"
 Cohesion: 0.07
-Nodes (11): CreatePlanRequest, TenantActivationRequest, TenantLifecycleActionRequest, UpdatePlanRequest, OtpLoginControllerTest, PlatformIdempotencyServiceTest, PlatformConcurrencyTest, PlatformTenantControllerTest (+3 more)
+Nodes (12): GoLiveBlockerItem, GoLiveCheckResponse, CreatePlanRequest, TenantActivationRequest, UpdatePlanRequest, PlatformConcurrency, PlatformIdempotencyServiceTest, PlatformConcurrencyTest (+4 more)
 
-### Community 35 - "org.springframework.transaction.annotation.Transactional"
-Cohesion: 0.04
-Nodes (17): GradingSchemeResponse, StudentStatusResponse, CourseOfferingRepository, MasterCalendarService, OfferingDepartmentResolver, ProgramYearRepository, SchoolClassRepository, SectionRepository (+9 more)
-
-### Community 36 - "BackupStatusControllerTest"
-Cohesion: 0.21
-Nodes (6): BackupStatusController, BackupStatusEntryResponse, BackupStatusResponse, TenantBackupStatusResponse, TenantBackupStatusRepository, BackupStatusControllerTest
+### Community 35 - ".tenant"
+Cohesion: 0.06
+Nodes (13): AssignmentScope, StaffOnboardingResponse, StaffProfileRequest, StaffProfileResponse, StaffProfileUpdateRequest, CreateUserResponse, StaffDirectoryAuthorizationAllowTest, StaffDirectoryAuthorizationTest (+5 more)
 
 ### Community 37 - "Application Configuration & Security"
-Cohesion: 0.07
-Nodes (12): JpaRepositoryConfig, RestClientConfig, OpenApiConfig, PlatformJpaConfig, PlatformTestInfrastructureConfig, SupportSessionFilterConfig, TokenHostMatchingFilter, TenantLocalProvisioningService (+4 more)
+Cohesion: 0.08
+Nodes (7): JpaRepositoryConfig, RestClientConfig, OpenApiConfig, PlatformJpaConfig, PlatformTestInfrastructureConfig, DataSourceConfig, TenantContextFilterConfig
 
-### Community 38 - "RoleDefinition"
+### Community 38 - "UserAccountId"
+Cohesion: 0.04
+Nodes (28): RoleInfo, DevRoleAssignmentSeeder, IdentityLinkStatus, ACTIVE, REVOKED, UserAccountId, TenantProvisioningService.StepAction, TenantProvisioningService.StepAction (+20 more)
+
+### Community 39 - "notblank"
 Cohesion: 0.06
-Nodes (10): LeaveApproverSettingResponse, RoleActionRepository, Caller, RoleCustomService, RoleDefinitionId, UserRoleAssignmentId, SwitchActiveRoleRequest, DevRoleAssignmentSeederTest (+2 more)
+Nodes (7): BulkApprovalRequest, BulkApproveItem, BulkApproveRequestDto, LinkGuardianRequest, StaffAssignmentRequest, StaffDocumentRequest, TenantProvisioningRetryRequest
 
-### Community 39 - "InstitutionSetupActionTest.java"
-Cohesion: 0.03
-Nodes (6): LinkGuardianRequest, UpdateAcademicSessionRequest, StaffAssignmentRequest, StaffDocumentRequest, UsageMetricSnapshot, CreateRolldownOverrideRequest
+### Community 40 - "GuardianLinkService"
+Cohesion: 0.09
+Nodes (7): ApprovalCountPublisher, GuardianLinkResponse, GuardianLinkService, GuardianProfileRepository, StudentGuardianLinkRepository, LiveEventPublisher, ApprovalCountPublisherTest
 
-### Community 40 - "org.springframework.transaction.annotation.Transactional"
+### Community 41 - "StructureService"
 Cohesion: 0.07
-Nodes (10): GoLiveBlockerItem, GoLiveCheckResponse, LeaveApproverService, LiveEventPublisher, TenantPageResponse, TenantResponse, NotificationDto, SelfServiceService (+2 more)
-
-### Community 41 - "InstitutionAdminPages.tsx"
-Cohesion: 0.07
-Nodes (20): GoLiveBlockerItem, GoLiveCheckResponse, LeaveApproverSetPayload, LeaveApproverSettingItem, AssignmentStatus, AssignRoleRequest, RoleDefinitionStatus, RoleLevel (+12 more)
+Nodes (10): CourseOfferingRepository, DepartmentRepository, OfferingDepartmentResolver, ProgramRepository, ProgramYearRepository, SchoolClassRepository, SectionRepository, SemesterRepository (+2 more)
 
 ### Community 42 - "Application Configuration & Security"
-Cohesion: 0.15
-Nodes (4): TenantIssuerAuthenticationManagerResolverIT, TokenAndSubject, LiveSocketConnectionLimitTest, 10. Housekeeping risks
+Cohesion: 0.10
+Nodes (8): TenantIssuerAuthenticationManagerResolverIT, TokenAndSubject, LiveSocketConnectionLimitTest, A. Traceability: decision → requirement → story → test → status, B. Implementation Gap Register (this round's items only), C. Epic/Sprint planning impact, EDU 360 — Requirements Traceability and Implementation Gap Update, 10. Housekeeping risks
 
 ### Community 43 - "ProfileService"
-Cohesion: 0.08
-Nodes (10): TenantPrincipal, UserAccountId, ProfileUpdateRequest, ProfileService, StoredPhoto, AuthActionTest, ProfileControllerTest, ProfileServiceTest (+2 more)
+Cohesion: 0.07
+Nodes (9): TenantPrincipal, ProfileUpdateRequest, ProfileService, StoredPhoto, AuthActionTest, JdbcFileAccessPolicyTest, ProfileControllerTest, ProfileServiceTest (+1 more)
 
 ### Community 45 - "TenantRoutingDataSource"
-Cohesion: 0.20
-Nodes (4): CachedPool, TenantRoutingDataSource, TenantSecretsResolver, TenantRoutingDataSourceTest
+Cohesion: 0.13
+Nodes (5): TenantDatabaseCredentials, CachedPool, TenantRoutingDataSource, TenantSecretsResolver, TenantRoutingDataSourceTest
 
-### Community 46 - "StoredPlatformAccessLookup"
-Cohesion: 0.19
-Nodes (3): PlatformCustomRoleActionRepository, PlatformStepInRepository, StoredPlatformAccessLookup
+### Community 46 - "PlatformAccessLookup"
+Cohesion: 0.09
+Nodes (4): PlatformDelegationRepository, PlatformAccessLookup, PlatformAccessLookup, StoredPlatformAccessLookup
 
 ### Community 47 - "PlatformRoleResponse"
+Cohesion: 0.21
+Nodes (5): BusinessRuleViolationException, PlatformRoleResponse, PlatformCustomRoleActionRepository, PlatformCustomRoleRepository, PlatformCustomRoleService
+
+### Community 48 - "Multi-Tenant Routing & Lifecycle"
+Cohesion: 0.14
+Nodes (3): SupportSessionIT, Fixture, TenantRoutingDataSourceInstitutionScopeIT
+
+### Community 49 - "PlatformBillingControllerTest"
 Cohesion: 0.16
-Nodes (8): PlatformRoleResponse, PlatformCustomRoleRepository, PlatformCustomRoleService, PlatformCustomRoleStatus, ACTIVE, ARCHIVED, DRAFT, INACTIVE
+Nodes (4): Claim, AddInvoiceLineRequest, ApplyDiscountRequest, PlatformBillingControllerTest
 
-### Community 49 - "PlatformIdempotencyService"
-Cohesion: 0.06
-Nodes (15): OtpLoginController, Claim, PlatformIdempotencyService, ApplyDiscountRequest, BillingCycleResponse, SkippedTenant, CreateBillingCycleRequest, TenantPlanChangeResponse (+7 more)
+### Community 50 - "RbacActionTest.java"
+Cohesion: 0.04
+Nodes (7): BulkApprovalResponse, ItemResult, CorrelationContext, SelfApprovalForbiddenException, GuardianChildResponse, TenantContext, AcademicControllerTest
 
-### Community 51 - ".activeAssignment"
-Cohesion: 0.06
-Nodes (14): TransactionSynchronization, TransactionSynchronization, StaffListResponse, StaffOnboardingResponse, StaffProfileRequest, StaffProfileResponse, StaffProfileUpdateRequest, StaffDirectoryAuthorizationAllowTest (+6 more)
+### Community 51 - "DataProtectionWorkspaceView.tsx"
+Cohesion: 0.05
+Nodes (40): DataProtectionDecision, platformDataProtectionService, PlatformDelegationCandidate, PlatformDelegationRequest, platformDelegationService, RbacMappingReportDto, RbacMappingReportRowDto, RetentionChangeRequestDto (+32 more)
 
 ### Community 52 - "TenantRepository"
-Cohesion: 0.12
-Nodes (12): InvoiceLineRepository, InvoiceRepository, PlatformBillingCycleService, ChangeTenantPlanRequest, PlanChangeEffective, NOW, RENEWAL, PlatformTenantPlanChangeService (+4 more)
-
-### Community 53 - "Tenant"
 Cohesion: 0.06
-Nodes (16): ActiveProfileValidatorInitializer, ActiveRoleRequiredFilter, CorrelationIdFilter, MustChangePasswordFilter, NormalizedRequestWrapper, PathNormalizationFilter, TrialReadOnlyFilter, Tenant (+8 more)
+Nodes (13): TenantSettingsResponse, UserMeResponse, IsolationMode, ISOLATED, SHARED, Tenant, TenantState, ACTIVE (+5 more)
+
+### Community 53 - "ioexception"
+Cohesion: 0.07
+Nodes (11): ActiveRoleRequiredFilter, CorrelationIdFilter, MustChangePasswordFilter, NormalizedRequestWrapper, PathNormalizationFilter, TokenHostMatchingFilter, TrialReadOnlyFilter, ActiveRoleRequiredException (+3 more)
 
 ### Community 54 - "Platform Operations & Governance"
-Cohesion: 0.31
+Cohesion: 0.28
 Nodes (4): CreateIntegrationTypeRequest, UpdateIntegrationTypeRequest, IntegrationTypeRepository, IntegrationTypeControllerTest
 
-### Community 55 - "AcademicSessionRepository"
-Cohesion: 0.06
-Nodes (17): AcademicCalendarEventRepository, AcademicSessionRepository, CalendarDayStatus, CalendarDayStatusService, CalendarEventService, CalendarEventRequest, CreateAcademicSessionRequest, CreateMasterCalendarEventRequest (+9 more)
+### Community 55 - ".findByTenantIdAndAcademicSessionId"
+Cohesion: 0.14
+Nodes (10): AcademicCalendarEvent, AcademicCalendarEventRepository, AcademicSessionRepository, CalendarDayStatus, CalendarDayStatusService, CalendarEventService, CalendarEventRequest, WeeklyOffRuleRepository (+2 more)
 
 ### Community 56 - "PlatformAuditWriter"
 Cohesion: 0.04
-Nodes (19): PlatformAuditWriter, EscalateSupportTicketRequest, SupportAccessGrantResponse, SupportTicketResponse, UpdateSupportTicketRequest, PlatformSupportService, SupportAccessGrantRepository, SupportSessionAuthenticationFilter (+11 more)
+Nodes (22): SupportSessionFilterConfig, JdbcFileAccessPolicy, Claim, IdempotencyService, PlatformBillingSettingsService, PlatformDelegationService, PlatformNotificationService, PlatformAuditWriter (+14 more)
 
-### Community 57 - "SessionsPage.tsx"
-Cohesion: 0.07
-Nodes (28): RoleSwitcher(), RoleSwitcherProps, mockRoles, meService, SwitchActiveRoleResponse, UserMeResponse, UserRoleOption, DeviceType (+20 more)
+### Community 57 - "ProfilePage.tsx"
+Cohesion: 0.08
+Nodes (44): PlatformRole, ProfileResponse, profileService, ProfileUpdateRequest, UserType, initialsFor(), ProfileAvatarSection(), ProfileAvatarSectionProps (+36 more)
 
-### Community 58 - ".provisionUser"
-Cohesion: 0.14
-Nodes (6): TopUserCreateRequest, CreateUserRequest, TopUserControllerTest, UserAccountStudentProvisioningTest, UserCreateKeycloakA07Test, UserCreationControllerTest
+### Community 58 - ".createUser"
+Cohesion: 0.09
+Nodes (8): TopUserCreateRequest, TransactionSynchronization, TransactionSynchronization, CreateUserRequest, TopUserControllerTest, UserAccountStudentProvisioningTest, UserCreateKeycloakA07Test, UserCreationControllerTest
 
-### Community 59 - "ProgramRuleService"
-Cohesion: 0.29
-Nodes (3): ProgramRuleService, ProgramRuleSetRepository, ProgramRuleSetResponse
+### Community 59 - "AuthControllerTest"
+Cohesion: 0.12
+Nodes (5): ChangePasswordRequest, IdentityEventRequest, LoginRequest, AuthControllerTest, RegM03Test
 
 ### Community 61 - "PlatformPrincipal"
-Cohesion: 0.12
-Nodes (8): PlatformPrincipal, DuplicateResourceException, SavePlatformRoleTemplateRequest, PlatformRoleTemplateActionRepository, PlatformRoleTemplateRepository, PlatformRoleTemplateService, PlatformAuditWriterTest, PlatformRoleTemplateServiceTest
+Cohesion: 0.11
+Nodes (9): PlatformPrincipal, DuplicateResourceException, PlatformRoleTemplateResponse, SavePlatformRoleTemplateRequest, PlatformRoleTemplateActionRepository, PlatformRoleTemplateRepository, PlatformRoleTemplateService, PlatformAuditWriterTest (+1 more)
 
 ### Community 62 - "Core Utilities"
 Cohesion: 0.09
 Nodes (21): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection, moduleResolution (+13 more)
 
 ### Community 63 - "PlatformUserManagementService"
-Cohesion: 0.11
-Nodes (5): KeycloakProvisioningException, PlatformUserUpdateRequest, AssignedRole, PlatformUserControllerTest, PlatformUserUpdateTest
+Cohesion: 0.09
+Nodes (8): PlatformUserStatus, ACTIVE, INACTIVE, PlatformUserUpdateRequest, AssignedRole, PlatformUserManagementService, PlatformUserControllerTest, PlatformUserUpdateTest
 
 ### Community 64 - "PlatformCustomRoleServiceTest"
-Cohesion: 0.19
+Cohesion: 0.16
 Nodes (6): AccessMode, HANDED_OVER, SHARED, CreatePlatformRoleRequest, RoleActionItem, PlatformCustomRoleServiceTest
 
 ### Community 65 - "RegB3SignInTest"
-Cohesion: 0.12
-Nodes (4): CredentialInfo, KeycloakUser, OtpConfirmResult, RegB3SignInTest
+Cohesion: 0.09
+Nodes (6): CredentialInfo, KeycloakAdminClient, KeycloakUser, OtpConfirmResult, OtpEnrolment, RegB3SignInTest
+
+### Community 66 - "jakarta.servlet.http.HttpServletRequest"
+Cohesion: 0.06
+Nodes (9): FeatureNotAvailableException, GlobalExceptionHandler, InvalidCredentialsException, ModuleNotEnabledException, GlobalExceptionHandlerTest, 11. Internal server errors (HTTP 500), Bad input that should get a clear message, Half-finished actions (+1 more)
 
 ### Community 67 - "PlatformDataProtectionService"
-Cohesion: 0.08
-Nodes (15): CreateDeletionRequestDto, CreateRetentionChangeRequest, DataProtectionDtos, DecideDeletionRequestDto, DeletionRequestResponse, ExportRequestResponse, RetentionChangeRequestResponse, RetentionPolicyResponse (+7 more)
+Cohesion: 0.07
+Nodes (14): ConfirmDeletionRequestDto, CreateDeletionRequestDto, CreateRetentionChangeRequest, DataProtectionDtos, DecideDeletionRequestDto, DeletionRequestResponse, ExportRequestResponse, RetentionChangeRequestResponse (+6 more)
 
 ### Community 68 - "Core Utilities"
 Cohesion: 0.10
@@ -585,137 +628,141 @@ Nodes (19): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib
 Cohesion: 0.10
 Nodes (37): 5.12 Leave, 5.17 Fees, `app.concession` <span class="b info">from Doc 1</span>, `app.credit_application` <span class="b new">new</span>, `app.fee_assignment` <span class="b info">from Doc 1</span>, `app.fee_exception` <span class="b info">from Doc 1</span>, `app.fee_head_rule` <span class="b warn">completed</span>, `app.fee_head` <span class="b info">from Doc 1</span> (+29 more)
 
-### Community 71 - "UserRoleAssignment"
-Cohesion: 0.11
-Nodes (6): IdentityLinkStatus, ACTIVE, REVOKED, ActiveResolution, UserRoleAssignment, TenantUserLookupTest
+### Community 70 - "MfaRecoveryService"
+Cohesion: 0.16
+Nodes (3): MfaRecoveryService, MfaRecoveryCodeRepository, MfaRecoveryServiceTest
 
 ### Community 72 - "EDU 360 CI/CD Engineering Standard"
 Cohesion: 0.18
 Nodes (10): 1. Purpose and delivery model, 2. Pipeline stages, 3. PostgreSQL migration validation, 4. Pull-request and branch protection, 5. Artifact and release integrity, 6. Deployment and operations — intentionally not enabled, 7. Follow-up acceptance checklist, EDU 360 CI/CD Engineering Standard (+2 more)
 
 ### Community 73 - "ProfileService.java"
-Cohesion: 0.09
-Nodes (3): RealmSecuritySyncService, SecurityPolicyService, AwsSecretsManagerTenantSecretsResolver
+Cohesion: 0.07
+Nodes (6): AuditLogEntryResponse, AuditLogPageResponse, PlatformAuditPayloadRedactor, AwsSecretsManagerTenantSecretsResolver, SecretsManagerProperties, PlatformAuditPayloadRedactorTest
 
 ### Community 74 - "SessionService"
 Cohesion: 0.07
-Nodes (11): UserSessionInfo, PlatformUserDeviceRepository, SessionResponse, DeviceView, SessionService, SignInContext, UserDeviceRepository, SessionServiceTest (+3 more)
+Nodes (10): UserSessionInfo, SessionResponse, DeviceView, SessionService, SignInContext, UserDeviceRepository, SessionServiceTest, Decisions in this round — 2026-11-09 (+2 more)
 
 ### Community 76 - ".as"
-Cohesion: 0.05
+Cohesion: 0.06
 Nodes (10): DecideApprovalRequestDto, GuardianChangeDecisionRequest, GuardianChangeRequestDto, ApprovalDelegationControllerTest, ApprovalEngineB2Test, ApprovalInboxControllerTest, ApprovalTestWorld, GuardianInstitutionPromotionB2Test (+2 more)
 
-### Community 77 - "InstitutionSetupActionTest"
-Cohesion: 0.09
-Nodes (10): ClassTeacherAssignmentRepository, ClassTeacherAssignRequest, HodAssignRequest, MentorAssignRequest, MentorAssignmentRepository, StaffAssignment, ClassTeacherAssignmentServiceTest, HodAssignmentServiceTest (+2 more)
+### Community 77 - ".assignMentor"
+Cohesion: 0.22
+Nodes (4): MentorAssignRequest, MentorAssignmentRepository, MentorAssignmentService, MentorAssignmentServiceTest
 
 ### Community 78 - "package.json"
-Cohesion: 0.04
-Nodes (61): dependencies, axios@^1.12.2, clsx@^2.1.1, date-fns@^4.4.0, react@^19.2.0, react-dom@^19.2.0, react-redux@^9.2.0, react-router-dom@^7.18.5 (+53 more)
+Cohesion: 0.05
+Nodes (55): dependencies, axios@^1.12.2, clsx@^2.1.1, react@^19.2.0, react-redux@^9.2.0, react-router-dom@^7.18.5, tailwind-merge@^3.7.0, devDependencies (+47 more)
 
 ### Community 79 - "Authentication & Identity Management"
 Cohesion: 0.13
 Nodes (14): KC_BOOTSTRAP_ADMIN_PASSWORD, KC_BOOTSTRAP_ADMIN_USERNAME, KC_SPI_THEME_CACHE_TEMPLATES, KC_SPI_THEME_CACHE_THEMES, KC_SPI_THEME_STATIC_MAX_AGE, command, environment, image (+6 more)
 
-### Community 82 - "instant"
-Cohesion: 0.09
-Nodes (30): FileObject, StudentProfile, AcademicSession, CourseOffering, Department, Program, ProgramYear, SchoolClass (+22 more)
-
-### Community 83 - "org.springframework.security.core.Authentication"
+### Community 80 - "KeycloakProperties"
 Cohesion: 0.04
-Nodes (44): GradingSchemeController, ProgramRuleController, StudentStatusController, SubjectAllocationController, ApprovalDelegationController, BulkApprovalRequest, DelegationResponse, AuthController (+36 more)
+Nodes (8): IdentityEventTokenValidator, AccountSetupRequiredException, KeycloakAuthClient, PasswordCheck, INVALID, VERIFIED, KeycloakProperties, KeycloakAdminClientTest
 
-### Community 84 - ".stepIn"
-Cohesion: 0.15
-Nodes (6): PlatformAccessLookup, StepInRequest, StepInResponse, PlatformStepInService, PlatformStepInServiceTest, 0.1 Already recorded (decision log)
+### Community 82 - "instant"
+Cohesion: 0.08
+Nodes (66): GradingSchemeVersion, ProgramRuleSet, PromotionRun, SubjectAllocation, ApprovalBatch, AuditLog, FileObject, GuardianProfile (+58 more)
 
-### Community 85 - "KeycloakAdminClient"
-Cohesion: 0.10
-Nodes (4): KeycloakAdminClient, OtpEnrolment, KeycloakRealmSecurityService, RealmSecuritySettings
+### Community 83 - "io.swagger.v3.oas.annotations.Operation"
+Cohesion: 0.06
+Nodes (23): ProgramRuleController, ProgramRuleSetResponse, PromotionController, AcademicSessionResponse, CourseOfferingResponse, CreateCourseOfferingRequest, CreateProgramYearRequest, CreateSchoolClassRequest (+15 more)
+
+### Community 84 - "PlatformStepInService.java"
+Cohesion: 0.27
+Nodes (4): StepInRequest, StepInResponse, PlatformStepInService, PlatformStepInServiceTest
 
 ### Community 86 - "Implementation continuation — 13 November 2026"
-Cohesion: 0.05
-Nodes (36): Additional implementation work — 13 November 2026, B9 approval-count badge continuation — 13 November 2026, B9 publisher hardening — 13 November 2026, Built, Changes added in this continuation, Chunk 1 — Foundations, Chunk 2 and Chunk 3 continuation — 12 November 2026, Chunk 2 / Chunk 3 continuation — implementation update (+28 more)
+Cohesion: 0.14
+Nodes (14): B9 approval-count badge continuation — 13 November 2026, B9 publisher hardening — 13 November 2026, Chunk 3 continuation — remaining work in progress (13 November 2026), Commits, Confirmed changes, Further Chunk 3 continuation — live events, ID-format editing and migration runner, Implementation continuation — 13 November 2026, Sensitive-view and C2-2 regression coverage — 13 November 2026 (+6 more)
 
-### Community 87 - "PlatformReportController.java"
-Cohesion: 0.06
-Nodes (17): PlanEntitlementRepository, EntitlementsResponse, EntitlementsUpdateRequest, PlatformFeatureToggleController, TenantEntitlementsResponse, TenantEntitlementRepository, PlatformReportController, PlatformReportResponse (+9 more)
+### Community 87 - ".findByTenantIdAndSectionId"
+Cohesion: 0.27
+Nodes (4): ClassTeacherAssignmentRepository, ClassTeacherAssignmentService, ClassTeacherAssignRequest, ClassTeacherAssignmentServiceTest
 
 ### Community 88 - "Docker Localstack"
 Cohesion: 0.15
 Nodes (12): AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, DEFAULT_REGION, SERVICES, environment, image, ports, volumes (+4 more)
 
-### Community 89 - ".Github Workflows"
-Cohesion: 0.18
-Nodes (11): GITHUB_TOKEN, NVD_API_KEY, PGPASSWORD, PSQL, security, name, runs-on, steps (+3 more)
+### Community 89 - "env"
+Cohesion: 0.22
+Nodes (9): EVENT_NAME, GITLEAKS_VERSION, NVD_API_KEY, PGPASSWORD, PR_BASE_SHA, PR_HEAD_SHA, PSQL, PUSH_BEFORE_SHA (+1 more)
 
 ### Community 90 - "EDU 360 — Platform Completion Plan (user stories and acceptance criteria)"
-Cohesion: 0.06
-Nodes (35): 0.2 Decided on 2026-11-16 (project owner, this session) — add to `GOVERNANCE_DECISION_LOG.md`, 0.3 Resolved by this plan without a new decision (follows the documents), 0.4 Still open for the Product Owner (not blocking the plan), 0. Decisions this plan rests on, 10. Epic E8 — Security policy and platform accounts, 11. Epic E9 — Dashboards, navigation and notifications per role, 14. New API operations (record at the next D5 revision), 15. Database migrations (+27 more)
+Cohesion: 0.04
+Nodes (51): 0.1 Already recorded (decision log), 0.2 Decided on 2026-11-16 (project owner, this session) — add to `GOVERNANCE_DECISION_LOG.md`, 0.3 Resolved by this plan without a new decision (follows the documents), 0.4 Still open for the Product Owner (not blocking the plan), 0. Decisions this plan rests on, 10. Epic E8 — Security policy and platform accounts, 11. Epic E9 — Dashboards, navigation and notifications per role, 12. Epic E10 — Production readiness (`PRODUCTION_TENANT_ROUTING.txt`) (+43 more)
 
 ### Community 91 - "EDU 360 — Sprint 1 Gap Validation"
-Cohesion: 0.06
-Nodes (35): 13. Loaders, screen states and fake data, 14. Negative and permission test cases, 15. How good are the existing tests?, 17.1 What was read and not read, 17.2 Effect of your decisions, 17.3 Standards now established for the work ahead, 17.4 Code inventory on 7 November (counted, not run), 17.5 Report statuses that are likely out of date (+27 more)
+Cohesion: 0.05
+Nodes (36): 13. Loaders, screen states and fake data, 14. Negative and permission test cases, 15. How good are the existing tests?, 1. The short answer, 2. How this was checked, and what was not, 3. The serious gaps, with real-world scenarios, 4. Where the audit document itself is wrong, 5. Walking through it as a real user (+28 more)
 
-### Community 92 - ".set"
-Cohesion: 0.10
-Nodes (5): InstitutionCodeFormat, PatternRow, InstitutionIdFormatsRequest, InstitutionCodeFormatTest, InstitutionIdFormatServiceTest
+### Community 92 - "PlatformReleaseController"
+Cohesion: 0.17
+Nodes (5): ReleaseResponse, UpdateReleaseRequest, PlatformReleaseController, PlatformReleaseService, org.springframework.transaction.support.TransactionSynchronization
 
 ### Community 93 - "Docker Postgres"
 Cohesion: 0.17
 Nodes (11): POSTGRES_DB, POSTGRES_PASSWORD, POSTGRES_USER, environment, image, ports, volumes, services (+3 more)
 
-### Community 94 - ".Github Workflows"
-Cohesion: 0.22
-Nodes (8): name, runs-on, concurrency, cancel-in-progress, group, jobs, backend, name
+### Community 94 - "jobs"
+Cohesion: 0.29
+Nodes (7): name, runs-on, jobs, backend, security, name, runs-on
 
 ### Community 95 - ".Github Workflows"
-Cohesion: 0.17
-Nodes (12): name, runs-on, services, POSTGRES_DB, POSTGRES_PASSWORD, POSTGRES_USER, database-migration-validation, env (+4 more)
+Cohesion: 0.22
+Nodes (9): services, POSTGRES_DB, POSTGRES_PASSWORD, POSTGRES_USER, env, image, options, ports (+1 more)
 
 ### Community 96 - ".Github Workflows"
-Cohesion: 0.17
-Nodes (12): with, cache, cache-dependency-path, distribution, fail-on-severity, if-no-files-found, java-version, languages (+4 more)
+Cohesion: 0.15
+Nodes (13): with, cache, cache-dependency-path, distribution, fail-on-severity, fetch-depth, if-no-files-found, java-version (+5 more)
 
 ### Community 97 - "SecurityPolicyService"
-Cohesion: 0.10
-Nodes (6): AccountState, PasswordPolicyService, AuthChallengeException, PlatformSettingValueRepository, SecurityPolicy, RegI06PasswordPolicyTest
+Cohesion: 0.11
+Nodes (10): PasswordPolicyService, PlatformSettingValueRepository, RealmSecuritySyncService, RealmSyncPreview, RealmSyncResult, RealmSyncRunResult, SecurityPolicy, SecurityPolicyService (+2 more)
 
 ### Community 98 - "26. Action list per role (new in Version 3.0)"
 Cohesion: 0.06
 Nodes (34): 26.10 Results, 26.11 Assignments and homework, 26.12 Fees, 26.13 Leave, 26.14 Communication, 26.15 Community and events, 26.16 Complaints, 26.17 Student notes (+26 more)
 
+### Community 100 - "PlatformSecurityPolicyController"
+Cohesion: 0.19
+Nodes (8): ApplyRealmSyncRequest, CreateSecurityIncidentRequest, PlatformSecurityPolicyController, RetryRealmSyncRequest, SecurityIncidentResponse, SecurityPolicyResponse, UpdateSecurityIncidentRequest, UpdateSecurityPolicyRequest
+
 ### Community 101 - "26. Action list per role (new in Version 3.0)"
 Cohesion: 0.06
 Nodes (34): 26.10 Results, 26.11 Assignments and homework, 26.12 Fees, 26.13 Leave, 26.14 Communication, 26.15 Community and events, 26.16 Complaints, 26.17 Student notes (+26 more)
 
-### Community 102 - "RbacPrincipal"
-Cohesion: 0.10
-Nodes (8): CreatePromotionRunRequest, PromotionController, PromotionRunResponse, PlatformSupportController, TenantSupportController, UserRoleAssignmentResponse, RbacPrincipal, RoleAssignmentController
+### Community 102 - "org.springframework.security.core.Authentication"
+Cohesion: 0.04
+Nodes (24): StudentStatusController, SubjectAllocationController, SubjectAllocationResponse, GuardianLinkController, EndStaffAssignmentRequest, InstitutionController, InstitutionIdFormatController, InstitutionIdFormatsResponse (+16 more)
 
 ### Community 103 - "Chat A5 — Data protection (Data Protection Officer)"
-Cohesion: 0.06
-Nodes (29): FileStorage, Your stories, Chat A5 — Data protection (Data Protection Officer), Database migrations you own, Decisions you must follow, Definition of done, Depends on / others depend on you, Facts about the code (+21 more)
+Cohesion: 0.12
+Nodes (16): Chat A5 — Data protection (Data Protection Officer), Database migrations you own, Decisions you must follow, Definition of done, Depends on / others depend on you, Facts about the code, Files you own, Final report (give this to the user at the end) (+8 more)
 
-### Community 104 - "components.test.tsx"
-Cohesion: 0.10
-Nodes (21): DiffRow, DiffTable(), FileDrop(), formatMiB(), Props, PersonOption, Props, Option (+13 more)
+### Community 104 - "InstitutionSetupPages.tsx"
+Cohesion: 0.04
+Nodes (92): DiffRow, DiffTable(), FileDrop(), formatMiB(), Props, PersonOption, PersonPicker(), Props (+84 more)
 
 ### Community 105 - "EDU 360 V4.0 — Deliverable 1 · Master Product Specification"
 Cohesion: 0.06
 Nodes (33): EDU 360 V4.0 — Deliverable 1 · Master Product Specification, The V4.0 document set (10 deliverables), V4-10. API, V4-12. UI/UX, design system and prototype, V4-13.1 Executed evidence, V4-13.2 Designed, not executed, V4-13.3 Required before launch, V4-13. QA and release readiness (+25 more)
 
-### Community 106 - "UserBulkUploadControllerTest"
-Cohesion: 0.22
-Nodes (5): ImportJobResponse, StartImportRequest, UserImportRequest, UserBulkUploadController, UserBulkUploadControllerTest
+### Community 106 - "UserBulkUploadController"
+Cohesion: 0.29
+Nodes (4): ImportJobResponse, ImportTemplateResponse, StartImportRequest, UserBulkUploadController
 
-### Community 107 - "StudentGuardianLink"
-Cohesion: 0.33
-Nodes (3): GuardianLinkResponse, GuardianProfile, StudentGuardianLink
+### Community 107 - "PlatformTenantPlanChangeServiceTest"
+Cohesion: 0.22
+Nodes (3): ChangeTenantPlanRequest, PlatformTenantPlanChangeControllerTest, PlatformTenantPlanChangeServiceTest
 
 ### Community 108 - ".Github Workflows"
-Cohesion: 0.25
-Nodes (8): if, name, permissions, runs-on, dependency-review, permissions, contents, pull-requests
+Cohesion: 0.33
+Nodes (6): if, name, permissions, runs-on, dependency-review, pull-requests
 
 ### Community 109 - "React + TypeScript + Vite"
 Cohesion: 0.50
@@ -726,16 +773,16 @@ Cohesion: 0.06
 Nodes (31): 5.10 Timetable and online classes, 5.13 Risk monitoring, 5.20 Complaints, 5.21 Student notes, 5.22 Policies and documents, 5.24 Privacy and legal (§22), 5.25 Reports and dashboards, 5.6 Approval engine (+23 more)
 
 ### Community 111 - ".Github Workflows"
-Cohesion: 0.29
-Nodes (7): name, permissions, runs-on, steps, codeql, actions, security-events
+Cohesion: 0.33
+Nodes (6): name, permissions, runs-on, codeql, actions, security-events
 
-### Community 113 - "RegM03SecurityChainTest.java"
-Cohesion: 0.13
-Nodes (4): DeviceDescriptor, ApiApplicationTests, RegM03SecurityChainTest, DeviceDescriptorTest
+### Community 113 - "RegM03SecurityChainTest"
+Cohesion: 0.16
+Nodes (3): DeviceDescriptor, RegM03SecurityChainTest, DeviceDescriptorTest
 
 ### Community 114 - "RoleDefinition"
-Cohesion: 0.06
-Nodes (34): UserAccount, PlatformUser, CustomScope, INSTITUTION, UNIVERSITY_OFFICE, RoleDefinitionResponse, RoleDetailResponse, UpdateCustomRoleRequest (+26 more)
+Cohesion: 0.13
+Nodes (15): RoleDefinitionResponse, UpdateCustomRoleRequest, RoleDefinitionStatus, ACTIVE, ARCHIVED, DRAFT, INACTIVE, RETIRED (+7 more)
 
 ### Community 116 - "5. Story checklist (236 stories)"
 Cohesion: 0.06
@@ -749,13 +796,21 @@ Nodes (30): 8.10 Communication *(Phase 1; WhatsApp Phase 2)*, 8.11 Community fee
 Cohesion: 0.33
 Nodes (6): OtpConfirmOutcome, ALREADY_ENROLLED, CONFIRMED, INVALID_CODE, NOT_FOUND, TOO_MANY_ATTEMPTS
 
-### Community 119 - "name"
-Cohesion: 0.31
-Nodes (10): steps, steps, steps, name, runs-on, steps, frontend, name (+2 more)
+### Community 119 - "steps"
+Cohesion: 0.23
+Nodes (13): steps, steps, name, runs-on, steps, steps, database-migration-validation, steps (+5 more)
 
-### Community 120 - ".Github Workflows"
-Cohesion: 0.33
-Nodes (6): on, pull_request, push, workflow_dispatch, branches, branches
+### Community 120 - "ci.yml"
+Cohesion: 0.15
+Nodes (12): concurrency, cancel-in-progress, group, name, on, pull_request, push, workflow_dispatch (+4 more)
+
+### Community 121 - "DeletionRequestRepository"
+Cohesion: 0.20
+Nodes (3): DeletionRequestRepository, PlatformExportController, PlatformExportControllerTest
+
+### Community 122 - "map"
+Cohesion: 0.04
+Nodes (14): PlatformUserRepository, PlatformInvoiceOverdueJob, TenantAdminInvoiceNotifier, DeletionReadinessJob, PlatformRenewalReminderJob, PlatformRenewalReminderService, PlatformTenantRenewalJob, PlatformTenantRenewalService (+6 more)
 
 ### Community 123 - "Core Utilities"
 Cohesion: 0.40
@@ -765,137 +820,113 @@ Nodes (4): printWidth, proseWrap, semi, trailingComma
 Cohesion: 0.70
 Nodes (3): formErrorMapping, normalizeFormErrors(), splitFullName()
 
-### Community 125 - "6.2 Resource schemas"
-Cohesion: 0.07
-Nodes (19): GradingSchemeVersion, GradingSchemeVersionRepository, PromotionRun, PromotionRunRepository, Delegation, ImportRowErrorResponse, ImportJob, ImportJobRepository (+11 more)
-
 ### Community 126 - "TemporaryPasswordResponseAdvice.java"
 Cohesion: 0.16
 Nodes (3): TemporaryPasswordResponseAdvice, PasswordResetResponse, TemporaryPasswordResponseAdviceTest
 
 ### Community 127 - ".decideApproval"
-Cohesion: 0.22
+Cohesion: 0.27
 Nodes (6): ApprovalInboxController, ApprovalInboxResponseDto, PageInfoDto, ApprovalStepDto, ApprovalSummaryDto, DecideApprovalResponseDto
 
 ### Community 128 - "8. Functional modules"
 Cohesion: 0.07
 Nodes (30): 8.10 Communication *(Phase 1; WhatsApp Phase 2)*, 8.11 Community feed and events *(Phase 1)*, 8.12 Complaints and issues *(Phase 1)*, 8.13 Student notes: discipline and health *(Phase 1)*, 8.14 Policies and documents *(Phase 1)*, 8.15 Staff records *(Phase 1)*, 8.16 Risk monitoring *(Phase 1)*, 8.17 Reports and dashboards *(Phase 1)* (+22 more)
 
-### Community 129 - "ApprovalRequest"
-Cohesion: 0.19
-Nodes (4): ApprovalRequest, ApprovalStep, ApprovalStepRepository, RoleRolldownDefault
-
 ### Community 130 - "EDU 360 — API Contract Specification"
 Cohesion: 0.07
 Nodes (28): 0.1 What changed from the supplied Document 2, 0.2 Companion files, 0. About this edition, 10. API test plan, 11.1 Open decisions OD-74 to OD-129, 11.2 Open decisions raised by this audit, 11.3 Assumptions and risks (carried), 11.4 Findings that changed this document (+20 more)
 
 ### Community 132 - "DevAdminSeeder"
-Cohesion: 0.10
-Nodes (20): DevAccount, DevAdminSeeder, 1. Former state (superseded — kept for history), 2. Target state (per `docs/V4.0_SPEC_SUMMARY.md` §1/§4), 3. Open decisions — resolved (2026-11-02), 4. Proposed phased approach, 5. What NOT to do, Keycloak Migration Plan (+12 more)
+Cohesion: 0.07
+Nodes (26): Build and test, Configuration profiles, Current architecture status, EDU 360 API, Requirements, Run locally, DevAccount, DevAdminSeeder (+18 more)
 
 ### Community 134 - "SessionActivityInterceptorTest"
-Cohesion: 0.12
-Nodes (4): WebMvcConfig, SessionActivityInterceptor, MutableClock, SessionActivityInterceptorTest
+Cohesion: 0.16
+Nodes (3): SessionActivityInterceptor, MutableClock, SessionActivityInterceptorTest
 
 ### Community 135 - "8. Functional modules"
 Cohesion: 0.07
 Nodes (28): 8.10 Assignment Management, 8.11 Timetable Management, 8.12 Supporting modules, 8.13 Admissions Management *(extended)*, 8.14 Alumni Management *(extended)*, 8.15 Hostel Management *(extended)*, 8.16 Transport Management *(extended)*, 8.17 Research and Publications *(extended)* (+20 more)
 
 ### Community 136 - "TenantProvisioningService"
-Cohesion: 0.16
-Nodes (7): TenantProvisioningResult, TenantProvisioningStatusResponse, TenantProvisioningStepResponse, StepAction, StepDefinition, StepState, TenantProvisioningService
+Cohesion: 0.19
+Nodes (4): StepAction, StepDefinition, StepState, TenantProvisioningService
 
-### Community 137 - "UserCreationControllerTest.java"
-Cohesion: 0.06
-Nodes (27): AuthTokenResponse, AuthUserResponse, BusinessRuleViolationException, TopUserResponse, UserAccountStatus, ACTIVE, DEACTIVATED, PENDING_ACTIVATION (+19 more)
+### Community 137 - "PlatformRole"
+Cohesion: 0.08
+Nodes (26): AuthTokenResponse, AuthUserResponse, TopUserResponse, UserAccount, UserAccountStatus, ACTIVE, DEACTIVATED, PENDING_ACTIVATION (+18 more)
 
-### Community 138 - ".set"
-Cohesion: 0.09
-Nodes (7): AuditEntry, CorrelationContext, EndStaffAssignmentRequest, StaffServiceRecordRequest, StaffServiceRecordResponse, AuditLogServiceTest, TenantContextTest
+### Community 138 - "PlatformAuditOutboxEventRepository"
+Cohesion: 0.18
+Nodes (4): PlatformAuditOutboxEventRepository, PlatformReleaseHealthService, RequestMetricHourlyRepository, PlatformReleaseHealthServiceTest
 
 ### Community 139 - "scripts"
 Cohesion: 0.20
 Nodes (10): scripts, build, dev, format, format:check, lint, preview, test (+2 more)
 
-### Community 140 - ".usageCounts"
-Cohesion: 0.30
-Nodes (4): UsageCountsResponse, UsageCountsController, UsageMetricDailyRepository, UsageCountsControllerTest
+### Community 140 - "TenantUsageMonthlyRepository"
+Cohesion: 0.16
+Nodes (7): TenantUsageMonthlyRepository, EventCounts, MonthlySnapshot, UsageRollupJob, UsageMetricDailyRepository, UsageRollupJobTest, UsageCountsControllerTest
 
 ### Community 144 - "4. Logical data model"
 Cohesion: 0.07
 Nodes (27): 4.10 Timetable and online classes, 4.11 Attendance, 4.12 Leave, 4.13 Risk monitoring, 4.14 Examinations, 4.15 Results, 4.16 Assignments, homework and study material, 4.17 Fees (+19 more)
 
-### Community 145 - "org.springframework.stereotype.Component"
-Cohesion: 0.06
-Nodes (6): PrintedPasswordPolicy, ModuleEntitlementEnforcer, ModuleEntitlementService, PlatformRenewalReminderJob, PlatformTenantRenewalJob, PlatformTenantRenewalJobTest
-
 ### Community 147 - "ClamAvFileScannerTest.java"
-Cohesion: 0.10
-Nodes (4): ClamAvFileScanner, ClamAvFileScannerTest, ReceivedRequest, ScannerConfiguration
+Cohesion: 0.11
+Nodes (11): ClamAvFileScanner, FileScanner, ScanResult, CLEAN, INFECTED, PENDING, PendingFileScanner, ClamAvFileScannerTest (+3 more)
 
 ### Community 148 - "Part II — EDU 360 Master Product Document, Version 3.3 (consolidated)"
 Cohesion: 0.08
 Nodes (26): 15.1 Standard notifications, 15.2 Optional notifications (each institution ticks what it wants) [CM-16], 15.3 Delivery failures [CM-17], 15. Notifications and alerts catalog, 17. Non-functional requirements (final targets), 18. Glossary, 1. Introduction, 20. Default formulas (+18 more)
 
-### Community 165 - "UserBulkUploadService.java"
-Cohesion: 0.21
-Nodes (3): ImportRowErrorRepository, RowValidationError, UserBulkUploadService
-
-### Community 167 - "PlatformNotificationService"
-Cohesion: 0.15
-Nodes (6): PlatformNotificationRepository, PlatformNotificationService, PlatformRenewalReminderService, PlatformInvoiceOverdueJobTest, PlatformNotificationServiceTest, PlatformRenewalReminderServiceTest
-
-### Community 168 - "ResourceNotFoundException"
-Cohesion: 0.13
-Nodes (7): ResourceNotFoundException, LeaveApproverController, UserListResponse, UserSummaryResponse, UserPasswordResetUnlockController, UserRequestSupport, UserViewController
+### Community 167 - "InvoiceRepository"
+Cohesion: 0.14
+Nodes (7): BillingCycleResponse, SkippedTenant, CreateBillingCycleRequest, InvoiceRepository, PlatformBillingCycleService, PlatformBillingCycleControllerTest, PlatformBillingCycleServiceTest
 
 ### Community 171 - "FileObjectId"
-Cohesion: 0.17
-Nodes (4): FileObjectId, StoredFile, FileServiceTest, JdbcFileAccessPolicyTest
+Cohesion: 0.10
+Nodes (10): FileObjectId, FilePurpose, ASSIGNMENT_SUBMISSION, ATTENDANCE_UPLOAD, STAFF_DOCUMENT, STUDY_MATERIAL, SYLLABUS, FileUploadResponse (+2 more)
 
 ### Community 172 - "EDU 360 – Education Management Platform: Final Master Product Document (Version 2.1)"
 Cohesion: 0.08
 Nodes (24): 15.1 Standard notifications, 15.2 Optional notifications (each institution ticks what it wants) \[CM-16\], 15.3 Delivery failures \[CM-17\], 15. Notifications and alerts, 17. Non-functional targets (final), 18. Glossary, 1. Introduction, 20. Default formulas (+16 more)
 
 ### Community 174 - "LiveSocketHandler"
-Cohesion: 0.22
+Cohesion: 0.15
 Nodes (3): Connection, LiveSocketHandler, UserKey
 
-### Community 175 - ".resolve"
-Cohesion: 0.08
-Nodes (15): SupportPrincipal, Resolution, TenantLogin, SupportPrincipalFilterBypassTest, TokenHostMismatchIT, SupportSessionIT, LoginTenantResolverTest, Your stories (+7 more)
+### Community 175 - "AuthService"
+Cohesion: 0.06
+Nodes (12): AccountState, AuthService, TokenResult, AuthChallengeException, LoginTenantResolver, PlatformLogin, Resolution, TenantLogin (+4 more)
 
 ### Community 176 - "5.4 Institution setup and academic structure"
 Cohesion: 0.09
 Nodes (23): 5.4 Institution setup and academic structure, `app.academic_calendar_event` <span class="b info">from Doc 1</span>, `app.academic_session` <span class="b info">from Doc 1</span>, `app.class_teacher_assignment` <span class="b warn">completed</span>, `app.course_offering` <span class="b warn">completed</span>, `app.department` <span class="b info">from Doc 1</span>, `app.institution` <span class="b info">from Doc 1</span>, `app.mentor_assignment` <span class="b warn">completed</span> (+15 more)
 
-### Community 177 - "Chunk 2 — Platform files and frontend shell"
+### Community 177 - "Chat A8 — Production readiness and end-to-end tests"
 Cohesion: 0.12
-Nodes (14): FileScanner, ScanResult, CLEAN, INFECTED, PENDING, PendingFileScanner, B5 — Files, B5 study-material view access — implementation update (+6 more)
+Nodes (16): Chat A8 — Production readiness and end-to-end tests, Database migrations you own, Decisions you must follow, Definition of done, Depends on / others depend on you, Facts about the code, Files you own, Final report (give this to the user at the end) (+8 more)
 
 ### Community 178 - ".updateSettings"
-Cohesion: 0.21
-Nodes (6): BillingSettingsRepository, BillingSettingsResponse, UpdateBillingSettingsRequest, PlatformBillingSettingsService, PlatformBillingSettingsControllerTest, PlatformBillingSettingsServiceTest
-
-### Community 179 - ".upload"
-Cohesion: 0.12
-Nodes (7): FilePurpose, ASSIGNMENT_SUBMISSION, ATTENDANCE_UPLOAD, STAFF_DOCUMENT, STUDY_MATERIAL, SYLLABUS, FileUploadResponse
+Cohesion: 0.22
+Nodes (4): BillingSettingsResponse, UpdateBillingSettingsRequest, PlatformBillingSettingsControllerTest, PlatformBillingSettingsServiceTest
 
 ### Community 180 - "StructureControllerTest"
-Cohesion: 0.22
-Nodes (5): DepartmentRepository, CreateDepartmentRequest, CreateProgramRequest, ProgramRepository, StructureControllerTest
+Cohesion: 0.17
+Nodes (4): CreateDepartmentRequest, CreateProgramRequest, InstitutionId, StructureControllerTest
 
 ### Community 181 - ".verify"
-Cohesion: 0.19
+Cohesion: 0.21
 Nodes (4): StaffDocumentResponse, StaffDocumentVerificationRequest, StaffDocumentServiceTest, StaffDocumentVerificationControllerTest
 
 ### Community 182 - "5.1 Reference data (ref)"
 Cohesion: 0.11
 Nodes (19): 5.1 Reference data (ref), `ref.action_catalog` <span class="b info">from Doc 1</span>, `ref.approval_chain_step` <span class="b info">from Doc 1</span>, `ref.approval_process` <span class="b info">from Doc 1</span>, `ref.data_class` <span class="b info">from Doc 1</span>, `ref.feature_area` <span class="b info">from Doc 1</span>, `ref.feature_catalog` <span class="b info">from Doc 1</span>, `ref.idempotency_scope` <span class="b info">from Doc 1</span> (+11 more)
 
-### Community 184 - "StaffDirectoryController"
+### Community 184 - ".generate"
 Cohesion: 0.24
-Nodes (3): StaffAssignmentResponse, StaffDirectoryController, StaffDirectoryControllerTest
+Nodes (4): RbacMappingReport, SkippedTenant, RbacMappingReportRow, RbacMappingReportControllerTest
 
 ### Community 185 - "Part A – Change table, section by section"
 Cohesion: 0.11
@@ -914,12 +945,12 @@ Cohesion: 0.11
 Nodes (18): 13.10 Librarian and Library Assistant *(Phase 2)*, 13.11 HR Manager and HR Executive, 13.12 Payroll Officer *(Phase 2)*, 13.13 Admission Officer *(Phase 2)*, 13.14 Examination Clerk, Records Officer and Office Staff, 13.15 IT Administrator and System Operator, 13.16 Academic support staff, 13.17 Campus services staff (+10 more)
 
 ### Community 189 - "Decisions in this round — 2026-11-04"
-Cohesion: 0.11
-Nodes (17): Decisions in this round — 2026-11-04, Decisions in this round — 2026-11-07, EDU 360 — Governance Decision Log, Implementation status (2026-11-07), OD-01 — PostgreSQL major version, OD-03 — Institution-level RLS, OD-09 — Audit-store integrity, OD-10 / OD-80 — Keycloak identity linkage (+9 more)
+Cohesion: 0.10
+Nodes (19): Decisions in this round — 2026-11-04, Decisions in this round — 2026-11-07, Decisions in this round — 2026-11-16, EDU 360 — Governance Decision Log, Implementation status (2026-11-07), MFA-01 — Getting back in when the authenticator stops working, OD-01 — PostgreSQL major version, OD-03 — Institution-level RLS (+11 more)
 
 ### Community 190 - ".teacherLookup"
-Cohesion: 0.20
-Nodes (4): PageInfo, TeacherLookupItem, TeacherLookupResponse, StaffDirectoryIdentityAndConflictTest
+Cohesion: 0.16
+Nodes (5): PageInfo, StaffListResponse, TeacherLookupItem, TeacherLookupResponse, StaffDirectoryIdentityAndConflictTest
 
 ### Community 191 - "Chat A1 — Foundation and repairs"
 Cohesion: 0.12
@@ -942,12 +973,12 @@ Cohesion: 0.12
 Nodes (17): 5.3 Platform administration, `app.tenant_local` <span class="b new">new</span>, `platform.integration_type` <span class="b warn">completed</span>, `platform.invoice_line` <span class="b warn">completed</span>, `platform.invoice` <span class="b info">from Doc 1</span>, `platform.plan_entitlement` <span class="b info">from Doc 1</span>, `platform.plan` <span class="b info">from Doc 1</span>, `platform.platform_user` <span class="b info">from Doc 1</span> (+9 more)
 
 ### Community 196 - "LocalFileStorage"
-Cohesion: 0.22
+Cohesion: 0.15
 Nodes (4): LocalFileStorage, UncheckedFileStorageException, LocalFileStorageTest, UserBulkUploadServiceStudentImportTest
 
 ### Community 197 - "Chat A4 — Support, the read-only support session, and isolation"
-Cohesion: 0.12
-Nodes (15): Chat A4 — Support, the read-only support session, and isolation, Database migrations you own, Decisions you must follow, Definition of done, Depends on / others depend on you, Facts about the code, Files you own, Final report (give this to the user at the end) (+7 more)
+Cohesion: 0.11
+Nodes (17): SupportPrincipal, SupportPrincipalFilterBypassTest, Chat A4 — Support, the read-only support session, and isolation, Database migrations you own, Decisions you must follow, Definition of done, Depends on / others depend on you, Facts about the code (+9 more)
 
 ### Community 198 - "Chat A6 — Usage, backup, audit log, releases and security policy"
 Cohesion: 0.12
@@ -965,17 +996,33 @@ Nodes (16): 7.0 How every approval works, 7.10 Communication rules, 7.11 Complai
 Cohesion: 0.12
 Nodes (16): 7.0 How every approval works, 7.10 Communication rules, 7.11 Complaints and issues, 7.12 Academic calendar, 7.13 Tenant lifecycle, 7.14 Audit and data rules, 7.1 Approval chains, 7.2 Leave rules (+8 more)
 
-### Community 206 - "RegB3SignInTest.java"
-Cohesion: 0.05
-Nodes (11): UsernameKind, EMAIL, MOBILE, STUDENT_CODE, AssignmentStatus, ACTIVE, ENDED, IsolationMode (+3 more)
+### Community 206 - ".createGradingScheme"
+Cohesion: 0.36
+Nodes (3): CreateGradingSchemeRequest, GradingSchemeController, GradingSchemeResponse
+
+### Community 208 - ".authorize"
+Cohesion: 0.07
+Nodes (7): ChangeStudentStatusRequest, CreateProgramRuleSetRequest, CreatePromotionRunRequest, PromotionDecisionRequest, PromotionRunId, PromotionRunResponse, StudentStatusResponse
 
 ### Community 211 - "Chat A2 — Tenant onboarding, plans and entitlements"
 Cohesion: 0.13
 Nodes (14): Chat A2 — Tenant onboarding, plans and entitlements, Database migrations you own, Decisions you must follow, Definition of done, Depends on / others depend on you, Facts about the code, Final report (give this to the user at the end), Git rules (+6 more)
 
-### Community 217 - "Chat A8 — Production readiness and end-to-end tests"
-Cohesion: 0.13
-Nodes (14): Chat A8 — Production readiness and end-to-end tests, Database migrations you own, Decisions you must follow, Definition of done, Facts about the code, Files you own, Final report (give this to the user at the end), Git rules (+6 more)
+### Community 212 - "uuid"
+Cohesion: 0.03
+Nodes (20): CalendarEventResponse, ClassTeacherAssignResponse, HodAssignResponse, InstitutionBlockResponse, InstitutionPageResponse, InstitutionResponse, MasterCalendarEventResponse, MentorAssignResponse (+12 more)
+
+### Community 213 - "TenantBrandingService"
+Cohesion: 0.15
+Nodes (4): Branding, Logo, TenantBrandingService, TenantBrandingServiceTest
+
+### Community 214 - ".grantAccess"
+Cohesion: 0.11
+Nodes (6): GrantSupportAccessRequest, OpenSupportSessionRequest, SupportSessionResponse, SupportTicketRepository, PlatformSupportControllerTest, TenantSupportControllerTest
+
+### Community 217 - "SelfServiceService"
+Cohesion: 0.10
+Nodes (5): NotificationDto, NotificationSummaryDto, SelfServiceController, SelfServiceService, SelfServiceControllerTest
 
 ### Community 219 - "19. Change log and decisions"
 Cohesion: 0.13
@@ -989,6 +1036,10 @@ Nodes (15): 7.10 Communication rules, 7.11 Complaints, issues and escalations, 7
 Cohesion: 0.13
 Nodes (14): 0.1 What changed from the supplied Document 1, 0.2 Companion files, 0. About this edition, 12. Backup, recovery and operations, 13. Database acceptance criteria, 15. Appendix: Phase 2 and Phase 3 extension points, 1.1 Sources used, 1.2 What V3.2 and V3.3 changed for the database (+6 more)
 
+### Community 222 - "InstitutionSetupActionTest"
+Cohesion: 0.18
+Nodes (6): StudentLoginSwitchRequest, UpdateAcademicSessionRequest, StudentLoginSwitchService, InstitutionSetupActionTest, StudentLoginSwitchServiceTest, Part A — Sprint 1 dependency audit
+
 ### Community 223 - "EDU 360 – Education Management Platform: Final Master Product Document"
 Cohesion: 0.14
 Nodes (14): 15. Notifications and alerts catalog, 17. Non-functional requirements *(proposed)*, 18. Glossary, 1. Introduction, 2. Institutional and role hierarchy, 3. Objectives, 5. System overview, 6.1 Permission legend (+6 more)
@@ -998,8 +1049,8 @@ Cohesion: 0.14
 Nodes (14): 10. Open decisions needing approval, 11. Validation results (executed), 12. Limitations, 13. Readiness, 1. Executive assessment, 2. Files and sections reviewed, 3. Coverage totals (denominators from the traceability workbook), 4. Findings by severity (+6 more)
 
 ### Community 227 - "Commands"
-Cohesion: 0.15
-Nodes (11): Architecture, Backend (`api/`), Backend (`api/src/main/java/com/edu360/api/`), CI parity, Commands, Database (`sql/`), Frontend (`app/`), Full local stack (repo root, PowerShell) (+3 more)
+Cohesion: 0.10
+Nodes (19): Act as a senior team, not a code generator, Architecture, Back-end and database changes — always check the contract, Backend (`api/`), Backend (`api/src/main/java/com/edu360/api/`), CI parity, Commands, Database (`sql/`) (+11 more)
 
 ### Community 228 - "EDU360_V4.0_01_Master_Product_Specification.md"
 Cohesion: 0.15
@@ -1037,13 +1088,13 @@ Nodes (4): Cursor, CursorPage, Request, CursorPageTest
 Cohesion: 0.17
 Nodes (12): 12.10 Research Coordinator *(Phase 3)*, 12.11 Governance officers, 12.1 Management *(new)*, 12.2 Data Protection Contact *(new)*, 12.3 University Admin, 12.4 Vice-Chancellor *(new)*, 12.5 Registrar *(new)*, 12.6 Finance Director *(new)* (+4 more)
 
-### Community 241 - ".create"
-Cohesion: 0.29
-Nodes (3): StudentCreationController, StudentProfileResponse, StudentCreationControllerTest
+### Community 242 - "TenantDataProtectionPage.tsx"
+Cohesion: 0.27
+Nodes (9): effectiveExportStatus(), formatDate(), OPEN_DELETION_STATUSES, TenantDataProtectionPage(), renderPage(), service, tenantDataProtectionService, TenantDeletionRequest (+1 more)
 
-### Community 247 - "IntegrationType.java"
-Cohesion: 0.24
-Nodes (4): AuditLogEntryResponse, AuditLogPageResponse, IntegrationType, PlatformAuditOutboxEvent
+### Community 247 - ".set"
+Cohesion: 0.10
+Nodes (4): AuditEntry, AuditLogServiceTest, TenantUserLookupTest, TenantContextTest
 
 ### Community 248 - "5.9 Data import, search and IDs"
 Cohesion: 0.20
@@ -1054,12 +1105,8 @@ Cohesion: 0.20
 Nodes (9): 1. Product scope — `01_Master_Product_Specification/EDU360_V4.0_01_Master_Product_Specification.md`, 2. Governance register & roles/permissions —, 3. Database & technical architecture —, 4. API & integration specification —, 5. QA traceability & security compliance —, 6. UX/Workflow, design system & prototype —, 7. Cross-cutting discrepancies to carry forward (don't silently resolve these), 8. Navigation guide — "which file do I open for X?" (+1 more)
 
 ### Community 251 - "StaffProfile"
-Cohesion: 0.28
-Nodes (3): StaffDocument, StaffProfile, StaffDocumentVerificationAuthorizationTest
-
-### Community 252 - "Override"
-Cohesion: 0.28
-Nodes (3): TenantProvisioningService.StepAction, TenantProvisioningService.StepAction, TenantProvisioningService.StepAction
+Cohesion: 0.24
+Nodes (3): StaffProfile, StaffDocumentVerificationAuthorizationTest, StaffProfileResponseTest
 
 ### Community 253 - "12. Role workflows – University level"
 Cohesion: 0.22
@@ -1085,17 +1132,29 @@ Nodes (8): Appendix D — C1 Executive Readout (carried forward unchanged), Appe
 Cohesion: 0.22
 Nodes (8): 1. Sources and which one wins, 2. Decisions every agent must follow (repeat them in every prompt), 3. Facts about the current code (put the relevant ones in each prompt), 5. Git rules (copy them word for word into every prompt), 6. Working method (copy it into every prompt: understand first, then build), 7. Required content of each agent prompt, 8. Your answer format, Prompt for the "EDU 360 Final" project — split the platform work into agent prompts
 
-### Community 259 - "3. The serious gaps, with real-world scenarios"
-Cohesion: 0.22
-Nodes (9): 3. The serious gaps, with real-world scenarios, Gap 1 — Staff may see no institution data, Gap 3 — Login is not protected as the spec requires, Gap 4 — The audit trail cannot answer "who did this?", Gap 5 — There is no approvals inbox, Gap 6 — Forms ask for IDs that admins cannot know, Gap 7 — Academic structure is mostly unbuilt, Gap 8 — Rules that were skipped in "completed" stories (+1 more)
+### Community 259 - "PlatformUserMfaResetControllerTest"
+Cohesion: 0.36
+Nodes (3): PlatformMfaResetRequest, PlatformUserMfaResetController, PlatformUserMfaResetControllerTest
 
 ### Community 260 - "EDU 360: Top Post Authority Rules"
 Cohesion: 0.22
 Nodes (8): 1. What no top post can do, 2. Rules that do not affect top posts (12), 3. Decisions made (5), 4. Who can do what after handing work over, Appendix A: every "Never allowed" rule (64), Appendix B: all 278 actions, EDU 360: Top Post Authority Rules, How the top posts relate
 
-### Community 266 - "How to work in this repository (mandatory)"
-Cohesion: 0.25
-Nodes (8): Act as a senior team, not a code generator, Back-end and database changes — always check the contract, Front-end changes — always check design, prototype, workflow, roles and database, How to work in this repository (mandatory), Required workflow for every implementation request, Required workflow for every implementation request, UI/UX standard, Use the graphify graph first to save tokens
+### Community 261 - "PlatformNotificationReadService"
+Cohesion: 0.35
+Nodes (3): PlatformNotificationReadService, PlatformNotificationRepository, PlatformNotificationReadServiceTest
+
+### Community 262 - "Routes.tsx"
+Cohesion: 0.04
+Nodes (83): ThemeToggle(), InvoicesPage, IntegrationTypesPage, AuditLogPage, BackupStatusPage, UsageCountsPage, PlatformOverviewPage, PlansPage (+75 more)
+
+### Community 265 - ".assignHod"
+Cohesion: 0.17
+Nodes (4): HodAssignRequest, StaffAssignment, StaffAssignmentRepository, HodAssignmentServiceTest
+
+### Community 266 - ".setRule"
+Cohesion: 0.28
+Nodes (4): WeeklyOffRuleRequest, WeeklyOffRuleResponse, WeeklyOffRuleService, WeeklyOffRuleServiceTest
 
 ### Community 267 - "10. Master role permission matrix (Version 3.3) <!-- A64: was (Version 3.0) -->"
 Cohesion: 0.25
@@ -1149,9 +1208,21 @@ Nodes (8): Ancillary instruction files, Appendix B — C1 Source Review & Preser
 Cohesion: 0.25
 Nodes (8): 16. Validation against the documents, API result against D5, Conflicts in the documents (not resolved here), Corrections made to this report, Findings the documents confirm, New defects from the documents, Screens against D3 and D7, What was read
 
-### Community 280 - "EDU 360 API"
-Cohesion: 0.29
-Nodes (6): Build and test, Configuration profiles, Current architecture status, EDU 360 API, Requirements, Run locally
+### Community 280 - ".create"
+Cohesion: 0.38
+Nodes (3): PlatformDelegationRequest, PlatformDelegationResponse, PlatformDelegationServiceTest
+
+### Community 281 - "RequestMetricCollector"
+Cohesion: 0.44
+Nodes (3): MetricKey, RequestMetricCollector, RequestMetricCollectorTest
+
+### Community 282 - "PlatformFeatureToggleController"
+Cohesion: 0.12
+Nodes (11): SessionSettingsResponse, EntitlementCatalog, Feature, Module, EditorFeature, EditorModule, EntitlementEditorResponse, EntitlementsResponse (+3 more)
+
+### Community 283 - "E5-S4 — Tenant purge design (reference)"
+Cohesion: 0.20
+Nodes (9): 1. Decisions, 2. Tables whose triggers block DELETE, 3. The retention closure (why "keep 7 tables" keeps much more), 4. Student notes: chosen approach (b) — SECURITY DEFINER check, 5. Legal holds, 6. Order and outcome, 7. OD-06 options (decision pending), 8. Tests required at build time (+1 more)
 
 ### Community 284 - "10. Master role permission matrix (Version 2.1)"
 Cohesion: 0.29
@@ -1189,10 +1260,6 @@ Nodes (7): 6. Data that should be collected, Create institution, Create tenant, 
 Cohesion: 0.33
 Nodes (6): 10.1 Feature areas, 10.2 Platform roles, 10.3 Institution roles: core operations, 10.4 Institution roles: services and records, 10.5 Institution roles: engagement, governance and integrations, 10. Master role permission matrix
 
-### Community 294 - "V4-5. Roles, permissions, approvals and templates"
-Cohesion: 0.33
-Nodes (6): V4-5.1 Roles, V4-5.2 Permission letters, V4-5.3 Approval and separation of duties (normative, from Part II §7), V4-5.3a Missing roles roll down, V4-5.4 Role templates and custom roles — *V4.0 recommendation, not yet decided*, V4-5. Roles, permissions, approvals and templates
-
 ### Community 295 - "14. Registers"
 Cohesion: 0.33
 Nodes (6): 14.1 Open decisions affecting the database, 14.2 Proposed technical decisions (need approval), 14.3 Assumptions and risks (carried, updated), 14.4 Tables added by this edition, 14.5 Findings that changed this document, 14. Registers
@@ -1209,9 +1276,9 @@ Nodes (6): 2.1 Engine and organisation, 2.2 Tenant key and isolation (corrected)
 Cohesion: 0.33
 Nodes (5): 1. Section structure (approved as the next-revision table of contents for this topic), 2. Critical rules (approved verbatim, consolidated across the 12 sections), 3. How these rules map onto rule #10 above and existing V4.0 concepts, 4. Implementation status, EDU 360 — Role and Permission Management Rules (Addendum, approved for next revision)
 
-### Community 299 - "EDU 360 — Sprint 1 Story Status Tracker (Measured 2026-11-07)"
-Cohesion: 0.33
-Nodes (5): 1. Executive Summary, 3. Product Owner Acceptance Readiness, Before production: tenant routing (not a Sprint 1 story), EDU 360 — Sprint 1 Story Status Tracker (Measured 2026-11-07), Test Suite Execution Summary
+### Community 302 - "org.junit.jupiter.api.DisplayName"
+Cohesion: 0.12
+Nodes (10): BlockDecisionRequest, BlockInstitutionRequest, CreateInstitutionRequest, InstitutionControllerTest, 1. Executive Summary, 2. Findings Table, 4. Performance Baseline Measurements, 5. Needs a Decision (Open Decisions & Document Conflicts) (+2 more)
 
 ### Community 303 - "19. Appendix: decisions resolved and change log"
 Cohesion: 0.40
@@ -1255,43 +1322,95 @@ Nodes (5): 3.1 Controls with executed evidence (database level), 3.2 Findings th
 
 ### Community 313 - "EDU360 Master Live API Verification Report (Postman / Newman Verified)"
 Cohesion: 0.40
-Nodes (4): 1. Executive Newman Summary, 2. Real pm.test Checks Evaluated, 3. Complete Newman Verification Results (All 268 Endpoints), EDU360 Master Live API Verification Report (Postman / Newman Verified)
+Nodes (4): 1. Executive Newman Summary, 2. Real pm.test Checks Evaluated, 3. Complete Newman Verification Results (All 319 Endpoints), EDU360 Master Live API Verification Report (Postman / Newman Verified)
+
+### Community 315 - ".claim"
+Cohesion: 0.08
+Nodes (10): PlatformIdempotencyService, PlatformIdempotentExecutor, InvoiceLineResponse, InvoiceResponse, RecordPaymentRequest, PlatformBillingController, PlatformBillingService, PlatformTenantPlanChangeController (+2 more)
 
 ### Community 320 - "10. Security, isolation and sensitive data"
 Cohesion: 0.50
 Nodes (4): 10.1 Requirements (carried, with status), 10.2 Sensitive data, 10.3 Threat model and security tests, 10. Security, isolation and sensitive data
 
-### Community 321 - "11. Internal server errors (HTTP 500)"
-Cohesion: 0.50
-Nodes (4): 11. Internal server errors (HTTP 500), Bad input that should get a clear message, Half-finished actions, Normal actions that fail
-
 ### Community 325 - "7. State-transition catalogue"
 Cohesion: 0.67
 Nodes (3): 7.1 Carried transitions, 7.2 New transitions (V3.2, V3.3 and audit corrections), 7. State-transition catalogue
 
-### Community 327 - "run"
-Cohesion: 0.67
-Nodes (3): run, defaults, working-directory
+### Community 327 - "steps"
+Cohesion: 0.29
+Nodes (7): run, defaults, name, runs-on, steps, frontend, working-directory
+
+### Community 328 - "MfaRecoveryService.java"
+Cohesion: 0.47
+Nodes (3): MfaRecoveryAttempt, MfaRecoveryAttemptRepository, MfaRecoveryCode
+
+### Community 339 - "MasterCalendarControllerTest"
+Cohesion: 0.15
+Nodes (4): CreateAcademicSessionRequest, CreateMasterCalendarEventRequest, StudentEnrollmentServiceTest, MasterCalendarControllerTest
+
+### Community 340 - "TenantProvisioningStatusResponse"
+Cohesion: 0.33
+Nodes (3): TenantProvisioningResult, TenantProvisioningStatusResponse, TenantProvisioningStepResponse
+
+### Community 341 - "V4-5. Roles, permissions, approvals and templates"
+Cohesion: 0.33
+Nodes (6): V4-5.1 Roles, V4-5.2 Permission letters, V4-5.3 Approval and separation of duties (normative, from Part II §7), V4-5.3a Missing roles roll down, V4-5.4 Role templates and custom roles — *V4.0 recommendation, not yet decided*, V4-5. Roles, permissions, approvals and templates
+
+### Community 342 - "EDU 360 — Sprint 1 Story Status Tracker (Measured 2026-11-07)"
+Cohesion: 0.33
+Nodes (5): 1. Executive Summary, 3. Product Owner Acceptance Readiness, Before production: tenant routing (not a Sprint 1 story), EDU 360 — Sprint 1 Story Status Tracker (Measured 2026-11-07), Test Suite Execution Summary
+
+### Community 346 - ".requestUpgrade"
+Cohesion: 0.44
+Nodes (3): UserLimit, UpgradeRequest, TenantUserLimitAndUpgradeTest
+
+### Community 349 - "UsernameKind"
+Cohesion: 0.50
+Nodes (4): UsernameKind, EMAIL, MOBILE, STUDENT_CODE
+
+### Community 355 - "17. Phase 1 review results"
+Cohesion: 0.25
+Nodes (8): 17.1 What was read and not read, 17.2 Effect of your decisions, 17.3 Standards now established for the work ahead, 17.4 Code inventory on 7 November (counted, not run), 17.5 Report statuses that are likely out of date, 17.6 Open decisions that can block Sprint 1, 17.7 More conflicts found (not resolved), 17. Phase 1 review results
+
+### Community 359 - "Emergency reset of two-step login (decision MFA-01)"
+Cohesion: 0.29
+Nodes (6): Afterwards (the same day), Before you start, Emergency reset of two-step login (decision MFA-01), If something looks wrong, Steps (about 5 minutes), Who does it
+
+### Community 360 - "EDU 360 Sprint 2 Progress"
+Cohesion: 0.09
+Nodes (22): Additional implementation work — 13 November 2026, Built, Changes added in this continuation, Chunk 1 — Foundations, Chunk 2 and Chunk 3 continuation — 12 November 2026, Chunk 2 / Chunk 3 continuation — implementation update, Current completion disposition — reconciled after implementation review (13 November 2026), Current source reconciliation — 13 November 2026 (+14 more)
+
+### Community 363 - "PlatformCustomRoleStatus"
+Cohesion: 0.33
+Nodes (5): PlatformCustomRoleStatus, ACTIVE, ARCHIVED, DRAFT, INACTIVE
+
+### Community 366 - "Chunk 2 — Platform files and frontend shell"
+Cohesion: 0.29
+Nodes (7): B5 study-material view access — implementation update, B6 — In-app notifications, Chunk 2 — Platform files and frontend shell, Chunk 2 tests, Latest branch validation — progress correction commit, Open items before Chunk 2 can be marked Tested, Status correction — staff stories
+
+### Community 370 - "PlatformAuditOutboxEvent.java"
+Cohesion: 0.22
+Nodes (3): IntegrationTypeResponse, IntegrationType, PlatformAuditOutboxEvent
 
 ## Knowledge Gaps
-- **161 isolated node(s):** `com.edu360:api`, `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `ACCOUNT_CREATED` (+156 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2386 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **122 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **165 isolated node(s):** `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `ACCOUNT_CREATED`, `PASSWORD_CHANGED` (+160 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2556 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **127 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `4. Workstream split (use this split; change it only with a stated reason)` connect `PageHeader` to `jakarta.servlet.http.HttpServletRequest`, `Prompt for the "EDU 360 Final" project — split the platform work into agent prompts`, `Application Configuration & Security`, `PlatformNotificationService`, `Chat A5 — Data protection (Data Protection Officer)`, `Application Configuration & Security`, `KeycloakProperties`, `PlatformAuditWriter`?**
-  _High betweenness centrality (0.096) - this node is a cross-community bridge._
-- **What connects `com.edu360:api`, `LOGIN_SUCCESS`, `LOGIN_FAILURE` to the rest of the system?**
-  _161 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `4. Workstream split (use this split; change it only with a stated reason)` connect `PageHeader` to `FileStorage`, `jakarta.servlet.http.HttpServletRequest`, `Prompt for the "EDU 360 Final" project — split the platform work into agent prompts`, `Application Configuration & Security`, `AuthService`, `KeycloakProperties`, `PlatformAuditWriter`?**
+  _High betweenness centrality (0.076) - this node is a cross-community bridge._
+- **What connects `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT` to the rest of the system?**
+  _165 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Button` be split into smaller, more focused modules?**
-  _Cohesion score 0.031168710516536604 - nodes in this community are weakly interconnected._
-- **Why does `6.2 Resource schemas` connect `6.2 Resource schemas` to `ApprovalRequest`, `EDU 360 — API Contract Specification`, `LeaveApproverSetting`, `lombok.NoArgsConstructor`, `org.junit.jupiter.api.DisplayName`, `InstitutionSetupPages.tsx`, `ScopeType`, `.tenantPrincipal`, `.createRelease`, `PlatformTenantControllerTest`, `InstitutionSetupActionTest.java`, `StructureControllerTest`, `Platform Operations & Governance`, `AcademicSessionRepository`, `.provisionUser`, `UserRoleAssignment`, `instant`, `org.springframework.security.core.Authentication`, `RbacPrincipal`, `StudentGuardianLink`, `RoleDefinition`?**
-  _High betweenness centrality (0.075) - this node is a cross-community bridge._
+  _Cohesion score 0.027172429924759267 - nodes in this community are weakly interconnected._
+- **Why does `6.2 Resource schemas` connect `instant` to `EDU 360 — API Contract Specification`, `PlatformActionTest`, `PlatformRole`, `ApprovalRequest`, `ScopeType`, `PlatformReleaseControllerTest`, `PlatformTenantControllerTest`, `UserAccountId`, `StructureControllerTest`, `Platform Operations & Governance`, `.findByTenantIdAndAcademicSessionId`, `.createUser`, `.authorize`, `MasterCalendarControllerTest`, `io.swagger.v3.oas.annotations.Operation`, `PlatformReleaseController`, `InstitutionSetupActionTest`, `ImportRowError`, `InstitutionSetupPages.tsx`, `Delegation`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Should `FileStorage` be split into smaller, more focused modules?**
+  _Cohesion score 0.05541368743615935 - nodes in this community are weakly interconnected._
+- **Why does `PromotionRunItem` connect `InstitutionSetupPages.tsx` to `instant`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
 - **Should `list` be split into smaller, more focused modules?**
-  _Cohesion score 0.05231746031746032 - nodes in this community are weakly interconnected._
-- **Why does `TenantClock` connect `PermissionEvaluatorService` to `.now`, `InstitutionSetupActionTest`, `org.springframework.stereotype.Component`, `AuditLogService`, `RbacActionTest.java`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
-- **Should `RbacActionTest` be split into smaller, more focused modules?**
-  _Cohesion score 0.09191583610188261 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03343301894026532 - nodes in this community are weakly interconnected._

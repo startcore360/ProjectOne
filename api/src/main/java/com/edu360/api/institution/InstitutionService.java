@@ -52,7 +52,7 @@ import lombok.RequiredArgsConstructor;
 public class InstitutionService {
 
     static final String BLOCK_PROCESS = "INSTITUTION_BLOCK";
-    static final String ACTIVATION_PROCESS = "INSTITUTION_ACTIVATION";
+    static final String ACTIVATION_PROCESS = "INSTITUTION_ACTIVATE";
 
     private static final Logger log = LoggerFactory.getLogger(InstitutionService.class);
 

@@ -233,6 +233,14 @@ export const platformOpsService = {
     return res.data;
   },
 
+  /** A short, newest-first slice of the platform audit log (dashboard activity). */
+  async listRecentAuditLogs(size: number, outcome?: string): Promise<PlatformAuditLogItem[]> {
+    const res = await api.get<PlatformAuditLogItem[] | { items?: PlatformAuditLogItem[] }>("/platform/audit-logs", {
+      params: { page: 0, size, ...(outcome ? { outcome } : {}) },
+    });
+    return Array.isArray(res.data) ? res.data : res.data?.items ?? [];
+  },
+
   async listAuditLogs(): Promise<PlatformAuditLogItem[]> {
     const res = await api.get<PlatformAuditLogItem[] | { items?: PlatformAuditLogItem[] }>("/platform/audit-logs");
     if (Array.isArray(res.data)) return res.data;

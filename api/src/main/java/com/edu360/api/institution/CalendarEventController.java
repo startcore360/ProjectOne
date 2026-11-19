@@ -30,7 +30,7 @@ import lombok.RequiredArgsConstructor;
  * scope is "own institution", not "own tenant").
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/calendar-events")
+@RequestMapping({"/v1/tenants/{tenantId}/calendar-events", "/api/tenants/{tenantId}/calendar-events"})
 @RequiredArgsConstructor
 @Tag(name = "Institution setup", description = "Local calendar events (CALENDAR_LOCAL_SET)")
 public class CalendarEventController {

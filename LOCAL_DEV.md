@@ -8,11 +8,17 @@ tenants), the Spring Boot backend, and the Vite frontend.
 
 - Docker Desktop running
 - Java 21, Node.js, PowerShell
-- **As Administrator, and again after creating a tenant:** `.\docker\dev-hosts-setup.ps1` — adds
-  `abc.edu360.local`, `xyz.edu360.local`, `platform.edu360.local` and every ACTIVE or TRIAL tenant
-  to your Windows `hosts` file, pointing at `127.0.0.1`. No frontend change is needed. Production
-  works differently: see `docker/PRODUCTION_TENANT_ROUTING.txt`. Required because the backend tells tenants apart by the `Host` header on each
-  request — without this, the frontend has no way to signal which tenant you're using.
+- **No hosts file needed.** Use `*.edu360.localhost` addresses, such as
+  `http://abc.edu360.localhost:5173`. Chrome, Edge and Firefox send every `*.localhost` name to
+  `127.0.0.1` by themselves, so a new tenant opens the moment it is created. The backend tells
+  tenants apart by the `Host` header, so each tenant still needs its own address. `.localhost`
+  just removes the per-tenant setup step.
+- *Optional, older style:* `*.edu360.local` addresses still work, but each one needs a hosts-file
+  line. Run `.\docker\dev-hosts-setup.ps1` as Administrator after creating a tenant.
+- Tools outside the browser (curl, Postman) may not resolve `*.localhost` on Windows. For them,
+  use `.edu360.local`, or call `http://127.0.0.1:8080` with a `Host: abc.edu360.localhost` header.
+- **Production** uses neither. A wildcard DNS record (`*.edu360.com`) plus a wildcard TLS
+  certificate cover every tenant with no per-tenant step. See `docker/PRODUCTION_TENANT_ROUTING.txt`.
 
 ## Commands
 
@@ -32,9 +38,12 @@ Frontend alone: `cd app; npm run dev`.
 
 | | Hostname | Keycloak realm |
 |---|---|---|
-| ABC University | `http://abc.edu360.local:5173` | `abc-university` |
-| XYZ University | `http://xyz.edu360.local:5173` | `xyz-university` |
-| Platform Admin | `http://platform.edu360.local:5173` | `edu360-platform` |
+| ABC University | `http://abc.edu360.localhost:5173` | `abc-university` |
+| XYZ University | `http://xyz.edu360.localhost:5173` | `xyz-university` |
+| Platform Admin | `http://platform.edu360.localhost:5173` | `edu360-platform` |
+| Any new tenant | `http://<subdomain>.edu360.localhost:5173` | its own realm |
+
+The `.edu360.local` form of each address also works if your hosts file has it.
 
 Plain `http://localhost:5173` will **not** work for login — `localhost` matches no tenant
 subdomain or the platform label, so you'll get `"Unknown sign-in address"`. You must use one of

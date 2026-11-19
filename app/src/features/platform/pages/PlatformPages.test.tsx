@@ -89,9 +89,10 @@ describe("Sprint 1 platform screens", () => {
       return Promise.resolve({ data: { items: [] } });
     });
     renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>);
-    expect(screen.getByRole("heading", { name: "Product Owner dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("Tenants by state")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Go-live and trials" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Platform activity" })).toBeInTheDocument();
     });
   });
 

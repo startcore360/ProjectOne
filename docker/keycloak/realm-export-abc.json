@@ -25,10 +25,12 @@
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": true,
       "redirectUris": [
+        "http://abc.edu360.localhost:5173/*",
         "http://abc.edu360.local:5173/*",
         "http://localhost:5173/*"
       ],
       "webOrigins": [
+        "http://abc.edu360.localhost:5173",
         "http://abc.edu360.local:5173",
         "http://localhost:5173"
       ],
