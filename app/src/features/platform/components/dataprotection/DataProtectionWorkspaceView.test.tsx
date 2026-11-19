@@ -14,6 +14,8 @@ vi.mock("../../api/platformDataProtectionService", () => ({
     decideExport: vi.fn(),
     decideDeletion: vi.fn(),
     decideRetentionChange: vi.fn(),
+    getRbacMappingReport: vi.fn(),
+    downloadRbacMappingReport: vi.fn(),
   },
   platformDelegationService: { candidates: vi.fn(), create: vi.fn() },
 }));
@@ -53,6 +55,8 @@ beforeEach(() => {
   service.listRetentionChanges.mockResolvedValue({ data: [] } as never);
   vi.mocked(platformDelegationService.candidates).mockResolvedValue({data:[{userId:"dpo-2",fullName:"Second DPO",email:"second@example.test"}]} as never);
   vi.mocked(platformDelegationService.create).mockResolvedValue({data:{}} as never);
+  service.getRbacMappingReport.mockResolvedValue({ data: { mismatches: [], noBaseTemplate: [], skippedTenants: [] } } as never);
+  service.downloadRbacMappingReport.mockResolvedValue(undefined);
   service.decideExport.mockResolvedValue({ data: {} } as never);
   service.decideDeletion.mockResolvedValue({ data: {} } as never);
   service.decideRetentionChange.mockResolvedValue({ data: {} } as never);
@@ -155,5 +159,46 @@ describe("DataProtectionWorkspacePage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Review" }));
 
     expect(screen.getByText("Approved closure plan")).toBeInTheDocument();
+  });
+});
+
+describe("E5-S7 RBAC mapping check tab", () => {
+  it("loads an empty report and provides CSV export to the DPO", async () => {
+    renderForRole("DATA_PROTECTION_OFFICER");
+    fireEvent.click(await screen.findByRole("tab", { name: "RBAC mapping check" }));
+    expect(await screen.findByText("No permission mismatches")).toBeInTheDocument();
+    expect(service.getRbacMappingReport).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(service.downloadRbacMappingReport).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows base-template drift and unbased custom roles in separate groups", async () => {
+    service.getRbacMappingReport.mockResolvedValueOnce({ data: {
+      mismatches: [{ scope: "TENANT", tenantId: "t-1", tenantName: "Northfield", roleCode: "CUSTOM_A",
+        roleName: "Custom A", actionCode: "GRADE_EDIT", result: "BASE_TEMPLATE_DRIFT", detail: "Extra action." }],
+      noBaseTemplate: [{ scope: "TENANT", tenantId: "t-1", tenantName: "Northfield", roleCode: "CUSTOM_B",
+        roleName: "Custom B", actionCode: null, result: "NO_BASE_TEMPLATE", detail: "No base recorded." }],
+      skippedTenants: [{ tenantId: "t-2", tenantName: "New tenant", state: "CREATED" }],
+    } } as never);
+    renderForRole("DATA_PROTECTION_OFFICER");
+    fireEvent.click(await screen.findByRole("tab", { name: "RBAC mapping check" }));
+    expect(await screen.findByText("BASE_TEMPLATE_DRIFT")).toBeInTheDocument();
+    expect(screen.getByText("NO_BASE_TEMPLATE")).toBeInTheDocument();
+    expect(screen.getByText("Skipped tenants")).toBeInTheDocument();
+  });
+
+  it("fails closed for a platform role without RBAC_MAPPING_CHECK", async () => {
+    renderForRole("PLATFORM_ADMIN");
+    fireEvent.click(await screen.findByRole("tab", { name: "RBAC mapping check" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("do not have permission");
+    expect(service.getRbacMappingReport).not.toHaveBeenCalled();
+  });
+
+  it("shows a retryable error when the report cannot be loaded", async () => {
+    service.getRbacMappingReport.mockRejectedValueOnce(new Error("network failure"));
+    renderForRole("DATA_PROTECTION_OFFICER");
+    fireEvent.click(await screen.findByRole("tab", { name: "RBAC mapping check" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("RBAC mapping report unavailable");
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 });

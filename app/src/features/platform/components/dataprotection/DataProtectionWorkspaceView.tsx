@@ -21,8 +21,9 @@ import {
   type RetentionChangeRequestDto,
 } from "../../api/platformDataProtectionService";
 import type { DeletionRequestDto, ExportRequestDto } from "../../api/platformTenantService";
+import { RbacMappingCheckView } from "./RbacMappingCheckView";
 
-type QueueTab = "exports" | "deletions" | "retention";
+type QueueTab = "exports" | "deletions" | "retention" | "rbac";
 type DecisionTarget =
   | { kind: "export"; id: string; tenantId: string; tenantName: string; rowVersion: number }
   | { kind: "deletion"; id: string; tenantId: string; tenantName: string; waiverReason?: string }
@@ -32,6 +33,7 @@ const TAB_LABELS: Record<QueueTab, string> = {
   exports: "Export requests",
   deletions: "Deletion requests",
   retention: "Retention changes",
+  rbac: "RBAC mapping check",
 };
 
 export function DataProtectionWorkspacePage() {
@@ -123,6 +125,7 @@ export function DataProtectionWorkspacePage() {
     { id: "exports", label: TAB_LABELS.exports, count: exports.length },
     { id: "deletions", label: TAB_LABELS.deletions, count: deletions.length },
     { id: "retention", label: TAB_LABELS.retention, count: retentionChanges.length },
+    { id: "rbac", label: TAB_LABELS.rbac },
   ];
 
   return (
@@ -152,7 +155,7 @@ export function DataProtectionWorkspacePage() {
             ariaLabel="Data protection queues"
           />
 
-          <section className="data-protection-workspace__queue" aria-label={`${TAB_LABELS[activeTab]} queue`}>
+          {activeTab === "rbac" ? <RbacMappingCheckView /> : <section className="data-protection-workspace__queue" aria-label={`${TAB_LABELS[activeTab]} queue`}>
             {activeTab === "exports" && (exports.length ? (
               <DataTable headers={["Tenant", "Requested by", "Status", "Requested", "Decision"]}>
                 {exports.map((item) => (
@@ -209,7 +212,7 @@ export function DataProtectionWorkspacePage() {
                 ))}
               </DataTable>
             ) : <EmptyState title="No retention changes" description="There are no retention change requests awaiting review." />)}
-          </section>
+          </section>}
         </>
       ) : null}
 
