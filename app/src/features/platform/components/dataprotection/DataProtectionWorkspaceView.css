@@ -23,3 +23,8 @@
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+.data-protection-workspace__delegation{display:grid;gap:var(--space-3);padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg)}
+.data-protection-workspace__delegation-form{display:flex;flex-wrap:wrap;align-items:end;gap:var(--space-3)}
+.data-protection-workspace__delegation-form label{display:grid;gap:var(--space-1)}
+.data-protection-workspace__delegation-form input,.data-protection-workspace__delegation-form select{min-height:2.5rem}

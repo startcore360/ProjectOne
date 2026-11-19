@@ -16,6 +16,7 @@ import {
 import { usePlatformAccess } from "../../platformAccess";
 import {
   platformDataProtectionService,
+  platformDelegationService,
   type DataProtectionDecision,
   type RetentionChangeRequestDto,
 } from "../../api/platformDataProtectionService";
@@ -38,6 +39,7 @@ export function DataProtectionWorkspacePage() {
   const canReviewExport = can("TENANT_EXPORT_APPROVE");
   const canReviewDeletion = can("TENANT_DELETION_APPROVE");
   const canReviewRetention = can("RETENTION_CHANGE_APPROVE");
+  const canDelegate = can("APPROVAL_DELEGATE");
 
   const [activeTab, setActiveTab] = useState<QueueTab>("exports");
   const [exports, setExports] = useState<ExportRequestDto[]>([]);
@@ -49,6 +51,10 @@ export function DataProtectionWorkspacePage() {
   const [decision, setDecision] = useState<DataProtectionDecision>("APPROVED");
   const [remark, setRemark] = useState("");
   const [saving, setSaving] = useState(false);
+  const [delegateCandidates,setDelegateCandidates]=useState<Array<{userId:string;fullName:string;email:string}>>([]);
+  const [delegateUserId,setDelegateUserId]=useState(""); const [delegationFrom,setDelegationFrom]=useState(""); const [delegationTo,setDelegationTo]=useState("");
+  const [delegationLoading,setDelegationLoading]=useState(false); const [delegationSaving,setDelegationSaving]=useState(false);
+  const [delegationError,setDelegationError]=useState<string|null>(null); const [delegationSuccess,setDelegationSuccess]=useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -69,9 +75,9 @@ export function DataProtectionWorkspacePage() {
     }
   }, []);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(()=>{if(!canDelegate)return;setDelegationLoading(true);platformDelegationService.candidates().then(r=>setDelegateCandidates(r.data??[])).catch(()=>setDelegationError("DPO delegates could not be loaded. Retry the page.")).finally(()=>setDelegationLoading(false));},[canDelegate]);
+  const saveDelegation=async(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();if(!delegateUserId||!delegationFrom||!delegationTo||delegationFrom>=delegationTo||delegationSaving)return;setDelegationSaving(true);setDelegationError(null);setDelegationSuccess(false);try{await platformDelegationService.create({delegateUserId,from:delegationFrom,to:delegationTo});setDelegationSuccess(true);setDelegateUserId("");setDelegationFrom("");setDelegationTo("");}catch{setDelegationError("The delegation was not saved. Check the dates and selected DPO, then retry.");}finally{setDelegationSaving(false);}};
 
   const openDecision = (next: DecisionTarget) => {
     setTarget(next);
@@ -207,6 +213,15 @@ export function DataProtectionWorkspacePage() {
         </>
       ) : null}
 
+      {canDelegate&&<section className="data-protection-workspace__delegation" aria-labelledby="dpo-delegation-heading">
+        <h2 id="dpo-delegation-heading">Delegate DPO approvals</h2><p>Temporarily allow another active Data Protection Officer to approve exports, deletions, and retention changes.</p>
+        {delegationLoading?<Spinner label="Loading DPO delegates"/>:<form className="data-protection-workspace__delegation-form" onSubmit={saveDelegation}>
+          <label>Data Protection Officer<select aria-label="Data Protection Officer" value={delegateUserId} onChange={e=>setDelegateUserId(e.target.value)} required><option value="">Choose a DPO</option>{delegateCandidates.map(d=><option key={d.userId} value={d.userId}>{d.fullName} ({d.email})</option>)}</select></label>
+          <label>From<input aria-label="Delegation from" type="date" value={delegationFrom} onChange={e=>setDelegationFrom(e.target.value)} required/></label>
+          <label>To<input aria-label="Delegation to" type="date" value={delegationTo} min={delegationFrom||undefined} onChange={e=>setDelegationTo(e.target.value)} required/></label>
+          <Button type="submit" disabled={delegationSaving||!delegateUserId||!delegationFrom||!delegationTo||delegationFrom>=delegationTo} busy={delegationSaving}>Save delegation</Button>
+        </form>}{delegationError&&<p role="alert">{delegationError}</p>}{delegationSuccess&&<p role="status">DPO delegation saved.</p>}
+      </section>}
       <Modal
         isOpen={Boolean(target)}
         onClose={() => setTarget(null)}

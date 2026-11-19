@@ -30,3 +30,10 @@ export const platformDataProtectionService = {
   decideRetentionChange: (id: string, decision: DataProtectionDecision, remark: string) =>
     api.post(`/platform/retention-change-requests/${id}/decision`, { decision, remark }, { headers: idempotencyHeaders() }),
 };
+
+export type PlatformDelegationCandidate={userId:string;fullName:string;email:string};
+export type PlatformDelegationRequest={delegateUserId:string;from:string;to:string};
+export const platformDelegationService={
+ candidates:()=>api.get<PlatformDelegationCandidate[]>("/platform/delegations/candidates"),
+ create:(request:PlatformDelegationRequest)=>api.post("/platform/delegations",request,{headers:idempotencyHeaders()}),
+};

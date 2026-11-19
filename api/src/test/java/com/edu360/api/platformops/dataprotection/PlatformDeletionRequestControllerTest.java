@@ -96,7 +96,8 @@ class PlatformDeletionRequestControllerTest {
                 platformAuditWriter,
                 notificationService,
                 platformConcurrency,
-                tenantIssuerResolver
+                tenantIssuerResolver,
+                PlatformAccessLookup.standardRolesOnly()
         );
 
         controller = new PlatformDeletionRequestController(dataProtectionService, permissionService, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));

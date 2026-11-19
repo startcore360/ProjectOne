@@ -24,6 +24,7 @@ import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.Retentio
 import com.edu360.api.platformops.PlatformNotificationService;
 import com.edu360.api.platformops.PlatformConcurrency;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
+import com.edu360.api.platformops.PlatformAccessLookup;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantRepository;
 import com.edu360.api.tenant.TenantState;
@@ -71,6 +72,7 @@ public class PlatformDataProtectionService {
     private final PlatformNotificationService notificationService;
     private final PlatformConcurrency platformConcurrency;
     private final TenantIssuerAuthenticationManagerResolver tenantIssuerResolver;
+    private final PlatformAccessLookup platformAccessLookup;
 
     /**
      * Records that an export was asked for. No file is generated yet (the export job is a later piece of
@@ -144,6 +146,7 @@ public class PlatformDataProtectionService {
             throw new BusinessRuleViolationException("ALREADY_ACTIONED",
                     "This export request was already decided (" + request.getStatus() + ").");
         }
+        rejectDelegatorOwnRequest(request.getRequestedByUserId(), principal);
         if (request.getRequestedByUserId() != null
                 && request.getRequestedByUserId().equals(principal.platformUserId())) {
             throw new UnauthorizedException("Separation of duties: the requester cannot decide their own export request.");
@@ -394,6 +397,8 @@ public class PlatformDataProtectionService {
                     "Deletion request must be in PENDING_DPO status to decide (current: " + req.getStatus() + ")");
         }
 
+        rejectDelegatorOwnRequest(req.getRequestedByUserId(), principal);
+        rejectDelegatorOwnRequest(req.getPoConfirmedBy(), principal);
         // ck_deletion_request_r4: the person who confirmed cannot decide.
         if (principal.platformUserId().equals(req.getPoConfirmedBy())) {
             throw new BusinessRuleViolationException("SEPARATION_OF_DUTIES", "Product Owner who confirmed cannot decide: the person who confirmed this deletion request cannot decide it.");
@@ -548,6 +553,7 @@ public class PlatformDataProtectionService {
             throw new BusinessRuleViolationException("ALREADY_ACTIONED",
                     "This retention change request was already decided (" + req.getStatus() + ").");
         }
+        rejectDelegatorOwnRequest(req.getRequestedBy(), principal);
         // ck_retention_change_request_r3
         if (principal.platformUserId().equals(req.getRequestedBy())) {
             throw new UnauthorizedException("Separation of duties: the person who requested a retention change cannot decide it.");
@@ -582,6 +588,10 @@ public class PlatformDataProtectionService {
         return toRetentionResponse(saved);
     }
 
+    private void rejectDelegatorOwnRequest(UUID id, PlatformPrincipal actor) {
+        if (id != null && platformAccessLookup.activeDelegationDelegator(actor.platformUserId()).filter(id::equals).isPresent())
+            throw new UnauthorizedException("A delegate cannot decide a request raised or confirmed by the delegating DPO.");
+    }
     private void applyApprovedRetention(RetentionChangeRequest req, PlatformPrincipal principal, Instant now) {
         retentionPolicyRepository.findByTenantIdAndDataClassCodeAndStatus(req.getTenantId(), req.getDataClassCode(), "ACTIVE")
                 .ifPresent(old -> {

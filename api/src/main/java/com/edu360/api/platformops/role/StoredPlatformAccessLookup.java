@@ -23,6 +23,7 @@ public class StoredPlatformAccessLookup implements PlatformAccessLookup {
     private final PlatformCustomRoleRepository roleRepository;
     private final PlatformCustomRoleActionRepository actionRepository;
     private final PlatformStepInRepository stepInRepository;
+    private final com.edu360.api.platformops.delegation.PlatformDelegationRepository delegationRepository;
 
     @Override
     public Optional<Set<String>> customRoleActions(UUID platformUserId) {
@@ -36,6 +37,10 @@ public class StoredPlatformAccessLookup implements PlatformAccessLookup {
                         .orElse(Set.of()));
     }
 
+    @Override
+    public Optional<UUID> activeDelegationDelegator(UUID id) {
+        return delegationRepository.findActiveDelegation(id, java.time.LocalDate.now(java.time.ZoneOffset.UTC)).map(com.edu360.api.platformops.delegation.PlatformDelegation::getDelegatorUserId);
+    }
     @Override
     public boolean isHandedOver(String actionCode) {
         return actionRepository.isHandedOver(actionCode);

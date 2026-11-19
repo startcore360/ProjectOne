@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer, { setUser } from "../../../../store/slices/authSlice";
 import { DataProtectionWorkspacePage } from "./DataProtectionWorkspaceView";
-import { platformDataProtectionService } from "../../api/platformDataProtectionService";
+import { platformDataProtectionService, platformDelegationService } from "../../api/platformDataProtectionService";
 
 vi.mock("../../api/platformDataProtectionService", () => ({
   platformDataProtectionService: {
@@ -15,6 +15,7 @@ vi.mock("../../api/platformDataProtectionService", () => ({
     decideDeletion: vi.fn(),
     decideRetentionChange: vi.fn(),
   },
+  platformDelegationService: { candidates: vi.fn(), create: vi.fn() },
 }));
 
 const service = vi.mocked(platformDataProtectionService);
@@ -50,6 +51,8 @@ beforeEach(() => {
   service.listExports.mockResolvedValue({ data: [] } as never);
   service.listDeletions.mockResolvedValue({ data: [] } as never);
   service.listRetentionChanges.mockResolvedValue({ data: [] } as never);
+  vi.mocked(platformDelegationService.candidates).mockResolvedValue({data:[{userId:"dpo-2",fullName:"Second DPO",email:"second@example.test"}]} as never);
+  vi.mocked(platformDelegationService.create).mockResolvedValue({data:{}} as never);
   service.decideExport.mockResolvedValue({ data: {} } as never);
   service.decideDeletion.mockResolvedValue({ data: {} } as never);
   service.decideRetentionChange.mockResolvedValue({ data: {} } as never);
@@ -79,6 +82,16 @@ describe("DataProtectionWorkspacePage", () => {
     expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
   });
 
+  it("shows Delegate section and saves DPO delegation", async () => {
+    renderForRole("DATA_PROTECTION_OFFICER");
+    expect(await screen.findByRole("heading",{name:"Delegate DPO approvals"})).toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText("Data Protection Officer"),{target:{value:"dpo-2"}});
+    fireEvent.change(screen.getByLabelText("Delegation from"),{target:{value:"2026-12-01"}});
+    fireEvent.change(screen.getByLabelText("Delegation to"),{target:{value:"2026-12-15"}});
+    fireEvent.click(screen.getByRole("button",{name:"Save delegation"}));
+    expect(await screen.findByRole("status")).toHaveTextContent("DPO delegation saved");
+    expect(platformDelegationService.create).toHaveBeenCalledWith({delegateUserId:"dpo-2",from:"2026-12-01",to:"2026-12-15"});
+  });
   it("shows the design-system error state when a queue request fails", async () => {
     service.listExports.mockRejectedValueOnce(new Error("network failure"));
 
