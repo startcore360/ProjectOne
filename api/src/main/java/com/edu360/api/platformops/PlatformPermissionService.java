@@ -111,7 +111,7 @@ public class PlatformPermissionService {
     public boolean holds(PlatformPrincipal principal, String actionCode) {
         boolean held = accessLookup.customRoleActions(principal.platformUserId()).map(actions -> actions.contains(actionCode)).orElseGet(() -> ALLOWED_ROLES.getOrDefault(actionCode, Set.of()).contains(principal.platformRole()));
         return held || (Set.of("TENANT_EXPORT_APPROVE", "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE").contains(actionCode)
-                && accessLookup.activeDelegationDelegator(principal.platformUserId()).isPresent());
+                && !accessLookup.activeDelegationDelegators(principal.platformUserId()).isEmpty());
     }
 
     /** Actions this person holds, whether or not they must step in first. */

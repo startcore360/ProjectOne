@@ -15,7 +15,7 @@ public interface PlatformAccessLookup {
     /** The custom role's actions, or empty if this person holds only a standard role. An inactive
      *  or archived custom role returns an empty set, which denies everything. */
     Optional<Set<String>> customRoleActions(UUID platformUserId);
-    default Optional<UUID> activeDelegationDelegator(UUID delegateUserId) { return Optional.empty(); }
+    default List<UUID> activeDelegationDelegators(UUID delegateUserId) { return List.of(); }
 
     boolean isHandedOver(String actionCode);
 

@@ -589,7 +589,7 @@ public class PlatformDataProtectionService {
     }
 
     private void rejectDelegatorOwnRequest(UUID id, PlatformPrincipal actor) {
-        if (id != null && platformAccessLookup.activeDelegationDelegator(actor.platformUserId()).filter(id::equals).isPresent())
+        if (id != null && platformAccessLookup.activeDelegationDelegators(actor.platformUserId()).contains(id))
             throw new UnauthorizedException("A delegate cannot decide a request raised or confirmed by the delegating DPO.");
     }
     private void applyApprovedRetention(RetentionChangeRequest req, PlatformPrincipal principal, Instant now) {
