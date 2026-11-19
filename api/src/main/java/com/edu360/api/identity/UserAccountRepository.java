@@ -9,7 +9,29 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.edu360.api.rbac.AssignmentStatus;
+import com.edu360.api.rbac.UserRoleAssignment;
+
 public interface UserAccountRepository extends JpaRepository<UserAccount, UserAccountId> {
+
+    List<UserAccount> findByIdTenantId(UUID tenantId);
+
+    @Query("""
+        SELECT u FROM UserAccount u
+        WHERE u.id.tenantId = :tenantId
+          AND EXISTS (
+              SELECT 1 FROM UserRoleAssignment ura
+              WHERE ura.id.tenantId = :tenantId
+                AND ura.userAccountId = u.id.userAccountId
+                AND ura.institutionId = :institutionId
+                AND ura.status = :status
+          )
+    """)
+    List<UserAccount> findByTenantIdAndInstitutionIdAndAssignmentStatus(
+            @Param("tenantId") UUID tenantId,
+            @Param("institutionId") UUID institutionId,
+            @Param("status") AssignmentStatus status
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE UserAccount u SET u.status = :newStatus WHERE u.id.tenantId = :tenantId AND u.id.userAccountId = :userAccountId AND u.status = :expectedStatus")
