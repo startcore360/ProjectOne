@@ -77,8 +77,11 @@ public class StaffDirectoryService {
         List<StaffProfile> profiles = staffProfiles.searchTenantStaff(actor.tenantId(),
                 institutionId, departmentId, normalizeQuery(query), limit);
         boolean includeSensitive = permissions.can(actor, "STAFF_RECORD_MANAGE", scope, RbacTarget.NONE).allowed();
-        if (includeSensitive) {
-            profiles.forEach(profile -> recordSensitiveView(actor, profile, institutionId));
+        if (includeSensitive && !profiles.isEmpty()) {
+            List<AuditEntry> auditEntries = profiles.stream()
+                    .map(profile -> toSensitiveViewEntry(profile, institutionId))
+                    .toList();
+            audit.recordAll(auditEntries);
         }
         List<StaffProfileResponse> items = profiles.stream()
                 .map(profile -> StaffProfileResponse.from(profile, includeSensitive)).toList();
@@ -547,10 +550,14 @@ public class StaffDirectoryService {
                 .map(StaffServiceRecordResponse::from).toList();
     }
 
-    private void recordSensitiveView(RbacPrincipal actor, StaffProfile profile, UUID institutionId) {
-        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
+    private AuditEntry toSensitiveViewEntry(StaffProfile profile, UUID institutionId) {
+        return new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
                 "STAFF_PROFILE", profile.getStaffProfileId(), institutionId, null,
-                Map.of("view", "sensitive_staff_fields"), 1, "P", "SUCCESS"));
+                Map.of("view", "sensitive_staff_fields"), 1, "P", "SUCCESS");
+    }
+
+    private void recordSensitiveView(RbacPrincipal actor, StaffProfile profile, UUID institutionId) {
+        audit.record(toSensitiveViewEntry(profile, institutionId));
     }
 
     private StaffProfile findScopedProfile(RbacPrincipal actor, UUID staffProfileId, String action) {

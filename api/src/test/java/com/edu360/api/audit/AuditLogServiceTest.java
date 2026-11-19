@@ -347,4 +347,55 @@ class AuditLogServiceTest {
                 .doesNotThrowAnyException();
         assertThat(rows).hasSize(1);
     }
+
+    @Test
+    void recordAll_savesAllEntriesWithTenantStore() {
+        List<TenantAuditEvent> rows = new ArrayList<>();
+        TenantAuditStore store = new TenantAuditStore() {
+            @Override public void append(TenantAuditEvent event) { rows.add(event); }
+            @Override public void appendAll(List<TenantAuditEvent> events) { rows.addAll(events); }
+        };
+        AuditLogService service = new AuditLogService(
+                createRepository(new AtomicReference<>(), new AtomicBoolean(false)), store);
+        UUID tenantId = UUID.randomUUID(), userId = UUID.randomUUID();
+        UUID entity1 = UUID.randomUUID(), entity2 = UUID.randomUUID(), entity3 = UUID.randomUUID();
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), "PRINCIPAL_COLLEGE", ScopeType.TENANT);
+        signIn(tenantId, userId);
+
+        List<AuditEntry> entries = List.of(
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity1, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS"),
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity2, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS"),
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity3, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS")
+        );
+
+        service.recordAll(entries);
+
+        assertThat(rows).hasSize(3);
+        assertThat(rows.get(0).entityId()).isEqualTo(entity1);
+        assertThat(rows.get(1).entityId()).isEqualTo(entity2);
+        assertThat(rows.get(2).entityId()).isEqualTo(entity3);
+        assertThat(rows.get(0).payloadHash()).isNotEmpty();
+        assertThat(rows.get(1).payloadHash()).isNotEmpty();
+        assertThat(rows.get(2).payloadHash()).isNotEmpty();
+    }
+
+    @Test
+    void recordAll_whenAppendFails_throwsAuditFailureException() {
+        TenantAuditStore store = new TenantAuditStore() {
+            @Override public void append(TenantAuditEvent event) { throw new RuntimeException("DB down"); }
+            @Override public void appendAll(List<TenantAuditEvent> events) { throw new RuntimeException("DB down"); }
+        };
+        AuditLogService service = new AuditLogService(
+                createRepository(new AtomicReference<>(), new AtomicBoolean(false)), store);
+        UUID tenantId = UUID.randomUUID(), userId = UUID.randomUUID(), entity1 = UUID.randomUUID();
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), "PRINCIPAL_COLLEGE", ScopeType.TENANT);
+        signIn(tenantId, userId);
+
+        List<AuditEntry> entries = List.of(
+                new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW", "STAFF_PROFILE", entity1, null, null, Map.of("view", "sensitive"), 1, "P", "SUCCESS")
+        );
+
+        assertThatThrownBy(() -> service.recordAll(entries))
+                .isInstanceOf(AuditFailureException.class);
+    }
 }

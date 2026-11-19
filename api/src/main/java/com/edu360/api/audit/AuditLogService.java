@@ -3,8 +3,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -106,6 +108,53 @@ public class AuditLogService {
     entry.actionCode(),entry.entityType(),entry.entityId(),entry.recordCount(),entry.sensitivityClass(),outcome,
     oldJson,newJson,correlation,hash));
   }catch(Exception ex){log.error("Structured audit write failed",ex);throw new AuditFailureException("Required audit event could not be recorded; the request was not completed.",ex);}
+ }
+ public void recordAll(List<AuditEntry> entries){
+  if(entries==null||entries.isEmpty())return;
+  try{
+   for(AuditEntry entry:entries){
+    if(entry==null||entry.eventType()==null||blank(entry.actionCode())||blank(entry.entityType())||entry.entityId()==null)
+     throw new IllegalArgumentException("Structured audit requires event type, action code, entity type and entity id.");
+    if(entry.sensitivityClass()!=null&&!SENSITIVITY.contains(entry.sensitivityClass()))throw new IllegalArgumentException("Invalid sensitivity class.");
+    if(entry.outcome()!=null&&!OUTCOMES.contains(entry.outcome()))throw new IllegalArgumentException("Invalid audit outcome.");
+    if(entry.recordCount()!=null&&entry.recordCount()<0)throw new IllegalArgumentException("Record count cannot be negative.");
+   }
+   String role=TenantContext.currentActiveRoleCode();
+   if(tenant==null){
+    for(AuditEntry entry:entries){
+     UUID institution=entry.institutionId();
+     if(institution==null){Set<UUID> ids=TenantContext.currentInstitutionIds();institution=ids.isEmpty()?null:ids.iterator().next();}
+     Map<String,Object> fallback=new LinkedHashMap<>();
+     fallback.put("action_code",entry.actionCode());fallback.put("entity_type",entry.entityType());
+     fallback.put("entity_id",entry.entityId().toString());fallback.put("old_values",entry.oldValues());
+     fallback.put("new_values",entry.newValues());fallback.put("record_count",entry.recordCount());
+     fallback.put("sensitivity_class",entry.sensitivityClass());fallback.put("outcome",entry.outcome());
+     legacy.save(AuditLog.builder().eventType(entry.eventType()).actorRoleCode(role)
+       .scopeType(TenantContext.currentActiveScopeType()==null?null:TenantContext.currentActiveScopeType().name())
+       .institutionId(institution).correlationId(bound(CorrelationContext.get()))
+       .details(json(fallback)).build());
+    }
+    return;
+   }
+   TenantPrincipal actor=tenantActor(role);
+   if(actor==null)throw new IllegalStateException("Structured audit requires an authenticated tenant actor with active role.");
+   String correlation=bound(CorrelationContext.get());
+   List<TenantAuditEvent> events=new ArrayList<>(entries.size());
+   for(AuditEntry entry:entries){
+    UUID institution=entry.institutionId();
+    if(institution==null){Set<UUID> ids=TenantContext.currentInstitutionIds();institution=ids.isEmpty()?null:ids.iterator().next();}
+    UUID event=UUID.randomUUID(); Instant now=Instant.now();
+    String oldJson=json(entry.oldValues()),newJson=json(entry.newValues());
+    String operation=operationOf(entry.eventType()),outcome=entry.outcome()==null?"SUCCESS":entry.outcome();
+    String hash=sha(String.join("|",actor.tenantId().toString(),event.toString(),now.toString(),actor.userAccountId().toString(),
+     role,operation,entry.actionCode(),entry.entityType(),entry.entityId().toString(),String.valueOf(entry.recordCount()),
+     String.valueOf(entry.sensitivityClass()),outcome,String.valueOf(oldJson),String.valueOf(newJson),correlation));
+    events.add(new TenantAuditEvent(actor.tenantId(),event,institution,now,actor.userAccountId(),role,operation,
+     entry.actionCode(),entry.entityType(),entry.entityId(),entry.recordCount(),entry.sensitivityClass(),outcome,
+     oldJson,newJson,correlation,hash));
+   }
+   tenant.appendAll(events);
+  }catch(Exception ex){log.error("Structured batch audit write failed",ex);throw new AuditFailureException("Required audit event could not be recorded; the request was not completed.",ex);}
  }
  private TenantPrincipal tenantActor(String role){
   UUID tenantId=TenantContext.currentTenantId();
