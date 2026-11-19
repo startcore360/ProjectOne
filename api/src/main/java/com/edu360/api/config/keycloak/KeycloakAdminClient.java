@@ -429,6 +429,40 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * Strict variant for platform staff lifecycle changes: the database status must not change
+     * unless Keycloak confirms the enabled flag was updated.
+     */
+    @SuppressWarnings("unchecked")
+    public void setUserEnabledStrict(String realm, String keycloakUserId, boolean enabled) {
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
+            Map<String, Object> current = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+            if (current == null) {
+                throw new KeycloakProvisioningException("Keycloak user could not be read for a status change.");
+            }
+            Map<String, Object> updated = new java.util.HashMap<>(current);
+            updated.put("enabled", enabled);
+            restClient.put()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .body(updated)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RuntimeException ex) {
+            if (ex instanceof KeycloakProvisioningException provisioningException) {
+                throw provisioningException;
+            }
+            // Do not surface provider response bodies or credential-bearing URLs.
+            throw new KeycloakProvisioningException("Keycloak could not update the platform user's enabled state.", ex);
+        }
+    }
+
+    /**
      * USER_PASSWORD_RESET_UNLOCK's real "unlock" half: clears Keycloak's own brute-force/
      * attack-detection lockout record for one user - DELETE /admin/realms/{realm}/
      * attack-detection/brute-force/users/{userId}, the endpoint Keycloak's own docs name for

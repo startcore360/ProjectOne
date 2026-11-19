@@ -46,6 +46,8 @@ public class RealmSecuritySyncService {
     public record RealmSyncRunResult(UUID runId, List<RealmSyncResult> results) {
     }
 
+    // This preview/run state is intentionally in memory only: after restart, users must preview
+    // again; it is node-local and therefore supports a single application server, not a cluster.
     private volatile UUID latestPreviewId;
     private volatile Set<String> latestPreviewRealms = Set.of();
     private volatile RealmSecuritySettings latestPreviewSettings;

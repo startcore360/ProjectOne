@@ -5,6 +5,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 public interface PlatformUserRepository extends JpaRepository<PlatformUser, UUID> {
 
@@ -20,6 +24,12 @@ public interface PlatformUserRepository extends JpaRepository<PlatformUser, UUID
     long countByPlatformRoleIdAndStatus(UUID platformRoleId, PlatformUserStatus status);
 
     long countByPlatformRoleAndStatus(PlatformRole platformRole, PlatformUserStatus status);
+
+    /** Locks all active Product Owners in deterministic order to serialize last-owner changes. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from PlatformUser u where u.platformRole = :role and u.status = :status order by u.platformUserId")
+    List<PlatformUser> lockActiveProductOwners(@Param("role") PlatformRole role,
+            @Param("status") PlatformUserStatus status);
 
     List<PlatformUser> findAllByPlatformRoleAndStatus(PlatformRole platformRole, PlatformUserStatus status);
 }
