@@ -16,6 +16,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.Map;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -157,7 +158,7 @@ class PlatformUserUpdateTest {
                 .thenAnswer(invocation -> {
                     int count = activeOwners.get();
                     if (count <= 1) ownerRowsLock.unlock();
-                    return count;
+                    return (long) count;
                 });
         when(users.save(any())).thenAnswer(invocation -> {
             PlatformUser saved = invocation.getArgument(0);
