@@ -7,7 +7,7 @@
 } from "../features/platform/platformAccess";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "../design-system/components";
+import { Button, Notice } from "../design-system/components";
 import { idleLogout, logout } from "../services/authManager";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Icon } from "../components/ui/Icon";
@@ -148,7 +148,8 @@ export default function AppLayout() {
   }
   const name = user?.displayName?.trim() || "Account";
   const dispatch = useAppDispatch();
-  const { serverActions, permissionsLoaded: platformPermissionsLoaded, customRoleName } = usePlatformAccess();
+  const { serverActions, permissionsLoaded: platformPermissionsLoaded, permissionsFailed: platformPermissionsFailed, customRoleName } = usePlatformAccess();
+  const [retryingPermissions, setRetryingPermissions] = useState(false);
   const { canAny: canTenantAny, loading: tenantPermissionsLoading, error: tenantPermissionsError, permissions: tenantPermissions } = useTenantAccess();
 
   // Role / Level detection
@@ -446,6 +447,25 @@ export default function AppLayout() {
       <main className="app-content">
         {isSupportSession && <SupportSessionBanner />}
         {!user?.platformRole && <TrialExpiredBanner />}
+        {isPlatformConsole && platformPermissionsFailed && (
+          <Notice tone="danger" className="app-permissions-error">
+            <strong>Your access could not be loaded.</strong>{" "}
+            Pages are hidden until it loads. This is a connection or server problem, not a change to your role.{" "}
+            <Button
+              variant="secondary"
+              size="sm"
+              busy={retryingPermissions}
+              disabled={retryingPermissions || !userId}
+              onClick={async () => {
+                if (!userId) return;
+                setRetryingPermissions(true);
+                try { await loadPlatformPermissions(dispatch, userId); } finally { setRetryingPermissions(false); }
+              }}
+            >
+              Retry
+            </Button>
+          </Notice>
+        )}
         <Outlet />
       </main>    </div>
   </div>;

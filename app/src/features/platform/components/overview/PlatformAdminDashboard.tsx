@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
-import { Spinner } from "../../../../components/ui";
-import { Notice, Panel } from "../../../../design-system/components";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { platformOpsService, type SupportTicketItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
+import { Spinner } from "../../../../components/ui";
+import { Notice } from "../../../../design-system/components";
 
-type MetricState = { status: "loading" | "ok" | "not-measured" | "error" | "denied"; value?: string | number; detail?: string };
 type BackupRow = { stale?: boolean };
 type BackupResponse = { tenants?: BackupRow[] };
 
@@ -22,14 +21,18 @@ async function getAllTenants(): Promise<TenantItem[]> {
   }
 }
 
+type MetricState = { status: "loading" | "ok" | "not-measured" | "error" | "denied"; value?: string | number; detail?: string };
+
+// KPI card (design-system .kpi): label, then one state. The body sits inside the card padding.
 function MetricTile({ title, metric }: { title: string; metric: MetricState }) {
-  return <Panel title={title}>
+  return <section className="kpi" aria-label={title}>
+    <div className="kpi__head"><h2 className="kpi__label">{title}</h2></div>
     {metric.status === "loading" ? <Spinner label={`Loading ${title.toLowerCase()}...`} /> :
       metric.status === "error" ? <Notice tone="warning">{metric.detail || "Could not load this metric."}</Notice> :
-      metric.status === "denied" ? <span>Not available for this role</span> :
-      metric.status === "not-measured" ? <span>Not measured{metric.detail ? ` — ${metric.detail}` : ""}</span> :
-      <strong className="platform-dashboard-value">{metric.value}</strong>}
-  </Panel>;
+      metric.status === "denied" ? <p className="kpi__context">Not available for this role</p> :
+      metric.status === "not-measured" ? <p className="kpi__context">Not measured{metric.detail ? ` — ${metric.detail}` : ""}</p> :
+      <p className={typeof metric.value === "number" ? "kpi__value" : "kpi__value kpi__value--text"}>{metric.value}</p>}
+  </section>;
 }
 
 export function PlatformAdminDashboard() {

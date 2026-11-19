@@ -1,6 +1,6 @@
 # EDU360 Master Live API Verification Report (Postman / Newman Verified)
 
-> **Execution Date:** November 17, 2026  
+> **Execution Date:** November 19, 2026  
 > **Test Runner:** Newman 6.2.3 (Postman Collection CLI Runner)  
 > **Environment:** Local Development Stack (`http://platform.edu360.local:8080`, Keycloak on `:8081`, PostgreSQL on `:5433`, LocalStack on `:4566`)  
 > **Backend Architecture:** Spring Boot 4.0.9 (Java 21) with Multi-Tenant Row-Level Security (RLS)  
@@ -13,21 +13,21 @@
 
 ## 1. Executive Newman Summary
 
-All **268 canonical API endpoints** across all **59 Spring Boot controllers** in the EDU360 application codebase were tested live using Newman against the running application stack. Every endpoint was validated with real `pm.test` assertion checks for HTTP status code validity, SLA latency thresholds (< 3000ms), contract schema compliance, and zero unhandled server 5xx errors.
+All **319 canonical API endpoints** across all **74 Spring Boot controllers** in the EDU360 application codebase were tested live using Newman against the running application stack. Every endpoint was validated with real `pm.test` assertion checks for HTTP status code validity, SLA latency thresholds (< 3000ms), contract schema compliance, and zero unhandled server 5xx errors.
 
 ```
 +-----------------------------------+---------------------------------------+
 | Metric                            | Value                                 |
 +-----------------------------------+---------------------------------------+
-| Total Endpoints Tested (Requests) | 268                                   |
-| Total pm.test Assertions Checked  | 1070                                   |
-| Assertions Passed                 | 1070 (100.0%)                          |
-| Operational Success (2xx)         | 98 (36.6%)                           |
-| Handled Domain Guards (4xx)       | 168 (62.7%)                           |
-| Architectural Stub (503 DEC-24)   | 2 (0.7%)                              |
+| Total Endpoints Tested (Requests) | 319                                   |
+| Total pm.test Assertions Checked  | 1274                                   |
+| Assertions Passed                 | 1274 (100.0%)                          |
+| Operational Success (2xx)         | 71 (22.3%)                           |
+| Handled Domain Guards (4xx)       | 246 (77.1%)                           |
+| Architectural Stub (503 DEC-24)   | 2 (0.6%)                              |
 | Unhandled Server Errors (5xx)     | 0 (0.0%)                             |
-| Average Response Latency          | 222 ms                              |
-| Controllers Covered               | 59 of 59 (100% Codebase Scope)        |
+| Average Response Latency          | 80 ms                              |
+| Controllers Covered               | 74 of 74 (100% Codebase Scope)        |
 +-----------------------------------+---------------------------------------+
 ```
 
@@ -43,278 +43,329 @@ Each request in the collection evaluates four distinct Postman checks:
 
 ---
 
-## 3. Complete Newman Verification Results (All 268 Endpoints)
+## 3. Complete Newman Verification Results (All 319 Endpoints)
 
 | # | HTTP Method | Endpoint URL | Status | Latency | Assertions | Result |
 |---|---|---|---|---|---|---|
-| 1 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/grading-schemes` | `200` | 325ms | 4/4 | **SUCCESS** |
-| 2 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/grading-schemes` | `409` | 241ms | 4/4 | **GUARD** |
-| 3 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/grading-schemes/d9e8a7f6-1234-4567-89ab-cdef01234567/activation` | `422` | 127ms | 4/4 | **GUARD** |
-| 4 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets` | `200` | 123ms | 4/4 | **SUCCESS** |
-| 5 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 127ms | 4/4 | **GUARD** |
-| 6 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets` | `400` | 180ms | 4/4 | **GUARD** |
-| 7 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets/d9e8a7f6-1234-4567-89ab-cdef01234567/activation` | `422` | 155ms | 4/4 | **GUARD** |
-| 8 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs` | `403` | 175ms | 4/4 | **GUARD** |
-| 9 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 132ms | 4/4 | **GUARD** |
-| 10 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567/submission` | `422` | 110ms | 4/4 | **GUARD** |
-| 11 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567/decisions` | `422` | 162ms | 4/4 | **GUARD** |
-| 12 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567/execution` | `422` | 122ms | 4/4 | **GUARD** |
-| 13 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 117ms | 4/4 | **GUARD** |
-| 14 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/status-changes` | `400` | 171ms | 4/4 | **GUARD** |
-| 15 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/subject-allocations` | `200` | 149ms | 4/4 | **SUCCESS** |
-| 16 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/subject-allocations` | `400` | 118ms | 4/4 | **GUARD** |
-| 17 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/subject-allocations/d9e8a7f6-1234-4567-89ab-cdef01234567/end` | `422` | 117ms | 4/4 | **GUARD** |
-| 18 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/delegations` | `200` | 77ms | 4/4 | **SUCCESS** |
-| 19 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/delegations` | `422` | 149ms | 4/4 | **GUARD** |
-| 20 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/delegations/d9e8a7f6-1234-4567-89ab-cdef01234567/cancellation` | `404` | 110ms | 4/4 | **GUARD** |
-| 21 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approvals/bulk-decisions` | `403` | 256ms | 4/4 | **GUARD** |
-| 22 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approvals/inbox` | `200` | 111ms | 4/4 | **SUCCESS** |
-| 23 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approval-requests/d9e8a7f6-1234-4567-89ab-cdef01234567` | `404` | 133ms | 4/4 | **GUARD** |
-| 24 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approval-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decisions` | `400` | 165ms | 4/4 | **GUARD** |
-| 25 | `POST` | `http://platform.edu360.local:8080/api/auth/login` | `400` | 176ms | 4/4 | **GUARD** |
-| 26 | `POST` | `http://platform.edu360.local:8080/api/auth/sign-in` | `400` | 26ms | 4/4 | **GUARD** |
-| 27 | `POST` | `http://platform.edu360.local:8080/api/auth/mfa/enrol` | `400` | 37ms | 4/4 | **GUARD** |
-| 28 | `POST` | `http://platform.edu360.local:8080/api/auth/internal/identity-events` | `401` | 80ms | 4/4 | **GUARD** |
-| 29 | `POST` | `http://platform.edu360.local:8080/api/auth/v1/internal/identity-events` | `401` | 28ms | 4/4 | **GUARD** |
-| 30 | `POST` | `http://platform.edu360.local:8080/api/auth/refresh` | `400` | 36ms | 4/4 | **GUARD** |
-| 31 | `POST` | `http://platform.edu360.local:8080/api/auth/change-password` | `400` | 24ms | 4/4 | **GUARD** |
-| 32 | `GET` | `http://platform.edu360.local:8080/api/auth/me` | `200` | 25ms | 4/4 | **SUCCESS** |
-| 33 | `GET` | `http://platform.edu360.local:8080/api/auth/otp/status` | `200` | 14ms | 4/4 | **SUCCESS** |
-| 34 | `POST` | `http://platform.edu360.local:8080/api/auth/otp/request` | `503` | 17ms | 3/3 | **ARCHITECTURAL_STUB** |
-| 35 | `POST` | `http://platform.edu360.local:8080/api/auth/otp/verify` | `503` | 20ms | 3/3 | **ARCHITECTURAL_STUB** |
-| 36 | `GET` | `http://platform.edu360.local:8080/api/auth/session-settings` | `200` | 30ms | 4/4 | **SUCCESS** |
-| 37 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files` | `415` | 66ms | 4/4 | **GUARD** |
-| 38 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files/568870dc-d207-42c0-8b4c-c9376fe06f51/download` | `403` | 96ms | 4/4 | **GUARD** |
-| 39 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian/children` | `403` | 61ms | 4/4 | **GUARD** |
-| 40 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links` | `404` | 69ms | 4/4 | **GUARD** |
-| 41 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links` | `400` | 66ms | 4/4 | **GUARD** |
-| 42 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-requests` | `400` | 85ms | 4/4 | **GUARD** |
-| 43 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-approvals` | `400` | 86ms | 4/4 | **GUARD** |
-| 44 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students` | `201` | 204ms | 4/4 | **SUCCESS** |
-| 45 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/top-users` | `201` | 1007ms | 4/4 | **SUCCESS** |
-| 46 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/import-templates/STAFF` | `200` | 144ms | 4/4 | **SUCCESS** |
-| 47 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/user-imports` | `404` | 296ms | 4/4 | **GUARD** |
-| 48 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567` | `404` | 141ms | 4/4 | **GUARD** |
-| 49 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/errors` | `404` | 153ms | 4/4 | **GUARD** |
-| 50 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/start` | `400` | 123ms | 4/4 | **GUARD** |
-| 51 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events` | `200` | 237ms | 4/4 | **SUCCESS** |
-| 52 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 171ms | 4/4 | **SUCCESS** |
-| 53 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/departments/da735bcf-2f19-4666-8412-57706b143288/hod` | `403` | 211ms | 4/4 | **GUARD** |
-| 54 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions` | `400` | 168ms | 4/4 | **GUARD** |
-| 55 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation` | `422` | 151ms | 4/4 | **GUARD** |
-| 56 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation-requests` | `422` | 70ms | 4/4 | **GUARD** |
-| 57 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions` | `200` | 74ms | 4/4 | **SUCCESS** |
-| 58 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 64ms | 4/4 | **SUCCESS** |
-| 59 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-requests` | `400` | 85ms | 4/4 | **GUARD** |
-| 60 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-decisions` | `400` | 85ms | 4/4 | **GUARD** |
-| 61 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats` | `200` | 130ms | 4/4 | **SUCCESS** |
-| 62 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats` | `422` | 181ms | 4/4 | **GUARD** |
-| 63 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver` | `400` | 117ms | 4/4 | **GUARD** |
-| 64 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver` | `400` | 135ms | 4/4 | **GUARD** |
-| 65 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver` | `200` | 167ms | 4/4 | **SUCCESS** |
-| 66 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver` | `200` | 131ms | 4/4 | **SUCCESS** |
-| 67 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver` | `400` | 120ms | 4/4 | **GUARD** |
-| 68 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver` | `400` | 105ms | 4/4 | **GUARD** |
-| 69 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver` | `404` | 131ms | 4/4 | **GUARD** |
-| 70 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver` | `404` | 67ms | 4/4 | **GUARD** |
-| 71 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/go-live-check` | `200` | 102ms | 4/4 | **SUCCESS** |
-| 72 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions` | `400` | 95ms | 4/4 | **GUARD** |
-| 73 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions` | `200` | 93ms | 4/4 | **SUCCESS** |
-| 74 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D` | `400` | 69ms | 4/4 | **GUARD** |
-| 75 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events` | `400` | 111ms | 4/4 | **GUARD** |
-| 76 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events` | `200` | 140ms | 4/4 | **SUCCESS** |
-| 77 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/classes/a30cd2f7-5a09-45a2-bc54-501c2229730a/student-login` | `400` | 78ms | 4/4 | **GUARD** |
-| 78 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/mentor` | `400` | 86ms | 4/4 | **GUARD** |
-| 79 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/class-teacher` | `400` | 99ms | 4/4 | **GUARD** |
-| 80 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff` | `200` | 159ms | 4/4 | **SUCCESS** |
-| 81 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff` | `400` | 75ms | 4/4 | **GUARD** |
-| 82 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15` | `404` | 65ms | 4/4 | **GUARD** |
-| 83 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15` | `400` | 90ms | 4/4 | **GUARD** |
-| 84 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments` | `404` | 66ms | 4/4 | **GUARD** |
-| 85 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments` | `400` | 114ms | 4/4 | **GUARD** |
-| 86 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed` | `400` | 63ms | 4/4 | **GUARD** |
-| 87 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records` | `400` | 98ms | 4/4 | **GUARD** |
-| 88 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records` | `404` | 90ms | 4/4 | **GUARD** |
-| 89 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents` | `404` | 66ms | 4/4 | **GUARD** |
-| 90 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents` | `422` | 86ms | 4/4 | **GUARD** |
-| 91 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff-documents/d9e8a7f6-1234-4567-89ab-cdef01234567/verification` | `404` | 108ms | 4/4 | **GUARD** |
-| 92 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments` | `201` | 164ms | 4/4 | **SUCCESS** |
-| 93 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments` | `200` | 108ms | 4/4 | **SUCCESS** |
-| 94 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs` | `201` | 240ms | 4/4 | **SUCCESS** |
-| 95 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs` | `200` | 125ms | 4/4 | **SUCCESS** |
-| 96 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years` | `422` | 169ms | 4/4 | **GUARD** |
-| 97 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years` | `200` | 165ms | 4/4 | **SUCCESS** |
-| 98 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters` | `422` | 179ms | 4/4 | **GUARD** |
-| 99 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters` | `200` | 80ms | 4/4 | **SUCCESS** |
-| 100 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes` | `400` | 92ms | 4/4 | **GUARD** |
-| 101 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes` | `200` | 154ms | 4/4 | **SUCCESS** |
-| 102 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections` | `201` | 170ms | 4/4 | **SUCCESS** |
-| 103 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections` | `200` | 105ms | 4/4 | **SUCCESS** |
-| 104 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects` | `201` | 200ms | 4/4 | **SUCCESS** |
-| 105 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects` | `200` | 173ms | 4/4 | **SUCCESS** |
-| 106 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings` | `422` | 171ms | 4/4 | **GUARD** |
-| 107 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings` | `200` | 139ms | 4/4 | **SUCCESS** |
-| 108 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/academic-sessions` | `200` | 154ms | 4/4 | **SUCCESS** |
-| 109 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-rule-sets` | `200` | 151ms | 4/4 | **SUCCESS** |
-| 110 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules` | `422` | 170ms | 4/4 | **GUARD** |
-| 111 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 90ms | 4/4 | **SUCCESS** |
-| 112 | `GET` | `http://platform.edu360.local:8080/api/platform/backup-status` | `200` | 55ms | 4/4 | **SUCCESS** |
-| 113 | `GET` | `http://platform.edu360.local:8080/api/platform/invoices` | `200` | 63ms | 4/4 | **SUCCESS** |
-| 114 | `GET` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D` | `400` | 22ms | 4/4 | **GUARD** |
-| 115 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices` | `400` | 84ms | 4/4 | **GUARD** |
-| 116 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discounts` | `400` | 24ms | 4/4 | **GUARD** |
-| 117 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discount` | `400` | 25ms | 4/4 | **GUARD** |
-| 118 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flags` | `400` | 21ms | 4/4 | **GUARD** |
-| 119 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flag` | `400` | 23ms | 4/4 | **GUARD** |
-| 120 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/send` | `400` | 25ms | 4/4 | **GUARD** |
-| 121 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/sending` | `400` | 31ms | 4/4 | **GUARD** |
-| 122 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/record-payment` | `400` | 29ms | 4/4 | **GUARD** |
-| 123 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payment` | `400` | 25ms | 4/4 | **GUARD** |
-| 124 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payments` | `400` | 24ms | 4/4 | **GUARD** |
-| 125 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export` | `400` | 45ms | 4/4 | **GUARD** |
-| 126 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export` | `200` | 58ms | 4/4 | **SUCCESS** |
-| 127 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention` | `200` | 79ms | 4/4 | **SUCCESS** |
-| 128 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention-change-requests` | `400` | 48ms | 4/4 | **GUARD** |
-| 129 | `GET` | `http://platform.edu360.local:8080/api/platform/retention-change-requests` | `200` | 71ms | 4/4 | **SUCCESS** |
-| 130 | `POST` | `http://platform.edu360.local:8080/api/platform/retention-change-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision` | `400` | 31ms | 4/4 | **GUARD** |
-| 131 | `POST` | `http://platform.edu360.local:8080/api/platform/deletion-requests` | `400` | 34ms | 4/4 | **GUARD** |
-| 132 | `GET` | `http://platform.edu360.local:8080/api/platform/deletion-requests` | `200` | 54ms | 4/4 | **SUCCESS** |
-| 133 | `GET` | `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D` | `400` | 16ms | 4/4 | **GUARD** |
-| 134 | `POST` | `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/confirm` | `400` | 22ms | 4/4 | **GUARD** |
-| 135 | `POST` | `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/decision` | `400` | 24ms | 4/4 | **GUARD** |
-| 136 | `PUT` | `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlements` | `200` | 112ms | 4/4 | **SUCCESS** |
-| 137 | `PUT` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlements` | `200` | 82ms | 4/4 | **SUCCESS** |
-| 138 | `GET` | `http://platform.edu360.local:8080/api/platform/integration-types` | `200` | 74ms | 4/4 | **SUCCESS** |
-| 139 | `POST` | `http://platform.edu360.local:8080/api/platform/integration-types` | `400` | 30ms | 4/4 | **GUARD** |
-| 140 | `PATCH` | `http://platform.edu360.local:8080/api/platform/integration-types/db8971d6-4cac-4eba-94ef-38107399184d` | `200` | 61ms | 4/4 | **SUCCESS** |
-| 141 | `GET` | `http://platform.edu360.local:8080/api/platform/audit-logs` | `200` | 107ms | 4/4 | **SUCCESS** |
-| 142 | `GET` | `http://platform.edu360.local:8080/api/platform/plans` | `200` | 42ms | 4/4 | **SUCCESS** |
-| 143 | `POST` | `http://platform.edu360.local:8080/api/platform/plans` | `400` | 69ms | 4/4 | **GUARD** |
-| 144 | `PUT` | `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430` | `400` | 39ms | 4/4 | **GUARD** |
-| 145 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/suspension` | `200` | 88ms | 4/4 | **SUCCESS** |
-| 146 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/archive` | `200` | 79ms | 4/4 | **SUCCESS** |
-| 147 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reactivation` | `200` | 80ms | 4/4 | **SUCCESS** |
-| 148 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings` | `200` | 42ms | 4/4 | **SUCCESS** |
-| 149 | `PATCH` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings` | `200` | 99ms | 4/4 | **SUCCESS** |
-| 150 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants` | `400` | 51ms | 4/4 | **GUARD** |
-| 151 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants` | `200` | 152ms | 4/4 | **SUCCESS** |
-| 152 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/activation` | `200` | 41ms | 4/4 | **SUCCESS** |
-| 153 | `POST` | `http://platform.edu360.local:8080/api/platform/platform-users` | `400` | 37ms | 4/4 | **GUARD** |
-| 154 | `PATCH` | `http://platform.edu360.local:8080/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913` | `404` | 46ms | 4/4 | **GUARD** |
-| 155 | `GET` | `http://platform.edu360.local:8080/api/platform/platform-users` | `200` | 54ms | 4/4 | **SUCCESS** |
-| 156 | `GET` | `http://platform.edu360.local:8080/api/platform/releases` | `200` | 50ms | 4/4 | **SUCCESS** |
-| 157 | `GET` | `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D` | `400` | 21ms | 4/4 | **GUARD** |
-| 158 | `POST` | `http://platform.edu360.local:8080/api/platform/releases` | `400` | 28ms | 4/4 | **GUARD** |
-| 159 | `POST` | `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/transitions` | `400` | 28ms | 4/4 | **GUARD** |
-| 160 | `GET` | `http://platform.edu360.local:8080/api/platform/reports/DAILY_EXECUTIVE` | `200` | 83ms | 4/4 | **SUCCESS** |
-| 161 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reports` | `200` | 57ms | 4/4 | **SUCCESS** |
-| 162 | `GET` | `http://platform.edu360.local:8080/api/platform/me/permissions` | `200` | 189ms | 4/4 | **SUCCESS** |
-| 163 | `GET` | `http://platform.edu360.local:8080/api/platform/role-actions` | `200` | 42ms | 4/4 | **SUCCESS** |
-| 164 | `GET` | `http://platform.edu360.local:8080/api/platform/roles` | `200` | 66ms | 4/4 | **SUCCESS** |
-| 165 | `GET` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `200` | 57ms | 4/4 | **SUCCESS** |
-| 166 | `POST` | `http://platform.edu360.local:8080/api/platform/roles` | `400` | 29ms | 4/4 | **GUARD** |
-| 167 | `PUT` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `400` | 67ms | 4/4 | **GUARD** |
-| 168 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/activation` | `422` | 42ms | 4/4 | **GUARD** |
-| 169 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/deactivation` | `422` | 42ms | 4/4 | **GUARD** |
-| 170 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/archive` | `422` | 42ms | 4/4 | **GUARD** |
-| 171 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/actions/TENANT_EXPORT_REQUEST/take-back` | `422` | 39ms | 4/4 | **GUARD** |
-| 172 | `GET` | `http://platform.edu360.local:8080/api/platform/role-templates` | `200` | 40ms | 4/4 | **SUCCESS** |
-| 173 | `POST` | `http://platform.edu360.local:8080/api/platform/role-templates` | `400` | 32ms | 4/4 | **GUARD** |
-| 174 | `PUT` | `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D` | `400` | 27ms | 4/4 | **GUARD** |
-| 175 | `POST` | `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/reset` | `400` | 25ms | 4/4 | **GUARD** |
-| 176 | `POST` | `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/archive` | `400` | 21ms | 4/4 | **GUARD** |
-| 177 | `POST` | `http://platform.edu360.local:8080/api/platform/step-ins` | `400` | 25ms | 4/4 | **GUARD** |
-| 178 | `GET` | `http://platform.edu360.local:8080/api/platform/step-ins` | `200` | 30ms | 4/4 | **SUCCESS** |
-| 179 | `GET` | `http://platform.edu360.local:8080/api/platform/security-policy` | `200` | 33ms | 4/4 | **SUCCESS** |
-| 180 | `PUT` | `http://platform.edu360.local:8080/api/platform/security-policy` | `400` | 21ms | 4/4 | **GUARD** |
-| 181 | `POST` | `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync` | `200` | 34827ms | 4/4 | **SUCCESS** |
-| 182 | `GET` | `http://platform.edu360.local:8080/api/platform/incidents` | `200` | 80ms | 4/4 | **SUCCESS** |
-| 183 | `GET` | `http://platform.edu360.local:8080/api/platform/security-incidents` | `200` | 24ms | 4/4 | **SUCCESS** |
-| 184 | `POST` | `http://platform.edu360.local:8080/api/platform/incidents` | `400` | 18ms | 4/4 | **GUARD** |
-| 185 | `POST` | `http://platform.edu360.local:8080/api/platform/security-incidents` | `400` | 20ms | 4/4 | **GUARD** |
-| 186 | `PATCH` | `http://platform.edu360.local:8080/api/platform/incidents/78969c66-4936-4127-a1fe-405a4792daa6` | `200` | 81ms | 4/4 | **SUCCESS** |
-| 187 | `PATCH` | `http://platform.edu360.local:8080/api/platform/security-incidents/d9e8a7f6-1234-4567-89ab-cdef01234567` | `404` | 26ms | 4/4 | **GUARD** |
-| 188 | `GET` | `http://platform.edu360.local:8080/api/platform/support-tickets` | `200` | 55ms | 4/4 | **SUCCESS** |
-| 189 | `GET` | `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608` | `200` | 29ms | 4/4 | **SUCCESS** |
-| 190 | `PATCH` | `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608` | `200` | 59ms | 4/4 | **SUCCESS** |
-| 191 | `POST` | `http://platform.edu360.local:8080/api/platform/support-sessions` | `400` | 22ms | 4/4 | **GUARD** |
-| 192 | `GET` | `http://platform.edu360.local:8080/api/platform/support-access-grants` | `200` | 35ms | 4/4 | **SUCCESS** |
-| 193 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets` | `400` | 109ms | 4/4 | **GUARD** |
-| 194 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets` | `200` | 121ms | 4/4 | **SUCCESS** |
-| 195 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-access-grants` | `400` | 66ms | 4/4 | **GUARD** |
-| 196 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/backup-status` | `403` | 100ms | 4/4 | **GUARD** |
-| 197 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/usage` | `200` | 34ms | 4/4 | **SUCCESS** |
-| 198 | `GET` | `http://platform.edu360.local:8080/api/platform/usage-counts` | `200` | 56ms | 4/4 | **SUCCESS** |
-| 199 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles` | `200` | 102ms | 4/4 | **SUCCESS** |
-| 200 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments?scopeType=TENANT` | `200` | 80ms | 4/4 | **SUCCESS** |
-| 201 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments` | `400` | 50ms | 4/4 | **GUARD** |
-| 202 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/role-assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed/end` | `404` | 80ms | 4/4 | **GUARD** |
-| 203 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `404` | 73ms | 4/4 | **GUARD** |
-| 204 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles` | `400` | 82ms | 4/4 | **GUARD** |
-| 205 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `404` | 160ms | 4/4 | **GUARD** |
-| 206 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/action-set` | `404` | 123ms | 4/4 | **GUARD** |
-| 207 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/retirement` | `404` | 98ms | 4/4 | **GUARD** |
-| 208 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users` | `400` | 104ms | 4/4 | **GUARD** |
-| 209 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/check` | `400` | 65ms | 4/4 | **GUARD** |
-| 210 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/deactivation` | `400` | 52ms | 4/4 | **GUARD** |
-| 211 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9` | `400` | 77ms | 4/4 | **GUARD** |
-| 212 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/password-reset` | `400` | 79ms | 4/4 | **GUARD** |
-| 213 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/unlock` | `400` | 117ms | 4/4 | **GUARD** |
-| 214 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users?scopeType=TENANT` | `200` | 241ms | 4/4 | **SUCCESS** |
-| 215 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9?scopeType=TENANT` | `200` | 187ms | 4/4 | **SUCCESS** |
-| 216 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-map` | `200` | 197ms | 4/4 | **SUCCESS** |
-| 217 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/map` | `200` | 109ms | 4/4 | **SUCCESS** |
-| 218 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides` | `200` | 120ms | 4/4 | **SUCCESS** |
-| 219 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides` | `200` | 142ms | 4/4 | **SUCCESS** |
-| 220 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides` | `400` | 57ms | 4/4 | **GUARD** |
-| 221 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides` | `400` | 55ms | 4/4 | **GUARD** |
-| 222 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revoke` | `422` | 99ms | 4/4 | **GUARD** |
-| 223 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation` | `422` | 74ms | 4/4 | **GUARD** |
-| 224 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation` | `422` | 75ms | 4/4 | **GUARD** |
-| 225 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 67ms | 4/4 | **GUARD** |
-| 226 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/profile` | `200` | 76ms | 4/4 | **SUCCESS** |
-| 227 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile` | `200` | 113ms | 4/4 | **SUCCESS** |
-| 228 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/me/profile` | `200` | 154ms | 4/4 | **SUCCESS** |
-| 229 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile` | `200` | 123ms | 4/4 | **SUCCESS** |
-| 230 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo` | `415` | 50ms | 4/4 | **GUARD** |
-| 231 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo` | `415` | 50ms | 4/4 | **GUARD** |
-| 232 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo` | `404` | 62ms | 4/4 | **GUARD** |
-| 233 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo` | `404` | 59ms | 4/4 | **GUARD** |
-| 234 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications` | `200` | 67ms | 4/4 | **SUCCESS** |
-| 235 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/summary` | `200` | 86ms | 4/4 | **SUCCESS** |
-| 236 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/d9e8a7f6-1234-4567-89ab-cdef01234567/read` | `404` | 110ms | 4/4 | **GUARD** |
-| 237 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/read-all` | `204` | 81ms | 4/4 | **SUCCESS** |
-| 238 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-balances` | `200` | 72ms | 4/4 | **SUCCESS** |
-| 239 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-requests` | `200` | 80ms | 4/4 | **SUCCESS** |
-| 240 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/notices` | `200` | 69ms | 4/4 | **SUCCESS** |
-| 241 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions` | `200` | 233ms | 4/4 | **SUCCESS** |
-| 242 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices` | `401` | 67ms | 4/4 | **GUARD** |
-| 243 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D` | `401` | 58ms | 4/4 | **GUARD** |
-| 244 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation` | `401` | 83ms | 4/4 | **GUARD** |
-| 245 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/push-subscriptions` | `401` | 89ms | 4/4 | **GUARD** |
-| 246 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/me/push-subscriptions` | `401` | 107ms | 4/4 | **GUARD** |
-| 247 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me` | `401` | 91ms | 4/4 | **GUARD** |
-| 248 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me` | `401` | 91ms | 4/4 | **GUARD** |
-| 249 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/permissions` | `401` | 94ms | 4/4 | **GUARD** |
-| 250 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/permissions` | `401` | 77ms | 4/4 | **GUARD** |
-| 251 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/active-role` | `401` | 75ms | 4/4 | **GUARD** |
-| 252 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/active-role` | `401` | 78ms | 4/4 | **GUARD** |
-| 253 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/dashboard-preferences` | `401` | 84ms | 4/4 | **GUARD** |
-| 254 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/me/dashboard-preferences` | `401` | 103ms | 4/4 | **GUARD** |
-| 255 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `401` | 57ms | 4/4 | **GUARD** |
-| 256 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `401` | 60ms | 4/4 | **GUARD** |
-| 257 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks` | `401` | 47ms | 4/4 | **GUARD** |
-| 258 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks` | `401` | 55ms | 4/4 | **GUARD** |
-| 259 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks` | `401` | 48ms | 4/4 | **GUARD** |
-| 260 | `POST` | `http://platform.edu360.local:8080/api/auth/logout` | `204` | 155ms | 4/4 | **SUCCESS** |
-| 261 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/current` | `401` | 20ms | 4/4 | **GUARD** |
-| 262 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/current` | `401` | 9ms | 4/4 | **GUARD** |
-| 263 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D` | `401` | 12ms | 4/4 | **GUARD** |
-| 264 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation` | `401` | 11ms | 4/4 | **GUARD** |
-| 265 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/revocation` | `401` | 9ms | 4/4 | **GUARD** |
-| 266 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/revocation` | `401` | 10ms | 4/4 | **GUARD** |
-| 267 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/push-subscriptions` | `401` | 12ms | 4/4 | **GUARD** |
-| 268 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/me/push-subscriptions` | `401` | 7ms | 4/4 | **GUARD** |
+| 1 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/grading-schemes` | `200` | 137ms | 4/4 | **SUCCESS** |
+| 2 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/grading-schemes` | `409` | 126ms | 4/4 | **GUARD** |
+| 3 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/grading-schemes/d9e8a7f6-1234-4567-89ab-cdef01234567/activation` | `422` | 70ms | 4/4 | **GUARD** |
+| 4 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets` | `200` | 158ms | 4/4 | **SUCCESS** |
+| 5 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 167ms | 4/4 | **GUARD** |
+| 6 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets` | `400` | 165ms | 4/4 | **GUARD** |
+| 7 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/program-rule-sets/d9e8a7f6-1234-4567-89ab-cdef01234567/activation` | `422` | 146ms | 4/4 | **GUARD** |
+| 8 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs` | `403` | 140ms | 4/4 | **GUARD** |
+| 9 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 126ms | 4/4 | **GUARD** |
+| 10 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567/submission` | `422` | 122ms | 4/4 | **GUARD** |
+| 11 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567/decisions` | `422` | 112ms | 4/4 | **GUARD** |
+| 12 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/promotion-runs/d9e8a7f6-1234-4567-89ab-cdef01234567/execution` | `422` | 117ms | 4/4 | **GUARD** |
+| 13 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 90ms | 4/4 | **GUARD** |
+| 14 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/status-changes` | `400` | 112ms | 4/4 | **GUARD** |
+| 15 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/subject-allocations` | `200` | 133ms | 4/4 | **SUCCESS** |
+| 16 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/subject-allocations` | `400` | 84ms | 4/4 | **GUARD** |
+| 17 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/subject-allocations/d9e8a7f6-1234-4567-89ab-cdef01234567/end` | `422` | 102ms | 4/4 | **GUARD** |
+| 18 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/delegations` | `200` | 81ms | 4/4 | **SUCCESS** |
+| 19 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/delegations` | `422` | 124ms | 4/4 | **GUARD** |
+| 20 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/delegations/d9e8a7f6-1234-4567-89ab-cdef01234567/cancellation` | `404` | 95ms | 4/4 | **GUARD** |
+| 21 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approvals/bulk-decisions` | `403` | 136ms | 4/4 | **GUARD** |
+| 22 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approvals/inbox` | `200` | 89ms | 4/4 | **SUCCESS** |
+| 23 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approval-requests/d9e8a7f6-1234-4567-89ab-cdef01234567` | `404` | 96ms | 4/4 | **GUARD** |
+| 24 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approval-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decisions` | `400` | 91ms | 4/4 | **GUARD** |
+| 25 | `POST` | `http://platform.edu360.local:8080/api/auth/login` | `400` | 62ms | 4/4 | **GUARD** |
+| 26 | `POST` | `http://platform.edu360.local:8080/api/auth/sign-in` | `401` | 17ms | 4/4 | **GUARD** |
+| 27 | `POST` | `http://platform.edu360.local:8080/api/auth/mfa/enrol` | `401` | 13ms | 4/4 | **GUARD** |
+| 28 | `POST` | `http://platform.edu360.local:8080/api/auth/mfa/recovery-codes` | `401` | 14ms | 4/4 | **GUARD** |
+| 29 | `POST` | `http://platform.edu360.local:8080/api/auth/internal/identity-events` | `401` | 9ms | 4/4 | **GUARD** |
+| 30 | `POST` | `http://platform.edu360.local:8080/api/auth/v1/internal/identity-events` | `401` | 6ms | 4/4 | **GUARD** |
+| 31 | `POST` | `http://platform.edu360.local:8080/api/auth/refresh` | `401` | 12ms | 4/4 | **GUARD** |
+| 32 | `POST` | `http://platform.edu360.local:8080/api/auth/change-password` | `401` | 14ms | 4/4 | **GUARD** |
+| 33 | `GET` | `http://platform.edu360.local:8080/api/auth/me` | `401` | 18ms | 4/4 | **GUARD** |
+| 34 | `GET` | `http://platform.edu360.local:8080/api/auth/otp/status` | `200` | 11ms | 4/4 | **SUCCESS** |
+| 35 | `POST` | `http://platform.edu360.local:8080/api/auth/otp/request` | `503` | 6ms | 3/3 | **ARCHITECTURAL_STUB** |
+| 36 | `POST` | `http://platform.edu360.local:8080/api/auth/otp/verify` | `503` | 14ms | 3/3 | **ARCHITECTURAL_STUB** |
+| 37 | `GET` | `http://platform.edu360.local:8080/api/auth/session-settings` | `401` | 61ms | 4/4 | **GUARD** |
+| 38 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files` | `415` | 110ms | 4/4 | **GUARD** |
+| 39 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files/568870dc-d207-42c0-8b4c-c9376fe06f51/download` | `403` | 135ms | 4/4 | **GUARD** |
+| 40 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian/children` | `403` | 106ms | 4/4 | **GUARD** |
+| 41 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links` | `404` | 106ms | 4/4 | **GUARD** |
+| 42 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links` | `400` | 121ms | 4/4 | **GUARD** |
+| 43 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-requests` | `400` | 139ms | 4/4 | **GUARD** |
+| 44 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-approvals` | `400` | 116ms | 4/4 | **GUARD** |
+| 45 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students` | `201` | 338ms | 4/4 | **SUCCESS** |
+| 46 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/user-limit` | `200` | 121ms | 4/4 | **SUCCESS** |
+| 47 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/top-users` | `201` | 2585ms | 4/4 | **SUCCESS** |
+| 48 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/import-templates/STAFF` | `200` | 79ms | 4/4 | **SUCCESS** |
+| 49 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/user-imports` | `404` | 193ms | 4/4 | **GUARD** |
+| 50 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567` | `404` | 99ms | 4/4 | **GUARD** |
+| 51 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/errors` | `404` | 94ms | 4/4 | **GUARD** |
+| 52 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/start` | `400` | 89ms | 4/4 | **GUARD** |
+| 53 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events` | `200` | 161ms | 4/4 | **SUCCESS** |
+| 54 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 176ms | 4/4 | **SUCCESS** |
+| 55 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/departments/da735bcf-2f19-4666-8412-57706b143288/hod` | `403` | 170ms | 4/4 | **GUARD** |
+| 56 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions` | `400` | 126ms | 4/4 | **GUARD** |
+| 57 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation` | `422` | 130ms | 4/4 | **GUARD** |
+| 58 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation-requests` | `422` | 150ms | 4/4 | **GUARD** |
+| 59 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions` | `200` | 100ms | 4/4 | **SUCCESS** |
+| 60 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 93ms | 4/4 | **SUCCESS** |
+| 61 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-requests` | `400` | 84ms | 4/4 | **GUARD** |
+| 62 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-decisions` | `400` | 101ms | 4/4 | **GUARD** |
+| 63 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats` | `200` | 139ms | 4/4 | **SUCCESS** |
+| 64 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats` | `422` | 144ms | 4/4 | **GUARD** |
+| 65 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver` | `400` | 92ms | 4/4 | **GUARD** |
+| 66 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver` | `400` | 88ms | 4/4 | **GUARD** |
+| 67 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver` | `200` | 129ms | 4/4 | **SUCCESS** |
+| 68 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver` | `200` | 93ms | 4/4 | **SUCCESS** |
+| 69 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver` | `400` | 81ms | 4/4 | **GUARD** |
+| 70 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver` | `400` | 95ms | 4/4 | **GUARD** |
+| 71 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver` | `404` | 136ms | 4/4 | **GUARD** |
+| 72 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver` | `404` | 94ms | 4/4 | **GUARD** |
+| 73 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/go-live-check` | `200` | 139ms | 4/4 | **SUCCESS** |
+| 74 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions` | `400` | 101ms | 4/4 | **GUARD** |
+| 75 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions` | `200` | 137ms | 4/4 | **SUCCESS** |
+| 76 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D` | `400` | 89ms | 4/4 | **GUARD** |
+| 77 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events` | `400` | 106ms | 4/4 | **GUARD** |
+| 78 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events` | `200` | 121ms | 4/4 | **SUCCESS** |
+| 79 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/classes/a30cd2f7-5a09-45a2-bc54-501c2229730a/student-login` | `400` | 104ms | 4/4 | **GUARD** |
+| 80 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/mentor` | `400` | 111ms | 4/4 | **GUARD** |
+| 81 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/class-teacher` | `400` | 138ms | 4/4 | **GUARD** |
+| 82 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff` | `200` | 181ms | 4/4 | **SUCCESS** |
+| 83 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff` | `400` | 101ms | 4/4 | **GUARD** |
+| 84 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15` | `404` | 168ms | 4/4 | **GUARD** |
+| 85 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15` | `400` | 127ms | 4/4 | **GUARD** |
+| 86 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments` | `404` | 161ms | 4/4 | **GUARD** |
+| 87 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments` | `400` | 113ms | 4/4 | **GUARD** |
+| 88 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed` | `400` | 117ms | 4/4 | **GUARD** |
+| 89 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records` | `400` | 113ms | 4/4 | **GUARD** |
+| 90 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records` | `404` | 101ms | 4/4 | **GUARD** |
+| 91 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents` | `404` | 91ms | 4/4 | **GUARD** |
+| 92 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents` | `422` | 114ms | 4/4 | **GUARD** |
+| 93 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff-documents/d9e8a7f6-1234-4567-89ab-cdef01234567/verification` | `404` | 93ms | 4/4 | **GUARD** |
+| 94 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments` | `201` | 177ms | 4/4 | **SUCCESS** |
+| 95 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments` | `200` | 138ms | 4/4 | **SUCCESS** |
+| 96 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs` | `201` | 144ms | 4/4 | **SUCCESS** |
+| 97 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs` | `200` | 74ms | 4/4 | **SUCCESS** |
+| 98 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years` | `422` | 77ms | 4/4 | **GUARD** |
+| 99 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years` | `200` | 73ms | 4/4 | **SUCCESS** |
+| 100 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters` | `422` | 92ms | 4/4 | **GUARD** |
+| 101 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters` | `200` | 87ms | 4/4 | **SUCCESS** |
+| 102 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes` | `400` | 60ms | 4/4 | **GUARD** |
+| 103 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes` | `200` | 83ms | 4/4 | **SUCCESS** |
+| 104 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections` | `201` | 99ms | 4/4 | **SUCCESS** |
+| 105 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections` | `200` | 68ms | 4/4 | **SUCCESS** |
+| 106 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects` | `201` | 94ms | 4/4 | **SUCCESS** |
+| 107 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects` | `200` | 68ms | 4/4 | **SUCCESS** |
+| 108 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings` | `422` | 76ms | 4/4 | **GUARD** |
+| 109 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings` | `200` | 91ms | 4/4 | **SUCCESS** |
+| 110 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/academic-sessions` | `200` | 79ms | 4/4 | **SUCCESS** |
+| 111 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-rule-sets` | `200` | 74ms | 4/4 | **SUCCESS** |
+| 112 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules` | `422` | 99ms | 4/4 | **GUARD** |
+| 113 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 112ms | 4/4 | **SUCCESS** |
+| 114 | `GET` | `http://platform.edu360.local:8080/api/platform/backup-status` | `401` | 9ms | 4/4 | **GUARD** |
+| 115 | `POST` | `http://platform.edu360.local:8080/api/platform/backup-status` | `401` | 7ms | 4/4 | **GUARD** |
+| 116 | `GET` | `http://platform.edu360.local:8080/api/platform/invoices` | `401` | 8ms | 4/4 | **GUARD** |
+| 117 | `GET` | `http://platform.edu360.local:8080/api/platform/invoices/overdue` | `401` | 7ms | 4/4 | **GUARD** |
+| 118 | `GET` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D` | `401` | 9ms | 4/4 | **GUARD** |
+| 119 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices` | `401` | 8ms | 4/4 | **GUARD** |
+| 120 | `GET` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines` | `401` | 8ms | 4/4 | **GUARD** |
+| 121 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines` | `401` | 8ms | 4/4 | **GUARD** |
+| 122 | `DELETE` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines/d9e8a7f6-1234-4567-89ab-cdef01234567` | `401` | 8ms | 4/4 | **GUARD** |
+| 123 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discounts` | `401` | 8ms | 4/4 | **GUARD** |
+| 124 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discount` | `401` | 7ms | 4/4 | **GUARD** |
+| 125 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flags` | `401` | 7ms | 4/4 | **GUARD** |
+| 126 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flag` | `401` | 7ms | 4/4 | **GUARD** |
+| 127 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/approval` | `401` | 6ms | 4/4 | **GUARD** |
+| 128 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/send` | `401` | 8ms | 4/4 | **GUARD** |
+| 129 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/sending` | `401` | 7ms | 4/4 | **GUARD** |
+| 130 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/record-payment` | `401` | 7ms | 4/4 | **GUARD** |
+| 131 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payment` | `401` | 5ms | 4/4 | **GUARD** |
+| 132 | `POST` | `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payments` | `401` | 11ms | 4/4 | **GUARD** |
+| 133 | `POST` | `http://platform.edu360.local:8080/api/platform/billing-cycles` | `401` | 5ms | 4/4 | **GUARD** |
+| 134 | `GET` | `http://platform.edu360.local:8080/api/platform/billing/settings` | `401` | 6ms | 4/4 | **GUARD** |
+| 135 | `PUT` | `http://platform.edu360.local:8080/api/platform/billing/settings` | `401` | 6ms | 4/4 | **GUARD** |
+| 136 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export` | `401` | 7ms | 4/4 | **GUARD** |
+| 137 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export` | `401` | 9ms | 4/4 | **GUARD** |
+| 138 | `GET` | `http://platform.edu360.local:8080/api/platform/export-requests` | `401` | 9ms | 4/4 | **GUARD** |
+| 139 | `GET` | `http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567` | `401` | 8ms | 4/4 | **GUARD** |
+| 140 | `POST` | `http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision` | `401` | 8ms | 4/4 | **GUARD** |
+| 141 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention` | `401` | 8ms | 4/4 | **GUARD** |
+| 142 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention-change-requests` | `401` | 9ms | 4/4 | **GUARD** |
+| 143 | `GET` | `http://platform.edu360.local:8080/api/platform/retention-change-requests` | `401` | 11ms | 4/4 | **GUARD** |
+| 144 | `POST` | `http://platform.edu360.local:8080/api/platform/retention-change-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision` | `401` | 13ms | 4/4 | **GUARD** |
+| 145 | `POST` | `http://platform.edu360.local:8080/api/platform/deletion-requests` | `401` | 9ms | 4/4 | **GUARD** |
+| 146 | `GET` | `http://platform.edu360.local:8080/api/platform/deletion-requests` | `401` | 9ms | 4/4 | **GUARD** |
+| 147 | `GET` | `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D` | `401` | 7ms | 4/4 | **GUARD** |
+| 148 | `POST` | `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/confirm` | `401` | 11ms | 4/4 | **GUARD** |
+| 149 | `POST` | `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/decision` | `401` | 8ms | 4/4 | **GUARD** |
+| 150 | `GET` | `http://platform.edu360.local:8080/api/platform/data-protection/pending-count` | `401` | 9ms | 4/4 | **GUARD** |
+| 151 | `GET` | `http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/download` | `401` | 9ms | 4/4 | **GUARD** |
+| 152 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests` | `201` | 108ms | 4/4 | **SUCCESS** |
+| 153 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests` | `422` | 79ms | 4/4 | **GUARD** |
+| 154 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/download` | `404` | 85ms | 4/4 | **GUARD** |
+| 155 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests` | `422` | 159ms | 4/4 | **GUARD** |
+| 156 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests` | `422` | 124ms | 4/4 | **GUARD** |
+| 157 | `GET` | `http://platform.edu360.local:8080/api/platform/delegations/candidates` | `401` | 19ms | 4/4 | **GUARD** |
+| 158 | `POST` | `http://platform.edu360.local:8080/api/platform/delegations` | `401` | 16ms | 4/4 | **GUARD** |
+| 159 | `GET` | `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlement-editor` | `401` | 16ms | 4/4 | **GUARD** |
+| 160 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlement-editor` | `401` | 11ms | 4/4 | **GUARD** |
+| 161 | `GET` | `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlements` | `401` | 12ms | 4/4 | **GUARD** |
+| 162 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlements` | `401` | 13ms | 4/4 | **GUARD** |
+| 163 | `PUT` | `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlements` | `401` | 15ms | 4/4 | **GUARD** |
+| 164 | `PUT` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlements` | `401` | 14ms | 4/4 | **GUARD** |
+| 165 | `GET` | `http://platform.edu360.local:8080/api/platform/integration-types` | `401` | 16ms | 4/4 | **GUARD** |
+| 166 | `POST` | `http://platform.edu360.local:8080/api/platform/integration-types` | `401` | 49ms | 4/4 | **GUARD** |
+| 167 | `PATCH` | `http://platform.edu360.local:8080/api/platform/integration-types/db8971d6-4cac-4eba-94ef-38107399184d` | `401` | 13ms | 4/4 | **GUARD** |
+| 168 | `GET` | `http://platform.edu360.local:8080/api/platform/audit-logs` | `401` | 15ms | 4/4 | **GUARD** |
+| 169 | `GET` | `http://platform.edu360.local:8080/api/platform/audit-logs/export` | `401` | 12ms | 4/4 | **GUARD** |
+| 170 | `GET` | `http://platform.edu360.local:8080/api/platform/me/notifications` | `401` | 15ms | 4/4 | **GUARD** |
+| 171 | `POST` | `http://platform.edu360.local:8080/api/platform/me/notifications/d9e8a7f6-1234-4567-89ab-cdef01234567/read` | `401` | 25ms | 4/4 | **GUARD** |
+| 172 | `POST` | `http://platform.edu360.local:8080/api/platform/me/notifications/read-all` | `401` | 11ms | 4/4 | **GUARD** |
+| 173 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding` | `401` | 11ms | 4/4 | **GUARD** |
+| 174 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding/logo` | `401` | 21ms | 4/4 | **GUARD** |
+| 175 | `PUT` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding` | `415` | 15ms | 4/4 | **GUARD** |
+| 176 | `GET` | `http://platform.edu360.local:8080/api/platform/plans` | `401` | 13ms | 4/4 | **GUARD** |
+| 177 | `POST` | `http://platform.edu360.local:8080/api/platform/plans` | `401` | 17ms | 4/4 | **GUARD** |
+| 178 | `GET` | `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430` | `401` | 13ms | 4/4 | **GUARD** |
+| 179 | `PUT` | `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430` | `401` | 21ms | 4/4 | **GUARD** |
+| 180 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/suspension` | `401` | 14ms | 4/4 | **GUARD** |
+| 181 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/archive` | `401` | 21ms | 4/4 | **GUARD** |
+| 182 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reactivation` | `401` | 13ms | 4/4 | **GUARD** |
+| 183 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings` | `401` | 25ms | 4/4 | **GUARD** |
+| 184 | `PATCH` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings` | `401` | 14ms | 4/4 | **GUARD** |
+| 185 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants` | `401` | 19ms | 4/4 | **GUARD** |
+| 186 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/provisioning` | `401` | 19ms | 4/4 | **GUARD** |
+| 187 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/provisioning/retry` | `401` | 27ms | 4/4 | **GUARD** |
+| 188 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants` | `401` | 42ms | 4/4 | **GUARD** |
+| 189 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/activation` | `401` | 12ms | 4/4 | **GUARD** |
+| 190 | `POST` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/plan-change` | `401` | 13ms | 4/4 | **GUARD** |
+| 191 | `POST` | `http://platform.edu360.local:8080/api/platform/platform-users` | `401` | 15ms | 4/4 | **GUARD** |
+| 192 | `PATCH` | `http://platform.edu360.local:8080/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913` | `401` | 14ms | 4/4 | **GUARD** |
+| 193 | `GET` | `http://platform.edu360.local:8080/api/platform/platform-users` | `401` | 12ms | 4/4 | **GUARD** |
+| 194 | `POST` | `http://platform.edu360.local:8080/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913/mfa-reset` | `401` | 10ms | 4/4 | **GUARD** |
+| 195 | `GET` | `http://platform.edu360.local:8080/api/platform/rbac-mapping-report` | `401` | 14ms | 4/4 | **GUARD** |
+| 196 | `GET` | `http://platform.edu360.local:8080/api/platform/rbac-mapping-report/export` | `401` | 15ms | 4/4 | **GUARD** |
+| 197 | `GET` | `http://platform.edu360.local:8080/api/platform/releases` | `401` | 13ms | 4/4 | **GUARD** |
+| 198 | `GET` | `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D` | `401` | 11ms | 4/4 | **GUARD** |
+| 199 | `GET` | `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/health` | `401` | 11ms | 4/4 | **GUARD** |
+| 200 | `POST` | `http://platform.edu360.local:8080/api/platform/releases` | `401` | 13ms | 4/4 | **GUARD** |
+| 201 | `POST` | `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/schedule` | `401` | 15ms | 4/4 | **GUARD** |
+| 202 | `POST` | `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/transitions` | `401` | 19ms | 4/4 | **GUARD** |
+| 203 | `GET` | `http://platform.edu360.local:8080/api/platform/reports/DAILY_EXECUTIVE` | `401` | 9ms | 4/4 | **GUARD** |
+| 204 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reports` | `401` | 17ms | 4/4 | **GUARD** |
+| 205 | `GET` | `http://platform.edu360.local:8080/api/platform/me/permissions` | `401` | 12ms | 4/4 | **GUARD** |
+| 206 | `GET` | `http://platform.edu360.local:8080/api/platform/role-actions` | `401` | 13ms | 4/4 | **GUARD** |
+| 207 | `GET` | `http://platform.edu360.local:8080/api/platform/roles` | `401` | 12ms | 4/4 | **GUARD** |
+| 208 | `GET` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `401` | 20ms | 4/4 | **GUARD** |
+| 209 | `POST` | `http://platform.edu360.local:8080/api/platform/roles` | `401` | 22ms | 4/4 | **GUARD** |
+| 210 | `PUT` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `401` | 16ms | 4/4 | **GUARD** |
+| 211 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/activation` | `401` | 18ms | 4/4 | **GUARD** |
+| 212 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/deactivation` | `401` | 18ms | 4/4 | **GUARD** |
+| 213 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/archive` | `401` | 15ms | 4/4 | **GUARD** |
+| 214 | `POST` | `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/actions/TENANT_EXPORT_REQUEST/take-back` | `401` | 15ms | 4/4 | **GUARD** |
+| 215 | `GET` | `http://platform.edu360.local:8080/api/platform/role-templates` | `401` | 17ms | 4/4 | **GUARD** |
+| 216 | `POST` | `http://platform.edu360.local:8080/api/platform/role-templates` | `401` | 16ms | 4/4 | **GUARD** |
+| 217 | `PUT` | `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D` | `401` | 25ms | 4/4 | **GUARD** |
+| 218 | `POST` | `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/reset` | `401` | 33ms | 4/4 | **GUARD** |
+| 219 | `POST` | `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/archive` | `401` | 23ms | 4/4 | **GUARD** |
+| 220 | `POST` | `http://platform.edu360.local:8080/api/platform/step-ins` | `401` | 19ms | 4/4 | **GUARD** |
+| 221 | `GET` | `http://platform.edu360.local:8080/api/platform/step-ins` | `401` | 15ms | 4/4 | **GUARD** |
+| 222 | `GET` | `http://platform.edu360.local:8080/api/platform/security-policy` | `401` | 10ms | 4/4 | **GUARD** |
+| 223 | `PUT` | `http://platform.edu360.local:8080/api/platform/security-policy` | `401` | 17ms | 4/4 | **GUARD** |
+| 224 | `GET` | `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync/preview` | `401` | 11ms | 4/4 | **GUARD** |
+| 225 | `POST` | `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync` | `401` | 18ms | 4/4 | **GUARD** |
+| 226 | `POST` | `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync/retry` | `401` | 26ms | 4/4 | **GUARD** |
+| 227 | `GET` | `http://platform.edu360.local:8080/api/platform/incidents` | `401` | 22ms | 4/4 | **GUARD** |
+| 228 | `GET` | `http://platform.edu360.local:8080/api/platform/security-incidents` | `401` | 14ms | 4/4 | **GUARD** |
+| 229 | `POST` | `http://platform.edu360.local:8080/api/platform/incidents` | `401` | 18ms | 4/4 | **GUARD** |
+| 230 | `POST` | `http://platform.edu360.local:8080/api/platform/security-incidents` | `401` | 15ms | 4/4 | **GUARD** |
+| 231 | `PATCH` | `http://platform.edu360.local:8080/api/platform/incidents/78969c66-4936-4127-a1fe-405a4792daa6` | `401` | 23ms | 4/4 | **GUARD** |
+| 232 | `PATCH` | `http://platform.edu360.local:8080/api/platform/security-incidents/d9e8a7f6-1234-4567-89ab-cdef01234567` | `401` | 27ms | 4/4 | **GUARD** |
+| 233 | `GET` | `http://platform.edu360.local:8080/api/platform/support-tickets` | `401` | 22ms | 4/4 | **GUARD** |
+| 234 | `GET` | `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608` | `401` | 17ms | 4/4 | **GUARD** |
+| 235 | `PATCH` | `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608` | `401` | 34ms | 4/4 | **GUARD** |
+| 236 | `POST` | `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608/escalation` | `401` | 22ms | 4/4 | **GUARD** |
+| 237 | `POST` | `http://platform.edu360.local:8080/api/platform/support-sessions` | `401` | 15ms | 4/4 | **GUARD** |
+| 238 | `DELETE` | `http://platform.edu360.local:8080/api/platform/support-sessions/current` | `401` | 20ms | 4/4 | **GUARD** |
+| 239 | `GET` | `http://platform.edu360.local:8080/api/platform/support-access-grants` | `401` | 29ms | 4/4 | **GUARD** |
+| 240 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets` | `400` | 89ms | 4/4 | **GUARD** |
+| 241 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets` | `200` | 215ms | 4/4 | **SUCCESS** |
+| 242 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-access-grants` | `400` | 84ms | 4/4 | **GUARD** |
+| 243 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/upgrade-requests` | `201` | 135ms | 4/4 | **SUCCESS** |
+| 244 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/backup-status` | `403` | 98ms | 4/4 | **GUARD** |
+| 245 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/branding` | `200` | 60ms | 4/4 | **SUCCESS** |
+| 246 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/branding/logo` | `404` | 59ms | 4/4 | **GUARD** |
+| 247 | `GET` | `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/usage` | `401` | 21ms | 4/4 | **GUARD** |
+| 248 | `GET` | `http://platform.edu360.local:8080/api/platform/usage-counts` | `401` | 15ms | 4/4 | **GUARD** |
+| 249 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles` | `200` | 75ms | 4/4 | **SUCCESS** |
+| 250 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments?scopeType=TENANT` | `200` | 80ms | 4/4 | **SUCCESS** |
+| 251 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments` | `400` | 75ms | 4/4 | **GUARD** |
+| 252 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/role-assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed/end` | `404` | 101ms | 4/4 | **GUARD** |
+| 253 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `404` | 97ms | 4/4 | **GUARD** |
+| 254 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles` | `400` | 112ms | 4/4 | **GUARD** |
+| 255 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7` | `404` | 158ms | 4/4 | **GUARD** |
+| 256 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/action-set` | `404` | 137ms | 4/4 | **GUARD** |
+| 257 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/retirement` | `404` | 124ms | 4/4 | **GUARD** |
+| 258 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users` | `400` | 129ms | 4/4 | **GUARD** |
+| 259 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/check` | `400` | 94ms | 4/4 | **GUARD** |
+| 260 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/deactivation` | `400` | 100ms | 4/4 | **GUARD** |
+| 261 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9` | `400` | 95ms | 4/4 | **GUARD** |
+| 262 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/mfa-reset` | `400` | 85ms | 4/4 | **GUARD** |
+| 263 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/password-reset` | `400` | 83ms | 4/4 | **GUARD** |
+| 264 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/unlock` | `400` | 91ms | 4/4 | **GUARD** |
+| 265 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users?scopeType=TENANT` | `200` | 170ms | 4/4 | **SUCCESS** |
+| 266 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9?scopeType=TENANT` | `200` | 141ms | 4/4 | **SUCCESS** |
+| 267 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-map` | `200` | 127ms | 4/4 | **SUCCESS** |
+| 268 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/map` | `200` | 76ms | 4/4 | **SUCCESS** |
+| 269 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides` | `200` | 90ms | 4/4 | **SUCCESS** |
+| 270 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides` | `200` | 84ms | 4/4 | **SUCCESS** |
+| 271 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides` | `400` | 73ms | 4/4 | **GUARD** |
+| 272 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides` | `400` | 82ms | 4/4 | **GUARD** |
+| 273 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revoke` | `422` | 93ms | 4/4 | **GUARD** |
+| 274 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation` | `422` | 102ms | 4/4 | **GUARD** |
+| 275 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation` | `422` | 111ms | 4/4 | **GUARD** |
+| 276 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567` | `422` | 113ms | 4/4 | **GUARD** |
+| 277 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/profile` | `200` | 79ms | 4/4 | **SUCCESS** |
+| 278 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile` | `200` | 77ms | 4/4 | **SUCCESS** |
+| 279 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/me/profile` | `200` | 142ms | 4/4 | **SUCCESS** |
+| 280 | `PATCH` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile` | `200` | 150ms | 4/4 | **SUCCESS** |
+| 281 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo` | `415` | 83ms | 4/4 | **GUARD** |
+| 282 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo` | `415` | 83ms | 4/4 | **GUARD** |
+| 283 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo` | `404` | 90ms | 4/4 | **GUARD** |
+| 284 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo` | `404` | 137ms | 4/4 | **GUARD** |
+| 285 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications` | `200` | 100ms | 4/4 | **SUCCESS** |
+| 286 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/summary` | `200` | 103ms | 4/4 | **SUCCESS** |
+| 287 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/d9e8a7f6-1234-4567-89ab-cdef01234567/read` | `404` | 138ms | 4/4 | **GUARD** |
+| 288 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/read-all` | `204` | 108ms | 4/4 | **SUCCESS** |
+| 289 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-balances` | `200` | 94ms | 4/4 | **SUCCESS** |
+| 290 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-requests` | `200` | 98ms | 4/4 | **SUCCESS** |
+| 291 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/notices` | `200` | 99ms | 4/4 | **SUCCESS** |
+| 292 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions` | `200` | 379ms | 4/4 | **SUCCESS** |
+| 293 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices` | `200` | 452ms | 4/4 | **SUCCESS** |
+| 294 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D` | `404` | 469ms | 4/4 | **GUARD** |
+| 295 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation` | `404` | 357ms | 4/4 | **GUARD** |
+| 296 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/push-subscriptions` | `204` | 130ms | 4/4 | **SUCCESS** |
+| 297 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/me/push-subscriptions` | `204` | 132ms | 4/4 | **SUCCESS** |
+| 298 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me` | `200` | 121ms | 4/4 | **SUCCESS** |
+| 299 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me` | `200` | 104ms | 4/4 | **SUCCESS** |
+| 300 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/permissions` | `200` | 139ms | 4/4 | **SUCCESS** |
+| 301 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/me/permissions` | `200` | 140ms | 4/4 | **SUCCESS** |
+| 302 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/active-role` | `400` | 108ms | 4/4 | **GUARD** |
+| 303 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/active-role` | `400` | 101ms | 4/4 | **GUARD** |
+| 304 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/dashboard-preferences` | `200` | 88ms | 4/4 | **SUCCESS** |
+| 305 | `PUT` | `http://audit-corp-9644.edu360.local:8080/api/me/dashboard-preferences` | `200` | 89ms | 4/4 | **SUCCESS** |
+| 306 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 113ms | 4/4 | **SUCCESS** |
+| 307 | `GET` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0` | `200` | 123ms | 4/4 | **SUCCESS** |
+| 308 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks` | `201` | 204ms | 4/4 | **SUCCESS** |
+| 309 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks` | `404` | 129ms | 4/4 | **GUARD** |
+| 310 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks` | `404` | 106ms | 4/4 | **GUARD** |
+| 311 | `POST` | `http://platform.edu360.local:8080/api/auth/logout` | `401` | 17ms | 4/4 | **GUARD** |
+| 312 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/current` | `401` | 9ms | 4/4 | **GUARD** |
+| 313 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/current` | `401` | 8ms | 4/4 | **GUARD** |
+| 314 | `DELETE` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D` | `401` | 8ms | 4/4 | **GUARD** |
+| 315 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation` | `401` | 7ms | 4/4 | **GUARD** |
+| 316 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/revocation` | `401` | 12ms | 4/4 | **GUARD** |
+| 317 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/revocation` | `401` | 9ms | 4/4 | **GUARD** |
+| 318 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/push-subscriptions` | `401` | 9ms | 4/4 | **GUARD** |
+| 319 | `POST` | `http://audit-corp-9644.edu360.local:8080/api/me/sessions/me/push-subscriptions` | `401` | 8ms | 4/4 | **GUARD** |
 
 
 ---
@@ -325,7 +376,7 @@ Each request in the collection evaluates four distinct Postman checks:
 
 - **Item Name:** [#1] GET /api/tenants/{tenantId}/grading-schemes (listGradingSchemes)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 325 ms
+- **Response Latency:** 137 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -357,7 +408,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#2] POST /api/tenants/{tenantId}/grading-schemes (createGradingScheme)
 - **HTTP Status Code:** `409`
-- **Response Latency:** 241 ms
+- **Response Latency:** 126 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -386,7 +437,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "DUPLICATE_RESOURCE",
   "error": "A record with this identifier already exists.",
   "message": "A record with this identifier already exists.",
-  "timestamp": "2026-11-17T18:00:04.150155600",
+  "timestamp": "2026-11-19T21:30:02.634876700",
   "status": 409
 }
 ```
@@ -397,7 +448,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#3] POST /api/tenants/{tenantId}/grading-schemes/{id}/activation (activateGradingScheme)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 127 ms
+- **Response Latency:** 70 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -424,7 +475,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "SCHEME_NOT_FOUND",
   "error": "Grading scheme version not found",
   "message": "Grading scheme version not found",
-  "timestamp": "2026-11-17T18:00:04.384572700",
+  "timestamp": "2026-11-19T21:30:02.837912100",
   "status": 422
 }
 ```
@@ -435,7 +486,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#4] GET /api/tenants/{tenantId}/program-rule-sets (listRuleSets)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 123 ms
+- **Response Latency:** 158 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -457,7 +508,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#5] GET /api/tenants/{tenantId}/program-rule-sets/{id} (getRuleSet)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 127 ms
+- **Response Latency:** 167 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -475,7 +526,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "RULE_SET_NOT_FOUND",
   "error": "Program rule set not found",
   "message": "Program rule set not found",
-  "timestamp": "2026-11-17T18:00:04.811421300",
+  "timestamp": "2026-11-19T21:30:03.482221400",
   "status": 422
 }
 ```
@@ -486,7 +537,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#6] POST /api/tenants/{tenantId}/program-rule-sets (createRuleSet)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 180 ms
+- **Response Latency:** 165 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -516,7 +567,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "BAD_REQUEST",
   "error": "Rules must be valid JSON: Unrecognized token 'MIN_CREDITS': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')\n at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1]",
   "message": "Rules must be valid JSON: Unrecognized token 'MIN_CREDITS': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')\n at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1]",
-  "timestamp": "2026-11-17T18:00:05.061288400",
+  "timestamp": "2026-11-19T21:30:03.772769400",
   "status": 400
 }
 ```
@@ -527,7 +578,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#7] POST /api/tenants/{tenantId}/program-rule-sets/{id}/activation (activateRuleSet)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 155 ms
+- **Response Latency:** 146 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -554,7 +605,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "RULE_SET_NOT_FOUND",
   "error": "Program rule set not found",
   "message": "Program rule set not found",
-  "timestamp": "2026-11-17T18:00:05.285304800",
+  "timestamp": "2026-11-19T21:30:04.070124900",
   "status": 422
 }
 ```
@@ -565,7 +616,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#8] POST /api/tenants/{tenantId}/promotion-runs (createPromotionRun)
 - **HTTP Status Code:** `403`
-- **Response Latency:** 175 ms
+- **Response Latency:** 140 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -594,7 +645,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "FORBIDDEN",
   "error": "The active role for this scope does not hold action PROMOTION_RUN.",
   "message": "The active role for this scope does not hold action PROMOTION_RUN.",
-  "timestamp": "2026-11-17T18:00:05.537778600",
+  "timestamp": "2026-11-19T21:30:04.333763900",
   "status": 403
 }
 ```
@@ -605,7 +656,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#9] GET /api/tenants/{tenantId}/promotion-runs/{id} (getPromotionRun)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 132 ms
+- **Response Latency:** 126 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -623,7 +674,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "PROMOTION_RUN_NOT_FOUND",
   "error": "Promotion run not found",
   "message": "Promotion run not found",
-  "timestamp": "2026-11-17T18:00:05.727757200",
+  "timestamp": "2026-11-19T21:30:04.643505700",
   "status": 422
 }
 ```
@@ -634,7 +685,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#10] POST /api/tenants/{tenantId}/promotion-runs/{id}/submission (submitPromotionRun)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 110 ms
+- **Response Latency:** 122 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -644,14 +695,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.371Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.925Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.371Z"
+  "timestamp": "2026-11-19T15:59:54.925Z"
 }
 ```
 
@@ -662,7 +713,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "PROMOTION_RUN_NOT_FOUND",
   "error": "Promotion run not found",
   "message": "Promotion run not found",
-  "timestamp": "2026-11-17T18:00:05.951800400",
+  "timestamp": "2026-11-19T21:30:04.905886100",
   "status": 422
 }
 ```
@@ -673,7 +724,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#11] POST /api/tenants/{tenantId}/promotion-runs/{id}/decisions (decidePromotionRun)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 162 ms
+- **Response Latency:** 112 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -701,7 +752,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "PROMOTION_RUN_NOT_FOUND",
   "error": "Promotion run not found",
   "message": "Promotion run not found",
-  "timestamp": "2026-11-17T18:00:06.190301200",
+  "timestamp": "2026-11-19T21:30:05.237007300",
   "status": 422
 }
 ```
@@ -712,7 +763,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#12] POST /api/tenants/{tenantId}/promotion-runs/{id}/execution (executePromotionRun)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 122 ms
+- **Response Latency:** 117 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -722,14 +773,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.926Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.926Z"
 }
 ```
 
@@ -740,7 +791,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "PROMOTION_RUN_NOT_FOUND",
   "error": "Promotion run not found",
   "message": "Promotion run not found",
-  "timestamp": "2026-11-17T18:00:06.408392100",
+  "timestamp": "2026-11-19T21:30:05.489140300",
   "status": 422
 }
 ```
@@ -751,7 +802,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#13] GET /api/tenants/{tenantId}/students/{id} (getStudent)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 117 ms
+- **Response Latency:** 90 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -769,7 +820,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "STUDENT_NOT_FOUND",
   "error": "Student record not found",
   "message": "Student record not found",
-  "timestamp": "2026-11-17T18:00:06.609515200",
+  "timestamp": "2026-11-19T21:30:05.681179700",
   "status": 422
 }
 ```
@@ -780,7 +831,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#14] POST /api/tenants/{tenantId}/students/{id}/status-changes (changeStatus)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 171 ms
+- **Response Latency:** 112 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -790,14 +841,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -812,7 +863,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:06.859237",
+  "timestamp": "2026-11-19T21:30:05.879326100",
   "status": 400
 }
 ```
@@ -823,7 +874,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#15] GET /api/tenants/{tenantId}/subject-allocations (listAllocations)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 149 ms
+- **Response Latency:** 133 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -845,7 +896,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#16] POST /api/tenants/{tenantId}/subject-allocations (allocateSubject)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 118 ms
+- **Response Latency:** 84 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -855,14 +906,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -872,13 +923,13 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/subject-allocations",
   "code": "VALIDATION_FAILED",
   "fieldErrors": {
-    "courseOfferingId": "must not be null",
     "institutionId": "must not be null",
+    "courseOfferingId": "must not be null",
     "staffAssignmentId": "must not be null"
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:07.312308100",
+  "timestamp": "2026-11-19T21:30:06.306628",
   "status": 400
 }
 ```
@@ -889,7 +940,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#17] POST /api/tenants/{tenantId}/subject-allocations/{id}/end (endAllocation)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 117 ms
+- **Response Latency:** 102 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -899,14 +950,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -917,7 +968,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "ALLOCATION_NOT_FOUND",
   "error": "Subject allocation not found",
   "message": "Subject allocation not found",
-  "timestamp": "2026-11-17T18:00:07.499703300",
+  "timestamp": "2026-11-19T21:30:06.522144600",
   "status": 422
 }
 ```
@@ -928,7 +979,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#18] GET /api/tenants/{tenantId}/delegations (listDelegations)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 77 ms
+- **Response Latency:** 81 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -950,7 +1001,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#19] POST /api/tenants/{tenantId}/delegations (createDelegation)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 149 ms
+- **Response Latency:** 124 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -980,7 +1031,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "SELF_DELEGATION_PROHIBITED",
   "error": "Delegator cannot delegate approval authority to themselves (Rule 11).",
   "message": "Delegator cannot delegate approval authority to themselves (Rule 11).",
-  "timestamp": "2026-11-17T18:00:07.933736100",
+  "timestamp": "2026-11-19T21:30:06.863522700",
   "status": 422
 }
 ```
@@ -991,7 +1042,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#20] POST /api/tenants/{tenantId}/delegations/{id}/cancellation (cancelDelegation)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 110 ms
+- **Response Latency:** 95 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1001,14 +1052,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1019,7 +1070,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "NOT_FOUND",
   "error": "Delegation not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
   "message": "Delegation not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
-  "timestamp": "2026-11-17T18:00:08.114952800",
+  "timestamp": "2026-11-19T21:30:07.050254700",
   "status": 404
 }
 ```
@@ -1030,7 +1081,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#21] POST /api/tenants/{tenantId}/approvals/bulk-decisions (bulkDecide)
 - **HTTP Status Code:** `403`
-- **Response Latency:** 256 ms
+- **Response Latency:** 136 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1060,7 +1111,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "FORBIDDEN",
   "error": "The active role for this scope does not hold action APPROVAL_BULK.",
   "message": "The active role for this scope does not hold action APPROVAL_BULK.",
-  "timestamp": "2026-11-17T18:00:08.446838700",
+  "timestamp": "2026-11-19T21:30:07.253327800",
   "status": 403
 }
 ```
@@ -1069,9 +1120,9 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ### [Endpoint #22] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approvals/inbox`
 
-- **Item Name:** [#22] GET /api/tenants/{tenantId}/approvals/inbox (listPendingApprovals)
+- **Item Name:** [#22] GET /api/tenants/{tenantId}/approvals/inbox (caller)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 111 ms
+- **Response Latency:** 89 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -1099,9 +1150,9 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ### [Endpoint #23] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/approval-requests/d9e8a7f6-1234-4567-89ab-cdef01234567`
 
-- **Item Name:** [#23] GET /api/tenants/{tenantId}/approval-requests/{id} (getApprovalRequest)
+- **Item Name:** [#23] GET /api/tenants/{tenantId}/approval-requests/{id} (steps)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 133 ms
+- **Response Latency:** 96 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1119,7 +1170,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Approval request d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
   "message": "Approval request d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
-  "timestamp": "2026-11-17T18:00:08.854195800",
+  "timestamp": "2026-11-19T21:30:07.600921600",
   "status": 404
 }
 ```
@@ -1130,7 +1181,7 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 - **Item Name:** [#24] POST /api/tenants/{tenantId}/approval-requests/{id}/decisions (decideApproval)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 165 ms
+- **Response Latency:** 91 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1161,7 +1212,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:09.086995600",
+  "timestamp": "2026-11-19T21:30:07.762629500",
   "status": 400
 }
 ```
@@ -1172,24 +1223,23 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 - **Item Name:** [#25] POST /api/auth/login (login)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 176 ms
+- **Response Latency:** 62 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
 curl -X POST "http://platform.edu360.local:8080/api/auth/login" \
-  -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1204,7 +1254,7 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/login" \
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:09.344140700",
+  "timestamp": "2026-11-19T21:30:07.899181500",
   "status": 400
 }
 ```
@@ -1214,8 +1264,8 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/login" \
 ### [Endpoint #26] POST `http://platform.edu360.local:8080/api/auth/sign-in`
 
 - **Item Name:** [#26] POST /api/auth/sign-in (login)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 26 ms
+- **HTTP Status Code:** `401`
+- **Response Latency:** 17 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1225,30 +1275,23 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/sign-in" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/auth/sign-in",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "password": "Password is required",
-    "email": "Email or student ID is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:09.446621300",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:07.977502600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
@@ -1256,9 +1299,9 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/sign-in" \
 
 ### [Endpoint #27] POST `http://platform.edu360.local:8080/api/auth/mfa/enrol`
 
-- **Item Name:** [#27] POST /api/auth/mfa/enrol (unknown)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 37 ms
+- **Item Name:** [#27] POST /api/auth/mfa/enrol (screen)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1268,96 +1311,120 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/mfa/enrol" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/auth/mfa/enrol",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "password": "Password is required",
-    "code": "Enter the 6-digit code from your authenticator app",
-    "enrolmentId": "The set-up has expired. Sign in again to start over.",
-    "email": "Email or student ID is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:09.573109300",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:08.100192300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #28] POST `http://platform.edu360.local:8080/api/auth/internal/identity-events`
+### [Endpoint #28] POST `http://platform.edu360.local:8080/api/auth/mfa/recovery-codes`
 
-- **Item Name:** [#28] POST /api/auth/internal/identity-events (handleIdentityEvent)
+- **Item Name:** [#28] POST /api/auth/mfa/recovery-codes (codes)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 80 ms
+- **Response Latency:** 14 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/auth/mfa/recovery-codes" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "password": "Edu360-PO2#Nov2026" }'
+```
+
+**Request Payload:**
+```json
+{
+  "password": "Edu360-PO2#Nov2026"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:08.213712900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #29] POST `http://platform.edu360.local:8080/api/auth/internal/identity-events`
+
+- **Item Name:** [#29] POST /api/auth/internal/identity-events (handleIdentityEvent)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
 curl -X POST "http://platform.edu360.local:8080/api/auth/internal/identity-events" \
-  -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
 ---
 
-### [Endpoint #29] POST `http://platform.edu360.local:8080/api/auth/v1/internal/identity-events`
+### [Endpoint #30] POST `http://platform.edu360.local:8080/api/auth/v1/internal/identity-events`
 
-- **Item Name:** [#29] POST /api/auth/v1/internal/identity-events (handleIdentityEvent)
+- **Item Name:** [#30] POST /api/auth/v1/internal/identity-events (handleIdentityEvent)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 28 ms
+- **Response Latency:** 6 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
 curl -X POST "http://platform.edu360.local:8080/api/auth/v1/internal/identity-events" \
-  -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
 ---
 
-### [Endpoint #30] POST `http://platform.edu360.local:8080/api/auth/refresh`
+### [Endpoint #31] POST `http://platform.edu360.local:8080/api/auth/refresh`
 
-- **Item Name:** [#30] POST /api/auth/refresh (refresh)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 36 ms
+- **Item Name:** [#31] POST /api/auth/refresh (refresh)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 12 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1367,39 +1434,33 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/refresh" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/auth/refresh",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "refreshToken": "Refresh token is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:09.958622",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:08.536916300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #31] POST `http://platform.edu360.local:8080/api/auth/change-password`
+### [Endpoint #32] POST `http://platform.edu360.local:8080/api/auth/change-password`
 
-- **Item Name:** [#31] POST /api/auth/change-password (changePassword)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 24 ms
+- **Item Name:** [#32] POST /api/auth/change-password (password)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 14 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1409,42 +1470,35 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/change-password" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/auth/change-password",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "newPassword": "New password is required",
-    "currentPassword": "Current password is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:10.053365800",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:08.652079700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #32] GET `http://platform.edu360.local:8080/api/auth/me`
+### [Endpoint #33] GET `http://platform.edu360.local:8080/api/auth/me`
 
-- **Item Name:** [#32] GET /api/auth/me (me)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 25 ms
+- **Item Name:** [#33] GET /api/auth/me (me)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 18 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -1456,33 +1510,25 @@ curl -X GET "http://platform.edu360.local:8080/api/auth/me" \
 **Response Payload:**
 ```json
 {
-  "id": "d3fd62c7-9968-4f32-a917-7b2c395fcfe0",
-  "displayName": "productowner2@edu360-platform.local",
-  "tenantId": null,
-  "userType": null,
-  "platformRole": "PRODUCT_OWNER",
-  "roleCode": null,
-  "roleName": null,
-  "photoUrl": null,
-  "mustChangePassword": false,
-  "mfaRequired": true
+  "timestamp": "2026-11-19T16:00:08.741587400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #33] GET `http://platform.edu360.local:8080/api/auth/otp/status`
+### [Endpoint #34] GET `http://platform.edu360.local:8080/api/auth/otp/status`
 
-- **Item Name:** [#34] GET /api/auth/otp/status (request)
+- **Item Name:** [#35] GET /api/auth/otp/status (status)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 14 ms
+- **Response Latency:** 11 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
 curl -X GET "http://platform.edu360.local:8080/api/auth/otp/status" \
-  -H "Authorization: Bearer <token>" \
   -H "Accept: application/json"
 ```
 
@@ -1495,28 +1541,27 @@ curl -X GET "http://platform.edu360.local:8080/api/auth/otp/status" \
 
 ---
 
-### [Endpoint #34] POST `http://platform.edu360.local:8080/api/auth/otp/request`
+### [Endpoint #35] POST `http://platform.edu360.local:8080/api/auth/otp/request`
 
-- **Item Name:** [#35] POST /api/auth/otp/request (request)
+- **Item Name:** [#36] POST /api/auth/otp/request (request)
 - **HTTP Status Code:** `503`
-- **Response Latency:** 17 ms
+- **Response Latency:** 6 ms
 - **Assertions Evaluated:** 3/3 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
 curl -X POST "http://platform.edu360.local:8080/api/auth/otp/request" \
-  -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1528,35 +1573,34 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/otp/request" \
   "code": "OTP_PROVIDER_NOT_CONFIGURED",
   "error": "Mobile one-time-code sign-in is not configured.",
   "message": "Mobile one-time-code sign-in is not configured.",
-  "timestamp": "2026-11-17T18:00:10.323570900",
+  "timestamp": "2026-11-19T21:30:08.950029700",
   "status": 503
 }
 ```
 
 ---
 
-### [Endpoint #35] POST `http://platform.edu360.local:8080/api/auth/otp/verify`
+### [Endpoint #36] POST `http://platform.edu360.local:8080/api/auth/otp/verify`
 
-- **Item Name:** [#36] POST /api/auth/otp/verify (verify)
+- **Item Name:** [#37] POST /api/auth/otp/verify (verify)
 - **HTTP Status Code:** `503`
-- **Response Latency:** 20 ms
+- **Response Latency:** 14 ms
 - **Assertions Evaluated:** 3/3 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
 curl -X POST "http://platform.edu360.local:8080/api/auth/otp/verify" \
-  -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1568,20 +1612,20 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/otp/verify" \
   "code": "OTP_PROVIDER_NOT_CONFIGURED",
   "error": "Mobile one-time-code sign-in is not configured.",
   "message": "Mobile one-time-code sign-in is not configured.",
-  "timestamp": "2026-11-17T18:00:10.407428",
+  "timestamp": "2026-11-19T21:30:09.083314100",
   "status": 503
 }
 ```
 
 ---
 
-### [Endpoint #36] GET `http://platform.edu360.local:8080/api/auth/session-settings`
+### [Endpoint #37] GET `http://platform.edu360.local:8080/api/auth/session-settings`
 
-- **Item Name:** [#37] GET /api/auth/session-settings (sessionSettings)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 30 ms
+- **Item Name:** [#38] GET /api/auth/session-settings (sessionSettings)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 61 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -1593,18 +1637,19 @@ curl -X GET "http://platform.edu360.local:8080/api/auth/session-settings" \
 **Response Payload:**
 ```json
 {
-  "idleTimeoutMinutes": 50,
-  "disabledModules": []
+  "timestamp": "2026-11-19T16:00:09.297591200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #37] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files`
+### [Endpoint #38] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files`
 
-- **Item Name:** [#38] POST /api/tenants/{tenantId}/files (upload)
+- **Item Name:** [#39] POST /api/tenants/{tenantId}/files (upload)
 - **HTTP Status Code:** `415`
-- **Response Latency:** 66 ms
+- **Response Latency:** 110 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1614,14 +1659,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1632,18 +1677,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "UNSUPPORTED_MEDIA_TYPE",
   "error": "Content-Type 'application/json' is not supported",
   "message": "Content-Type 'application/json' is not supported",
-  "timestamp": "2026-11-17T18:00:10.659827900",
+  "timestamp": "2026-11-19T21:30:09.540964",
   "status": 415
 }
 ```
 
 ---
 
-### [Endpoint #38] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files/568870dc-d207-42c0-8b4c-c9376fe06f51/download`
+### [Endpoint #39] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files/568870dc-d207-42c0-8b4c-c9376fe06f51/download`
 
-- **Item Name:** [#39] GET /api/tenants/{tenantId}/files/{fileId}/download (download)
+- **Item Name:** [#40] GET /api/tenants/{tenantId}/files/{fileId}/download (download)
 - **HTTP Status Code:** `403`
-- **Response Latency:** 96 ms
+- **Response Latency:** 135 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1651,7 +1696,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 ```bash
 curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/files/568870dc-d207-42c0-8b4c-c9376fe06f51/download" \
   -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json"
+  -H "Accept: text/csv"
 ```
 
 **Response Payload:**
@@ -1661,11 +1706,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #39] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian/children`
+### [Endpoint #40] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian/children`
 
-- **Item Name:** [#40] GET /api/tenants/{tenantId}/guardian/children (listActiveChildren)
+- **Item Name:** [#41] GET /api/tenants/{tenantId}/guardian/children (listActiveChildren)
 - **HTTP Status Code:** `403`
-- **Response Latency:** 61 ms
+- **Response Latency:** 106 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1683,18 +1728,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "FORBIDDEN",
   "error": "Guardian account required to list linked children.",
   "message": "Guardian account required to list linked children.",
-  "timestamp": "2026-11-17T18:00:10.980672200",
+  "timestamp": "2026-11-19T21:30:10.114024700",
   "status": 403
 }
 ```
 
 ---
 
-### [Endpoint #40] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links`
+### [Endpoint #41] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links`
 
-- **Item Name:** [#41] GET /api/tenants/{tenantId}/students/{studentId}/guardian-links (listGuardianLinks)
+- **Item Name:** [#42] GET /api/tenants/{tenantId}/students/{studentId}/guardian-links (listGuardianLinks)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 69 ms
+- **Response Latency:** 106 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1712,18 +1757,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Student d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
   "message": "Student d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
-  "timestamp": "2026-11-17T18:00:11.119653300",
+  "timestamp": "2026-11-19T21:30:10.379347800",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #41] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links`
+### [Endpoint #42] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students/d9e8a7f6-1234-4567-89ab-cdef01234567/guardian-links`
 
-- **Item Name:** [#42] POST /api/tenants/{tenantId}/students/{studentId}/guardian-links (linkGuardian)
+- **Item Name:** [#43] POST /api/tenants/{tenantId}/students/{studentId}/guardian-links (linkGuardian)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 66 ms
+- **Response Latency:** 121 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1733,14 +1778,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1751,18 +1796,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "BAD_REQUEST",
   "error": "Malformed JSON request body",
   "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:00:11.241056900",
+  "timestamp": "2026-11-19T21:30:10.682842600",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #42] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-requests`
+### [Endpoint #43] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-requests`
 
-- **Item Name:** [#43] POST /api/tenants/{tenantId}/guardian-links/{id}/change-requests (requestChange)
+- **Item Name:** [#44] POST /api/tenants/{tenantId}/guardian-links/{id}/change-requests (requestChange)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 85 ms
+- **Response Latency:** 139 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1772,14 +1817,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1793,18 +1838,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:11.398832800",
+  "timestamp": "2026-11-19T21:30:10.932650",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #43] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-approvals`
+### [Endpoint #44] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/guardian-links/d9e8a7f6-1234-4567-89ab-cdef01234567/change-approvals`
 
-- **Item Name:** [#44] POST /api/tenants/{tenantId}/guardian-links/{id}/change-approvals (decideChange)
+- **Item Name:** [#45] POST /api/tenants/{tenantId}/guardian-links/{id}/change-approvals (decideChange)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 86 ms
+- **Response Latency:** 116 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -1814,14 +1859,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
 ```
 
@@ -1832,18 +1877,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "BAD_REQUEST",
   "error": "Malformed JSON request body",
   "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:00:11.567783900",
+  "timestamp": "2026-11-19T21:30:11.265339400",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #44] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students`
+### [Endpoint #45] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/students`
 
-- **Item Name:** [#45] POST /api/tenants/{tenantId}/students (create)
+- **Item Name:** [#46] POST /api/tenants/{tenantId}/students (create)
 - **HTTP Status Code:** `201`
-- **Response Latency:** 204 ms
+- **Response Latency:** 338 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -1870,19 +1915,19 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "id": "b3e036a2-7f5c-4fbe-8124-1bab0f99e474",
+  "id": "8152a9cb-08aa-43ec-8380-a57221b3d60b",
   "userAccountId": null,
   "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
-  "studentCode": "AGY-CHECK1-INST-2026-00004",
+  "studentCode": "AGY-CHECK1-INST-2026-00008",
   "fullName": "Antigravity Postman Check 1 Student Live",
   "dateOfBirth": null,
-  "admissionDate": "2026-11-17",
+  "admissionDate": "2026-11-19",
   "nationalIdLast4": null,
   "photoFileId": null,
   "status": "ACTIVE",
   "statusReason": null,
   "statusChangedAt": null,
-  "createdAt": "2026-11-17T12:30:11.735642Z",
+  "createdAt": "2026-11-19T16:00:11.488323Z",
   "createdBy": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
   "version": 1,
   "temporaryPassword": null
@@ -1891,11 +1936,37 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ---
 
-### [Endpoint #45] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/top-users`
+### [Endpoint #46] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/user-limit`
 
-- **Item Name:** [#46] POST /api/tenants/{tenantId}/top-users (createTopUser)
+- **Item Name:** [#47] GET /api/tenants/{tenantId}/user-limit (userLimit)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 121 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/user-limit" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "limit": null,
+  "active": 13,
+  "percent": 0
+}
+```
+
+---
+
+### [Endpoint #47] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/top-users`
+
+- **Item Name:** [#48] POST /api/tenants/{tenantId}/top-users (Approver)
 - **HTTP Status Code:** `201`
-- **Response Latency:** 1007 ms
+- **Response Latency:** 2585 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -1905,15 +1976,15 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "roleCode": "GOVERNING_BODY_APPROVER", "displayName": "Antigravity Postman Check 1 Approver 7054", "email": "approver.7054@agy-check1.local", "mobile": "+919876543210" }'
+  -d '{ "roleCode": "GOVERNING_BODY_APPROVER", "displayName": "Antigravity Postman Check 1 Approver 2789", "email": "approver.2789@agy-check1.local", "mobile": "+919876543210" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "roleCode": "GOVERNING_BODY_APPROVER",
-  "displayName": "Antigravity Postman Check 1 Approver 7054",
-  "email": "approver.7054@agy-check1.local",
+  "displayName": "Antigravity Postman Check 1 Approver 2789",
+  "email": "approver.2789@agy-check1.local",
   "mobile": "+919876543210"
 }
 ```
@@ -1921,14 +1992,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "userAccountId": "a57600dd-e8a0-4446-82c6-973fc8df989a",
-  "displayName": "Antigravity Postman Check 1 Approver 7054",
-  "email": "approver.7054@agy-check1.local",
+  "userAccountId": "8198d89d-f71c-49c5-8e9b-cc77b7b81fb9",
+  "displayName": "Antigravity Postman Check 1 Approver 2789",
+  "email": "approver.2789@agy-check1.local",
   "mobile": "+919876543210",
   "roleCode": "GOVERNING_BODY_APPROVER",
   "userType": "GOVERNANCE",
   "status": "PENDING_ACTIVATION",
-  "temporaryPassword": "2%ijpiT2X4AfTZ8@",
+  "temporaryPassword": "45yCfYrDW6SEy!Ux",
   "twoStepLoginRequired": true,
   "message": "Top governance user created with two-step login requirement [Rule F-12, C6, C9]."
 }
@@ -1936,11 +2007,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ---
 
-### [Endpoint #46] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/import-templates/STAFF`
+### [Endpoint #48] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/import-templates/STAFF`
 
-- **Item Name:** [#47] GET /api/tenants/{tenantId}/import-templates/{kind} (getImportTemplate)
+- **Item Name:** [#49] GET /api/tenants/{tenantId}/import-templates/{kind} (uploads)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 144 ms
+- **Response Latency:** 79 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -1991,11 +2062,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #47] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/user-imports`
+### [Endpoint #49] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/user-imports`
 
-- **Item Name:** [#48] POST /api/tenants/{tenantId}/user-imports (createUserImport)
+- **Item Name:** [#50] POST /api/tenants/{tenantId}/user-imports (CSV)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 296 ms
+- **Response Latency:** 193 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2023,18 +2094,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "REFERENCE_NOT_FOUND",
   "error": "Referenced entity was not found in the current scope.",
   "message": "Referenced entity was not found in the current scope.",
-  "timestamp": "2026-11-17T18:00:13.576781",
+  "timestamp": "2026-11-19T21:30:15.114320500",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #48] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567`
+### [Endpoint #50] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567`
 
-- **Item Name:** [#49] GET /api/tenants/{tenantId}/imports/{importJobId} (getImportJob)
+- **Item Name:** [#51] GET /api/tenants/{tenantId}/imports/{importJobId} (job)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 141 ms
+- **Response Latency:** 99 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2052,18 +2123,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Import job not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
   "message": "Import job not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
-  "timestamp": "2026-11-17T18:00:13.793678100",
+  "timestamp": "2026-11-19T21:30:15.299809700",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #49] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/errors`
+### [Endpoint #51] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/errors`
 
-- **Item Name:** [#50] GET /api/tenants/{tenantId}/imports/{importJobId}/errors (listImportErrors)
+- **Item Name:** [#52] GET /api/tenants/{tenantId}/imports/{importJobId}/errors (reasons)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 153 ms
+- **Response Latency:** 94 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2081,18 +2152,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Import job not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
   "message": "Import job not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
-  "timestamp": "2026-11-17T18:00:14.024418800",
+  "timestamp": "2026-11-19T21:30:15.465643500",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #50] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/start`
+### [Endpoint #52] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/imports/d9e8a7f6-1234-4567-89ab-cdef01234567/start`
 
-- **Item Name:** [#51] POST /api/tenants/{tenantId}/imports/{importJobId}/start (startImport)
+- **Item Name:** [#53] POST /api/tenants/{tenantId}/imports/{importJobId}/start (GOOD_ROWS_ONLY)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 123 ms
+- **Response Latency:** 89 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2122,18 +2193,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:14.271537700",
+  "timestamp": "2026-11-19T21:30:15.654718100",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #51] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events`
+### [Endpoint #53] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events`
 
-- **Item Name:** [#52] POST /api/tenants/{tenantId}/calendar-events (addLocalEvent)
+- **Item Name:** [#54] POST /api/tenants/{tenantId}/calendar-events (event)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 237 ms
+- **Response Latency:** 161 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2161,7 +2232,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "academicCalendarEventId": "fd65f4f7-df26-4c0f-86d2-e7fcffe394b9",
+  "academicCalendarEventId": "4c7d8511-0f75-4458-895a-a54f9195e3e1",
   "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
   "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
   "sourceLevel": "INSTITUTION",
@@ -2174,11 +2245,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ---
 
-### [Endpoint #52] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
+### [Endpoint #54] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/calendar-events?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
 
-- **Item Name:** [#53] GET /api/tenants/{tenantId}/calendar-events (listLocalEvents)
+- **Item Name:** [#55] GET /api/tenants/{tenantId}/calendar-events (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 171 ms
+- **Response Latency:** 176 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2211,17 +2282,47 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
     "title": "Antigravity Check 1 Holiday",
     "startDate": "2026-12-25",
     "endDate": "2026-12-25"
+  },
+  {
+    "academicCalendarEventId": "9d71fd65-e2e2-42f5-91cf-046a023d0dcc",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "sourceLevel": "INSTITUTION",
+    "eventType": "LOCAL_HOLIDAY",
+    "title": "Antigravity Check 1 Holiday",
+    "startDate": "2026-12-25",
+    "endDate": "2026-12-25"
+  },
+  {
+    "academicCalendarEventId": "44c49c67-5af7-4e31-9f1f-475e0b6157a3",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "sourceLevel": "INSTITUTION",
+    "eventType": "LOCAL_HOLIDAY",
+    "title": "Antigravity Check 1 Holiday",
+    "startDate": "2026-12-25",
+    "endDate": "2026-12-25"
+  },
+  {
+    "academicCalendarEventId": "4c7d8511-0f75-4458-895a-a54f9195e3e1",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "sourceLevel": "INSTITUTION",
+    "eventType": "LOCAL_HOLIDAY",
+    "title": "Antigravity Check 1 Holiday",
+    "startDate": "2026-12-25",
+    "endDate": "2026-12-25"
   }
 ]
 ```
 
 ---
 
-### [Endpoint #53] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/departments/da735bcf-2f19-4666-8412-57706b143288/hod`
+### [Endpoint #55] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/departments/da735bcf-2f19-4666-8412-57706b143288/hod`
 
-- **Item Name:** [#54] PUT /api/tenants/{tenantId}/departments/{departmentId}/hod (assignHod)
+- **Item Name:** [#56] PUT /api/tenants/{tenantId}/departments/{departmentId}/hod (department)
 - **HTTP Status Code:** `403`
-- **Response Latency:** 211 ms
+- **Response Latency:** 170 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2249,18 +2350,18 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "FORBIDDEN",
   "error": "The active role for this scope does not hold action HOD_ASSIGN.",
   "message": "The active role for this scope does not hold action HOD_ASSIGN.",
-  "timestamp": "2026-11-17T18:00:15.161626100",
+  "timestamp": "2026-11-19T21:30:16.480246700",
   "status": 403
 }
 ```
 
 ---
 
-### [Endpoint #54] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions`
+### [Endpoint #56] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions`
 
-- **Item Name:** [#55] POST /api/tenants/{tenantId}/institutions (createDraft)
+- **Item Name:** [#57] POST /api/tenants/{tenantId}/institutions (Draft)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 168 ms
+- **Response Latency:** 126 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2270,14 +2371,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.373Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.373Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2294,18 +2395,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:15.414513",
+  "timestamp": "2026-11-19T21:30:16.679654100",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #55] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation`
+### [Endpoint #57] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation`
 
-- **Item Name:** [#56] POST /api/tenants/{tenantId}/institutions/{institutionId}/activation (activateInstitution)
+- **Item Name:** [#58] POST /api/tenants/{tenantId}/institutions/{institutionId}/activation (institution)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 151 ms
+- **Response Latency:** 130 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2315,14 +2416,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.373Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.373Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2333,18 +2434,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "NO_PENDING_REQUEST",
   "error": "Institution 852afed4-54a6-4e3f-bb72-de065563fcc0 (ACTIVE) has no pending activation request; activation and reactivation need their own request and approval.",
   "message": "Institution 852afed4-54a6-4e3f-bb72-de065563fcc0 (ACTIVE) has no pending activation request; activation and reactivation need their own request and approval.",
-  "timestamp": "2026-11-17T18:00:15.646758400",
+  "timestamp": "2026-11-19T21:30:16.900246600",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #56] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation-requests`
+### [Endpoint #58] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/activation-requests`
 
-- **Item Name:** [#57] POST /api/tenants/{tenantId}/institutions/{institutionId}/activation-requests (requestActivation)
+- **Item Name:** [#59] POST /api/tenants/{tenantId}/institutions/{institutionId}/activation-requests (requestActivation)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 70 ms
+- **Response Latency:** 150 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2354,14 +2455,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.375Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.375Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2372,18 +2473,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "INVALID_INSTITUTION_STATUS",
   "error": "Only a Draft or Blocked institution can be submitted for activation. Current status is ACTIVE.",
   "message": "Only a Draft or Blocked institution can be submitted for activation. Current status is ACTIVE.",
-  "timestamp": "2026-11-17T18:00:15.799978300",
+  "timestamp": "2026-11-19T21:30:17.140792700",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #57] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions`
+### [Endpoint #59] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions`
 
-- **Item Name:** [#58] GET /api/tenants/{tenantId}/institutions (listInstitutions)
+- **Item Name:** [#60] GET /api/tenants/{tenantId}/institutions (listInstitutions)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 74 ms
+- **Response Latency:** 100 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2425,11 +2526,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #58] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0`
+### [Endpoint #60] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0`
 
-- **Item Name:** [#59] GET /api/tenants/{tenantId}/institutions/{institutionId} (getInstitution)
+- **Item Name:** [#61] GET /api/tenants/{tenantId}/institutions/{institutionId} (getInstitution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 64 ms
+- **Response Latency:** 93 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2466,11 +2567,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #59] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-requests`
+### [Endpoint #61] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-requests`
 
-- **Item Name:** [#60] POST /api/tenants/{tenantId}/institutions/{institutionId}/block-requests (requestBlock)
+- **Item Name:** [#62] POST /api/tenants/{tenantId}/institutions/{institutionId}/block-requests (access)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 85 ms
+- **Response Latency:** 84 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2480,14 +2581,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.375Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.375Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2501,18 +2602,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:16.310819500",
+  "timestamp": "2026-11-19T21:30:17.723269",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #60] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-decisions`
+### [Endpoint #62] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/block-decisions`
 
-- **Item Name:** [#61] POST /api/tenants/{tenantId}/institutions/{institutionId}/block-decisions (decideBlock)
+- **Item Name:** [#63] POST /api/tenants/{tenantId}/institutions/{institutionId}/block-decisions (block)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 85 ms
+- **Response Latency:** 101 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2522,14 +2623,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.375Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.375Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2543,18 +2644,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:16.474764100",
+  "timestamp": "2026-11-19T21:30:17.927205600",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #61] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats`
+### [Endpoint #63] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats`
 
-- **Item Name:** [#62] GET /api/tenants/{tenantId}/institutions/{institutionId}/id-formats (get)
+- **Item Name:** [#64] GET /api/tenants/{tenantId}/institutions/{institutionId}/id-formats (get)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 130 ms
+- **Response Latency:** 139 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2577,11 +2678,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #62] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats`
+### [Endpoint #64] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/id-formats`
 
-- **Item Name:** [#63] PUT /api/tenants/{tenantId}/institutions/{institutionId}/id-formats (set)
+- **Item Name:** [#65] PUT /api/tenants/{tenantId}/institutions/{institutionId}/id-formats (set)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 181 ms
+- **Response Latency:** 144 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2609,18 +2710,18 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "ID_FORMAT_LOCKED",
   "error": "Student ID format is read-only after the first student code has been generated.",
   "message": "Student ID format is read-only after the first student code has been generated.",
-  "timestamp": "2026-11-17T18:00:16.954505900",
+  "timestamp": "2026-11-19T21:30:18.377341500",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #63] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver`
+### [Endpoint #65] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver`
 
-- **Item Name:** [#64] PUT /api/tenants/{tenantId}/institutions/{institutionId}/dpc-leave-approver (setPrincipalLeaveApprover)
+- **Item Name:** [#66] PUT /api/tenants/{tenantId}/institutions/{institutionId}/dpc-leave-approver (leave)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 117 ms
+- **Response Latency:** 92 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2630,14 +2731,14 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.375Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.375Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2647,23 +2748,23 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver",
   "code": "VALIDATION_FAILED",
   "fieldErrors": {
-    "approverKind": "approverKind is required",
-    "approverUserId": "approverUserId is required"
+    "approverUserId": "approverUserId is required",
+    "approverKind": "approverKind is required"
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:17.181447200",
+  "timestamp": "2026-11-19T21:30:18.530006400",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #64] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver`
+### [Endpoint #66] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver`
 
-- **Item Name:** [#65] PUT /api/tenants/{tenantId}/institutions/{institutionId}/principal-leave-approver (setPrincipalLeaveApprover)
+- **Item Name:** [#67] PUT /api/tenants/{tenantId}/institutions/{institutionId}/principal-leave-approver (leave)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 135 ms
+- **Response Latency:** 88 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2673,14 +2774,14 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.375Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.375Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2690,23 +2791,23 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver",
   "code": "VALIDATION_FAILED",
   "fieldErrors": {
-    "approverKind": "approverKind is required",
-    "approverUserId": "approverUserId is required"
+    "approverUserId": "approverUserId is required",
+    "approverKind": "approverKind is required"
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:17.420777100",
+  "timestamp": "2026-11-19T21:30:18.692139500",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #65] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver`
+### [Endpoint #67] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/dpc-leave-approver`
 
-- **Item Name:** [#66] GET /api/tenants/{tenantId}/institutions/{institutionId}/dpc-leave-approver (getPrincipalLeaveApprover)
+- **Item Name:** [#68] GET /api/tenants/{tenantId}/institutions/{institutionId}/dpc-leave-approver (getPrincipalLeaveApprover)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 167 ms
+- **Response Latency:** 129 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2734,11 +2835,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #66] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver`
+### [Endpoint #68] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/principal-leave-approver`
 
-- **Item Name:** [#67] GET /api/tenants/{tenantId}/institutions/{institutionId}/principal-leave-approver (getPrincipalLeaveApprover)
+- **Item Name:** [#69] GET /api/tenants/{tenantId}/institutions/{institutionId}/principal-leave-approver (getPrincipalLeaveApprover)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 131 ms
+- **Response Latency:** 93 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2766,11 +2867,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #67] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver`
+### [Endpoint #69] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver`
 
-- **Item Name:** [#68] PUT /api/tenants/{tenantId}/dpc-leave-approver (setVcLeaveApprover)
+- **Item Name:** [#70] PUT /api/tenants/{tenantId}/dpc-leave-approver (leave)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 120 ms
+- **Response Latency:** 81 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2780,14 +2881,14 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.375Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.375Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2797,23 +2898,23 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver",
   "code": "VALIDATION_FAILED",
   "fieldErrors": {
-    "approverKind": "approverKind is required",
-    "approverUserId": "approverUserId is required"
+    "approverUserId": "approverUserId is required",
+    "approverKind": "approverKind is required"
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:18.079566400",
+  "timestamp": "2026-11-19T21:30:19.186008500",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #68] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver`
+### [Endpoint #70] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver`
 
-- **Item Name:** [#69] PUT /api/tenants/{tenantId}/vc-leave-approver (setVcLeaveApprover)
+- **Item Name:** [#71] PUT /api/tenants/{tenantId}/vc-leave-approver (leave)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 105 ms
+- **Response Latency:** 95 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2823,14 +2924,14 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.375Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.375Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2840,23 +2941,23 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver",
   "code": "VALIDATION_FAILED",
   "fieldErrors": {
-    "approverKind": "approverKind is required",
-    "approverUserId": "approverUserId is required"
+    "approverUserId": "approverUserId is required",
+    "approverKind": "approverKind is required"
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:18.259362400",
+  "timestamp": "2026-11-19T21:30:19.364897800",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #69] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver`
+### [Endpoint #71] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/dpc-leave-approver`
 
-- **Item Name:** [#70] GET /api/tenants/{tenantId}/dpc-leave-approver (getVcLeaveApprover)
+- **Item Name:** [#72] GET /api/tenants/{tenantId}/dpc-leave-approver (getVcLeaveApprover)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 131 ms
+- **Response Latency:** 136 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2874,18 +2975,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "No active Vice-Chancellor leave approver set for tenant: 97392262-5e24-4c36-8449-449215019f2c",
   "message": "No active Vice-Chancellor leave approver set for tenant: 97392262-5e24-4c36-8449-449215019f2c",
-  "timestamp": "2026-11-17T18:00:18.485186500",
+  "timestamp": "2026-11-19T21:30:19.595612700",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #70] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver`
+### [Endpoint #72] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/vc-leave-approver`
 
-- **Item Name:** [#71] GET /api/tenants/{tenantId}/vc-leave-approver (getVcLeaveApprover)
+- **Item Name:** [#73] GET /api/tenants/{tenantId}/vc-leave-approver (getVcLeaveApprover)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 67 ms
+- **Response Latency:** 94 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2903,18 +3004,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "No active Vice-Chancellor leave approver set for tenant: 97392262-5e24-4c36-8449-449215019f2c",
   "message": "No active Vice-Chancellor leave approver set for tenant: 97392262-5e24-4c36-8449-449215019f2c",
-  "timestamp": "2026-11-17T18:00:18.646034900",
+  "timestamp": "2026-11-19T21:30:19.781924500",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #71] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/go-live-check`
+### [Endpoint #73] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/go-live-check`
 
-- **Item Name:** [#72] GET /api/tenants/{tenantId}/go-live-check (getGoLiveCheck)
+- **Item Name:** [#74] GET /api/tenants/{tenantId}/go-live-check (requirements)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 102 ms
+- **Response Latency:** 139 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -2935,11 +3036,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #72] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions`
+### [Endpoint #74] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions`
 
-- **Item Name:** [#73] POST /api/tenants/{tenantId}/academic-sessions (createAcademicSession)
+- **Item Name:** [#75] POST /api/tenants/{tenantId}/academic-sessions (session)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 95 ms
+- **Response Latency:** 101 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -2949,14 +3050,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -2973,18 +3074,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:18.996040700",
+  "timestamp": "2026-11-19T21:30:20.188984500",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #73] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions`
+### [Endpoint #75] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions`
 
-- **Item Name:** [#74] GET /api/tenants/{tenantId}/academic-sessions (listAcademicSessions)
+- **Item Name:** [#76] GET /api/tenants/{tenantId}/academic-sessions (sessions)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 93 ms
+- **Response Latency:** 137 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3014,11 +3115,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #74] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D`
+### [Endpoint #76] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/academic-sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D`
 
-- **Item Name:** [#75] GET /api/tenants/{tenantId}/academic-sessions/{sessionId} (getAcademicSession)
+- **Item Name:** [#77] GET /api/tenants/{tenantId}/academic-sessions/{sessionId} (session)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 69 ms
+- **Response Latency:** 89 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3036,18 +3137,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "TYPE_MISMATCH",
   "error": "Invalid parameter: sessionId",
   "message": "Invalid parameter: sessionId",
-  "timestamp": "2026-11-17T18:00:19.328254900",
+  "timestamp": "2026-11-19T21:30:20.577438400",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #75] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events`
+### [Endpoint #77] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events`
 
-- **Item Name:** [#76] POST /api/tenants/{tenantId}/master-calendar-events (createMasterCalendarEvent)
+- **Item Name:** [#78] POST /api/tenants/{tenantId}/master-calendar-events (event)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 111 ms
+- **Response Latency:** 106 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3057,14 +3158,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -3075,25 +3176,25 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "VALIDATION_FAILED",
   "fieldErrors": {
     "endDate": "endDate is required",
-    "academicSessionId": "academicSessionId is required",
     "eventType": "eventType is required",
+    "academicSessionId": "academicSessionId is required",
     "title": "title is required",
     "startDate": "startDate is required"
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:19.510695100",
+  "timestamp": "2026-11-19T21:30:20.798312600",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #76] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events`
+### [Endpoint #78] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/master-calendar-events`
 
-- **Item Name:** [#77] GET /api/tenants/{tenantId}/master-calendar-events (listMasterCalendarEvents)
+- **Item Name:** [#79] GET /api/tenants/{tenantId}/master-calendar-events (events)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 140 ms
+- **Response Latency:** 121 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3111,11 +3212,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #77] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/classes/a30cd2f7-5a09-45a2-bc54-501c2229730a/student-login`
+### [Endpoint #79] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/classes/a30cd2f7-5a09-45a2-bc54-501c2229730a/student-login`
 
-- **Item Name:** [#78] PUT /api/tenants/{tenantId}/classes/{classId}/student-login (setStudentLogin)
+- **Item Name:** [#80] PUT /api/tenants/{tenantId}/classes/{classId}/student-login (class)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 78 ms
+- **Response Latency:** 104 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3125,14 +3226,14 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -3146,18 +3247,18 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:19.878087100",
+  "timestamp": "2026-11-19T21:30:21.218200700",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #78] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/mentor`
+### [Endpoint #80] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/mentor`
 
-- **Item Name:** [#79] PUT /api/tenants/{tenantId}/sections/{sectionId}/mentor (assignMentor)
+- **Item Name:** [#81] PUT /api/tenants/{tenantId}/sections/{sectionId}/mentor (section)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 86 ms
+- **Response Latency:** 111 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3167,14 +3268,14 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -3188,18 +3289,18 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:20.034040200",
+  "timestamp": "2026-11-19T21:30:21.401241400",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #79] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/class-teacher`
+### [Endpoint #81] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/sections/a30cd2f7-5a09-45a2-bc54-501c2229730a/class-teacher`
 
-- **Item Name:** [#80] PUT /api/tenants/{tenantId}/sections/{sectionId}/class-teacher (assignClassTeacher)
+- **Item Name:** [#82] PUT /api/tenants/{tenantId}/sections/{sectionId}/class-teacher (section)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 99 ms
+- **Response Latency:** 138 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3209,14 +3310,14 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.928Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.928Z"
 }
 ```
 
@@ -3230,18 +3331,18 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:20.213445400",
+  "timestamp": "2026-11-19T21:30:21.610884200",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #80] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff`
+### [Endpoint #82] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff`
 
-- **Item Name:** [#81] GET /api/tenants/{tenantId}/staff (list)
+- **Item Name:** [#83] GET /api/tenants/{tenantId}/staff (list)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 159 ms
+- **Response Latency:** 181 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3293,6 +3394,25 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
       "updatedAt": "2026-11-16T18:44:46.074337Z",
       "updatedBy": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
       "version": 1
+    },
+    {
+      "id": "16054d57-dad3-4cbd-9fff-1fb15084f1e8",
+      "userAccountId": "0cc6f4a5-43c6-44e7-ac39-287eedf797be",
+      "staffCode": "AGY-CHECK1-INST-ST-26-0003",
+      "fullName": "Dr. Vikram Sarabhai",
+      "dateOfBirth": null,
+      "personalEmail": null,
+      "personalMobile": null,
+      "nationalIdLast4": null,
+      "photoFileId": null,
+      "employmentStatus": "ACTIVE",
+      "joinedOn": "2026-11-18",
+      "leftOn": null,
+      "createdAt": "2026-11-18T04:52:48.247967Z",
+      "createdBy": "3613a0ae-c59b-4269-a024-ba7487a7ec96",
+      "updatedAt": "2026-11-18T04:52:48.247967Z",
+      "updatedBy": "3613a0ae-c59b-4269-a024-ba7487a7ec96",
+      "version": 1
     }
   ],
   "page": {
@@ -3306,11 +3426,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #81] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff`
+### [Endpoint #83] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff`
 
-- **Item Name:** [#82] POST /api/tenants/{tenantId}/staff (create)
+- **Item Name:** [#84] POST /api/tenants/{tenantId}/staff (create)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 75 ms
+- **Response Latency:** 101 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3346,18 +3466,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:20.630800",
+  "timestamp": "2026-11-19T21:30:22.084406200",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #82] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15`
+### [Endpoint #84] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15`
 
-- **Item Name:** [#83] GET /api/tenants/{tenantId}/staff/{id} (get)
+- **Item Name:** [#85] GET /api/tenants/{tenantId}/staff/{id} (get)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 65 ms
+- **Response Latency:** 168 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3375,18 +3495,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Staff record not found.",
   "message": "Staff record not found.",
-  "timestamp": "2026-11-17T18:00:20.769785400",
+  "timestamp": "2026-11-19T21:30:22.351132600",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #83] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15`
+### [Endpoint #85] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15`
 
-- **Item Name:** [#84] PATCH /api/tenants/{tenantId}/staff/{id} (update)
+- **Item Name:** [#86] PATCH /api/tenants/{tenantId}/staff/{id} (update)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 90 ms
+- **Response Latency:** 127 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3396,14 +3516,14 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.930Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.930Z"
 }
 ```
 
@@ -3414,18 +3534,18 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   "code": "IF_MATCH_REQUIRED",
   "error": "If-Match is required.",
   "message": "If-Match is required.",
-  "timestamp": "2026-11-17T18:00:20.959206300",
+  "timestamp": "2026-11-19T21:30:22.552307600",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #84] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments`
+### [Endpoint #86] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments`
 
-- **Item Name:** [#85] GET /api/tenants/{tenantId}/staff/{id}/assignments (listAssignments)
+- **Item Name:** [#87] GET /api/tenants/{tenantId}/staff/{id}/assignments (listAssignments)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 66 ms
+- **Response Latency:** 161 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3443,18 +3563,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Staff record not found.",
   "message": "Staff record not found.",
-  "timestamp": "2026-11-17T18:00:21.100705200",
+  "timestamp": "2026-11-19T21:30:22.829001",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #85] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments`
+### [Endpoint #87] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments`
 
-- **Item Name:** [#86] POST /api/tenants/{tenantId}/staff/{id}/assignments (addAssignment)
+- **Item Name:** [#88] POST /api/tenants/{tenantId}/staff/{id}/assignments (addAssignment)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 114 ms
+- **Response Latency:** 113 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3464,14 +3584,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.930Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.930Z"
 }
 ```
 
@@ -3486,18 +3606,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:21.301399400",
+  "timestamp": "2026-11-19T21:30:23.177024800",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #86] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed`
+### [Endpoint #88] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed`
 
-- **Item Name:** [#87] PATCH /api/tenants/{tenantId}/staff/{id}/assignments/{assignmentId} (endAssignment)
+- **Item Name:** [#89] PATCH /api/tenants/{tenantId}/staff/{id}/assignments/{assignmentId} (endAssignment)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 63 ms
+- **Response Latency:** 117 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3507,14 +3627,14 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.930Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.930Z"
 }
 ```
 
@@ -3528,18 +3648,18 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:21.444701800",
+  "timestamp": "2026-11-19T21:30:23.386635300",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #87] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records`
+### [Endpoint #89] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records`
 
-- **Item Name:** [#88] POST /api/tenants/{tenantId}/staff/{id}/service-records (addServiceRecord)
+- **Item Name:** [#90] POST /api/tenants/{tenantId}/staff/{id}/service-records (addServiceRecord)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 98 ms
+- **Response Latency:** 113 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3549,14 +3669,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.376Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.930Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.376Z"
+  "timestamp": "2026-11-19T15:59:54.930Z"
 }
 ```
 
@@ -3572,18 +3692,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:21.621301400",
+  "timestamp": "2026-11-19T21:30:23.551527900",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #88] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records`
+### [Endpoint #90] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/service-records`
 
-- **Item Name:** [#89] GET /api/tenants/{tenantId}/staff/{id}/service-records (listServiceRecords)
+- **Item Name:** [#91] GET /api/tenants/{tenantId}/staff/{id}/service-records (listServiceRecords)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 90 ms
+- **Response Latency:** 101 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3601,18 +3721,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Staff record not found.",
   "message": "Staff record not found.",
-  "timestamp": "2026-11-17T18:00:21.783495400",
+  "timestamp": "2026-11-19T21:30:23.738498700",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #89] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents`
+### [Endpoint #91] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents`
 
-- **Item Name:** [#90] GET /api/tenants/{tenantId}/staff/{id}/documents (list)
+- **Item Name:** [#92] GET /api/tenants/{tenantId}/staff/{id}/documents (list)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 66 ms
+- **Response Latency:** 91 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3630,18 +3750,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Staff record not found.",
   "message": "Staff record not found.",
-  "timestamp": "2026-11-17T18:00:21.937799600",
+  "timestamp": "2026-11-19T21:30:23.913396600",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #90] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents`
+### [Endpoint #92] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff/0f53b887-9851-4ec4-bafc-4a07c93f5b15/documents`
 
-- **Item Name:** [#91] POST /api/tenants/{tenantId}/staff/{id}/documents (attach)
+- **Item Name:** [#93] POST /api/tenants/{tenantId}/staff/{id}/documents (attach)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 86 ms
+- **Response Latency:** 114 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3669,18 +3789,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "VALIDATION_FAILED",
   "error": "documentType must be DEGREE, ID_PROOF or OTHER and fileId is required.",
   "message": "documentType must be DEGREE, ID_PROOF or OTHER and fileId is required.",
-  "timestamp": "2026-11-17T18:00:22.101034700",
+  "timestamp": "2026-11-19T21:30:24.100354200",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #91] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff-documents/d9e8a7f6-1234-4567-89ab-cdef01234567/verification`
+### [Endpoint #93] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/staff-documents/d9e8a7f6-1234-4567-89ab-cdef01234567/verification`
 
-- **Item Name:** [#92] POST /api/tenants/{tenantId}/staff-documents/{id}/verification (verify)
+- **Item Name:** [#94] POST /api/tenants/{tenantId}/staff-documents/{id}/verification (verify)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 108 ms
+- **Response Latency:** 93 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3708,18 +3828,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "NOT_FOUND",
   "error": "Staff document not found.",
   "message": "Staff document not found.",
-  "timestamp": "2026-11-17T18:00:22.325284700",
+  "timestamp": "2026-11-19T21:30:24.277835900",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #92] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments`
+### [Endpoint #94] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments`
 
-- **Item Name:** [#93] POST /api/tenants/{tenantId}/institutions/{institutionId}/departments (createDepartment)
+- **Item Name:** [#95] POST /api/tenants/{tenantId}/institutions/{institutionId}/departments (department)
 - **HTTP Status Code:** `201`
-- **Response Latency:** 164 ms
+- **Response Latency:** 177 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3729,24 +3849,24 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "departmentCode": "AGY_3523", "departmentName": "Antigravity Postman Check 1 Dept 3523" }'
+  -d '{ "departmentCode": "AGY_7454", "departmentName": "Antigravity Postman Check 1 Dept 7454" }'
 ```
 
 **Request Payload:**
 ```json
 {
-  "departmentCode": "AGY_3523",
-  "departmentName": "Antigravity Postman Check 1 Dept 3523"
+  "departmentCode": "AGY_7454",
+  "departmentName": "Antigravity Postman Check 1 Dept 7454"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "departmentId": "ccdb2641-fb28-4a55-b109-f361aa4ee3ec",
+  "departmentId": "2d37b8d5-6f97-4129-8bed-d66f73656490",
   "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
-  "departmentCode": "AGY_3523",
-  "departmentName": "Antigravity Postman Check 1 Dept 3523",
+  "departmentCode": "AGY_7454",
+  "departmentName": "Antigravity Postman Check 1 Dept 7454",
   "hodStaffAssignmentId": null,
   "status": "ACTIVE"
 }
@@ -3754,11 +3874,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ---
 
-### [Endpoint #93] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments`
+### [Endpoint #95] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/departments`
 
-- **Item Name:** [#94] GET /api/tenants/{tenantId}/institutions/{institutionId}/departments (listDepartments)
+- **Item Name:** [#96] GET /api/tenants/{tenantId}/institutions/{institutionId}/departments (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 108 ms
+- **Response Latency:** 138 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3795,17 +3915,41 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
     "departmentName": "Antigravity Postman Check 1 Dept 3523",
     "hodStaffAssignmentId": null,
     "status": "ACTIVE"
+  },
+  {
+    "departmentId": "a9c36cd7-cdf7-48cc-bea8-076c1e278cf5",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "departmentCode": "AGY_3539",
+    "departmentName": "Antigravity Postman Check 1 Dept 3539",
+    "hodStaffAssignmentId": null,
+    "status": "ACTIVE"
+  },
+  {
+    "departmentId": "0cfbcb0a-6602-4b4e-a82f-d5418625d36a",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "departmentCode": "AGY_9281",
+    "departmentName": "Antigravity Postman Check 1 Dept 9281",
+    "hodStaffAssignmentId": null,
+    "status": "ACTIVE"
+  },
+  {
+    "departmentId": "2d37b8d5-6f97-4129-8bed-d66f73656490",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "departmentCode": "AGY_7454",
+    "departmentName": "Antigravity Postman Check 1 Dept 7454",
+    "hodStaffAssignmentId": null,
+    "status": "ACTIVE"
   }
 ]
 ```
 
 ---
 
-### [Endpoint #94] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs`
+### [Endpoint #96] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs`
 
-- **Item Name:** [#95] POST /api/tenants/{tenantId}/institutions/{institutionId}/programs (createProgram)
+- **Item Name:** [#97] POST /api/tenants/{tenantId}/institutions/{institutionId}/programs (department)
 - **HTTP Status Code:** `201`
-- **Response Latency:** 240 ms
+- **Response Latency:** 144 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3815,15 +3959,15 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "departmentId": "da735bcf-2f19-4666-8412-57706b143288", "programCode": "AGY_P_9741", "programName": "Antigravity Postman Check 1 Prog 9741", "durationYears": 4, "semestersPerYear": 2 }'
+  -d '{ "departmentId": "da735bcf-2f19-4666-8412-57706b143288", "programCode": "AGY_P_8781", "programName": "Antigravity Postman Check 1 Prog 8781", "durationYears": 4, "semestersPerYear": 2 }'
 ```
 
 **Request Payload:**
 ```json
 {
   "departmentId": "da735bcf-2f19-4666-8412-57706b143288",
-  "programCode": "AGY_P_9741",
-  "programName": "Antigravity Postman Check 1 Prog 9741",
+  "programCode": "AGY_P_8781",
+  "programName": "Antigravity Postman Check 1 Prog 8781",
   "durationYears": 4,
   "semestersPerYear": 2
 }
@@ -3832,11 +3976,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "programId": "4a8c6498-c5ee-441d-8461-3bc7818989d8",
+  "programId": "d700c421-bedc-4db4-a13c-c9b07c1784b4",
   "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
   "departmentId": "da735bcf-2f19-4666-8412-57706b143288",
-  "programCode": "AGY_P_9741",
-  "programName": "Antigravity Postman Check 1 Prog 9741",
+  "programCode": "AGY_P_8781",
+  "programName": "Antigravity Postman Check 1 Prog 8781",
   "durationYears": 4,
   "semestersPerYear": 2,
   "status": "ACTIVE"
@@ -3845,11 +3989,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ---
 
-### [Endpoint #95] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs`
+### [Endpoint #97] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs`
 
-- **Item Name:** [#96] GET /api/tenants/{tenantId}/institutions/{institutionId}/programs (listPrograms)
+- **Item Name:** [#98] GET /api/tenants/{tenantId}/institutions/{institutionId}/programs (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 125 ms
+- **Response Latency:** 74 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3892,17 +4036,47 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
     "durationYears": 4,
     "semestersPerYear": 2,
     "status": "ACTIVE"
+  },
+  {
+    "programId": "4908cc16-13a8-4fa3-92e3-21705c05170f",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "departmentId": "da735bcf-2f19-4666-8412-57706b143288",
+    "programCode": "AGY_P_2817",
+    "programName": "Antigravity Postman Check 1 Prog 2817",
+    "durationYears": 4,
+    "semestersPerYear": 2,
+    "status": "ACTIVE"
+  },
+  {
+    "programId": "36f8915c-f564-4dbf-8931-fd250debc7c0",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "departmentId": "da735bcf-2f19-4666-8412-57706b143288",
+    "programCode": "AGY_P_3324",
+    "programName": "Antigravity Postman Check 1 Prog 3324",
+    "durationYears": 4,
+    "semestersPerYear": 2,
+    "status": "ACTIVE"
+  },
+  {
+    "programId": "d700c421-bedc-4db4-a13c-c9b07c1784b4",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "departmentId": "da735bcf-2f19-4666-8412-57706b143288",
+    "programCode": "AGY_P_8781",
+    "programName": "Antigravity Postman Check 1 Prog 8781",
+    "durationYears": 4,
+    "semestersPerYear": 2,
+    "status": "ACTIVE"
   }
 ]
 ```
 
 ---
 
-### [Endpoint #96] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years`
+### [Endpoint #98] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years`
 
-- **Item Name:** [#97] POST /api/tenants/{tenantId}/institutions/{institutionId}/programs/{programId}/years (createProgramYear)
+- **Item Name:** [#99] POST /api/tenants/{tenantId}/institutions/{institutionId}/programs/{programId}/years (year)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 169 ms
+- **Response Latency:** 77 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -3930,18 +4104,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "DUPLICATE_PROGRAM_YEAR",
   "error": "Year 2 already exists for this program.",
   "message": "Year 2 already exists for this program.",
-  "timestamp": "2026-11-17T18:00:23.573970200",
+  "timestamp": "2026-11-19T21:30:25.296801300",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #97] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years`
+### [Endpoint #99] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/programs/4d95908b-7ac0-483f-939b-3e2a2920de22/years`
 
-- **Item Name:** [#98] GET /api/tenants/{tenantId}/institutions/{institutionId}/programs/{programId}/years (listProgramYears)
+- **Item Name:** [#100] GET /api/tenants/{tenantId}/institutions/{institutionId}/programs/{programId}/years (program)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 165 ms
+- **Response Latency:** 73 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -3974,11 +4148,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #98] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters`
+### [Endpoint #100] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters`
 
-- **Item Name:** [#99] POST /api/tenants/{tenantId}/institutions/{institutionId}/program-years/{programYearId}/semesters (createSemester)
+- **Item Name:** [#101] POST /api/tenants/{tenantId}/institutions/{institutionId}/program-years/{programYearId}/semesters (year)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 179 ms
+- **Response Latency:** 92 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4006,18 +4180,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "DUPLICATE_SEMESTER_NUMBER",
   "error": "Semester 2 already exists for this program year.",
   "message": "Semester 2 already exists for this program year.",
-  "timestamp": "2026-11-17T18:00:24.078702600",
+  "timestamp": "2026-11-19T21:30:25.578383700",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #99] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters`
+### [Endpoint #101] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-years/25c8caef-5549-4ad2-be4e-5564f9f1cff6/semesters`
 
-- **Item Name:** [#100] GET /api/tenants/{tenantId}/institutions/{institutionId}/program-years/{programYearId}/semesters (listSemesters)
+- **Item Name:** [#102] GET /api/tenants/{tenantId}/institutions/{institutionId}/program-years/{programYearId}/semesters (year)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 80 ms
+- **Response Latency:** 87 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4050,11 +4224,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #100] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes`
+### [Endpoint #102] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes`
 
-- **Item Name:** [#101] POST /api/tenants/{tenantId}/institutions/{institutionId}/classes (createSchoolClass)
+- **Item Name:** [#103] POST /api/tenants/{tenantId}/institutions/{institutionId}/classes (class)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 92 ms
+- **Response Latency:** 60 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4064,14 +4238,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.377Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.377Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
@@ -4086,18 +4260,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:24.381145500",
+  "timestamp": "2026-11-19T21:30:25.847997600",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #101] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes`
+### [Endpoint #103] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/classes`
 
-- **Item Name:** [#102] GET /api/tenants/{tenantId}/institutions/{institutionId}/classes (listSchoolClasses)
+- **Item Name:** [#104] GET /api/tenants/{tenantId}/institutions/{institutionId}/classes (school)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 154 ms
+- **Response Latency:** 83 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4115,11 +4289,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #102] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections`
+### [Endpoint #104] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections`
 
-- **Item Name:** [#103] POST /api/tenants/{tenantId}/institutions/{institutionId}/sections (createSection)
+- **Item Name:** [#105] POST /api/tenants/{tenantId}/institutions/{institutionId}/sections (section)
 - **HTTP Status Code:** `201`
-- **Response Latency:** 170 ms
+- **Response Latency:** 99 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4129,7 +4303,7 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455", "semesterId": "80b79beb-e0a2-4e7b-b621-6d649c13fde5", "sectionName": "AGY-Sec-9856" }'
+  -d '{ "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455", "semesterId": "80b79beb-e0a2-4e7b-b621-6d649c13fde5", "sectionName": "AGY-Sec-2685" }'
 ```
 
 **Request Payload:**
@@ -4137,30 +4311,30 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 {
   "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
   "semesterId": "80b79beb-e0a2-4e7b-b621-6d649c13fde5",
-  "sectionName": "AGY-Sec-9856"
+  "sectionName": "AGY-Sec-2685"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "sectionId": "230a48e4-132b-4f60-b71f-73610e3e7ddb",
+  "sectionId": "3e17355f-382a-4f7a-bd94-1278f455431c",
   "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
   "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
   "semesterId": "80b79beb-e0a2-4e7b-b621-6d649c13fde5",
   "classId": null,
-  "sectionName": "AGY-Sec-9856",
+  "sectionName": "AGY-Sec-2685",
   "status": "ACTIVE"
 }
 ```
 
 ---
 
-### [Endpoint #103] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections`
+### [Endpoint #105] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/sections`
 
-- **Item Name:** [#104] GET /api/tenants/{tenantId}/institutions/{institutionId}/sections (listSections)
+- **Item Name:** [#106] GET /api/tenants/{tenantId}/institutions/{institutionId}/sections (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 105 ms
+- **Response Latency:** 68 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4200,17 +4374,44 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
     "classId": null,
     "sectionName": "AGY-Sec-9856",
     "status": "ACTIVE"
+  },
+  {
+    "sectionId": "cc495b55-7c12-469c-9b85-fc5767226c48",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "semesterId": "80b79beb-e0a2-4e7b-b621-6d649c13fde5",
+    "classId": null,
+    "sectionName": "AGY-Sec-7232",
+    "status": "ACTIVE"
+  },
+  {
+    "sectionId": "b8319c6c-11aa-4bf3-813b-a0bbf9661b21",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "semesterId": "80b79beb-e0a2-4e7b-b621-6d649c13fde5",
+    "classId": null,
+    "sectionName": "AGY-Sec-6747",
+    "status": "ACTIVE"
+  },
+  {
+    "sectionId": "3e17355f-382a-4f7a-bd94-1278f455431c",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "semesterId": "80b79beb-e0a2-4e7b-b621-6d649c13fde5",
+    "classId": null,
+    "sectionName": "AGY-Sec-2685",
+    "status": "ACTIVE"
   }
 ]
 ```
 
 ---
 
-### [Endpoint #104] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects`
+### [Endpoint #106] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects`
 
-- **Item Name:** [#105] POST /api/tenants/{tenantId}/institutions/{institutionId}/subjects (createSubject)
+- **Item Name:** [#107] POST /api/tenants/{tenantId}/institutions/{institutionId}/subjects (subject)
 - **HTTP Status Code:** `201`
-- **Response Latency:** 200 ms
+- **Response Latency:** 94 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4220,14 +4421,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "subjectCode": "AGY_S_8748", "subjectName": "Antigravity Postman Check 1 Subject 8748", "credits": 3, "isElective": false }'
+  -d '{ "subjectCode": "AGY_S_2889", "subjectName": "Antigravity Postman Check 1 Subject 2889", "credits": 3, "isElective": false }'
 ```
 
 **Request Payload:**
 ```json
 {
-  "subjectCode": "AGY_S_8748",
-  "subjectName": "Antigravity Postman Check 1 Subject 8748",
+  "subjectCode": "AGY_S_2889",
+  "subjectName": "Antigravity Postman Check 1 Subject 2889",
   "credits": 3,
   "isElective": false
 }
@@ -4236,10 +4437,10 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "subjectId": "142ac3eb-85bd-46f1-aa39-f7fc526465d5",
+  "subjectId": "83133b5b-fbe9-4903-af72-c558d118e4ca",
   "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
-  "subjectCode": "AGY_S_8748",
-  "subjectName": "Antigravity Postman Check 1 Subject 8748",
+  "subjectCode": "AGY_S_2889",
+  "subjectName": "Antigravity Postman Check 1 Subject 2889",
   "credits": 3,
   "isElective": false,
   "status": "ACTIVE"
@@ -4248,11 +4449,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ---
 
-### [Endpoint #105] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects`
+### [Endpoint #107] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/subjects`
 
-- **Item Name:** [#106] GET /api/tenants/{tenantId}/institutions/{institutionId}/subjects (listSubjects)
+- **Item Name:** [#108] GET /api/tenants/{tenantId}/institutions/{institutionId}/subjects (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 173 ms
+- **Response Latency:** 68 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4292,17 +4493,44 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
     "credits": 3,
     "isElective": false,
     "status": "ACTIVE"
+  },
+  {
+    "subjectId": "7466c39e-5f67-4ab1-91e5-45fffb266ba5",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "subjectCode": "AGY_S_8823",
+    "subjectName": "Antigravity Postman Check 1 Subject 8823",
+    "credits": 3,
+    "isElective": false,
+    "status": "ACTIVE"
+  },
+  {
+    "subjectId": "ef9f2f34-8e18-4553-a30a-044d7e18ad28",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "subjectCode": "AGY_S_1684",
+    "subjectName": "Antigravity Postman Check 1 Subject 1684",
+    "credits": 3,
+    "isElective": false,
+    "status": "ACTIVE"
+  },
+  {
+    "subjectId": "83133b5b-fbe9-4903-af72-c558d118e4ca",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "subjectCode": "AGY_S_2889",
+    "subjectName": "Antigravity Postman Check 1 Subject 2889",
+    "credits": 3,
+    "isElective": false,
+    "status": "ACTIVE"
   }
 ]
 ```
 
 ---
 
-### [Endpoint #106] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings`
+### [Endpoint #108] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings`
 
-- **Item Name:** [#107] POST /api/tenants/{tenantId}/institutions/{institutionId}/course-offerings (createCourseOffering)
+- **Item Name:** [#109] POST /api/tenants/{tenantId}/institutions/{institutionId}/course-offerings (offering)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 171 ms
+- **Response Latency:** 76 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4331,18 +4559,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "DUPLICATE_COURSE_OFFERING",
   "error": "Course offering already exists for this subject and semester in this session.",
   "message": "Course offering already exists for this subject and semester in this session.",
-  "timestamp": "2026-11-17T18:00:25.846279",
+  "timestamp": "2026-11-19T21:30:26.780182200",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #107] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings`
+### [Endpoint #109] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/course-offerings`
 
-- **Item Name:** [#108] GET /api/tenants/{tenantId}/institutions/{institutionId}/course-offerings (listCourseOfferings)
+- **Item Name:** [#110] GET /api/tenants/{tenantId}/institutions/{institutionId}/course-offerings (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 139 ms
+- **Response Latency:** 91 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4369,11 +4597,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #108] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/academic-sessions`
+### [Endpoint #110] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/academic-sessions`
 
-- **Item Name:** [#109] GET /api/tenants/{tenantId}/institutions/{institutionId}/academic-sessions (listAcademicSessions)
+- **Item Name:** [#111] GET /api/tenants/{tenantId}/institutions/{institutionId}/academic-sessions (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 154 ms
+- **Response Latency:** 79 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4403,11 +4631,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #109] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-rule-sets`
+### [Endpoint #111] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/program-rule-sets`
 
-- **Item Name:** [#110] GET /api/tenants/{tenantId}/institutions/{institutionId}/program-rule-sets (listProgramRuleSets)
+- **Item Name:** [#112] GET /api/tenants/{tenantId}/institutions/{institutionId}/program-rule-sets (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 151 ms
+- **Response Latency:** 74 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4425,11 +4653,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #110] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules`
+### [Endpoint #112] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules`
 
-- **Item Name:** [#111] POST /api/tenants/{tenantId}/weekly-off-rules (setRule)
+- **Item Name:** [#113] POST /api/tenants/{tenantId}/weekly-off-rules (institution)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 170 ms
+- **Response Latency:** 99 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4459,18 +4687,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "BUSINESS_RULE_VIOLATION",
   "error": "The requested operation violates a business rule constraint.",
   "message": "The requested operation violates a business rule constraint.",
-  "timestamp": "2026-11-17T18:00:26.770588700",
+  "timestamp": "2026-11-19T21:30:27.373643200",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #111] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
+### [Endpoint #113] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/weekly-off-rules?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
 
-- **Item Name:** [#112] GET /api/tenants/{tenantId}/weekly-off-rules (listRules)
+- **Item Name:** [#114] GET /api/tenants/{tenantId}/weekly-off-rules (institution)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 90 ms
+- **Response Latency:** 112 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -4497,13 +4725,13 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #112] GET `http://platform.edu360.local:8080/api/platform/backup-status`
+### [Endpoint #114] GET `http://platform.edu360.local:8080/api/platform/backup-status`
 
-- **Item Name:** [#113] GET /api/platform/backup-status (backupStatus)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 55 ms
+- **Item Name:** [#115] GET /api/platform/backup-status (status)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -4515,21 +4743,60 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/backup-status" \
 **Response Payload:**
 ```json
 {
-  "wiredToRealBackupSystem": false,
-  "note": "platform.tenant_backup_status exists in the schema, but no backup/PITR system in this codebase writes to it yet - this list reflects that real, currently-empty state rather than placeholder timestamps.",
-  "tenants": []
+  "timestamp": "2026-11-19T16:00:27.647295800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #113] GET `http://platform.edu360.local:8080/api/platform/invoices`
+### [Endpoint #115] POST `http://platform.edu360.local:8080/api/platform/backup-status`
 
-- **Item Name:** [#114] GET /api/platform/invoices (listInvoices)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 63 ms
+- **Item Name:** [#116] POST /api/platform/backup-status (ingest)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/backup-status" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "tenantId": "97392262-5e24-4c36-8449-449215019f2c", "status": "COMPLETED", "component": "POSTGRES", "backupSizeBytes": 1048576, "checksum": "abc12345" }'
+```
+
+**Request Payload:**
+```json
+{
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "status": "COMPLETED",
+  "component": "POSTGRES",
+  "backupSizeBytes": 1048576,
+  "checksum": "abc12345"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:27.716025300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #116] GET `http://platform.edu360.local:8080/api/platform/invoices`
+
+- **Item Name:** [#117] GET /api/platform/invoices (listInvoices)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -4540,108 +4807,46 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/invoices" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "invoiceId": "adcb2425-3990-43f8-9cbf-8bf9705a0ccf",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "invoiceNumber": "INV-2026-FC7A170C",
-    "periodStart": "2026-11-01",
-    "periodEnd": "2026-11-07",
-    "subtotalAmount": 60000,
-    "discountAmount": 0,
-    "discountAppliedBy": null,
-    "totalAmount": 60000,
-    "currencyCode": "INR",
-    "status": "DRAFT",
-    "approvedBy": null,
-    "approvedAt": null,
-    "dueAt": null,
-    "sentAt": null,
-    "paidAt": null,
-    "overdueFlaggedAt": null,
-    "overdue": false,
-    "rowVersion": 1
-  },
-  {
-    "invoiceId": "69011a39-9df4-4a78-9370-1a6a36994b1a",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "invoiceNumber": "INV-2026-0A09A7EB",
-    "periodStart": "2026-11-01",
-    "periodEnd": "2026-11-07",
-    "subtotalAmount": 50000,
-    "discountAmount": 0,
-    "discountAppliedBy": null,
-    "totalAmount": 50000,
-    "currencyCode": "INR",
-    "status": "DRAFT",
-    "approvedBy": null,
-    "approvedAt": null,
-    "dueAt": null,
-    "sentAt": null,
-    "paidAt": null,
-    "overdueFlaggedAt": null,
-    "overdue": false,
-    "rowVersion": 1
-  },
-  {
-    "invoiceId": "2a87f357-4470-4c8c-97a3-118671f85d93",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "invoiceNumber": "INV-2026-5E4AEABD",
-    "periodStart": "2026-11-01",
-    "periodEnd": "2026-11-07",
-    "subtotalAmount": 60000,
-    "discountAmount": 0,
-    "discountAppliedBy": null,
-    "totalAmount": 60000,
-    "currencyCode": "INR",
-    "status": "DRAFT",
-    "approvedBy": null,
-    "approvedAt": null,
-    "dueAt": null,
-    "sentAt": null,
-    "paidAt": null,
-    "overdueFlaggedAt": null,
-    "overdue": false,
-    "rowVersion": 1
-  },
-  {
-    "invoiceId": "d6f8f349-a11a-442b-aa53-95f79e0aa6f7",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "invoiceNumber": "INV-2026-CDAC5ED0",
-    "periodStart": "2026-11-01",
-    "periodEnd": "2026-11-07",
-    "subtotalAmount": 50000,
-    "discountAmount": 0,
-    "discountAppliedBy": null,
-    "totalAmount": 50000,
-    "currencyCode": "INR",
-    "status": "DRAFT",
-    "approvedBy": null,
-    "approvedAt": null,
-    "dueAt": null,
-    "sentAt": null,
-    "paidAt": null,
-    "overdueFlaggedAt": null,
-    "overdue": false,
-    "rowVersion": 1
-  },
-  {
-    "invoiceId": "1ffc43dd-1cea-4555-b3f4-af2207f6a537",
-    "tenantId": "f5e030ce-7ccd-4ca7-8d50-9eaf54d91fe2",
-    "invoiceNumber": "INV-2026-A7837575",
-    "periodStart": "2026-11-01",
-    "periodEnd": "2026-11-13",
-   
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:27.795482600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #114] GET `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D`
+### [Endpoint #117] GET `http://platform.edu360.local:8080/api/platform/invoices/overdue`
 
-- **Item Name:** [#115] GET /api/platform/invoices/{id} (getInvoice)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 22 ms
+- **Item Name:** [#118] GET /api/platform/invoices/overdue (listOverdueInvoices)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/invoices/overdue" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:27.878976300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #118] GET `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D`
+
+- **Item Name:** [#119] GET /api/platform/invoices/{id} (getInvoice)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4655,22 +4860,19 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceI
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:27.306802400",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:27.962784100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #115] POST `http://platform.edu360.local:8080/api/platform/invoices`
+### [Endpoint #119] POST `http://platform.edu360.local:8080/api/platform/invoices`
 
-- **Item Name:** [#116] POST /api/platform/invoices (createInvoice)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 84 ms
+- **Item Name:** [#120] POST /api/platform/invoices (createInvoice)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4680,42 +4882,133 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.377Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.377Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "tenantId": "must not be null",
-    "periodStart": "must not be null",
-    "subtotalAmount": "must not be null",
-    "periodEnd": "must not be null"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:27.482062500",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.043907600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #116] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discounts`
+### [Endpoint #120] GET `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines`
 
-- **Item Name:** [#117] POST /api/platform/invoices/{id}/discounts (applyDiscount)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 24 ms
+- **Item Name:** [#121] GET /api/platform/invoices/{id}/lines (listInvoiceLines)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:28.112149400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #121] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines`
+
+- **Item Name:** [#122] POST /api/platform/invoices/{id}/lines (addInvoiceLine)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "description": "Antigravity Postman Check 1 Extra Users", "quantity": 10, "unitPrice": 100, "amount": 1000 }'
+```
+
+**Request Payload:**
+```json
+{
+  "description": "Antigravity Postman Check 1 Extra Users",
+  "quantity": 10,
+  "unitPrice": 100,
+  "amount": 1000
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:28.181739800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #122] DELETE `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines/d9e8a7f6-1234-4567-89ab-cdef01234567`
+
+- **Item Name:** [#123] DELETE /api/platform/invoices/{id}/lines/{lineId} (removeInvoiceLine)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X DELETE "http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/lines/d9e8a7f6-1234-4567-89ab-cdef01234567" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
+```
+
+**Request Payload:**
+```json
+{
+  "name": "Antigravity Postman Check 1 Payload",
+  "timestamp": "2026-11-19T15:59:54.931Z"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:28.262458900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #123] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discounts`
+
+- **Item Name:** [#124] POST /api/platform/invoices/{id}/discounts (applyDiscount)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4725,36 +5018,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.377Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.377Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/discounts",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:27.585172900",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.343879200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #117] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discount`
+### [Endpoint #124] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/discount`
 
-- **Item Name:** [#118] POST /api/platform/invoices/{id}/discount (applyDiscount)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 25 ms
+- **Item Name:** [#125] POST /api/platform/invoices/{id}/discount (applyDiscount)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4764,36 +5054,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.377Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.377Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/discount",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:27.711705",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.412275100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #118] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flags`
+### [Endpoint #125] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flags`
 
-- **Item Name:** [#119] POST /api/platform/invoices/{id}/overdue-flags (flagOverdue)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 21 ms
+- **Item Name:** [#126] POST /api/platform/invoices/{id}/overdue-flags (flagOverdue)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4803,36 +5090,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.377Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.377Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/overdue-flags",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:27.818133",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.478631Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #119] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flag`
+### [Endpoint #126] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/overdue-flag`
 
-- **Item Name:** [#120] POST /api/platform/invoices/{id}/overdue-flag (flagOverdue)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 23 ms
+- **Item Name:** [#127] POST /api/platform/invoices/{id}/overdue-flag (flagOverdue)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4842,36 +5126,69 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.377Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.377Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/overdue-flag",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:27.921429900",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.562215600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #120] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/send`
+### [Endpoint #127] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/approval`
 
-- **Item Name:** [#121] POST /api/platform/invoices/{id}/send (sendInvoice)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 25 ms
+- **Item Name:** [#128] POST /api/platform/invoices/{id}/approval (approveInvoice)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 6 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/approval" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "decision": "APPROVED", "reason": "Antigravity Postman Check 1 Invoice Approved" }'
+```
+
+**Request Payload:**
+```json
+{
+  "decision": "APPROVED",
+  "reason": "Antigravity Postman Check 1 Invoice Approved"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:28.654149700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #128] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/send`
+
+- **Item Name:** [#129] POST /api/platform/invoices/{id}/send (sendInvoice)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4881,36 +5198,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.377Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.377Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/send",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:28.031036100",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.717002500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #121] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/sending`
+### [Endpoint #129] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/sending`
 
-- **Item Name:** [#122] POST /api/platform/invoices/{id}/sending (sendInvoice)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 31 ms
+- **Item Name:** [#130] POST /api/platform/invoices/{id}/sending (sendInvoice)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4920,36 +5234,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/sending",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:28.145095500",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.795907400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #122] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/record-payment`
+### [Endpoint #130] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/record-payment`
 
-- **Item Name:** [#123] POST /api/platform/invoices/{id}/record-payment (recordPayment)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 29 ms
+- **Item Name:** [#131] POST /api/platform/invoices/{id}/record-payment (recordPayment)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4959,36 +5270,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/record-payment",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:28.267963900",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.878296200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #123] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payment`
+### [Endpoint #131] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payment`
 
-- **Item Name:** [#124] POST /api/platform/invoices/{id}/payment (recordPayment)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 25 ms
+- **Item Name:** [#132] POST /api/platform/invoices/{id}/payment (recordPayment)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 5 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -4998,36 +5306,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/payment",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:28.387628100",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:28.957847900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #124] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payments`
+### [Endpoint #132] POST `http://platform.edu360.local:8080/api/platform/invoices/%7BinvoiceId%7D/payments`
 
-- **Item Name:** [#125] POST /api/platform/invoices/{id}/payments (recordPayment)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 24 ms
+- **Item Name:** [#133] POST /api/platform/invoices/{id}/payments (recordPayment)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5037,36 +5342,133 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/invoices/%7BinvoiceId%7D/payments",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:28.494451500",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:29.037443800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #125] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export`
+### [Endpoint #133] POST `http://platform.edu360.local:8080/api/platform/billing-cycles`
 
-- **Item Name:** [#126] POST /api/platform/tenants/{tenantId}/export (exportTenant)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 45 ms
+- **Item Name:** [#134] POST /api/platform/billing-cycles (createBillingCycle)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 5 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/billing-cycles" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "billingCycleName": "Antigravity Postman Check 1 Q1 Cycle", "startDate": "2026-01-01", "endDate": "2026-03-31" }'
+```
+
+**Request Payload:**
+```json
+{
+  "billingCycleName": "Antigravity Postman Check 1 Q1 Cycle",
+  "startDate": "2026-01-01",
+  "endDate": "2026-03-31"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:29.112411100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #134] GET `http://platform.edu360.local:8080/api/platform/billing/settings`
+
+- **Item Name:** [#135] GET /api/platform/billing/settings (getSettings)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 6 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/billing/settings" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:29.193859600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #135] PUT `http://platform.edu360.local:8080/api/platform/billing/settings`
+
+- **Item Name:** [#136] PUT /api/platform/billing/settings (updateSettings)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 6 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X PUT "http://platform.edu360.local:8080/api/platform/billing/settings" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "brandColor": "#1E293B", "academicYearStartMonth": 6, "attendanceThresholdPercent": 75 }'
+```
+
+**Request Payload:**
+```json
+{
+  "brandColor": "#1E293B",
+  "academicYearStartMonth": 6,
+  "attendanceThresholdPercent": 75
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:29.261871900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #136] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export`
+
+- **Item Name:** [#137] POST /api/platform/tenants/{tenantId}/export (exportTenant)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5074,62 +5476,151 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/invoices/%7Binvoice
 ```bash
 curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export" \
   -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json" \
+  -H "Accept: text/csv" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export",
-  "code": "VALIDATION_FAILED",
-  "error": "Required header 'Idempotency-Key' is missing.",
-  "message": "Required header 'Idempotency-Key' is missing.",
-  "timestamp": "2026-11-17T18:00:28.614563200",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:29.329680300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #126] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export`
+### [Endpoint #137] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export`
 
-- **Item Name:** [#127] GET /api/platform/tenants/{tenantId}/export (listExports)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 58 ms
+- **Item Name:** [#138] GET /api/platform/tenants/{tenantId}/export (listExports)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
 curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/export" \
   -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json"
+  -H "Accept: text/csv"
 ```
 
 **Response Payload:**
 ```json
-[]
+{
+  "timestamp": "2026-11-19T16:00:29.398817900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #127] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention`
+### [Endpoint #138] GET `http://platform.edu360.local:8080/api/platform/export-requests`
 
-- **Item Name:** [#128] GET /api/platform/tenants/{tenantId}/retention (getRetention)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 79 ms
+- **Item Name:** [#139] GET /api/platform/export-requests (listAllExports)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/export-requests" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: text/csv"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:29.480317100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #139] GET `http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567`
+
+- **Item Name:** [#140] GET /api/platform/export-requests/{id} (getExportRequest)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: text/csv"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:29.562265800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #140] POST `http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision`
+
+- **Item Name:** [#141] POST /api/platform/export-requests/{id}/decision (decideExportRequest)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: text/csv" \
+  -H "Content-Type: application/json" \
+  -d '{ "decision": "APPROVED", "reason": "Antigravity Postman Check 1 Export Approved" }'
+```
+
+**Request Payload:**
+```json
+{
+  "decision": "APPROVED",
+  "reason": "Antigravity Postman Check 1 Export Approved"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:29.630043600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #141] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention`
+
+- **Item Name:** [#142] GET /api/platform/tenants/{tenantId}/retention (getRetention)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5140,91 +5631,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e2
 
 **Response Payload:**
 ```json
-[
-  {
-    "tenantRetentionPolicyId": "0c041ce7-5fea-43e2-a184-267ec27451a7",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "ACADEMIC_RECORD",
-    "retentionMonths": 36,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "311008da-6832-4b0a-9199-b79cc31998e0",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "APPROVAL",
-    "retentionMonths": 36,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "231d4cc6-c8fa-4259-9018-58b2f5ec60b5",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "AUDIT",
-    "retentionMonths": 1,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "041a1e21-bf09-45c1-b85a-1cdc4311e1f1",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "BACKUP",
-    "retentionMonths": 1,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "816303c1-3334-4af0-abd8-573472b3f528",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "BY_OWNER",
-    "retentionMonths": 36,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "aba8b511-264c-4640-b174-bb86779990fe",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "COMMUNICATION",
-    "retentionMonths": 36,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "b8bf8dcd-4ceb-4398-b021-89e54afe2c3e",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "FINANCIAL",
-    "retentionMonths": 36,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "407fa17e-3b3f-47c7-bca0-6b3030ea0f77",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "GOVERNANCE",
-    "retentionMonths": 36,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "173bb52a-2018-469d-becc-339f295f830e",
-    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-    "dataClassCode": "PERSON",
-    "retentionMonths": 36,
-    "effectiveFrom": "2026-11-16T18:08:23.749467Z",
-    "status": "ACTIVE"
-  },
-  {
-    "tenantRetentionPolicyId": "e6d1ee13-3c76-480
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:29.713382100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #128] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention-change-requests`
+### [Endpoint #142] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention-change-requests`
 
-- **Item Name:** [#129] POST /api/platform/tenants/{tenantId}/retention-change-requests (requestRetentionChange)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 48 ms
+- **Item Name:** [#143] POST /api/platform/tenants/{tenantId}/retention-change-requests (requestRetentionChange)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5234,43 +5654,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/retention-change-requests",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "requestedMonths": "requestedMonths is required",
-    "reason": "reason is required",
-    "dataClassCode": "dataClassCode is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:29.069958800",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:29.801439200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #129] GET `http://platform.edu360.local:8080/api/platform/retention-change-requests`
+### [Endpoint #143] GET `http://platform.edu360.local:8080/api/platform/retention-change-requests`
 
-- **Item Name:** [#130] GET /api/platform/retention-change-requests (listRetentionChangeRequests)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 71 ms
+- **Item Name:** [#144] GET /api/platform/retention-change-requests (listRetentionChangeRequests)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5281,90 +5693,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/retention-change-req
 
 **Response Payload:**
 ```json
-[
-  {
-    "retentionChangeRequestId": "8aedf696-0e40-4453-b53e-0ab343146c12",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "dataClassCode": "AUDIT",
-    "currentMonths": 84,
-    "requestedMonths": 36,
-    "reason": "Institutional compliance audit guideline",
-    "status": "REQUESTED",
-    "decidedAt": null,
-    "createdAt": "2026-11-08T17:35:46.859393Z"
-  },
-  {
-    "retentionChangeRequestId": "4381e368-50e9-4a63-847b-2681e500064f",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "dataClassCode": "AUDIT",
-    "currentMonths": 84,
-    "requestedMonths": 36,
-    "reason": "Institutional compliance audit guideline",
-    "status": "REQUESTED",
-    "decidedAt": null,
-    "createdAt": "2026-11-08T17:23:08.654584Z"
-  },
-  {
-    "retentionChangeRequestId": "37869c38-4603-4bc6-ac7a-047aa82c5086",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "dataClassCode": "AUDIT",
-    "currentMonths": 84,
-    "requestedMonths": 36,
-    "reason": "Institutional compliance audit guideline",
-    "status": "REQUESTED",
-    "decidedAt": null,
-    "createdAt": "2026-11-08T17:19:28.707071Z"
-  },
-  {
-    "retentionChangeRequestId": "e29788e6-8973-4e3e-a88b-5cdc7ee61eaa",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "dataClassCode": "AUDIT",
-    "currentMonths": 84,
-    "requestedMonths": 36,
-    "reason": "Institutional compliance audit guideline",
-    "status": "REQUESTED",
-    "decidedAt": null,
-    "createdAt": "2026-11-08T17:15:06.944390Z"
-  },
-  {
-    "retentionChangeRequestId": "0a8c2a2a-9647-42e5-bce0-e1022295a969",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "dataClassCode": "AUDIT",
-    "currentMonths": 84,
-    "requestedMonths": 36,
-    "reason": "Institutional compliance audit guideline",
-    "status": "REQUESTED",
-    "decidedAt": null,
-    "createdAt": "2026-11-07T18:34:33.424062Z"
-  },
-  {
-    "retentionChangeRequestId": "a8dc4c93-ebdf-4459-b92d-8aa6e68aee26",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "dataClassCode": "AUDIT",
-    "currentMonths": 84,
-    "requestedMonths": 36,
-    "reason": "Institutional compliance audit guideline",
-    "status": "REQUESTED",
-    "decidedAt": null,
-    "createdAt": "2026-11-07T18:28:42.242947Z"
-  },
-  {
-    "retentionChangeRequestId": "e4e78ca7-a913-43e2-b4b1-47b99c358e08",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "dataClassCode": "AUDIT",
-    "currentMonths": 84,
-    "requestedMonths": 36,
-    "reason": "Institutional compliance 
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:29.897413Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #130] POST `http://platform.edu360.local:8080/api/platform/retention-change-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision`
+### [Endpoint #144] POST `http://platform.edu360.local:8080/api/platform/retention-change-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision`
 
-- **Item Name:** [#131] POST /api/platform/retention-change-requests/{id}/decision (decideRetentionChange)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 31 ms
+- **Item Name:** [#145] POST /api/platform/retention-change-requests/{id}/decision (decideRetentionChange)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5374,39 +5716,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/retention-change-re
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/retention-change-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/decision",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "decision": "decision is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:29.344862500",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:29.993417100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #131] POST `http://platform.edu360.local:8080/api/platform/deletion-requests`
+### [Endpoint #145] POST `http://platform.edu360.local:8080/api/platform/deletion-requests`
 
-- **Item Name:** [#132] POST /api/platform/deletion-requests (requestDeletion)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 34 ms
+- **Item Name:** [#146] POST /api/platform/deletion-requests (deletion)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5416,41 +5752,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/deletion-requests" 
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/deletion-requests",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "tenantId": "tenantId is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:29.484251800",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:30.064980300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #132] GET `http://platform.edu360.local:8080/api/platform/deletion-requests`
+### [Endpoint #146] GET `http://platform.edu360.local:8080/api/platform/deletion-requests`
 
-- **Item Name:** [#133] GET /api/platform/deletion-requests (listDeletionRequests)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 54 ms
+- **Item Name:** [#147] GET /api/platform/deletion-requests (listDeletionRequests)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5461,30 +5791,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/deletion-requests" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "deletionRequestId": "eb859b4d-c6bc-4b08-acf7-9047db7c252d",
-    "tenantId": "f5e030ce-7ccd-4ca7-8d50-9eaf54d91fe2",
-    "origin": "PRODUCT_OWNER",
-    "status": "PO_CONFIRMED",
-    "poConfirmedAt": "2026-11-08T18:28:30.886320Z",
-    "retentionEndsAt": null,
-    "deletedAt": "2026-11-08T18:28:30.886320Z",
-    "createdAt": "2026-11-08T18:28:30.886320Z",
-    "purgeStatus": null,
-    "dpoDecidedAt": null,
-    "dpoRemark": null
-  }
-]
+{
+  "timestamp": "2026-11-19T16:00:30.133492500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #133] GET `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D`
+### [Endpoint #147] GET `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D`
 
-- **Item Name:** [#134] GET /api/platform/deletion-requests/{id} (getDeletionRequest)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 16 ms
+- **Item Name:** [#148] GET /api/platform/deletion-requests/{id} (getDeletionRequest)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5498,22 +5818,19 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/deletion-requests/%7
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/deletion-requests/%7BdeletionRequestId%7D",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:29.716387300",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:30.197667500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #134] POST `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/confirm`
+### [Endpoint #148] POST `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/confirm`
 
-- **Item Name:** [#135] POST /api/platform/deletion-requests/{id}/confirm (confirmDeletion)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 22 ms
+- **Item Name:** [#149] POST /api/platform/deletion-requests/{id}/confirm (request)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5523,36 +5840,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/deletion-requests/%
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/deletion-requests/%7BdeletionRequestId%7D/confirm",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:29.831390600",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:30.280929400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #135] POST `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/decision`
+### [Endpoint #149] POST `http://platform.edu360.local:8080/api/platform/deletion-requests/%7BdeletionRequestId%7D/decision`
 
-- **Item Name:** [#136] POST /api/platform/deletion-requests/{id}/decision (decideDeletion)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 24 ms
+- **Item Name:** [#150] POST /api/platform/deletion-requests/{id}/decision (request)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 8 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5562,38 +5876,412 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/deletion-requests/%
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.931Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.931Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/deletion-requests/%7BdeletionRequestId%7D/decision",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:29.922827600",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:30.362128700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #136] PUT `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlements`
+### [Endpoint #150] GET `http://platform.edu360.local:8080/api/platform/data-protection/pending-count`
 
-- **Item Name:** [#137] PUT /api/platform/plans/{id}/entitlements (updatePlanEntitlements)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 112 ms
+- **Item Name:** [#151] GET /api/platform/data-protection/pending-count (DPO)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/data-protection/pending-count" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:30.430326600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #151] GET `http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/download`
+
+- **Item Name:** [#152] GET /api/platform/export-requests/{id}/download (ZIP)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/download" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: text/csv"
+```
+
+**Response Payload:**
+```json
+[Binary file payload stream]
+```
+
+---
+
+### [Endpoint #152] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests`
+
+- **Item Name:** [#153] POST /api/tenants/{tenantId}/tenant-export-requests (requestExport)
+- **HTTP Status Code:** `201`
+- **Response Latency:** 108 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "exportType": "FULL", "reason": "Antigravity Postman Check 1 Tenant Full Export" }'
+```
+
+**Request Payload:**
+```json
+{
+  "exportType": "FULL",
+  "reason": "Antigravity Postman Check 1 Tenant Full Export"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "exportRequestId": "f45bf6b9-3066-404c-8eb7-6a9136e9cae6",
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "tenantName": "Antigravity Postman Check 1 Tenant",
+  "requestedByKind": "TENANT_ADMIN",
+  "status": "REQUESTED",
+  "fileRef": null,
+  "downloadExpiresAt": null,
+  "createdAt": "2026-11-19T16:00:30.669842200Z",
+  "rowVersion": 1
+}
+```
+
+---
+
+### [Endpoint #153] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests`
+
+- **Item Name:** [#154] GET /api/tenants/{tenantId}/tenant-export-requests (exportHistory)
+- **HTTP Status Code:** `422`
+- **Response Latency:** 79 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "error": "The requested operation violates a business rule constraint.",
+  "message": "The requested operation violates a business rule constraint.",
+  "timestamp": "2026-11-19T21:30:30.815800400",
+  "status": 422
+}
+```
+
+---
+
+### [Endpoint #154] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/download`
+
+- **Item Name:** [#155] GET /api/tenants/{tenantId}/tenant-export-requests/{id}/download (downloadExport)
+- **HTTP Status Code:** `404`
+- **Response Latency:** 85 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-export-requests/d9e8a7f6-1234-4567-89ab-cdef01234567/download" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: text/csv"
+```
+
+**Response Payload:**
+```json
+[Binary file payload stream]
+```
+
+---
+
+### [Endpoint #155] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests`
+
+- **Item Name:** [#156] POST /api/tenants/{tenantId}/tenant-deletion-requests (requestDeletion)
+- **HTTP Status Code:** `422`
+- **Response Latency:** 159 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "reason": "Antigravity Postman Check 1 Offboarding Test", "contactEmail": "admin@agy-check1.local" }'
+```
+
+**Request Payload:**
+```json
+{
+  "reason": "Antigravity Postman Check 1 Offboarding Test",
+  "contactEmail": "admin@agy-check1.local"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "error": "The requested operation violates a business rule constraint.",
+  "message": "The requested operation violates a business rule constraint.",
+  "timestamp": "2026-11-19T21:30:31.237185800",
+  "status": 422
+}
+```
+
+---
+
+### [Endpoint #156] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests`
+
+- **Item Name:** [#157] GET /api/tenants/{tenantId}/tenant-deletion-requests (deletionHistory)
+- **HTTP Status Code:** `422`
+- **Response Latency:** 124 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/tenant-deletion-requests",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "error": "The requested operation violates a business rule constraint.",
+  "message": "The requested operation violates a business rule constraint.",
+  "timestamp": "2026-11-19T21:30:31.443736700",
+  "status": 422
+}
+```
+
+---
+
+### [Endpoint #157] GET `http://platform.edu360.local:8080/api/platform/delegations/candidates`
+
+- **Item Name:** [#158] GET /api/platform/delegations/candidates (candidates)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 19 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/delegations/candidates" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:31.552321Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #158] POST `http://platform.edu360.local:8080/api/platform/delegations`
+
+- **Item Name:** [#159] POST /api/platform/delegations (create)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 16 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/delegations" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "delegateUserId": "d93af3bd-850b-428c-92b9-b5c77003b2d9", "delegationBasis": "PLANNED_LEAVE", "startsAt": "2026-11-16T00:00:00Z", "endsAt": "2026-11-20T23:59:59Z" }'
+```
+
+**Request Payload:**
+```json
+{
+  "delegateUserId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+  "delegationBasis": "PLANNED_LEAVE",
+  "startsAt": "2026-11-16T00:00:00Z",
+  "endsAt": "2026-11-20T23:59:59Z"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:31.687853300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #159] GET `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlement-editor`
+
+- **Item Name:** [#160] GET /api/platform/plans/{id}/entitlement-editor (flag)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 16 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlement-editor" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:31.828184700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #160] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlement-editor`
+
+- **Item Name:** [#161] GET /api/platform/tenants/{id}/entitlement-editor (override)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlement-editor" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:31.903852300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #161] GET `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlements`
+
+- **Item Name:** [#162] GET /api/platform/plans/{id}/entitlements (entitlements)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 12 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlements" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:32.000293600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #162] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlements`
+
+- **Item Name:** [#163] GET /api/platform/tenants/{id}/entitlements (entitlements)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlements" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:32.088843Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #163] PUT `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430/entitlements`
+
+- **Item Name:** [#164] PUT /api/platform/plans/{id}/entitlements (entitlements)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5620,21 +6308,21 @@ curl -X PUT "http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-
 **Response Payload:**
 ```json
 {
-  "targetId": "df1747f1-e6c5-4d99-b774-795d35edf430",
-  "targetType": "PLAN",
-  "features": null
+  "timestamp": "2026-11-19T16:00:32.200857Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #137] PUT `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlements`
+### [Endpoint #164] PUT `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/entitlements`
 
-- **Item Name:** [#138] PUT /api/platform/tenants/{id}/entitlements (updateTenantEntitlements)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 82 ms
+- **Item Name:** [#165] PUT /api/platform/tenants/{id}/entitlements (entitlements)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 14 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5661,21 +6349,21 @@ curl -X PUT "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e2
 **Response Payload:**
 ```json
 {
-  "targetId": "97392262-5e24-4c36-8449-449215019f2c",
-  "targetType": "TENANT",
-  "features": null
+  "timestamp": "2026-11-19T16:00:32.334273300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #138] GET `http://platform.edu360.local:8080/api/platform/integration-types`
+### [Endpoint #165] GET `http://platform.edu360.local:8080/api/platform/integration-types`
 
-- **Item Name:** [#139] GET /api/platform/integration-types (list)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 74 ms
+- **Item Name:** [#166] GET /api/platform/integration-types (types)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 16 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5686,104 +6374,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/integration-types" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "integrationTypeId": "db8971d6-4cac-4eba-94ef-38107399184d",
-    "integrationTypeCode": "sms",
-    "description": "sms",
-    "status": "ALLOWED",
-    "allowedProviders": [
-      "soundarya"
-    ],
-    "createdAt": "2026-11-07T15:17:01.941330Z",
-    "updatedAt": "2026-11-17T04:54:45.584956Z",
-    "rowVersion": 2
-  },
-  {
-    "integrationTypeId": "c21738fb-39c1-49f7-bf2e-f8e5571d5e89",
-    "integrationTypeCode": "WH_1394",
-    "description": "Webhook and Event Dispatcher (Production)",
-    "status": "ALLOWED",
-    "allowedProviders": [
-      "SLACK",
-      "DISCORD"
-    ],
-    "createdAt": "2026-11-07T18:28:41.412540Z",
-    "updatedAt": "2026-11-07T18:28:41.450138Z",
-    "rowVersion": 2
-  },
-  {
-    "integrationTypeId": "0e6fe5bf-9de4-47ed-808e-e9aea753a61c",
-    "integrationTypeCode": "WH_1883",
-    "description": "Webhook and Event Dispatcher (Production)",
-    "status": "ALLOWED",
-    "allowedProviders": [
-      "SLACK",
-      "DISCORD"
-    ],
-    "createdAt": "2026-11-07T18:34:31.912804Z",
-    "updatedAt": "2026-11-07T18:34:31.975214Z",
-    "rowVersion": 2
-  },
-  {
-    "integrationTypeId": "c519ac0c-76be-4d87-8cf8-53774b772fbb",
-    "integrationTypeCode": "WH_2199",
-    "description": "Custom Webhook & Event Dispatcher (Production)",
-    "status": "ALLOWED",
-    "allowedProviders": [
-      "SLACK",
-      "DISCORD"
-    ],
-    "createdAt": "2026-11-07T16:43:42.228965Z",
-    "updatedAt": "2026-11-07T16:43:42.315722Z",
-    "rowVersion": 2
-  },
-  {
-    "integrationTypeId": "d15cb17f-ea4d-4192-9d4a-a078f7e6b113",
-    "integrationTypeCode": "WH_4679",
-    "description": "Webhook and Event Dispatcher (Production)",
-    "status": "ALLOWED",
-    "allowedProviders": [
-      "SLACK",
-      "DISCORD"
-    ],
-    "createdAt": "2026-11-07T17:37:04.681724Z",
-    "updatedAt": "2026-11-07T17:37:04.711576Z",
-    "rowVersion": 2
-  },
-  {
-    "integrationTypeId": "badbfc12-9e05-4426-9378-724e04304c23",
-    "integrationTypeCode": "WH_5349",
-    "description": "Updated enterprise LMS connector",
-    "status": "ALLOWED",
-    "allowedProviders": [
-      "SLACK",
-      "DISCORD"
-    ],
-    "createdAt": "2026-11-08T17:35:45.380634Z",
-    "updatedAt": "2026-11-15T04:07:21.881934Z",
-    "rowVersion": 7
-  },
-  {
-    "integrationTypeId": "76678164-d83c-4c32-a9c5-1d95886200a1",
-    "integrationTypeCode": "WH_5966",
-    "description": "Webhook and Event Dispatcher (Production)",
-    "status": "ALLOWED",
-    "allowedProviders": [
-      "SLACK",
-      "DISCORD"
-    ],
-    "create
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:32.443776Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #139] POST `http://platform.edu360.local:8080/api/platform/integration-types`
+### [Endpoint #166] POST `http://platform.edu360.local:8080/api/platform/integration-types`
 
-- **Item Name:** [#140] POST /api/platform/integration-types (create)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 30 ms
+- **Item Name:** [#167] POST /api/platform/integration-types (type)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 49 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -5793,42 +6397,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/integration-types" 
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.378Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.378Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/integration-types",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "description": "must not be blank",
-    "integrationTypeCode": "must not be blank"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:30.533149200",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:32.567114800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #140] PATCH `http://platform.edu360.local:8080/api/platform/integration-types/db8971d6-4cac-4eba-94ef-38107399184d`
+### [Endpoint #167] PATCH `http://platform.edu360.local:8080/api/platform/integration-types/db8971d6-4cac-4eba-94ef-38107399184d`
 
-- **Item Name:** [#141] PATCH /api/platform/integration-types/{integrationTypeId} (update)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 61 ms
+- **Item Name:** [#168] PATCH /api/platform/integration-types/{integrationTypeId} (type)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5849,28 +6446,21 @@ curl -X PATCH "http://platform.edu360.local:8080/api/platform/integration-types/
 **Response Payload:**
 ```json
 {
-  "integrationTypeId": "db8971d6-4cac-4eba-94ef-38107399184d",
-  "integrationTypeCode": "sms",
-  "description": "sms",
-  "status": "ALLOWED",
-  "allowedProviders": [
-    "soundarya"
-  ],
-  "createdAt": "2026-11-07T15:17:01.941330Z",
-  "updatedAt": "2026-11-17T04:54:45.584956Z",
-  "rowVersion": 2
+  "timestamp": "2026-11-19T16:00:32.714128700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #141] GET `http://platform.edu360.local:8080/api/platform/audit-logs`
+### [Endpoint #168] GET `http://platform.edu360.local:8080/api/platform/audit-logs`
 
-- **Item Name:** [#142] GET /api/platform/audit-logs (listAuditLogs)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 107 ms
+- **Item Name:** [#169] GET /api/platform/audit-logs (events)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5882,99 +6472,232 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/audit-logs" \
 **Response Payload:**
 ```json
 {
-  "items": [
-    {
-      "auditOutboxId": "de3fffb8-46cb-47d3-95db-094b3690ba22",
-      "tenantId": null,
-      "occurredAt": "2026-11-17T12:30:30.674354Z",
-      "actorKind": "PLATFORM_USER",
-      "actorUserId": "d3fd62c7-9968-4f32-a917-7b2c395fcfe0",
-      "operation": "UPDATE",
-      "actionCode": "INTEGRATION_TYPES_MANAGE",
-      "entityType": "INTEGRATION_TYPE",
-      "entityId": "db8971d6-4cac-4eba-94ef-38107399184d",
-      "outcome": "SUCCESS",
-      "correlationId": "5f8ca9c8-a0f6-420f-9ee9-a6f3120dd3f1",
-      "eventType": "INTEGRATION_TYPE_UPDATED",
-      "payload": {
-        "array": false,
-        "bigDecimal": false,
-        "bigInteger": false,
-        "binary": false,
-        "boolean": false,
-        "containerNode": true,
-        "double": false,
-        "empty": false,
-        "float": false,
-        "floatingPointNumber": false,
-        "int": false,
-        "integralNumber": false,
-        "long": false,
-        "missingNode": false,
-        "nodeType": "OBJECT",
-        "null": false,
-        "number": false,
-        "object": true,
-        "pojo": false,
-        "short": false,
-        "textual": false,
-        "valueNode": false
-      }
-    },
-    {
-      "auditOutboxId": "bac4c85b-a0c4-42d7-b330-b4175ea88948",
-      "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-      "occurredAt": "2026-11-17T12:30:30.244633Z",
-      "actorKind": "PLATFORM_USER",
-      "actorUserId": "d3fd62c7-9968-4f32-a917-7b2c395fcfe0",
-      "operation": "UPDATE",
-      "actionCode": "FEATURE_TOGGLE",
-      "entityType": "TENANT",
-      "entityId": "97392262-5e24-4c36-8449-449215019f2c",
-      "outcome": "SUCCESS",
-      "correlationId": "2aa20a52-d8ff-4ae5-bb3f-da1d73e1e384",
-      "eventType": "CONFIG_CHANGE",
-      "payload": {
-        "array": false,
-        "bigDecimal": false,
-        "bigInteger": false,
-        "binary": false,
-        "boolean": false,
-        "containerNode": true,
-        "double": false,
-        "empty": false,
-        "float": false,
-        "floatingPointNumber": false,
-        "int": false,
-        "integralNumber": false,
-        "long": false,
-        "missingNode": false,
-        "nodeType": "OBJECT",
-        "null": false,
-        "number": false,
-        "object": true,
-        "pojo": false,
-        "short": false,
-        "textual": false,
-        "valueNode": false
-      }
-    },
-    {
-      "auditOutboxId": "51c721bf-8759-4ad9-a2fc-f26978b3ed72",
-      "tenantId": null,
-      "occurredAt": "2026-11-17T12:30:30.04
-... [truncated]
+  "timestamp": "2026-11-19T16:00:32.814074400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #142] GET `http://platform.edu360.local:8080/api/platform/plans`
+### [Endpoint #169] GET `http://platform.edu360.local:8080/api/platform/audit-logs/export`
 
-- **Item Name:** [#143] GET /api/platform/plans (listPlans)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 42 ms
+- **Item Name:** [#170] GET /api/platform/audit-logs/export (exportAuditLogs)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 12 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/audit-logs/export" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: text/csv"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:32.933106100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #170] GET `http://platform.edu360.local:8080/api/platform/me/notifications`
+
+- **Item Name:** [#171] GET /api/platform/me/notifications (list)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/me/notifications" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:33.034310100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #171] POST `http://platform.edu360.local:8080/api/platform/me/notifications/d9e8a7f6-1234-4567-89ab-cdef01234567/read`
+
+- **Item Name:** [#172] POST /api/platform/me/notifications/{notificationId}/read (markRead)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 25 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/me/notifications/d9e8a7f6-1234-4567-89ab-cdef01234567/read" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
+```
+
+**Request Payload:**
+```json
+{
+  "name": "Antigravity Postman Check 1 Payload",
+  "timestamp": "2026-11-19T15:59:54.932Z"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:33.149330200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #172] POST `http://platform.edu360.local:8080/api/platform/me/notifications/read-all`
+
+- **Item Name:** [#173] POST /api/platform/me/notifications/read-all (markAllRead)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/me/notifications/read-all" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
+```
+
+**Request Payload:**
+```json
+{
+  "name": "Antigravity Postman Check 1 Payload",
+  "timestamp": "2026-11-19T15:59:54.932Z"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:33.235565300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #173] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding`
+
+- **Item Name:** [#174] GET /api/platform/tenants/{tenantId}/branding (getBranding)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:33.334076700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #174] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding/logo`
+
+- **Item Name:** [#175] GET /api/platform/tenants/{tenantId}/branding/logo (getLogo)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 21 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding/logo" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+[Binary file payload stream]
+```
+
+---
+
+### [Endpoint #175] PUT `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding`
+
+- **Item Name:** [#176] PUT /api/platform/tenants/{tenantId}/branding (logo)
+- **HTTP Status Code:** `415`
+- **Response Latency:** 15 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X PUT "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "primaryColor": "#1E293B", "secondaryColor": "#475569" }'
+```
+
+**Request Payload:**
+```json
+{
+  "primaryColor": "#1E293B",
+  "secondaryColor": "#475569"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "path": "/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/branding",
+  "code": "UNSUPPORTED_MEDIA_TYPE",
+  "error": "Content-Type 'application/json' is not supported",
+  "message": "Content-Type 'application/json' is not supported",
+  "timestamp": "2026-11-19T21:30:33.538199900",
+  "status": 415
+}
+```
+
+---
+
+### [Endpoint #176] GET `http://platform.edu360.local:8080/api/platform/plans`
+
+- **Item Name:** [#177] GET /api/platform/plans (listPlans)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -5985,108 +6708,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/plans" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "planId": "427a4076-f000-4a7b-b06d-05bb168cb525",
-    "planName": "Enterprise Plan 3646",
-    "pricingType": "PER_STUDENT_YEAR",
-    "priceAmount": 4999,
-    "currencyCode": "INR",
-    "userLimit": 1000,
-    "storageLimitGb": 50,
-    "smsLimit": 5000,
-    "apiLimit": 10000,
-    "maxInstitutions": 5,
-    "customDomainAllowed": false,
-    "brandingColorsAllowed": false,
-    "billingCycleMonths": 12,
-    "smsUnitAmount": null,
-    "storageUnitAmountPerGb": null,
-    "status": "ACTIVE",
-    "rowVersion": 1
-  },
-  {
-    "planId": "a30118ba-d070-4651-a61e-2fcedbc9a995",
-    "planName": "Enterprise Plan 5068",
-    "pricingType": "PER_STUDENT_YEAR",
-    "priceAmount": 4999,
-    "currencyCode": "INR",
-    "userLimit": 1000,
-    "storageLimitGb": 50,
-    "smsLimit": 5000,
-    "apiLimit": 10000,
-    "maxInstitutions": 5,
-    "customDomainAllowed": false,
-    "brandingColorsAllowed": false,
-    "billingCycleMonths": 12,
-    "smsUnitAmount": null,
-    "storageUnitAmountPerGb": null,
-    "status": "ACTIVE",
-    "rowVersion": 1
-  },
-  {
-    "planId": "9de9d684-34e2-48c7-8efb-5241a047c893",
-    "planName": "Enterprise Plan 9486",
-    "pricingType": "PER_STUDENT_YEAR",
-    "priceAmount": 4999,
-    "currencyCode": "INR",
-    "userLimit": 1000,
-    "storageLimitGb": 50,
-    "smsLimit": 5000,
-    "apiLimit": 10000,
-    "maxInstitutions": 5,
-    "customDomainAllowed": false,
-    "brandingColorsAllowed": false,
-    "billingCycleMonths": 12,
-    "smsUnitAmount": null,
-    "storageUnitAmountPerGb": null,
-    "status": "ACTIVE",
-    "rowVersion": 1
-  },
-  {
-    "planId": "94482496-98da-43e2-9d9a-07f8f057a8cb",
-    "planName": "Enterprise Plan Updated 1457",
-    "pricingType": "PER_MODULE",
-    "priceAmount": 5999,
-    "currencyCode": "INR",
-    "userLimit": 100,
-    "storageLimitGb": 5,
-    "smsLimit": 5000,
-    "apiLimit": 10000,
-    "maxInstitutions": 10,
-    "customDomainAllowed": false,
-    "brandingColorsAllowed": false,
-    "billingCycleMonths": 12,
-    "smsUnitAmount": null,
-    "storageUnitAmountPerGb": null,
-    "status": "ACTIVE",
-    "rowVersion": 2
-  },
-  {
-    "planId": "3942ec15-2a24-4f7f-9e1d-a73a4d73a713",
-    "planName": "Enterprise Plan Updated 1983",
-    "pricingType": "PER_MODULE",
-    "priceAmount": 5999,
-    "currencyCode": "INR",
-    "userLimit": 100,
-    "storageLimitGb": 5,
-    "smsLimit": 5000,
-    "apiLimit": 10000,
-    "maxInstitutions": 10,
-    "customDomainAllowed": false,
-    "brandingColorsAllowed": false,
-    "billingCycleMonths": 12,
-   
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:33.656616200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #143] POST `http://platform.edu360.local:8080/api/platform/plans`
+### [Endpoint #177] POST `http://platform.edu360.local:8080/api/platform/plans`
 
-- **Item Name:** [#144] POST /api/platform/plans (createPlan)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 69 ms
+- **Item Name:** [#178] POST /api/platform/plans (plan)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 17 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -6096,14 +6731,14 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/plans" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "planCode": "AGY_PC1_PLAN_2006", "name": "Antigravity Postman Check 1 Plan 2006", "priceMonthly": 49999, "currency": "INR", "maxStudents": 5000, "features": [ "ANALYTICS", "MULTI_CAMPUS" ] }'
+  -d '{ "planCode": "AGY_PC1_PLAN_3031", "name": "Antigravity Postman Check 1 Plan 3031", "priceMonthly": 49999, "currency": "INR", "maxStudents": 5000, "features": [ "ANALYTICS", "MULTI_CAMPUS" ] }'
 ```
 
 **Request Payload:**
 ```json
 {
-  "planCode": "AGY_PC1_PLAN_2006",
-  "name": "Antigravity Postman Check 1 Plan 2006",
+  "planCode": "AGY_PC1_PLAN_3031",
+  "name": "Antigravity Postman Check 1 Plan 3031",
   "priceMonthly": 49999,
   "currency": "INR",
   "maxStudents": 5000,
@@ -6117,25 +6752,45 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/plans" \
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/plans",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "planName": "Plan name is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:31.215551700",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:33.757865500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #144] PUT `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430`
+### [Endpoint #178] GET `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430`
 
-- **Item Name:** [#145] PUT /api/platform/plans/{planId} (updatePlan)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 39 ms
+- **Item Name:** [#179] GET /api/platform/plans/{planId} (getPlan)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:33.854613800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #179] PUT `http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430`
+
+- **Item Name:** [#180] PUT /api/platform/plans/{planId} (plan)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 21 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -6145,38 +6800,35 @@ curl -X PUT "http://platform.edu360.local:8080/api/platform/plans/df1747f1-e6c5-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/plans/df1747f1-e6c5-4d99-b774-795d35edf430",
-  "code": "VALIDATION_FAILED",
-  "error": "Required header 'If-Match' is missing.",
-  "message": "Required header 'If-Match' is missing.",
-  "timestamp": "2026-11-17T18:00:31.322410700",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:33.959962200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #145] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/suspension`
+### [Endpoint #180] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/suspension`
 
-- **Item Name:** [#146] POST /api/platform/tenants/{tenantId}/suspension (suspendTenant)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 88 ms
+- **Item Name:** [#181] POST /api/platform/tenants/{tenantId}/suspension (tenant)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 14 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6184,57 +6836,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-  "tenantName": "Antigravity Postman Check 1 Tenant",
-  "tenantType": "STANDALONE_COLLEGE",
-  "planId": "df1747f1-e6c5-4d99-b774-795d35edf430",
-  "planName": "Demo Plan",
-  "state": "SUSPENDED",
-  "isolationMode": "SHARED",
-  "subdomain": "audit-corp-9644",
-  "customDomain": null,
-  "timeZone": "Asia/Kolkata",
-  "dataRegion": "IN",
-  "trialEndsAt": "2026-12-16T18:08:23.595154Z",
-  "userLimit": null,
-  "storageLimitGb": null,
-  "smsLimit": null,
-  "apiLimit": null,
-  "keycloakRealm": "agy-postman-check1-realm",
-  "firstAdminEmail": null,
-  "firstAdminMobile": null,
-  "firstAdminNationalIdLast4": null,
-  "createdAt": "2026-11-16T18:08:23.595154Z",
-  "firstAdminTemporaryPassword": null,
-  "firstAdminUserId": null,
-  "suspendedAt": "2026-11-17T12:30:31.411834200Z",
-  "archivedAt": null
+  "timestamp": "2026-11-19T16:00:34.074276400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #146] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/archive`
+### [Endpoint #181] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/archive`
 
-- **Item Name:** [#147] POST /api/platform/tenants/{tenantId}/archive (archiveTenant)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 79 ms
+- **Item Name:** [#182] POST /api/platform/tenants/{tenantId}/archive (tenant)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 21 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6242,57 +6872,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-  "tenantName": "Antigravity Postman Check 1 Tenant",
-  "tenantType": "STANDALONE_COLLEGE",
-  "planId": "df1747f1-e6c5-4d99-b774-795d35edf430",
-  "planName": "Demo Plan",
-  "state": "ARCHIVED",
-  "isolationMode": "SHARED",
-  "subdomain": "audit-corp-9644",
-  "customDomain": null,
-  "timeZone": "Asia/Kolkata",
-  "dataRegion": "IN",
-  "trialEndsAt": "2026-12-16T18:08:23.595154Z",
-  "userLimit": null,
-  "storageLimitGb": null,
-  "smsLimit": null,
-  "apiLimit": null,
-  "keycloakRealm": "agy-postman-check1-realm",
-  "firstAdminEmail": null,
-  "firstAdminMobile": null,
-  "firstAdminNationalIdLast4": null,
-  "createdAt": "2026-11-16T18:08:23.595154Z",
-  "firstAdminTemporaryPassword": null,
-  "firstAdminUserId": null,
-  "suspendedAt": "2026-11-17T12:30:31.411834Z",
-  "archivedAt": "2026-11-17T12:30:31.588462600Z"
+  "timestamp": "2026-11-19T16:00:34.196754500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #147] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reactivation`
+### [Endpoint #182] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reactivation`
 
-- **Item Name:** [#148] POST /api/platform/tenants/{tenantId}/reactivation (reactivateTenant)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 80 ms
+- **Item Name:** [#183] POST /api/platform/tenants/{tenantId}/reactivation (reactivateTenant)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6300,57 +6908,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-  "tenantName": "Antigravity Postman Check 1 Tenant",
-  "tenantType": "STANDALONE_COLLEGE",
-  "planId": "df1747f1-e6c5-4d99-b774-795d35edf430",
-  "planName": "Demo Plan",
-  "state": "ACTIVE",
-  "isolationMode": "SHARED",
-  "subdomain": "audit-corp-9644",
-  "customDomain": null,
-  "timeZone": "Asia/Kolkata",
-  "dataRegion": "IN",
-  "trialEndsAt": "2026-12-16T18:08:23.595154Z",
-  "userLimit": null,
-  "storageLimitGb": null,
-  "smsLimit": null,
-  "apiLimit": null,
-  "keycloakRealm": "agy-postman-check1-realm",
-  "firstAdminEmail": null,
-  "firstAdminMobile": null,
-  "firstAdminNationalIdLast4": null,
-  "createdAt": "2026-11-16T18:08:23.595154Z",
-  "firstAdminTemporaryPassword": null,
-  "firstAdminUserId": null,
-  "suspendedAt": null,
-  "archivedAt": null
+  "timestamp": "2026-11-19T16:00:34.329712900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #148] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings`
+### [Endpoint #183] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings`
 
-- **Item Name:** [#149] GET /api/platform/tenants/{tenantId}/settings (getTenantSettings)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 42 ms
+- **Item Name:** [#184] GET /api/platform/tenants/{tenantId}/settings (limits)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 25 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6362,36 +6948,21 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e2
 **Response Payload:**
 ```json
 {
-  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-  "tenantName": "Antigravity Postman Check 1 Tenant",
-  "planName": "Demo Plan",
-  "state": "ACTIVE",
-  "timeZone": "Asia/Kolkata",
-  "dataRegion": "IN",
-  "analyticsOptOut": false,
-  "customDomain": null,
-  "userLimit": null,
-  "storageLimitGb": null,
-  "smsLimit": null,
-  "apiLimit": null,
-  "planUserLimit": null,
-  "planStorageLimitGb": null,
-  "planSmsLimit": null,
-  "planApiLimit": null,
-  "customDomainAllowed": false,
-  "brandingColorsAllowed": false
+  "timestamp": "2026-11-19T16:00:34.463824500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #149] PATCH `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings`
+### [Endpoint #184] PATCH `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/settings`
 
-- **Item Name:** [#150] PATCH /api/platform/tenants/{tenantId}/settings (updateTenantSettings)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 99 ms
+- **Item Name:** [#185] PATCH /api/platform/tenants/{tenantId}/settings (limits)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 14 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6414,34 +6985,19 @@ curl -X PATCH "http://platform.edu360.local:8080/api/platform/tenants/97392262-5
 **Response Payload:**
 ```json
 {
-  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-  "tenantName": "Antigravity Postman Check 1 Tenant",
-  "planName": "Demo Plan",
-  "state": "ACTIVE",
-  "timeZone": "Asia/Kolkata",
-  "dataRegion": "IN",
-  "analyticsOptOut": false,
-  "customDomain": null,
-  "userLimit": null,
-  "storageLimitGb": null,
-  "smsLimit": null,
-  "apiLimit": null,
-  "planUserLimit": null,
-  "planStorageLimitGb": null,
-  "planSmsLimit": null,
-  "planApiLimit": null,
-  "customDomainAllowed": false,
-  "brandingColorsAllowed": false
+  "timestamp": "2026-11-19T16:00:34.590019900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #150] POST `http://platform.edu360.local:8080/api/platform/tenants`
+### [Endpoint #185] POST `http://platform.edu360.local:8080/api/platform/tenants`
 
-- **Item Name:** [#151] POST /api/platform/tenants (createTenant)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 51 ms
+- **Item Name:** [#186] POST /api/platform/tenants (state)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 19 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -6451,48 +7007,97 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/tenants" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "tenantName": "Antigravity Postman Check 1 Tenant 5413", "subdomain": "agy-pc1-5413", "tenantType": "COLLEGE", "planId": "df1747f1-e6c5-4d99-b774-795d35edf430", "adminEmail": "admin.5413@agy-pc1-5413.local" }'
+  -d '{ "tenantName": "Antigravity Postman Check 1 Tenant 3293", "subdomain": "agy-pc1-3293", "tenantType": "COLLEGE", "planId": "df1747f1-e6c5-4d99-b774-795d35edf430", "adminEmail": "admin.3293@agy-pc1-3293.local" }'
 ```
 
 **Request Payload:**
 ```json
 {
-  "tenantName": "Antigravity Postman Check 1 Tenant 5413",
-  "subdomain": "agy-pc1-5413",
+  "tenantName": "Antigravity Postman Check 1 Tenant 3293",
+  "subdomain": "agy-pc1-3293",
   "tenantType": "COLLEGE",
   "planId": "df1747f1-e6c5-4d99-b774-795d35edf430",
-  "adminEmail": "admin.5413@agy-pc1-5413.local"
+  "adminEmail": "admin.3293@agy-pc1-3293.local"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/tenants",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "isolationMode": "Isolation mode is required",
-    "firstAdminEmail": "Primary administrator email is required",
-    "firstAdminName": "Primary administrator full name is required",
-    "backupRetentionDays": "Backup retention days is required",
-    "retentionMonths": "Data retention months is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:32.244697900",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:34.698722500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #151] GET `http://platform.edu360.local:8080/api/platform/tenants`
+### [Endpoint #186] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/provisioning`
 
-- **Item Name:** [#152] GET /api/platform/tenants (listTenants)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 152 ms
+- **Item Name:** [#187] GET /api/platform/tenants/{tenantId}/provisioning (error)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 19 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/provisioning" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:34.823874600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #187] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/provisioning/retry`
+
+- **Item Name:** [#188] POST /api/platform/tenants/{tenantId}/provisioning/retry (DONE)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 27 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/provisioning/retry" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Request Payload:**
+```json
+{}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:34.994834600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #188] GET `http://platform.edu360.local:8080/api/platform/tenants`
+
+- **Item Name:** [#189] GET /api/platform/tenants (listTenants)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 42 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6504,91 +7109,21 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/tenants" \
 **Response Payload:**
 ```json
 {
-  "items": [
-    {
-      "tenantId": "00b859cc-30c7-49bb-bc5c-99b0f21956fb",
-      "tenantName": "Audit Corp Academy 1938",
-      "tenantType": "UNIVERSITY_GROUP",
-      "planId": "ab97e051-9f51-4b53-aa1b-3df0487cbb57",
-      "planName": "Enterprise Plan Updated 8186",
-      "state": "ACTIVE",
-      "isolationMode": "SHARED",
-      "subdomain": "audit-corp-1938",
-      "customDomain": null,
-      "timeZone": "Asia/Kolkata",
-      "dataRegion": "IN",
-      "trialEndsAt": "2026-12-07T16:14:22.849153Z",
-      "userLimit": 1000,
-      "storageLimitGb": 50,
-      "smsLimit": 5000,
-      "apiLimit": 10000,
-      "keycloakRealm": "audit-corp-1938-realm",
-      "firstAdminEmail": null,
-      "firstAdminMobile": null,
-      "firstAdminNationalIdLast4": null,
-      "createdAt": "2026-11-07T16:14:22.849153Z",
-      "firstAdminTemporaryPassword": null,
-      "firstAdminUserId": null,
-      "suspendedAt": null,
-      "archivedAt": null
-    },
-    {
-      "tenantId": "dac862fc-e853-4560-aea5-d2abb5d05803",
-      "tenantName": "manoj test123 institution",
-      "tenantType": "STANDALONE_SCHOOL",
-      "planId": "772f2570-17ca-48ce-afcd-77aee76fd6f6",
-      "planName": "Enterprise Plan Updated 8078",
-      "state": "SUSPENDED",
-      "isolationMode": "SHARED",
-      "subdomain": "test-inst-8151",
-      "customDomain": "verified-266.edu360.local",
-      "timeZone": "Asia/Kolkata",
-      "dataRegion": "IN",
-      "trialEndsAt": "2026-12-07T13:07:15.402137Z",
-      "userLimit": 1500,
-      "storageLimitGb": 25,
-      "smsLimit": 5000,
-      "apiLimit": 10000,
-      "keycloakRealm": "test-inst-8151-realm",
-      "firstAdminEmail": null,
-      "firstAdminMobile": null,
-      "firstAdminNationalIdLast4": null,
-      "createdAt": "2026-11-07T13:07:15.402137Z",
-      "firstAdminTemporaryPassword": null,
-      "firstAdminUserId": null,
-      "suspendedAt": null,
-      "archivedAt": null
-    },
-    {
-      "tenantId": "93fb25bc-c6be-4f89-a1f4-f4dfc0e70be5",
-      "tenantName": "manoj test institution",
-      "tenantType": "STANDALONE_SCHOOL",
-      "planId": "772f2570-17ca-48ce-afcd-77aee76fd6f6",
-      "planName": "Enterprise Plan Updated 8078",
-      "state": "TRIAL",
-      "isolationMode": "SHARED",
-      "subdomain": "live-test-444",
-      "customDomain": null,
-      "timeZone": "Asia/Kolkata",
-      "dataRegion": "IN",
-      "trialEndsAt": "2026-12-07T13:18:55.585932Z",
-      "userLimit": 100,
-      "storageLimitGb": 5,
-      "smsLimit": 5000,
-      "apiLimit": 10000,
-      
-... [truncated]
+  "timestamp": "2026-11-19T16:00:35.153538800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #152] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/activation`
+### [Endpoint #189] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/activation`
 
-- **Item Name:** [#153] POST /api/platform/tenants/{tenantId}/activation (activateTenant)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 41 ms
+- **Item Name:** [#190] POST /api/platform/tenants/{tenantId}/activation (verification)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 12 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6596,55 +7131,69 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
-  "tenantName": "Antigravity Postman Check 1 Tenant",
-  "tenantType": "STANDALONE_COLLEGE",
-  "planId": "df1747f1-e6c5-4d99-b774-795d35edf430",
-  "planName": "Demo Plan",
-  "state": "ACTIVE",
-  "isolationMode": "SHARED",
-  "subdomain": "audit-corp-9644",
-  "customDomain": null,
-  "timeZone": "Asia/Kolkata",
-  "dataRegion": "IN",
-  "trialEndsAt": "2026-12-16T18:08:23.595154Z",
-  "userLimit": null,
-  "storageLimitGb": null,
-  "smsLimit": null,
-  "apiLimit": null,
-  "keycloakRealm": "agy-postman-check1-realm",
-  "firstAdminEmail": null,
-  "firstAdminMobile": null,
-  "firstAdminNationalIdLast4": null,
-  "createdAt": "2026-11-16T18:08:23.595154Z",
-  "firstAdminTemporaryPassword": null,
-  "firstAdminUserId": null,
-  "suspendedAt": null,
-  "archivedAt": null
+  "timestamp": "2026-11-19T16:00:35.314774Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #153] POST `http://platform.edu360.local:8080/api/platform/platform-users`
+### [Endpoint #190] POST `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/plan-change`
 
-- **Item Name:** [#154] POST /api/platform/platform-users (createPlatformUser)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 37 ms
+- **Item Name:** [#191] POST /api/platform/tenants/{tenantId}/plan-change (changePlan)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/plan-change" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "targetPlanId": "df1747f1-e6c5-4d99-b774-795d35edf430", "effectiveDate": "2026-12-01" }'
+```
+
+**Request Payload:**
+```json
+{
+  "targetPlanId": "df1747f1-e6c5-4d99-b774-795d35edf430",
+  "effectiveDate": "2026-12-01"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:35.398403100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #191] POST `http://platform.edu360.local:8080/api/platform/platform-users`
+
+- **Item Name:** [#192] POST /api/platform/platform-users (account)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -6654,40 +7203,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/platform-users" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/platform-users",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "fullName": "Full name is required",
-    "email": "Email is required"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:32.722921300",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:35.502952Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #154] PATCH `http://platform.edu360.local:8080/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913`
+### [Endpoint #192] PATCH `http://platform.edu360.local:8080/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913`
 
-- **Item Name:** [#155] PATCH /api/platform/platform-users/{platformUserId} (updatePlatformUser)
-- **HTTP Status Code:** `404`
-- **Response Latency:** 46 ms
+- **Item Name:** [#193] PATCH /api/platform/platform-users/{platformUserId} (status)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 14 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -6710,24 +7252,21 @@ curl -X PATCH "http://platform.edu360.local:8080/api/platform/platform-users/316
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913",
-  "code": "NOT_FOUND",
-  "error": "Platform user 31651154-7087-4cf0-b6d9-dc6c4c846913 was not found.",
-  "message": "Platform user 31651154-7087-4cf0-b6d9-dc6c4c846913 was not found.",
-  "timestamp": "2026-11-17T18:00:32.848600500",
-  "status": 404
+  "timestamp": "2026-11-19T16:00:35.645427Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #155] GET `http://platform.edu360.local:8080/api/platform/platform-users`
+### [Endpoint #193] GET `http://platform.edu360.local:8080/api/platform/platform-users`
 
-- **Item Name:** [#156] GET /api/platform/platform-users (listPlatformUsers)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 54 ms
+- **Item Name:** [#194] GET /api/platform/platform-users (listPlatformUsers)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 12 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6738,100 +7277,109 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/platform-users" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "platformUserId": "4136c008-6e21-407a-909f-3c0173f8bde3",
-    "fullName": "Senior Support Specialist 7771",
-    "email": "support-7771@edu360-platform.local",
-    "platformRole": "SUPPORT_MANAGER",
-    "platformRoleId": null,
-    "customRoleName": null,
-    "status": "ACTIVE",
-    "mfaRequired": true,
-    "lastLoginAt": null,
-    "createdAt": "2026-11-07T16:50:07.802507Z",
-    "tempPassword": null
-  },
-  {
-    "platformUserId": "7c1743ee-575b-49a1-99c0-e8a9f1617821",
-    "fullName": "Senior Support Specialist 4466",
-    "email": "support-4466@edu360-platform.local",
-    "platformRole": "SUPPORT_MANAGER",
-    "platformRoleId": null,
-    "customRoleName": null,
-    "status": "ACTIVE",
-    "mfaRequired": true,
-    "lastLoginAt": null,
-    "createdAt": "2026-11-07T17:37:04.482018Z",
-    "tempPassword": null
-  },
-  {
-    "platformUserId": "df6c430d-51b6-42c5-9216-ce33203e62d2",
-    "fullName": "sanmith",
-    "email": "sanmith@yopmail.com",
-    "platformRole": "PRODUCT_OWNER",
-    "platformRoleId": null,
-    "customRoleName": null,
-    "status": "ACTIVE",
-    "mfaRequired": true,
-    "lastLoginAt": null,
-    "createdAt": "2026-11-07T15:32:23.748432Z",
-    "tempPassword": null
-  },
-  {
-    "platformUserId": "330a66ad-eefd-4806-ba9e-7e82e9f169b7",
-    "fullName": "vachan",
-    "email": "vachan@yopmail.com",
-    "platformRole": "SUPPORT_MANAGER",
-    "platformRoleId": null,
-    "customRoleName": null,
-    "status": "INACTIVE",
-    "mfaRequired": true,
-    "lastLoginAt": null,
-    "createdAt": "2026-11-07T05:54:30.470086Z",
-    "tempPassword": null
-  },
-  {
-    "platformUserId": "35268614-d4f8-47c1-9575-1e28aa66c9fe",
-    "fullName": "Senior Support Specialist 8676",
-    "email": "support-8676@edu360-platform.local",
-    "platformRole": "SUPPORT_MANAGER",
-    "platformRoleId": null,
-    "customRoleName": null,
-    "status": "ACTIVE",
-    "mfaRequired": true,
-    "lastLoginAt": null,
-    "createdAt": "2026-11-07T18:17:48.774576Z",
-    "tempPassword": null
-  },
-  {
-    "platformUserId": "6a9d3b85-7094-4a2e-bb85-c9cc75631a02",
-    "fullName": "Senior Support Specialist 1136",
-    "email": "support-1136@edu360-platform.local",
-    "platformRole": "SUPPORT_MANAGER",
-    "platformRoleId": null,
-    "customRoleName": null,
-    "status": "ACTIVE",
-    "mfaRequired": true,
-    "lastLoginAt": null,
-    "createdAt": "2026-11-07T18:28:41.179254Z",
-    "tempPassword": null
-  },
-  {
-    "platformUserId": "7fb19fc2-cc3d-4562-8f5c-808c094ee557",
-    "fullName": "Senior Su
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:35.751986900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #156] GET `http://platform.edu360.local:8080/api/platform/releases`
+### [Endpoint #194] POST `http://platform.edu360.local:8080/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913/mfa-reset`
 
-- **Item Name:** [#157] GET /api/platform/releases (listReleases)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 50 ms
+- **Item Name:** [#195] POST /api/platform/platform-users/{platformUserId}/mfa-reset (login)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 10 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/platform-users/31651154-7087-4cf0-b6d9-dc6c4c846913/mfa-reset" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "reason": "Antigravity Postman Check 1 MFA Reset" }'
+```
+
+**Request Payload:**
+```json
+{
+  "reason": "Antigravity Postman Check 1 MFA Reset"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:35.845480200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #195] GET `http://platform.edu360.local:8080/api/platform/rbac-mapping-report`
+
+- **Item Name:** [#196] GET /api/platform/rbac-mapping-report (report)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 14 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/rbac-mapping-report" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:35.951137400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #196] GET `http://platform.edu360.local:8080/api/platform/rbac-mapping-report/export`
+
+- **Item Name:** [#197] GET /api/platform/rbac-mapping-report/export (export)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/rbac-mapping-report/export" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: text/csv"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:36.049853900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #197] GET `http://platform.edu360.local:8080/api/platform/releases`
+
+- **Item Name:** [#198] GET /api/platform/releases (listReleases)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -6842,103 +7390,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/releases" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "releaseId": "bc24576a-1b72-4c67-a450-215b74712fdb",
-    "versionLabel": "v2.4.24",
-    "releaseNotes": "Optimizations and updates.",
-    "isHotfix": false,
-    "status": "STAGING_TESTED",
-    "deployedAt": null,
-    "rolledBackAt": null,
-    "schemaVersion": "2026.11",
-    "createdAt": "2026-11-08T17:35:46.601366Z",
-    "rowVersion": 4
-  },
-  {
-    "releaseId": "1f04ae87-dda6-4dfd-8944-29dfad747d4e",
-    "versionLabel": "v2.4.88",
-    "releaseNotes": "Optimizations and updates.",
-    "isHotfix": false,
-    "status": "STAGING_TESTED",
-    "deployedAt": null,
-    "rolledBackAt": null,
-    "schemaVersion": "2026.11",
-    "createdAt": "2026-11-08T17:23:08.556730Z",
-    "rowVersion": 2
-  },
-  {
-    "releaseId": "9395b319-8925-4325-90d0-6a5cc177f7e8",
-    "versionLabel": "v2.7.13",
-    "releaseNotes": "Optimizations and updates.",
-    "isHotfix": false,
-    "status": "STAGING_TESTED",
-    "deployedAt": null,
-    "rolledBackAt": null,
-    "schemaVersion": "2026.11",
-    "createdAt": "2026-11-08T17:19:28.593672Z",
-    "rowVersion": 2
-  },
-  {
-    "releaseId": "96285b81-8280-4dac-8b1d-ac88c130c3f5",
-    "versionLabel": "v2.2.55",
-    "releaseNotes": "Optimizations and updates.",
-    "isHotfix": false,
-    "status": "STAGING_TESTED",
-    "deployedAt": null,
-    "rolledBackAt": null,
-    "schemaVersion": "2026.11",
-    "createdAt": "2026-11-08T17:15:06.746148Z",
-    "rowVersion": 2
-  },
-  {
-    "releaseId": "6affda09-ee3b-4a1a-a7de-0e18e17ed9be",
-    "versionLabel": "v2.8.87",
-    "releaseNotes": "Optimizations and updates.",
-    "isHotfix": false,
-    "status": "STAGING_TESTED",
-    "deployedAt": null,
-    "rolledBackAt": null,
-    "schemaVersion": "2026.11",
-    "createdAt": "2026-11-07T18:34:33.117727Z",
-    "rowVersion": 2
-  },
-  {
-    "releaseId": "a123a498-9468-4277-a4d5-584dc19be8d9",
-    "versionLabel": "v2.2.37",
-    "releaseNotes": "Optimizations and updates.",
-    "isHotfix": false,
-    "status": "STAGING_TESTED",
-    "deployedAt": null,
-    "rolledBackAt": null,
-    "schemaVersion": "2026.11",
-    "createdAt": "2026-11-07T18:28:42.100585Z",
-    "rowVersion": 2
-  },
-  {
-    "releaseId": "13d25d46-9412-4576-8f6a-f01e76c5eb7c",
-    "versionLabel": "v2.0.38",
-    "releaseNotes": "Optimizations and updates.",
-    "isHotfix": false,
-    "status": "STAGING_TESTED",
-    "deployedAt": null,
-    "rolledBackAt": null,
-    "schemaVersion": "2026.11",
-    "createdAt": "2026-11-07T18:17:51.188141Z",
-    "rowVersion": 2
-  },
-  {
-    "releaseId": "c222aabd-8bc
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:36.152938100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #157] GET `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D`
+### [Endpoint #198] GET `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D`
 
-- **Item Name:** [#158] GET /api/platform/releases/{id} (getRelease)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 21 ms
+- **Item Name:** [#199] GET /api/platform/releases/{id} (getRelease)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -6952,22 +7417,45 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/releases/%7BreleaseI
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/releases/%7BreleaseId%7D",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:33.223442700",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:36.263015100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #158] POST `http://platform.edu360.local:8080/api/platform/releases`
+### [Endpoint #199] GET `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/health`
 
-- **Item Name:** [#159] POST /api/platform/releases (createRelease)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 28 ms
+- **Item Name:** [#200] GET /api/platform/releases/{id}/health (getReleaseHealth)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/health" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:36.382833700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #200] POST `http://platform.edu360.local:8080/api/platform/releases`
+
+- **Item Name:** [#201] POST /api/platform/releases (createRelease)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -6977,36 +7465,69 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/releases" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/releases",
-  "code": "BAD_REQUEST",
-  "error": "Malformed JSON request body",
-  "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:00:33.330456800",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:36.484881200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #159] POST `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/transitions`
+### [Endpoint #201] POST `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/schedule`
 
-- **Item Name:** [#160] POST /api/platform/releases/{id}/transitions (transitionRelease)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 28 ms
+- **Item Name:** [#202] POST /api/platform/releases/{id}/schedule (scheduleRelease)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/schedule" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "scheduledTime": "2026-12-01T02:00:00Z", "notes": "Antigravity Postman Check 1 Release Schedule" }'
+```
+
+**Request Payload:**
+```json
+{
+  "scheduledTime": "2026-12-01T02:00:00Z",
+  "notes": "Antigravity Postman Check 1 Release Schedule"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:36.586471400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #202] POST `http://platform.edu360.local:8080/api/platform/releases/%7BreleaseId%7D/transitions`
+
+- **Item Name:** [#203] POST /api/platform/releases/{id}/transitions (transitionRelease)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 19 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7016,38 +7537,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/releases/%7Brelease
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.379Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.379Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/releases/%7BreleaseId%7D/transitions",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:33.445008",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:36.693278900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #160] GET `http://platform.edu360.local:8080/api/platform/reports/DAILY_EXECUTIVE`
+### [Endpoint #203] GET `http://platform.edu360.local:8080/api/platform/reports/DAILY_EXECUTIVE`
 
-- **Item Name:** [#161] GET /api/platform/reports/{reportCode} (getReport)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 83 ms
+- **Item Name:** [#204] GET /api/platform/reports/{reportCode} (getReport)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7059,29 +7577,21 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/reports/DAILY_EXECUT
 **Response Payload:**
 ```json
 {
-  "reportCode": "DAILY_EXECUTIVE",
-  "reportName": "Platform Report: DAILY_EXECUTIVE",
-  "generatedAt": "2026-11-17T12:30:33.613802900Z",
-  "currency": "INR",
-  "metrics": {
-    "usageNote": "Storage and API request totals are not measured yet.",
-    "apiRequestsToday": null,
-    "storageUsedGb": null,
-    "activeTenants": 8,
-    "totalTenants": 33
-  }
+  "timestamp": "2026-11-19T16:00:36.781510800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #161] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reports`
+### [Endpoint #204] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/reports`
 
-- **Item Name:** [#162] GET /api/platform/tenants/{tenantId}/reports (getTenantReport)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 57 ms
+- **Item Name:** [#205] GET /api/platform/tenants/{tenantId}/reports (getTenantReport)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 17 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7093,27 +7603,21 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e2
 **Response Payload:**
 ```json
 {
-  "reportCode": "TENANT_SUMMARY_97392262-5e24-4c36-8449-449215019f2c",
-  "reportName": "Tenant Performance Summary",
-  "generatedAt": "2026-11-17T12:30:33.747881Z",
-  "currency": "INR",
-  "metrics": {
-    "totalInvoicesCount": 0,
-    "totalBilledAmount": 0,
-    "totalTicketsCount": 0
-  }
+  "timestamp": "2026-11-19T16:00:36.900673300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #162] GET `http://platform.edu360.local:8080/api/platform/me/permissions`
+### [Endpoint #205] GET `http://platform.edu360.local:8080/api/platform/me/permissions`
 
-- **Item Name:** [#163] GET /api/platform/me/permissions (myPermissions)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 189 ms
+- **Item Name:** [#206] GET /api/platform/me/permissions (myPermissions)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 12 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7125,47 +7629,21 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/me/permissions" \
 **Response Payload:**
 ```json
 {
-  "platformRole": "PRODUCT_OWNER",
-  "customRoleName": null,
-  "actions": [
-    "BACKUP_STATUS_VIEW",
-    "DISCOUNT_APPLY",
-    "FEATURE_TOGGLE",
-    "INTEGRATION_TYPES_MANAGE",
-    "INVOICE_MANAGE",
-    "OVERDUE_FLAG",
-    "PLAN_MANAGE",
-    "PLATFORM_AUDIT_VIEW",
-    "PLATFORM_REPORTS_VIEW",
-    "PLATFORM_USER_MANAGE",
-    "RBAC_MAPPING_CHECK",
-    "RELEASE_MANAGE",
-    "SECURITY_POLICY_SET",
-    "SUPPORT_ACCESS_USE",
-    "SUPPORT_TICKET_MANAGE",
-    "TENANT_ACTIVATE",
-    "TENANT_CREATE",
-    "TENANT_DELETION_CONFIRM",
-    "TENANT_DELETION_REQUEST",
-    "TENANT_EXPORT_REQUEST",
-    "TENANT_SETTINGS",
-    "TENANT_SUSPEND_ARCHIVE",
-    "USAGE_COUNTS_VIEW"
-  ],
-  "stepInRequired": [],
-  "steppedIn": []
+  "timestamp": "2026-11-19T16:00:37.016126700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #163] GET `http://platform.edu360.local:8080/api/platform/role-actions`
+### [Endpoint #206] GET `http://platform.edu360.local:8080/api/platform/role-actions`
 
-- **Item Name:** [#164] GET /api/platform/role-actions (actionCatalog)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 42 ms
+- **Item Name:** [#207] GET /api/platform/role-actions (actionCatalog)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 13 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7176,101 +7654,22 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/role-actions" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "actionCode": "TENANT_EXPORT_REQUEST",
-    "description": "Request a full-tenant export",
-    "moduleName": "Governance and data protection",
-    "sensitive": true,
-    "lockedReason": null
-  },
-  {
-    "actionCode": "TENANT_EXPORT_APPROVE",
-    "description": "Approve a full-tenant export",
-    "moduleName": "Governance and data protection",
-    "sensitive": true,
-    "lockedReason": "Stays with the Data Protection Officer."
-  },
-  {
-    "actionCode": "TENANT_DELETION_REQUEST",
-    "description": "Request tenant deletion",
-    "moduleName": "Governance and data protection",
-    "sensitive": true,
-    "lockedReason": null
-  },
-  {
-    "actionCode": "TENANT_DELETION_CONFIRM",
-    "description": "Confirm a tenant deletion request",
-    "moduleName": "Governance and data protection",
-    "sensitive": true,
-    "lockedReason": "Stays with the Product Owner, as one step of the deletion chain."
-  },
-  {
-    "actionCode": "TENANT_DELETION_APPROVE",
-    "description": "Approve tenant deletion",
-    "moduleName": "Governance and data protection",
-    "sensitive": true,
-    "lockedReason": "Stays with the Data Protection Officer."
-  },
-  {
-    "actionCode": "RETENTION_CHANGE_APPROVE",
-    "description": "Approve retention changes",
-    "moduleName": "Governance and data protection",
-    "sensitive": true,
-    "lockedReason": "Stays with the Data Protection Officer."
-  },
-  {
-    "actionCode": "RBAC_MAPPING_CHECK",
-    "description": "Compare live permissions with the matrix and custom roles",
-    "moduleName": "Governance and data protection",
-    "sensitive": false,
-    "lockedReason": null
-  },
-  {
-    "actionCode": "PLAN_MANAGE",
-    "description": "Create plans and set prices",
-    "moduleName": "Platform",
-    "sensitive": false,
-    "lockedReason": null
-  },
-  {
-    "actionCode": "TENANT_CREATE",
-    "description": "Create a tenant (starts in Trial)",
-    "moduleName": "Platform",
-    "sensitive": false,
-    "lockedReason": null
-  },
-  {
-    "actionCode": "TENANT_ACTIVATE",
-    "description": "Activate a tenant after payment",
-    "moduleName": "Platform",
-    "sensitive": false,
-    "lockedReason": null
-  },
-  {
-    "actionCode": "TENANT_SUSPEND_ARCHIVE",
-    "description": "Suspend or archive a tenant",
-    "moduleName": "Platform",
-    "sensitive": false,
-    "lockedReason": null
-  },
-  {
-    "actionCode": "TENANT_SETTINGS",
-    "description": "Change a tenant's limits, features and branding within its plan",
-    "moduleName": "Platform",
-    "sen
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:37.133548Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #164] GET `http://platform.edu360.local:8080/api/platform/roles`
+### [Endpoint #207] GET `http://platform.edu360.local:8080/api/platform/roles`
 
-- **Item Name:** [#165] GET /api/platform/roles (listRoles)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 66 ms
+- **Item Name:** [#208] GET /api/platform/roles (listRoles)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 12 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7281,113 +7680,22 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/roles" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "platformRoleId": "9b985131-e8a5-45c3-85b6-cc34fda6fd45",
-    "roleName": "Browser check role",
-    "basePlatformRole": "BILLING_MANAGER",
-    "sourceTemplateId": "15f94301-2755-8480-849d-501bcf44124a",
-    "status": "ARCHIVED",
-    "actions": [
-      {
-        "actionCode": "INVOICE_MANAGE",
-        "accessMode": "HANDED_OVER"
-      },
-      {
-        "actionCode": "OVERDUE_FLAG",
-        "accessMode": "SHARED"
-      },
-      {
-        "actionCode": "PLATFORM_REPORTS_VIEW",
-        "accessMode": "SHARED"
-      }
-    ],
-    "holders": 0,
-    "createdAt": "2026-11-07T05:36:27.624026Z"
-  },
-  {
-    "platformRoleId": "5e178733-cd99-4b9e-b8a5-73d5c75c52d8",
-    "roleName": "Browser check role 1794029892908",
-    "basePlatformRole": "BILLING_MANAGER",
-    "sourceTemplateId": "15f94301-2755-8480-849d-501bcf44124a",
-    "status": "ARCHIVED",
-    "actions": [
-      {
-        "actionCode": "INVOICE_MANAGE",
-        "accessMode": "HANDED_OVER"
-      },
-      {
-        "actionCode": "OVERDUE_FLAG",
-        "accessMode": "SHARED"
-      },
-      {
-        "actionCode": "PLATFORM_REPORTS_VIEW",
-        "accessMode": "SHARED"
-      }
-    ],
-    "holders": 0,
-    "createdAt": "2026-11-07T05:38:33.134898Z"
-  },
-  {
-    "platformRoleId": "ed78df12-c75b-48ea-8143-f5268fbb3732",
-    "roleName": "Custom Support 0698 v2",
-    "basePlatformRole": "SUPPORT_MANAGER",
-    "sourceTemplateId": null,
-    "status": "ARCHIVED",
-    "actions": [
-      {
-        "actionCode": "INTEGRATION_TYPES_MANAGE",
-        "accessMode": "SHARED"
-      },
-      {
-        "actionCode": "SUPPORT_TICKET_MANAGE",
-        "accessMode": "SHARED"
-      }
-    ],
-    "holders": 0,
-    "createdAt": "2026-11-07T18:17:50.856299Z"
-  },
-  {
-    "platformRoleId": "148e5f24-63f5-4c55-b3de-053f092ce3b9",
-    "roleName": "Custom Support 1855 v2",
-    "basePlatformRole": "SUPPORT_MANAGER",
-    "sourceTemplateId": null,
-    "status": "ARCHIVED",
-    "actions": [
-      {
-        "actionCode": "INTEGRATION_TYPES_MANAGE",
-        "accessMode": "SHARED"
-      },
-      {
-        "actionCode": "SUPPORT_TICKET_MANAGE",
-        "accessMode": "SHARED"
-      }
-    ],
-    "holders": 0,
-    "createdAt": "2026-11-07T18:28:41.919592Z"
-  },
-  {
-    "platformRoleId": "863310dd-985c-40cb-a8fb-c29f97194f1e",
-    "roleName": "Custom Support 2701 v2",
-    "basePlatformRole": "SUPPORT_MANAGER",
-    "sourceTemplateId": null,
-    "status": "ARCHIVED",
-    "actions": [
-      {
-        "actionCode": "INTEGRATION_TYPES_MANAGE",
-        
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:37.233198Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #165] GET `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
+### [Endpoint #208] GET `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
 
-- **Item Name:** [#166] GET /api/platform/roles/{id} (getRole)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 57 ms
+- **Item Name:** [#209] GET /api/platform/roles/{id} (getRole)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 20 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7399,33 +7707,19 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-
 **Response Payload:**
 ```json
 {
-  "platformRoleId": "afec87cd-944e-4e7b-932d-b48f86b5a9d7",
-  "roleName": "Custom Support 8493 v2",
-  "basePlatformRole": "SUPPORT_MANAGER",
-  "sourceTemplateId": null,
-  "status": "ARCHIVED",
-  "actions": [
-    {
-      "actionCode": "INTEGRATION_TYPES_MANAGE",
-      "accessMode": "SHARED"
-    },
-    {
-      "actionCode": "SUPPORT_TICKET_MANAGE",
-      "accessMode": "SHARED"
-    }
-  ],
-  "holders": 0,
-  "createdAt": "2026-11-08T17:19:28.506964Z"
+  "timestamp": "2026-11-19T16:00:37.346139300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #166] POST `http://platform.edu360.local:8080/api/platform/roles`
+### [Endpoint #209] POST `http://platform.edu360.local:8080/api/platform/roles`
 
-- **Item Name:** [#167] POST /api/platform/roles (createRole)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 29 ms
+- **Item Name:** [#210] POST /api/platform/roles (createRole)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 22 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7451,22 +7745,19 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/roles" \
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/roles",
-  "code": "BAD_REQUEST",
-  "error": "Malformed JSON request body",
-  "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:00:34.496013",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:37.491463100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #167] PUT `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
+### [Endpoint #210] PUT `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
 
-- **Item Name:** [#168] PUT /api/platform/roles/{id} (updateRole)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 67 ms
+- **Item Name:** [#211] PUT /api/platform/roles/{id} (updateRole)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 16 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7476,40 +7767,33 @@ curl -X PUT "http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "roleName": "must not be blank",
-    "actions": "must not be null"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:34.631331600",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:37.600419200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #168] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/activation`
+### [Endpoint #211] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/activation`
 
-- **Item Name:** [#169] POST /api/platform/roles/{id}/activation (activate)
-- **HTTP Status Code:** `422`
-- **Response Latency:** 42 ms
+- **Item Name:** [#212] POST /api/platform/roles/{id}/activation (activate)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 18 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7519,36 +7803,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/activation",
-  "code": "BUSINESS_RULE_VIOLATION",
-  "error": "Only a draft or inactive role can be activated.",
-  "message": "Only a draft or inactive role can be activated.",
-  "timestamp": "2026-11-17T18:00:34.760843",
-  "status": 422
+  "timestamp": "2026-11-19T16:00:37.707206Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #169] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/deactivation`
+### [Endpoint #212] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/deactivation`
 
-- **Item Name:** [#170] POST /api/platform/roles/{id}/deactivation (deactivate)
-- **HTTP Status Code:** `422`
-- **Response Latency:** 42 ms
+- **Item Name:** [#213] POST /api/platform/roles/{id}/deactivation (deactivate)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 18 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7558,36 +7839,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/deactivation",
-  "code": "BUSINESS_RULE_VIOLATION",
-  "error": "Only an active role can be deactivated.",
-  "message": "Only an active role can be deactivated.",
-  "timestamp": "2026-11-17T18:00:34.897336600",
-  "status": 422
+  "timestamp": "2026-11-19T16:00:37.819330Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #170] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/archive`
+### [Endpoint #213] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/archive`
 
-- **Item Name:** [#171] POST /api/platform/roles/{id}/archive (archive)
-- **HTTP Status Code:** `422`
-- **Response Latency:** 42 ms
+- **Item Name:** [#214] POST /api/platform/roles/{id}/archive (archive)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7597,36 +7875,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/archive",
-  "code": "BUSINESS_RULE_VIOLATION",
-  "error": "This role is already archived.",
-  "message": "This role is already archived.",
-  "timestamp": "2026-11-17T18:00:35.044877500",
-  "status": 422
+  "timestamp": "2026-11-19T16:00:37.953691Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #171] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/actions/TENANT_EXPORT_REQUEST/take-back`
+### [Endpoint #214] POST `http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/actions/TENANT_EXPORT_REQUEST/take-back`
 
-- **Item Name:** [#172] POST /api/platform/roles/{id}/actions/{actionCode}/take-back (takeBack)
-- **HTTP Status Code:** `422`
-- **Response Latency:** 39 ms
+- **Item Name:** [#215] POST /api/platform/roles/{id}/actions/{actionCode}/take-back (takeBack)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7636,38 +7911,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/roles/afec87cd-944e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/actions/TENANT_EXPORT_REQUEST/take-back",
-  "code": "BUSINESS_RULE_VIOLATION",
-  "error": "An archived role can't be changed.",
-  "message": "An archived role can't be changed.",
-  "timestamp": "2026-11-17T18:00:35.162918600",
-  "status": 422
+  "timestamp": "2026-11-19T16:00:38.089189800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #172] GET `http://platform.edu360.local:8080/api/platform/role-templates`
+### [Endpoint #215] GET `http://platform.edu360.local:8080/api/platform/role-templates`
 
-- **Item Name:** [#173] GET /api/platform/role-templates (listTemplates)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 40 ms
+- **Item Name:** [#216] GET /api/platform/role-templates (listTemplates)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 17 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7678,103 +7950,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/role-templates" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "platformRoleTemplateId": "15f94301-2755-8480-849d-501bcf44124a",
-    "templateName": "Billing Manager",
-    "description": "Standard starting point for this role.",
-    "basePlatformRole": "BILLING_MANAGER",
-    "standard": true,
-    "locked": false,
-    "status": "ACTIVE",
-    "actionCodes": [
-      "INVOICE_MANAGE",
-      "OVERDUE_FLAG",
-      "PLATFORM_REPORTS_VIEW"
-    ]
-  },
-  {
-    "platformRoleTemplateId": "134c476c-e44a-798c-2ccf-ac03ece95e79",
-    "templateName": "Data Protection Officer",
-    "description": "Standard starting point for this role.",
-    "basePlatformRole": "DATA_PROTECTION_OFFICER",
-    "standard": true,
-    "locked": true,
-    "status": "ACTIVE",
-    "actionCodes": [
-      "APPROVAL_DELEGATE",
-      "RBAC_MAPPING_CHECK",
-      "RETENTION_CHANGE_APPROVE",
-      "TENANT_DELETION_APPROVE",
-      "TENANT_EXPORT_APPROVE"
-    ]
-  },
-  {
-    "platformRoleTemplateId": "b0f46ab8-c65d-e585-7777-53589edd2d94",
-    "templateName": "Platform Admin",
-    "description": "Standard starting point for this role.",
-    "basePlatformRole": "PLATFORM_ADMIN",
-    "standard": true,
-    "locked": false,
-    "status": "ARCHIVED",
-    "actionCodes": [
-      "BACKUP_STATUS_VIEW",
-      "FEATURE_TOGGLE",
-      "INTEGRATION_TYPES_MANAGE",
-      "PLAN_MANAGE",
-      "PLATFORM_AUDIT_VIEW",
-      "RELEASE_MANAGE",
-      "SUPPORT_TICKET_MANAGE",
-      "TENANT_CREATE",
-      "TENANT_SETTINGS",
-      "USAGE_COUNTS_VIEW"
-    ]
-  },
-  {
-    "platformRoleTemplateId": "de63b209-eaf8-2f77-cc7c-f1155fbe2efb",
-    "templateName": "Release Manager",
-    "description": "Standard starting point for this role.",
-    "basePlatformRole": "RELEASE_MANAGER",
-    "standard": true,
-    "locked": false,
-    "status": "ACTIVE",
-    "actionCodes": [
-      "RELEASE_MANAGE"
-    ]
-  },
-  {
-    "platformRoleTemplateId": "9d8395ad-fd0c-a88b-28de-e40dbbc5d166",
-    "templateName": "Support Manager",
-    "description": "Standard starting point for this role.",
-    "basePlatformRole": "SUPPORT_MANAGER",
-    "standard": true,
-    "locked": false,
-    "status": "ACTIVE",
-    "actionCodes": [
-      "PLATFORM_REPORTS_VIEW",
-      "SUPPORT_ACCESS_USE",
-      "SUPPORT_TICKET_MANAGE"
-    ]
-  },
-  {
-    "platformRoleTemplateId": "1345b594-39f3-4c7a-8b93-669c18033a4f",
-    "templateName": "Support Template 0370 v2",
-    "description": "Updated operations template",
-    "basePlatformRole": "SUPPORT_MANAGER",
-    "standard": false,
-    "locked": false,
-    "status": "ARCHIVED",
-    "actionCo
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:38.208113Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #173] POST `http://platform.edu360.local:8080/api/platform/role-templates`
+### [Endpoint #216] POST `http://platform.edu360.local:8080/api/platform/role-templates`
 
-- **Item Name:** [#174] POST /api/platform/role-templates (createTemplate)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 32 ms
+- **Item Name:** [#217] POST /api/platform/role-templates (createTemplate)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 16 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7784,41 +7973,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/role-templates" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/role-templates",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "templateName": "must not be blank",
-    "basePlatformRole": "must not be null",
-    "actionCodes": "must not be null"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:35.420367100",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:38.334234200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #174] PUT `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D`
+### [Endpoint #217] PUT `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D`
 
-- **Item Name:** [#175] PUT /api/platform/role-templates/{id} (updateTemplate)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 27 ms
+- **Item Name:** [#218] PUT /api/platform/role-templates/{id} (updateTemplate)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 25 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7828,36 +8009,33 @@ curl -X PUT "http://platform.edu360.local:8080/api/platform/role-templates/%7Bro
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/role-templates/%7BroleTemplateId%7D",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:35.532566",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:38.466065500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #175] POST `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/reset`
+### [Endpoint #218] POST `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/reset`
 
-- **Item Name:** [#176] POST /api/platform/role-templates/{id}/reset (resetTemplate)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 25 ms
+- **Item Name:** [#219] POST /api/platform/role-templates/{id}/reset (resetTemplate)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 33 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7867,36 +8045,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/role-templates/%7Br
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/role-templates/%7BroleTemplateId%7D/reset",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:35.645230100",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:38.653480700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #176] POST `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/archive`
+### [Endpoint #219] POST `http://platform.edu360.local:8080/api/platform/role-templates/%7BroleTemplateId%7D/archive`
 
-- **Item Name:** [#177] POST /api/platform/role-templates/{id}/archive (archiveTemplate)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 21 ms
+- **Item Name:** [#220] POST /api/platform/role-templates/{id}/archive (archiveTemplate)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 23 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7906,36 +8081,33 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/role-templates/%7Br
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/role-templates/%7BroleTemplateId%7D/archive",
-  "code": "TYPE_MISMATCH",
-  "error": "Invalid parameter: id",
-  "message": "Invalid parameter: id",
-  "timestamp": "2026-11-17T18:00:35.755066",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:38.783324400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #177] POST `http://platform.edu360.local:8080/api/platform/step-ins`
+### [Endpoint #220] POST `http://platform.edu360.local:8080/api/platform/step-ins`
 
-- **Item Name:** [#178] POST /api/platform/step-ins (stepIn)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 25 ms
+- **Item Name:** [#221] POST /api/platform/step-ins (stepIn)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 19 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -7945,42 +8117,35 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/step-ins" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.932Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.932Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/step-ins",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "reason": "must not be blank",
-    "actionCode": "must not be blank"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:00:35.863649500",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:38.925585200Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #178] GET `http://platform.edu360.local:8080/api/platform/step-ins`
+### [Endpoint #221] GET `http://platform.edu360.local:8080/api/platform/step-ins`
 
-- **Item Name:** [#179] GET /api/platform/step-ins (recentStepIns)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 30 ms
+- **Item Name:** [#222] GET /api/platform/step-ins (recentStepIns)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -7991,18 +8156,22 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/step-ins" \
 
 **Response Payload:**
 ```json
-[]
+{
+  "timestamp": "2026-11-19T16:00:39.067671900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #179] GET `http://platform.edu360.local:8080/api/platform/security-policy`
+### [Endpoint #222] GET `http://platform.edu360.local:8080/api/platform/security-policy`
 
-- **Item Name:** [#180] GET /api/platform/security-policy (getPolicy)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 33 ms
+- **Item Name:** [#223] GET /api/platform/security-policy (policy)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 10 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8014,26 +8183,19 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/security-policy" \
 **Response Payload:**
 ```json
 {
-  "minPasswordLength": 12,
-  "requireSpecialChar": true,
-  "requireDigit": true,
-  "maxFailedLogins": 5,
-  "lockoutMinutes": 15,
-  "idleSessionTimeoutMinutes": 50,
-  "mfaRequiredForPrivileged": true,
-  "defaultBackupRetentionDays": 90,
-  "passwordRotationDays": 120,
-  "realmSync": []
+  "timestamp": "2026-11-19T16:00:39.165030500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #180] PUT `http://platform.edu360.local:8080/api/platform/security-policy`
+### [Endpoint #223] PUT `http://platform.edu360.local:8080/api/platform/security-policy`
 
-- **Item Name:** [#181] PUT /api/platform/security-policy (updatePolicy)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 21 ms
+- **Item Name:** [#224] PUT /api/platform/security-policy (policy)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 17 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -8062,24 +8224,47 @@ curl -X PUT "http://platform.edu360.local:8080/api/platform/security-policy" \
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/security-policy",
-  "code": "BAD_REQUEST",
-  "error": "Malformed JSON request body",
-  "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:00:36.175780400",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:39.287447100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #181] POST `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync`
+### [Endpoint #224] GET `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync/preview`
 
-- **Item Name:** [#182] POST /api/platform/security-policy/realm-sync (syncRealms)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 34827 ms
+- **Item Name:** [#225] GET /api/platform/security-policy/realm-sync/preview (previewRealmSync)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 11 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://platform.edu360.local:8080/api/platform/security-policy/realm-sync/preview" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:39.433445800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #225] POST `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync`
+
+- **Item Name:** [#226] POST /api/platform/security-policy/realm-sync (syncRealms)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 18 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8105,166 +8290,63 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/security-policy/rea
 
 **Response Payload:**
 ```json
-[
-  {
-    "realm": "edu360-platform",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "audit-corp-1938-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "test-inst-8151-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "live-test-444-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "live-test-4946-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "subdomain-college-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "school-86048-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "test-inst-4476-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "test-inst-6768-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "pwcheck-159343-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "live-test-2710-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "live-audit-5222-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "live-5408-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "pwflow-751314-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "pwforce-314895-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "temp-del-6515-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "soundarya-university-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "subdomain-university-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "subdomain-school-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "manoj-test-institution-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "manoj-test123-institution-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "agy-postman-check1-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "test-inst-9806-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "manoj-success-1028-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "test-inst-5519-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "live-test-1275-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "abc-university",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "audit-corp-0912-realm",
-    "applied": true,
-    "error": null
-  },
-  {
-    "realm": "xyz-university",
-    "applied": true,
-    "error": null
-  },
-  {
-    "real
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:39.536133300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #182] GET `http://platform.edu360.local:8080/api/platform/incidents`
+### [Endpoint #226] POST `http://platform.edu360.local:8080/api/platform/security-policy/realm-sync/retry`
 
-- **Item Name:** [#183] GET /api/platform/incidents (listIncidents)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 80 ms
+- **Item Name:** [#227] POST /api/platform/security-policy/realm-sync/retry (retryFailedRealmSync)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 26 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/security-policy/realm-sync/retry" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "maxFailedAttempts": 5, "lockoutDurationMinutes": 15, "mfaEnforcedRoles": [ "PLATFORM_ADMIN", "PRODUCT_OWNER" ], "sessionTimeoutMinutes": 30 }'
+```
+
+**Request Payload:**
+```json
+{
+  "maxFailedAttempts": 5,
+  "lockoutDurationMinutes": 15,
+  "mfaEnforcedRoles": [
+    "PLATFORM_ADMIN",
+    "PRODUCT_OWNER"
+  ],
+  "sessionTimeoutMinutes": 30
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:39.693408300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #227] GET `http://platform.edu360.local:8080/api/platform/incidents`
+
+- **Item Name:** [#228] GET /api/platform/incidents (incidents)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 22 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8275,83 +8357,22 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/incidents" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "securityIncidentId": "5d8e11ef-6400-4f2a-9fbd-04643f666466",
-    "tenantId": "00b859cc-30c7-49bb-bc5c-99b0f21956fb",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-15T04:07:09.578416Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "DETECTED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": null,
-    "createdAt": "2026-11-15T04:07:09.578416Z"
-  },
-  {
-    "securityIncidentId": "26eff524-68cb-47dc-be7e-b757209c1d3d",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-15T04:03:06.491009Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "DETECTED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": null,
-    "createdAt": "2026-11-15T04:03:06.491009Z"
-  },
-  {
-    "securityIncidentId": "8a308d36-fc74-4c73-ad78-1cb6e66cc6cd",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-08T17:35:46.708857Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "CLOSED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": "IP address rate-limited by gateway firewall.",
-    "createdAt": "2026-11-08T17:35:46.708857Z"
-  },
-  {
-    "securityIncidentId": "858b6110-0237-4583-8dd4-f0b0aa8a6647",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-08T17:23:08.603069Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "CLOSED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": "IP address rate-limited by gateway firewall.",
-    "createdAt": "2026-11-08T17:23:08.603069Z"
-  },
-  {
-    "securityIncidentId": "efde0d86-86c2-4aeb-8dba-d30923ff3b75",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-08T17:19:28.646691Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "CLOSED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": "IP address rate-limited by gateway firewall.",
-    "
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:39.840811Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #183] GET `http://platform.edu360.local:8080/api/platform/security-incidents`
+### [Endpoint #228] GET `http://platform.edu360.local:8080/api/platform/security-incidents`
 
-- **Item Name:** [#184] GET /api/platform/security-incidents (listIncidents)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 24 ms
+- **Item Name:** [#229] GET /api/platform/security-incidents (incidents)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 14 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8362,80 +8383,19 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/security-incidents" 
 
 **Response Payload:**
 ```json
-[
-  {
-    "securityIncidentId": "5d8e11ef-6400-4f2a-9fbd-04643f666466",
-    "tenantId": "00b859cc-30c7-49bb-bc5c-99b0f21956fb",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-15T04:07:09.578416Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "DETECTED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": null,
-    "createdAt": "2026-11-15T04:07:09.578416Z"
-  },
-  {
-    "securityIncidentId": "26eff524-68cb-47dc-be7e-b757209c1d3d",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-15T04:03:06.491009Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "DETECTED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": null,
-    "createdAt": "2026-11-15T04:03:06.491009Z"
-  },
-  {
-    "securityIncidentId": "8a308d36-fc74-4c73-ad78-1cb6e66cc6cd",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-08T17:35:46.708857Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "CLOSED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": "IP address rate-limited by gateway firewall.",
-    "createdAt": "2026-11-08T17:35:46.708857Z"
-  },
-  {
-    "securityIncidentId": "858b6110-0237-4583-8dd4-f0b0aa8a6647",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-08T17:23:08.603069Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "CLOSED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": "IP address rate-limited by gateway firewall.",
-    "createdAt": "2026-11-08T17:23:08.603069Z"
-  },
-  {
-    "securityIncidentId": "efde0d86-86c2-4aeb-8dba-d30923ff3b75",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "title": "Anomalous Failed Login Cluster",
-    "detectedAt": "2026-11-08T17:19:28.646691Z",
-    "severity": "MEDIUM",
-    "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-    "status": "CLOSED",
-    "externalNotificationRequired": false,
-    "externalNotifiedAt": null,
-    "closureNote": "IP address rate-limited by gateway firewall.",
-    "
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:39.968566100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #184] POST `http://platform.edu360.local:8080/api/platform/incidents`
+### [Endpoint #229] POST `http://platform.edu360.local:8080/api/platform/incidents`
 
-- **Item Name:** [#185] POST /api/platform/incidents (createIncident)
-- **HTTP Status Code:** `400`
+- **Item Name:** [#230] POST /api/platform/incidents (incident)
+- **HTTP Status Code:** `401`
 - **Response Latency:** 18 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
@@ -8462,22 +8422,19 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/incidents" \
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/incidents",
-  "code": "BAD_REQUEST",
-  "error": "Malformed JSON request body",
-  "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:01:11.458947800",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:40.089329400Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #185] POST `http://platform.edu360.local:8080/api/platform/security-incidents`
+### [Endpoint #230] POST `http://platform.edu360.local:8080/api/platform/security-incidents`
 
-- **Item Name:** [#186] POST /api/platform/security-incidents (createIncident)
-- **HTTP Status Code:** `400`
-- **Response Latency:** 20 ms
+- **Item Name:** [#231] POST /api/platform/security-incidents (incident)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -8503,24 +8460,21 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/security-incidents"
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/security-incidents",
-  "code": "BAD_REQUEST",
-  "error": "Malformed JSON request body",
-  "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:01:11.585157800",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:40.232670600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #186] PATCH `http://platform.edu360.local:8080/api/platform/incidents/78969c66-4936-4127-a1fe-405a4792daa6`
+### [Endpoint #231] PATCH `http://platform.edu360.local:8080/api/platform/incidents/78969c66-4936-4127-a1fe-405a4792daa6`
 
-- **Item Name:** [#187] PATCH /api/platform/incidents/{id} (updateIncident)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 81 ms
+- **Item Name:** [#232] PATCH /api/platform/incidents/{id} (updateIncident)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 23 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8544,27 +8498,19 @@ curl -X PATCH "http://platform.edu360.local:8080/api/platform/incidents/78969c66
 **Response Payload:**
 ```json
 {
-  "securityIncidentId": "78969c66-4936-4127-a1fe-405a4792daa6",
-  "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-  "title": "Cluster incident",
-  "detectedAt": "2026-11-07T17:01:25.341635Z",
-  "severity": "MEDIUM",
-  "ownerUserId": "8679213a-ccbc-456e-b4a4-34772f44036d",
-  "status": "DETECTED",
-  "externalNotificationRequired": false,
-  "externalNotifiedAt": null,
-  "closureNote": null,
-  "createdAt": "2026-11-07T17:01:25.341635Z"
+  "timestamp": "2026-11-19T16:00:40.379195500Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #187] PATCH `http://platform.edu360.local:8080/api/platform/security-incidents/d9e8a7f6-1234-4567-89ab-cdef01234567`
+### [Endpoint #232] PATCH `http://platform.edu360.local:8080/api/platform/security-incidents/d9e8a7f6-1234-4567-89ab-cdef01234567`
 
-- **Item Name:** [#188] PATCH /api/platform/security-incidents/{id} (updateIncident)
-- **HTTP Status Code:** `404`
-- **Response Latency:** 26 ms
+- **Item Name:** [#233] PATCH /api/platform/security-incidents/{id} (updateIncident)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 27 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -8590,24 +8536,21 @@ curl -X PATCH "http://platform.edu360.local:8080/api/platform/security-incidents
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/security-incidents/d9e8a7f6-1234-4567-89ab-cdef01234567",
-  "code": "NOT_FOUND",
-  "error": "Security incident not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
-  "message": "Security incident not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
-  "timestamp": "2026-11-17T18:01:11.876270500",
-  "status": 404
+  "timestamp": "2026-11-19T16:00:40.515445800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #188] GET `http://platform.edu360.local:8080/api/platform/support-tickets`
+### [Endpoint #233] GET `http://platform.edu360.local:8080/api/platform/support-tickets`
 
-- **Item Name:** [#189] GET /api/platform/support-tickets (listTickets)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 55 ms
+- **Item Name:** [#234] GET /api/platform/support-tickets (listTickets)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 22 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8618,89 +8561,22 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/support-tickets" \
 
 **Response Payload:**
 ```json
-[
-  {
-    "supportTicketId": "7cda73f1-2a7d-404b-9778-aec6fa540fb1",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "ticketNumber": "SUP-2026-91551",
-    "raisedByUserId": "2dfffe96-cd56-4181-bcd4-8b7ec37cfdca",
-    "raisedByName": "University Group Administrator",
-    "subject": "Need configuration assistance",
-    "description": "Requesting support review of tenant settings",
-    "priority": "HIGH",
-    "category": "SYSTEM_ISSUE",
-    "status": "NEW",
-    "assignedTo": null,
-    "escalatedAt": null,
-    "closedAt": null,
-    "resolutionNote": null,
-    "createdAt": "2026-11-08T18:20:24.428751Z",
-    "rowVersion": 1
-  },
-  {
-    "supportTicketId": "292db0c7-3dda-4056-9901-302d6181c9db",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "ticketNumber": "SUP-2026-E137A",
-    "raisedByUserId": "2dfffe96-cd56-4181-bcd4-8b7ec37cfdca",
-    "raisedByName": "University Group Administrator",
-    "subject": "Need configuration assistance",
-    "description": "Requesting support review of tenant settings",
-    "priority": "HIGH",
-    "category": "SYSTEM_ISSUE",
-    "status": "NEW",
-    "assignedTo": null,
-    "escalatedAt": null,
-    "closedAt": null,
-    "resolutionNote": null,
-    "createdAt": "2026-11-08T18:24:54.875012Z",
-    "rowVersion": 1
-  },
-  {
-    "supportTicketId": "95d28de8-c08b-4d6c-917c-2fb6b71d774d",
-    "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-    "ticketNumber": "SUP-2026-626F4",
-    "raisedByUserId": "2dfffe96-cd56-4181-bcd4-8b7ec37cfdca",
-    "raisedByName": "University Group Administrator",
-    "subject": "Need configuration assistance",
-    "description": "Requesting support review of tenant settings",
-    "priority": "HIGH",
-    "category": "SYSTEM_ISSUE",
-    "status": "NEW",
-    "assignedTo": null,
-    "escalatedAt": null,
-    "closedAt": null,
-    "resolutionNote": null,
-    "createdAt": "2026-11-08T18:28:28.839336Z",
-    "rowVersion": 1
-  },
-  {
-    "supportTicketId": "45212d3f-c6c8-4313-835f-12aebc323143",
-    "tenantId": "00b859cc-30c7-49bb-bc5c-99b0f21956fb",
-    "ticketNumber": "SUP-2026-CD44A",
-    "raisedByUserId": "f171d815-4b97-4c8c-981e-4eaab08c8d13",
-    "raisedByName": "Prof. Rajesh Sharma Updated 4134",
-    "subject": "Need configuration assistance",
-    "description": "Requesting support review of tenant settings",
-    "priority": "HIGH",
-    "category": "SYSTEM_ISSUE",
-    "status": "NEW",
-    "assignedTo": null,
-    "escalatedAt": null,
-    "closedAt": null,
-    "resolutionNote": null,
-    "
-... [truncated]
+{
+  "timestamp": "2026-11-19T16:00:40.654545800Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #189] GET `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608`
+### [Endpoint #234] GET `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608`
 
-- **Item Name:** [#190] GET /api/platform/support-tickets/{id} (getTicket)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 29 ms
+- **Item Name:** [#235] GET /api/platform/support-tickets/{id} (getTicket)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 17 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8712,34 +8588,21 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/support-tickets/50d0
 **Response Payload:**
 ```json
 {
-  "supportTicketId": "50d06b66-75d5-44d8-b9f9-448b971ad608",
-  "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-  "ticketNumber": "SUP-2026-8FE2A",
-  "raisedByUserId": "2dfffe96-cd56-4181-bcd4-8b7ec37cfdca",
-  "raisedByName": "Manoj Audit Director",
-  "subject": "Assistance configuring SAML SSO",
-  "description": "We are linking our external IdP and require metadata verification.",
-  "priority": "MEDIUM",
-  "category": "AUTHENTICATION",
-  "status": "TRIAGED",
-  "assignedTo": null,
-  "escalatedAt": null,
-  "closedAt": null,
-  "resolutionNote": null,
-  "createdAt": "2026-11-07T17:37:05.606832Z",
-  "rowVersion": 3
+  "timestamp": "2026-11-19T16:00:40.809746600Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #190] PATCH `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608`
+### [Endpoint #235] PATCH `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608`
 
-- **Item Name:** [#191] PATCH /api/platform/support-tickets/{id} (updateTicket)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 59 ms
+- **Item Name:** [#236] PATCH /api/platform/support-tickets/{id} (updateTicket)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 34 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8747,46 +8610,68 @@ curl -X PATCH "http://platform.edu360.local:8080/api/platform/support-tickets/50
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "supportTicketId": "50d06b66-75d5-44d8-b9f9-448b971ad608",
-  "tenantId": "6fb12087-2ea8-4259-b14a-5cf9e0fc7ab0",
-  "ticketNumber": "SUP-2026-8FE2A",
-  "raisedByUserId": "2dfffe96-cd56-4181-bcd4-8b7ec37cfdca",
-  "raisedByName": "Manoj Audit Director",
-  "subject": "Assistance configuring SAML SSO",
-  "description": "We are linking our external IdP and require metadata verification.",
-  "priority": "MEDIUM",
-  "category": "AUTHENTICATION",
-  "status": "TRIAGED",
-  "assignedTo": null,
-  "escalatedAt": null,
-  "closedAt": null,
-  "resolutionNote": null,
-  "createdAt": "2026-11-07T17:37:05.606832Z",
-  "rowVersion": 3
+  "timestamp": "2026-11-19T16:00:40.974045100Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #191] POST `http://platform.edu360.local:8080/api/platform/support-sessions`
+### [Endpoint #236] POST `http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608/escalation`
 
-- **Item Name:** [#192] POST /api/platform/support-sessions (assumeSupportSession)
-- **HTTP Status Code:** `400`
+- **Item Name:** [#237] POST /api/platform/support-tickets/{id}/escalation (escalateTicket)
+- **HTTP Status Code:** `401`
 - **Response Latency:** 22 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://platform.edu360.local:8080/api/platform/support-tickets/50d06b66-75d5-44d8-b9f9-448b971ad608/escalation" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "escalationReason": "Antigravity Postman Check 1 Urgent Escalation" }'
+```
+
+**Request Payload:**
+```json
+{
+  "escalationReason": "Antigravity Postman Check 1 Urgent Escalation"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:41.131931700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #237] POST `http://platform.edu360.local:8080/api/platform/support-sessions`
+
+- **Item Name:** [#238] POST /api/platform/support-sessions (assumeSupportSession)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -8796,41 +8681,71 @@ curl -X POST "http://platform.edu360.local:8080/api/platform/support-sessions" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.380Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.380Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "path": "/api/platform/support-sessions",
-  "code": "VALIDATION_FAILED",
-  "fieldErrors": {
-    "ticketId": "must not be null"
-  },
-  "error": "Validation failed",
-  "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:12.393720500",
-  "status": 400
+  "timestamp": "2026-11-19T16:00:41.257563700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #192] GET `http://platform.edu360.local:8080/api/platform/support-access-grants`
+### [Endpoint #238] DELETE `http://platform.edu360.local:8080/api/platform/support-sessions/current`
 
-- **Item Name:** [#193] GET /api/platform/support-access-grants (listGrants)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 35 ms
+- **Item Name:** [#239] DELETE /api/platform/support-sessions/current (endCurrentSupportSession)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 20 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X DELETE "http://platform.edu360.local:8080/api/platform/support-sessions/current" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
+```
+
+**Request Payload:**
+```json
+{
+  "name": "Antigravity Postman Check 1 Payload",
+  "timestamp": "2026-11-19T15:59:54.933Z"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "timestamp": "2026-11-19T16:00:41.426054Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
+```
+
+---
+
+### [Endpoint #239] GET `http://platform.edu360.local:8080/api/platform/support-access-grants`
+
+- **Item Name:** [#240] GET /api/platform/support-access-grants (listGrants)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 29 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -8841,16 +8756,20 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/support-access-grant
 
 **Response Payload:**
 ```json
-[]
+{
+  "timestamp": "2026-11-19T16:00:41.549074900Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #193] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets`
+### [Endpoint #240] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets`
 
-- **Item Name:** [#194] POST /api/tenants/{tenantId}/support-tickets (raiseTicket)
+- **Item Name:** [#241] POST /api/tenants/{tenantId}/support-tickets (raiseTicket)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 109 ms
+- **Response Latency:** 89 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -8860,14 +8779,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -8882,18 +8801,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:12.667020100",
+  "timestamp": "2026-11-19T21:30:41.793728100",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #194] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets`
+### [Endpoint #241] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-tickets`
 
-- **Item Name:** [#195] GET /api/tenants/{tenantId}/support-tickets (myTickets)
+- **Item Name:** [#242] GET /api/tenants/{tenantId}/support-tickets (myTickets)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 121 ms
+- **Response Latency:** 215 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -8906,16 +8825,53 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 **Response Payload:**
 ```json
-[]
+[
+  {
+    "supportTicketId": "cfc258d2-73e8-4ead-b826-f2f6022b116f",
+    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+    "ticketNumber": "SUP-2026-7CD21",
+    "raisedByUserId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+    "raisedByName": "Antigravity Admin Check 1",
+    "subject": "Upgrade request",
+    "description": "Upgrade requested from the Users page. Accounts in use: 13 (no limit set).",
+    "priority": "MEDIUM",
+    "category": "BILLING",
+    "status": "NEW",
+    "assignedTo": null,
+    "escalatedAt": null,
+    "closedAt": null,
+    "resolutionNote": null,
+    "createdAt": "2026-11-19T15:58:01.711723Z",
+    "rowVersion": 1
+  },
+  {
+    "supportTicketId": "65d690ef-7cf1-4dc2-9365-9212d167af22",
+    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+    "ticketNumber": "SUP-2026-82748",
+    "raisedByUserId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+    "raisedByName": "Antigravity Admin Check 1",
+    "subject": "Upgrade request",
+    "description": "Upgrade requested from the Users page. Accounts in use: 12 (no limit set).",
+    "priority": "MEDIUM",
+    "category": "BILLING",
+    "status": "NEW",
+    "assignedTo": null,
+    "escalatedAt": null,
+    "closedAt": null,
+    "resolutionNote": null,
+    "createdAt": "2026-11-19T15:50:04.768093Z",
+    "rowVersion": 1
+  }
+]
 ```
 
 ---
 
-### [Endpoint #195] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-access-grants`
+### [Endpoint #242] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/support-access-grants`
 
-- **Item Name:** [#196] POST /api/tenants/{tenantId}/support-access-grants (grantAccess)
+- **Item Name:** [#243] POST /api/tenants/{tenantId}/support-access-grants (grantAccess)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 66 ms
+- **Response Latency:** 84 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -8925,14 +8881,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -8947,18 +8903,67 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:12.984171700",
+  "timestamp": "2026-11-19T21:30:42.356754100",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #196] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/backup-status`
+### [Endpoint #243] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/upgrade-requests`
 
-- **Item Name:** [#197] GET /api/tenants/{tenantId}/backup-status (backupStatus)
+- **Item Name:** [#244] POST /api/tenants/{tenantId}/upgrade-requests (ticket)
+- **HTTP Status Code:** `201`
+- **Response Latency:** 135 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/upgrade-requests" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "targetPlanId": "df1747f1-e6c5-4d99-b774-795d35edf430", "reason": "Antigravity Postman Check 1 Upgrade Request" }'
+```
+
+**Request Payload:**
+```json
+{
+  "targetPlanId": "df1747f1-e6c5-4d99-b774-795d35edf430",
+  "reason": "Antigravity Postman Check 1 Upgrade Request"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "supportTicketId": "d9e57523-2f9d-471b-b43e-9c7d1fee758c",
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "ticketNumber": "SUP-2026-CD8BC",
+  "raisedByUserId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+  "raisedByName": "Antigravity Admin Check 1",
+  "subject": "Upgrade request",
+  "description": "Upgrade requested from the Users page. Accounts in use: 14 (no limit set).",
+  "priority": "MEDIUM",
+  "category": "BILLING",
+  "status": "NEW",
+  "assignedTo": null,
+  "escalatedAt": null,
+  "closedAt": null,
+  "resolutionNote": null,
+  "createdAt": "2026-11-19T16:00:42.579331800Z",
+  "rowVersion": 1
+}
+```
+
+---
+
+### [Endpoint #244] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/backup-status`
+
+- **Item Name:** [#245] GET /api/tenants/{tenantId}/backup-status (backupStatus)
 - **HTTP Status Code:** `403`
-- **Response Latency:** 100 ms
+- **Response Latency:** 98 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -8976,20 +8981,70 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "FORBIDDEN",
   "error": "The active role for this scope does not hold action BACKUP_STATUS_VIEW.",
   "message": "The active role for this scope does not hold action BACKUP_STATUS_VIEW.",
-  "timestamp": "2026-11-17T18:01:13.162198600",
+  "timestamp": "2026-11-19T21:30:42.783423100",
   "status": 403
 }
 ```
 
 ---
 
-### [Endpoint #197] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/usage`
+### [Endpoint #245] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/branding`
 
-- **Item Name:** [#198] GET /api/platform/tenants/{tenantId}/usage (getTenantUsage)
+- **Item Name:** [#246] GET /api/tenants/{tenantId}/branding (branding)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 34 ms
+- **Response Latency:** 60 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/branding" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+{
+  "hasLogo": false,
+  "logoVersion": null,
+  "primary": null,
+  "accent": null,
+  "colorsAllowed": false
+}
+```
+
+---
+
+### [Endpoint #246] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/branding/logo`
+
+- **Item Name:** [#247] GET /api/tenants/{tenantId}/branding/logo (logo)
+- **HTTP Status Code:** `404`
+- **Response Latency:** 59 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/branding/logo" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json"
+```
+
+**Response Payload:**
+```json
+[Binary file payload stream]
+```
+
+---
+
+### [Endpoint #247] GET `http://platform.edu360.local:8080/api/platform/tenants/97392262-5e24-4c36-8449-449215019f2c/usage`
+
+- **Item Name:** [#248] GET /api/platform/tenants/{tenantId}/usage (getTenantUsage)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 21 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -9000,18 +9055,22 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/tenants/97392262-5e2
 
 **Response Payload:**
 ```json
-[]
+{
+  "timestamp": "2026-11-19T16:00:43.268714300Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
+}
 ```
 
 ---
 
-### [Endpoint #198] GET `http://platform.edu360.local:8080/api/platform/usage-counts`
+### [Endpoint #248] GET `http://platform.edu360.local:8080/api/platform/usage-counts`
 
-- **Item Name:** [#199] GET /api/platform/usage-counts (usageCounts)
-- **HTTP Status Code:** `200`
-- **Response Latency:** 56 ms
+- **Item Name:** [#249] GET /api/platform/usage-counts (counts)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 15 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -9023,37 +9082,19 @@ curl -X GET "http://platform.edu360.local:8080/api/platform/usage-counts" \
 **Response Payload:**
 ```json
 {
-  "totalTenantCount": 33,
-  "tenantsInAnalytics": 33,
-  "tenantsOptedOut": 0,
-  "metrics": [
-    {
-      "metricCode": "LOGINS",
-      "value": null,
-      "asOfDate": null
-    },
-    {
-      "metricCode": "ATTENDANCE_MARKED",
-      "value": null,
-      "asOfDate": null
-    },
-    {
-      "metricCode": "FEES_PAID_ONLINE",
-      "value": null,
-      "asOfDate": null
-    }
-  ],
-  "totalUserCountGap": "Not available: no table in the committed sql/ bundle materializes a platform-wide user count, and computing one by querying every tenant's own RLS-scoped data from a platform request would break tenant isolation by design. Flagged as an open gap rather than estimated."
+  "timestamp": "2026-11-19T16:00:43.384710700Z",
+  "status": 401,
+  "error": "This session has been signed out. Please sign in again."
 }
 ```
 
 ---
 
-### [Endpoint #199] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles`
+### [Endpoint #249] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles`
 
-- **Item Name:** [#200] GET /api/tenants/{tenantId}/roles (listRoles)
+- **Item Name:** [#250] GET /api/tenants/{tenantId}/roles (listRoles)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 102 ms
+- **Response Latency:** 75 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -9154,9 +9195,9 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #200] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments?scopeType=TENANT`
+### [Endpoint #250] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments?scopeType=TENANT`
 
-- **Item Name:** [#201] GET /api/tenants/{tenantId}/users/{userId}/role-assignments (listUserRoleAssignments)
+- **Item Name:** [#251] GET /api/tenants/{tenantId}/users/{userId}/role-assignments (listUserRoleAssignments)
 - **HTTP Status Code:** `200`
 - **Response Latency:** 80 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
@@ -9219,11 +9260,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #201] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments`
+### [Endpoint #251] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/role-assignments`
 
-- **Item Name:** [#202] POST /api/tenants/{tenantId}/users/{userId}/role-assignments (assignRole)
+- **Item Name:** [#252] POST /api/tenants/{tenantId}/users/{userId}/role-assignments (user)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 50 ms
+- **Response Latency:** 75 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9252,18 +9293,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "BAD_REQUEST",
   "error": "Malformed JSON request body",
   "message": "Malformed JSON request body",
-  "timestamp": "2026-11-17T18:01:13.869615900",
+  "timestamp": "2026-11-19T21:30:43.913668800",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #202] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/role-assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed/end`
+### [Endpoint #252] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/role-assignments/d0b9e228-2d21-44b7-b637-b65fc6e7b6ed/end`
 
-- **Item Name:** [#203] POST /api/tenants/{tenantId}/role-assignments/{assignmentId}/end (endRoleAssignment)
+- **Item Name:** [#253] POST /api/tenants/{tenantId}/role-assignments/{assignmentId}/end (once)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 80 ms
+- **Response Latency:** 101 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9292,18 +9333,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "NOT_FOUND",
   "error": "Role assignment d0b9e228-2d21-44b7-b637-b65fc6e7b6ed not found.",
   "message": "Role assignment d0b9e228-2d21-44b7-b637-b65fc6e7b6ed not found.",
-  "timestamp": "2026-11-17T18:01:14.033283800",
+  "timestamp": "2026-11-19T21:30:44.122462300",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #203] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
+### [Endpoint #253] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
 
-- **Item Name:** [#204] GET /api/tenants/{tenantId}/roles/{roleDefinitionId} (getRole)
+- **Item Name:** [#254] GET /api/tenants/{tenantId}/roles/{roleDefinitionId} (getRole)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 73 ms
+- **Response Latency:** 97 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9321,18 +9362,18 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
   "code": "NOT_FOUND",
   "error": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
   "message": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
-  "timestamp": "2026-11-17T18:01:14.193419100",
+  "timestamp": "2026-11-19T21:30:44.304811800",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #204] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles`
+### [Endpoint #254] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles`
 
-- **Item Name:** [#205] POST /api/tenants/{tenantId}/roles (createCustomRole)
+- **Item Name:** [#255] POST /api/tenants/{tenantId}/roles (actions)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 82 ms
+- **Response Latency:** 112 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9366,18 +9407,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:14.338685500",
+  "timestamp": "2026-11-19T21:30:44.529392900",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #205] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
+### [Endpoint #255] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7`
 
-- **Item Name:** [#206] PATCH /api/tenants/{tenantId}/roles/{roleDefinitionId} (updateCustomRole)
+- **Item Name:** [#256] PATCH /api/tenants/{tenantId}/roles/{roleDefinitionId} (details)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 160 ms
+- **Response Latency:** 158 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9387,14 +9428,14 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9405,18 +9446,18 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   "code": "NOT_FOUND",
   "error": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
   "message": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
-  "timestamp": "2026-11-17T18:01:14.563161600",
+  "timestamp": "2026-11-19T21:30:44.806196700",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #206] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/action-set`
+### [Endpoint #256] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/action-set`
 
-- **Item Name:** [#207] POST /api/tenants/{tenantId}/roles/{roleDefinitionId}/action-set (updateRoleActionSet)
+- **Item Name:** [#257] POST /api/tenants/{tenantId}/roles/{roleDefinitionId}/action-set (role)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 123 ms
+- **Response Latency:** 137 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9447,18 +9488,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "NOT_FOUND",
   "error": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
   "message": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
-  "timestamp": "2026-11-17T18:01:14.777728200",
+  "timestamp": "2026-11-19T21:30:45.056494400",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #207] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/retirement`
+### [Endpoint #257] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/roles/afec87cd-944e-4e7b-932d-b48f86b5a9d7/retirement`
 
-- **Item Name:** [#208] POST /api/tenants/{tenantId}/roles/{roleDefinitionId}/retirement (retireCustomRole)
+- **Item Name:** [#258] POST /api/tenants/{tenantId}/roles/{roleDefinitionId}/retirement (deleting)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 98 ms
+- **Response Latency:** 124 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9468,14 +9509,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9486,18 +9527,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "NOT_FOUND",
   "error": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
   "message": "Role afec87cd-944e-4e7b-932d-b48f86b5a9d7 was not found.",
-  "timestamp": "2026-11-17T18:01:14.945796400",
+  "timestamp": "2026-11-19T21:30:45.267702",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #208] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users`
+### [Endpoint #258] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users`
 
-- **Item Name:** [#209] POST /api/tenants/{tenantId}/users (createUser)
+- **Item Name:** [#259] POST /api/tenants/{tenantId}/users (account)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 104 ms
+- **Response Latency:** 129 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9507,14 +9548,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9529,18 +9570,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:15.143016400",
+  "timestamp": "2026-11-19T21:30:45.483940900",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #209] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/check`
+### [Endpoint #259] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/check`
 
-- **Item Name:** [#210] POST /api/tenants/{tenantId}/users/check (checkCreateUser)
+- **Item Name:** [#260] POST /api/tenants/{tenantId}/users/check (checkCreateUser)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 65 ms
+- **Response Latency:** 94 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9550,14 +9591,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9571,18 +9612,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:15.285504800",
+  "timestamp": "2026-11-19T21:30:45.665567",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #210] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/deactivation`
+### [Endpoint #260] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/deactivation`
 
-- **Item Name:** [#211] POST /api/tenants/{tenantId}/users/{userId}/deactivation (deactivateUser)
+- **Item Name:** [#261] POST /api/tenants/{tenantId}/users/{userId}/deactivation (DELETE)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 52 ms
+- **Response Latency:** 100 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9592,14 +9633,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9613,18 +9654,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:15.410238300",
+  "timestamp": "2026-11-19T21:30:45.882156700",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #211] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9`
+### [Endpoint #261] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9`
 
-- **Item Name:** [#212] PATCH /api/tenants/{tenantId}/users/{userId} (updateUser)
+- **Item Name:** [#262] PATCH /api/tenants/{tenantId}/users/{userId} (fields)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 77 ms
+- **Response Latency:** 95 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9634,14 +9675,14 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9655,18 +9696,59 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:15.555604400",
+  "timestamp": "2026-11-19T21:30:46.095466200",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #212] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/password-reset`
+### [Endpoint #262] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/mfa-reset`
 
-- **Item Name:** [#213] POST /api/tenants/{tenantId}/users/{userId}/password-reset (resetPassword)
+- **Item Name:** [#263] POST /api/tenants/{tenantId}/users/{userId}/mfa-reset (login)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 79 ms
+- **Response Latency:** 85 ms
+- **Assertions Evaluated:** 4/4 passed (ALL PASSED)
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+
+**cURL Command:**
+```bash
+curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/mfa-reset" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{ "reason": "Antigravity Postman Check 1 MFA Reset" }'
+```
+
+**Request Payload:**
+```json
+{
+  "reason": "Antigravity Postman Check 1 MFA Reset"
+}
+```
+
+**Response Payload:**
+```json
+{
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/mfa-reset",
+  "code": "VALIDATION_FAILED",
+  "fieldErrors": {
+    "institutionId": "must not be null"
+  },
+  "error": "Validation failed",
+  "message": "Validation failed",
+  "timestamp": "2026-11-19T21:30:46.272874200",
+  "status": 400
+}
+```
+
+---
+
+### [Endpoint #263] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/password-reset`
+
+- **Item Name:** [#264] POST /api/tenants/{tenantId}/users/{userId}/password-reset (password)
+- **HTTP Status Code:** `400`
+- **Response Latency:** 83 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9676,14 +9758,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9697,18 +9779,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:15.709880400",
+  "timestamp": "2026-11-19T21:30:46.422877900",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #213] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/unlock`
+### [Endpoint #264] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9/unlock`
 
-- **Item Name:** [#214] POST /api/tenants/{tenantId}/users/{userId}/unlock (unlockUser)
+- **Item Name:** [#265] POST /api/tenants/{tenantId}/users/{userId}/unlock (account)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 117 ms
+- **Response Latency:** 91 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -9718,14 +9800,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -9739,18 +9821,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:15.912680600",
+  "timestamp": "2026-11-19T21:30:46.622452800",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #214] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users?scopeType=TENANT`
+### [Endpoint #265] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users?scopeType=TENANT`
 
-- **Item Name:** [#215] GET /api/tenants/{tenantId}/users (listUsers)
+- **Item Name:** [#266] GET /api/tenants/{tenantId}/users (scope)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 241 ms
+- **Response Latency:** 170 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -9844,11 +9926,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #215] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9?scopeType=TENANT`
+### [Endpoint #266] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/users/d93af3bd-850b-428c-92b9-b5c77003b2d9?scopeType=TENANT`
 
-- **Item Name:** [#216] GET /api/tenants/{tenantId}/users/{userId} (getUser)
+- **Item Name:** [#267] GET /api/tenants/{tenantId}/users/{userId} (scope)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 187 ms
+- **Response Latency:** 141 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -9873,11 +9955,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #216] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-map`
+### [Endpoint #267] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-map`
 
-- **Item Name:** [#217] GET /api/tenants/{tenantId}/rolldown-map (getRolldownMap)
+- **Item Name:** [#268] GET /api/tenants/{tenantId}/rolldown-map (role)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 197 ms
+- **Response Latency:** 127 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -9980,11 +10062,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #217] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/map`
+### [Endpoint #268] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/map`
 
-- **Item Name:** [#218] GET /api/tenants/{tenantId}/rolldown/map (getRolldownMap)
+- **Item Name:** [#269] GET /api/tenants/{tenantId}/rolldown/map (role)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 109 ms
+- **Response Latency:** 76 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10087,11 +10169,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #218] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides`
+### [Endpoint #269] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides`
 
-- **Item Name:** [#219] GET /api/tenants/{tenantId}/rolldown-overrides (getOverrides)
+- **Item Name:** [#270] GET /api/tenants/{tenantId}/rolldown-overrides (getOverrides)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 120 ms
+- **Response Latency:** 90 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10109,11 +10191,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #219] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides`
+### [Endpoint #270] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides`
 
-- **Item Name:** [#220] GET /api/tenants/{tenantId}/rolldown/overrides (getOverrides)
+- **Item Name:** [#271] GET /api/tenants/{tenantId}/rolldown/overrides (getOverrides)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 142 ms
+- **Response Latency:** 84 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10131,11 +10213,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #220] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides`
+### [Endpoint #271] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides`
 
-- **Item Name:** [#221] POST /api/tenants/{tenantId}/rolldown-overrides (createOverride)
+- **Item Name:** [#272] POST /api/tenants/{tenantId}/rolldown-overrides (createOverride)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 57 ms
+- **Response Latency:** 73 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10145,14 +10227,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10169,18 +10251,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:17.545042900",
+  "timestamp": "2026-11-19T21:30:48.126438200",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #221] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides`
+### [Endpoint #272] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides`
 
-- **Item Name:** [#222] POST /api/tenants/{tenantId}/rolldown/overrides (createOverride)
+- **Item Name:** [#273] POST /api/tenants/{tenantId}/rolldown/overrides (createOverride)
 - **HTTP Status Code:** `400`
-- **Response Latency:** 55 ms
+- **Response Latency:** 82 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10190,14 +10272,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10214,18 +10296,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   },
   "error": "Validation failed",
   "message": "Validation failed",
-  "timestamp": "2026-11-17T18:01:17.686425300",
+  "timestamp": "2026-11-19T21:30:48.316774500",
   "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #222] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revoke`
+### [Endpoint #273] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revoke`
 
-- **Item Name:** [#223] POST /api/tenants/{tenantId}/rolldown-overrides/{id}/revoke (revokeOverride)
+- **Item Name:** [#274] POST /api/tenants/{tenantId}/rolldown-overrides/{id}/revoke (revokeOverride)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 99 ms
+- **Response Latency:** 93 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10235,14 +10317,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10253,18 +10335,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "OVERRIDE_NOT_FOUND",
   "error": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
   "message": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
-  "timestamp": "2026-11-17T18:01:17.867783200",
+  "timestamp": "2026-11-19T21:30:48.515168",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #223] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation`
+### [Endpoint #274] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation`
 
-- **Item Name:** [#224] POST /api/tenants/{tenantId}/rolldown-overrides/{id}/revocation (revokeOverride)
+- **Item Name:** [#275] POST /api/tenants/{tenantId}/rolldown-overrides/{id}/revocation (revokeOverride)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 74 ms
+- **Response Latency:** 102 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10274,14 +10356,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10292,18 +10374,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "OVERRIDE_NOT_FOUND",
   "error": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
   "message": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
-  "timestamp": "2026-11-17T18:01:18.036365900",
+  "timestamp": "2026-11-19T21:30:48.707964",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #224] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation`
+### [Endpoint #275] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown/overrides/d9e8a7f6-1234-4567-89ab-cdef01234567/revocation`
 
-- **Item Name:** [#225] POST /api/tenants/{tenantId}/rolldown/overrides/{id}/revocation (revokeOverride)
+- **Item Name:** [#276] POST /api/tenants/{tenantId}/rolldown/overrides/{id}/revocation (revokeOverride)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 75 ms
+- **Response Latency:** 111 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10313,14 +10395,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10331,18 +10413,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "OVERRIDE_NOT_FOUND",
   "error": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
   "message": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
-  "timestamp": "2026-11-17T18:01:18.181531500",
+  "timestamp": "2026-11-19T21:30:48.929785600",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #225] DELETE `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567`
+### [Endpoint #276] DELETE `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/rolldown-overrides/d9e8a7f6-1234-4567-89ab-cdef01234567`
 
-- **Item Name:** [#226] DELETE /api/tenants/{tenantId}/rolldown-overrides/{id} (deleteOverride)
+- **Item Name:** [#277] DELETE /api/tenants/{tenantId}/rolldown-overrides/{id} (deleteOverride)
 - **HTTP Status Code:** `422`
-- **Response Latency:** 67 ms
+- **Response Latency:** 113 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10352,14 +10434,14 @@ curl -X DELETE "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10370,18 +10452,18 @@ curl -X DELETE "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e
   "code": "OVERRIDE_NOT_FOUND",
   "error": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
   "message": "Rolldown override d9e8a7f6-1234-4567-89ab-cdef01234567 not found",
-  "timestamp": "2026-11-17T18:01:18.329954200",
+  "timestamp": "2026-11-19T21:30:49.120222900",
   "status": 422
 }
 ```
 
 ---
 
-### [Endpoint #226] GET `http://audit-corp-9644.edu360.local:8080/api/me/profile`
+### [Endpoint #277] GET `http://audit-corp-9644.edu360.local:8080/api/me/profile`
 
-- **Item Name:** [#227] GET /api/me/profile (getProfile)
+- **Item Name:** [#278] GET /api/me/profile (getProfile)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 76 ms
+- **Response Latency:** 79 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10409,11 +10491,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/me/profile" \
 
 ---
 
-### [Endpoint #227] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile`
+### [Endpoint #278] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile`
 
-- **Item Name:** [#228] GET /api/tenants/{tenantId}/me/profile (getProfile)
+- **Item Name:** [#279] GET /api/tenants/{tenantId}/me/profile (getProfile)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 113 ms
+- **Response Latency:** 77 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10441,11 +10523,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #228] PATCH `http://audit-corp-9644.edu360.local:8080/api/me/profile`
+### [Endpoint #279] PATCH `http://audit-corp-9644.edu360.local:8080/api/me/profile`
 
-- **Item Name:** [#229] PATCH /api/me/profile (updateProfile)
+- **Item Name:** [#280] PATCH /api/me/profile (updateProfile)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 154 ms
+- **Response Latency:** 142 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10455,14 +10537,14 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/me/profile" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10483,11 +10565,11 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/me/profile" \
 
 ---
 
-### [Endpoint #229] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile`
+### [Endpoint #280] PATCH `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile`
 
-- **Item Name:** [#230] PATCH /api/tenants/{tenantId}/me/profile (updateProfile)
+- **Item Name:** [#281] PATCH /api/tenants/{tenantId}/me/profile (updateProfile)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 123 ms
+- **Response Latency:** 150 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10497,14 +10579,14 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10525,11 +10607,11 @@ curl -X PATCH "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e2
 
 ---
 
-### [Endpoint #230] POST `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo`
+### [Endpoint #281] POST `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo`
 
-- **Item Name:** [#231] POST /api/me/profile/photo (uploadPhoto)
+- **Item Name:** [#282] POST /api/me/profile/photo (photo)
 - **HTTP Status Code:** `415`
-- **Response Latency:** 50 ms
+- **Response Latency:** 83 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10539,14 +10621,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/me/profile/photo" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10557,11 +10639,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/me/profile/photo" \
 
 ---
 
-### [Endpoint #231] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo`
+### [Endpoint #282] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo`
 
-- **Item Name:** [#232] POST /api/tenants/{tenantId}/me/profile/photo (uploadPhoto)
+- **Item Name:** [#283] POST /api/tenants/{tenantId}/me/profile/photo (photo)
 - **HTTP Status Code:** `415`
-- **Response Latency:** 50 ms
+- **Response Latency:** 83 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10571,14 +10653,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10589,11 +10671,11 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 
 ---
 
-### [Endpoint #232] GET `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo`
+### [Endpoint #283] GET `http://audit-corp-9644.edu360.local:8080/api/me/profile/photo`
 
-- **Item Name:** [#233] GET /api/me/profile/photo (getPhoto)
+- **Item Name:** [#284] GET /api/me/profile/photo (photo)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 62 ms
+- **Response Latency:** 90 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10611,11 +10693,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/me/profile/photo" \
 
 ---
 
-### [Endpoint #233] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo`
+### [Endpoint #284] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/profile/photo`
 
-- **Item Name:** [#234] GET /api/tenants/{tenantId}/me/profile/photo (getPhoto)
+- **Item Name:** [#285] GET /api/tenants/{tenantId}/me/profile/photo (photo)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 59 ms
+- **Response Latency:** 137 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10633,11 +10715,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #234] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications`
+### [Endpoint #285] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications`
 
-- **Item Name:** [#235] GET /api/tenants/{tenantId}/me/notifications (getNotifications)
+- **Item Name:** [#286] GET /api/tenants/{tenantId}/me/notifications (getNotifications)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 67 ms
+- **Response Latency:** 100 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10655,11 +10737,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #235] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/summary`
+### [Endpoint #286] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/summary`
 
-- **Item Name:** [#236] GET /api/tenants/{tenantId}/me/notifications/summary (getNotificationSummary)
+- **Item Name:** [#287] GET /api/tenants/{tenantId}/me/notifications/summary (getNotificationSummary)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 86 ms
+- **Response Latency:** 103 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10679,11 +10761,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #236] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/d9e8a7f6-1234-4567-89ab-cdef01234567/read`
+### [Endpoint #287] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/d9e8a7f6-1234-4567-89ab-cdef01234567/read`
 
-- **Item Name:** [#237] POST /api/tenants/{tenantId}/me/notifications/{notificationId}/read (markNotificationRead)
+- **Item Name:** [#288] POST /api/tenants/{tenantId}/me/notifications/{notificationId}/read (markNotificationRead)
 - **HTTP Status Code:** `404`
-- **Response Latency:** 110 ms
+- **Response Latency:** 138 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10693,14 +10775,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.933Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.933Z"
 }
 ```
 
@@ -10711,18 +10793,18 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   "code": "NOT_FOUND",
   "error": "Notification not found",
   "message": "Notification not found",
-  "timestamp": "2026-11-17T18:01:20.114786400",
+  "timestamp": "2026-11-19T21:30:51.368690100",
   "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #237] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/read-all`
+### [Endpoint #288] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/notifications/read-all`
 
-- **Item Name:** [#238] POST /api/tenants/{tenantId}/me/notifications/read-all (markAllNotificationsRead)
+- **Item Name:** [#289] POST /api/tenants/{tenantId}/me/notifications/read-all (markAllNotificationsRead)
 - **HTTP Status Code:** `204`
-- **Response Latency:** 81 ms
+- **Response Latency:** 108 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10732,24 +10814,24 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #238] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-balances`
+### [Endpoint #289] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-balances`
 
-- **Item Name:** [#239] GET /api/tenants/{tenantId}/me/leave-balances (getLeaveBalances)
+- **Item Name:** [#290] GET /api/tenants/{tenantId}/me/leave-balances (getLeaveBalances)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 72 ms
+- **Response Latency:** 94 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10767,11 +10849,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #239] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-requests`
+### [Endpoint #290] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/leave-requests`
 
-- **Item Name:** [#240] GET /api/tenants/{tenantId}/me/leave-requests (getLeaveRequests)
+- **Item Name:** [#291] GET /api/tenants/{tenantId}/me/leave-requests (getLeaveRequests)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 80 ms
+- **Response Latency:** 98 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10789,11 +10871,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #240] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/notices`
+### [Endpoint #291] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/notices`
 
-- **Item Name:** [#241] GET /api/tenants/{tenantId}/notices (getNotices)
+- **Item Name:** [#292] GET /api/tenants/{tenantId}/notices (getNotices)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 69 ms
+- **Response Latency:** 99 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10811,11 +10893,11 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 ---
 
-### [Endpoint #241] GET `http://audit-corp-9644.edu360.local:8080/api/me/sessions`
+### [Endpoint #292] GET `http://audit-corp-9644.edu360.local:8080/api/me/sessions`
 
-- **Item Name:** [#242] GET /api/me/sessions (listSessions)
+- **Item Name:** [#293] GET /api/me/sessions (listSessions)
 - **HTTP Status Code:** `200`
-- **Response Latency:** 233 ms
+- **Response Latency:** 379 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
@@ -10828,18 +10910,30 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/me/sessions" \
 
 **Response Payload:**
 ```json
-[]
+[
+  {
+    "sessionId": "7b2f7f12-70c0-404b-9480-8b32d9c160c3",
+    "current": true,
+    "revocable": true,
+    "issuedAt": "2026-11-19T15:48:49.119711Z",
+    "expiresAt": "2026-11-20T01:48:48Z",
+    "deviceType": "COMPUTER",
+    "deviceName": null,
+    "ipAddress": "127.0.0.1",
+    "lastActiveAt": "2026-11-19T16:00:02.287216Z"
+  }
+]
 ```
 
 ---
 
-### [Endpoint #242] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices`
+### [Endpoint #293] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices`
 
-- **Item Name:** [#243] GET /api/tenants/{tenantId}/me/devices (listSessions)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 67 ms
+- **Item Name:** [#294] GET /api/tenants/{tenantId}/me/devices (listSessions)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 452 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -10850,20 +10944,28 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 **Response Payload:**
 ```json
-{
-  "timestamp": "2026-11-17T12:31:21.275334800Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
-}
+[
+  {
+    "sessionId": "7b2f7f12-70c0-404b-9480-8b32d9c160c3",
+    "current": true,
+    "revocable": true,
+    "issuedAt": "2026-11-19T15:48:49.119711Z",
+    "expiresAt": "2026-11-20T01:48:48Z",
+    "deviceType": "COMPUTER",
+    "deviceName": null,
+    "ipAddress": "127.0.0.1",
+    "lastActiveAt": "2026-11-19T16:00:02.287216Z"
+  }
+]
 ```
 
 ---
 
-### [Endpoint #243] DELETE `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D`
+### [Endpoint #294] DELETE `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D`
 
-- **Item Name:** [#247] DELETE /api/tenants/{tenantId}/me/devices/{sessionId} (revokeSession)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 58 ms
+- **Item Name:** [#298] DELETE /api/tenants/{tenantId}/me/devices/{sessionId} (sessions)
+- **HTTP Status Code:** `404`
+- **Response Latency:** 469 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10873,33 +10975,36 @@ curl -X DELETE "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:21.423081100Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D",
+  "code": "NOT_FOUND",
+  "error": "Session {295239a1-a5e9-4386-97d8-5205e8c45ac6} not found for this user",
+  "message": "Session {295239a1-a5e9-4386-97d8-5205e8c45ac6} not found for this user",
+  "timestamp": "2026-11-19T21:30:53.674475900",
+  "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #244] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation`
+### [Endpoint #295] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation`
 
-- **Item Name:** [#250] POST /api/tenants/{tenantId}/me/devices/{sessionId}/revocation (revokeDeviceD5)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 83 ms
+- **Item Name:** [#301] POST /api/tenants/{tenantId}/me/devices/{sessionId}/revocation (revokeDeviceD5)
+- **HTTP Status Code:** `404`
+- **Response Latency:** 357 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -10909,35 +11014,38 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:21.588053900Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation",
+  "code": "NOT_FOUND",
+  "error": "Session {295239a1-a5e9-4386-97d8-5205e8c45ac6} not found for this user",
+  "message": "Session {295239a1-a5e9-4386-97d8-5205e8c45ac6} not found for this user",
+  "timestamp": "2026-11-19T21:30:54.113242300",
+  "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #245] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/push-subscriptions`
+### [Endpoint #296] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/push-subscriptions`
 
-- **Item Name:** [#254] POST /api/tenants/{tenantId}/me/devices/push-subscriptions (registerPushSubscription)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 89 ms
+- **Item Name:** [#305] POST /api/tenants/{tenantId}/me/devices/push-subscriptions (registerPushSubscription)
+- **HTTP Status Code:** `204`
+- **Response Latency:** 130 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -10945,35 +11053,26 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.382Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.382Z"
-}
-```
-
-**Response Payload:**
-```json
-{
-  "timestamp": "2026-11-17T12:31:21.786101500Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #246] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/me/push-subscriptions`
+### [Endpoint #297] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/me/push-subscriptions`
 
-- **Item Name:** [#255] POST /api/tenants/{tenantId}/me/devices/me/push-subscriptions (registerPushSubscription)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 107 ms
+- **Item Name:** [#306] POST /api/tenants/{tenantId}/me/devices/me/push-subscriptions (registerPushSubscription)
+- **HTTP Status Code:** `204`
+- **Response Latency:** 132 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -10981,35 +11080,26 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.382Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.382Z"
-}
-```
-
-**Response Payload:**
-```json
-{
-  "timestamp": "2026-11-17T12:31:21.986979Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #247] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me`
+### [Endpoint #298] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me`
 
-- **Item Name:** [#256] GET /api/tenants/{tenantId}/me (getMe)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 91 ms
+- **Item Name:** [#307] GET /api/tenants/{tenantId}/me (options)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 121 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11021,21 +11111,65 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:22.185684500Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "userAccountId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "email": "admin@agy-check1.local",
+  "displayName": "Antigravity Admin Check 1",
+  "userType": "STAFF",
+  "currentRoleCode": "UNIVERSITY_ADMIN",
+  "currentRoleName": "University Administrator",
+  "currentAssignmentId": "dee128ec-aba3-481b-b012-e82630544b26",
+  "roles": [
+    {
+      "userRoleAssignmentId": "1335d7da-185f-41e5-80f8-53cce16d7b01",
+      "roleDefinitionId": "34f6f8ea-1575-45f5-b442-2d21b35e0a61",
+      "roleCode": "COLLEGE_ADMIN",
+      "roleName": "College Admin",
+      "scopeType": "TENANT",
+      "institutionId": null,
+      "institutionName": null,
+      "departmentId": null,
+      "departmentName": null,
+      "currentActive": false
+    },
+    {
+      "userRoleAssignmentId": "dee128ec-aba3-481b-b012-e82630544b26",
+      "roleDefinitionId": "c291f099-1133-4161-a1ef-319868dd68c3",
+      "roleCode": "UNIVERSITY_ADMIN",
+      "roleName": "University Administrator",
+      "scopeType": "TENANT",
+      "institutionId": null,
+      "institutionName": null,
+      "departmentId": null,
+      "departmentName": null,
+      "currentActive": true
+    },
+    {
+      "userRoleAssignmentId": "50d45b38-d65f-45e8-9d3e-fadd0cc2b88c",
+      "roleDefinitionId": "34f6f8ea-1575-45f5-b442-2d21b35e0a61",
+      "roleCode": "COLLEGE_ADMIN",
+      "roleName": "College Admin",
+      "scopeType": "INSTITUTION",
+      "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+      "institutionName": "Antigravity Postman Check 1 Institute",
+      "departmentId": null,
+      "departmentName": null,
+      "currentActive": false
+    }
+  ],
+  "idleTimeoutMinutes": 15
 }
 ```
 
 ---
 
-### [Endpoint #248] GET `http://audit-corp-9644.edu360.local:8080/api/me`
+### [Endpoint #299] GET `http://audit-corp-9644.edu360.local:8080/api/me`
 
-- **Item Name:** [#257] GET /api/me (getMe)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 91 ms
+- **Item Name:** [#308] GET /api/me (options)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 104 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11047,21 +11181,65 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/me" \
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:22.370491400Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "userAccountId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "email": "admin@agy-check1.local",
+  "displayName": "Antigravity Admin Check 1",
+  "userType": "STAFF",
+  "currentRoleCode": "UNIVERSITY_ADMIN",
+  "currentRoleName": "University Administrator",
+  "currentAssignmentId": "dee128ec-aba3-481b-b012-e82630544b26",
+  "roles": [
+    {
+      "userRoleAssignmentId": "1335d7da-185f-41e5-80f8-53cce16d7b01",
+      "roleDefinitionId": "34f6f8ea-1575-45f5-b442-2d21b35e0a61",
+      "roleCode": "COLLEGE_ADMIN",
+      "roleName": "College Admin",
+      "scopeType": "TENANT",
+      "institutionId": null,
+      "institutionName": null,
+      "departmentId": null,
+      "departmentName": null,
+      "currentActive": false
+    },
+    {
+      "userRoleAssignmentId": "dee128ec-aba3-481b-b012-e82630544b26",
+      "roleDefinitionId": "c291f099-1133-4161-a1ef-319868dd68c3",
+      "roleCode": "UNIVERSITY_ADMIN",
+      "roleName": "University Administrator",
+      "scopeType": "TENANT",
+      "institutionId": null,
+      "institutionName": null,
+      "departmentId": null,
+      "departmentName": null,
+      "currentActive": true
+    },
+    {
+      "userRoleAssignmentId": "50d45b38-d65f-45e8-9d3e-fadd0cc2b88c",
+      "roleDefinitionId": "34f6f8ea-1575-45f5-b442-2d21b35e0a61",
+      "roleCode": "COLLEGE_ADMIN",
+      "roleName": "College Admin",
+      "scopeType": "INSTITUTION",
+      "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+      "institutionName": "Antigravity Postman Check 1 Institute",
+      "departmentId": null,
+      "departmentName": null,
+      "currentActive": false
+    }
+  ],
+  "idleTimeoutMinutes": 15
 }
 ```
 
 ---
 
-### [Endpoint #249] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/permissions`
+### [Endpoint #300] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/permissions`
 
-- **Item Name:** [#258] GET /api/tenants/{tenantId}/me/permissions (getPermissions)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 94 ms
+- **Item Name:** [#309] GET /api/tenants/{tenantId}/me/permissions (getPermissions)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 139 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11073,21 +11251,97 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:22.568442200Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "userAccountId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+  "activeRoleCode": "UNIVERSITY_ADMIN",
+  "activeRoleName": "University Administrator",
+  "scopeType": "TENANT",
+  "institutionId": null,
+  "departmentId": null,
+  "allowedActions": [
+    "AUTH_LOGIN",
+    "ATTENDANCE_RULES_SET",
+    "USER_VIEW",
+    "STAFF_LEAVE_APPLY",
+    "SELF_SERVICE_VIEW",
+    "REPORTS_VIEW",
+    "SUBJECT_ALLOCATE",
+    "ROLLDOWN_OVERRIDE_SET",
+    "TERM_UNLOCK",
+    "RESULT_VIEW",
+    "LEDGER_VIEW",
+    "NOTICE_EMERGENCY",
+    "PROGRAM_RULES_SET",
+    "CALENDAR_LOCAL_SET",
+    "EXAM_PATTERN_SET",
+    "PRINCIPAL_LEAVE_APPROVER_SET",
+    "AUTH_DEVICES_MANAGE",
+    "ADMISSION_FORM_CREATE",
+    "CALENDAR_MASTER_SET",
+    "ROLLDOWN_VIEW",
+    "VC_LEAVE_APPROVER_SET",
+    "COMPLAINT_ESCALATED_VIEW",
+    "SUPPORT_ACCESS_GRANT",
+    "APPROVAL_DELEGATE",
+    "DATA_IMPORT",
+    "PROFILE_EDIT_OWN",
+    "PROMOTION_APPROVE",
+    "TERM_LOCK",
+    "INSTITUTION_BLOCK_REQUEST",
+    "EVENT_RSVP",
+    "STRUCTURE_MANAGE",
+    "ROLE_CUSTOM_MANAGE",
+    "USER_BULK_UPLOAD",
+    "ALUMNI_RECORD_MANAGE",
+    "DATA_REQUEST_RAISE",
+    "SUPPORT_TICKET_RAISE",
+    "STAFF_RECORD_MANAGE",
+    "BULK_CORRECT",
+    "COMMUNITY_LIKE_COMMENT",
+    "STUDENT_LOGIN_SWITCH",
+    "TENANT_EXPORT_REQUEST",
+    "AUDIT_LOG_VIEW",
+    "POLICY_ACCEPT",
+    "USER_CREATE",
+    "USAGE_ANALYTICS_VIEW",
+    "ATTENDANCE_VIEW",
+    "EXAM_VIEW",
+    "USER_PASSWORD_RESET_UNLOCK",
+    "WEEKLY_OFF_SET",
+    "POLICY_DRAFT",
+    "USER_DEACTIVATE",
+    "ROLE_ASSIGN",
+    "STATUTORY_EXPORT",
+    "LEAVE_CANCEL_OWN",
+    "NOTICE_PUBLISH_UNIVERSITY",
+    "AUTH_PASSWORD_CHANGE",
+    "GRADING_SCHEME_SET",
+    "USER_MFA_RESET",
+    "POLICY_PUBLISH",
+    "STUDENT_SEARCH",
+    "TENANT_TOP_USERS_CREATE",
+    "AUDIT_LOG_EXPORT",
+    "COMMUNITY_POST_DIRECT",
+    "USER_EDIT",
+    "INSTITUTION_CREATE_DRAFT",
+    "ROLE_SWITCH",
+    "TENANT_DELETION_REQUEST",
+    "STAFF_RECORD_VIEW",
+    "INSTITUTION_ACTIVATE",
+    "TENANT_INTEGRATION_MANAGE"
+  ]
 }
 ```
 
 ---
 
-### [Endpoint #250] GET `http://audit-corp-9644.edu360.local:8080/api/me/permissions`
+### [Endpoint #301] GET `http://audit-corp-9644.edu360.local:8080/api/me/permissions`
 
-- **Item Name:** [#259] GET /api/me/permissions (getPermissions)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 77 ms
+- **Item Name:** [#310] GET /api/me/permissions (getPermissions)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 140 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11099,19 +11353,95 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/me/permissions" \
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:22.732401400Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "userAccountId": "d93af3bd-850b-428c-92b9-b5c77003b2d9",
+  "activeRoleCode": "UNIVERSITY_ADMIN",
+  "activeRoleName": "University Administrator",
+  "scopeType": "TENANT",
+  "institutionId": null,
+  "departmentId": null,
+  "allowedActions": [
+    "AUTH_LOGIN",
+    "ATTENDANCE_RULES_SET",
+    "USER_VIEW",
+    "STAFF_LEAVE_APPLY",
+    "SELF_SERVICE_VIEW",
+    "REPORTS_VIEW",
+    "SUBJECT_ALLOCATE",
+    "ROLLDOWN_OVERRIDE_SET",
+    "TERM_UNLOCK",
+    "RESULT_VIEW",
+    "LEDGER_VIEW",
+    "NOTICE_EMERGENCY",
+    "PROGRAM_RULES_SET",
+    "CALENDAR_LOCAL_SET",
+    "EXAM_PATTERN_SET",
+    "PRINCIPAL_LEAVE_APPROVER_SET",
+    "AUTH_DEVICES_MANAGE",
+    "ADMISSION_FORM_CREATE",
+    "CALENDAR_MASTER_SET",
+    "ROLLDOWN_VIEW",
+    "VC_LEAVE_APPROVER_SET",
+    "COMPLAINT_ESCALATED_VIEW",
+    "SUPPORT_ACCESS_GRANT",
+    "APPROVAL_DELEGATE",
+    "DATA_IMPORT",
+    "PROFILE_EDIT_OWN",
+    "PROMOTION_APPROVE",
+    "TERM_LOCK",
+    "INSTITUTION_BLOCK_REQUEST",
+    "EVENT_RSVP",
+    "STRUCTURE_MANAGE",
+    "ROLE_CUSTOM_MANAGE",
+    "USER_BULK_UPLOAD",
+    "ALUMNI_RECORD_MANAGE",
+    "DATA_REQUEST_RAISE",
+    "SUPPORT_TICKET_RAISE",
+    "STAFF_RECORD_MANAGE",
+    "BULK_CORRECT",
+    "COMMUNITY_LIKE_COMMENT",
+    "STUDENT_LOGIN_SWITCH",
+    "TENANT_EXPORT_REQUEST",
+    "AUDIT_LOG_VIEW",
+    "POLICY_ACCEPT",
+    "USER_CREATE",
+    "USAGE_ANALYTICS_VIEW",
+    "ATTENDANCE_VIEW",
+    "EXAM_VIEW",
+    "USER_PASSWORD_RESET_UNLOCK",
+    "WEEKLY_OFF_SET",
+    "POLICY_DRAFT",
+    "USER_DEACTIVATE",
+    "ROLE_ASSIGN",
+    "STATUTORY_EXPORT",
+    "LEAVE_CANCEL_OWN",
+    "NOTICE_PUBLISH_UNIVERSITY",
+    "AUTH_PASSWORD_CHANGE",
+    "GRADING_SCHEME_SET",
+    "USER_MFA_RESET",
+    "POLICY_PUBLISH",
+    "STUDENT_SEARCH",
+    "TENANT_TOP_USERS_CREATE",
+    "AUDIT_LOG_EXPORT",
+    "COMMUNITY_POST_DIRECT",
+    "USER_EDIT",
+    "INSTITUTION_CREATE_DRAFT",
+    "ROLE_SWITCH",
+    "TENANT_DELETION_REQUEST",
+    "STAFF_RECORD_VIEW",
+    "INSTITUTION_ACTIVATE",
+    "TENANT_INTEGRATION_MANAGE"
+  ]
 }
 ```
 
 ---
 
-### [Endpoint #251] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/active-role`
+### [Endpoint #302] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/active-role`
 
-- **Item Name:** [#260] POST /api/tenants/{tenantId}/me/active-role (switchActiveRole)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 75 ms
+- **Item Name:** [#311] POST /api/tenants/{tenantId}/me/active-role (role)
+- **HTTP Status Code:** `400`
+- **Response Latency:** 108 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11134,19 +11464,25 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:22.900641700Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/active-role",
+  "code": "VALIDATION_FAILED",
+  "fieldErrors": {
+    "assignmentId": "assignmentId is required"
+  },
+  "error": "Validation failed",
+  "message": "Validation failed",
+  "timestamp": "2026-11-19T21:30:55.611103400",
+  "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #252] POST `http://audit-corp-9644.edu360.local:8080/api/me/active-role`
+### [Endpoint #303] POST `http://audit-corp-9644.edu360.local:8080/api/me/active-role`
 
-- **Item Name:** [#261] POST /api/me/active-role (switchActiveRole)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 78 ms
+- **Item Name:** [#312] POST /api/me/active-role (role)
+- **HTTP Status Code:** `400`
+- **Response Latency:** 101 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11169,21 +11505,27 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/me/active-role" \
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:23.090803800Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "path": "/api/me/active-role",
+  "code": "VALIDATION_FAILED",
+  "fieldErrors": {
+    "assignmentId": "assignmentId is required"
+  },
+  "error": "Validation failed",
+  "message": "Validation failed",
+  "timestamp": "2026-11-19T21:30:55.815117100",
+  "status": 400
 }
 ```
 
 ---
 
-### [Endpoint #253] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/dashboard-preferences`
+### [Endpoint #304] PUT `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/dashboard-preferences`
 
-- **Item Name:** [#262] PUT /api/tenants/{tenantId}/me/dashboard-preferences (unknown)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 84 ms
+- **Item Name:** [#313] PUT /api/tenants/{tenantId}/me/dashboard-preferences (saveDashboardPreferences)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 88 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11208,21 +11550,19 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:23.264725800Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "message": "Dashboard preferences updated successfully."
 }
 ```
 
 ---
 
-### [Endpoint #254] PUT `http://audit-corp-9644.edu360.local:8080/api/me/dashboard-preferences`
+### [Endpoint #305] PUT `http://audit-corp-9644.edu360.local:8080/api/me/dashboard-preferences`
 
-- **Item Name:** [#263] PUT /api/me/dashboard-preferences (unknown)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 103 ms
+- **Item Name:** [#314] PUT /api/me/dashboard-preferences (saveDashboardPreferences)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 89 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11247,21 +11587,19 @@ curl -X PUT "http://audit-corp-9644.edu360.local:8080/api/me/dashboard-preferenc
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:23.476449500Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "message": "Dashboard preferences updated successfully."
 }
 ```
 
 ---
 
-### [Endpoint #255] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
+### [Endpoint #306] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
 
-- **Item Name:** [#264] GET /api/tenants/{tenantId}/institutions/{institutionId}/term-locks (listTermLocks)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 57 ms
+- **Item Name:** [#315] GET /api/tenants/{tenantId}/institutions/{institutionId}/term-locks (listTermLocks)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 113 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11272,22 +11610,31 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 **Response Payload:**
 ```json
-{
-  "timestamp": "2026-11-17T12:31:23.630804600Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
-}
+[
+  {
+    "termLockId": "edca2886-6079-4a2e-9c80-5274b2dc0cc4",
+    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "semesterId": null,
+    "lockState": "LOCKED",
+    "unlockUntil": null,
+    "createdAt": "2026-11-17T04:59:30.256330Z",
+    "updatedAt": "2026-11-19T15:58:11.442847Z",
+    "rowVersion": 3
+  }
+]
 ```
 
 ---
 
-### [Endpoint #256] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
+### [Endpoint #307] GET `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks?institutionId=852afed4-54a6-4e3f-bb72-de065563fcc0`
 
-- **Item Name:** [#265] GET /api/tenants/{tenantId}/term-locks (listTermLocksQuery)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 60 ms
+- **Item Name:** [#316] GET /api/tenants/{tenantId}/term-locks (listTermLocksQuery)
+- **HTTP Status Code:** `200`
+- **Response Latency:** 123 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11298,22 +11645,31 @@ curl -X GET "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-
 
 **Response Payload:**
 ```json
-{
-  "timestamp": "2026-11-17T12:31:23.787463900Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
-}
+[
+  {
+    "termLockId": "edca2886-6079-4a2e-9c80-5274b2dc0cc4",
+    "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+    "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+    "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+    "semesterId": null,
+    "lockState": "LOCKED",
+    "unlockUntil": null,
+    "createdAt": "2026-11-17T04:59:30.256330Z",
+    "updatedAt": "2026-11-19T15:58:11.442847Z",
+    "rowVersion": 3
+  }
+]
 ```
 
 ---
 
-### [Endpoint #257] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks`
+### [Endpoint #308] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks`
 
-- **Item Name:** [#266] POST /api/tenants/{tenantId}/institutions/{institutionId}/term-locks (lockTerm)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 47 ms
+- **Item Name:** [#317] POST /api/tenants/{tenantId}/institutions/{institutionId}/term-locks (lockTerm)
+- **HTTP Status Code:** `201`
+- **Response Latency:** 204 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
+- **Execution Verdict:** **SUCCESS (Operational 2xx)**
 
 **cURL Command:**
 ```bash
@@ -11337,19 +11693,26 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:23.945834500Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "termLockId": "edca2886-6079-4a2e-9c80-5274b2dc0cc4",
+  "tenantId": "97392262-5e24-4c36-8449-449215019f2c",
+  "institutionId": "852afed4-54a6-4e3f-bb72-de065563fcc0",
+  "academicSessionId": "65f340dc-45b0-41c7-a91f-47080f36c455",
+  "semesterId": null,
+  "lockState": "LOCKED",
+  "unlockUntil": null,
+  "createdAt": "2026-11-17T04:59:30.256330Z",
+  "updatedAt": "2026-11-19T16:00:56.758064Z",
+  "rowVersion": 4
 }
 ```
 
 ---
 
-### [Endpoint #258] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks`
+### [Endpoint #309] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks`
 
-- **Item Name:** [#267] POST /api/tenants/{tenantId}/institutions/{institutionId}/term-locks/{id}/unlocks (unlockTerm)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 55 ms
+- **Item Name:** [#318] POST /api/tenants/{tenantId}/institutions/{institutionId}/term-locks/{id}/unlocks (unlockTerm)
+- **HTTP Status Code:** `404`
+- **Response Latency:** 129 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11372,19 +11735,22 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:24.099603900Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/institutions/852afed4-54a6-4e3f-bb72-de065563fcc0/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks",
+  "code": "NOT_FOUND",
+  "error": "Term lock not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
+  "message": "Term lock not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
+  "timestamp": "2026-11-19T21:30:57.079860700",
+  "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #259] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks`
+### [Endpoint #310] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks`
 
-- **Item Name:** [#268] POST /api/tenants/{tenantId}/term-locks/{id}/unlocks (unlockTerm)
-- **HTTP Status Code:** `401`
-- **Response Latency:** 48 ms
+- **Item Name:** [#319] POST /api/tenants/{tenantId}/term-locks/{id}/unlocks (unlockTerm)
+- **HTTP Status Code:** `404`
+- **Response Latency:** 106 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11407,21 +11773,24 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
 **Response Payload:**
 ```json
 {
-  "timestamp": "2026-11-17T12:31:24.229238700Z",
-  "status": 401,
-  "error": "This session has been signed out. Please sign in again."
+  "path": "/api/tenants/97392262-5e24-4c36-8449-449215019f2c/term-locks/d9e8a7f6-1234-4567-89ab-cdef01234567/unlocks",
+  "code": "NOT_FOUND",
+  "error": "Term lock not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
+  "message": "Term lock not found: d9e8a7f6-1234-4567-89ab-cdef01234567",
+  "timestamp": "2026-11-19T21:30:57.289002",
+  "status": 404
 }
 ```
 
 ---
 
-### [Endpoint #260] POST `http://platform.edu360.local:8080/api/auth/logout`
+### [Endpoint #311] POST `http://platform.edu360.local:8080/api/auth/logout`
 
-- **Item Name:** [#33] POST /api/auth/logout (logout)
-- **HTTP Status Code:** `204`
-- **Response Latency:** 155 ms
+- **Item Name:** [#34] POST /api/auth/logout (logout)
+- **HTTP Status Code:** `401`
+- **Response Latency:** 17 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
-- **Execution Verdict:** **SUCCESS (Operational 2xx)**
+- **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
 **cURL Command:**
 ```bash
@@ -11429,24 +11798,29 @@ curl -X POST "http://platform.edu360.local:8080/api/auth/logout" \
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.372Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.927Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.372Z"
+  "timestamp": "2026-11-19T15:59:54.927Z"
 }
+```
+
+**Response Payload:**
+```json
+[Binary file payload stream]
 ```
 
 ---
 
-### [Endpoint #261] DELETE `http://audit-corp-9644.edu360.local:8080/api/me/sessions/current`
+### [Endpoint #312] DELETE `http://audit-corp-9644.edu360.local:8080/api/me/sessions/current`
 
-- **Item Name:** [#244] DELETE /api/me/sessions/current (revokeCurrentSession)
+- **Item Name:** [#295] DELETE /api/me/sessions/current (revokeCurrentSession)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 20 ms
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11456,24 +11830,24 @@ curl -X DELETE "http://audit-corp-9644.edu360.local:8080/api/me/sessions/current
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #262] DELETE `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/current`
+### [Endpoint #313] DELETE `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/current`
 
-- **Item Name:** [#245] DELETE /api/tenants/{tenantId}/me/devices/current (revokeCurrentSession)
+- **Item Name:** [#296] DELETE /api/tenants/{tenantId}/me/devices/current (revokeCurrentSession)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 9 ms
+- **Response Latency:** 8 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11483,24 +11857,24 @@ curl -X DELETE "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #263] DELETE `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D`
+### [Endpoint #314] DELETE `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D`
 
-- **Item Name:** [#246] DELETE /api/me/sessions/{sessionId} (revokeSession)
+- **Item Name:** [#297] DELETE /api/me/sessions/{sessionId} (sessions)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 12 ms
+- **Response Latency:** 8 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11510,24 +11884,24 @@ curl -X DELETE "http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B2952
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #264] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation`
+### [Endpoint #315] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239a1-a5e9-4386-97d8-5205e8c45ac6%7D/revocation`
 
-- **Item Name:** [#248] POST /api/me/sessions/{sessionId}/revocation (revokeDeviceD5)
+- **Item Name:** [#299] POST /api/me/sessions/{sessionId}/revocation (revokeDeviceD5)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 11 ms
+- **Response Latency:** 7 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11537,24 +11911,24 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/me/sessions/%7B295239
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #265] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/revocation`
+### [Endpoint #316] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/revocation`
 
-- **Item Name:** [#249] POST /api/me/sessions/revocation (revokeDeviceD5)
+- **Item Name:** [#300] POST /api/me/sessions/revocation (revokeDeviceD5)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 9 ms
+- **Response Latency:** 12 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11564,24 +11938,24 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/me/sessions/revocatio
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #266] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/revocation`
+### [Endpoint #317] POST `http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24-4c36-8449-449215019f2c/me/devices/revocation`
 
-- **Item Name:** [#251] POST /api/tenants/{tenantId}/me/devices/revocation (revokeDeviceD5)
+- **Item Name:** [#302] POST /api/tenants/{tenantId}/me/devices/revocation (revokeDeviceD5)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 10 ms
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11591,24 +11965,24 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/tenants/97392262-5e24
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #267] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/push-subscriptions`
+### [Endpoint #318] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/push-subscriptions`
 
-- **Item Name:** [#252] POST /api/me/sessions/push-subscriptions (registerPushSubscription)
+- **Item Name:** [#303] POST /api/me/sessions/push-subscriptions (registerPushSubscription)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 12 ms
+- **Response Latency:** 9 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11618,24 +11992,24 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/me/sessions/push-subs
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.381Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.381Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 
 ---
 
-### [Endpoint #268] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/me/push-subscriptions`
+### [Endpoint #319] POST `http://audit-corp-9644.edu360.local:8080/api/me/sessions/me/push-subscriptions`
 
-- **Item Name:** [#253] POST /api/me/sessions/me/push-subscriptions (registerPushSubscription)
+- **Item Name:** [#304] POST /api/me/sessions/me/push-subscriptions (registerPushSubscription)
 - **HTTP Status Code:** `401`
-- **Response Latency:** 7 ms
+- **Response Latency:** 8 ms
 - **Assertions Evaluated:** 4/4 passed (ALL PASSED)
 - **Execution Verdict:** **GUARD (Business/Security Rule 4xx)**
 
@@ -11645,14 +12019,14 @@ curl -X POST "http://audit-corp-9644.edu360.local:8080/api/me/sessions/me/push-s
   -H "Authorization: Bearer <token>" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-17T12:29:33.382Z" }'
+  -d '{ "name": "Antigravity Postman Check 1 Payload", "timestamp": "2026-11-19T15:59:54.934Z" }'
 ```
 
 **Request Payload:**
 ```json
 {
   "name": "Antigravity Postman Check 1 Payload",
-  "timestamp": "2026-11-17T12:29:33.382Z"
+  "timestamp": "2026-11-19T15:59:54.934Z"
 }
 ```
 

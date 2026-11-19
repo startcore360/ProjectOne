@@ -120,7 +120,7 @@ if ($platformRolesApplied.Trim() -ne "t") {
 }
 foreach ($f in @("12d_v41_platform_role_templates.sql", "14_v41_audit_foundation.sql", "15_v41_user_active_role.sql",
                  "16_v41_tenant_top_post_authority.sql", "18_v41_user_sessions.sql", "20_v41_never_allowed_guard.sql", "22_v41_platform_audit_event_type.sql", "24_v41_sign_in_security.sql", "24d_v41_action_module_map.sql",
-                 "25_sprint2_foundations.sql", "26_v41_student_login_switch_guard.sql", "27_v41_notification_read_state.sql", "28_v41_study_material_view.sql", "29_v41_institution_code_formats.sql", "30_v41_exam_day_event_type.sql", "31_v41_staff_record_view_grants.sql", "32_v41_staff_login_aliases.sql", "33_v41_study_material_leadership_grants.sql", "36_v41_plan_commercial.sql", "37_v41_feature_catalog_and_provisioning.sql", "38_v41_invoice_approval_and_renewal.sql", "39_v41_billing_settings.sql", "40_v41_support_session.sql", "41_v41_support_readable.sql", "49_v41_platform_notification.sql", "50_v41_platform_audit_payload_idempotency.sql", "51_v41_mfa_recovery.sql", "52_v41_tenant_branding_logo.sql", "45_v41_usage_rollup.sql", "42_v41_deletion_retention_waiver.sql", "44_v41_release_scheduling.sql")) {
+                 "25_sprint2_foundations.sql", "26_v41_student_login_switch_guard.sql", "27_v41_notification_read_state.sql", "28_v41_study_material_view.sql", "29_v41_institution_code_formats.sql", "30_v41_exam_day_event_type.sql", "31_v41_staff_record_view_grants.sql", "32_v41_staff_login_aliases.sql", "33_v41_study_material_leadership_grants.sql", "36_v41_plan_commercial.sql", "37_v41_feature_catalog_and_provisioning.sql", "38_v41_invoice_approval_and_renewal.sql", "39_v41_billing_settings.sql", "40_v41_support_session.sql", "41_v41_support_readable.sql", "49_v41_platform_notification.sql", "50_v41_platform_audit_payload_idempotency.sql", "51_v41_mfa_recovery.sql", "52_v41_tenant_branding_logo.sql", "45_v41_usage_rollup.sql", "42_v41_deletion_retention_waiver.sql", "44_v41_release_scheduling.sql", "53_v41_platform_approval_delegation.sql")) {
     Run-Sql $f
 }
 Write-Host "V4.1 migrations applied (12d through 50, including E3 billing schema and platform audit/idempotency)."
@@ -141,6 +141,7 @@ Write-Host "edu_app role credential set."
 # granting only table-level SELECT still fails with "permission denied for schema platform".
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT USAGE ON SCHEMA platform TO edu_app"
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT ON platform.tenant, platform.platform_user, platform.audit_outbox TO edu_app"
+docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT, INSERT, UPDATE ON platform.approval_delegation TO edu_app"
 Write-Host "Granted edu_app read-only access to platform.tenant, platform.platform_user, and platform.audit_outbox."
 
 # edu_platform (created by sql/01_schema.sql, already granted SELECT/INSERT/UPDATE on

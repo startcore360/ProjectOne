@@ -1,5 +1,4 @@
 {
-  "12": "Institution Structure & Hierarchy",
   "24": "Audit",
   "37": "Application Configuration & Security",
   "42": "Application Configuration & Security",
@@ -9,7 +8,6 @@
   "68": "Core Utilities",
   "75": "Application Configuration & Security",
   "79": "Authentication & Identity Management",
-  "81": "Platform Operations & Governance",
   "88": "Docker Localstack",
   "93": "Docker Postgres",
   "95": ".Github Workflows",
