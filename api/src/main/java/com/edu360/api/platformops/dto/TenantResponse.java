@@ -32,7 +32,9 @@ public record TenantResponse(
         String firstAdminTemporaryPassword,
         UUID firstAdminUserId,
         Instant suspendedAt,
-        Instant archivedAt
+        Instant archivedAt,
+        /** E8-S5: the row version, sent back as If-Match on activate / suspend / archive. */
+        Integer rowVersion
 ) {
     public static TenantResponse from(Tenant tenant, String planName, String adminEmail, String adminMobile, String nationalIdLast4) {
         return from(tenant, planName, adminEmail, adminMobile, nationalIdLast4, null, null);
@@ -72,7 +74,8 @@ public record TenantResponse(
                 firstAdminTemporaryPassword,
                 firstAdminUserId,
                 tenant.getSuspendedAt(),
-                tenant.getArchivedAt()
+                tenant.getArchivedAt(),
+                tenant.getRowVersion()
         );
     }
 }

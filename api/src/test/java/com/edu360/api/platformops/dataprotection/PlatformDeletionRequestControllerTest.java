@@ -99,7 +99,7 @@ class PlatformDeletionRequestControllerTest {
                 tenantIssuerResolver
         );
 
-        controller = new PlatformDeletionRequestController(dataProtectionService, permissionService);
+        controller = new PlatformDeletionRequestController(dataProtectionService, permissionService, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
         dataProtectionController = new PlatformDataProtectionController(dataProtectionService, permissionService, idempotencyService, objectMapper, platformConcurrency);
     }
 

@@ -1,4 +1,5 @@
 import api from "../../../services/axios";
+import { idempotencyHeaders } from "./platformTenantService";
 
 export type IntegrationTypeItem = {
   integrationTypeId: string;
@@ -277,7 +278,7 @@ export const platformOpsService = {
   },
 
   async createInvoice(payload: CreateInvoicePayload): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>("/platform/invoices", payload);
+    const res = await api.post<InvoiceItem>("/platform/invoices", payload, { headers: idempotencyHeaders() });
     return res.data;
   },
 
@@ -321,7 +322,7 @@ export const platformOpsService = {
   },
 
   async recordPayment(invoiceId: string, payload: { paymentMode: string; paymentReference: string }): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/record-payment`, payload);
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/record-payment`, payload, { headers: idempotencyHeaders() });
     return res.data;
   },
 

@@ -13,6 +13,8 @@ export type Tenant = {
   updated: string;
   suspendedAt?: string;
   archivedAt?: string;
+  /** E8-S5: row version from the server, sent back as If-Match on activate / suspend / archive. */
+  rowVersion?: number;
 };
 
 export type PlatformUser = {

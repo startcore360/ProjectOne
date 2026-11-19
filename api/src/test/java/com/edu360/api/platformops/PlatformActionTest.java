@@ -181,7 +181,7 @@ class PlatformActionTest {
                 leaveApproverSettingRepository, institutionRepository,
                 null, null, null, null, null, null, null, invoiceRepository, platformAuditWriter
         );
-        tenantController = new PlatformTenantController(permissionService, tenantManagementService);
+        tenantController = new PlatformTenantController(permissionService, tenantManagementService, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
 
         planEntitlementRepository = mock(PlanEntitlementRepository.class);
         tenantEntitlementRepository = mock(TenantEntitlementRepository.class);

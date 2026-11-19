@@ -290,7 +290,7 @@ describe("Sprint 1 platform screens", () => {
         firstAdminNationalIdLast4: "7891",
         retentionMonths: 84,
         backupRetentionDays: 30,
-      }));
+      }), expect.objectContaining({ headers: expect.objectContaining({ "Idempotency-Key": expect.any(String) }) }));
     });
   });
 
@@ -342,7 +342,7 @@ describe("Sprint 1 platform screens", () => {
             subdomain: "riverbank",
             timeZone: "Asia/Kolkata",
             dataRegion: "IN",
-            keycloakRealm: "riverbank-realm",
+            keycloakRealm: "riverbank-realm", rowVersion: 7,
             createdAt: "2026-11-01T00:00:00Z",
           },
         ],
@@ -384,7 +384,8 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         "/platform/tenants/TEN-0003/activation",
-        { paymentReference: "PAY-2026-X8841", note: "Verified" }
+        { paymentReference: "PAY-2026-X8841", note: "Verified" },
+        { headers: { "Idempotency-Key": expect.any(String), "If-Match": "\"7\"" } }
       );
     });
   });
@@ -640,7 +641,7 @@ describe("Sprint 1 platform screens", () => {
           subdomain: "greenwood",
           timeZone: "Asia/Kolkata",
           dataRegion: "IN",
-          keycloakRealm: "greenwood-realm",
+          keycloakRealm: "greenwood-realm", rowVersion: 2,
           createdAt: "2026-11-01T00:00:00Z",
         }],
       },
@@ -667,7 +668,8 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         "/platform/tenants/TEN-0001/suspension",
-        { reason: "Statutory compliance audit pending." }
+        { reason: "Statutory compliance audit pending." },
+        { headers: { "Idempotency-Key": expect.any(String), "If-Match": "\"2\"" } }
       );
     });
   });

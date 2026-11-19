@@ -162,7 +162,7 @@ export function TenantDataProtectionModal({
     setWaiverReason("");
   };
 
-  const handleConfirmExistingDeletion = async (requestId: string, origin: string) => {
+  const handleConfirmExistingDeletion = async (requestId: string, origin: string, rowVersion?: number) => {
     const waive = origin === "PRODUCT_OWNER" && waiveRetentionWait;
     setDeleting(true);
     setNotice(null);
@@ -170,7 +170,7 @@ export function TenantDataProtectionModal({
       const response = await platformTenantService.confirmTenantDeletion(requestId, {
         waiveRetentionWait: waive,
         waiverReason: waive ? waiverReason.trim() : undefined,
-      });
+      }, rowVersion);
       setNotice({
         tone: "success",
         message: waive
@@ -493,7 +493,7 @@ export function TenantDataProtectionModal({
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => void handleConfirmExistingDeletion(confirmTarget.deletionRequestId, confirmTarget.origin)}
+                  onClick={() => void handleConfirmExistingDeletion(confirmTarget.deletionRequestId, confirmTarget.origin, confirmTarget.rowVersion)}
                   disabled={deleting || (waiveRetentionWait && !waiverReason.trim())}
                   busy={deleting}
                 >

@@ -39,7 +39,8 @@ public final class DataProtectionDtos {
             Instant dpoDecidedAt,
             String dpoRemark,
             Instant retentionWaivedAt,
-            String retentionWaiverReason
+            String retentionWaiverReason,
+            Integer rowVersion
     ) {}
 
     public record RetentionPolicyResponse(
@@ -61,7 +62,8 @@ public final class DataProtectionDtos {
             String reason,
             String status,
             Instant decidedAt,
-            Instant createdAt
+            Instant createdAt,
+            Integer rowVersion
     ) {}
 
     public record CreateRetentionChangeRequest(

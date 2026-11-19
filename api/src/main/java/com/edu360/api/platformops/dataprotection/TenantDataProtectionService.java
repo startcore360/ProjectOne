@@ -197,7 +197,7 @@ public class TenantDataProtectionService {
                 tenantName(request.getTenantId()), request.getOrigin(), request.getStatus(),
                 request.getPoConfirmedAt(), request.getRetentionEndsAt(), request.getDeletedAt(),
                 request.getCreatedAt(), purgeStatus, request.getDpoDecidedAt(), request.getDpoRemark(),
-                request.getRetentionWaivedAt(), request.getRetentionWaiverReason());
+                request.getRetentionWaivedAt(), request.getRetentionWaiverReason(), request.getRowVersion());
     }
 
     private String tenantName(UUID tenantId) {

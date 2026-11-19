@@ -232,6 +232,19 @@ public class PlatformDataProtectionService {
     }
 
     /**
+     * E8-S5: D5 confirmTenantDeletion requires If-Match. The version is checked against the stored row
+     * first (428 missing, 400 malformed, 409 stale), then the normal confirmation runs in the same transaction.
+     */
+    @Transactional
+    public DeletionRequestResponse confirmTenantDeletion(UUID deletionRequestId, boolean waiveRetentionWait,
+            String waiverReason, PlatformPrincipal principal, String ifMatch) {
+        DeletionRequest req = deletionRequestRepository.findById(deletionRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Deletion request not found: " + deletionRequestId));
+        platformConcurrency.requireIfMatch(ifMatch, req.getRowVersion() == null ? 0 : req.getRowVersion());
+        return confirmTenantDeletion(deletionRequestId, waiveRetentionWait, waiverReason, principal);
+    }
+
+    /**
      * E5-S2: the Product Owner confirms. The request becomes PO_CONFIRMED (not PENDING_DPO); the daily
      * {@link DeletionReadinessJob} moves it on once the export is produced and the retention date has passed.
      * PD-7 exception: on a PRODUCT_OWNER request the PO may waive the retention wait with a reason. The waiver
@@ -473,7 +486,8 @@ public class PlatformDataProtectionService {
                 r.getDpoDecidedAt(),
                 r.getDpoRemark(),
                 r.getRetentionWaivedAt(),
-                r.getRetentionWaiverReason()
+                r.getRetentionWaiverReason(),
+                r.getRowVersion()
         );
     }
 
@@ -594,6 +608,7 @@ public class PlatformDataProtectionService {
     private RetentionChangeRequestResponse toRetentionResponse(RetentionChangeRequest r) {
         return new RetentionChangeRequestResponse(r.getRetentionChangeRequestId(), r.getTenantId(),
                 tenantName(r.getTenantId()), r.getDataClassCode(),
-                r.getCurrentMonths(), r.getRequestedMonths(), r.getReason(), r.getStatus(), r.getDecidedAt(), r.getCreatedAt());
+                r.getCurrentMonths(), r.getRequestedMonths(), r.getReason(), r.getStatus(), r.getDecidedAt(), r.getCreatedAt(),
+                r.getRowVersion());
     }
 }

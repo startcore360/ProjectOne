@@ -1,4 +1,5 @@
 import api from "../../../services/axios";
+import { idempotencyHeaders } from "./platformTenantService";
 import type { DeletionRequestDto, ExportRequestDto } from "./platformTenantService";
 
 export type RetentionChangeRequestDto = {
@@ -25,7 +26,7 @@ export const platformDataProtectionService = {
       headers: { "If-Match": `"${rowVersion}"` },
     }),
   decideDeletion: (id: string, decision: DataProtectionDecision, remark: string) =>
-    api.post(`/platform/deletion-requests/${id}/decision`, { decision, remark }),
+    api.post(`/platform/deletion-requests/${id}/decision`, { decision, remark }, { headers: idempotencyHeaders() }),
   decideRetentionChange: (id: string, decision: DataProtectionDecision, remark: string) =>
-    api.post(`/platform/retention-change-requests/${id}/decision`, { decision, remark }),
+    api.post(`/platform/retention-change-requests/${id}/decision`, { decision, remark }, { headers: idempotencyHeaders() }),
 };

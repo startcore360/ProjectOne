@@ -94,7 +94,7 @@ describe("TenantDataProtectionModal", () => {
   it("allows the Product Owner to confirm an existing deletion request", async () => {
     service.listDeletionRequests.mockResolvedValue({ data: [{
       deletionRequestId: "del-1", tenantId: "tenant-1", tenantName: "Northfield School",
-      origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z",
+      origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z", rowVersion: 3,
     }] } as never);
     renderModal("PRODUCT_OWNER");
     fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
@@ -104,14 +104,14 @@ describe("TenantDataProtectionModal", () => {
     await waitFor(() => expect(service.confirmTenantDeletion).toHaveBeenCalledWith("del-1", {
       waiveRetentionWait: false,
       waiverReason: undefined,
-    }));
+    }, 3));
     expect(await screen.findByText(/once the tenant export is ready and the retention period has ended/)).toBeInTheDocument();
   });
 
   it("E5-S2: requires a reason before the Product Owner can waive the retention wait", async () => {
     service.listDeletionRequests.mockResolvedValue({ data: [{
       deletionRequestId: "del-1", tenantId: "tenant-1", tenantName: "Northfield School",
-      origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z",
+      origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z", rowVersion: 3,
     }] } as never);
     renderModal("PRODUCT_OWNER");
     fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
@@ -127,7 +127,7 @@ describe("TenantDataProtectionModal", () => {
     await waitFor(() => expect(service.confirmTenantDeletion).toHaveBeenCalledWith("del-1", {
       waiveRetentionWait: true,
       waiverReason: "Approved closure plan",
-    }));
+    }, 3));
   });
 
   it("E5-S2: offers no waiver on a request that did not come from the Product Owner", async () => {

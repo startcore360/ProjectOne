@@ -81,7 +81,7 @@ class TenantDataProtectionControllerTest {
         allow("TENANT_DELETION_REQUEST");
         DeletionRequestResponse response = new DeletionRequestResponse(UUID.randomUUID(), TENANT_ID,
                 "School", "TENANT_ADMIN", "REQUESTED", null, null, null,
-                java.time.Instant.now(), null, null, null, null, null);
+                java.time.Instant.now(), null, null, null, null, null, 0);
         when(service.requestDeletion(TENANT_ID, USER_ID)).thenReturn(response);
 
         ResponseEntity<DeletionRequestResponse> result =

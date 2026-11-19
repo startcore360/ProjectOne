@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.idempotency.PlatformIdempotentExecutor;
 import com.edu360.api.platformops.dto.CreatePlanRequest;
 import com.edu360.api.platformops.dto.PlanResponse;
 import com.edu360.api.platformops.dto.TenantActivationRequest;
@@ -50,6 +51,8 @@ public class PlatformTenantController {
 
     private final PlatformPermissionService platformPermissionService;
     private final TenantManagementService tenantManagementService;
+    /** E8-S5: Idempotency-Key handling for the D5 operations marked IdempotencyKey. */
+    private final PlatformIdempotentExecutor idempotentExecutor;
 
     @GetMapping("/plans")
     @Operation(summary = "List subscription plans")
@@ -97,10 +100,25 @@ public class PlatformTenantController {
     }
 
     @PostMapping("/tenants/{tenantId}/suspension")
-    @Operation(summary = "Suspend tenant (TENANT_SUSPEND_ARCHIVE / Rule R2-24)")
+    @Operation(summary = "Suspend tenant (TENANT_SUSPEND_ARCHIVE / Rule R2-24; Idempotency-Key + If-Match)")
     public ResponseEntity<TenantResponse> suspendTenant(
             @PathVariable UUID tenantId,
             @RequestBody(required = false) TenantLifecycleActionRequest request,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+            Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "TENANT_SUSPEND_ARCHIVE");
+        String reason = request != null ? request.reason() : null;
+        return idempotentExecutor.execute(principal.platformUserId(), "suspendTenant", idempotencyKey,
+                fingerprint(tenantId, reason), HttpStatus.OK, TenantResponse.class,
+                () -> tenantManagementService.suspendTenant(tenantId, reason, principal, ifMatch));
+    }
+
+    /** Internal / test path: no HTTP headers, no version check. */
+    public ResponseEntity<TenantResponse> suspendTenant(
+            UUID tenantId,
+            TenantLifecycleActionRequest request,
             Authentication authentication) {
 
         PlatformPrincipal principal = requirePlatformPrincipal(authentication);
@@ -112,10 +130,25 @@ public class PlatformTenantController {
     }
 
     @PostMapping("/tenants/{tenantId}/archive")
-    @Operation(summary = "Archive tenant (TENANT_SUSPEND_ARCHIVE / Rule R2-24)")
+    @Operation(summary = "Archive tenant (TENANT_SUSPEND_ARCHIVE / Rule R2-24; Idempotency-Key + If-Match)")
     public ResponseEntity<TenantResponse> archiveTenant(
             @PathVariable UUID tenantId,
             @RequestBody(required = false) TenantLifecycleActionRequest request,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+            Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "TENANT_SUSPEND_ARCHIVE");
+        String reason = request != null ? request.reason() : null;
+        return idempotentExecutor.execute(principal.platformUserId(), "archiveTenant", idempotencyKey,
+                fingerprint(tenantId, reason), HttpStatus.OK, TenantResponse.class,
+                () -> tenantManagementService.archiveTenant(tenantId, reason, principal, ifMatch));
+    }
+
+    /** Internal / test path: no HTTP headers, no version check. */
+    public ResponseEntity<TenantResponse> archiveTenant(
+            UUID tenantId,
+            TenantLifecycleActionRequest request,
             Authentication authentication) {
 
         PlatformPrincipal principal = requirePlatformPrincipal(authentication);
@@ -167,9 +200,23 @@ public class PlatformTenantController {
     }
 
     @PostMapping("/tenants")
-    @Operation(summary = "Create a tenant in TRIAL state (TENANT_CREATE)")
+    @Operation(summary = "Create a tenant in TRIAL state (TENANT_CREATE; Idempotency-Key)")
     public ResponseEntity<TenantResponse> createTenant(
             @Valid @RequestBody TenantCreateRequest request,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "TENANT_CREATE");
+        // The stored replay holds the one-time admin password only for this caller and key; it is never
+        // returned by any other endpoint (TenantResponse comment).
+        return idempotentExecutor.execute(principal.platformUserId(), "createTenant", idempotencyKey,
+                request, HttpStatus.CREATED, TenantResponse.class,
+                () -> tenantManagementService.createTenant(request, principal));
+    }
+
+    /** Internal / test path: no Idempotency-Key. */
+    public ResponseEntity<TenantResponse> createTenant(
+            TenantCreateRequest request,
             Authentication authentication) {
 
         PlatformPrincipal principal = requirePlatformPrincipal(authentication);
@@ -222,10 +269,25 @@ public class PlatformTenantController {
     }
 
     @PostMapping("/tenants/{tenantId}/activation")
-    @Operation(summary = "Activate a tenant after payment verification (TENANT_ACTIVATE)")
+    @Operation(summary = "Activate a tenant after payment verification (TENANT_ACTIVATE; Idempotency-Key + If-Match)")
     public ResponseEntity<TenantResponse> activateTenant(
             @PathVariable UUID tenantId,
             @RequestBody(required = false) TenantActivationRequest request,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+            Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "TENANT_ACTIVATE");
+        return idempotentExecutor.execute(principal.platformUserId(), "activateTenant", idempotencyKey,
+                fingerprint(tenantId, request == null ? null : String.valueOf(request)), HttpStatus.OK,
+                TenantResponse.class,
+                () -> tenantManagementService.activateTenant(tenantId, request, principal, ifMatch));
+    }
+
+    /** Internal / test path: no HTTP headers, no version check. */
+    public ResponseEntity<TenantResponse> activateTenant(
+            UUID tenantId,
+            TenantActivationRequest request,
             Authentication authentication) {
 
         PlatformPrincipal principal = requirePlatformPrincipal(authentication);
@@ -235,6 +297,14 @@ public class PlatformTenantController {
         return ResponseEntity.ok(response);
     }
 
+
+    /** Request fingerprint for path-plus-optional-text operations (null-safe, unlike Map.of). */
+    private static java.util.Map<String, Object> fingerprint(UUID tenantId, Object detail) {
+        java.util.Map<String, Object> fp = new java.util.LinkedHashMap<>();
+        fp.put("tenantId", tenantId);
+        fp.put("detail", detail);
+        return fp;
+    }
 
     private PlatformPrincipal requirePlatformPrincipal(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof PlatformPrincipal principal)) {
