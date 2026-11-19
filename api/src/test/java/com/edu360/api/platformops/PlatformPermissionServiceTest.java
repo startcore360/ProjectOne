@@ -24,6 +24,26 @@ class PlatformPermissionServiceTest {
     }
 
     @Test
+    void activeDpoDelegateCanApproveButExpiredDelegationCannot() {
+        UUID id = UUID.randomUUID();
+        PlatformPrincipal delegate = new PlatformPrincipal(id, PlatformRole.DATA_PROTECTION_OFFICER, "delegate@example.test", false);
+        StubLookup active = new StubLookup();
+        active.customActions = Set.of();
+        active.delegators = List.of(UUID.randomUUID());
+        PlatformPermissionService delegated = withLookup(active);
+
+        for (String action : List.of("TENANT_EXPORT_APPROVE", "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE")) {
+            assertThatCode(() -> delegated.authorize(delegate, action)).doesNotThrowAnyException();
+        }
+
+        StubLookup expiredLookup = new StubLookup();
+        expiredLookup.customActions = Set.of();
+        PlatformPermissionService expired = withLookup(expiredLookup);
+        for (String action : List.of("TENANT_EXPORT_APPROVE", "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE")) {
+            assertThatThrownBy(() -> expired.authorize(delegate, action)).isInstanceOf(UnauthorizedException.class);
+        }
+    }
+    @Test
     void authorize_allowsProductOwnerForAllFourActions() {
         PlatformPrincipal productOwner = principal(PlatformRole.PRODUCT_OWNER);
 
@@ -106,12 +126,17 @@ class PlatformPermissionServiceTest {
         Set<String> customActions;
         Set<String> handedOver = Set.of();
         Set<String> steppedIn = Set.of();
+        List<UUID> delegators = List.of();
 
         @Override
         public Optional<Set<String>> customRoleActions(UUID platformUserId) {
             return Optional.ofNullable(customActions);
         }
 
+        @Override
+        public List<UUID> activeDelegationDelegators(UUID id) {
+            return delegators;
+        }
         @Override
         public boolean isHandedOver(String actionCode) {
             return handedOver.contains(actionCode);

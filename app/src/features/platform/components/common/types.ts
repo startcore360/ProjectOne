@@ -13,6 +13,8 @@ export type Tenant = {
   updated: string;
   suspendedAt?: string;
   archivedAt?: string;
+  /** E8-S5: row version from the server, sent back as If-Match on activate / suspend / archive. */
+  rowVersion?: number;
 };
 
 export type PlatformUser = {
@@ -100,13 +102,15 @@ export type UsageMetric = { metricCode: string; value: number | null; asOfDate: 
 
 export type UsageCounts = {
   totalTenantCount: number;
+  tenantsInAnalytics: number;
+  tenantsOptedOut: number;
   metrics: UsageMetric[];
-  totalUserCountGap: string | null;
 };
 
 export const USAGE_METRIC_LABELS: Record<string, string> = {
   LOGINS: "Logins",
   ATTENDANCE_MARKED: "Attendance marked",
   FEES_PAID_ONLINE: "Fees paid online",
+  ACTIVE_USERS: "Active users",
 };
 

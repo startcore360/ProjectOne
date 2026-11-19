@@ -970,9 +970,22 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
             UUID tenantId,
             TenantActivationRequest request,
             PlatformPrincipal principal) {
+        return activateTenant(tenantId, request, principal, null, false);
+    }
+
+    /** E8-S5: the HTTP path. If-Match must name the tenant's current row version (428 / 409 otherwise). */
+    @Transactional
+    public TenantResponse activateTenant(UUID tenantId, TenantActivationRequest request, PlatformPrincipal principal,
+            String ifMatch) {
+        return activateTenant(tenantId, request, principal, ifMatch, true);
+    }
+
+    private TenantResponse activateTenant(UUID tenantId, TenantActivationRequest request, PlatformPrincipal principal,
+            String ifMatch, boolean checkVersion) {
 
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
+        if (checkVersion) requireTenantVersion(tenant, ifMatch);
 
         String planName = planRepository.findById(tenant.getPlanId())
                 .map(Plan::getPlanName)
@@ -1029,6 +1042,7 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
 
         tenant.setState(TenantState.ACTIVE);
         tenant.setActivatedAt(Instant.now());
+        bumpVersion(tenant);
         tenantRepository.save(tenant);
 
         platformAuditWriter.record(principal, tenantId, "TENANT_ACTIVATED", "TENANT_ACTIVATE", "TENANT", tenantId);
@@ -1285,8 +1299,20 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
 
     @Transactional
     public TenantResponse suspendTenant(UUID tenantId, String reason, PlatformPrincipal principal) {
+        return suspendTenant(tenantId, reason, principal, null, false);
+    }
+
+    /** E8-S5: the HTTP path. If-Match must name the tenant's current row version (428 / 409 otherwise). */
+    @Transactional
+    public TenantResponse suspendTenant(UUID tenantId, String reason, PlatformPrincipal principal, String ifMatch) {
+        return suspendTenant(tenantId, reason, principal, ifMatch, true);
+    }
+
+    private TenantResponse suspendTenant(UUID tenantId, String reason, PlatformPrincipal principal, String ifMatch,
+            boolean checkVersion) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
+        if (checkVersion) requireTenantVersion(tenant, ifMatch);
         requireTransition(tenant, TenantState.SUSPENDED);
 
         Instant now = Instant.now();
@@ -1295,6 +1321,7 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
         tenant.setArchivedAt(null);
         tenant.setUpdatedAt(now);
         tenant.setUpdatedBy(principal.platformUserId());
+        bumpVersion(tenant);
         tenantRepository.save(tenant);
 
         if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {
@@ -1309,8 +1336,20 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
 
     @Transactional
     public TenantResponse archiveTenant(UUID tenantId, String reason, PlatformPrincipal principal) {
+        return archiveTenant(tenantId, reason, principal, null, false);
+    }
+
+    /** E8-S5: the HTTP path. If-Match must name the tenant's current row version (428 / 409 otherwise). */
+    @Transactional
+    public TenantResponse archiveTenant(UUID tenantId, String reason, PlatformPrincipal principal, String ifMatch) {
+        return archiveTenant(tenantId, reason, principal, ifMatch, true);
+    }
+
+    private TenantResponse archiveTenant(UUID tenantId, String reason, PlatformPrincipal principal, String ifMatch,
+            boolean checkVersion) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found."));
+        if (checkVersion) requireTenantVersion(tenant, ifMatch);
         requireTransition(tenant, TenantState.ARCHIVED);
 
         Instant now = Instant.now();
@@ -1318,6 +1357,7 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
         tenant.setArchivedAt(now);
         tenant.setUpdatedAt(now);
         tenant.setUpdatedBy(principal.platformUserId());
+        bumpVersion(tenant);
         tenantRepository.save(tenant);
 
         if (tenantIssuerResolver != null && tenant.getKeycloakRealm() != null) {
@@ -1355,6 +1395,19 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
     }
 
     /** L-09: lifecycle moves only along allowed edges; a DELETED (locked) tenant never comes back. */
+    /** E8-S5: If-Match must name the tenant's current row_version (428 IF_MATCH_REQUIRED / 409 VERSION_CONFLICT). */
+    private static void requireTenantVersion(Tenant tenant, String ifMatch) {
+        new PlatformConcurrency().requireIfMatch(ifMatch, tenant.getRowVersion() == null ? 0 : tenant.getRowVersion());
+    }
+
+    /**
+     * Keeps the in-memory row_version equal to what platform.fn_touch writes (OLD + 1) so the response carries the
+     * version the client must send next time.
+     */
+    private static void bumpVersion(Tenant tenant) {
+        tenant.setRowVersion(tenant.getRowVersion() == null ? 1 : tenant.getRowVersion() + 1);
+    }
+
     static void requireTransition(Tenant tenant, TenantState target) {
         TenantState from = tenant.getState();
         boolean allowed = switch (target) {

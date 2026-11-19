@@ -195,6 +195,7 @@ export function TenantsView() {
         updated: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Just now",
         suspendedAt: t.suspendedAt,
         archivedAt: t.archivedAt,
+        rowVersion: t.rowVersion,
       })));
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : "Unable to load tenants. Please retry.");
@@ -332,7 +333,7 @@ export function TenantsView() {
       await platformTenantService.activateTenant(selectedTenant.id, {
         paymentReference: paymentRef.trim() || undefined,
         note: activateNote.trim() || undefined,
-      });
+      }, selectedTenant.rowVersion);
       setMessage(`Tenant "${selectedTenant.name}" activated successfully.`);
       setShowActivate(false);
       setTenants((prev) =>
@@ -359,7 +360,7 @@ export function TenantsView() {
     if (!selectedTenant) return;
     setSuspending(true);
     try {
-      await platformTenantService.suspendTenant(selectedTenant.id, suspendReason.trim() || undefined);
+      await platformTenantService.suspendTenant(selectedTenant.id, suspendReason.trim() || undefined, selectedTenant.rowVersion);
       setMessage(`Tenant "${selectedTenant.name}" has been SUSPENDED.`);
       setShowSuspend(false);
       void loadTenants();
@@ -382,7 +383,7 @@ export function TenantsView() {
     if (!selectedTenant) return;
     setArchiving(true);
     try {
-      await platformTenantService.archiveTenant(selectedTenant.id, archiveReason.trim() || undefined);
+      await platformTenantService.archiveTenant(selectedTenant.id, archiveReason.trim() || undefined, selectedTenant.rowVersion);
       setMessage(`Tenant "${selectedTenant.name}" has been ARCHIVED.`);
       setShowArchive(false);
       void loadTenants();

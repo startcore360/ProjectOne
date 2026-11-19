@@ -2,6 +2,7 @@ package com.edu360.api.platformops.role;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -61,6 +62,25 @@ class PlatformAuditWriterTest {
         assertEquals("PLAN_MANAGE", captor.getValue().getActionCode());
         assertEquals("PLAN", captor.getValue().getEntityType());
         assertEquals(planId, captor.getValue().getEntityId());
+    }
+
+    @Test
+    void recordsScheduledJobEventsAsSystemWithoutAPlatformUser() {
+        PlatformAuditOutboxEventRepository repository = mock(PlatformAuditOutboxEventRepository.class);
+        PlatformAuditWriter writer = new PlatformAuditWriter(repository);
+        UUID requestId = UUID.randomUUID();
+
+        writer.recordSystem(UUID.randomUUID(), "TENANT_DELETION_READY_FOR_DPO", "UPDATE", "TENANT_DELETION_CONFIRM",
+                "DELETION_REQUEST", requestId, PlatformAuditWriter.SUCCESS,
+                Map.of("status", Map.of("old", "EXPORT_DONE", "new", "PENDING_DPO")));
+
+        ArgumentCaptor<PlatformAuditOutboxEvent> captor = ArgumentCaptor.forClass(PlatformAuditOutboxEvent.class);
+        verify(repository).save(captor.capture());
+        assertEquals("SYSTEM", captor.getValue().getActorKind());
+        assertNull(captor.getValue().getActorUserId());
+        assertEquals(PlatformAuditWriter.SYSTEM_ACTOR_ID, captor.getValue().getCreatedBy());
+        assertEquals("UPDATE", captor.getValue().getOperation());
+        assertEquals(requestId, captor.getValue().getEntityId());
     }
 
 }

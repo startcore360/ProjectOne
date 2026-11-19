@@ -151,6 +151,7 @@ class PlatformActionTest {
     private PlatformAuditLogController auditLogController;
 
     private UsageMetricDailyRepository usageMetricDailyRepository;
+    private com.edu360.api.platformops.usage.TenantUsageMonthlyRepository tenantUsageMonthlyRepository;
     private UsageCountsController usageCountsController;
 
     private TenantBackupStatusRepository tenantBackupStatusRepository;
@@ -180,7 +181,7 @@ class PlatformActionTest {
                 leaveApproverSettingRepository, institutionRepository,
                 null, null, null, null, null, null, null, invoiceRepository, platformAuditWriter
         );
-        tenantController = new PlatformTenantController(permissionService, tenantManagementService);
+        tenantController = new PlatformTenantController(permissionService, tenantManagementService, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
 
         planEntitlementRepository = mock(PlanEntitlementRepository.class);
         tenantEntitlementRepository = mock(TenantEntitlementRepository.class);
@@ -211,10 +212,11 @@ class PlatformActionTest {
         integrationTypeController = new IntegrationTypeController(permissionService, integrationTypeRepository, platformAuditWriter);
 
         auditOutboxEventRepository = mock(PlatformAuditOutboxEventRepository.class);
-        auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository);
+        auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository, platformAuditWriter);
 
         usageMetricDailyRepository = mock(UsageMetricDailyRepository.class);
-        usageCountsController = new UsageCountsController(permissionService, tenantRepository, usageMetricDailyRepository);
+        tenantUsageMonthlyRepository = mock(com.edu360.api.platformops.usage.TenantUsageMonthlyRepository.class);
+        usageCountsController = new UsageCountsController(permissionService, tenantRepository, usageMetricDailyRepository, tenantUsageMonthlyRepository);
 
         tenantBackupStatusRepository = mock(TenantBackupStatusRepository.class);
         backupStatusController = new BackupStatusController(permissionService, tenantBackupStatusRepository);
@@ -985,8 +987,8 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-ALLOW: Platform Admin views platform audit logs")
     void actPlatformAuditView_allow() {
-        when(auditOutboxEventRepository.findAllByOrderByOccurredAtDesc(any())).thenReturn(org.springframework.data.domain.Page.empty());
-        var res = auditLogController.listAuditLogs(0, 50, auth(PlatformRole.PLATFORM_ADMIN));
+        when(auditOutboxEventRepository.findFiltered(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(org.springframework.data.domain.Page.empty());
+        var res = auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, auth(PlatformRole.PLATFORM_ADMIN));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
@@ -994,22 +996,22 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-DENY: Billing Manager lacking PLATFORM_AUDIT_VIEW denied")
     void actPlatformAuditView_deny() {
-        assertThatThrownBy(() -> auditLogController.listAuditLogs(0, 50, auth(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, auth(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-SCOPE: Tenant principal rejected")
     void actPlatformAuditView_scope() {
-        assertThatThrownBy(() -> auditLogController.listAuditLogs(0, 50, tenantAuth(tenantId)))
+        assertThatThrownBy(() -> auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, tenantAuth(tenantId)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-GUARD: Audit page size clamped safely")
     void actPlatformAuditView_guard() {
-        when(auditOutboxEventRepository.findAllByOrderByOccurredAtDesc(any())).thenReturn(org.springframework.data.domain.Page.empty());
-        var res = auditLogController.listAuditLogs(-1, 500, auth(PlatformRole.PLATFORM_ADMIN));
+        when(auditOutboxEventRepository.findFiltered(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(org.springframework.data.domain.Page.empty());
+        var res = auditLogController.listAuditLogs(null, null, null, null, null, null, -1, 500, auth(PlatformRole.PLATFORM_ADMIN));
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
@@ -1047,7 +1049,7 @@ class PlatformActionTest {
     void actUsageCountsView_guard() {
         when(tenantRepository.count()).thenReturn(5L);
         var res = usageCountsController.usageCounts(auth(PlatformRole.PRODUCT_OWNER));
-        assertThat(res.getBody().totalUserCountGap()).contains("break tenant isolation");
+        assertThat(res.getBody().metrics()).anySatisfy(metric -> assertThat(metric.metricCode()).isEqualTo("ACTIVE_USERS"));
     }
 
     // =========================================================================

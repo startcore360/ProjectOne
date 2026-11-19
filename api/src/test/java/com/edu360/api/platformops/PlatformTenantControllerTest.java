@@ -101,7 +101,7 @@ class PlatformTenantControllerTest {
                 platformAuditWriter
         );
 
-        controller = new PlatformTenantController(platformPermissionService, tenantManagementService);
+        controller = new PlatformTenantController(platformPermissionService, tenantManagementService, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
     }
 
     private Authentication authFor(PlatformRole role) {
@@ -241,7 +241,7 @@ class PlatformTenantControllerTest {
                 userRepo, linkRepo, roleDefRepo, stdRoleRepo, stdActionRepo, roleActionRepo, assignRepo,
                 null, platformAuditWriter
         );
-        PlatformTenantController testController = new PlatformTenantController(platformPermissionService, serviceWithAdmin);
+        PlatformTenantController testController = new PlatformTenantController(platformPermissionService, serviceWithAdmin, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
 
         when(tenantRepository.findBySubdomain("dwps-delhi")).thenReturn(Optional.empty());
         when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(samplePlan()));
@@ -660,6 +660,70 @@ class PlatformTenantControllerTest {
         assertThat(error.getStatus()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(error.getErrorCode()).isEqualTo("VERSION_CONFLICT");
         verify(planRepository, org.mockito.Mockito.never()).save(any(Plan.class));
+    }
+
+    /** E8-S5: suspend over HTTP needs the tenant's current version; missing → 428, stale → 409, current → bumped. */
+    @Test
+    void E8S5_suspendRequiresCurrentIfMatchAndReturnsTheNewVersion() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenant = Tenant.builder()
+                .tenantId(tenantId)
+                .tenantName("Doon Valley Academy")
+                .planId(PLAN_ID)
+                .state(TenantState.ACTIVE)
+                .subdomain("doon-valley")
+                .timeZone("Asia/Kolkata")
+                .dataRegion("IN")
+                .build();
+        tenant.setRowVersion(4);
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(samplePlan()));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
+        PlatformPrincipal po = (PlatformPrincipal) authFor(PlatformRole.PRODUCT_OWNER).getPrincipal();
+
+        com.edu360.api.exception.ApiException missing = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> tenantManagementService.suspendTenant(tenantId, "Overdue", po, null));
+        assertThat(missing.getStatus()).isEqualTo(HttpStatus.PRECONDITION_REQUIRED);
+        assertThat(missing.getErrorCode()).isEqualTo("IF_MATCH_REQUIRED");
+
+        com.edu360.api.exception.ApiException stale = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> tenantManagementService.suspendTenant(tenantId, "Overdue", po, "\"3\""));
+        assertThat(stale.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(stale.getErrorCode()).isEqualTo("VERSION_CONFLICT");
+        verify(tenantRepository, org.mockito.Mockito.never()).save(any(Tenant.class));
+        assertThat(tenant.getState()).isEqualTo(TenantState.ACTIVE);
+
+        TenantResponse ok = tenantManagementService.suspendTenant(tenantId, "Overdue", po, "\"4\"");
+        assertThat(ok.state()).isEqualTo(TenantState.SUSPENDED);
+        // Matches what the platform.fn_touch trigger writes, so the next If-Match the screen sends is correct.
+        assertThat(ok.rowVersion()).isEqualTo(5);
+    }
+
+    /** E8-S5: a stale archive is refused before any state change. */
+    @Test
+    void E8S5_archiveWithStaleVersionIsRefused() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenant = Tenant.builder()
+                .tenantId(tenantId)
+                .tenantName("Doon Valley Academy")
+                .planId(PLAN_ID)
+                .state(TenantState.SUSPENDED)
+                .subdomain("doon-valley")
+                .timeZone("Asia/Kolkata")
+                .dataRegion("IN")
+                .build();
+        tenant.setRowVersion(2);
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        PlatformPrincipal po = (PlatformPrincipal) authFor(PlatformRole.PRODUCT_OWNER).getPrincipal();
+
+        com.edu360.api.exception.ApiException stale = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> tenantManagementService.archiveTenant(tenantId, "Closed", po, "\"1\""));
+        assertThat(stale.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(tenant.getState()).isEqualTo(TenantState.SUSPENDED);
+        verify(tenantRepository, org.mockito.Mockito.never()).save(any(Tenant.class));
     }
 
     @Test

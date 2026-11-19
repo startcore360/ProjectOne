@@ -28,6 +28,11 @@ export function SecurityPolicyView() {
   const [incidents, setIncidents] = useState<SecurityIncidentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [realmPreview, setRealmPreview] = useState<import("../../api/platformOpsService").RealmSyncPreviewItem | null>(null);
+  const [realmSyncRun, setRealmSyncRun] = useState<import("../../api/platformOpsService").RealmSyncRunItem | null>(null);
+  const [previewingRealms, setPreviewingRealms] = useState(false);
+  const [applyingRealms, setApplyingRealms] = useState(false);
+  const [retryingRealms, setRetryingRealms] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -100,6 +105,47 @@ export function SecurityPolicyView() {
       setSavingPolicy(false);
     }
   };
+
+  const handlePreviewRealmSync = async () => {
+    setPreviewingRealms(true);
+    setError("");
+    setRealmSyncRun(null);
+    try {
+      setRealmPreview(await platformOpsService.previewSecurityPolicyRealmSync());
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to preview realm security sync");
+    } finally {
+      setPreviewingRealms(false);
+    }
+  };
+
+  const handleApplyRealmSync = async () => {
+    if (!realmPreview) return;
+    setApplyingRealms(true);
+    setError("");
+    try {
+      setRealmSyncRun(await platformOpsService.applySecurityPolicyRealmSync(realmPreview.previewId));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to apply realm security policy");
+    } finally {
+      setApplyingRealms(false);
+    }
+  };
+
+  const handleRetryFailedRealms = async () => {
+    if (!realmSyncRun) return;
+    setRetryingRealms(true);
+    setError("");
+    try {
+      setRealmSyncRun(await platformOpsService.retryFailedSecurityPolicyRealms(realmSyncRun.runId));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to retry failed realms");
+    } finally {
+      setRetryingRealms(false);
+    }
+  };
+
+  const failedRealmCount = realmSyncRun?.results.filter((result) => !result.applied).length ?? 0;
 
   const handleCreateIncident = async (e: FormEvent) => {
     e.preventDefault();
@@ -176,6 +222,57 @@ export function SecurityPolicyView() {
           mark="alert"
         />
       </div>
+
+      {canEditPolicy && (
+        <Panel
+          title="Realm Security Policy Re-application"
+          description="Preview target realms and policy values before making changes. Credentials and client secrets are never displayed."
+        >
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px" }}>
+            <Button variant="secondary" onClick={() => void handlePreviewRealmSync()} disabled={previewingRealms || applyingRealms || retryingRealms}>
+              {previewingRealms ? "Loading Preview..." : "Preview Realm Sync"}
+            </Button>
+            {realmPreview && (
+              <Button onClick={() => void handleApplyRealmSync()} disabled={applyingRealms || retryingRealms || realmPreview.realms.length === 0}>
+                {applyingRealms ? "Applying..." : "Apply to Previewed Realms"}
+              </Button>
+            )}
+            {failedRealmCount > 0 && realmSyncRun && (
+              <Button variant="secondary" onClick={() => void handleRetryFailedRealms()} disabled={retryingRealms || applyingRealms}>
+                {retryingRealms ? "Retrying Failed..." : "Retry Failed Realms (" + failedRealmCount + ")"}
+              </Button>
+            )}
+          </div>
+          {realmPreview && (
+            <div style={{ marginBottom: "16px" }}>
+              <p><strong>Read-only preview</strong> · {realmPreview.realms.length} realm(s) targeted</p>
+              <p>
+                Password length: {realmPreview.settings.minPasswordLength}; digits: {realmPreview.settings.requireDigit ? "required" : "not required"}; special character: {realmPreview.settings.requireSpecialChar ? "required" : "not required"}; lockout: {realmPreview.settings.maxFailedLogins} failures / {realmPreview.settings.lockoutMinutes} min; idle timeout: {realmPreview.settings.idleSessionTimeoutMinutes} min.
+              </p>
+              <DataTable headers={["Target realm", "Action"]}>
+                {realmPreview.realms.map((realm) => (
+                  <tr key={realm}><td>{realm}</td><td>Apply current security baseline</td></tr>
+                ))}
+              </DataTable>
+            </div>
+          )}
+          {realmSyncRun && (
+            <div>
+              <p><strong>Execution results</strong> · {realmSyncRun.results.length - failedRealmCount} applied · {failedRealmCount} failed</p>
+              <DataTable headers={["Realm", "Result", "Safe error code"]}>
+                {realmSyncRun.results.map((result) => (
+                  <tr key={result.realm} style={!result.applied ? { background: "var(--color-status-danger-bg)" } : undefined}>
+                    <td>{result.realm}</td>
+                    <td><StatusBadge value={result.applied ? "APPLIED" : "FAILED"} /></td>
+                    <td>{result.error ?? "—"}</td>
+                  </tr>
+                ))}
+              </DataTable>
+              {failedRealmCount > 0 && <Notice tone="warning">Failed realms are highlighted. Retry targets only the failed realms from this run.</Notice>}
+            </div>
+          )}
+        </Panel>
+      )}
 
       <div className="app-two-col">
         {/* Policy Configuration Form */}

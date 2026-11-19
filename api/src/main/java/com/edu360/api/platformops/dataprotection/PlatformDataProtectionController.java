@@ -141,6 +141,33 @@ public class PlatformDataProtectionController {
     public ResponseEntity<RetentionChangeRequestResponse> decideRetentionChange(
             @PathVariable UUID id,
             @Valid @RequestBody DecideDeletionRequestDto request,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "RETENTION_CHANGE_APPROVE");
+        // E8-S5: D5 decideRetentionChange requires an Idempotency-Key.
+        PlatformIdempotencyService.Claim claim = idempotencyService.claim(principal.platformUserId(),
+                "decideRetentionChange", idempotencyKey, Map.of("id", id, "request", request));
+        if (claim.replay()) {
+            int status = claim.responseStatus() == null ? HttpStatus.OK.value() : claim.responseStatus();
+            return ResponseEntity.status(status)
+                    .body(objectMapper.convertValue(claim.responseBody(), RetentionChangeRequestResponse.class));
+        }
+        try {
+            RetentionChangeRequestResponse response = dataProtectionService.decideRetentionChange(
+                    id, request.decision(), request.remark(), principal);
+            idempotencyService.complete(principal.platformUserId(), claim.id(), HttpStatus.OK.value(), response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            idempotencyService.release(principal.platformUserId(), claim.id());
+            throw ex;
+        }
+    }
+
+    /** Internal / test path: no Idempotency-Key. */
+    public ResponseEntity<RetentionChangeRequestResponse> decideRetentionChange(
+            UUID id,
+            DecideDeletionRequestDto request,
             Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "RETENTION_CHANGE_APPROVE");

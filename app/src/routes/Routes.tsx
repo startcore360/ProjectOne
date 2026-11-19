@@ -6,7 +6,7 @@ import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
 import { Spinner } from "../design-system/components";
 import RouteErrorBoundary from "./RouteErrorBoundary";
-import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole } from "../features/platform/platformAccess";
+import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole, platformLandingPath } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
@@ -23,6 +23,7 @@ const SelfServicePage = lazy(() => import("../features/self-service/pages/SelfSe
 const SessionsPage = lazy(() => import("../features/sessions/pages/SessionsPage"));
 const TenantSupportPage = lazy(() => import("../features/institution-admin/pages/TenantSupportPage"));
 const StaffRecordsPage = lazy(() => import("../features/institution-admin/pages/StaffRecordsPage"));
+const TenantDataProtectionPage = lazy(() => import("../features/dataprotection/TenantDataProtectionPage"));
 
 // Lazy-loaded platform pages
 const PlatformOverviewPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.PlatformOverviewPage })));
@@ -41,6 +42,7 @@ const AuditLogPage = lazy(() => import("../features/platform/pages/PlatformPages
 const UsageCountsPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.UsageCountsPage })));
 const BackupStatusPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.BackupStatusPage })));
 const IntegrationTypesPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.IntegrationTypesPage })));
+const DataProtectionWorkspacePage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.DataProtectionWorkspacePage })));
 
 // Lazy-loaded institution admin pages
 const InstitutionsPage = lazy(() => import("../features/institution-admin/pages/InstitutionAdminPages").then((m) => ({ default: m.InstitutionsPage })));
@@ -93,7 +95,7 @@ function LazyRouteView() {
 // string. platformRole is real, so this branch can be checked for real.
 function RoleHomeRedirect() {
   const platformRole = useAppSelector((state) => state.auth.user?.platformRole);
-  if (canOpenPlatformConsole(platformRole)) return <Navigate to="/platform" replace />;
+  if (canOpenPlatformConsole(platformRole)) return <Navigate to={platformLandingPath(platformRole)} replace />;
   // There is no tenant-side "university admin" role on the backend yet (Foundation item 7,
   // not yet built - no role field exists on AuthUserResponse beyond userType), so that branch
   // can't be satisfied by any real login right now. Default everyone else to the one route
@@ -145,6 +147,7 @@ export default function AppRoutes() {
               <Route path="/university/setup/academic-governance" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicGovernance}><AcademicGovernancePage /></ActionGate>} />
               <Route path="/tenants/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
               <Route path="/tenants/users/:userId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserDetailPage /></ActionGate>} />
+              <Route path="/tenant/data-protection" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.dataProtection}><TenantDataProtectionPage /></ActionGate>} />
             </Route>
           </Route>
         </Route>
@@ -192,6 +195,9 @@ export default function AppRoutes() {
               </Route>
               <Route element={<PlatformPageGate anyOf={PLATFORM_PAGE_ACTIONS.integrations} />}>
                 <Route path="/platform/integration-types" element={<IntegrationTypesPage />} />
+              </Route>
+              <Route element={<PlatformPageGate anyOf={PLATFORM_PAGE_ACTIONS.dataProtection} />}>
+                <Route path="/platform/data-protection" element={<DataProtectionWorkspacePage />} />
               </Route>
             </Route>
           </Route>

@@ -1,6 +1,7 @@
 ﻿import {
   PLATFORM_PAGE_ACTIONS,
   canOpenPlatformConsole,
+  filterPlatformNavigation,
   loadPlatformPermissions,
   usePlatformAccess,
 } from "../features/platform/platformAccess";
@@ -14,6 +15,7 @@ import Edu360Logo from "../assets/Edu360Logo";
 import { ThemeToggle } from "../components/ui";
 import { RoleSwitcher } from "../components/layout/RoleSwitcher";
 import { NotificationBell } from "../features/notifications/components/NotificationBell";
+import { PlatformNotificationBell } from "../features/platform/components/notifications/PlatformNotificationBell";
 import { useLiveSocket } from "../features/live/liveSocket";
 import { SESSION_IDLE_LIMIT_MS, startInactivityTracker } from "../services/inactivityTracker";
 import api from "../services/axios";
@@ -64,7 +66,6 @@ const schoolNavigation = [
 
 const platformNavigation = [
   { label: "Overview", to: "/platform", icon: "home" as const, important: true, anyOf: null },
-  { label: "My sessions", to: "/sessions", icon: "lock" as const, important: false, anyOf: null },
   { label: "Tenants", to: "/platform/tenants", icon: "building" as const, important: true, anyOf: PLATFORM_PAGE_ACTIONS.tenants },
   { label: "Plans & billing", to: "/platform/plans", icon: "wallet" as const, important: true, anyOf: PLATFORM_PAGE_ACTIONS.plans },
   { label: "Invoices", to: "/platform/invoices", icon: "file-text" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.invoices },
@@ -80,6 +81,7 @@ const platformNavigation = [
   { label: "Security policy", to: "/platform/security-policy", icon: "key" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.security },
   { label: "Integrations", to: "/platform/integration-types", icon: "cpu" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.integrations },
   { label: "Releases", to: "/platform/releases", icon: "package" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.releases },
+  { label: "Data protection", to: "/platform/data-protection", icon: "shield" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.dataProtection },
 ];
 
 const workspaceNavigation = [
@@ -146,7 +148,7 @@ export default function AppLayout() {
   }
   const name = user?.displayName?.trim() || "Account";
   const dispatch = useAppDispatch();
-  const { canAny, customRoleName } = usePlatformAccess();
+  const { serverActions, permissionsLoaded: platformPermissionsLoaded, customRoleName } = usePlatformAccess();
   const { canAny: canTenantAny, loading: tenantPermissionsLoading, error: tenantPermissionsError, permissions: tenantPermissions } = useTenantAccess();
 
   // Role / Level detection
@@ -242,7 +244,7 @@ export default function AppLayout() {
   const baseNavigation = isSupportSession
     ? [{ label: "Dashboard", to: "/dashboard", icon: "home" as const, important: true }, { label: "Support", to: "/support", icon: "help" as const, important: true }]
     : isPlatformConsole
-    ? platformNavigation.filter((item) => !item.anyOf || canAny(item.anyOf))
+    ? filterPlatformNavigation(platformNavigation, platformPermissionsLoaded ? serverActions : [])
     : isStudent || user?.userType === "GUARDIAN"
       ? studentNavigation
       : isUniversityLevel
@@ -256,15 +258,11 @@ export default function AppLayout() {
               : workspaceNavigation;
 
   // Academic destinations appear only when the active role has the matching server grant.
-  // They remain non-clickable until their real feature pages ship; no placeholder routes.
+  // Only real feature destinations are included; unfinished placeholders are intentionally omitted.
   const academicNavigation = tenantPermissionsLoading ? [] : [
     { label: "Support", to: "/support", icon: "help" as const, important: false, anyOf: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"] },
-    { label: "Timetable", to: "/dashboard", icon: "calendar" as const, important: false, disabled: true, anyOf: ["TIMETABLE_BUILD", "TIMETABLE_VIEW"] },
-    { label: "Attendance", to: "/dashboard", icon: "check-circle" as const, important: false, disabled: true, anyOf: ["ATTENDANCE_MARK", "ATTENDANCE_VIEW", "ATTENDANCE_VIEW_OWN", "ATTENDANCE_BULK_UPLOAD"] },
-    { label: "Assignments", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["ASSIGNMENT_CREATE", "ASSIGNMENT_SUBMIT", "ASSIGNMENT_VIEW_OWN", "ASSIGNMENT_EVALUATE"] },
-    { label: "Study material", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["STUDY_MATERIAL_UPLOAD"] },
-    { label: "Syllabus", to: "/dashboard", icon: "book" as const, important: false, disabled: true, anyOf: ["SYLLABUS_VIEW", "SYLLABUS_MANAGE"] },
     { label: "Staff records", to: "/university/staff", icon: "users" as const, important: false, anyOf: ["STAFF_RECORD_VIEW"] },
+    { label: "Data protection", to: "/tenant/data-protection", icon: "shield" as const, important: false, anyOf: ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"] },
   ].filter((item) => canTenantAny(item.anyOf));
   const navigation = isPlatformConsole ? baseNavigation : [...baseNavigation, ...academicNavigation];
 
@@ -438,7 +436,7 @@ export default function AppLayout() {
       <div className="app-topbar">
         <div className="app-topbar__context"><span>EDU 360</span><span aria-hidden="true">/</span><strong>{contextLabel}</strong></div>
         <div className="app-topbar__tools">
-          {!isPlatformConsole && <NotificationBell />}
+          {isPlatformConsole ? <PlatformNotificationBell /> : <NotificationBell />}
           <div className="app-topbar__role"><RoleSwitcher /></div>
           <ThemeToggle variant="inline" />
           {/* Mobile only (CSS): who is signed in, always visible, one tap to the profile. */}

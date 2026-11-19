@@ -42,6 +42,9 @@ public class PlatformRelease {
     @Column(name = "deployed_at")
     private Instant deployedAt;
 
+    @Column(name = "scheduled_at")
+    private Instant scheduledAt;
+
     @Column(name = "rolled_back_at")
     private Instant rolledBackAt;
 

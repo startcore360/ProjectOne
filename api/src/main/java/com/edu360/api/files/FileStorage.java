@@ -24,4 +24,11 @@ public interface FileStorage {
 
     /** Reads a previously stored file fully into memory. Use only for bounded content. */
     byte[] read(String storageKey);
+
+    /**
+     * Permanently deletes a stored object (E5-S3 export expiry). Idempotent: deleting a key that no longer
+     * exists is a no-op. Implementations must validate the key the same way reads do. Every implementation
+     * (including the future S3FileStorage, E10-S6) must honour this contract.
+     */
+    void delete(String storageKey);
 }

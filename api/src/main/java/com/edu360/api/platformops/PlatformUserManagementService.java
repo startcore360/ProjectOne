@@ -12,6 +12,8 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -88,7 +90,13 @@ public class PlatformUserManagementService {
                 .build();
 
         PlatformUser saved = platformUserRepository.save(user);
-        auditWriter.record(principal, "CREATE", "PLATFORM_USER_MANAGE", "platform_user", platformUserId);
+        Map<String, Map<String, Object>> changes = new LinkedHashMap<>();
+        changes.put("fullName", change(null, saved.getFullName()));
+        changes.put("email", change(null, saved.getEmail()));
+        changes.put("platformRole", change(null, roleSnapshot(assigned.base(), assigned.customRoleId())));
+        changes.put("status", change(null, saved.getStatus().name()));
+        auditWriter.record(principal, null, "PLATFORM_USER_CREATED", "CREATE", "PLATFORM_USER_MANAGE",
+                "platform_user", platformUserId, PlatformAuditWriter.SUCCESS, changes);
 
         log.info("Created platform user {} ({}) with role {} by {}",
                 platformUserId, normalizedEmail, assigned.base(), principal.email());
@@ -103,6 +111,9 @@ public class PlatformUserManagementService {
     @Transactional(transactionManager = "platformTransactionManager")
     public PlatformUserResponse updatePlatformUser(UUID platformUserId, PlatformUserUpdateRequest request,
             PlatformPrincipal principal) {
+        // Lock all active Product Owner rows in stable order before reading the target. This is a
+        // database-backed, cross-instance serialization point for the last-owner invariant.
+        platformUserRepository.lockActiveProductOwners(PlatformRole.PRODUCT_OWNER, PlatformUserStatus.ACTIVE);
         PlatformUser user = platformUserRepository.findById(platformUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Platform user " + platformUserId + " was not found."));
 
@@ -123,15 +134,24 @@ public class PlatformUserManagementService {
                     "The last active Product Owner cannot be demoted or deactivated.");
         }
 
+        Map<String, Map<String, Object>> changes = new LinkedHashMap<>();
         if (request.fullName() != null) {
             String name = request.fullName().trim();
             if (name.isEmpty()) {
                 throw new IllegalArgumentException("Full name can't be blank.");
             }
-            user.setFullName(name);
+            if (!Objects.equals(user.getFullName(), name)) {
+                changes.put("fullName", change(user.getFullName(), name));
+                user.setFullName(name);
+            }
         }
         if (changesRole) {
             AssignedRole assigned = resolveRole(request.platformRole(), request.platformRoleId());
+            String oldRole = roleSnapshot(user.getPlatformRole(), user.getPlatformRoleId());
+            String newRole = roleSnapshot(assigned.base(), assigned.customRoleId());
+            if (!Objects.equals(oldRole, newRole)) {
+                changes.put("platformRole", change(oldRole, newRole));
+            }
             user.setPlatformRole(assigned.base());
             user.setPlatformRoleId(assigned.customRoleId());
         }
@@ -140,16 +160,27 @@ public class PlatformUserManagementService {
         String realm = keycloakProperties.getPlatformRealm();
         if (changesStatus) {
             boolean enable = request.status() == PlatformUserStatus.ACTIVE;
-            keycloakAdminClient.setUserEnabled(realm, user.getIdentitySubject(), enable);
+            // Do not persist ACTIVE/INACTIVE unless Keycloak confirms the enabled-state update.
+            keycloakAdminClient.setUserEnabledStrict(realm, user.getIdentitySubject(), enable);
             if (!enable) {
                 keycloakAdminClient.logoutUser(realm, user.getIdentitySubject());
             }
+            changes.put("status", change(user.getStatus().name(), request.status().name()));
             user.setStatus(request.status());
         }
 
         PlatformUser saved = platformUserRepository.save(user);
-        auditWriter.record(principal, "UPDATE", "PLATFORM_USER_MANAGE", "platform_user", platformUserId);
+        auditWriter.record(principal, null, "PLATFORM_USER_UPDATED", "UPDATE", "PLATFORM_USER_MANAGE",
+                "platform_user", platformUserId, PlatformAuditWriter.SUCCESS, changes);
         return PlatformUserResponse.from(saved, customRoleName(saved.getPlatformRoleId()), null);
+    }
+
+    private static Map<String, Object> change(Object oldValue, Object newValue) {
+        return Map.of("old", oldValue == null ? "" : oldValue, "new", newValue == null ? "" : newValue);
+    }
+
+    private static String roleSnapshot(PlatformRole role, UUID customRoleId) {
+        return role.name() + (customRoleId == null ? "" : ":" + customRoleId);
     }
 
     private AssignedRole resolveRole(PlatformRole standardRole, UUID customRoleId) {

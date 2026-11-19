@@ -26,9 +26,8 @@ import lombok.NoArgsConstructor;
  * So the "never tenant audit logs" rule in this story's brief is enforced simply by which table
  * this entity maps to - there is no cross-tenant query to accidentally write.
  *
- * Only the columns an audit log viewer actually needs are mapped (same partial-entity pattern as
- * tenant.Tenant) - old_values/new_values are jsonb and deliberately left unmapped rather than
- * pulling in a new jsonb-mapping dependency for this slice.
+ * Only the columns an audit log viewer needs are mapped. The masked payload jsonb is represented
+ * as JsonNode and passed through PlatformAuditPayloadRedactor before it leaves the API.
  *
  * REAL GAP (flagged, not worked around): nothing in this codebase currently INSERTs into
  * platform.audit_outbox - no platform action in api/ writes an audit event here yet. This

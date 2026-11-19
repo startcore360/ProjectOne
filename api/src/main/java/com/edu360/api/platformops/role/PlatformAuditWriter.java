@@ -31,6 +31,8 @@ public class PlatformAuditWriter {
     public static final String SUCCESS = "SUCCESS";
     public static final String DENIED = "DENIED";
     public static final String FAILED = "FAILED";
+    /** Reserved id stamped in created_by/updated_by for events written by scheduled jobs. */
+    public static final UUID SYSTEM_ACTOR_ID = new UUID(0L, 0L);
 
     private static final Set<String> VALID_OPERATIONS = Set.of(
             "CREATE", "UPDATE", "DELETE", "APPROVE", "REJECT", "LOGIN", "EXPORT", "DOWNLOAD", "DENIED",
@@ -63,6 +65,23 @@ public class PlatformAuditWriter {
         if (actor == null || actor.platformUserId() == null) {
             throw new IllegalStateException("A platform audit event needs an actor.");
         }
+        write("PLATFORM_USER", actor.platformUserId(), actor.platformUserId(), tenantId, eventType, operation,
+                actionCode, entityType, entityId, outcome, changes);
+    }
+
+    /**
+     * Writes an event raised by a scheduled job rather than a person (actor_kind SYSTEM, no actor user).
+     * The audit schema allows this; created_by/updated_by carry the reserved all-zero system id.
+     */
+    public void recordSystem(UUID tenantId, String eventType, String operation, String actionCode,
+                             String entityType, UUID entityId, String outcome, Map<String, Map<String, Object>> changes) {
+        write("SYSTEM", null, SYSTEM_ACTOR_ID, tenantId, eventType, operation, actionCode, entityType, entityId,
+                outcome, changes);
+    }
+
+    private void write(String actorKind, UUID actorUserId, UUID metadataUserId, UUID tenantId, String eventType,
+                       String operation, String actionCode, String entityType, UUID entityId, String outcome,
+                       Map<String, Map<String, Object>> changes) {
         Instant now = Instant.now();
         UUID id = UUID.randomUUID();
         String op = operation != null ? normalizeOperation(operation) : normalizeOperation(eventType);
@@ -87,8 +106,8 @@ public class PlatformAuditWriter {
                 .auditOutboxId(id)
                 .tenantId(tenantId)
                 .occurredAt(now)
-                .actorKind("PLATFORM_USER")
-                .actorUserId(actor.platformUserId())
+                .actorKind(actorKind)
+                .actorUserId(actorUserId)
                 .operation(op)
                 .eventType(event)
                 .actionCode(actionCode)
@@ -97,10 +116,11 @@ public class PlatformAuditWriter {
                 .outcome(outcome)
                 .payload(payload)
                 .correlationId(correlationId)
-                .payloadHash(sha256(id + "|" + actor.platformUserId() + "|" + op + "|" + event + "|" + actionCode
-                        + "|" + entityType + "|" + entityId + "|" + outcome + "|" + payloadJson + "|" + now))
-                .createdBy(actor.platformUserId())
-                .updatedBy(actor.platformUserId())
+                .payloadHash(sha256(id + "|" + (actorUserId != null ? actorUserId : actorKind) + "|" + op + "|" + event
+                        + "|" + actionCode + "|" + entityType + "|" + entityId + "|" + outcome + "|" + payloadJson
+                        + "|" + now))
+                .createdBy(metadataUserId)
+                .updatedBy(metadataUserId)
                 .build());
     }
 

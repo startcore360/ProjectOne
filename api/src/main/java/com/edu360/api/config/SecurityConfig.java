@@ -3,6 +3,7 @@ package com.edu360.api.config;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -93,6 +94,10 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/internal/identity-events", "/v1/internal/identity-events", "/v1/ws", "/api/ws").permitAll();
                     // BS-25: Swagger and H2 console only open in dev or test profiles
                     if (isDevOrTest) {
+                        // The local backup-agent route has its own dev-only shared-secret check.
+                        if (environment.matchesProfiles("dev")) {
+                            auth.requestMatchers(HttpMethod.POST, "/api/platform/backup-status", "/v1/platform/backup-status").permitAll();
+                        }
                         auth.requestMatchers("/h2-console/**").permitAll();
                         auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
                     }

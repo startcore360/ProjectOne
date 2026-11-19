@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
+import com.edu360.api.auth.MfaRequirementService;
 import com.edu360.api.auth.SessionSettingsController;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.GlobalExceptionHandler;
@@ -101,7 +102,7 @@ class RegI07ModuleEntitlementTest {
     @DisplayName("REG-I07-3 (server half): the session settings the menu reads list the disabled module")
     void regI07_3_sessionSettingsListDisabledModule() {
         tenantHasModule(false);
-        SessionSettingsController controller = new SessionSettingsController(new SecurityPolicyService(null), service);
+        SessionSettingsController controller = new SessionSettingsController(service, mock(MfaRequirementService.class), new SecurityPolicyService(null));
         TenantPrincipal principal = new TenantPrincipal(TENANT_ID, UUID.randomUUID(), UserType.STAFF, "Admin", false);
 
         var response = controller.sessionSettings(new UsernamePasswordAuthenticationToken(principal, null, List.of()));

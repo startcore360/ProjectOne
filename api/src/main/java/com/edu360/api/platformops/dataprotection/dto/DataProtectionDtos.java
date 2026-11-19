@@ -7,6 +7,7 @@ import java.util.UUID;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 public final class DataProtectionDtos {
 
@@ -15,6 +16,7 @@ public final class DataProtectionDtos {
     public record ExportRequestResponse(
             UUID exportRequestId,
             UUID tenantId,
+            String tenantName,
             String requestedByKind,
             String status,
             UUID fileRef,
@@ -26,6 +28,7 @@ public final class DataProtectionDtos {
     public record DeletionRequestResponse(
             UUID deletionRequestId,
             UUID tenantId,
+            String tenantName,
             String origin,
             String status,
             Instant poConfirmedAt,
@@ -34,7 +37,10 @@ public final class DataProtectionDtos {
             Instant createdAt,
             String purgeStatus,
             Instant dpoDecidedAt,
-            String dpoRemark
+            String dpoRemark,
+            Instant retentionWaivedAt,
+            String retentionWaiverReason,
+            Integer rowVersion
     ) {}
 
     public record RetentionPolicyResponse(
@@ -49,13 +55,15 @@ public final class DataProtectionDtos {
     public record RetentionChangeRequestResponse(
             UUID retentionChangeRequestId,
             UUID tenantId,
+            String tenantName,
             String dataClassCode,
             Integer currentMonths,
             Integer requestedMonths,
             String reason,
             String status,
             Instant decidedAt,
-            Instant createdAt
+            Instant createdAt,
+            Integer rowVersion
     ) {}
 
     public record CreateRetentionChangeRequest(
@@ -68,6 +76,12 @@ public final class DataProtectionDtos {
             @NotNull(message = "tenantId is required") UUID tenantId,
             String origin,
             String reason
+    ) {}
+
+    /** Optional body for the Product Owner confirmation (E5-S2, PD-7 waiver). No body means no waiver. */
+    public record ConfirmDeletionRequestDto(
+            boolean waiveRetentionWait,
+            @Size(max = 900, message = "waiverReason must be at most 900 characters") String waiverReason
     ) {}
 
     public record DecideDeletionRequestDto(

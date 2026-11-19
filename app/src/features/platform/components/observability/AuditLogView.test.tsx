@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "../../../../services/axios";
 import { AuditLogView, type AuditLogItem } from "./AuditLogView";
@@ -22,6 +22,8 @@ function items(count: number, offset = 0): AuditLogItem[] {
     entityId: null,
     outcome: "SUCCESS",
     correlationId: null,
+    eventType: "TENANT_UPDATED",
+    payload: { old_values: { state: "TRIAL" }, new_values: { state: "ACTIVE" } },
   }));
 }
 
@@ -33,14 +35,12 @@ beforeEach(() => {
   mockedApi.get.mockReset();
 });
 
-describe("AuditLogView pagination", () => {
-  it("shows a single server pager with the real total, not the table's own pager", async () => {
+describe("AuditLogView", () => {
+  it("shows a single server pager with the real total", async () => {
     mockedApi.get.mockResolvedValueOnce(page(0, 25, 62, 3));
-
     render(<AuditLogView />);
 
     expect(await screen.findByText("ACTION_0")).toBeInTheDocument();
-    // All 25 rows of this page are shown - the client pager (10 rows per page) is off.
     expect(screen.getByText("ACTION_24")).toBeInTheDocument();
     expect(screen.getAllByRole("navigation", { name: /pagination/i })).toHaveLength(1);
     expect(screen.queryByText(/Rows per page/i)).not.toBeInTheDocument();
@@ -52,7 +52,6 @@ describe("AuditLogView pagination", () => {
 
   it("disables Next on the last page and requests the next page from the server", async () => {
     mockedApi.get.mockResolvedValueOnce(page(0, 25, 30, 2)).mockResolvedValueOnce(page(1, 5, 30, 2));
-
     render(<AuditLogView />);
     fireEvent.click(await screen.findByRole("button", { name: "Next" }));
 
@@ -62,12 +61,48 @@ describe("AuditLogView pagination", () => {
     expect(mockedApi.get).toHaveBeenLastCalledWith("/platform/audit-logs", { params: { page: 1, size: 25 } });
   });
 
-  it("shows no pager when everything fits on one page (exactly 25 events)", async () => {
+  it("shows no pager when everything fits on one page", async () => {
     mockedApi.get.mockResolvedValueOnce(page(0, 25, 25, 1));
-
     render(<AuditLogView />);
-
     expect(await screen.findByText("ACTION_24")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: /pagination/i })).not.toBeInTheDocument();
+  });
+
+  it("applies server-side tenant filters", async () => {
+    mockedApi.get.mockResolvedValueOnce(page(0, 1, 1, 1)).mockResolvedValueOnce(page(0, 1, 1, 1));
+    render(<AuditLogView />);
+    await screen.findByText("ACTION_0");
+    fireEvent.change(screen.getByLabelText("Tenant ID"), { target: { value: "tenant-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    await waitFor(() => expect(mockedApi.get).toHaveBeenLastCalledWith("/platform/audit-logs", {
+      params: { page: 0, size: 25, tenantId: "tenant-123" },
+    }));
+  });
+
+  it("opens the full event payload in the details drawer", async () => {
+    mockedApi.get.mockResolvedValueOnce(page(0, 1, 1, 1));
+    render(<AuditLogView />);
+    fireEvent.click(await screen.findByRole("button", { name: "Details" }));
+    expect(screen.getByRole("dialog", { name: "Audit event details" })).toBeInTheDocument();
+    expect(screen.getByText(/"old_values"/)).toBeInTheDocument();
+    expect(screen.getByText(/"ACTIVE"/)).toBeInTheDocument();
+  });
+
+  it("requests a CSV export using the applied filters", async () => {
+    mockedApi.get.mockResolvedValueOnce(page(0, 1, 1, 1)).mockResolvedValueOnce({ data: new Blob(["csv"]) });
+    const createObjectURL = vi.fn(() => "blob:platform-audit");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(window.URL, "createObjectURL", { configurable: true, value: createObjectURL });
+    Object.defineProperty(window.URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL });
+
+    render(<AuditLogView />);
+    fireEvent.click(await screen.findByRole("button", { name: "Export CSV" }));
+
+    await waitFor(() => expect(mockedApi.get).toHaveBeenLastCalledWith("/platform/audit-logs/export", {
+      params: {}, responseType: "blob",
+    }));
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:platform-audit");
   });
 });

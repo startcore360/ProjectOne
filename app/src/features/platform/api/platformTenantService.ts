@@ -1,5 +1,15 @@
 import api from "../../../services/axios";
 
+/**
+ * E8-S5: headers for D5 writes marked IdempotencyKey, plus If-Match when the caller passes the row version it
+ * last read. Without a version the server answers 428 IF_MATCH_REQUIRED on operations that need one.
+ */
+export function idempotencyHeaders(rowVersion?: number): Record<string, string> {
+  const headers: Record<string, string> = { "Idempotency-Key": crypto.randomUUID() };
+  if (typeof rowVersion === "number") headers["If-Match"] = `"${rowVersion}"`;
+  return headers;
+}
+
 export type TenantType = "UNIVERSITY_GROUP" | "STANDALONE_COLLEGE" | "STANDALONE_SCHOOL";
 export type IsolationMode = "ISOLATED" | "SHARED";
 export type TenantStatus = "CREATED" | "TRIAL" | "ACTIVE" | "SUSPENDED" | "ARCHIVED" | "DELETED";
@@ -50,6 +60,8 @@ export type TenantItem = {
   archivedAt?: string;
   // Present only on the create response. It's never stored or returned again.
   firstAdminTemporaryPassword?: string;
+  /** E8-S5: current row version, sent back as If-Match on activate / suspend / archive. */
+  rowVersion?: number;
 };
 
 export type TenantPageResponse = {
@@ -157,6 +169,7 @@ export type UpdateTenantSettingsPayload = {
 export type ExportRequestDto = {
   exportRequestId: string;
   tenantId: string;
+  tenantName: string;
   requestedByKind: string;
   status: string;
   fileRef?: string;
@@ -168,6 +181,7 @@ export type ExportRequestDto = {
 export type DeletionRequestDto = {
   deletionRequestId: string;
   tenantId: string;
+  tenantName: string;
   origin: string;
   status: string;
   poConfirmedAt?: string;
@@ -177,6 +191,10 @@ export type DeletionRequestDto = {
   purgeStatus?: string;
   dpoDecidedAt?: string;
   dpoRemark?: string;
+  retentionWaivedAt?: string;
+  retentionWaiverReason?: string;
+  /** E8-S5: sent back as If-Match on the Product Owner confirmation. */
+  rowVersion?: number;
 };
 
 export type RetentionPolicyDto = {
@@ -194,6 +212,7 @@ export type TenantUsageMonthlyDto = {
   usageMonth: string;
   metricCode: string;
   quantity: number;
+  measured: boolean;
   computedAt: string;
   isFinal: boolean;
 };
@@ -231,14 +250,16 @@ export const platformTenantService = {
     }),
   getTenants: (page = 0, size = 50) =>
     api.get<TenantPageResponse>(`/platform/tenants?page=${page}&size=${size}`),
+  // E8-S5: D5 marks these writes IdempotencyKey (and If-Match where a version is passed); a fresh key per
+  // user action means a network retry of that action is replayed by the server instead of run twice.
   createTenant: (data: TenantCreateRequest) =>
-    api.post<TenantItem>("/platform/tenants", data),
-  activateTenant: (tenantId: string, data?: { paymentReference?: string; note?: string }) =>
-    api.post<TenantItem>(`/platform/tenants/${tenantId}/activation`, data || {}),
-  suspendTenant: (tenantId: string, reason?: string) =>
-    api.post<TenantItem>(`/platform/tenants/${tenantId}/suspension`, { reason }),
-  archiveTenant: (tenantId: string, reason?: string) =>
-    api.post<TenantItem>(`/platform/tenants/${tenantId}/archive`, { reason }),
+    api.post<TenantItem>("/platform/tenants", data, { headers: idempotencyHeaders() }),
+  activateTenant: (tenantId: string, data?: { paymentReference?: string; note?: string }, rowVersion?: number) =>
+    api.post<TenantItem>(`/platform/tenants/${tenantId}/activation`, data || {}, { headers: idempotencyHeaders(rowVersion) }),
+  suspendTenant: (tenantId: string, reason?: string, rowVersion?: number) =>
+    api.post<TenantItem>(`/platform/tenants/${tenantId}/suspension`, { reason }, { headers: idempotencyHeaders(rowVersion) }),
+  archiveTenant: (tenantId: string, reason?: string, rowVersion?: number) =>
+    api.post<TenantItem>(`/platform/tenants/${tenantId}/archive`, { reason }, { headers: idempotencyHeaders(rowVersion) }),
   reactivateTenant: (tenantId: string) =>
     api.post<TenantItem>(`/platform/tenants/${tenantId}/reactivation`),
   changeTenantPlan: (tenantId: string, payload: { planId: string; effective: "NOW" | "RENEWAL" }, idempotencyKey: string) =>
@@ -254,7 +275,17 @@ export const platformTenantService = {
   listExports: (tenantId: string) =>
     api.get<ExportRequestDto[]>(`/platform/tenants/${tenantId}/export`),
   requestTenantDeletion: (tenantId: string, origin = "PRODUCT_OWNER") =>
-    api.post<DeletionRequestDto>(`/platform/deletion-requests`, { tenantId, origin }),
+    api.post<DeletionRequestDto>(`/platform/deletion-requests`, { tenantId, origin }, { headers: idempotencyHeaders() }),
+  listDeletionRequests: () => api.get<DeletionRequestDto[]>("/platform/deletion-requests"),
+  confirmTenantDeletion: (
+    requestId: string,
+    options: { waiveRetentionWait?: boolean; waiverReason?: string } = {},
+    rowVersion?: number,
+  ) =>
+    api.post<DeletionRequestDto>(`/platform/deletion-requests/${requestId}/confirm`, {
+      waiveRetentionWait: options.waiveRetentionWait ?? false,
+      waiverReason: options.waiveRetentionWait ? options.waiverReason : undefined,
+    }, { headers: idempotencyHeaders(rowVersion) }),
   getRetentionPolicies: (tenantId: string) =>
     api.get<RetentionPolicyDto[]>(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>

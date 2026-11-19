@@ -98,9 +98,9 @@ public class PlatformReportController {
                         .map(Invoice::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                Instant startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+                Instant startOfMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
                 BigDecimal totalCollectionsThisMonth = paidInvoices.stream()
-                        .filter(i -> i.getPaidAt() != null && i.getPaidAt().isAfter(startOfMonth))
+                        .filter(i -> i.getPaidAt() != null && !i.getPaidAt().isBefore(startOfMonth))
                         .map(Invoice::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -149,6 +149,24 @@ public class PlatformReportController {
         }
 
         if (revenueReport) {
+            if (principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+                List<Invoice> paidInvoices = invoiceRepository != null
+                        ? invoiceRepository.findByStatus("PAID") : List.of();
+                Instant startOfYear = LocalDate.now(ZoneOffset.UTC).withDayOfYear(1)
+                        .atStartOfDay().toInstant(ZoneOffset.UTC);
+                BigDecimal totalRevenueYtd = paidInvoices.stream()
+                        .filter(i -> i.getPaidAt() != null && !i.getPaidAt().isBefore(startOfYear))
+                        .map(Invoice::getTotalAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                Instant startOfMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+                        .atStartOfDay().toInstant(ZoneOffset.UTC);
+                BigDecimal totalCollectionsThisMonth = paidInvoices.stream()
+                        .filter(i -> i.getPaidAt() != null && !i.getPaidAt().isBefore(startOfMonth))
+                        .map(Invoice::getTotalAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                metrics.put("totalRevenueYtd", totalRevenueYtd);
+                metrics.put("totalCollectionsThisMonth", totalCollectionsThisMonth);
+            }
             addRevenueMetrics(metrics);
         }
 

@@ -29,6 +29,14 @@ run edu360_v4_test 49_v41_platform_notification.sql > /dev/null
 run edu360_v4_test 50_v41_platform_audit_payload_idempotency.sql > /dev/null
 run edu360_v4_test 51_v41_mfa_recovery.sql > /dev/null  # MFA-01 two-step login recovery
 run edu360_v4_test 52_v41_tenant_branding_logo.sql > /dev/null  # E1-S4 tenant logo storage
+run edu360_v4_test 53_v41_platform_approval_delegation.sql > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/53t_tests_platform_approval_delegation.sql" > /dev/null
+run edu360_v4_test 44_v41_release_scheduling.sql > /dev/null  # E7-S1 release scheduling
+$PSQL -q -d edu360_v4_test -f "$D/44t_tests_release_scheduling.sql" > /dev/null
+run edu360_v4_test 45_v41_usage_rollup.sql > /dev/null  # E6-S1 usage rollup
+$PSQL -q -d edu360_v4_test -f "$D/45t_tests_usage_rollup.sql" > /dev/null
+run edu360_v4_test 42_v41_deletion_retention_waiver.sql > /dev/null  # E5-S2 deletion retention waiver
+$PSQL -q -d edu360_v4_test -f "$D/42t_tests_deletion_retention_waiver.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/52t_tests_tenant_branding_logo.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/36t_tests_plan_commercial.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/49t_tests_platform_notification.sql" > /dev/null
@@ -120,10 +128,18 @@ $PSQL -At -d edu360_v4_ref -c "SELECT 'REFCHECK | tenant-level standard roles ho
 run edu360_v4_ref 51_v41_mfa_recovery.sql > /dev/null  # MFA-01: needs 05 grants and the 20 never-allowed function
 $PSQL -q -d edu360_v4_ref -f "$D/51t_tests_mfa_recovery.sql" > /dev/null
 run edu360_v4_ref 52_v41_tenant_branding_logo.sql > /dev/null  # E1-S4 tenant logo storage
+run edu360_v4_ref 53_v41_platform_approval_delegation.sql > /dev/null
+$PSQL -q -d edu360_v4_ref -f "$D/53t_tests_platform_approval_delegation.sql" > /dev/null
+run edu360_v4_ref 44_v41_release_scheduling.sql > /dev/null  # E7-S1 release scheduling
+$PSQL -q -d edu360_v4_ref -f "$D/44t_tests_release_scheduling.sql" > /dev/null
+run edu360_v4_ref 45_v41_usage_rollup.sql > /dev/null  # E6-S1 usage rollup
+$PSQL -q -d edu360_v4_ref -f "$D/45t_tests_usage_rollup.sql" > /dev/null
+run edu360_v4_ref 42_v41_deletion_retention_waiver.sql > /dev/null  # E5-S2 deletion retention waiver
+$PSQL -q -d edu360_v4_ref -f "$D/42t_tests_deletion_retention_waiver.sql" > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/52t_tests_tenant_branding_logo.sql" > /dev/null
 # D. Q-03 / Q-06: V4.1 migrations are idempotent and their rollbacks round-trip (third throw-away database).
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_rb WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_rb"
-V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 25_sprint2_foundations.sql 26_v41_student_login_switch_guard.sql 27_v41_notification_read_state.sql 28_v41_study_material_view.sql 29_v41_institution_code_formats.sql 30_v41_exam_day_event_type.sql 31_v41_staff_record_view_grants.sql 32_v41_staff_login_aliases.sql 33_v41_study_material_leadership_grants.sql 36_v41_plan_commercial.sql 37_v41_feature_catalog_and_provisioning.sql 38_v41_invoice_approval_and_renewal.sql 39_v41_billing_settings.sql 40_v41_support_session.sql 41_v41_support_readable.sql 49_v41_platform_notification.sql 50_v41_platform_audit_payload_idempotency.sql 51_v41_mfa_recovery.sql 52_v41_tenant_branding_logo.sql"
+V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 25_sprint2_foundations.sql 26_v41_student_login_switch_guard.sql 27_v41_notification_read_state.sql 28_v41_study_material_view.sql 29_v41_institution_code_formats.sql 30_v41_exam_day_event_type.sql 31_v41_staff_record_view_grants.sql 32_v41_staff_login_aliases.sql 33_v41_study_material_leadership_grants.sql 36_v41_plan_commercial.sql 37_v41_feature_catalog_and_provisioning.sql 38_v41_invoice_approval_and_renewal.sql 39_v41_billing_settings.sql 40_v41_support_session.sql 41_v41_support_readable.sql 49_v41_platform_notification.sql 50_v41_platform_audit_payload_idempotency.sql 51_v41_mfa_recovery.sql 52_v41_tenant_branding_logo.sql 44_v41_release_scheduling.sql 45_v41_usage_rollup.sql 42_v41_deletion_retention_waiver.sql 53_v41_platform_approval_delegation.sql"
 for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 05_ref_data.sql $V41; do run edu360_v4_rb $f > /dev/null; done
 for f in $V41; do run edu360_v4_rb $f > /dev/null; done                      # second apply: idempotent
 echo "RBCHECK | apply V4.1 files twice | OK" >> "$OUT"
@@ -136,7 +152,7 @@ INSERT INTO ref.action_catalog (action_code, action_no, module_name, phase, desc
 INSERT INTO app.tenant_step_in (tenant_id, step_in_id, actor_user_id, action_code, reason, expires_at)
 VALUES ('00000000-0000-0000-0000-00000000c601', '00000000-0000-0000-0000-00000000c621', '00000000-0000-0000-0000-00000000c611', 'B6_RB_ACTION', 'Rollback evidence row', now() + interval '5 minutes');
 SQL
-for f in 52r_v41_tenant_branding_logo_rollback.sql 51r_v41_mfa_recovery_rollback.sql 50r_v41_platform_audit_payload_idempotency_rollback.sql 49r_v41_platform_notification_rollback.sql 41r_v41_support_readable_rollback.sql 40r_v41_support_session_rollback.sql 39r_v41_billing_settings_rollback.sql 38r_v41_invoice_approval_and_renewal_rollback.sql 37r_v41_feature_catalog_and_provisioning_rollback.sql 36r_v41_plan_commercial_rollback.sql 33r_v41_study_material_leadership_grants_rollback.sql 32r_v41_staff_login_aliases_rollback.sql 31r_v41_staff_record_view_grants_rollback.sql 30r_v41_exam_day_event_type_rollback.sql 29r_v41_institution_code_formats_rollback.sql 28r_v41_study_material_view_rollback.sql 27r_v41_notification_read_state_rollback.sql 26r_v41_student_login_switch_guard_rollback.sql 25r_sprint2_foundations_rollback.sql 22r_v41_platform_audit_event_type_rollback.sql 20r_v41_never_allowed_guard_rollback.sql 18r_v41_user_sessions_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
+for f in 53r_v41_platform_approval_delegation_rollback.sql 42r_v41_deletion_retention_waiver_rollback.sql 44r_v41_release_scheduling_rollback.sql 52r_v41_tenant_branding_logo_rollback.sql 51r_v41_mfa_recovery_rollback.sql 50r_v41_platform_audit_payload_idempotency_rollback.sql 49r_v41_platform_notification_rollback.sql 45r_v41_usage_rollup_rollback.sql 41r_v41_support_readable_rollback.sql 40r_v41_support_session_rollback.sql 39r_v41_billing_settings_rollback.sql 38r_v41_invoice_approval_and_renewal_rollback.sql 37r_v41_feature_catalog_and_provisioning_rollback.sql 36r_v41_plan_commercial_rollback.sql 33r_v41_study_material_leadership_grants_rollback.sql 32r_v41_staff_login_aliases_rollback.sql 31r_v41_staff_record_view_grants_rollback.sql 30r_v41_exam_day_event_type_rollback.sql 29r_v41_institution_code_formats_rollback.sql 28r_v41_study_material_view_rollback.sql 27r_v41_notification_read_state_rollback.sql 26r_v41_student_login_switch_guard_rollback.sql 25r_sprint2_foundations_rollback.sql 22r_v41_platform_audit_event_type_rollback.sql 20r_v41_never_allowed_guard_rollback.sql 18r_v41_user_sessions_rollback.sql; do run edu360_v4_rb $f > /dev/null; done
 if run edu360_v4_rb 16r_v41_tenant_top_post_authority_rollback.sql > /dev/null 2>&1; then r=MISMATCH; else r=OK; fi
 echo "RBCHECK | 16r refuses while step-in rows exist (DB-A12) | $r" >> "$OUT"
 $PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_rb -c "SET edu360.rollback_discard_step_ins = 'on'" -f "$D/16r_v41_tenant_top_post_authority_rollback.sql" > /dev/null

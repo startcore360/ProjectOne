@@ -44,3 +44,7 @@ Thumbs.db
 
 # Local test scripts and outputs (contain live tokens); never commit.
 /scratch/
+
+# Local development backup artifacts and credentials
+/docker/backup/backups/
+/docker/backup/.env.local

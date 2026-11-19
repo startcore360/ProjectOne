@@ -65,9 +65,22 @@ public class PlatformBillingController {
         return ResponseEntity.ok(billingService.getInvoice(id));
     }
 
+    /** E8-S5: D5 createInvoice requires an Idempotency-Key, so a double-click cannot raise two invoices. */
     @PostMapping
     public ResponseEntity<InvoiceResponse> createInvoice(
             @Valid @RequestBody CreateInvoiceRequest req,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication auth
+    ) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "INVOICE_MANAGE");
+        return runIdempotent(principal, "INVOICE_CREATE", idempotencyKey, req, HttpStatus.CREATED,
+                () -> billingService.createInvoice(req, principal));
+    }
+
+    /** Internal / test path: no Idempotency-Key. */
+    public ResponseEntity<InvoiceResponse> createInvoice(
+            CreateInvoiceRequest req,
             Authentication auth
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
@@ -166,14 +179,50 @@ public class PlatformBillingController {
         return ResponseEntity.ok(billingService.sendInvoice(id, principal));
     }
 
+    /** E8-S5: D5 recordInvoicePayment requires an Idempotency-Key, so a retry cannot record a payment twice. */
     @PostMapping({"/{id}/record-payment", "/{id}/payment", "/{id}/payments"})
     public ResponseEntity<InvoiceResponse> recordPayment(
             @PathVariable UUID id,
             @Valid @RequestBody com.edu360.api.platformops.billing.dto.RecordPaymentRequest req,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication auth
+    ) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "INVOICE_MANAGE");
+        java.util.Map<String, Object> fingerprint = new java.util.LinkedHashMap<>();
+        fingerprint.put("invoiceId", id);
+        fingerprint.put("request", req);
+        return runIdempotent(principal, "INVOICE_PAYMENT", idempotencyKey, fingerprint, HttpStatus.OK,
+                () -> billingService.recordPayment(id, req, principal));
+    }
+
+    /** Internal / test path: no Idempotency-Key. */
+    public ResponseEntity<InvoiceResponse> recordPayment(
+            UUID id,
+            com.edu360.api.platformops.billing.dto.RecordPaymentRequest req,
             Authentication auth
     ) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "INVOICE_MANAGE");
         return ResponseEntity.ok(billingService.recordPayment(id, req, principal));
+    }
+
+    private ResponseEntity<InvoiceResponse> runIdempotent(PlatformPrincipal principal, String scope, String key,
+            Object fingerprint, HttpStatus successStatus, java.util.function.Supplier<InvoiceResponse> action) {
+        PlatformIdempotencyService.Claim claim =
+                idempotencyService.claim(principal.platformUserId(), scope, key, fingerprint);
+        if (claim.replay()) {
+            InvoiceResponse replay = objectMapper.convertValue(claim.responseBody(), InvoiceResponse.class);
+            return ResponseEntity.status(claim.responseStatus() == null ? successStatus
+                    : HttpStatus.valueOf(claim.responseStatus())).body(replay);
+        }
+        try {
+            InvoiceResponse result = action.get();
+            idempotencyService.complete(principal.platformUserId(), claim.id(), successStatus.value(), result);
+            return ResponseEntity.status(successStatus).body(result);
+        } catch (RuntimeException ex) {
+            idempotencyService.release(principal.platformUserId(), claim.id());
+            throw ex;
+        }
     }
 }

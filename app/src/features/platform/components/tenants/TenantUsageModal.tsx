@@ -69,14 +69,15 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
                 Monthly Historical Records
               </h4>
               <DataTable
-                headers={["Usage Month", "Metric", "Quantity", "Computed At", "Final"]}
+                headers={["Usage Month", "Metric", "Quantity", "Measured", "Computed At", "Final"]}
                 empty={usageList.length === 0}
               >
                 {usageList.map((u) => (
                   <tr key={u.tenantUsageMonthlyId}>
                     <td><strong>{u.usageMonth.slice(0, 7)}</strong></td>
                     <td>{u.metricCode}</td>
-                    <td>{Number(u.quantity).toLocaleString()}</td>
+                    <td>{u.measured ? Number(u.quantity).toLocaleString() : "Not measured"}</td>
+                    <td>{u.measured ? "Yes" : "No"}</td>
                     <td>{u.computedAt ? new Date(u.computedAt).toLocaleString() : "—"}</td>
                     <td>{u.isFinal ? "Yes" : "No"}</td>
                   </tr>

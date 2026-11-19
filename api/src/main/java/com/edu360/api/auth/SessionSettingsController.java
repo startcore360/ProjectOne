@@ -33,8 +33,9 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Authentication")
 public class SessionSettingsController {
 
-    private final SecurityPolicyService securityPolicyService;
     private final ModuleEntitlementService moduleEntitlementService;
+    private final MfaRequirementService mfaRequirementService;
+    private final SecurityPolicyService securityPolicyService;
 
     public record SessionSettingsResponse(int idleTimeoutMinutes, List<String> disabledModules) {
     }

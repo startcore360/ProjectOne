@@ -1,4 +1,5 @@
 import api from "../../../services/axios";
+import { idempotencyHeaders } from "./platformTenantService";
 
 export type IntegrationTypeItem = {
   integrationTypeId: string;
@@ -29,21 +30,25 @@ export type PlatformAuditLogItem = {
   entityId?: string;
   outcome: string;
   correlationId?: string;
+  eventType?: string;
+  payload?: Record<string, unknown> | null;
 };
 
 export type UsageMetricSnapshot = {
-  metricName: string;
-  latestValue: number;
-  asOfDate: string;
+  metricCode: string;
+  value: number | null;
+  asOfDate: string | null;
 };
 
 export type UsageCountsResponse = {
   totalTenantCount: number;
+  tenantsInAnalytics: number;
+  tenantsOptedOut: number;
   metrics: UsageMetricSnapshot[];
-  totalUserCountGap?: string;
 };
 
 export type BackupStatusItem = {
+  stale?: boolean;
   tenantId: string;
   lastDailyBackupAt: string;
   lastBackupOutcome: "SUCCESS" | "FAILED" | "IN_PROGRESS" | string;
@@ -131,6 +136,30 @@ export type CreateReleasePayload = {
   schemaVersion: string;
 };
 
+export type RealmSyncPreviewItem = {
+  previewId: string;
+  realms: string[];
+  settings: {
+    minPasswordLength: number;
+    requireDigit: boolean;
+    requireSpecialChar: boolean;
+    maxFailedLogins: number;
+    lockoutMinutes: number;
+    idleSessionTimeoutMinutes: number;
+  };
+};
+
+export type RealmSyncResultItem = {
+  realm: string;
+  applied: boolean;
+  error?: string | null;
+};
+
+export type RealmSyncRunItem = {
+  runId: string;
+  results: RealmSyncResultItem[];
+};
+
 export type SecurityPolicyItem = {
   minPasswordLength: number;
   requireSpecialChar: boolean;
@@ -216,8 +245,8 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async getPlatformBackupStatus(): Promise<BackupStatusItem[]> {
-    const res = await api.get<BackupStatusItem[]>("/platform/backup-status");
+  async getPlatformBackupStatus(): Promise<{ wiredToRealBackupSystem: boolean; note: string; tenants: BackupStatusItem[] }> {
+    const res = await api.get<{ wiredToRealBackupSystem: boolean; note: string; tenants: BackupStatusItem[] }>("/platform/backup-status");
     return res.data;
   },
 
@@ -243,8 +272,13 @@ export const platformOpsService = {
     return res.data;
   },
 
+  async listOverdueInvoices(): Promise<InvoiceItem[]> {
+    const res = await api.get<InvoiceItem[]>("/platform/invoices/overdue");
+    return res.data;
+  },
+
   async createInvoice(payload: CreateInvoicePayload): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>("/platform/invoices", payload);
+    const res = await api.post<InvoiceItem>("/platform/invoices", payload, { headers: idempotencyHeaders() });
     return res.data;
   },
 
@@ -288,7 +322,7 @@ export const platformOpsService = {
   },
 
   async recordPayment(invoiceId: string, payload: { paymentMode: string; paymentReference: string }): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/record-payment`, payload);
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/record-payment`, payload, { headers: idempotencyHeaders() });
     return res.data;
   },
 
@@ -313,6 +347,11 @@ export const platformOpsService = {
     return res.data;
   },
 
+  async getPendingDataProtectionCount(): Promise<{ count: number }> {
+    const res = await api.get<{ count: number }>("/platform/data-protection/pending-count");
+    return res.data;
+  },
+
   // Reports
   async getReport(reportCode: string): Promise<PlatformReportItem> {
     const res = await api.get<PlatformReportItem>(`/platform/reports/${reportCode}`);
@@ -322,6 +361,21 @@ export const platformOpsService = {
   // Security Policy & Incidents
   async getSecurityPolicy(): Promise<SecurityPolicyItem> {
     const res = await api.get<SecurityPolicyItem>("/platform/security-policy");
+    return res.data;
+  },
+
+  async previewSecurityPolicyRealmSync(): Promise<RealmSyncPreviewItem> {
+    const res = await api.get<RealmSyncPreviewItem>("/platform/security-policy/realm-sync/preview");
+    return res.data;
+  },
+
+  async applySecurityPolicyRealmSync(previewId: string): Promise<RealmSyncRunItem> {
+    const res = await api.post<RealmSyncRunItem>("/platform/security-policy/realm-sync", { previewId });
+    return res.data;
+  },
+
+  async retryFailedSecurityPolicyRealms(runId: string): Promise<RealmSyncRunItem> {
+    const res = await api.post<RealmSyncRunItem>("/platform/security-policy/realm-sync/retry", { runId });
     return res.data;
   },
 

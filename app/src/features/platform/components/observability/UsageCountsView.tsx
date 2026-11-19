@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Spinner } from "../../../../components/ui";
-import { Icon } from "../../../../components/ui/Icon";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Button, MetricCard } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
@@ -42,7 +41,7 @@ export function UsageCountsView() {
     <div className="app-page">
       <PageHeader
         title="Usage counts"
-        description="Anonymous, combined platform usage numbers. No per-tenant or per-user figures are shown here."
+        description="Anonymous, combined platform usage numbers from the nightly tenant-isolated rollup. No per-tenant or per-user figures are shown here."
       />
       {status === "error" && (
         <ErrorState
@@ -71,17 +70,7 @@ export function UsageCountsView() {
               ))}
             </div>
 
-            {data.totalUserCountGap && (
-              <p className="app-sample-note" style={{ marginTop: "var(--space-4)", color: "var(--color-text-muted)" }}>
-                <span aria-hidden="true" style={{ color: "var(--color-text-muted)" }}>
-                  <Icon name="info" size={14} />
-                </span>
-                <span style={{ color: "var(--color-text-muted)" }}>
-                  <strong style={{ color: "var(--color-text)", fontWeight: "var(--fw-medium)" }}>Total user count: not available.</strong>{" "}
-                  {data.totalUserCountGap.replace(/^Not available:\s*/i, "")}
-                </span>
-              </p>
-            )}
+
           </>
         )
       )}

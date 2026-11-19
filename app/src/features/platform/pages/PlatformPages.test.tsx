@@ -89,21 +89,59 @@ describe("Sprint 1 platform screens", () => {
       return Promise.resolve({ data: { items: [] } });
     });
     renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>);
-    expect(screen.getByRole("heading", { name: "Platform overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Product Owner dashboard" })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("Greenwood Public School")).toBeInTheDocument();
+      expect(screen.getByText("Tenants by state")).toBeInTheDocument();
     });
   });
 
 
-  it("loads only overview data allowed to a Billing Manager", async () => {
-    mockedApi.get.mockResolvedValue({ data: { items: [] } });
+
+  it("shows the Platform Admin dashboard only for Platform Admin and uses its existing read endpoints", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes("/platform/tenants")) {
+        return Promise.resolve({ data: {
+          items: [{ tenantId: "tenant-pa-1", state: "TRIAL" }],
+          page: 0, size: 200, totalElements: 1, totalPages: 1,
+        } });
+      }
+      if (url.includes("/provisioning")) {
+        return Promise.resolve({ data: { overallStatus: "DONE", steps: [] } });
+      }
+      if (url.includes("/support-tickets")) return Promise.resolve({ data: [] });
+      if (url.includes("/backup-status")) {
+        return Promise.resolve({ data: { wiredToRealBackupSystem: true, note: "", tenants: [{ tenantId: "tenant-pa-1", stale: true }] } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>, "PLATFORM_ADMIN");
+
+    expect(screen.getByRole("heading", { name: "Platform Admin dashboard" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Tenants pending activation")).toBeInTheDocument());
+    expect(screen.getByText("Failed setups")).toBeInTheDocument();
+    expect(screen.getByText("Open tickets")).toBeInTheDocument();
+    expect(screen.getByText("Backup alerts")).toBeInTheDocument();
+    expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
+    expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/backup-status"));
+  });
+
+  it("loads only billing dashboard sources for a Billing Manager", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url === "/platform/reports/REVENUE") {
+        return Promise.resolve({ data: { currency: "INR", metrics: { totalCollectionsThisMonth: 0, renewalsDueIn60Days: 0 } } });
+      }
+      return Promise.resolve({ data: [] });
+    });
     renderWithStore(<PlatformOverviewPage />, "BILLING_MANAGER");
 
-    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/tenants")));
+    expect(screen.getByRole("heading", { name: "Billing Manager dashboard" })).toBeInTheDocument();
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith("/platform/invoices/overdue"));
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/invoices");
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/reports/REVENUE");
+    expect(mockedApi.get).not.toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
     expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/platform-users");
     expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
-    expect(screen.getByText(/Billing workspace/)).toBeInTheDocument();
   });
 
   it("renders the DPO workspace without calling unrelated admin endpoints", async () => {
@@ -252,7 +290,7 @@ describe("Sprint 1 platform screens", () => {
         firstAdminNationalIdLast4: "7891",
         retentionMonths: 84,
         backupRetentionDays: 30,
-      }));
+      }), expect.objectContaining({ headers: expect.objectContaining({ "Idempotency-Key": expect.any(String) }) }));
     });
   });
 
@@ -304,7 +342,7 @@ describe("Sprint 1 platform screens", () => {
             subdomain: "riverbank",
             timeZone: "Asia/Kolkata",
             dataRegion: "IN",
-            keycloakRealm: "riverbank-realm",
+            keycloakRealm: "riverbank-realm", rowVersion: 7,
             createdAt: "2026-11-01T00:00:00Z",
           },
         ],
@@ -346,7 +384,8 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         "/platform/tenants/TEN-0003/activation",
-        { paymentReference: "PAY-2026-X8841", note: "Verified" }
+        { paymentReference: "PAY-2026-X8841", note: "Verified" },
+        { headers: { "Idempotency-Key": expect.any(String), "If-Match": "\"7\"" } }
       );
     });
   });
@@ -602,7 +641,7 @@ describe("Sprint 1 platform screens", () => {
           subdomain: "greenwood",
           timeZone: "Asia/Kolkata",
           dataRegion: "IN",
-          keycloakRealm: "greenwood-realm",
+          keycloakRealm: "greenwood-realm", rowVersion: 2,
           createdAt: "2026-11-01T00:00:00Z",
         }],
       },
@@ -629,7 +668,8 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         "/platform/tenants/TEN-0001/suspension",
-        { reason: "Statutory compliance audit pending." }
+        { reason: "Statutory compliance audit pending." },
+        { headers: { "Idempotency-Key": expect.any(String), "If-Match": "\"2\"" } }
       );
     });
   });
@@ -793,23 +833,26 @@ describe("AuditLogPage (wired to GET /api/platform/audit-logs)", () => {
 });
 
 describe("UsageCountsPage (wired to GET /api/platform/usage-counts)", () => {
-  it("shows real counts and marks the flagged gap as not available", async () => {
+  it("shows real counts including materialized active users", async () => {
     mockedApi.get.mockResolvedValue({
       data: {
         totalTenantCount: 4,
+        tenantsInAnalytics: 3,
+        tenantsOptedOut: 1,
         metrics: [
           { metricCode: "LOGINS", value: 120, asOfDate: "2026-11-04" },
           { metricCode: "ATTENDANCE_MARKED", value: null, asOfDate: null },
+          { metricCode: "ACTIVE_USERS", value: 45, asOfDate: "2026-11-01" },
         ],
-        totalUserCountGap: "Not available: cross-tenant RLS boundary.",
       },
     });
     render(<UsageCountsPage />);
     await waitFor(() => expect(screen.getByText("Logins")).toBeInTheDocument());
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("Not available")).toBeInTheDocument();
-    expect(screen.getByText(/Total user count: not available\./)).toBeInTheDocument();
-    expect(screen.getByText(/cross-tenant RLS boundary\./)).toBeInTheDocument();
+    expect(screen.getByText("Active users")).toBeInTheDocument();
+    expect(screen.getByText("45")).toBeInTheDocument();
+    expect(screen.queryByText(/Total user count: not available/)).not.toBeInTheDocument();
   });
 
   it("shows an error state on failure", async () => {

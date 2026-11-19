@@ -2,16 +2,20 @@ package com.edu360.api.platformops.release;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.DuplicateResourceException;
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platformops.release.dto.CreateReleaseRequest;
 import com.edu360.api.platformops.release.dto.ReleaseResponse;
 import com.edu360.api.platformops.release.dto.ReleaseTransitionRequest;
@@ -23,14 +27,25 @@ public class PlatformReleaseService {
 
     private final PlatformReleaseRepository releaseRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
+    private final PlatformReleaseNotificationService releaseNotificationService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformReleaseService(
             PlatformReleaseRepository releaseRepository,
-            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter,
+            PlatformReleaseNotificationService releaseNotificationService
     ) {
         this.releaseRepository = releaseRepository;
         this.platformAuditWriter = platformAuditWriter;
+        this.releaseNotificationService = releaseNotificationService;
+    }
+
+    /** Compatibility constructor for isolated unit fixtures that do not exercise deployment notifications. */
+    public PlatformReleaseService(
+            PlatformReleaseRepository releaseRepository,
+            com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter
+    ) {
+        this(releaseRepository, platformAuditWriter, null);
     }
 
     private static final Set<String> VALID_STATUSES = Set.of("UPLOADED", "STAGING_TESTED", "DEPLOYED", "ROLLED_BACK");
@@ -62,6 +77,30 @@ public class PlatformReleaseService {
     }
 
     @Transactional
+    public ReleaseResponse scheduleRelease(UUID releaseId, Instant at, PlatformPrincipal principal) {
+        PlatformRelease release = releaseRepository.findById(releaseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Release not found: " + releaseId));
+        if (!"STAGING_TESTED".equals(release.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "NOT_STAGING_TESTED");
+        }
+        if (at == null || !at.isAfter(Instant.now())) {
+            throw new BusinessRuleViolationException("SCHEDULE_TIME_MUST_BE_FUTURE",
+                    "Scheduled deployment time must be in the future.");
+        }
+
+        Instant now = Instant.now();
+        release.setScheduledAt(at);
+        release.setUpdatedAt(now);
+        release.setUpdatedBy(principal.platformUserId());
+
+        PlatformRelease saved = releaseRepository.save(release);
+        platformAuditWriter.record(principal, null, "RELEASE_SCHEDULED", "CONFIG_CHANGE", "RELEASE_MANAGE",
+                "PLATFORM_RELEASE", saved.getReleaseId(), "SUCCESS",
+                Map.of("scheduled_at", Map.of("old", "", "new", at.toString())));
+        return ReleaseResponse.fromEntity(saved);
+    }
+
+    @Transactional
     public ReleaseResponse transitionRelease(UUID releaseId, ReleaseTransitionRequest req, PlatformPrincipal principal) {
         PlatformRelease release = releaseRepository.findById(releaseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Release not found: " + releaseId));
@@ -73,6 +112,21 @@ public class PlatformReleaseService {
 
         Instant now = Instant.now();
         if ("DEPLOYED".equals(target)) {
+            if (!"STAGING_TESTED".equals(release.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "NOT_STAGING_TESTED");
+            }
+            boolean scheduleIsDue = release.getScheduledAt() != null && !release.getScheduledAt().isAfter(now);
+            boolean productOwnerOverride = principal.platformRole() == PlatformRole.PRODUCT_OWNER
+                    && req.reason() != null && !req.reason().isBlank();
+            if (!scheduleIsDue && !productOwnerOverride) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "DEPLOYMENT_REQUIRES_DUE_SCHEDULE_OR_PRODUCT_OWNER_REASON");
+            }
+            if (!scheduleIsDue) {
+                platformAuditWriter.record(principal, null, "RELEASE_DEPLOY_OVERRIDE", "CONFIG_CHANGE",
+                        "RELEASE_MANAGE", "PLATFORM_RELEASE", release.getReleaseId(), "SUCCESS",
+                        Map.of("reason", Map.of("old", "", "new", req.reason().trim())));
+            }
             release.setDeployedAt(now);
         } else if ("ROLLED_BACK".equals(target)) {
             release.setRolledBackAt(now);
@@ -84,6 +138,20 @@ public class PlatformReleaseService {
 
         PlatformRelease saved = releaseRepository.save(release);
         platformAuditWriter.record(principal, "RELEASE_TRANSITIONED_" + target, "RELEASE_MANAGE", "PLATFORM_RELEASE", saved.getReleaseId());
+        if ("DEPLOYED".equals(target) && releaseNotificationService != null) {
+            Runnable publishReleaseNotes = () -> releaseNotificationService.notifyTenantAdmins(saved);
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                        new org.springframework.transaction.support.TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                publishReleaseNotes.run();
+                            }
+                        });
+            } else {
+                publishReleaseNotes.run();
+            }
+        }
         return ReleaseResponse.fromEntity(saved);
     }
 
