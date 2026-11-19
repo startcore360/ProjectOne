@@ -34,10 +34,11 @@ class RbacMappingReportControllerTest {
 
     @Test
     void reportRequiresThePlatformAction() {
-        PlatformPrincipal principal = (PlatformPrincipal) auth(PlatformRole.DATA_PROTECTION_OFFICER).getPrincipal();
+        Authentication authentication = auth(PlatformRole.DATA_PROTECTION_OFFICER);
+        PlatformPrincipal principal = (PlatformPrincipal) authentication.getPrincipal();
         when(reports.generate()).thenReturn(new RbacMappingReport(List.of(), List.of(), List.of()));
 
-        assertThat(controller.report(auth(PlatformRole.DATA_PROTECTION_OFFICER)).getStatusCode().is2xxSuccessful())
+        assertThat(controller.report(authentication).getStatusCode().is2xxSuccessful())
                 .isTrue();
         verify(permissions).authorize(principal, "RBAC_MAPPING_CHECK");
     }
