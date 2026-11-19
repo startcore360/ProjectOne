@@ -220,7 +220,7 @@ The backend cannot run on its own: dev needs Postgres, Keycloak and LocalStack. 
 the details, tenant hostnames and known quirks.
 
 ```powershell
-.\docker\dev-hosts-setup.ps1   # one-time, as Administrator: adds the *.edu360.local hosts entries
+.\docker\dev-hosts-setup.ps1   # optional, as Administrator: only for the older *.edu360.local addresses
 .\dev-up.ps1                   # Docker services, SQL bundle + DB roles, backend and frontend windows
 .\dev-status.ps1               # first stop when something is down
 .\dev-logs.ps1 backend -Follow # also: postgres | keycloak | localstack | frontend
@@ -230,9 +230,11 @@ the details, tenant hostnames and known quirks.
 
 Ports: Vite 5173, API 8080, Postgres 5433, Keycloak 8081, LocalStack 4566.
 
-Open the app at `http://abc.edu360.local:5173`, `http://xyz.edu360.local:5173` or
-`http://platform.edu360.local:5173`. Login from `localhost:5173` fails with "Unknown sign-in
-address" because the tenant comes from the `Host` header.
+Open the app at `http://abc.edu360.localhost:5173`, `http://xyz.edu360.localhost:5173` or
+`http://platform.edu360.localhost:5173`. Browsers resolve `*.localhost` themselves, so a new tenant
+needs no hosts-file entry. `*.edu360.local` still works with a hosts entry. Login from
+`localhost:5173` fails with "Unknown sign-in address" because the tenant comes from the `Host`
+header. Production uses wildcard DNS + a wildcard certificate instead (`docker/PRODUCTION_TENANT_ROUTING.txt`).
 
 ### Frontend (`app/`)
 

@@ -29,7 +29,7 @@ import lombok.RequiredArgsConstructor;
  * GET and a body field on POST, same reasoning as CalendarEventController.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/weekly-off-rules")
+@RequestMapping({"/v1/tenants/{tenantId}/weekly-off-rules", "/api/tenants/{tenantId}/weekly-off-rules"})
 @RequiredArgsConstructor
 @Tag(name = "Institution setup", description = "Weekly-off pattern (WEEKLY_OFF_SET)")
 public class WeeklyOffRuleController {

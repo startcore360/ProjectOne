@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
  * WHAT: STUDENT_LOGIN_SWITCH - see StudentLoginSwitchService's javadoc.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/classes/{classId}")
+@RequestMapping({"/v1/tenants/{tenantId}/classes/{classId}", "/api/tenants/{tenantId}/classes/{classId}"})
 @RequiredArgsConstructor
 @Tag(name = "Institution setup", description = "School-class institution setup (STUDENT_LOGIN_SWITCH)")
 public class SchoolClassController {

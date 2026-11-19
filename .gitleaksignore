@@ -1,0 +1,5 @@
+# Exact gitleaks findings checked by hand and confirmed to be test data, not secrets.
+# Format: commit:file:rule:line. Add a line only after checking the value; never for a real secret.
+# SessionServiceTest: fake browser id constant. UserManagementPages.test: fake temporaryPassword fixture.
+bd55a02c311e17847dc34ac4c20ae6800d41025e:api/src/test/java/com/edu360/api/selfservice/SessionServiceTest.java:generic-api-key:65
+bda753d85a45297852ae9711b7d317177274012a:app/src/features/user-management/pages/UserManagementPages.test.tsx:generic-api-key:297

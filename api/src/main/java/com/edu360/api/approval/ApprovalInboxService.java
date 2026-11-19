@@ -388,7 +388,7 @@ public class ApprovalInboxService {
         String subjectType = request.getSubjectType();
         String processCode = request.getProcessCode();
         if ("INSTITUTION".equalsIgnoreCase(subjectType)) {
-            if ("INSTITUTION_ACTIVATION".equalsIgnoreCase(processCode) || "ACTIVATION".equalsIgnoreCase(processCode)) {
+            if ("INSTITUTION_ACTIVATION".equalsIgnoreCase(processCode) || "INSTITUTION_ACTIVATE".equalsIgnoreCase(processCode) || "ACTIVATION".equalsIgnoreCase(processCode)) {
                 return "INSTITUTION_ACTIVATE";
             }
             if ("INSTITUTION_BLOCK".equalsIgnoreCase(processCode)) {
@@ -432,7 +432,7 @@ public class ApprovalInboxService {
                         studentGuardianLinkRepository.save(link);
                     });
         } else if ("INSTITUTION".equals(request.getSubjectType())) {
-            boolean activation = "INSTITUTION_ACTIVATION".equalsIgnoreCase(request.getProcessCode());
+            boolean activation = "INSTITUTION_ACTIVATION".equalsIgnoreCase(request.getProcessCode()) || "INSTITUTION_ACTIVATE".equalsIgnoreCase(request.getProcessCode());
             institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, request.getSubjectId()).ifPresent(inst -> {
                 if (approved && activation) {
                     // Rule C7: the Principal's-leave approver must be set before an institution goes live.

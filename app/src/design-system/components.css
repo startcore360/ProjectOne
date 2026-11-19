@@ -570,13 +570,25 @@ a {
   height: 17px;
   accent-color: var(--color-action-primary);
 }
+/* Underlined so a text-styled button reads as clickable without relying on colour alone. */
 .eds-link-button {
   padding: 6px 0;
   border: 0;
   background: transparent;
   color: var(--color-text-brand);
   font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
   cursor: pointer;
+}
+.eds-link-button:hover {
+  text-decoration-thickness: 2px;
+}
+.eds-link-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  text-decoration: none;
 }
 .auth-submit {
   min-height: 52px;

@@ -1,8 +1,10 @@
 // The sign-in address of a new tenant, built from the address the platform console itself is
 // open on - so it follows whichever style is in use, without a separate setting:
+//   platform.edu360.localhost    -> abc.edu360.localhost    (dot style, no hosts file needed)
 //   platform.edu360.local        -> abc.edu360.local        (dot style, hosts file)
 //   platform-edu360.duckdns.org  -> abc-edu360.duckdns.org  (hyphen style, one DuckDNS name each)
-// The backend resolves both (LoginTenantResolver, app.keycloak.local-dev-host-suffix).
+//   platform.edu360.com          -> abc.edu360.com          (PRODUCTION: wildcard DNS + certificate)
+// The backend resolves all of them (LoginTenantResolver, app.keycloak.local-dev-host-suffix).
 const PLATFORM_LABEL = "platform";
 
 export function tenantLoginAddress(

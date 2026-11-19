@@ -96,6 +96,12 @@ export default function LoginPage() {
         return;
       }
       if (step === "code") setCode("");
+      if (step === "backup" && body?.code === "INVALID_CREDENTIALS") {
+        // The server checks the password before it looks at the backup code, so say which one failed:
+        // otherwise a wrong password reads as "your backup code doesn't work".
+        setError("Your email or password is wrong. Your backup code was not checked and can still be used.");
+        return;
+      }
       // The backend's GlobalExceptionHandler sends a real, human message in the body
       // ({error: "Invalid email or password"}) - show that, never axios's own generic
       // "Request failed with status code 401" text.
@@ -162,11 +168,25 @@ export default function LoginPage() {
     setNotice("Codes saved. Enter the next code from your authenticator app to sign in.");
   };
 
-  const useBackupCode = () => {
+  const switchToBackupCode = (typed = "") => {
     setStep("backup");
+    setBackupCode(typed);
+    setCode("");
     setShowCodeHelp(false);
     setError("");
     setNotice("");
+  };
+
+  // The authenticator box takes digits only. A letter or dash means the person is typing a backup
+  // code (like K7QD4-9MXRT) into the wrong box, so move them to the backup box with what they typed
+  // instead of silently deleting the letters.
+  const changeCode = (value: string) => {
+    if (/[A-Za-z-]/.test(value)) {
+      switchToBackupCode(value.toUpperCase());
+      return;
+    }
+    // maxLength on the box is 14 so a pasted backup code arrives whole; digits still stop at 6.
+    setCode(value.replace(/\D/g, "").slice(0, 6));
   };
 
   const kicker = step === "enrol" ? "ONE-TIME SET-UP" : step === "codes" ? "SAVE YOUR BACKUP CODES" : "WELCOME BACK";
@@ -244,9 +264,9 @@ export default function LoginPage() {
               label="Authenticator code"
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
+              maxLength={14}
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              onChange={(e) => changeCode(e.target.value)}
               placeholder="6-digit code"
               required
               autoFocus
@@ -268,15 +288,26 @@ export default function LoginPage() {
             />
           )}
           {(step === "code" || step === "backup") && (
+            // MFA-01: switching between the authenticator code and a backup code is a real (outlined)
+            // button, always visible - a plain text link here was easy to miss.
             <div className="auth-options">
               {step === "code" ? (
-                <LinkButton onClick={() => setShowCodeHelp((open) => !open)} aria-expanded={showCodeHelp}>
-                  Problem with your code?
-                </LinkButton>
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => switchToBackupCode()}>
+                    Use a backup code instead
+                  </Button>
+                  <LinkButton onClick={() => setShowCodeHelp((open) => !open)} aria-expanded={showCodeHelp}>
+                    Problem with your code?
+                  </LinkButton>
+                </>
               ) : (
-                <LinkButton onClick={() => { setStep("code"); setBackupCode(""); setError(""); }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => { setStep("code"); setBackupCode(""); setError(""); }}
+                >
                   Use the authenticator code instead
-                </LinkButton>
+                </Button>
               )}
             </div>
           )}
@@ -284,10 +315,7 @@ export default function LoginPage() {
             <div className="auth-message" role="region" aria-label="Help with your code">
               <ul className="auth-help-list">
                 <li>Check that your phone shows the correct time (set it to automatic).</li>
-                <li>
-                  Lost your phone or deleted the app?{" "}
-                  <LinkButton onClick={useBackupCode}>Use a backup code</LinkButton>
-                </li>
+                <li>Lost your phone or deleted the app? Choose “Use a backup code instead” above.</li>
                 <li>No backup codes? Ask your administrator to reset your two-step login.</li>
               </ul>
             </div>

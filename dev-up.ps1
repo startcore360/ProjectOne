@@ -96,13 +96,12 @@ if ($frontendProc.HasExited) {
     Write-Warning "Frontend window closed immediately (exit code $($frontendProc.ExitCode)); check the app/ setup."
 }
 
-# A tenant created since the last hosts update can't be opened until it has an entry there.
-$hostsFile = "$env:SystemRoot\System32\drivers\etc\hosts"
-$tenantSubdomains = docker compose -f (Join-Path $root "docker-compose.yml") exec -T -e PGPASSWORD=edu360 postgres psql -h localhost -U edu360 -d edu360db -tAc "SELECT subdomain FROM platform.tenant WHERE state IN ('ACTIVE', 'TRIAL')" 2>$null
-$missingHosts = @($tenantSubdomains | Where-Object { $_ -and ((Get-Content $hostsFile) -notcontains "127.0.0.1 $_.edu360.local") })
-if ($missingHosts.Count -gt 0) {
-    Write-Warning "$($missingHosts.Count) tenant address(es) aren't in your hosts file. To open them, run as Administrator: .\docker\dev-hosts-setup.ps1"
-}
-
+# No hosts-file check any more: *.edu360.localhost addresses need no hosts entry, because browsers
+# send every *.localhost name to 127.0.0.1 by themselves. A tenant works the moment it is created.
+# (The older *.edu360.local addresses still need docker\dev-hosts-setup.ps1, run as Administrator.)
+#
+# PRODUCTION has no equivalent step either: a wildcard DNS record (*.edu360.com) and a wildcard
+# certificate cover every tenant. See docker\PRODUCTION_TENANT_ROUTING.txt.
 Write-Host "Postgres + Keycloak running in Docker; backend and frontend starting in new windows."
+Write-Host "Open: http://platform.edu360.localhost:5173 (platform) or http://<tenant>.edu360.localhost:5173 - no hosts file needed."
 Write-Host "Logs: $backendLog / $frontendLog (or .\dev-logs.ps1)"

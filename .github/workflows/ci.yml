@@ -77,6 +77,8 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -95,11 +97,51 @@ jobs:
         run: |
           # Read the key from the environment without placing its value in Maven arguments.
           mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:12.2.2:check -DfailBuildOnCVSS=7 -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
+      # gitleaks CLI instead of gitleaks/gitleaks-action@v2: the action builds its own range
+      # ("<first PR commit>^..<last PR commit>" from the GitHub API), which failed with
+      # "ambiguous argument ... unknown revision" and exit code 1 without scanning anything.
+      # Here the range comes straight from the event, and both ends are always in this
+      # fetch-depth: 0 clone. Allowed false positives live in .gitleaks.toml / .gitleaksignore.
       - name: Scan repository for secrets
         if: always()
-        uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: "8.24.3"
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "$base/$archive"
+          curl -sSfLO "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "$archive" gitleaks
+          cd "$GITHUB_WORKSPACE"
+
+          has_commit() { [ -n "$1" ] && git cat-file -e "$1^{commit}" 2>/dev/null; }
+          range=""
+          if [ "$EVENT_NAME" = "pull_request" ] && has_commit "$PR_BASE_SHA" && has_commit "$PR_HEAD_SHA"; then
+            range="$PR_BASE_SHA..$PR_HEAD_SHA"
+          elif [ "$EVENT_NAME" = "push" ] && has_commit "$PUSH_BEFORE_SHA"; then
+            range="$PUSH_BEFORE_SHA..$GITHUB_SHA"
+          fi
+          # No usable range (new branch, force push, manual run): scan the whole history.
+          # Build the options without a trailing space - "--no-merges " makes git fail.
+          log_opts="--no-merges${range:+ $range}"
+          echo "Scanning: ${range:-full history}"
+          "$RUNNER_TEMP/gitleaks" git --redact --verbose --no-banner --exit-code 1 \
+            --report-format sarif --report-path gitleaks-results.sarif \
+            --log-opts="$log_opts" .
+      - name: Upload secret scan report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-results-${{ github.sha }}
+          path: gitleaks-results.sarif
+          if-no-files-found: ignore
 
   dependency-review:
     name: Pull request dependency review

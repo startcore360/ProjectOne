@@ -1,0 +1,26 @@
+# Gitleaks configuration for EDU 360 (used by the "Scan repository for secrets" CI step).
+# Keeps every default gitleaks rule and only allows values that were checked by hand and are
+# known not to be secrets. Do not add a real credential here - remove it from the code and
+# rotate it instead.
+#
+# Uses the single [allowlist] table because CI pins gitleaks 8.24.3, which predates the
+# [[allowlists]] array format.
+
+title = "EDU 360 gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+1. graphify-out/ is a generated code graph (file hashes and timestamps), not product code. Its
+   cache was committed before it was git-ignored and trips generic-api-key / sentry-access-token.
+2. Known non-secret values matched by generic-api-key: support ticket numbers used as test data
+   (SUP-2026-ABCDE, SUP-2026-00398) and edu360.* browser-storage key names (edu360.trialEndedAt).
+"""
+paths = ['''^graphify-out/''']
+regexTarget = "secret"
+regexes = [
+  '''^SUP-\d{4}-[A-Z0-9]{5}$''',
+  '''^edu360\.[A-Za-z0-9.\-]+$''',
+]

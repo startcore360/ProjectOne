@@ -31,7 +31,7 @@ import lombok.RequiredArgsConstructor;
  * REST Controller for CALENDAR_MASTER_SET (Action Code #28) - Academic Sessions and Master Calendar Events.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}")
+@RequestMapping({"/v1/tenants/{tenantId}", "/api/tenants/{tenantId}"})
 @RequiredArgsConstructor
 @Tag(name = "Academic Calendar", description = "Academic Sessions and Master Calendar Events (CALENDAR_MASTER_SET)")
 public class MasterCalendarController {

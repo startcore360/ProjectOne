@@ -152,13 +152,50 @@ describe("LoginPage", () => {
     const help = screen.getByRole("region", { name: /Help with your code/i });
     expect(help.textContent).toMatch(/correct time/i);
     expect(help.textContent).toMatch(/administrator to reset your two-step login/i);
-    expect(screen.getByRole("button", { name: /Use a backup code/i })).toBeTruthy();
+    expect(help.textContent).toMatch(/Use a backup code instead/i);
+  });
+
+  it("MFA-01-FE-6: the backup code option is a visible button on the code step, no extra click needed", async () => {
+    await reachCodeStep();
+    const button = screen.getByRole("button", { name: /Use a backup code instead/i });
+    expect(button.className).toContain("eds-button--secondary");
+  });
+
+  it("MFA-01-FE-7: letters typed into the authenticator box move to the backup box, keeping what was typed", async () => {
+    await reachCodeStep();
+    fireEvent.change(screen.getByLabelText(/Authenticator code/), { target: { value: "mdj5m-td7px" } });
+
+    const backupField = (await screen.findByLabelText(/Backup code/)) as HTMLInputElement;
+    expect(backupField.value).toBe("MDJ5M-TD7PX");
+    expect(screen.queryByLabelText(/Authenticator code/)).toBeNull();
+  });
+
+  it("MFA-01-FE-8: digits in the authenticator box still stop at 6", async () => {
+    await reachCodeStep();
+    const field = screen.getByLabelText(/Authenticator code/) as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "12345678" } });
+    expect(field.value).toBe("123456");
+  });
+
+  it("MFA-01-FE-9: a wrong password on the backup step says the password failed, not the code", async () => {
+    vi.spyOn(authService, "loginWithRecoveryCode").mockRejectedValueOnce(
+      new AxiosError("401", "ERR_BAD_REQUEST", undefined, undefined, {
+        status: 401,
+        data: { code: "INVALID_CREDENTIALS", error: "Invalid credentials" },
+      } as AxiosResponse),
+    );
+    await reachCodeStep();
+    fireEvent.click(screen.getByRole("button", { name: /Use a backup code instead/i }));
+    fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "AAAAA-BBBBB" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/email or password is wrong/i)).toBeTruthy();
+    expect(screen.getByText(/backup code was not checked/i)).toBeTruthy();
   });
 
   it("MFA-01-FE-2: a backup code is sent instead of the authenticator code and leads to a new set-up", async () => {
     const backup = vi.spyOn(authService, "loginWithRecoveryCode").mockRejectedValueOnce(enrolmentChallenge());
     await reachCodeStep();
-    fireEvent.click(screen.getByRole("button", { name: /Problem with your code/i }));
     fireEvent.click(screen.getByRole("button", { name: /Use a backup code/i }));
     fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "k7qd4-9mxrt" } });
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -176,7 +213,6 @@ describe("LoginPage", () => {
       } as AxiosResponse),
     );
     await reachCodeStep();
-    fireEvent.click(screen.getByRole("button", { name: /Problem with your code/i }));
     fireEvent.click(screen.getByRole("button", { name: /Use a backup code/i }));
     fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "AAAAA-BBBBB" } });
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -188,7 +224,6 @@ describe("LoginPage", () => {
   it("MFA-01-FE-4: a malformed backup code is caught before anything is sent", async () => {
     const backup = vi.spyOn(authService, "loginWithRecoveryCode");
     await reachCodeStep();
-    fireEvent.click(screen.getByRole("button", { name: /Problem with your code/i }));
     fireEvent.click(screen.getByRole("button", { name: /Use a backup code/i }));
     fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "ABC" } });
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));

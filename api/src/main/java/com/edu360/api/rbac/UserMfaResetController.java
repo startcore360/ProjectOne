@@ -45,7 +45,7 @@ import jakarta.validation.Valid;
  * The next sign-in shows a new QR code through the existing in-app set-up.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/users")
+@RequestMapping({"/v1/tenants/{tenantId}/users", "/api/tenants/{tenantId}/users"})
 @Tag(name = "Users", description = "USER_MFA_RESET - reset a user's two-step login")
 public class UserMfaResetController {
 

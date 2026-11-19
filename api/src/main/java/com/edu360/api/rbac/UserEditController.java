@@ -45,7 +45,7 @@ import jakarta.validation.Valid;
  * "deny", but authorization is evaluated before any business rule about the resource's state).
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/users")
+@RequestMapping({"/v1/tenants/{tenantId}/users", "/api/tenants/{tenantId}/users"})
 @Tag(name = "Users", description = "USER_EDIT - edit a user account")
 public class UserEditController {
 
