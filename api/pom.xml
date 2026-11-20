@@ -188,6 +188,7 @@
 				</executions>
 				<configuration>
 					<skipITs>${skipITs}</skipITs>
+					<argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.17.8/byte-buddy-agent-1.17.8.jar -XX:+EnableDynamicAgentLoading</argLine>
 					<includes>
 						<include>**/*IT.java</include>
 					</includes>
