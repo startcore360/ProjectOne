@@ -147,6 +147,35 @@ public class KeycloakAdminClient {
                 throw new KeycloakProvisioningException("Failed to register frontend client in realm '" + realm + "': " + ex.getMessage(), ex);
             }
         }
+
+        // Reconcile clients in realms that already existed before this release. A 409 above
+        // only proves the client exists; it does not update the redirect allowlist.
+        reconcileFrontendRedirectUris(adminToken, realm);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void reconcileFrontendRedirectUris(String adminToken, String realm) {
+        List<Map<String, Object>> clients = restClient.get()
+                .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients?clientId={clientId}",
+                        properties.getFrontendClientId())
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .body(List.class);
+        if (clients == null || clients.isEmpty()) {
+            throw new KeycloakProvisioningException("Frontend client was not found after provisioning realm '" + realm + "'.");
+        }
+        Map<String, Object> client = new HashMap<>(clients.get(0));
+        Object clientId = client.get("id");
+        if (clientId == null) {
+            throw new KeycloakProvisioningException("Keycloak did not return the frontend client identifier for realm '" + realm + "'.");
+        }
+        client.put("redirectUris", properties.getFrontendRedirectUris());
+        restClient.put()
+                .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients/" + clientId)
+                .header("Authorization", "Bearer " + adminToken)
+                .body(client)
+                .retrieve()
+                .toBodilessEntity();
     }
 
     /**
