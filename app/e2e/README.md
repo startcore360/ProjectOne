@@ -9,6 +9,7 @@ cd app
 npm ci
 npm install --no-save --package-lock=false @playwright/test@1.56.1
 npx playwright install chromium
+npm run e2e:typecheck
 npm run e2e
 ```
 
