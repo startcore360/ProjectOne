@@ -29,8 +29,7 @@ class LoginTenantResolverTest {
     void setUp() {
         KeycloakProperties props = new KeycloakProperties();
         props.setPlatformRealm("edu360-platform");
-        props.setLocalDevHostSuffix(".edu360.localhost, .edu360.local, -edu360.duckdns.org");
-        props.setTenantHostSuffix(".edu360.com");
+        props.setTenantHostSuffix(".edu360.localhost, .edu360.local, -edu360.duckdns.org, .edu360.com");
         resolver = new LoginTenantResolver(props, tenantRepository);
         abc = Tenant.builder().tenantId(UUID.randomUUID()).subdomain("abc").keycloakRealm("abc-realm")
                 .state(TenantState.ACTIVE).build();
