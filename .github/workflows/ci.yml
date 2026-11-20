@@ -284,6 +284,13 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+      - name: Verify E2E fixture secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in EDU360_E2E_PRODUCT_OWNER_TOKEN EDU360_E2E_PLATFORM_ADMIN_TOKEN EDU360_E2E_BILLING_MANAGER_TOKEN EDU360_E2E_SUPPORT_MANAGER_TOKEN EDU360_E2E_RELEASE_MANAGER_TOKEN EDU360_E2E_DPO_TOKEN EDU360_E2E_TENANT_TOKEN EDU360_E2E_TENANT_ID EDU360_E2E_TENANT_SUBDOMAIN EDU360_E2E_DPO_READY_REQUEST_ID EDU360_E2E_BILLING_TENANT_ID; do
+            test -n "${!name}" || { echo "Missing required E2E secret: $name"; exit 1; }
+          done
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
