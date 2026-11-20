@@ -1,43 +1,27 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { apiFor, createTenant, json, makeInvoicePaid, openPlatformPage, requiredToken } from "./helpers";
+import { apiFor, json, openPlatformPage, requiredToken } from "./helpers";
 
-test("DPO decides a deletion request after Product Owner confirmation", async ({ page }) => {
+test("DPO decides a deletion request only after export and retention readiness", async ({ page }) => {
   test.skip(
-    !process.env.EDU360_E2E_PRODUCT_OWNER_TOKEN || !process.env.EDU360_E2E_DPO_TOKEN,
-    "Requires separate Product Owner and DPO tokens; TPA-04 separation is intentional.",
+    !process.env.EDU360_E2E_DPO_TOKEN || !process.env.EDU360_E2E_DPO_READY_REQUEST_ID,
+    "Requires a disposable PENDING_DPO request whose export and retention gates are already satisfied.",
   );
-  const owner = await apiFor("platform", requiredToken("EDU360_E2E_PRODUCT_OWNER_TOKEN"));
-  const dpo = await apiFor("platform", requiredToken("EDU360_E2E_DPO_TOKEN"));
+  const token = requiredToken("EDU360_E2E_DPO_TOKEN");
+  const api = await apiFor("platform", token);
   try {
-    const tenant = await createTenant(owner);
-    const requestResponse = await owner.post("/api/platform/deletion-requests", {
-      tenantId: tenant.tenantId,
-      origin: "PRODUCT_OWNER",
-    }, { headers: { "Idempotency-Key": randomUUID() } });
-    const deletion = await json<{ deletionRequestId: string; rowVersion?: number }>(requestResponse);
-    const confirmResponse = await owner.post(`/api/platform/deletion-requests/${deletion.deletionRequestId}/confirm`, {
-      waiveRetentionWait: false,
-    }, {
-      headers: {
-        "Idempotency-Key": randomUUID(),
-        ...(deletion.rowVersion ? { "If-Match": `"${deletion.rowVersion}"` } : {}),
-      },
-    });
-    await json(confirmResponse);
-
-    const decision = await dpo.post(`/api/platform/deletion-requests/${deletion.deletionRequestId}/decision`, {
+    const requestId = process.env.EDU360_E2E_DPO_READY_REQUEST_ID!;
+    const decision = await api.post(`/api/platform/deletion-requests/${requestId}/decision`, {
       decision: "APPROVED",
-      remark: "A8 E2E DPO approval; purge remains deferred until retention expiry.",
+      remark: "A8 E2E DPO approval on an isolated, export-ready test tenant.",
     }, { headers: { "Idempotency-Key": randomUUID() } });
     const result = await json<{ status: string }>(decision);
     expect(result.status).toBe("APPROVED");
 
-    await openPlatformPage(page, requiredToken("EDU360_E2E_DPO_TOKEN"), "/platform/data-protection");
+    await openPlatformPage(page, token, "/platform/data-protection");
     await expect(page.locator("#root")).toBeVisible();
   } finally {
-    await owner.dispose();
-    await dpo.dispose();
+    await api.dispose();
   }
 });
 
