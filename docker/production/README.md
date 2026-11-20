@@ -8,7 +8,7 @@ This deployment bundle uses `edu360.com` only as a placeholder. Replace it with 
 - Create a wildcard DNS record for `*.<EDU360_DOMAIN>` pointing to the public load balancer/host. Create the platform label `platform.<EDU360_DOMAIN>` on the same endpoint.
 - Issue a wildcard TLS certificate for `*.<EDU360_DOMAIN>` using DNS-01 validation (Let's Encrypt DNS plugin or AWS Certificate Manager on an ALB). A wildcard certificate covers one label only; the nginx host regex rejects nested names and bare IPs.
 - Mount the certificate chain as `fullchain.pem` and private key as `privkey.pem` under `EDU360_TLS_DIR`. Protect the private key and rotate it before expiry.
-- The proxy forwards the original `Host` header. The app's production Axios base URL is same-origin. Swagger, OpenAPI docs and H2 console paths return 404.
+- The proxy forwards the original `Host` header and overwrites forwarded client-IP headers rather than trusting client-supplied X-Forwarded-For. The app's production Axios base URL is same-origin. Swagger, OpenAPI docs and H2 console paths return 404.
 - Never publish the API's 8080 port to the host or internet. Restrict database and Keycloak ingress to the API workload/network.
 
 ## Build and launch
@@ -26,7 +26,7 @@ This deployment bundle uses `edu360.com` only as a placeholder. Replace it with 
 - Request/validate the wildcard certificate using DNS-01. Keep the certificate and private key outside the image.
 - Create a private S3 bucket for file storage. Enable block-public-access, versioning, server-side encryption and lifecycle retention. Grant the API workload `s3:PutObject`, `s3:GetObject`, and `s3:DeleteObject` only on the `tenants/*` prefix; bucket listing is not required by the application.
 - Create a separate private backup bucket/prefix and a distinct backup workload role. Do not reuse the API file-storage role.
-- Ensure Postgres and Keycloak are reachable only from the API workload. Do not expose port 8080.
+- Ensure Postgres and Keycloak are reachable only from the API workload. Do not expose port 8080. If a load balancer sits in front of nginx, configure nginx real_ip only for the load balancer's explicit trusted CIDRs before relying on client IPs for audit/rate limits.
 - Configure Keycloak realm service accounts and redirect URIs using the production procedure documented in `KEYCLOAK_PRODUCTION_SETUP.md`.
 
 ## Operational caveats
