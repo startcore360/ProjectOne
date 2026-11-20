@@ -53,7 +53,7 @@ After it succeeds:
 1. Store the two client secrets in the production secret manager.
 2. Set `KEYCLOAK_ADMIN_CLIENT_ID`, `KEYCLOAK_ADMIN_CLIENT_SECRET`, `KEYCLOAK_IDENTITY_EVENTS_CLIENT_ID`, and `KEYCLOAK_IDENTITY_EVENTS_CLIENT_SECRET` in the API deployment environment.
 3. Remove bootstrap admin credentials from the operator shell and rotate/disable the one-time bootstrap credential according to the Keycloak operations policy.
-4. Verify client-credentials token issuance in master, the platform realm, and at least one tenant realm. Confirm that a tenant service account cannot administer another tenant realm.
+4. Verify client-credentials token issuance in master, the platform realm, and at least one tenant realm. Confirm that a token issued in tenant realm A cannot administer tenant realm B, and confirm the shared client secret is not exposed to tenant applications or users.
 5. Run `mvn --batch-mode --no-transfer-progress -f api/pom.xml verify -Pit` against the integration stack.
 
 New realms provisioned by the application embed the tenant-local admin client and its user-management role mappings. Existing realms must be included in `KEYCLOAK_TENANT_REALMS` during the one-time migration; otherwise realm-scoped client-credentials authentication will fail closed for those realms.
