@@ -24,7 +24,7 @@ Run from an approved external test runner against staging only.
 | SEC-04 | RLS/IDOR: enumerate tenant IDs, file IDs, support ticket IDs and institution IDs across tenants | No cross-tenant read/write; database RLS remains enforced under the application role |
 | SEC-05 | CORS and browser origin | Only the exact configured platform origin is allowed; wildcard origins are not emitted |
 | SEC-06 | Keycloak redirect URI | Only HTTPS wildcard-domain redirect URIs are accepted; localhost and unregistered domains rejected |
-| SEC-07 | Keycloak service-account least privilege | Master client can create/delete realms only; tenant client can administer users only in its own realm; identity-events client cannot administer users |
+| SEC-07 | Keycloak service-account least privilege | Master-realm token can create/delete realms only; each tenant-realm token has user-management roles only in that realm; identity-events client cannot administer users. Also verify the shared admin client secret is protected as a platform-wide credential |
 | SEC-08 | File storage | S3 bucket is private; object keys remain under `tenants/{tenantId}/{fileId}`; traversal and cross-tenant access denied |
 | SEC-09 | Secrets and headers | No secrets in image, source, logs, or browser bundles; HSTS, nosniff, frame denial and TLS 1.2+ observed |
 | SEC-10 | API exposure | Port 8080 is not publicly reachable; Swagger, OpenAPI docs and H2 console return 404 |
