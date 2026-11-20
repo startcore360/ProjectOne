@@ -114,7 +114,7 @@ Ensure-ClientRoles "master" $masterClient.id @("create-realm", "delete-realm", "
 
 foreach ($realm in $realms) {
     $tenantClient = Ensure-Client $realm $adminClientId $adminClientSecret $true
-    Ensure-ClientRoles $realm $tenantClient.id @("manage-users", "view-users", "query-users", "view-realm") | Out-Null
+    Ensure-ClientRoles $realm $tenantClient.id @("manage-users", "view-users", "query-users", "view-realm", "manage-clients") | Out-Null
     Ensure-FrontendRedirects $realm
 }
 
