@@ -104,10 +104,17 @@ public class KeycloakAdminClient {
     public void provisionRealm(String realm, String displayName) {
         String adminToken = fetchMasterAdminAccessToken();
         try {
-            Map<String, Object> realmRep = Map.of(
-                    "realm", realm,
-                    "displayName", displayName,
-                    "enabled", true);
+            Map<String, Object> realmRep = new HashMap<>();
+            realmRep.put("realm", realm);
+            realmRep.put("displayName", displayName);
+            realmRep.put("enabled", true);
+            // Production creates the tenant-scoped service account in the same realm import
+            // transaction. Its realm-management roles are limited to user administration.
+            // Dev keeps using the existing master-admin password fallback and imported realms.
+            if (hasAdminClientCredentials()) {
+                realmRep.put("clients", List.of(adminServiceClientRepresentation()));
+                realmRep.put("users", List.of(adminServiceAccountUserRepresentation()));
+            }
             restClient.post()
                     .uri(properties.getBaseUrl() + "/admin/realms")
                     .header("Authorization", "Bearer " + adminToken)
@@ -120,7 +127,9 @@ public class KeycloakAdminClient {
             }
         }
 
-        allowCustomUserAttributes(adminToken, realm);
+        String realmAdminToken = hasAdminClientCredentials()
+                ? fetchRealmAdminAccessToken(realm) : adminToken;
+        allowCustomUserAttributes(realmAdminToken, realm);
 
         try {
             Map<String, Object> clientRep = Map.of(
@@ -150,7 +159,33 @@ public class KeycloakAdminClient {
 
         // Reconcile clients in realms that already existed before this release. A 409 above
         // only proves the client exists; it does not update the redirect allowlist.
-        reconcileFrontendRedirectUris(adminToken, realm);
+        reconcileFrontendRedirectUris(realmAdminToken, realm);
+    }
+
+    private boolean hasAdminClientCredentials() {
+        return properties.getAdminClientId() != null && !properties.getAdminClientId().isBlank()
+                && properties.getAdminClientSecret() != null && !properties.getAdminClientSecret().isBlank();
+    }
+
+    private Map<String, Object> adminServiceClientRepresentation() {
+        return Map.of(
+                "clientId", properties.getAdminClientId(),
+                "enabled", true,
+                "publicClient", false,
+                "clientAuthenticatorType", "client-secret",
+                "secret", properties.getAdminClientSecret(),
+                "serviceAccountsEnabled", true,
+                "standardFlowEnabled", false,
+                "directAccessGrantsEnabled", false);
+    }
+
+    private Map<String, Object> adminServiceAccountUserRepresentation() {
+        return Map.of(
+                "username", "service-account-" + properties.getAdminClientId(),
+                "enabled", true,
+                "serviceAccountClientId", properties.getAdminClientId(),
+                "clientRoles", Map.of("realm-management",
+                        List.of("manage-users", "view-users", "query-users", "view-realm")));
     }
 
     @SuppressWarnings("unchecked")
