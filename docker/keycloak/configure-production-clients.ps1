@@ -45,7 +45,7 @@ function Invoke-Keycloak([string]$Method, [string]$Path, $Body = $null) {
 function Get-Client([string]$Realm, [string]$ClientId) {
     $encoded = [uri]::EscapeDataString($ClientId)
     $matches = Invoke-Keycloak "Get" "/admin/realms/$Realm/clients?clientId=$encoded"
-    if ($matches -and $matches.Count -gt 0) { return $matches[0] }
+    if (@($matches).Count -gt 0) { return @($matches)[0] }
     return $null
 }
 
@@ -65,7 +65,7 @@ function Ensure-Client([string]$Realm, [string]$ClientId, [string]$Secret, [bool
         Invoke-Keycloak "Post" "/admin/realms/$Realm/clients" $representation | Out-Null
         $client = Get-Client $Realm $ClientId
     } else {
-        $client.secret = $Secret
+        $client | Add-Member -NotePropertyName secret -NotePropertyValue $Secret -Force
         $client.enabled = $true
         $client.publicClient = $false
         $client.clientAuthenticatorType = "client-secret"
