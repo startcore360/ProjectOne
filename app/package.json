@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test --config=playwright.config.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.13.0",
