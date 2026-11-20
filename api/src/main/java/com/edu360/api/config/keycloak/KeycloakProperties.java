@@ -50,33 +50,16 @@ public class KeycloakProperties {
     /** Exact allowed browser redirect patterns for the public frontend client. */
     private java.util.List<String> frontendRedirectUris = java.util.List.of();
 
-    /** Local-dev-only hostname suffix stripped from the Host header to find a tenant's
-     *  subdomain (see LoginTenantResolver) - e.g. ".edu360.local". Blank in production, where
-     *  real subdomain/custom-domain routing is not built yet: see
-     *  docker/PRODUCTION_TENANT_ROUTING.txt, P4. May be a comma-separated list so several address
-     *  styles work at once, e.g. ".edu360.local,-edu360.duckdns.org". */
-    private String localDevHostSuffix = "";
-
-    /** Production wildcard tenant domain ending, e.g. ".example.edu". */
+    /** Tenant hostname suffixes, comma-separated; production supplies its wildcard suffix. */
     private String tenantHostSuffix = "";
 
-    /** All configured tenant address endings, with longest-match-first applied by the resolver. */
+    /** All configured tenant address endings, normalized and matched longest-first. */
     public java.util.List<String> getTenantHostSuffixes() {
-        java.util.List<String> suffixes = new java.util.ArrayList<>(getLocalDevHostSuffixes());
-        if (tenantHostSuffix != null && !tenantHostSuffix.isBlank()) {
-            suffixes.add(tenantHostSuffix.trim().toLowerCase(java.util.Locale.ROOT));
-        }
-        return suffixes.stream().distinct().toList();
-    }
-
-    /** localDevHostSuffix split into its non-blank, lower-cased endings. */
-    public java.util.List<String> getLocalDevHostSuffixes() {
-        if (localDevHostSuffix == null || localDevHostSuffix.isBlank()) {
-            return java.util.List.of();
-        }
-        return java.util.Arrays.stream(localDevHostSuffix.split(","))
+        if (tenantHostSuffix == null || tenantHostSuffix.isBlank()) return java.util.List.of();
+        return java.util.Arrays.stream(tenantHostSuffix.split(","))
                 .map(s -> s.trim().toLowerCase(java.util.Locale.ROOT))
                 .filter(s -> !s.isEmpty())
+                .distinct()
                 .toList();
     }
 
@@ -146,17 +129,13 @@ public class KeycloakProperties {
         this.frontendRedirectUris = frontendRedirectUris == null ? java.util.List.of() : java.util.List.copyOf(frontendRedirectUris);
     }
 
-    public String getLocalDevHostSuffix() {
-        return localDevHostSuffix;
-    }
-
-    public void setLocalDevHostSuffix(String localDevHostSuffix) {
-        this.localDevHostSuffix = localDevHostSuffix;
-    }
-
     public String getTenantHostSuffix() { return tenantHostSuffix; }
 
     public void setTenantHostSuffix(String tenantHostSuffix) { this.tenantHostSuffix = tenantHostSuffix; }
+
+    /** Backward-compatible setter for tests/configuration not yet migrated; new config uses tenant-host-suffix. */
+    @Deprecated
+    public void setLocalDevHostSuffix(String localDevHostSuffix) { this.tenantHostSuffix = localDevHostSuffix; }
 
     public String getPlatformHostLabel() {
         return platformHostLabel;
