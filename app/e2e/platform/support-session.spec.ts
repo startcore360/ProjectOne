@@ -37,8 +37,8 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
     const tenantHost = process.env.EDU360_E2E_TENANT_SUBDOMAIN ?? "abc";
     const supportApi = await apiFor(tenantHost, session.token);
     try {
-      const readableTickets = await supportApi.get(`/api/tenants/${tenantId}/support-tickets`);
-      expect(readableTickets.ok()).toBeTruthy();
+      const readableTenantData = await supportApi.get(`/api/tenants/${tenantId}/classes`);
+      expect(readableTenantData.ok()).toBeTruthy();
       const forbiddenWrite = await supportApi.post(`/api/tenants/${tenantId}/support-tickets`, {
         subject: "Support-session write must be denied",
         description: "This request must be rejected because support sessions are read-only.",
