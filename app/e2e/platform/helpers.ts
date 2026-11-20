@@ -35,7 +35,7 @@ export type CreatedTenant = {
 };
 
 export async function createTenant(api: APIRequestContext, kind: "UNIVERSITY_GROUP" | "STANDALONE_SCHOOL" | "STANDALONE_COLLEGE" = "STANDALONE_SCHOOL"): Promise<CreatedTenant> {
-  const plansResponse = await api.get("/api/platform/plans");
+  const plansResponse = await billingApi.get("/api/platform/plans");
   const plans = await json<Array<{ planId: string; priceAmount: number; currencyCode: string; status: string }>>(plansResponse);
   const plan = plans.find((item) => item.status === "ACTIVE") ?? plans[0];
   expect(plan, "A seeded active plan is required for tenant provisioning.").toBeTruthy();
@@ -59,13 +59,14 @@ export async function createTenant(api: APIRequestContext, kind: "UNIVERSITY_GRO
   const tenant = await json<CreatedTenant>(response);
   expect(tenant.tenantId).toBeTruthy();
   expect(tenant.state).toBe("TRIAL");
+  expect(tenant.rowVersion).toBeTruthy();
   return tenant;
 }
 
-export async function makeInvoicePaid(api: APIRequestContext, tenantId: string): Promise<string> {
+export async function makeInvoicePaid(billingApi: APIRequestContext, ownerApi: APIRequestContext, tenantId: string): Promise<string> {
   const plansResponse = await api.get("/api/platform/plans");
   const plans = await json<Array<{ planId: string; priceAmount: number; currencyCode: string }>>(plansResponse);
-  const tenantsResponse = await api.get("/api/platform/tenants?page=0&size=100");
+  const tenantsResponse = await billingApi.get("/api/platform/tenants?page=0&size=100");
   const tenants = await json<{ items: Array<{ tenantId: string; planId: string }> }>(tenantsResponse);
   const tenant = tenants.items.find((item) => item.tenantId === tenantId);
   expect(tenant, "Created tenant must be listed before invoicing.").toBeTruthy();
@@ -75,7 +76,7 @@ export async function makeInvoicePaid(api: APIRequestContext, tenantId: string):
   const now = new Date();
   const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
   const periodStart = new Date(Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth(), 1));
-  const invoiceResponse = await api.post("/api/platform/invoices", {
+  const invoiceResponse = await billingApi.post("/api/platform/invoices", {
     tenantId,
     periodStart: periodStart.toISOString().slice(0, 10),
     periodEnd: periodEnd.toISOString().slice(0, 10),
@@ -84,11 +85,11 @@ export async function makeInvoicePaid(api: APIRequestContext, tenantId: string):
   }, { headers: { "Idempotency-Key": randomUUID() } });
   const invoice = await json<{ invoiceId: string }>(invoiceResponse);
 
-  await json(await api.post(`/api/platform/invoices/${invoice.invoiceId}/approval`, {}, {
+  await json(await ownerApi.post(`/api/platform/invoices/${invoice.invoiceId}/approval`, {}, {
     headers: { "Idempotency-Key": randomUUID() },
   }));
-  await json(await api.post(`/api/platform/invoices/${invoice.invoiceId}/send`));
-  await json(await api.post(`/api/platform/invoices/${invoice.invoiceId}/record-payment`, {
+  await json(await billingApi.post(`/api/platform/invoices/${invoice.invoiceId}/send`));
+  await json(await billingApi.post(`/api/platform/invoices/${invoice.invoiceId}/record-payment`, {
     paymentMode: "BANK_TRANSFER",
     paymentReference: `A8-E2E-${randomUUID()}`,
   }, { headers: { "Idempotency-Key": randomUUID() } }));
@@ -100,7 +101,7 @@ export async function activateTenant(api: APIRequestContext, tenant: CreatedTena
   const response = await api.post(`/api/platform/tenants/${tenant.tenantId}/activation`, {
     paymentReference,
     note: "A8 automated end-to-end verification",
-  }, { headers: { "Idempotency-Key": randomUUID(), ...(tenant.rowVersion ? { "If-Match": `"${tenant.rowVersion}"` } : {}) } });
+  }, { headers: { "Idempotency-Key": randomUUID(), "If-Match": `"${tenant.rowVersion}"` } });
   const activated = await json<{ state: string }>(response);
   expect(activated.state).toBe("ACTIVE");
 }
