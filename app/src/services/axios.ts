@@ -24,14 +24,19 @@ if (typeof window !== "undefined" && window.location.hash.includes("support_sess
   }
 }
 
-// Tenant identity is resolved by the request hostname, so keep the API origin
-// derived from the active tenant host unless an explicit deployment override exists.
-// PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P3): port 8080 below works only locally. Production must call /api on the
-// page's own address through the reverse proxy, and must not set one fixed VITE_API_BASE_URL.
-const inferredBaseUrl = `${window.location.protocol}//${window.location.hostname}:8080/api`;
-// A relative override such as "/api" (same-origin API behind a proxy, P3) is resolved against the
-// page origin so the origin check below has an absolute URL to compare. Absolute values are unchanged.
-const configuredBaseUrl = new URL(import.meta.env.VITE_API_BASE_URL || inferredBaseUrl, window.location.origin)
+// Tenant identity is resolved by the request hostname. In development the API listens on
+// port 8080 of that hostname; in production the reverse proxy serves /api on the same origin.
+// A production VITE_API_BASE_URL override is deliberately ignored: one fixed API host would
+// collapse every tenant onto the same Host header and break tenant resolution (P3).
+const inferredBaseUrl = import.meta.env.DEV
+  ? `${window.location.protocol}//${window.location.hostname}:8080/api`
+  : `${window.location.origin}/api`;
+// Keep the explicit override as a local-development escape hatch only. Resolve relative values
+// against the page origin so the origin check below always compares absolute URLs.
+const configuredBaseUrl = new URL(
+  import.meta.env.DEV ? (import.meta.env.VITE_API_BASE_URL || inferredBaseUrl) : inferredBaseUrl,
+  window.location.origin,
+)
   .toString()
   .replace(/\/$/, "");
 const api = axios.create({
