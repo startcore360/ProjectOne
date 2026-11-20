@@ -12,7 +12,7 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
   const tenantApi = await apiFor(process.env.EDU360_E2E_TENANT_SUBDOMAIN ?? "abc", tenantToken);
   const platformApi = await apiFor("platform", ownerToken);
   try {
-    const ticketResponse = await tenantApi.post(`/tenants/${tenantId}/support-tickets`, {
+    const ticketResponse = await tenantApi.post(`/api/tenants/${tenantId}/support-tickets`, {
       subject: `A8 support test ${Date.now()}`,
       description: "Automated E2E validation of ticket-bound support access.",
       priority: "NORMAL",
@@ -20,14 +20,14 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
     });
     const ticket = await json<{ supportTicketId: string }>(ticketResponse);
 
-    const grantResponse = await tenantApi.post(`/tenants/${tenantId}/support-access-grants`, {
+    const grantResponse = await tenantApi.post(`/api/tenants/${tenantId}/support-access-grants`, {
       ticketId: ticket.supportTicketId,
       durationHours: 1,
     });
     const grant = await json<{ supportAccessGrantId: string }>(grantResponse);
     expect(grant.supportAccessGrantId).toBeTruthy();
 
-    const sessionResponse = await platformApi.post("/platform/support-sessions", {
+    const sessionResponse = await platformApi.post("/api/platform/support-sessions", {
       ticketId: ticket.supportTicketId,
     });
     const session = await json<{ token: string; expiresAt: string; tenantLoginAddress: string }>(sessionResponse);
