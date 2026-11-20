@@ -76,7 +76,7 @@ TenantHostMatchingFilter resolves the request host and compares it with the auth
 
 ## P11. Realm-scoped Keycloak admin service accounts
 
-Production uses client-credentials authentication rather than the master bootstrap password. The master-realm service account can create/delete realms and view/query realm metadata. Each tenant realm has a realm-local service-account user with manage-users, view-users, query-users, and view-realm. User operations obtain a token from the target realm; realm lifecycle operations use the master-realm client.
+Production uses client-credentials authentication rather than the master bootstrap password. The master-realm service account can create/delete realms and view/query realm metadata. Each tenant realm has a realm-local service-account user with manage-users, view-users, query-users, view-realm, and manage-clients. User operations obtain a token from the target realm; realm lifecycle operations use the master-realm client.
 
 Run docker/keycloak/configure-production-clients.ps1 as documented in docs/KEYCLOAK_PRODUCTION_SETUP.md. Include every existing tenant realm in KEYCLOAK_TENANT_REALMS.
 
