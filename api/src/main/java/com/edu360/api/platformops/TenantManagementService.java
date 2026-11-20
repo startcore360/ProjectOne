@@ -707,8 +707,12 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
         }
         String normalizedSubdomain = request.getSubdomain().toLowerCase().trim();
 
-        // 1. Check subdomain uniqueness
-        // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P6): reserved names such as "platform" must also be refused.
+        // 1. Reject platform-owned labels on both the current and legacy creation paths.
+        if (RESERVED_SUBDOMAINS.contains(normalizedSubdomain)) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "SUBDOMAIN_RESERVED",
+                    "The subdomain '" + normalizedSubdomain + "' is reserved by the platform.");
+        }
+        // 2. Check subdomain uniqueness.
         if (tenantRepository.findBySubdomain(normalizedSubdomain).isPresent()) {
             throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists");
         }
