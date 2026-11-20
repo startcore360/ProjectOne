@@ -308,6 +308,8 @@ jobs:
         run: npm install --no-save --package-lock=false @playwright/test@1.56.1
       - name: Install Chromium
         run: npx playwright install chromium
+      - name: Type-check Playwright suite
+        run: npm run e2e:typecheck
       - name: Run platform E2E scenarios
         run: npm run e2e
       - name: Upload Playwright report and traces
