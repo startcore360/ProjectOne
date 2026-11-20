@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { apiFor, createTenant, json, makeInvoicePaid, openPlatformPage, requiredToken } from "./helpers";
 
 test("DPO decides a deletion request after Product Owner confirmation", async ({ page }) => {
@@ -13,7 +14,7 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
     const requestResponse = await owner.post("/api/platform/deletion-requests", {
       tenantId: tenant.tenantId,
       origin: "PRODUCT_OWNER",
-    }, { headers: { "Idempotency-Key": crypto.randomUUID() } });
+    }, { headers: { "Idempotency-Key": randomUUID() } });
     const deletion = await json<{ deletionRequestId: string; rowVersion?: number }>(requestResponse);
     const confirmResponse = await owner.post(`/api/platform/deletion-requests/${deletion.deletionRequestId}/confirm`, {
       waiveRetentionWait: false,
@@ -41,13 +42,14 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
 });
 
 test("Billing cycle creates a payable invoice and payment moves it to PAID", async ({ page }) => {
-  test.skip(!process.env.EDU360_E2E_PRODUCT_OWNER_TOKEN, "Requires a Product Owner token from the local dev stack.");
+  test.skip(!process.env.EDU360_E2E_PRODUCT_OWNER_TOKEN || !process.env.EDU360_E2E_BILLING_MANAGER_TOKEN, "Requires Product Owner and Billing Manager tokens from the local dev stack.");
   const token = requiredToken("EDU360_E2E_PRODUCT_OWNER_TOKEN");
   const api = await apiFor("platform", token);
+  const billingApi = await apiFor("platform", requiredToken("EDU360_E2E_BILLING_MANAGER_TOKEN"));
   try {
     const tenant = await createTenant(api);
-    const invoiceId = await makeInvoicePaid(api, tenant.tenantId);
-    const response = await api.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
+    const invoiceId = await makeInvoicePaid(billingApi, api, tenant.tenantId);
+    const response = await billingApi.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
     const invoices = await json<Array<{ invoiceId: string; status: string }>>(response);
     expect(invoices.find((item) => item.invoiceId === invoiceId)?.status).toBe("PAID");
 
@@ -55,5 +57,6 @@ test("Billing cycle creates a payable invoice and payment moves it to PAID", asy
     await expect(page.locator("#root")).toBeVisible();
   } finally {
     await api.dispose();
+    await billingApi.dispose();
   }
 });
