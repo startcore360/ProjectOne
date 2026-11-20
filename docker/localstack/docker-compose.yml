@@ -1,6 +1,9 @@
 services:
   localstack:
-    image: localstack/localstack:3.8
+    image: edu360-localstack:3.8
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       SERVICES: secretsmanager,s3
       DEFAULT_REGION: ap-south-1
@@ -12,7 +15,6 @@ services:
       - "4566:4566"
     volumes:
       - localstack-data:/var/lib/localstack
-      - ./init/ready.d:/etc/localstack/init/ready.d:ro
 
 volumes:
   localstack-data:
