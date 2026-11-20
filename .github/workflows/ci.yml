@@ -277,8 +277,10 @@ jobs:
       EDU360_E2E_TENANT_TOKEN: ${{ secrets.EDU360_E2E_TENANT_TOKEN }}
       EDU360_E2E_TENANT_ID: ${{ secrets.EDU360_E2E_TENANT_ID }}
       EDU360_E2E_TENANT_SUBDOMAIN: ${{ secrets.EDU360_E2E_TENANT_SUBDOMAIN }}
-      EDU360_E2E_PLATFORM_URL: ${{ vars.EDU360_E2E_PLATFORM_URL }}
-      EDU360_E2E_API_PORT: ${{ vars.EDU360_E2E_API_PORT }}
+      EDU360_E2E_DPO_READY_REQUEST_ID: ${{ secrets.EDU360_E2E_DPO_READY_REQUEST_ID }}
+      EDU360_E2E_BILLING_TENANT_ID: ${{ secrets.EDU360_E2E_BILLING_TENANT_ID }}
+      EDU360_E2E_PLATFORM_URL: ${{ vars.EDU360_E2E_PLATFORM_URL || 'http://platform.edu360.localhost:5173' }}
+      EDU360_E2E_API_PORT: ${{ vars.EDU360_E2E_API_PORT || '8080' }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
