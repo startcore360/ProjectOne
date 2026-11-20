@@ -28,11 +28,11 @@ test("E2E-035: standalone college reaches ACTIVE only after its invoice is paid"
   const billingApi = await apiFor("platform", requiredToken("EDU360_E2E_BILLING_MANAGER_TOKEN"));
   try {
     const tenant = await createTenant(api, "STANDALONE_COLLEGE");
-    const invoicesBeforePayment = await api.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
+    const invoicesBeforePayment = await billingApi.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
     const existing = await json<Array<{ status: string }>>(invoicesBeforePayment);
     expect(existing.every((invoice) => invoice.status !== "PAID")).toBeTruthy();
 
-    await makeInvoicePaid(billingApi, api, tenant.tenantId);
+    await makeInvoicePaid(billingApi, api, tenant);
     await activateTenant(api, tenant);
 
     await openPlatformPage(page, token, "/platform/tenants");
