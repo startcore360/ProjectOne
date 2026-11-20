@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { activateTenant, apiFor, createTenant, json, makeInvoicePaid, openPlatformPage, requiredToken } from "./helpers";
 
 test("E2E-001: onboard a tenant, pay its first invoice and activate it", async ({ page }) => {
