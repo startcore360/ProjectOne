@@ -7,7 +7,7 @@ This is a one-time deployment operation. Run it against the production Keycloak 
 The application does not use the bootstrap admin password in production.
 
 - Master realm client `edu360-admin-cli`: client-credentials grant, service account roles limited to `create-realm`, `delete-realm`, `view-realm`, and `query-realms`. This client is used only to create/delete tenant realms.
-- Each tenant realm client `edu360-admin-cli`: same client ID and configured secret, separate realm-local service-account user, roles limited to `manage-users`, `view-users`, `query-users`, and `view-realm`. User provisioning, password reset, OTP enrollment, and session administration obtain a token from the target realm, not from master.
+- Each tenant realm client `edu360-admin-cli`: same client ID and configured secret, separate realm-local service-account user, roles limited to `manage-users`, `view-users`, `query-users`, `view-realm`, and `manage-clients`. User provisioning, password reset, OTP enrollment, and session administration obtain a token from the target realm, not from master.
 - Platform realm client `edu360-admin-cli`: the same realm-scoped user-management role set for platform identities.
 - Platform realm client `edu360-identity-events`: separate client-credentials service account with only the realm role `identity-events:write`. It is not reused for user administration.
 - Frontend client `edu360-frontend`: public client with the production HTTPS wildcard redirect allowlist. Existing clients are updated in place; the API preserves the rest of each client representation.
