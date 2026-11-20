@@ -1,7 +1,13 @@
 import type { FormEvent } from "react";
-import { Button, Kicker, TextField, Notice } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
-import { Icon } from "../../../../components/ui/Icon";
+import {
+  Button,
+  CheckboxField,
+  Modal,
+  Notice,
+  SkeletonCard,
+  SkeletonText,
+  TextField,
+} from "../../../../design-system/components";
 import type { Tenant } from "../common/types";
 
 export interface TenantSettingsDraft {
@@ -67,85 +73,91 @@ export function TenantSettingsModal({
   const limitHint = (limit: number | null | undefined) => (limit == null ? undefined : `Plan limit: ${limit}`);
 
   return (
-    <div
-      className="platform-modal-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      kicker="TENANT SETTINGS"
+      title={`Tenant Settings: ${tenant.name}`}
+      titleId="tenant-settings-title"
+      description="Configure operational limits, custom domains and anonymous analytics preferences."
+      size="md"
+      footer={
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={savingSettings}>
+            Cancel
+          </Button>
+          <Button
+            form="tenant-settings-form"
+            type="submit"
+            variant="primary"
+            busy={savingSettings}
+            disabled={blocked}
+          >
+            Save Settings
+          </Button>
+        </div>
+      }
     >
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-settings-title">
-        <header>
-          <div>
-            <Kicker>TENANT SETTINGS</Kicker>
-            <h2 id="tenant-settings-title">Tenant Settings: {tenant.name}</h2>
-            <p>Configure operational limits, custom domains and anonymous analytics preferences.</p>
+      {loadingSettings ? (
+        <div role="status" aria-busy="true" aria-label="Loading tenant settings">
+          <span className="sr-only">Loading tenant settings...</span>
+          <SkeletonCard>
+            <SkeletonText height="2.5rem" />
+            <div className="app-form-grid">
+              <SkeletonText height="2.5rem" />
+              <SkeletonText height="2.5rem" />
+            </div>
+            <SkeletonText height="1rem" width="65%" />
+          </SkeletonCard>
+        </div>
+      ) : (
+        <form id="tenant-settings-form" onSubmit={onSubmit}>
+          {settingsError && (
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <Notice tone="danger">{settingsError}</Notice>
+            </div>
+          )}
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <TextField
+              id="settings-custom-domain"
+              label="Custom Domain"
+              value={settingsDraft.customDomain}
+              onChange={(e) => setSettingsDraft({ ...settingsDraft, customDomain: e.target.value })}
+              placeholder="e.g. portal.northbridge.edu"
+              hint={plan && !plan.customDomainAllowed ? "This tenant's plan does not include a custom domain." : undefined}
+              error={domainBlocked ? "Change the plan first: a custom domain is not part of it." : undefined}
+            />
           </div>
-          <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={16} />
-          </button>
-        </header>
-        {loadingSettings ? (
-          <div className="platform-empty-inline">
-            <Spinner label="Loading tenant settings" />
+          <div className="app-form-grid">
+            <TextField
+              id="settings-user-limit"
+              label="User Limit"
+              type="number"
+              value={String(settingsDraft.userLimit)}
+              onChange={(e) => setSettingsDraft({ ...settingsDraft, userLimit: Number(e.target.value) })}
+              hint={usersBeyond && isProductOwner ? `${limitHint(plan?.userLimit)} - you are going beyond the plan.` : limitHint(plan?.userLimit)}
+              error={usersBeyond && !isProductOwner ? BEYOND_PLAN : undefined}
+            />
+            <TextField
+              id="settings-storage-limit"
+              label="Storage Limit (GB)"
+              type="number"
+              value={String(settingsDraft.storageLimitGb)}
+              onChange={(e) => setSettingsDraft({ ...settingsDraft, storageLimitGb: Number(e.target.value) })}
+              hint={storageBeyond && isProductOwner ? `${limitHint(plan?.storageLimitGb)} - you are going beyond the plan.` : limitHint(plan?.storageLimitGb)}
+              error={storageBeyond && !isProductOwner ? BEYOND_PLAN : undefined}
+            />
           </div>
-        ) : (
-          <form onSubmit={onSubmit}>
-            {settingsError && <Notice tone="danger">{settingsError}</Notice>}
-            <div style={{ marginBottom: "1rem" }}>
-              <TextField
-                id="settings-custom-domain"
-                label="Custom Domain"
-                value={settingsDraft.customDomain}
-                onChange={(e) => setSettingsDraft({ ...settingsDraft, customDomain: e.target.value })}
-                placeholder="e.g. portal.northbridge.edu"
-                hint={plan && !plan.customDomainAllowed ? "This tenant's plan does not include a custom domain." : undefined}
-                error={domainBlocked ? "Change the plan first: a custom domain is not part of it." : undefined}
-              />
-            </div>
-            <div className="platform-form-grid">
-              <TextField
-                id="settings-user-limit"
-                label="User Limit"
-                type="number"
-                value={String(settingsDraft.userLimit)}
-                onChange={(e) => setSettingsDraft({ ...settingsDraft, userLimit: Number(e.target.value) })}
-                hint={usersBeyond && isProductOwner ? `${limitHint(plan?.userLimit)} - you are going beyond the plan.` : limitHint(plan?.userLimit)}
-                error={usersBeyond && !isProductOwner ? BEYOND_PLAN : undefined}
-              />
-              <TextField
-                id="settings-storage-limit"
-                label="Storage Limit (GB)"
-                type="number"
-                value={String(settingsDraft.storageLimitGb)}
-                onChange={(e) => setSettingsDraft({ ...settingsDraft, storageLimitGb: Number(e.target.value) })}
-                hint={storageBeyond && isProductOwner ? `${limitHint(plan?.storageLimitGb)} - you are going beyond the plan.` : limitHint(plan?.storageLimitGb)}
-                error={storageBeyond && !isProductOwner ? BEYOND_PLAN : undefined}
-              />
-            </div>
-            <div style={{ margin: "1rem 0" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.875rem" }}>
-                <input
-                  type="checkbox"
-                  checked={settingsDraft.analyticsOptOut}
-                  onChange={(e) => setSettingsDraft({ ...settingsDraft, analyticsOptOut: e.target.checked })}
-                />
-                <span>
-                  <strong>Opt out of anonymous platform analytics</strong>
-                </span>
-              </label>
-            </div>
-            <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-              <Button type="button" variant="secondary" onClick={onClose} disabled={savingSettings}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" busy={savingSettings} disabled={blocked}>
-                Save Settings
-              </Button>
-            </footer>
-          </form>
-        )}
-      </section>
-    </div>
+          <div style={{ margin: "var(--space-3) 0" }}>
+            <CheckboxField
+              id="settings-analytics-opt-out"
+              label={<strong>Opt out of anonymous platform analytics</strong>}
+              checked={settingsDraft.analyticsOptOut}
+              onChange={(e) => setSettingsDraft({ ...settingsDraft, analyticsOptOut: e.target.checked })}
+            />
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }

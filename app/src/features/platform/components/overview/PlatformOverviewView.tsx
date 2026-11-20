@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button, MetricCard, Panel, StatusBadge, Notice } from "../../../../design-system/components";
+import { Button, MetricCard, Panel, StatusBadge, Notice, SkeletonPage } from "../../../../design-system/components";
 import { PageHeader } from "../../../../components/layout/PageHeader";
-import { Spinner } from "../../../../components/ui";
 import { Icon } from "../../../../components/ui/Icon";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { platformUserService, type PlatformUserItem } from "../../api/platformUserService";
@@ -80,10 +79,8 @@ function LegacyPlatformOverviewView() {
         </Notice>
       )}
 
-      {loading ? (
-        <div className="app-empty-inline">
-          <Spinner label="Loading platform overview..." />
-        </div>
+      {loading && tenants.length === 0 && users.length === 0 && auditLogs.length === 0 ? (
+        <SkeletonPage title="Loading platform overview" showKpis kpiCount={4} showTable tableRows={5} tableColumns={5} />
       ) : (
         <>
           {(canViewTenants || canViewUsers) && (

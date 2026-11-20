@@ -11,7 +11,9 @@ import {
   PageHeader,
   Panel,
   SearchBox,
-  Spinner,
+  SkeletonCard,
+  SkeletonTable,
+  SkeletonText,
   StatusBadge,
   TextField,
 } from "../../../design-system/components";
@@ -105,22 +107,128 @@ export function ConfirmDialog({
 
 function MoreActionsMenu({ items }: { items: { label: string; onClick: () => void }[] }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        !triggerRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
   }, [open]);
+
+  useEffect(() => {
+    if (open && menuRef.current) {
+      const menuItems = menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+      if (menuItems.length > 0) menuItems[0].focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) {
+      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+
+    const menuItems = menuRef.current
+      ? Array.from(menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      : [];
+    if (menuItems.length === 0) return;
+    const activeIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextIndex = activeIndex < menuItems.length - 1 ? activeIndex + 1 : 0;
+      menuItems[nextIndex]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevIndex = activeIndex > 0 ? activeIndex - 1 : menuItems.length - 1;
+      menuItems[prevIndex]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      menuItems[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      menuItems[menuItems.length - 1]?.focus();
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  const closeMenu = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <Button variant="secondary" onClick={() => setOpen((v) => !v)} aria-haspopup="true" aria-expanded={open}>
+    <div onKeyDown={handleKeyDown} style={{ position: "relative" }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="eds-button eds-button--secondary"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="More user actions"
+      >
         More ▾
-      </Button>
+      </button>
       {open && (
-        <div role="menu" style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50, background: "var(--color-bg-surface)", border: "1px solid var(--color-border-divider)", borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-2)", minWidth: "220px", padding: "4px 0" }} onClick={() => setOpen(false)}>
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label="More user actions"
+          style={{
+            position: "absolute",
+            right: 0,
+            top: "calc(100% + 4px)",
+            zIndex: 50,
+            background: "var(--color-bg-surface)",
+            border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--elevation-2)",
+            minWidth: "220px",
+            padding: "4px 0",
+          }}
+          onClick={closeMenu}
+        >
           {items.map((item) => (
-            <button key={item.label} role="menuitem" onClick={item.onClick} style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 16px", background: "none", border: "none", cursor: "pointer", fontSize: "0.875rem", color: "var(--color-text-primary)" }}>
+            <button
+              key={item.label}
+              role="menuitem"
+              onClick={item.onClick}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 16px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                color: "var(--color-text)",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+            >
               {item.label}
             </button>
           ))}
@@ -251,7 +359,7 @@ export function UserListPage() {
           }
         />
       )}
-      {state === "loading" && <Spinner label="Loading users" />}
+      {state === "loading" && <Panel title="User register"><SkeletonTable rows={5} columns={6} /></Panel>}
 
       {state === "loaded" && (
         <Panel
@@ -589,7 +697,7 @@ export function UserDetailPage() {
         </Panel>
       )}
 
-      {!needsScope && state === "loading" && <Spinner label="Loading user" />}
+      {!needsScope && state === "loading" && <SkeletonCard><SkeletonText height="1.25rem" width="50%" /><SkeletonText lines={5} /></SkeletonCard>}
       {!needsScope && state === "denied" && (
         <ErrorState
           title="Permission denied"

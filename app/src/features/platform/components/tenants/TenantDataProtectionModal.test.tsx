@@ -68,7 +68,7 @@ describe("TenantDataProtectionModal", () => {
 
   it("requests deletion through the approval chain without claiming the tenant was deleted", async () => {
     renderModal();
-    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Tenant Deletion/i }));
     fireEvent.change(screen.getByPlaceholderText("Northfield School"), { target: { value: "Northfield School" } });
     fireEvent.click(screen.getByRole("button", { name: "Request deletion" }));
 
@@ -80,7 +80,7 @@ describe("TenantDataProtectionModal", () => {
 
   it("offers only the ref.data_class codes for retention requests", async () => {
     renderModal();
-    fireEvent.click(screen.getByRole("button", { name: "Retention Policy" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Retention Policy" }));
     fireEvent.click(screen.getByRole("button", { name: "Request Policy Change" }));
 
     const select = await screen.findByLabelText("Data Category");
@@ -97,7 +97,7 @@ describe("TenantDataProtectionModal", () => {
       origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z", rowVersion: 3,
     }] } as never);
     renderModal("PRODUCT_OWNER");
-    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Tenant Deletion/i }));
 
     fireEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm deletion request" }));
@@ -114,7 +114,7 @@ describe("TenantDataProtectionModal", () => {
       origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z", rowVersion: 3,
     }] } as never);
     renderModal("PRODUCT_OWNER");
-    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Tenant Deletion/i }));
     fireEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
 
     fireEvent.click(screen.getByRole("checkbox", { name: /Waive the retention wait/ }));
@@ -136,7 +136,7 @@ describe("TenantDataProtectionModal", () => {
       origin: "TENANT_ADMIN", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z",
     }] } as never);
     renderModal("PRODUCT_OWNER");
-    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Tenant Deletion/i }));
     fireEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
 
     expect(screen.queryByRole("checkbox", { name: /Waive the retention wait/ })).not.toBeInTheDocument();
@@ -148,7 +148,7 @@ describe("TenantDataProtectionModal", () => {
       origin: "PRODUCT_OWNER", status: "EXPORT_DONE", retentionEndsAt: "2027-11-17", createdAt: "2026-11-01T00:00:00Z",
     }] } as never);
     renderModal("PRODUCT_OWNER");
-    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Tenant Deletion/i }));
 
     expect(await screen.findByText("Waiting: retention ends 2027-11-17")).toBeInTheDocument();
   });
@@ -159,7 +159,7 @@ describe("TenantDataProtectionModal", () => {
       origin: "PRODUCT_OWNER", status: "REQUESTED", createdAt: "2026-11-01T00:00:00Z",
     }] } as never);
     renderModal("DATA_PROTECTION_OFFICER");
-    fireEvent.click(screen.getByRole("button", { name: /Tenant Deletion/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Tenant Deletion/i }));
 
     await waitFor(() => expect(service.listDeletionRequests).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole("button", { name: "Confirm request" })).not.toBeInTheDocument();

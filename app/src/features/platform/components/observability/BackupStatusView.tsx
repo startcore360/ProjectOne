@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Button, Panel, DataTable, Notice } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
@@ -64,26 +63,23 @@ export function BackupStatusView() {
         </Notice>
       )}
       <Panel title="Tenant backup status" description="platform.tenant_backup_status">
-        {status === "loading" ? (
-          <div className="app-empty-inline">
-            <Spinner label="Loading backup status" />
-          </div>
-        ) : (
-          <DataTable
-            headers={[
-              "Tenant",
-              "Last backup",
-              "Backup outcome",
-              "Restorable window",
-              "Last restore test",
-              "Restore test outcome",
-              "Backup freshness",
-            ]}
-            empty={!data?.tenants.length}
-            emptyMessage={
-              status === "error" ? "Backup status could not be loaded." : "No backup status rows recorded yet."
-            }
-          >
+        <DataTable
+          headers={[
+            "Tenant",
+            "Last backup",
+            "Backup outcome",
+            "Restorable window",
+            "Last restore test",
+            "Restore test outcome",
+            "Backup freshness",
+          ]}
+          loading={status === "loading" && !data}
+          loadingLabel="Loading backup status"
+          empty={status !== "loading" && !data?.tenants.length}
+          emptyMessage={
+            status === "error" ? "Backup status could not be loaded." : "No backup status rows recorded yet."
+          }
+        >
             {(data?.tenants ?? []).map((t) => (
               <tr key={t.tenantId}>
                 <td>{t.tenantId}</td>
@@ -99,8 +95,7 @@ export function BackupStatusView() {
                 <td>{t.stale ? "Stale" : "Current"}</td>
               </tr>
             ))}
-          </DataTable>
-        )}
+        </DataTable>
       </Panel>
     </div>
   );

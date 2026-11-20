@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button, Kicker, LinkButton, PasswordField } from "../../../design-system/components";
+import Edu360Logo from "../../../assets/Edu360Logo";
 import { useAppSelector } from "../../../store/hooks";
 import { changePassword, idleLogout, logout } from "../../../services/authManager";
 import { startInactivityTracker } from "../../../services/inactivityTracker";
@@ -51,10 +52,7 @@ export default function ChangePasswordPage() {
   return (
     <main className="auth-screen">
       <div className="auth-brand">
-        <span className="auth-brand__mark">e</span>
-        <span>
-          EDU <strong>360</strong>
-        </span>
+        <Edu360Logo className="auth-brand__logo" />
       </div>
       <section className="auth-card" aria-labelledby="change-password-title">
         <Kicker>{mustChangePassword ? "ACTION REQUIRED" : "ACCOUNT"}</Kicker>

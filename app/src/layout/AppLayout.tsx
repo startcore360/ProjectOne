@@ -272,6 +272,7 @@ export default function AppLayout() {
   // further in either direction and let CSS fade that edge, plus show a "More" button below.
   const navRef = useRef<HTMLElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
+  const moreTriggerRef = useRef<HTMLButtonElement>(null);
   const [navOverflow, setNavOverflow] = useState({ above: false, below: false });
   const updateNavOverflow = useCallback(() => {
     const el = navRef.current;
@@ -296,11 +297,21 @@ export default function AppLayout() {
   // Focus-trap for the mobile "more" drawer: matches the Modal pattern exactly.
   // Declared as a constant so the dep array stays stable.
   const DRAWER_FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  const closeMoreDrawer = useCallback(() => {
+    setMoreOpen(false);
+    moreTriggerRef.current?.focus();
+  }, []);
+
   useEffect(() => {
     if (!moreOpen) return undefined;
     drawerRef.current?.focus();
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setMoreOpen(false); return; }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeMoreDrawer();
+        return;
+      }
       if (e.key !== "Tab" || !drawerRef.current) return;
       const focusable = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(DRAWER_FOCUSABLE));
       if (focusable.length === 0) { e.preventDefault(); drawerRef.current.focus(); return; }
@@ -312,7 +323,7 @@ export default function AppLayout() {
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [moreOpen, DRAWER_FOCUSABLE]);
+  }, [moreOpen, DRAWER_FOCUSABLE, closeMoreDrawer]);
 
   const scrollNavDown = () => {
     const el = navRef.current;
@@ -411,11 +422,11 @@ export default function AppLayout() {
         mobile (CSS hides it above the 640px breakpoint; .app-sidebar is hidden below it). */}
     <nav className="app-mobile-nav" aria-label="Mobile navigation">
       {importantNav.map((item) => navLink(item, 22))}
-      <button type="button" className="app-nav__link" aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Icon name="more" size={22}/><span>More</span></button>
+      <button ref={moreTriggerRef} type="button" className="app-nav__link" aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Icon name="more" size={22}/><span>More</span></button>
     </nav>
-    {moreOpen && <div className="app-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setMoreOpen(false); }}>
+    {moreOpen && <div className="app-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) closeMoreDrawer(); }}>
       <section ref={drawerRef} tabIndex={-1} className="app-more-drawer" role="dialog" aria-modal="true" aria-label="Menu">
-        <header><h2>Menu</h2><button className="app-icon-button" onClick={() => setMoreOpen(false)} aria-label="Close"><Icon name="x" size={16}/></button></header>
+        <header><h2>Menu</h2><button className="app-icon-button" onClick={closeMoreDrawer} aria-label="Close"><Icon name="x" size={16}/></button></header>
         {/* Mobile has no sidebar, so the signed-in identity + profile link live here too. */}
         <NavLink to="/profile" className="app-user app-user--drawer" onClick={() => setMoreOpen(false)}>
           {avatar}

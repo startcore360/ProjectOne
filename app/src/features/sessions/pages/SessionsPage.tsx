@@ -3,11 +3,12 @@ import axios from "axios";
 import {
   Button,
   ConfirmDialog,
-  Spinner,
   PageHeader,
   EmptyState,
   ErrorState,
   MetricCard,
+  SkeletonCard,
+  SkeletonText,
 } from "../../../design-system/components";
 import { clearTokens } from "../../../services/tokenStorage";
 import { useAppDispatch } from "../../../store/hooks";
@@ -163,7 +164,7 @@ export default function SessionsPage() {
         ? "You'll be taken to the sign-in page. Your other devices stay signed in."
         : "That device will need to sign in again. This device stays signed in.";
 
-  const ready = !loading && !loadError && sessions;
+  const ready = !loadError && sessions;
 
   return (
     <div className="sessions-page">
@@ -179,9 +180,15 @@ export default function SessionsPage() {
         }
       />
 
-      {loading && (
-        <section className="sessions-panel">
-          <Spinner label="Loading your sessions…" />
+      {loading && !sessions && (
+        <section className="sessions-panel" role="status" aria-busy="true" aria-label="Loading your sessions">
+          <span className="sr-only">Loading your sessions...</span>
+          <div className="kpi-grid" aria-hidden="true">
+            {Array.from({ length: 3 }, (_, index) => <SkeletonCard key={index}><SkeletonText height="1.25rem" width="45%" /><SkeletonText height="2rem" width="65%" /></SkeletonCard>)}
+          </div>
+          <div className="app-two-col" aria-hidden="true">
+            {Array.from({ length: 3 }, (_, index) => <SkeletonCard key={index}><SkeletonText height="1rem" width="55%" /><SkeletonText lines={3} /></SkeletonCard>)}
+          </div>
         </section>
       )}
 

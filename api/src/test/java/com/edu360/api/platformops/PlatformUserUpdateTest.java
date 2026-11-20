@@ -133,6 +133,40 @@ class PlatformUserUpdateTest {
     }
 
     @Test
+    void unlockingClearsOnlyTheKeycloakBruteForceLockoutAndAuditsIt() {
+        service.unlockPlatformUser(staffId, OWNER);
+
+        verify(keycloak).clearBruteForceLockout("edu360-platform", "kc-staff");
+        verify(keycloak, never()).resetPassword(anyString(), anyString(), anyString(), anyBoolean());
+        verify(keycloak, never()).logoutUser(anyString(), anyString());
+        verify(users, never()).save(any());
+        verify(auditWriter).record(OWNER, null, "PLATFORM_USER_UNLOCKED", "UPDATE",
+                "PLATFORM_USER_MANAGE", "PLATFORM_USER", staffId, PlatformAuditWriter.SUCCESS);
+    }
+
+    @Test
+    void cannotUnlockOwnPlatformAccount() {
+        assertThatThrownBy(() -> service.unlockPlatformUser(OWNER.platformUserId(), OWNER))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("own platform account");
+
+        verify(keycloak, never()).clearBruteForceLockout(anyString(), anyString());
+    }
+
+    @Test
+    void cannotUnlockAnInactivePlatformAccount() {
+        when(users.findById(staffId)).thenReturn(Optional.of(PlatformUser.builder()
+                .platformUserId(staffId).identitySubject("kc-staff")
+                .platformRole(PlatformRole.BILLING_MANAGER).status(PlatformUserStatus.INACTIVE).build()));
+
+        assertThatThrownBy(() -> service.unlockPlatformUser(staffId, OWNER))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Reactivate this platform account");
+
+        verify(keycloak, never()).clearBruteForceLockout(anyString(), anyString());
+    }
+
+    @Test
     void parallelDemotionsCannotRemoveTheLastActiveProductOwner() throws Exception {
         UUID firstId = UUID.randomUUID();
         UUID secondId = UUID.randomUUID();

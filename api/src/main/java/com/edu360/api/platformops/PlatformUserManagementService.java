@@ -175,6 +175,26 @@ public class PlatformUserManagementService {
         return PlatformUserResponse.from(saved, customRoleName(saved.getPlatformRoleId()), null);
     }
 
+    @Transactional(transactionManager = "platformTransactionManager")
+    public void unlockPlatformUser(UUID platformUserId, PlatformPrincipal principal) {
+        if (platformUserId.equals(principal.platformUserId())) {
+            throw new UnauthorizedException("You can't unlock your own platform account.");
+        }
+
+        PlatformUser user = platformUserRepository.findById(platformUserId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Platform user " + platformUserId + " was not found."));
+        if (user.getStatus() != PlatformUserStatus.ACTIVE) {
+            throw new BusinessRuleViolationException(
+                    "PLATFORM_USER_INACTIVE", "Reactivate this platform account before unlocking sign-in.");
+        }
+
+        keycloakAdminClient.clearBruteForceLockout(
+                keycloakProperties.getPlatformRealm(), user.getIdentitySubject());
+        auditWriter.record(principal, null, "PLATFORM_USER_UNLOCKED", "UPDATE", "PLATFORM_USER_MANAGE",
+                "PLATFORM_USER", platformUserId, PlatformAuditWriter.SUCCESS);
+    }
+
     private static Map<String, Object> change(Object oldValue, Object newValue) {
         return Map.of("old", oldValue == null ? "" : oldValue, "new", newValue == null ? "" : newValue);
     }

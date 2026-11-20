@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "../../../components/layout/PageHeader";
-import { Badge, Spinner } from "../../../components/ui";
+import { Badge } from "../../../components/ui";
 import {
   Button,
   Tabs,
@@ -8,6 +8,10 @@ import {
   MetricCard,
   StatusBadge,
   EmptyState,
+  SkeletonCard,
+  SkeletonMetricCard,
+  SkeletonTable,
+  SkeletonText,
 } from "../../../design-system/components";
 import { ErrorState } from "../../../components/feedback/ErrorState";
 import { useAppSelector } from "../../../store/hooks";
@@ -126,8 +130,11 @@ export default function SelfServicePage() {
         hidden={activeTab !== "notices"}
         className="app-stack"
       >
-        {noticesLoading && (
-          <div className="app-spinner-center"><Spinner /></div>
+        {noticesLoading && notices.length === 0 && (
+          <div className="app-stack" role="status" aria-busy="true" aria-label="Loading notices">
+            <span className="sr-only">Loading notices...</span>
+            {Array.from({ length: 3 }, (_, index) => <SkeletonCard key={index} />)}
+          </div>
         )}
         {noticesError && !noticesLoading && (
           <ErrorState
@@ -135,7 +142,7 @@ export default function SelfServicePage() {
             action={<Button variant="secondary" onClick={() => void loadNotices()}>Retry</Button>}
           />
         )}
-        {!noticesLoading && !noticesError && (
+        {(!noticesLoading || notices.length > 0) && !noticesError && (
           notices.length === 0 ? (
             <EmptyState
               title="No published notices found."
@@ -168,8 +175,14 @@ export default function SelfServicePage() {
         hidden={activeTab !== "leaves"}
         className="app-stack"
       >
-        {leavesLoading && (
-          <div className="app-spinner-center"><Spinner /></div>
+        {leavesLoading && balances.length === 0 && requests.length === 0 && (
+          <div className="app-stack" role="status" aria-busy="true" aria-label="Loading leave information">
+            <span className="sr-only">Loading leave information...</span>
+            <div className="kpi-grid" aria-hidden="true">
+              {Array.from({ length: 3 }, (_, index) => <SkeletonMetricCard key={index} />)}
+            </div>
+            <SkeletonTable columns={4} rows={4} />
+          </div>
         )}
         {leavesError && !leavesLoading && (
           <ErrorState
@@ -177,7 +190,7 @@ export default function SelfServicePage() {
             action={<Button variant="secondary" onClick={() => void loadLeaves()}>Retry</Button>}
           />
         )}
-        {!leavesLoading && !leavesError && (
+        {(!leavesLoading || balances.length > 0 || requests.length > 0) && !leavesError && (
           <>
             <div>
               <h3 className="app-section-title">Leave Balances</h3>
@@ -229,8 +242,16 @@ export default function SelfServicePage() {
         hidden={activeTab !== "notifications"}
         className="app-stack--sm"
       >
-        {notificationsLoading && (
-          <div className="app-spinner-center"><Spinner /></div>
+        {notificationsLoading && notifications.length === 0 && (
+          <div className="app-stack--sm" role="status" aria-busy="true" aria-label="Loading notifications">
+            <span className="sr-only">Loading notifications...</span>
+            {Array.from({ length: 3 }, (_, index) => (
+              <SkeletonCard key={index}>
+                <SkeletonText height="1rem" width="60%" />
+                <SkeletonText lines={2} height="0.875rem" />
+              </SkeletonCard>
+            ))}
+          </div>
         )}
         {notificationsError && !notificationsLoading && (
           <ErrorState
@@ -238,7 +259,7 @@ export default function SelfServicePage() {
             action={<Button variant="secondary" onClick={() => void loadNotifications()}>Retry</Button>}
           />
         )}
-        {!notificationsLoading && !notificationsError && (
+        {(!notificationsLoading || notifications.length > 0) && !notificationsError && (
           notifications.length === 0 ? (
             <EmptyState
               title="No notifications."
@@ -265,4 +286,3 @@ export default function SelfServicePage() {
     </div>
   );
 }
-

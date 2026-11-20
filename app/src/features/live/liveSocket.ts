@@ -17,7 +17,10 @@ export function liveSocketUrl(): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   // Local development API is served on :8080; deployed environments use the page host /
   // reverse proxy. Tenant routing is hostname-based, never a fixed API override.
-  const host = import.meta.env.DEV
+  // A relative VITE_API_BASE_URL ("/api") means the API is proxied on the page's own address (the
+  // dev-host tunnel), so the socket uses that address too.
+  const sameOriginApi = (import.meta.env.VITE_API_BASE_URL ?? "").startsWith("/");
+  const host = import.meta.env.DEV && !sameOriginApi
     ? `${window.location.hostname}:8080`
     : window.location.host;
   return `${protocol}//${host}/v1/ws`;

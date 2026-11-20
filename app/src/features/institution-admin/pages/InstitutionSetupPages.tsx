@@ -20,6 +20,8 @@ import {
   Panel,
   EmptyState,
   Notice,
+  SkeletonPage,
+  SkeletonTable,
   Tabs,
   Toast,
   toast,
@@ -641,7 +643,12 @@ export function CalendarEventsPage() {
                 <input
                   id="cal-institution-id"
                   value={institutionId}
-                  onChange={(e) => setInstitutionId(e.target.value)}
+                  onChange={(e) => {
+                    setInstitutionId(e.target.value);
+                    setEvents(null);
+                    setListStatus("idle");
+                    setListMessage("");
+                  }}
                   placeholder="Paste the ID (UUID)"
                   style={{ flex: 1 }}
                 />
@@ -851,7 +858,7 @@ function formatStatusLabel(value: string): string {
     REJECTED: "Rejected", CANCELLED: "Cancelled", EXAM_DAY: "Exam day", SEMESTER_DATES: "Semester dates",
     LOCAL_HOLIDAY: "Local holiday", LOCAL_EVENT: "Local event", UNIVERSITY: "University", COLLEGE: "College", SCHOOL: "School",
   };
-  return known[value] ?? value.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+  return known[value] ?? value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function WeeklyOffRulesPage() {
@@ -941,6 +948,9 @@ export function WeeklyOffRulesPage() {
                   aria-describedby={fieldErrors.institutionId ? "wo-institution-id-error" : undefined}
                   onChange={(e) => {
                     setInstitutionId(e.target.value);
+                    setRules(null);
+                    setListStatus("idle");
+                    setListMessage("");
                     setFieldErrors((current) => ({ ...current, institutionId: undefined }));
                   }}
                   placeholder="Paste the ID (UUID)"
@@ -959,7 +969,7 @@ export function WeeklyOffRulesPage() {
                   <Button variant="secondary" size="sm" onClick={() => void loadRules()}>Retry</Button>
                 </div>
               </Notice>
-            ) : listStatus === "busy" ? <p className="app-empty-note" role="status">Loading weekly-off rules…</p> : null}
+            ) : listStatus === "busy" ? <SkeletonTable rows={4} columns={4} /> : null}
           </Panel>
 
           <Panel title="Current weekly-off rules">
@@ -1237,6 +1247,11 @@ export function AcademicStructurePage() {
                 onChange={(e) => {
                   const val = e.target.value;
                   setInstitutionId(val);
+                  setDepartments([]);
+                  setPrograms([]);
+                  setSchoolClasses([]);
+                  setSchoolSections([]);
+                  setSchoolSessions([]);
                   if (val && isValidUuid(val)) {
                     void loadStructureFor(val);
                   }
@@ -1258,7 +1273,15 @@ export function AcademicStructurePage() {
                   id="structure-institution-id"
                   label="Institution ID *"
                   value={institutionId}
-                  onChange={(e) => setInstitutionId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInstitutionId(val);
+                    setDepartments([]);
+                    setPrograms([]);
+                    setSchoolClasses([]);
+                    setSchoolSections([]);
+                    setSchoolSessions([]);
+                  }}
                   placeholder="Paste the ID (UUID)"
                   hint="UUID of the college or school"
                 />
@@ -1312,7 +1335,7 @@ export function AcademicStructurePage() {
                 </div>
               </form>
             </div>
-            {loading ? <p className="app-empty-note" role="status">Loading classes and sections…</p> : null}
+            {loading && schoolClasses.length === 0 ? <SkeletonTable rows={4} columns={4} /> : null}
             {!loading && !error && schoolClasses.length === 0 ? (
               <EmptyState title="No classes configured" description="Create the first class or grade for this school." />
             ) : schoolClasses.length > 0 ? (
@@ -1579,6 +1602,7 @@ export function AcademicStructurePage() {
 // ============================================================================
 export function TermLockPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
+  const { can } = useTenantAccess();
   const [institutionId, setInstitutionId] = useState("");
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [sessionId, setSessionId] = useState("");
@@ -1748,7 +1772,7 @@ export function TermLockPage() {
             />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={locking}>
+            <Button type="submit" disabled={locking || !can("TERM_LOCK")} title={!can("TERM_LOCK") ? "Requires TERM_LOCK permission" : undefined}>
               {locking ? "Locking term…" : "Lock term"}
             </Button>
           </div>
@@ -1756,7 +1780,7 @@ export function TermLockPage() {
       </Panel>
 
       <Panel title="Active term locks" description="Review locked terms. Principals can temporarily unlock for grievances or corrections.">
-        {loading && <p className="app-empty-note">Loading locks...</p>}
+        {loading && locks.length === 0 && <SkeletonTable rows={4} columns={5} />}
         {lockLoadError ? (
           <Notice tone="danger">{lockLoadError} <Button variant="secondary" size="sm" onClick={() => fetchLocks(institutionId)}>Retry</Button></Notice>
         ) : !isValidUuid(institutionId) ? (
@@ -1794,13 +1818,17 @@ export function TermLockPage() {
                     <td>{lock.unlockUntil ? new Date(lock.unlockUntil).toLocaleString() : "—"}</td>
                     <td>
                       {lock.lockState === "LOCKED" ? (
-                        <Button
-                          variant="secondary"
-                          style={{ padding: "2px 8px", fontSize: "0.8rem" }}
-                          onClick={() => setUnlockModalItem(lock)}
-                        >
-                          Unlock Term
-                        </Button>
+                        can("TERM_UNLOCK") ? (
+                          <Button
+                            variant="secondary"
+                            style={{ padding: "2px 8px", fontSize: "0.8rem" }}
+                            onClick={() => setUnlockModalItem(lock)}
+                          >
+                            Unlock Term
+                          </Button>
+                        ) : (
+                          <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Locked</span>
+                        )
                       ) : (
                         <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Unlocked</span>
                       )}
@@ -2095,8 +2123,12 @@ export function DelegationsApprovalsPage() {
             />
           </div>
 
+          {delegationFormError && (
+            <div style={{ marginTop: "var(--space-3)" }}>
+              <Notice tone="danger">{delegationFormError}</Notice>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            {delegationFormError && <Notice tone="danger">{delegationFormError}</Notice>}
             <Button type="submit" disabled={creating}>
               {creating ? "Delegating…" : "Create delegation"}
             </Button>
@@ -2144,8 +2176,12 @@ export function DelegationsApprovalsPage() {
             />
           </div>
 
+          {bulkFormError && (
+            <div style={{ marginTop: "var(--space-3)" }}>
+              <Notice tone="danger">{bulkFormError}</Notice>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            {bulkFormError && <Notice tone="danger">{bulkFormError}</Notice>}
             <Button type="submit" disabled={bulkSubmitting}>
               {bulkSubmitting ? "Processing…" : "Apply bulk decision"}
             </Button>
@@ -2158,7 +2194,7 @@ export function DelegationsApprovalsPage() {
           title="Pending approval requests (Inbox)"
           description="Pending approval steps awaiting your review or authorized delegation."
         >
-          {inboxLoading && <p className="app-empty-note">Loading pending approvals...</p>}
+          {inboxLoading && inboxItems.length === 0 && <SkeletonTable rows={4} columns={4} />}
           {inboxError && <Notice tone="danger">{inboxError} <Button variant="secondary" size="sm" onClick={fetchInbox}>Retry</Button></Notice>}
           {!inboxLoading && !inboxError && inboxItems.length === 0 ? (
             <EmptyState
@@ -2213,7 +2249,7 @@ export function DelegationsApprovalsPage() {
 
       <div style={{ marginTop: "var(--space-4)" }}>
         <Panel title="My active delegations" description="Review approval responsibilities you have delegated. You cannot approve your own request.">
-          {loading && <p className="app-empty-note">Loading delegations...</p>}
+          {loading && delegations.length === 0 && <SkeletonTable rows={4} columns={6} />}
           {delegationsError && <Notice tone="danger">{delegationsError} <Button variant="secondary" size="sm" onClick={fetchDelegations}>Retry</Button></Notice>}
           {!loading && !delegationsError && delegations.length === 0 ? (
             <EmptyState
@@ -2318,6 +2354,11 @@ export function AcademicGovernancePage() {
         .then(setAllocations)
         .catch((err) => setLoadError(getApiErrorMessage(err)))
         .finally(() => setLoading(false));
+    } else if (activeTab === "promotion") {
+      academicService.listPromotionRuns(tenantId)
+        .then(setPromotionRuns)
+        .catch((err) => setLoadError(getApiErrorMessage(err)))
+        .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
@@ -2390,7 +2431,7 @@ export function AcademicGovernancePage() {
         />
       )}
 
-      {loading && <p className="app-empty-note">Loading academic configuration...</p>}
+      {loading && <SkeletonPage title="Loading academic configuration" showTable tableRows={5} tableColumns={5} />}
       {loadError && !loading && <Notice tone="danger">{loadError} <Button variant="secondary" size="sm" onClick={fetchCurrentTab}>Retry</Button></Notice>}
 
       <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" tabIndex={0} hidden={activeTab !== "rules"}>
@@ -2554,6 +2595,7 @@ export function AcademicGovernancePage() {
             fetchCurrentTab();
           } catch (err: unknown) {
             setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+            throw err;
           } finally {
             setSaving(false);
           }
@@ -2577,6 +2619,7 @@ export function AcademicGovernancePage() {
             fetchCurrentTab();
           } catch (err: unknown) {
             setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+            throw err;
           } finally {
             setSaving(false);
           }
@@ -2597,6 +2640,7 @@ export function AcademicGovernancePage() {
             fetchCurrentTab();
           } catch (err: unknown) {
             setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+            throw err;
           } finally {
             setSaving(false);
           }
@@ -2617,6 +2661,7 @@ export function AcademicGovernancePage() {
             setPromotionModalOpen(false);
           } catch (err: unknown) {
             setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
+            throw err;
           } finally {
             setSaving(false);
           }

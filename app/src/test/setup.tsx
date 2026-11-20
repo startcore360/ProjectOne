@@ -8,10 +8,20 @@ import { cleanup } from "@testing-library/react";
 // jsdom does not implement window.matchMedia. Stub it so components that use
 // matchMedia (e.g. DataTable's mobile-card rendering) work without throwing,
 // and report non-mobile so responsive duplicates don't break text queries.
+let defaultMatchMediaMatches = false;
+declare global {
+  interface Window {
+    __setMatchMediaMatches?: (matches: boolean) => void;
+  }
+}
+window.__setMatchMediaMatches = (matches: boolean) => {
+  defaultMatchMediaMatches = matches;
+};
+
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
-    matches: false,
+    matches: defaultMatchMediaMatches,
     media: query,
     onchange: null,
     addListener: () => {},
@@ -20,6 +30,10 @@ Object.defineProperty(window, "matchMedia", {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }),
+});
+
+afterEach(() => {
+  defaultMatchMediaMatches = false;
 });
 
 // vitest.config.ts doesn't set `test.globals: true`, so @testing-library/react's own

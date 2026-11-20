@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import "./StaffRecordsPage.css";
 import {
   Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
-  Panel, SearchBox, SelectField, Spinner, TextAreaField, TextField, DataTable,
+  Panel, SearchBox, SelectField, SkeletonCard, SkeletonText, TextAreaField, TextField, DataTable,
 } from "../../../design-system/components";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
@@ -12,6 +13,7 @@ import {
   staffService, type StaffAssignment, type StaffDocument, type StaffProfile,
   type StaffProfilePayload, type StaffServiceRecord,
 } from "../api/staffService";
+import { getLocalDateString } from "../../../utils/dateUtils";
 
 type LoadState = "idle" | "loading" | "loaded" | "error";
 const EVENT_OPTIONS = [
@@ -26,7 +28,7 @@ const EVENT_OPTIONS = [
 function humanize(value: string) {
   return value.replaceAll("_", " ").toLowerCase().split(" ").map((word) => word ? word[0].toUpperCase() + word.slice(1) : "").join(" ");
 }
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => getLocalDateString();
 
 export default function StaffRecordsPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
@@ -258,7 +260,7 @@ export default function StaffRecordsPage() {
             <SearchBox value={query} onChange={setQuery} placeholder="Search staff name or code" />
             <Button variant="secondary" size="sm" onClick={() => { setDirectoryPage(1); void loadDirectory(query); }} busy={state === "loading"}>Search</Button>
           </div>
-          {state === "loading" && <Spinner label="Loading staff directory" />}
+          {state === "loading" && <SkeletonCard><SkeletonText height="1rem" width="55%" /><SkeletonText lines={5} /></SkeletonCard>}
           {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
           {state === "loaded" && staff.length === 0 && <div className="">
             <EmptyState title={query ? "No matching staff records" : "Your staff directory is empty"}
@@ -303,7 +305,7 @@ export default function StaffRecordsPage() {
 
         <div className="staff-record-detail">
           {!selected && !detailLoading && <EmptyState title="Select a staff member" description="Choose a record to view profile details, assignments, documents and service history." icon="users" />}
-          {detailLoading && <Spinner label="Loading staff profile" />}
+          {detailLoading && <SkeletonCard><SkeletonText height="1.25rem" width="55%" /><SkeletonText lines={5} /></SkeletonCard>}
           {detailError && <ErrorState title="Could not load staff details" message={detailError} action={selected ? <Button variant="secondary" onClick={() => void loadProfile(selected.id)}>Retry</Button> : undefined} />}
           {selected && !detailLoading && !detailError && (
             <>
@@ -315,7 +317,7 @@ export default function StaffRecordsPage() {
                     <TextField id="staff-edit-email" label="Personal email" type="email" value={profileDraft.personalEmail ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, personalEmail: e.target.value })} disabled={!canManage} />
                     <TextField id="staff-edit-mobile" label="Personal mobile (E.164)" value={profileDraft.personalMobile ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, personalMobile: e.target.value })} disabled={!canManage} />
                     <DateField id="staff-edit-dob" label="Date of birth" value={profileDraft.dateOfBirth ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, dateOfBirth: e.target.value })} disabled={!canManage} />
-                    <TextField id="staff-edit-national" label="National ID (last four only)" maxLength={4} value={profileDraft.nationalIdLast4 ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, nationalIdLast4: e.target.value.replace(/\\D/g, "") })} disabled={!canManage} />
+                    <TextField id="staff-edit-national" label="National ID (last four only)" maxLength={4} value={profileDraft.nationalIdLast4 ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, nationalIdLast4: e.target.value.replace(/\D/g, "") })} disabled={!canManage} />
                     <SelectField id="staff-edit-status" label="Employment status" value={profileDraft.employmentStatus ?? "ACTIVE"} onChange={(e) => setProfileDraft({ ...profileDraft, employmentStatus: e.target.value })} disabled={!canManage}
                       options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }, { value: "LEFT", label: "Left service" }]} />
                     <DateField id="staff-edit-joined" label="Joined on" value={profileDraft.joinedOn ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, joinedOn: e.target.value })} disabled={!canManage} />
@@ -407,7 +409,7 @@ export default function StaffRecordsPage() {
             <TextField id="new-staff-role" label="Initial role code (optional)" value={draft.initialRoleCode ?? ""} onChange={(e) => setDraft({ ...draft, initialRoleCode: e.target.value })} />
             <TextField id="new-staff-mobile" label="Personal mobile (E.164)" value={draft.personalMobile ?? ""} onChange={(e) => setDraft({ ...draft, personalMobile: e.target.value })} />
             <DateField id="new-staff-dob" label="Date of birth" value={draft.dateOfBirth ?? ""} onChange={(e) => setDraft({ ...draft, dateOfBirth: e.target.value })} />
-            <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\\D/g, "") })} />
+            <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\D/g, "") })} />
             <DateField id="new-staff-joined-on" label="Joined on" value={draft.joinedOn ?? ""} onChange={(e) => setDraft({ ...draft, joinedOn: e.target.value })} />
           </div>
           <footer className="app-modal__footer">

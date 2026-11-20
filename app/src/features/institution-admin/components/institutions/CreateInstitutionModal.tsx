@@ -190,10 +190,9 @@ export function CreateInstitutionModal({
         </div>
 
         <div
+          className="app-form-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: "var(--space-3)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
             marginBottom: "var(--space-3)",
           }}
         >

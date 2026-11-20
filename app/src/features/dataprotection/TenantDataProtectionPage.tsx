@@ -4,7 +4,7 @@ import { useAppSelector } from "../../store/hooks";
 import { useTenantAccess } from "../profile/hooks/useTenantAccess";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { ErrorState } from "../../components/feedback/ErrorState";
-import { Button, StatusBadge } from "../../design-system/components";
+import { Button, SkeletonTable, StatusBadge } from "../../design-system/components";
 import {
   tenantDataProtectionService,
   type TenantDeletionRequest,
@@ -110,7 +110,6 @@ export default function TenantDataProtectionPage() {
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
       setError(getApiErrorMessage(err));
-      await refresh();
     } finally {
       setDownloadingId(null);
     }
@@ -157,7 +156,7 @@ export default function TenantDataProtectionPage() {
             <p>Downloads are available only while a request is READY and within its original 24-hour window.</p>
           </div>
         </div>
-        {loading ? <p role="status">Loading request history…</p> : exports.length === 0 ? (
+        {loading ? <SkeletonTable columns={5} rows={3} /> : exports.length === 0 ? (
           <p className="tenant-data-protection__empty">No tenant export requests have been submitted.</p>
         ) : (
           <div className="app-table-wrap">
@@ -188,7 +187,7 @@ export default function TenantDataProtectionPage() {
             <p>Deletion is not immediate. The Product Owner and Data Protection Officer complete their separate approval steps.</p>
           </div>
         </div>
-        {loading ? <p role="status">Loading request history…</p> : deletions.length === 0 ? (
+        {loading ? <SkeletonTable columns={5} rows={3} /> : deletions.length === 0 ? (
           <p className="tenant-data-protection__empty">No tenant deletion requests have been submitted.</p>
         ) : (
           <div className="app-table-wrap">

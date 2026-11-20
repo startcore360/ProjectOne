@@ -6,16 +6,24 @@ export type CheckboxFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "ty
   hint?: string;
 };
 
-export default function CheckboxField({ label, id, hint, className = "", ...rest }: CheckboxFieldProps) {
+export default function CheckboxField({
+  label,
+  id,
+  hint,
+  className = "",
+  "aria-describedby": callerDescribedBy,
+  ...rest
+}: CheckboxFieldProps) {
   const hintId = hint ? `${id}-hint` : undefined;
+  const describedBy = [hintId, callerDescribedBy].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className={`eds-field--checkbox ${className}`.trim()}>
       <input
         id={id}
         type="checkbox"
-        aria-describedby={hintId ?? rest["aria-describedby"]}
         {...rest}
+        aria-describedby={describedBy}
       />
       <label htmlFor={id}>
         <span>{label}</span>

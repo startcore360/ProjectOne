@@ -3,7 +3,6 @@ import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Icon } from "../../../../components/ui/Icon";
 import { Panel, StatusBadge, DataTable, Button, Notice } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
-import { Spinner } from "../../../../components/ui";
 import {
   platformOpsService,
   type SupportAccessGrantItem,
@@ -113,14 +112,14 @@ export function SupportAccessView() {
       </div>
 
       <Panel title="Active Support Grants" description="Tenant-authorized diagnostic access windows">
-        {loading ? (
-          <div className="app-empty-inline">
-            <Spinner label="Loading active grants..." />
-          </div>
-        ) : error ? null : grants.length === 0 ? (
-          <p className="app-empty-inline">No active support sessions or grants currently open.</p>
-        ) : (
-          <DataTable headers={["Ticket #", "Tenant ID", "Granted At", "Access Ends", "Status", "Actions"]}>
+        {!error && (
+          <DataTable
+            headers={["Ticket #", "Tenant ID", "Granted At", "Access Ends", "Status", "Actions"]}
+            loading={loading && grants.length === 0}
+            loadingLabel="Loading active grants"
+            empty={!loading && grants.length === 0}
+            emptyMessage="No active support sessions or grants currently open."
+          >
             {grants.map((g) => {
               const ticket = tickets[g.ticketId];
               const isExpired = new Date(g.expiresAt).getTime() < Date.now();

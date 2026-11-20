@@ -26,4 +26,17 @@ describe("FileDrop", () => {
     expect(onFile).toHaveBeenCalledWith(file);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("derives visible helper text from the accept prop (EDU-UX-032)", () => {
+    const onFile = vi.fn();
+    render(
+      <FileDrop
+        label="Upload certificate"
+        onFile={onFile}
+        accept=".pdf,.png,.jpg,.jpeg"
+      />
+    );
+
+    expect(screen.getByText(/PDF, PNG, JPG, or JPEG\. Maximum 10 MiB\./i)).toBeInTheDocument();
+  });
 });

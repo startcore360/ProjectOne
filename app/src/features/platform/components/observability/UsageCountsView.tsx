@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
-import { Button, MetricCard } from "../../../../design-system/components";
+import { Button, MetricCard, SkeletonMetricCard } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   readErrorMessage,
@@ -51,8 +50,9 @@ export function UsageCountsView() {
       )}
 
       {status === "loading" ? (
-        <div className="app-empty-inline">
-          <Spinner label="Loading usage counts" />
+        <div className="kpi-grid" role="status" aria-busy="true" aria-label="Loading usage counts">
+          <span className="sr-only">Loading usage counts...</span>
+          {Array.from({ length: 5 }, (_, index) => <SkeletonMetricCard key={index} />)}
         </div>
       ) : (
         data && (

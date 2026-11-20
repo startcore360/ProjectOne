@@ -2,7 +2,7 @@
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
-import { Spinner } from "../../../components/ui/Spinner";
+import { SkeletonText } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { useNotifications } from "../hooks/useNotifications";
 import { timeAgo } from "../utils/timeAgo";
@@ -101,7 +101,20 @@ export function NotificationBell() {
             </header>
             <div className="notif-bell__body">
               {error && <p className="notif-bell__state notif-bell__state--error" role="alert">{error}</p>}
-              {loading && items.length === 0 && <p className="notif-bell__state" role="status"><Spinner /> Loading notifications</p>}
+              {loading && items.length === 0 && (
+                <div className="notif-bell__list" role="status" aria-busy="true" aria-label="Loading notifications">
+                  <span className="sr-only">Loading notifications...</span>
+                  {Array.from({ length: 3 }, (_, index) => (
+                    <div className="notif-bell__item" aria-hidden="true" key={index}>
+                      <div className="notif-bell__text">
+                        <SkeletonText height="1rem" width="65%" />
+                        <SkeletonText height="0.875rem" width="90%" />
+                        <SkeletonText height="0.75rem" width="30%" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {!loading && !error && items.length === 0 && <p className="notif-bell__state">You have no notifications.</p>}
               {visible.length > 0 && (
                 <ul className="notif-bell__list">

@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, type FormEvent } from "react";
-import { Button, Kicker, Notice } from "../../../../design-system/components";
-import { Badge, Spinner } from "../../../../components/ui";
+import { Button, Kicker, Notice, SkeletonCard, SkeletonText } from "../../../../design-system/components";
+import { Badge } from "../../../../components/ui";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { platformTenantService, type PlanItem, type TenantItem } from "../../api/platformTenantService";
@@ -150,9 +150,17 @@ export function PlansView() {
         />
       )}
 
-      {loading ? (
-        <div className="app-empty-inline">
-          <Spinner label="Loading plans..." />
+      {loading && plans.length === 0 ? (
+        <div className="app-plan-grid" role="status" aria-busy="true" aria-label="Loading plans">
+          <span className="sr-only">Loading plans...</span>
+          {Array.from({ length: 3 }, (_, index) => (
+            <SkeletonCard key={index} className="app-plan-card">
+              <SkeletonText height="0.75rem" width="40%" />
+              <SkeletonText height="1.5rem" width="65%" />
+              <SkeletonText height="1rem" width="55%" />
+              <SkeletonText height="1rem" width="80%" />
+            </SkeletonCard>
+          ))}
         </div>
       ) : loadError ? null : plans.length === 0 ? (
         <p className="app-empty-inline">No subscription plans found.</p>

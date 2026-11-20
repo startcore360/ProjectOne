@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, DataTable, EmptyState, ErrorState, Spinner } from "../../../../design-system/components";
+import { Button, DataTable, EmptyState, ErrorState, Notice, SkeletonPage } from "../../../../design-system/components";
 import { usePlatformAccess } from "../../platformAccess";
 import { platformDataProtectionService, type RbacMappingReportDto, type RbacMappingReportRowDto } from "../../api/platformDataProtectionService";
 
@@ -26,6 +26,8 @@ export function RbacMappingCheckView() {
   const [report, setReport] = useState<RbacMappingReportDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!permitted) return;
@@ -45,15 +47,32 @@ export function RbacMappingCheckView() {
     if (permitted) void refresh();
   }, [permitted, refresh]);
 
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await platformDataProtectionService.downloadRbacMappingReport();
+    } catch (err: unknown) {
+      setExportError(err instanceof Error ? err.message : "Failed to export RBAC mapping report.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!permitted) return <section aria-label="RBAC mapping check"><p role="alert">You do not have permission to run the RBAC mapping check.</p></section>;
 
   return (
     <section aria-label="RBAC mapping check">
       <div className="data-protection-workspace__decision-actions">
-        <Button variant="secondary" onClick={() => void refresh()} disabled={loading}>Refresh report</Button>
-        <Button onClick={() => platformDataProtectionService.downloadRbacMappingReport()} disabled={loading || !report}>Export CSV</Button>
+        <Button variant="secondary" onClick={() => void refresh()} disabled={loading || exporting}>Refresh report</Button>
+        <Button onClick={() => void handleExport()} busy={exporting} disabled={loading || exporting || !report}>Export CSV</Button>
       </div>
-      {loading && <div className="app-empty-inline"><Spinner label="Checking role permission mappings" /></div>}
+      {exportError && (
+        <div style={{ marginTop: "12px" }}>
+          <Notice tone="danger">{exportError}</Notice>
+        </div>
+      )}
+      {loading && !report && <SkeletonPage title="Checking role permission mappings" showTable tableRows={5} tableColumns={6} />}
       {error && <ErrorState title="RBAC mapping report unavailable" message={error} action={<Button variant="secondary" onClick={() => void refresh()} disabled={loading}>Retry</Button>} />}
       {report && !error && !loading && (
         <>

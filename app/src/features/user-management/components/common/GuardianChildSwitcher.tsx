@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, EmptyState, ErrorState, Notice, Panel, SelectField, Spinner } from "../../../../design-system/components";
+import { Badge, Button, EmptyState, ErrorState, Notice, Panel, SelectField, SkeletonCard, SkeletonText } from "../../../../design-system/components";
 import api from "../../../../services/axios";
 
 export type GuardianChild = {
@@ -45,7 +45,14 @@ export function GuardianChildSwitcher({ value, onChange }: GuardianChildSwitcher
     }
   }, [children, error, loading, onChange, value]);
 
-  if (loading) return <Panel title="Linked children"><Spinner label="Loading linked children…" /></Panel>;
+  if (loading && children.length === 0) return (
+    <Panel title="Linked children">
+      <div role="status" aria-busy="true" aria-label="Loading linked children">
+        <span className="sr-only">Loading linked children...</span>
+        <SkeletonCard><SkeletonText height="1rem" width="40%" /><SkeletonText height="2.5rem" /></SkeletonCard>
+      </div>
+    </Panel>
+  );
   if (error) return (
     <ErrorState
       title="Could not load linked children"

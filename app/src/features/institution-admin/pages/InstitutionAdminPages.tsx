@@ -8,6 +8,7 @@ import {
   StatusBadge as StateBadge,
   Badge,
   PageHeader,
+  SkeletonTable,
 } from "../../../design-system/components";
 import { Icon } from "../../../components/ui/Icon";
 import { ErrorState } from "../../../components/feedback/ErrorState";
@@ -66,6 +67,7 @@ function TenantContextNotice() {
 export function InstitutionsPage() {
   const user = useAppSelector((state) => state.auth.user);
   const tenantId = user?.tenantId ?? "";
+  const { can } = useTenantAccess();
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +83,6 @@ export function InstitutionsPage() {
     message: string;
   } | null>(null);
 
-  // Check if role is restricted from creating/managing institutions
   const isNonAdminRole =
     user?.roleCode === "SCHOOL_ADMIN" ||
     user?.roleCode === "COLLEGE_ADMIN" ||
@@ -91,7 +92,10 @@ export function InstitutionsPage() {
     user?.roleCode === "PARENT_SCHOOL" ||
     user?.roleCode === "CLASS_TEACHER" ||
     user?.roleCode === "SUBJECT_TEACHER";
-  const canManageInstitutions = !isNonAdminRole;
+  const canManageInstitutions =
+    can("INSTITUTION_CREATE_DRAFT") ||
+    can("INSTITUTION_ACTIVATE") ||
+    (!isNonAdminRole && (!user?.roleCode || user?.roleCode === "UNIVERSITY_ADMIN"));
 
   // Leave Approver state (Stories #45 & #46)
   const [goLiveCheck, setGoLiveCheck] = useState<GoLiveCheckResponse | null>(null);
@@ -278,9 +282,10 @@ export function InstitutionsPage() {
         </div>
 
         {loading && institutions.length === 0 ? (
-          <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-text-muted)" }}>
-            Loading institutions...
-          </div>
+          <>
+            <div className="sr-only" role="status">Loading institutions...</div>
+            <SkeletonTable rows={5} columns={6} />
+          </>
         ) : error ? null : filtered.length === 0 ? (
           <div className="app-admin-empty" style={{ padding: "var(--space-6)", textAlign: "center" }}>
             <span aria-hidden="true">
@@ -495,7 +500,10 @@ export function InstitutionUsersPage() {
 }
 
 export function RolesPermissionsPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
+  const user = useAppSelector((state) => state.auth.user);
+  const tenantId = user?.tenantId ?? "";
+  const { can } = useTenantAccess();
+  const canManageCustomRole = can("ROLE_CUSTOM_MANAGE") || !user?.roleCode || user?.roleCode === "UNIVERSITY_ADMIN";
   const [query, setQuery] = useState("");
   const [roles, setRoles] = useState<RoleDefinitionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -554,9 +562,11 @@ export function RolesPermissionsPage() {
         title="Roles & permissions"
         description="Review standard roles and their permission scope. Standard roles are read-only; custom roles can be managed by authorized administrators."
         actions={
-          <Button onClick={() => setCreateModalOpen(true)}>
-            + Create Custom Role
-          </Button>
+          canManageCustomRole ? (
+            <Button onClick={() => setCreateModalOpen(true)}>
+              + Create Custom Role
+            </Button>
+          ) : null
         }
       />
 
@@ -577,7 +587,12 @@ export function RolesPermissionsPage() {
         title="Role catalogue"
         description="Roles returned by the tenant role catalogue. Standard roles are system-defined; custom roles are tenant-managed."
       >
-        {loading && <p className="app-empty-note" role="status">Loading roles from catalogue...</p>}
+        {loading && (
+          <>
+            <p className="app-empty-note sr-only" role="status">Loading roles from catalogue...</p>
+            <SkeletonTable rows={5} columns={6} />
+          </>
+        )}
         {loadError && !loading && (
           <Notice tone="danger">
             {loadError} <Button variant="secondary" size="sm" onClick={() => void fetchRoles()}>Retry</Button>
@@ -790,7 +805,12 @@ export function MissingRolesPage() {
         title="Role coverage by institution level"
         description="Default stand-in roles used when a role has no active holder."
       >
-        {loading && <p className="app-empty-note" role="status">Loading role coverage rules…</p>}
+        {loading && (
+          <>
+            <p className="app-empty-note sr-only" role="status">Loading role coverage rules…</p>
+            <SkeletonTable rows={5} columns={6} />
+          </>
+        )}
         {!loading && !loadError && entries.length === 0 && (
           <EmptyState
             icon="shield"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
-import { PageHeader, Kpi, Panel } from "../../../design-system/components";
+import { PageHeader, Kpi, Panel, SkeletonCard, SkeletonText } from "../../../design-system/components";
 import { DashboardPanel, QuietEmpty } from "./DashboardPanel";
 import { selfServiceApi, type NoticeItem, type LeaveBalanceItem } from "../../self-service/api/selfServiceApi";
 
@@ -121,7 +121,15 @@ export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
           action={{ label: "All notices", href: "/self-service" }}
         >
           {noticesLoading ? (
-            <p role="status">Loading published campus notices…</p>
+            <div className="app-stack--sm" role="status" aria-busy="true" aria-label="Loading campus notices">
+              <span className="sr-only">Loading published campus notices</span>
+              {Array.from({ length: 2 }, (_, index) => (
+                <SkeletonCard key={index} className="app-card app-card--notice">
+                  <SkeletonText height="1rem" width="55%" />
+                  <SkeletonText lines={2} height="0.875rem" />
+                </SkeletonCard>
+              ))}
+            </div>
           ) : noticesError ? (
             <p role="status">{tenantId ? "Campus notices could not be loaded. Open Self-Service to retry." : "Sign in as a student to view campus notices."}</p>
           ) : notices.length === 0 ? (

@@ -127,6 +127,32 @@ class PlatformUserControllerTest {
     }
 
     @Test
+    void unlockPlatformUser_allow_forProductOwner() {
+        UUID targetUserId = UUID.randomUUID();
+        when(platformUserRepository.findById(targetUserId)).thenReturn(Optional.of(PlatformUser.builder()
+                .platformUserId(targetUserId)
+                .identitySubject("kc-staff")
+                .platformRole(PlatformRole.PLATFORM_ADMIN)
+                .status(PlatformUserStatus.ACTIVE)
+                .build()));
+
+        ResponseEntity<Void> response = controller.unlockPlatformUser(
+                targetUserId, authFor(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        org.mockito.Mockito.verify(keycloakAdminClient)
+                .clearBruteForceLockout("edu360-platform", "kc-staff");
+    }
+
+    @Test
+    void unlockPlatformUser_deny_forNonProductOwnerPlatformRoles() {
+        assertThatThrownBy(() -> controller.unlockPlatformUser(
+                UUID.randomUUID(), authFor(PlatformRole.PLATFORM_ADMIN)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("does not hold action PLATFORM_USER_MANAGE");
+    }
+
+    @Test
     void listPlatformUsers_returnsAllUsers() {
         PlatformUser user = PlatformUser.builder()
                 .platformUserId(UUID.randomUUID())

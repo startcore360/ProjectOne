@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal } from "../../../../design-system/components";
+import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { getApiErrorMessage } from "../../../../services/apiHelper";
 
 export interface PromotionRunModalProps {
   isOpen: boolean;
@@ -21,69 +22,80 @@ export function PromotionRunModal({
   const [promInstId, setPromInstId] = useState("");
   const [promFromSessionId, setPromFromSessionId] = useState("");
   const [promToSessionId, setPromToSessionId] = useState("");
+  const [modalError, setModalError] = useState("");
+
+  const handleClose = () => {
+    setModalError("");
+    onClose();
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit({
-      institutionId: promInstId.trim(),
-      fromSessionId: promFromSessionId.trim(),
-      toSessionId: promToSessionId.trim(),
-    });
-    setPromFromSessionId("");
-    setPromToSessionId("");
+    setModalError("");
+    try {
+      await onSubmit({
+        institutionId: promInstId.trim(),
+        fromSessionId: promFromSessionId.trim(),
+        toSessionId: promToSessionId.trim(),
+      });
+      setPromFromSessionId("");
+      setPromToSessionId("");
+      handleClose();
+    } catch (err: unknown) {
+      setModalError(getApiErrorMessage(err));
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       kicker="YEAR-END PROMOTION"
       title="Initiate Promotion Run"
       titleId="prom-modal-title"
       size="sm"
     >
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
+      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }} noValidate>
+        {modalError && (
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <Notice tone="danger">{modalError}</Notice>
+          </div>
+        )}
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <label htmlFor="prom-inst-id" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            Institution UUID *
-          </label>
-          <input
+          <TextField
             id="prom-inst-id"
+            label="Institution UUID *"
             type="text"
             value={promInstId}
             onChange={(e) => setPromInstId(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)", fontFamily: "monospace" }}
+            style={{ fontFamily: "monospace" }}
           />
         </div>
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <label htmlFor="prom-from-session-id" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            From Session UUID *
-          </label>
-          <input
+          <TextField
             id="prom-from-session-id"
+            label="From Session UUID *"
             type="text"
             value={promFromSessionId}
             onChange={(e) => setPromFromSessionId(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)", fontFamily: "monospace" }}
+            style={{ fontFamily: "monospace" }}
           />
         </div>
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label htmlFor="prom-to-session-id" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            To Session UUID *
-          </label>
-          <input
+          <TextField
             id="prom-to-session-id"
+            label="To Session UUID *"
             type="text"
             value={promToSessionId}
             onChange={(e) => setPromToSessionId(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)", fontFamily: "monospace" }}
+            style={{ fontFamily: "monospace" }}
           />
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" disabled={saving}>

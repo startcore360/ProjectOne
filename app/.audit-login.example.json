@@ -1,0 +1,5 @@
+{
+  "email": "audit-bot@edu360-platform.local",
+  "password": "the account's password",
+  "totpSecret": "the authenticator key shown under 'Unable to scan?' when setting up the authenticator"
+}

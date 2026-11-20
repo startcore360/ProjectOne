@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SkeletonCard, SkeletonText, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { institutionService, type InstitutionItem, type InstitutionIdFormats } from "../../api/institutionService";
 
@@ -70,7 +70,7 @@ export function InstitutionIdFormatsModal({ tenantId, institution, onClose, onSa
         <form onSubmit={submit}>
           <p className="app-note">{institution.institutionName} · {institution.institutionCode}</p>
           {error && <Notice tone="danger">{error}</Notice>}
-          {loading ? <p role="status">Loading ID formats…</p> : (
+          {loading ? <div role="status" aria-busy="true" aria-label="Loading ID formats"><span className="sr-only">Loading ID formats...</span><SkeletonCard><SkeletonText height="1rem" width="50%" /><SkeletonText height="1.25rem" width="85%" /><SkeletonText height="1rem" width="65%" /></SkeletonCard></div> : (
             <>
               <TextField
                 id="edit-student-id-format"

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Modal, Notice, Spinner } from "../../../../design-system/components";
+import { Badge, Button, Modal, Notice, SkeletonCard } from "../../../../design-system/components";
 import api from "../../../../services/axios";
 import { readErrorMessage } from "../common/types";
 
@@ -117,7 +117,10 @@ export function EntitlementEditor({ isOpen, target, targetId, targetName, isProd
       }
     >
       {loading ? (
-        <Spinner label="Loading modules" />
+        <div role="status" aria-busy="true" aria-label="Loading modules" style={{ display: "grid", gap: "var(--space-3)" }}>
+          <span className="sr-only">Loading modules...</span>
+          {Array.from({ length: 5 }, (_, index) => <SkeletonCard key={index} />)}
+        </div>
       ) : loadError ? (
         <Notice tone="danger">{loadError}</Notice>
       ) : modules.length === 0 ? (

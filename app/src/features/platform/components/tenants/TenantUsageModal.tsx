@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, Button, DataTable } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { Modal, Button, DataTable, Notice } from "../../../../design-system/components";
 import { platformTenantService, type TenantUsageMonthlyDto } from "../../api/platformTenantService";
 import type { Tenant } from "../common/types";
 
@@ -29,24 +28,24 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
         setError("");
         setLoadedTenantId(tenantId);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!active) return;
-        setError("Failed to load tenant monthly usage data.");
+        setError(err instanceof Error ? err.message : "Failed to load tenant monthly usage data.");
         setLoadedTenantId(tenantId);
       });
     return () => {
       active = false;
     };
-  }, [isOpen, tenantId]);
+  }, [isOpen, tenantId, loadedTenantId]);
 
   if (!tenant) return null;
-
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={`Resource Usage: ${tenant.name}`}
+      titleId="tenant-usage-title"
       kicker="Telemetry & Quotas"
       size="lg"
       footer={
@@ -58,19 +57,26 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
       }
     >
       <div style={{ display: "grid", gap: "var(--space-4)" }}>
-        {error && <div className="notice notice--danger">{error}</div>}
+        {error && (
+          <Notice tone="danger">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <span>{error}</span>
+              <Button size="sm" variant="secondary" onClick={() => setLoadedTenantId(null)}>
+                Retry
+              </Button>
+            </div>
+          </Notice>
+        )}
 
-        {loading ? (
-          <Spinner label="Loading usage metrics" />
-        ) : (
-          <>
-            <div style={{ display: "grid", gap: "var(--space-2)" }}>
-              <h4 style={{ margin: 0, fontSize: "var(--fs-body)", color: "var(--text-primary)" }}>
+        <div style={{ display: "grid", gap: "var(--space-2)" }}>
+              <h4 style={{ margin: 0, fontSize: "var(--fs-body)", color: "var(--color-text)" }}>
                 Monthly Historical Records
               </h4>
               <DataTable
                 headers={["Usage Month", "Metric", "Quantity", "Measured", "Computed At", "Final"]}
-                empty={usageList.length === 0}
+                loading={loading && usageList.length === 0}
+                loadingLabel="Loading usage metrics"
+                empty={!loading && usageList.length === 0}
               >
                 {usageList.map((u) => (
                   <tr key={u.tenantUsageMonthlyId}>
@@ -84,8 +90,6 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
                 ))}
               </DataTable>
             </div>
-          </>
-        )}
       </div>
     </Modal>
   );
