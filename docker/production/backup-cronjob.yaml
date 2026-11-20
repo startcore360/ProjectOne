@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: edu360-backup-agent
+  namespace: edu360
+  annotations:
+    # Replace with the dedicated IAM role for the backup bucket and RDS backup operations.
+    eks.amazonaws.com/role-arn: REPLACE_WITH_EDU360_BACKUP_IAM_ROLE_ARN
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: edu360-production-backup
+  namespace: edu360
+spec:
+  schedule: "0 2 * * *"
+  timeZone: "Asia/Kolkata"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 7
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 14400
+      ttlSecondsAfterFinished: 1209600
+      template:
+        spec:
+          serviceAccountName: edu360-backup-agent
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backup-agent
+              # A6 must publish the production-capable agent image before this manifest is applied.
+              image: ghcr.io/startcore360/edu360-backup-agent:REPLACE_WITH_A6_PRODUCTION_RELEASE
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: BACKUP_ENVIRONMENT
+                  value: production
+                - name: AWS_REGION
+                  value: ap-south-1
+              envFrom:
+                - secretRef:
+                    name: edu360-backup-agent-production
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+                limits:
+                  cpu: "2"
+                  memory: 4Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir:
+                sizeLimit: 2Gi
