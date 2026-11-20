@@ -29,7 +29,7 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
     const decision = await dpo.post(`/api/platform/deletion-requests/${deletion.deletionRequestId}/decision`, {
       decision: "APPROVED",
       remark: "A8 E2E DPO approval; purge remains deferred until retention expiry.",
-    }, { headers: { "Idempotency-Key": crypto.randomUUID() } });
+    }, { headers: { "Idempotency-Key": randomUUID() } });
     const result = await json<{ status: string }>(decision);
     expect(result.status).toBe("APPROVED");
 
@@ -41,19 +41,17 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
   }
 });
 
-test("Billing cycle generates the renewal invoice and the maker-checker flow records payment", async ({ page }) => {
+test("Billing cycle generates a renewal invoice and maker-checker records payment", async ({ page }) => {
   test.skip(
-    !process.env.EDU360_E2E_PRODUCT_OWNER_TOKEN || !process.env.EDU360_E2E_BILLING_MANAGER_TOKEN,
-    "Requires Product Owner and Billing Manager tokens from the local dev stack.",
+    !process.env.EDU360_E2E_PRODUCT_OWNER_TOKEN ||
+    !process.env.EDU360_E2E_BILLING_MANAGER_TOKEN ||
+    !process.env.EDU360_E2E_BILLING_TENANT_ID,
+    "Requires Product Owner/Billing Manager tokens and an active tenant due for renewal.",
   );
   const ownerToken = requiredToken("EDU360_E2E_PRODUCT_OWNER_TOKEN");
   const owner = await apiFor("platform", ownerToken);
   const billing = await apiFor("platform", requiredToken("EDU360_E2E_BILLING_MANAGER_TOKEN"));
   try {
-    const tenant = await createTenant(owner);
-    await makeInvoicePaid(billing, owner, tenant);
-    await (await import("./helpers")).activateTenant(owner, tenant);
-
     const today = new Date();
     const periodStart = today.toISOString().slice(0, 10);
     const future = new Date(Date.UTC(today.getUTCFullYear() + 5, today.getUTCMonth(), today.getUTCDate()));
@@ -62,8 +60,8 @@ test("Billing cycle generates the renewal invoice and the maker-checker flow rec
       periodEnd: future.toISOString().slice(0, 10),
     }, { headers: { "Idempotency-Key": randomUUID() } });
     const cycle = await json<{ created: Array<{ invoiceId: string; tenantId: string }>; skipped: Array<{ tenantId: string; reason: string }> }>(cycleResponse);
-    const renewalInvoice = cycle.created.find((item) => item.tenantId === tenant.tenantId);
-    expect(renewalInvoice, "The active tenant must be due for a renewal within the requested cycle window.").toBeTruthy();
+    const renewalInvoice = cycle.created.find((item) => item.tenantId === process.env.EDU360_E2E_BILLING_TENANT_ID);
+    expect(renewalInvoice, "The seeded active tenant must be due for renewal in this billing-cycle window.").toBeTruthy();
 
     await json(await owner.post(`/api/platform/invoices/${renewalInvoice!.invoiceId}/approval`, {}, {
       headers: { "Idempotency-Key": randomUUID() },
@@ -75,7 +73,7 @@ test("Billing cycle generates the renewal invoice and the maker-checker flow rec
     }, { headers: { "Idempotency-Key": randomUUID() } }));
 
     const invoices = await json<Array<{ invoiceId: string; status: string }>>(
-      await billing.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`),
+      await billing.get(`/api/platform/invoices?tenantId=${process.env.EDU360_E2E_BILLING_TENANT_ID}`),
     );
     expect(invoices.find((item) => item.invoiceId === renewalInvoice!.invoiceId)?.status).toBe("PAID");
     await openPlatformPage(page, ownerToken, "/platform/invoices");
