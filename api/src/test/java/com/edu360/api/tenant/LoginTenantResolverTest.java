@@ -30,6 +30,7 @@ class LoginTenantResolverTest {
         KeycloakProperties props = new KeycloakProperties();
         props.setPlatformRealm("edu360-platform");
         props.setLocalDevHostSuffix(".edu360.localhost, .edu360.local, -edu360.duckdns.org");
+        props.setTenantHostSuffix(".edu360.com");
         resolver = new LoginTenantResolver(props, tenantRepository);
         abc = Tenant.builder().tenantId(UUID.randomUUID()).subdomain("abc").keycloakRealm("abc-realm")
                 .state(TenantState.ACTIVE).build();
@@ -85,6 +86,19 @@ class LoginTenantResolverTest {
         // The bare ending is not a tenant either.
         assertThatThrownBy(() -> resolve("edu360.duckdns.org")).isInstanceOf(InvalidCredentialsException.class);
         verify(tenantRepository, never()).findBySubdomain("x");
+    }
+
+    @Test
+    void productionWildcardDomain_resolvesTenantAndPlatform() {
+        assertThat(resolve("abc.edu360.com")).isEqualTo(new LoginTenantResolver.TenantLogin(abc));
+        assertThat(resolve("platform.edu360.com")).isEqualTo(new LoginTenantResolver.PlatformLogin("edu360-platform"));
+    }
+
+    @Test
+    void productionWildcardDomain_refusesNestedAndBareHosts() {
+        when(tenantRepository.findBySubdomain(anyString())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> resolve("x.abc.edu360.com")).isInstanceOf(InvalidCredentialsException.class);
+        assertThatThrownBy(() -> resolve("edu360.com")).isInstanceOf(InvalidCredentialsException.class);
     }
 
     @Test
