@@ -307,6 +307,27 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  playwright-typecheck:
+    name: Type-check Playwright platform E2E suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm ci
+        working-directory: app
+      - name: Install pinned Playwright types without changing the app lockfile
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+        working-directory: app
+      - name: Type-check Playwright suite
+        run: npm run e2e:typecheck
+        working-directory: app
   platform-e2e:
     name: Platform Playwright end-to-end suite
     if: github.event_name == 'workflow_dispatch' && vars.EDU360_E2E_ENABLED == 'true'
