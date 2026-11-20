@@ -56,20 +56,20 @@ public class KeycloakAdminClient {
      *  mustChangePassword controls the initial must_change_password attribute. */
     public String provisionUser(String realm, String name, String email, String initialPassword,
                                  boolean mustChangePassword) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         return createUser(adminToken, realm, name, email, email, initialPassword, mustChangePassword);
     }
 
     /** Provisions a student account whose Keycloak username is the institution-generated student code. */
     public String provisionStudentUser(String realm, String name, String studentCode, String initialPassword,
                                        boolean mustChangePassword) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         return createUser(adminToken, realm, name, studentCode, null, initialPassword, mustChangePassword);
     }
 
     /** Removes a just-provisioned identity when its enclosing database transaction cannot complete. */
     public void deleteUser(String realm, String keycloakUserId) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         restClient.delete()
                 .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId)
                 .header("Authorization", "Bearer " + adminToken)
@@ -221,6 +221,33 @@ public class KeycloakAdminClient {
                         "userinfo.token.claim", "true"));
     }
 
+    /**
+     * Realm-scoped service account token. Production provisions the same confidential client
+     * in each tenant realm with manage-users/view-users/query-users/view-realm only. Local dev
+     * retains the master-admin password fallback because its imported realm clients use
+     * per-realm development secrets.
+     */
+    private String fetchRealmAdminAccessToken(String realm) {
+        if (properties.getAdminClientId() == null || properties.getAdminClientId().isBlank()
+                || properties.getAdminClientSecret() == null || properties.getAdminClientSecret().isBlank()) {
+            return fetchMasterAdminAccessToken();
+        }
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "client_credentials");
+        form.add("client_id", properties.getAdminClientId());
+        form.add("client_secret", properties.getAdminClientSecret());
+        Map<String, Object> response = restClient.post()
+                .uri(properties.getBaseUrl() + "/realms/" + realm + "/protocol/openid-connect/token")
+                .body(form)
+                .retrieve()
+                .body(Map.class);
+        Object token = response == null ? null : response.get("access_token");
+        if (token == null) {
+            throw new KeycloakProvisioningException("Keycloak did not return a realm admin access token for realm '" + realm + "'.");
+        }
+        return token.toString();
+    }
+
     private String fetchMasterAdminAccessToken() {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         // BS-23: Prefer confidential client credentials grant in production when configured
@@ -324,7 +351,7 @@ public class KeycloakAdminClient {
      * Resets a user's password with configurable must_change_password policy.
      */
     public void resetPassword(String realm, String keycloakUserId, String newPassword, boolean mustChangePassword) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         Map<String, Object> credential = Map.of(
                 "type", "password",
                 "value", newPassword,
@@ -365,7 +392,7 @@ public class KeycloakAdminClient {
      */
     @SuppressWarnings("unchecked")
     public List<UserSessionInfo> listUserSessions(String realm, String keycloakUserId) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         List<Map<String, Object>> body = restClient.get()
                 .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId + "/sessions")
                 .header("Authorization", "Bearer " + adminToken)
@@ -397,7 +424,7 @@ public class KeycloakAdminClient {
 
     public void logoutSession(String realm, String sessionId) {
         try {
-            String adminToken = fetchMasterAdminAccessToken();
+            String adminToken = fetchRealmAdminAccessToken(realm);
             restClient.delete()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/sessions/" + sessionId)
                     .header("Authorization", "Bearer " + adminToken)
@@ -420,7 +447,7 @@ public class KeycloakAdminClient {
      */
     public void logoutUser(String realm, String keycloakUserId) {
         try {
-            String adminToken = fetchMasterAdminAccessToken();
+            String adminToken = fetchRealmAdminAccessToken(realm);
             restClient.post()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId + "/logout")
                     .header("Authorization", "Bearer " + adminToken)
@@ -439,7 +466,7 @@ public class KeycloakAdminClient {
     @SuppressWarnings("unchecked")
     public void setUserEnabled(String realm, String keycloakUserId, boolean enabled) {
         try {
-            String adminToken = fetchMasterAdminAccessToken();
+            String adminToken = fetchRealmAdminAccessToken(realm);
             String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
             Map<String, Object> current = restClient.get()
                     .uri(userUrl)
@@ -469,7 +496,7 @@ public class KeycloakAdminClient {
     @SuppressWarnings("unchecked")
     public void setUserEnabledStrict(String realm, String keycloakUserId, boolean enabled) {
         try {
-            String adminToken = fetchMasterAdminAccessToken();
+            String adminToken = fetchRealmAdminAccessToken(realm);
             String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
             Map<String, Object> current = restClient.get()
                     .uri(userUrl)
@@ -550,7 +577,7 @@ public class KeycloakAdminClient {
     @SuppressWarnings("unchecked")
     public java.util.Optional<OtpEnrolment> startOtpEnrolment(String realm, String username) {
         try {
-            String adminToken = fetchMasterAdminAccessToken();
+            String adminToken = fetchRealmAdminAccessToken(realm);
             Map<String, Object> body = restClient.post()
                     .uri(properties.getBaseUrl() + "/realms/" + realm + OTP_EXTENSION_PATH + "/enrolment")
                     .header("Authorization", "Bearer " + adminToken)
@@ -574,7 +601,7 @@ public class KeycloakAdminClient {
     @SuppressWarnings("unchecked")
     public OtpConfirmResult confirmOtpEnrolment(String realm, String username, String enrolmentId, String code,
                                                 String deviceName) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         Map<String, Object> request = new HashMap<>();
         request.put("username", username);
         request.put("code", code);
@@ -618,7 +645,7 @@ public class KeycloakAdminClient {
         if (identifier == null || identifier.isBlank()) {
             return java.util.Optional.empty();
         }
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         List<Map<String, Object>> matches = restClient.get()
                 .uri(properties.getBaseUrl() + "/admin/realms/{realm}/users?username={u}&exact=true&briefRepresentation=false",
                         realm, identifier.trim())
@@ -641,7 +668,7 @@ public class KeycloakAdminClient {
 
     @SuppressWarnings("unchecked")
     public java.util.Optional<KeycloakUser> getUser(String realm, String keycloakUserId) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         try {
             Map<String, Object> rep = restClient.get()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId)
@@ -674,7 +701,7 @@ public class KeycloakAdminClient {
     /** Every credential Keycloak holds for the user (metadata only - never secret values). */
     @SuppressWarnings("unchecked")
     public List<CredentialInfo> listCredentials(String realm, String keycloakUserId) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         List<Map<String, Object>> body = restClient.get()
                 .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId + "/credentials")
                 .header("Authorization", "Bearer " + adminToken)
@@ -696,7 +723,7 @@ public class KeycloakAdminClient {
      */
     @SuppressWarnings("unchecked")
     public int removeOtpCredentials(String realm, String keycloakUserId) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         String base = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId + "/credentials";
         List<Map<String, Object>> body = restClient.get().uri(base)
                 .header("Authorization", "Bearer " + adminToken)
@@ -721,7 +748,7 @@ public class KeycloakAdminClient {
      */
     @SuppressWarnings("unchecked")
     public void setUserAttribute(String realm, String keycloakUserId, String name, String value) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
         Map<String, Object> current = restClient.get().uri(userUrl)
                 .header("Authorization", "Bearer " + adminToken).retrieve().body(Map.class);
@@ -744,7 +771,7 @@ public class KeycloakAdminClient {
     /** Adds (add=true) or removes one Keycloak required action on the user. */
     @SuppressWarnings("unchecked")
     public void setRequiredAction(String realm, String keycloakUserId, String action, boolean add) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
         Map<String, Object> current = restClient.get().uri(userUrl)
                 .header("Authorization", "Bearer " + adminToken).retrieve().body(Map.class);
@@ -770,7 +797,7 @@ public class KeycloakAdminClient {
      */
     @SuppressWarnings("unchecked")
     public boolean isBruteForceLocked(String realm, String keycloakUserId) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         Map<String, Object> status = restClient.get()
                 .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/attack-detection/brute-force/users/" + keycloakUserId)
                 .header("Authorization", "Bearer " + adminToken)
@@ -811,7 +838,7 @@ public class KeycloakAdminClient {
     }
 
     public void clearBruteForceLockout(String realm, String keycloakUserId) {
-        String adminToken = fetchMasterAdminAccessToken();
+        String adminToken = fetchRealmAdminAccessToken(realm);
         restClient.delete()
                 .uri(properties.getBaseUrl() + "/admin/realms/" + realm
                         + "/attack-detection/brute-force/users/" + keycloakUserId)
