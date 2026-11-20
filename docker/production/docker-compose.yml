@@ -1,0 +1,46 @@
+services:
+  edu360-api:
+    build:
+      context: ../..
+      dockerfile: api/Dockerfile
+    image: edu360-api:production
+    restart: unless-stopped
+    env_file:
+      - ${EDU360_API_ENV_FILE:?Set EDU360_API_ENV_FILE to the protected production API environment file}
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    expose:
+      - "8080"
+    networks:
+      - app
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - edu360-api
+    environment:
+      EDU360_DOMAIN: ${EDU360_DOMAIN:?Set EDU360_DOMAIN to the registered apex domain}
+      NGINX_ENVSUBST_FILTER: ^EDU360_DOMAIN$
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${EDU360_APP_DIST_DIR:?Set EDU360_APP_DIST_DIR to the built app/dist directory}:/usr/share/nginx/html:ro
+      - ${EDU360_TLS_DIR:?Set EDU360_TLS_DIR to the wildcard certificate directory}:/etc/nginx/tls:ro
+      - ../nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    networks:
+      - app
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  app:
+    driver: bridge
