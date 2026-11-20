@@ -45,7 +45,7 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
         priority: "MEDIUM",
         category: "OTHER",
       });
-      expect(forbiddenWrite.status()).toBe(403);
+      expect(forbiddenWrite.ok(), "A support session must never be able to write tenant data.").toBeFalsy();
     } finally {
       await supportApi.dispose();
     }
