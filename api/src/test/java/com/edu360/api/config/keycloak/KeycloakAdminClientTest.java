@@ -118,6 +118,7 @@ class KeycloakAdminClientTest {
                 .andExpect(jsonPath("$.clients[0].serviceAccountsEnabled").value(true))
                 .andExpect(jsonPath("$.users[0].serviceAccountClientId").value("edu360-admin-cli"))
                 .andExpect(jsonPath("$.users[0].clientRoles['realm-management']").isArray())
+                .andExpect(jsonPath("$.users[0].clientRoles['realm-management'][4]").value("manage-clients"))
                 .andRespond(withStatus(HttpStatus.CREATED));
         server.expect(requestTo("http://kc.test/realms/" + REALM + "/protocol/openid-connect/token"))
                 .andRespond(withSuccess("{\"access_token\":\"tenant-admin-token\"}", MediaType.APPLICATION_JSON));
