@@ -65,7 +65,7 @@ export async function createTenant(api: APIRequestContext, kind: "UNIVERSITY_GRO
 }
 
 export async function makeInvoicePaid(billingApi: APIRequestContext, ownerApi: APIRequestContext, tenant: CreatedTenant): Promise<string> {
-  const plansResponse = await billingApi.get("/api/platform/plans");
+  const plansResponse = await ownerApi.get("/api/platform/plans");
   const plans = await json<Array<{ planId: string; priceAmount: number; currencyCode: string }>>(plansResponse);
   const plan = plans.find((item) => item.planId === tenant.planId);
   expect(plan).toBeTruthy();
