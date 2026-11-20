@@ -47,6 +47,9 @@ public class KeycloakProperties {
      *  it is a public client. */
     private String frontendClientId;
 
+    /** Exact allowed browser redirect patterns for the public frontend client. */
+    private java.util.List<String> frontendRedirectUris = java.util.List.of();
+
     /** Local-dev-only hostname suffix stripped from the Host header to find a tenant's
      *  subdomain (see LoginTenantResolver) - e.g. ".edu360.local". Blank in production, where
      *  real subdomain/custom-domain routing is not built yet: see
@@ -135,6 +138,12 @@ public class KeycloakProperties {
 
     public void setFrontendClientId(String frontendClientId) {
         this.frontendClientId = frontendClientId;
+    }
+
+    public java.util.List<String> getFrontendRedirectUris() { return frontendRedirectUris; }
+
+    public void setFrontendRedirectUris(java.util.List<String> frontendRedirectUris) {
+        this.frontendRedirectUris = frontendRedirectUris == null ? java.util.List.of() : java.util.List.copyOf(frontendRedirectUris);
     }
 
     public String getLocalDevHostSuffix() {
