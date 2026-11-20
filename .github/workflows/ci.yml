@@ -206,3 +206,103 @@ jobs:
         run: |
           chmod +x sql/run_all.sh
           ./sql/run_all.sh
+
+  integration-tests:
+    name: PostgreSQL, Keycloak and LocalStack integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: api/pom.xml
+      - name: Start PostgreSQL
+        run: docker compose -p edu360-postgres -f docker/postgres/docker-compose.yml up -d
+      - name: Start Keycloak with committed test realms
+        run: docker compose -p edu360-keycloak -f docker/keycloak/docker-compose.yml up -d
+      - name: Start LocalStack with S3 bucket bootstrap
+        run: docker compose -p edu360-localstack -f docker/localstack/docker-compose.yml up -d
+      - name: Wait for integration services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8081/realms/master/.well-known/openid-configuration >/dev/null; then break; fi
+            sleep 5
+          done
+          curl -fsS http://127.0.0.1:8081/realms/master/.well-known/openid-configuration >/dev/null
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4566/_localstack/health >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:4566/_localstack/health >/dev/null
+          docker exec edu360-localstack-localstack-1 awslocal s3api head-bucket --bucket edu360-files
+      - name: Run Failsafe integration suite
+        env:
+          LOCALSTACK_ENDPOINT: http://127.0.0.1:4566
+          S3_FILE_BUCKET: edu360-files
+          S3_REGION: ap-south-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml verify -Pit
+      - name: Upload integration test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edu360-integration-test-reports-${{ github.sha }}
+          path: |
+            api/target/failsafe-reports/
+            api/target/surefire-reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  platform-e2e:
+    name: Platform Playwright end-to-end suite
+    if: github.event_name == 'workflow_dispatch' && vars.EDU360_E2E_ENABLED == 'true'
+    runs-on: [self-hosted, edu360-e2e]
+    defaults:
+      run:
+        working-directory: app
+    env:
+      EDU360_E2E_PRODUCT_OWNER_TOKEN: ${{ secrets.EDU360_E2E_PRODUCT_OWNER_TOKEN }}
+      EDU360_E2E_PLATFORM_ADMIN_TOKEN: ${{ secrets.EDU360_E2E_PLATFORM_ADMIN_TOKEN }}
+      EDU360_E2E_BILLING_MANAGER_TOKEN: ${{ secrets.EDU360_E2E_BILLING_MANAGER_TOKEN }}
+      EDU360_E2E_SUPPORT_MANAGER_TOKEN: ${{ secrets.EDU360_E2E_SUPPORT_MANAGER_TOKEN }}
+      EDU360_E2E_RELEASE_MANAGER_TOKEN: ${{ secrets.EDU360_E2E_RELEASE_MANAGER_TOKEN }}
+      EDU360_E2E_DPO_TOKEN: ${{ secrets.EDU360_E2E_DPO_TOKEN }}
+      EDU360_E2E_TENANT_TOKEN: ${{ secrets.EDU360_E2E_TENANT_TOKEN }}
+      EDU360_E2E_TENANT_ID: ${{ secrets.EDU360_E2E_TENANT_ID }}
+      EDU360_E2E_TENANT_SUBDOMAIN: ${{ secrets.EDU360_E2E_TENANT_SUBDOMAIN }}
+      EDU360_E2E_PLATFORM_URL: ${{ vars.EDU360_E2E_PLATFORM_URL }}
+      EDU360_E2E_API_PORT: ${{ vars.EDU360_E2E_API_PORT }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Install pinned Playwright runner without changing the app lockfile
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium
+        run: npx playwright install chromium
+      - name: Run platform E2E scenarios
+        run: npm run e2e
+      - name: Upload Playwright report and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edu360-playwright-report-${{ github.sha }}
+          path: |
+            app/playwright-report/
+            app/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
