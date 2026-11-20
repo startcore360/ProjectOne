@@ -147,7 +147,7 @@ public class KeycloakAdminClient {
                     "redirectUris", properties.getFrontendRedirectUris());
             restClient.post()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients")
-                    .header("Authorization", "Bearer " + adminToken)
+                    .header("Authorization", "Bearer " + realmAdminToken)
                     .body(clientRep)
                     .retrieve()
                     .toBodilessEntity();
