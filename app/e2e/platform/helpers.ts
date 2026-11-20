@@ -26,6 +26,7 @@ export async function json<T>(response: Awaited<ReturnType<APIRequestContext["ge
 export type CreatedTenant = {
   tenantId: string;
   tenantName: string;
+  planId: string;
   subdomain: string;
   keycloakRealm: string;
   state: string;
@@ -63,21 +64,17 @@ export async function createTenant(api: APIRequestContext, kind: "UNIVERSITY_GRO
   return tenant;
 }
 
-export async function makeInvoicePaid(billingApi: APIRequestContext, ownerApi: APIRequestContext, tenantId: string): Promise<string> {
+export async function makeInvoicePaid(billingApi: APIRequestContext, ownerApi: APIRequestContext, tenant: CreatedTenant): Promise<string> {
   const plansResponse = await billingApi.get("/api/platform/plans");
   const plans = await json<Array<{ planId: string; priceAmount: number; currencyCode: string }>>(plansResponse);
-  const tenantsResponse = await billingApi.get("/api/platform/tenants?page=0&size=100");
-  const tenants = await json<{ items: Array<{ tenantId: string; planId: string }> }>(tenantsResponse);
-  const tenant = tenants.items.find((item) => item.tenantId === tenantId);
-  expect(tenant, "Created tenant must be listed before invoicing.").toBeTruthy();
-  const plan = plans.find((item) => item.planId === tenant!.planId);
+  const plan = plans.find((item) => item.planId === tenant.planId);
   expect(plan).toBeTruthy();
 
   const now = new Date();
   const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
   const periodStart = new Date(Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth(), 1));
   const invoiceResponse = await billingApi.post("/api/platform/invoices", {
-    tenantId,
+    tenantId: tenant.tenantId,
     periodStart: periodStart.toISOString().slice(0, 10),
     periodEnd: periodEnd.toISOString().slice(0, 10),
     subtotalAmount: plan!.priceAmount,
