@@ -31,6 +31,12 @@ test("E2E-035: standalone college reaches ACTIVE only after its invoice is paid"
     const invoicesBeforePayment = await billingApi.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
     const existing = await json<Array<{ status: string }>>(invoicesBeforePayment);
     expect(existing.every((invoice) => invoice.status !== "PAID")).toBeTruthy();
+    const earlyActivation = await api.post(`/api/platform/tenants/${tenant.tenantId}/activation`, {
+      paymentReference: "A8-E2E-PREPAYMENT-BLOCK",
+    }, {
+      headers: { "Idempotency-Key": randomUUID(), "If-Match": `"${tenant.rowVersion}"` },
+    });
+    expect(earlyActivation.ok(), "A standalone tenant must not activate before a paid invoice exists.").toBeFalsy();
 
     await makeInvoicePaid(billingApi, api, tenant);
     await activateTenant(api, tenant);
