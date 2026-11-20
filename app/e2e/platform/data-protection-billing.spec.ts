@@ -41,22 +41,47 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
   }
 });
 
-test("Billing cycle creates a payable invoice and payment moves it to PAID", async ({ page }) => {
-  test.skip(!process.env.EDU360_E2E_PRODUCT_OWNER_TOKEN || !process.env.EDU360_E2E_BILLING_MANAGER_TOKEN, "Requires Product Owner and Billing Manager tokens from the local dev stack.");
-  const token = requiredToken("EDU360_E2E_PRODUCT_OWNER_TOKEN");
-  const api = await apiFor("platform", token);
-  const billingApi = await apiFor("platform", requiredToken("EDU360_E2E_BILLING_MANAGER_TOKEN"));
+test("Billing cycle generates the renewal invoice and the maker-checker flow records payment", async ({ page }) => {
+  test.skip(
+    !process.env.EDU360_E2E_PRODUCT_OWNER_TOKEN || !process.env.EDU360_E2E_BILLING_MANAGER_TOKEN,
+    "Requires Product Owner and Billing Manager tokens from the local dev stack.",
+  );
+  const ownerToken = requiredToken("EDU360_E2E_PRODUCT_OWNER_TOKEN");
+  const owner = await apiFor("platform", ownerToken);
+  const billing = await apiFor("platform", requiredToken("EDU360_E2E_BILLING_MANAGER_TOKEN"));
   try {
-    const tenant = await createTenant(api);
-    const invoiceId = await makeInvoicePaid(billingApi, api, tenant.tenantId);
-    const response = await billingApi.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
-    const invoices = await json<Array<{ invoiceId: string; status: string }>>(response);
-    expect(invoices.find((item) => item.invoiceId === invoiceId)?.status).toBe("PAID");
+    const tenant = await createTenant(owner);
+    await makeInvoicePaid(billing, owner, tenant.tenantId);
+    await (await import("./helpers")).activateTenant(owner, tenant);
 
-    await openPlatformPage(page, token, "/platform/invoices");
+    const today = new Date();
+    const periodStart = today.toISOString().slice(0, 10);
+    const future = new Date(Date.UTC(today.getUTCFullYear() + 5, today.getUTCMonth(), today.getUTCDate()));
+    const cycleResponse = await billing.post("/api/platform/billing-cycles", {
+      periodStart,
+      periodEnd: future.toISOString().slice(0, 10),
+    }, { headers: { "Idempotency-Key": randomUUID() } });
+    const cycle = await json<{ created: Array<{ invoiceId: string; tenantId: string }>; skipped: Array<{ tenantId: string; reason: string }> }>(cycleResponse);
+    const renewalInvoice = cycle.created.find((item) => item.tenantId === tenant.tenantId);
+    expect(renewalInvoice, "The active tenant must be due for a renewal within the requested cycle window.").toBeTruthy();
+
+    await json(await owner.post(`/api/platform/invoices/${renewalInvoice!.invoiceId}/approval`, {}, {
+      headers: { "Idempotency-Key": randomUUID() },
+    }));
+    await json(await billing.post(`/api/platform/invoices/${renewalInvoice!.invoiceId}/send`));
+    await json(await billing.post(`/api/platform/invoices/${renewalInvoice!.invoiceId}/record-payment`, {
+      paymentMode: "BANK_TRANSFER",
+      paymentReference: `A8-CYCLE-${randomUUID()}`,
+    }, { headers: { "Idempotency-Key": randomUUID() } }));
+
+    const invoices = await json<Array<{ invoiceId: string; status: string }>>(
+      await billing.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`),
+    );
+    expect(invoices.find((item) => item.invoiceId === renewalInvoice!.invoiceId)?.status).toBe("PAID");
+    await openPlatformPage(page, ownerToken, "/platform/invoices");
     await expect(page.locator("#root")).toBeVisible();
   } finally {
-    await api.dispose();
-    await billingApi.dispose();
+    await owner.dispose();
+    await billing.dispose();
   }
 });
