@@ -9,13 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.exception.ApiException;
-import com.edu360.api.identity.RoleActionRepository;
-import com.edu360.api.identity.RoleDefinitionRepository;
-import com.edu360.api.identity.StandardRoleActionRepository;
-import com.edu360.api.identity.StandardRoleRepository;
+import com.edu360.api.rbac.RoleActionRepository;
+import com.edu360.api.rbac.RoleDefinitionRepository;
+import com.edu360.api.rbac.StandardRoleActionRepository;
+import com.edu360.api.rbac.StandardRoleRepository;
 import com.edu360.api.identity.UserAccountRepository;
 import com.edu360.api.identity.UserIdentityLinkRepository;
-import com.edu360.api.identity.UserRoleAssignmentRepository;
+import com.edu360.api.rbac.UserRoleAssignmentRepository;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.LeaveApproverSettingRepository;
 import com.edu360.api.platform.PlanRepository;
