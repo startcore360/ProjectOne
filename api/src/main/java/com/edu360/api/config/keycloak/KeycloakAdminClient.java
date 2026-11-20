@@ -20,10 +20,10 @@ import com.edu360.api.exception.DuplicateResourceException;
  * now parameterized by realm, since this app administers many realms (every tenant realm, plus
  * the platform realm), not one fixed realm.
  *
- * HOW admin access works: authenticates once as the master-realm admin account (see
- * KeycloakProperties' class comment for why), then calls /admin/realms/{realm}/... for whatever
- * realm the caller asks about. Nothing here ever stores a password locally - it is forwarded
- * once and then forgotten.
+ * Production admin access is split by scope: a master-realm service account can create/delete
+ * realms, while a same-client service account in each tenant realm can manage users only in that
+ * realm. The dev profile retains its local master-admin password fallback. Nothing stores a
+ * user password locally; it is forwarded to Keycloak once and then forgotten.
  */
 @Component
 public class KeycloakAdminClient {
