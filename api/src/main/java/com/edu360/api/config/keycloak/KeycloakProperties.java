@@ -29,12 +29,13 @@ public class KeycloakProperties {
      *  at all in the schema - never an implicit tenant RLS bypass). */
     private String platformRealm;
 
-    /** Master-realm account with cross-realm admin rights, used for all account provisioning/
-     *  password-reset/attribute operations against ANY realm (tenant or platform) by name. */
+    /** Local-development bootstrap admin username; production uses scoped client credentials. */
     private String masterAdminUsername;
     private String masterAdminPassword;
 
-    /** Confidential client credentials for admin access (BS-23, preferred in production). */
+    /** Confidential service-account client provisioned in master and each managed realm.
+     *  Master roles are limited to create/delete realm; tenant realm roles are limited to user
+     *  administration. Required in production. */
     private String adminClientId;
     private String adminClientSecret;
 
