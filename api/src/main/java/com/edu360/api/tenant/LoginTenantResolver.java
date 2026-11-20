@@ -14,9 +14,9 @@ import lombok.RequiredArgsConstructor;
  * runs on an ALREADY-ISSUED bearer token's "iss" claim. At login time there is no token yet, so
  * the only thing to go on is which hostname the request came in on.
  *
- * HOW: the Host header's hostname, with a configured local-dev ending stripped (blank in
- * production). Endings may be a dot (abc.edu360.local) or a hyphen (abc-edu360.duckdns.org).
- * "platform.edu360.local" / "platform-edu360.duckdns.org" -> platform login. Anything else -> look that remaining
+ * HOW: the Host header's hostname, with a configured tenant-host suffix stripped. Production
+ * configures the registered wildcard suffix (e.g. .example.edu); development may configure
+ * several dot/hyphen suffixes. The platform label under that suffix resolves to platform login. Anything else -> look that remaining
  * label up against platform.tenant.subdomain (never RLS'd - this is the one query allowed to
  * run before any tenant context exists, same as the bootstrap resolver). Unknown hostname, or a
  * tenant not in ACTIVE/TRIAL state -> rejected outright, never a default tenant.
@@ -52,7 +52,7 @@ public class LoginTenantResolver {
         if (host == null || host.isBlank()) {
             host = request.getServerName();
         }
-        String label = stripLocalDevSuffix(host);
+        String label = stripTenantHostSuffix(host);
 
         if (label.equals(keycloakProperties.getPlatformHostLabel())) {
             return new PlatformLogin(keycloakProperties.getPlatformRealm());
@@ -65,14 +65,10 @@ public class LoginTenantResolver {
         return new TenantLogin(tenant);
     }
 
-    // Custom domains are matched exactly before the subdomain fallback above. Local-dev suffixes
-    // continue to be stripped only for the configured local hostname forms.
-    //
-    // Several endings may be configured (comma-separated), so more than one address style works
-    // at once - e.g. ".edu360.local" (abc.edu360.local) and "-edu360.duckdns.org"
-    // (abc-edu360.duckdns.org, one DuckDNS name per tenant). The longest matching ending wins,
-    // and what is left must be a single, non-empty label: "x.abc" or "" is never a tenant.
-    private String stripLocalDevSuffix(String host) {
+    // Custom domains are matched exactly before the subdomain fallback above. Several configured
+    // suffixes may be comma-separated; the longest match wins, and what remains must be exactly
+    // one non-empty label. Nested labels and the bare apex never resolve to a tenant.
+    private String stripTenantHostSuffix(String host) {
         String lowerHost = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
         return keycloakProperties.getTenantHostSuffixes().stream()
                 .sorted(java.util.Comparator.comparingInt(String::length).reversed())
