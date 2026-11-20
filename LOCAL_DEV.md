@@ -17,8 +17,9 @@ tenants plus the development S3 object-storage bucket), the Spring Boot backend,
   line. Run `.\docker\dev-hosts-setup.ps1` as Administrator after creating a tenant.
 - Tools outside the browser (curl, Postman) may not resolve `*.localhost` on Windows. For them,
   use `.edu360.local`, or call `http://127.0.0.1:8080` with a `Host: abc.edu360.localhost` header.
-- **Production** uses neither. A wildcard DNS record (`*.edu360.com`) plus a wildcard TLS
-  certificate cover every tenant with no per-tenant step. See `docker/PRODUCTION_TENANT_ROUTING.txt`.
+- **Production** uses neither. A wildcard DNS record and wildcard TLS certificate for the registered
+  production domain cover every tenant with no per-tenant step. `edu360.com` is only a placeholder
+  until the domain is selected. See `docker/PRODUCTION_TENANT_ROUTING.txt`.
 
 ## Commands
 
