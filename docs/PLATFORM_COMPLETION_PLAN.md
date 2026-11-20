@@ -372,27 +372,27 @@ Wireframe — Entitlement editor (plan or tenant):
 
 ## 12. Epic E10 — Production readiness (`PRODUCTION_TENANT_ROUTING.txt`)
 
-| ID | Item | AC |
+| ID | Item | AC / current status |
 |---|---|---|
-| E10-S1 P1–P2 | wildcard DNS + TLS; nginx serving `app/dist` and proxying `/api`, `/v1` with `Host` preserved; port 8080 private; swagger blocked | checklist lines 226–235 |
-| E10-S2 P3 | `axios.ts` same-origin in prod | network tab shows same-origin calls |
-| E10-S3 P4–P5 | `tenant-host-suffix`, `platform-host-label`, no wildcard CORS, prod properties without defaults | missing env stops startup |
-| E10-S4 P6–P7 | reserved subdomains (E1-S1); Keycloak redirect URIs from config; existing realms migrated | — |
-| E10-S5 P11–P12 | admin client-credentials service account with `manage-users` on realm clients; identity-events client | tenant creation works with no master password set |
-| E10-S6 Object storage | `S3FileStorage` implementing `FileStorage` (LocalStack in dev); exports, logos, uploads | export ZIP lands in S3 |
-| E10-S7 Backup agent | E6-S3 in prod (RDS snapshots / pg_dump to S3) | first SUCCESS row |
-| E10-S8 Verification | pen test, load test (10× peak 1 h), restore rehearsal, E2E-001/033/035 on staging | reports attached to `docs/` |
-| E10-S9 (optional, later) ISOLATED tenants | orchestrator for DB create + Secrets Manager + migrations (PD-8) | — |
+| E10-S1 P1–P2 | wildcard DNS + TLS; nginx serving `app/dist` and proxying `/api`, `/v1` with `Host` preserved; port 8080 private; swagger blocked | Dockerfile, nginx template and production Compose bundle committed; real DNS/TLS deployment NOT RUN |
+| E10-S2 P3 | `axios.ts` same-origin in prod | Production uses same-origin `/api`; fixed `VITE_API_BASE_URL` ignored; code committed |
+| E10-S3 P4–P5 | `tenant-host-suffix`, `platform-host-label`, no wildcard CORS, prod properties without defaults | Required env properties and hostname resolver committed; production startup not exercised |
+| E10-S4 P6–P7 | reserved subdomains (E1-S1); Keycloak redirect URIs from config; existing realms migrated | Reserved labels remain enforced; redirect allowlist/reconciliation and one-time realm migration script committed; not run against production |
+| E10-S5 P11–P12 | admin client-credentials service account with realm-scoped `manage-users`; separate identity-events client | Realm-scoped token path, provisioning representation and bootstrap script committed; production roles/secrets not provisioned |
+| E10-S6 Object storage | `S3FileStorage` implementing `FileStorage` (LocalStack in dev); exports, logos, uploads | S3 implementation, LocalStack bucket bootstrap, unit and LocalStack IT added; CI execution pending |
+| E10-S7 Backup agent | E6-S3 in prod (RDS snapshots / pg_dump to S3) | CronJob schedule template added; BLOCKED until A6 publishes production-capable image/contract; current A6 script is dev-only |
+| E10-S8 Verification | pen test, load test (10× peak 1 h), restore rehearsal, E2E-001/033/035 on staging | Security/load/restore plan and evidence template committed; all staging execution NOT RUN |
+| E10-S9 (optional, later) ISOLATED tenants | orchestrator for DB create + Secrets Manager + migrations (PD-8) | Excluded from A8 |
 
 ---
 
 ## 13. Epic E11 — Tests and evidence
 
 - **Action tests:** keep `PlatformActionTest` as the ACT-* mapping; add ALLOW/DENY/SCOPE/GUARD for every new endpoint (billing cycle, approval, plan-change, escalation, export decision, delegation, rbac report, support session, provisioning retry, branding).
-- **Integration (`*IT`, real stack):** `SupportSessionIT`, `TenantProvisioningIT`, `ExportJobIT`, `PurgeJobIT`, `TokenHostMismatchIT`. Add Failsafe to `api/pom.xml` so `verify -Pit` runs them in CI with the Postgres + Keycloak services.
+- **Integration (`*IT`, real stack):** existing `SupportSessionIT`, `TokenHostMismatchIT`, `TenantIssuerAuthenticationManagerResolverIT`, and `TenantRoutingDataSourceInstitutionScopeIT`; A8 adds `TenantProvisioningIT` (real Keycloak) and `S3FileStorageIT` (LocalStack). Failsafe is configured so `verify -Pit` runs the suite; CI starts PostgreSQL, Keycloak and LocalStack. `ExportJobIT` and `PurgeJobIT` remain dependent on their owning export/purge implementations and are not represented as completed by A8.
 - **SQL:** `34…38_v41_*.sql` each with `r` rollback and `t` tests; `run_all.sh` extended; DB test for the `edu_purge` role.
 - **Frontend:** vitest per new screen (loading/empty/error/denied/read-only), MSW handlers generated from the Java DTOs.
-- **E2E:** Playwright suite `app/e2e/platform/` covering E2E-001 (onboard → activate), E2E-033 (support session), E2E-035 (standalone go-live), plus "DPO decides deletion", "Billing cycle to paid". Runs against `dev-up.ps1` stack.
+- **E2E:** Playwright suite `app/e2e/platform/` covers E2E-001 (onboard → activate), E2E-033 (support session), E2E-035 (standalone go-live), DPO decision on a ready deletion request, billing cycle to paid, and one landing-page check per platform role. Run against an isolated `dev-up.ps1`/staging stack with the documented test tokens and ready fixtures; the GitHub job is gated on a self-hosted `edu360-e2e` runner.
 - **Evidence:** every story's PR links the test run; `PHASE1_PROGRESS_CHECKLIST.md` Platform rows get a *Verified* column fed only by passing E2E.
 
 ---
