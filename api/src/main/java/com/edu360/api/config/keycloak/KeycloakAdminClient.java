@@ -185,7 +185,7 @@ public class KeycloakAdminClient {
                 "enabled", true,
                 "serviceAccountClientId", properties.getAdminClientId(),
                 "clientRoles", Map.of("realm-management",
-                        List.of("manage-users", "view-users", "query-users", "view-realm")));
+                        List.of("manage-users", "view-users", "query-users", "view-realm", "manage-clients")));
     }
 
     @SuppressWarnings("unchecked")
