@@ -706,6 +706,10 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
                     "Dedicated-database tenant isolation is not available; use SHARED isolation.");
         }
         String normalizedSubdomain = request.getSubdomain().toLowerCase().trim();
+        if (!normalizedSubdomain.matches("^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "SUBDOMAIN_INVALID",
+                    "The subdomain must be 3-63 lowercase letters, numbers, or hyphens, and cannot start or end with a hyphen.");
+        }
 
         // 1. Reject platform-owned labels on both the current and legacy creation paths.
         if (RESERVED_SUBDOMAINS.contains(normalizedSubdomain)) {
