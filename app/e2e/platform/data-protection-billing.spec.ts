@@ -20,7 +20,7 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
       waiveRetentionWait: false,
     }, {
       headers: {
-        "Idempotency-Key": crypto.randomUUID(),
+        "Idempotency-Key": randomUUID(),
         ...(deletion.rowVersion ? { "If-Match": `"${deletion.rowVersion}"` } : {}),
       },
     });
