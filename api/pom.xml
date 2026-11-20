@@ -102,6 +102,11 @@
 			<artifactId>secretsmanager</artifactId>
 			<version>2.29.52</version>
 		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.29.52</version>
+		</dependency>
 
 		<!-- Testcontainers - integration tests run against a real Postgres with the committed sql/ bundle
 		     applied, never H2 (the V4.0 schema's RLS/GUC behaviour has no H2 equivalent). -->
@@ -168,7 +173,39 @@
 					<argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.17.8/byte-buddy-agent-1.17.8.jar -XX:+EnableDynamicAgentLoading</argLine>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>3.5.2</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<includes>
+						<include>**/*IT.java</include>
+					</includes>
+					<systemPropertyVariables>
+						<spring.profiles.active>it</spring.profiles.active>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
+
+
+	<profiles>
+		<profile>
+			<id>it</id>
+			<properties>
+				<maven.test.skip>false</maven.test.skip>
+				<skipITs>false</skipITs>
+			</properties>
+		</profile>
+	</profiles>
 
 </project>
