@@ -74,7 +74,7 @@ public class LoginTenantResolver {
     // and what is left must be a single, non-empty label: "x.abc" or "" is never a tenant.
     private String stripLocalDevSuffix(String host) {
         String lowerHost = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
-        return keycloakProperties.getLocalDevHostSuffixes().stream()
+        return keycloakProperties.getTenantHostSuffixes().stream()
                 .sorted(java.util.Comparator.comparingInt(String::length).reversed())
                 .filter(lowerHost::endsWith)
                 .map(suffix -> lowerHost.substring(0, lowerHost.length() - suffix.length()))
