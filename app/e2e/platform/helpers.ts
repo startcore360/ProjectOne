@@ -12,8 +12,8 @@ export function requiredToken(name: string): string {
 
 export async function apiFor(hostLabel: string, token: string): Promise<APIRequestContext> {
   return request.newContext({
-    baseURL: `http://${hostLabel}.edu360.localhost:${apiPort}`,
-    extraHTTPHeaders: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    baseURL: `http://127.0.0.1:${apiPort}`,
+    extraHTTPHeaders: { Authorization: `Bearer ${token}`, Accept: "application/json", Host: `${hostLabel}.edu360.localhost` },
     ignoreHTTPSErrors: true,
   });
 }
