@@ -88,7 +88,7 @@ class KeycloakAdminClientTest {
 
         server.expect(requestTo("http://kc.test/realms/" + REALM + "/protocol/openid-connect/token"))
                 .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess("{\\"access_token\\":\\"realm-admin-token\\"}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("{\"access_token\":\"realm-admin-token\"}", MediaType.APPLICATION_JSON));
         server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/users"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.CREATED)
@@ -112,7 +112,7 @@ class KeycloakAdminClientTest {
         String profileUrl = "http://kc.test/admin/realms/" + REALM + "/users/profile";
 
         server.expect(requestTo("http://kc.test/realms/master/protocol/openid-connect/token"))
-                .andRespond(withSuccess("{\\"access_token\\":\\"master-create-realm-token\\"}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("{\"access_token\":\"master-create-realm-token\"}", MediaType.APPLICATION_JSON));
         server.expect(requestTo("http://kc.test/admin/realms"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.clients[0].clientId").value("edu360-admin-cli"))
@@ -121,10 +121,10 @@ class KeycloakAdminClientTest {
                 .andExpect(jsonPath("$.users[0].clientRoles['realm-management']").isArray())
                 .andRespond(withStatus(HttpStatus.CREATED));
         server.expect(requestTo("http://kc.test/realms/" + REALM + "/protocol/openid-connect/token"))
-                .andRespond(withSuccess("{\\"access_token\\":\\"tenant-admin-token\\"}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("{\"access_token\":\"tenant-admin-token\"}", MediaType.APPLICATION_JSON));
         server.expect(requestTo(profileUrl))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess("{\\"attributes\\":[]}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("{\"attributes\":[]}", MediaType.APPLICATION_JSON));
         server.expect(requestTo(profileUrl))
                 .andExpect(method(HttpMethod.PUT))
                 .andRespond(withSuccess());
@@ -133,7 +133,7 @@ class KeycloakAdminClientTest {
                 .andRespond(withStatus(HttpStatus.CREATED));
         server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/clients?clientId=edu360-frontend"))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess("[{\\"id\\":\\"frontend-client-id\\",\\"clientId\\":\\"edu360-frontend\\"}]",
+                .andRespond(withSuccess("[{\"id\":\"frontend-client-id\",\"clientId\":\"edu360-frontend\"}]",
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/clients/frontend-client-id"))
                 .andExpect(method(HttpMethod.PUT))
