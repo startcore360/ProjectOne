@@ -35,7 +35,7 @@ export type CreatedTenant = {
 };
 
 export async function createTenant(api: APIRequestContext, kind: "UNIVERSITY_GROUP" | "STANDALONE_SCHOOL" | "STANDALONE_COLLEGE" = "STANDALONE_SCHOOL"): Promise<CreatedTenant> {
-  const plansResponse = await billingApi.get("/api/platform/plans");
+  const plansResponse = await api.get("/api/platform/plans");
   const plans = await json<Array<{ planId: string; priceAmount: number; currencyCode: string; status: string }>>(plansResponse);
   const plan = plans.find((item) => item.status === "ACTIVE") ?? plans[0];
   expect(plan, "A seeded active plan is required for tenant provisioning.").toBeTruthy();
@@ -64,7 +64,7 @@ export async function createTenant(api: APIRequestContext, kind: "UNIVERSITY_GRO
 }
 
 export async function makeInvoicePaid(billingApi: APIRequestContext, ownerApi: APIRequestContext, tenantId: string): Promise<string> {
-  const plansResponse = await api.get("/api/platform/plans");
+  const plansResponse = await billingApi.get("/api/platform/plans");
   const plans = await json<Array<{ planId: string; priceAmount: number; currencyCode: string }>>(plansResponse);
   const tenantsResponse = await billingApi.get("/api/platform/tenants?page=0&size=100");
   const tenants = await json<{ items: Array<{ tenantId: string; planId: string }> }>(tenantsResponse);
