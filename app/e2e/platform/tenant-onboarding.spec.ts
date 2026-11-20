@@ -6,7 +6,7 @@ test("E2E-001: onboard a tenant, pay its first invoice and activate it", async (
   const token = requiredToken("EDU360_E2E_PRODUCT_OWNER_TOKEN");
   const api = await apiFor("platform", token);
   try {
-    const tenant = await createTenant(api, "UNIVERSITY_GROUP" as never);
+    const tenant = await createTenant(api, "UNIVERSITY_GROUP");
     expect(tenant.firstAdminTemporaryPassword).toBeTruthy();
     await makeInvoicePaid(api, tenant.tenantId);
     await activateTenant(api, tenant);
@@ -25,7 +25,7 @@ test("E2E-035: standalone college reaches ACTIVE only after its invoice is paid"
   const api = await apiFor("platform", token);
   try {
     const tenant = await createTenant(api, "STANDALONE_COLLEGE");
-    const invoicesBeforePayment = await api.get(`/platform/invoices?tenantId=${tenant.tenantId}`);
+    const invoicesBeforePayment = await api.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
     const existing = await json<Array<{ status: string }>>(invoicesBeforePayment);
     expect(existing.every((invoice) => invoice.status !== "PAID")).toBeTruthy();
 
