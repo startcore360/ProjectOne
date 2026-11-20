@@ -11,11 +11,19 @@ test("DPO decides a deletion request only after export and retention readiness",
   const api = await apiFor("platform", token);
   try {
     const requestId = process.env.EDU360_E2E_DPO_READY_REQUEST_ID!;
-    const decision = await api.post(`/api/platform/deletion-requests/${requestId}/decision`, {
-      decision: "APPROVED",
-      remark: "A8 E2E DPO approval on an isolated, export-ready test tenant.",
-    }, { headers: { "Idempotency-Key": randomUUID() } });
-    const result = await json<{ status: string }>(decision);
+    const current = await json<{ status: string }>(
+      await api.get(`/api/platform/deletion-requests/${requestId}`),
+    );
+    if (current.status !== "APPROVED") {
+      expect(current.status).toBe("PENDING_DPO");
+      await json(await api.post(`/api/platform/deletion-requests/${requestId}/decision`, {
+        decision: "APPROVED",
+        remark: "A8 E2E DPO approval on an isolated, export-ready test tenant.",
+      }, { headers: { "Idempotency-Key": randomUUID() } }));
+    }
+    const result = await json<{ status: string }>(
+      await api.get(`/api/platform/deletion-requests/${requestId}`),
+    );
     expect(result.status).toBe("APPROVED");
 
     await openPlatformPage(page, token, "/platform/data-protection");
