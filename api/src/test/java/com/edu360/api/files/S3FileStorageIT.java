@@ -18,17 +18,18 @@ class S3FileStorageIT {
                 "Set LOCALSTACK_ENDPOINT to run the S3/LocalStack integration test.");
         String bucket = System.getenv().getOrDefault("S3_FILE_BUCKET", "edu360-files");
         String region = System.getenv().getOrDefault("S3_REGION", "ap-south-1");
-        S3FileStorage storage = new S3FileStorage(bucket, region, endpoint, "test", "test");
-        UUID tenantId = UUID.randomUUID();
-        UUID fileId = UUID.randomUUID();
-        byte[] payload = "EDU360 S3 integration test".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        try (S3FileStorage storage = new S3FileStorage(bucket, region, endpoint, "test", "test")) {
+            UUID tenantId = UUID.randomUUID();
+            UUID fileId = UUID.randomUUID();
+            byte[] payload = "EDU360 S3 integration test".getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
-        String key = storage.store(tenantId, fileId, new ByteArrayInputStream(payload));
-        assertThat(key).isEqualTo("tenants/" + tenantId + "/" + fileId);
-        assertThat(storage.read(key)).containsExactly(payload);
+            String key = storage.store(tenantId, fileId, new ByteArrayInputStream(payload));
+            assertThat(key).isEqualTo("tenants/" + tenantId + "/" + fileId);
+            assertThat(storage.read(key)).containsExactly(payload);
 
-        storage.delete(key);
-        assertThatThrownByRead(storage, key);
+            storage.delete(key);
+            assertThatThrownByRead(storage, key);
+        }
     }
 
     private static void assertThatThrownByRead(S3FileStorage storage, String key) {
