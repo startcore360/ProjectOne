@@ -8,7 +8,7 @@ server {
 
 server {
     listen 80;
-    server_name ~^(?<tenant>[a-z0-9][a-z0-9-]{1,61}[a-z0-9])\.${EDU360_DOMAIN}$;
+    server_name ~^([a-z0-9][a-z0-9-]{1,61}[a-z0-9])\.${EDU360_DOMAIN}$;
     return 308 https://$host$request_uri;
 }
 
@@ -23,7 +23,7 @@ server {
 server {
     listen 443 ssl;
     http2 on;
-    server_name ~^(?<tenant>[a-z0-9][a-z0-9-]{1,61}[a-z0-9])\.${EDU360_DOMAIN}$;
+    server_name ~^([a-z0-9][a-z0-9-]{1,61}[a-z0-9])\.${EDU360_DOMAIN}$;
 
     ssl_certificate /etc/nginx/tls/fullchain.pem;
     ssl_certificate_key /etc/nginx/tls/privkey.pem;
