@@ -1,11 +1,26 @@
 # EDU 360: Production Tenant Routing
 
-**Status: not implemented. Required before the first production deployment.**
+**Status: application configuration and code are implemented on sprint-2-development; external DNS/TLS/Keycloak/AWS deployment validation remains NOT RUN. Required before the first production deployment.**
 **Written:** 2026-11-07, from reading the code. None of this has been run in a production setup.
 
 **Goal:** creating a tenant should need no frontend change, no DNS change and no redeploy. The tenant opens at `<subdomain>.edu360.com` straight away.
 
 `edu360.com` is a placeholder in this document. Replace it with the real domain, which hasn't been chosen.
+
+**Implementation status (code/config only; not evidence of infrastructure readiness):**
+
+| Item | Repository implementation | External validation |
+|---|---|---|
+| P1 wildcard DNS / TLS | nginx production template and Compose deployment added under `docker/production/` | NOT RUN — real domain, DNS and certificate not supplied |
+| P2 same-origin reverse proxy | nginx forwards original `Host` and X-Forwarded headers; API 8080 is not published | NOT RUN — deployment not provisioned |
+| P3 same-origin API | production Axios uses `window.location.origin + /api`; production ignores fixed VITE_API_BASE_URL | Code committed |
+| P4 tenant suffix | `app.keycloak.tenant-host-suffix` and `TENANT_HOST_SUFFIX`; resolver strips configured suffix | Code committed; domain not selected |
+| P5 CORS | production requires exact `CORS_ALLOWED_ORIGIN`; no wildcard patterns configured | Code committed |
+| P6 reserved subdomains | existing tenant provisioning rejects `platform`, `www`, `api`, `admin`, `auth`, `keycloak`, `mail`, `static`, `status` | Existing code; no new domain policy approved |
+| P7 Keycloak redirects | configurable HTTPS allowlist; realm provisioning reconciles existing client redirect URIs | Code committed; run one-time production setup |
+| P10 token/host binding | existing filter fails closed; new unit tests cover mismatch and match | Tests added; execution pending |
+| P11 admin service account | master create/delete-realm client and realm-local manage-users clients | Bootstrap script added; not run |
+| P12 identity events client | separate platform realm service account with `identity-events:write` | Bootstrap script added; not run |
 
 ## Why this matters
 
@@ -253,3 +268,17 @@ Production Keycloak must include the EDU 360 extension, or two-step-role users f
 - **Keep versions in step:** the extension is built against Keycloak 26.0.8 (`keycloak.version` in its `pom.xml`). Rebuild it whenever Keycloak is upgraded. It uses an SPI that Keycloak marks internal, so re-test after every upgrade.
 - **Admin access:** the API calls the extension with its Keycloak admin token. With a client-credentials admin client in production, that service account needs `manage-users` on each tenant realm's management client in master (or master `admin`).
 - [ ] Check: a two-step-role user with no authenticator sees the QR code inside EDU 360 and can sign in afterwards.
+## P11. Realm-scoped Keycloak admin service accounts
+
+Production uses client-credentials tokens, not the master bootstrap password. Run `docker/keycloak/configure-production-clients.ps1` as documented in `docs/KEYCLOAK_PRODUCTION_SETUP.md`. The master-realm service account is limited to realm create/delete and view/query roles; each tenant realm gets a separate service-account user with manage-users/view-users/query-users/view-realm roles. The application obtains realm-local tokens for user operations.
+
+## P12. Identity events service account
+
+The production setup script also configures a distinct `edu360-identity-events` client in `edu360-platform` and maps only the `identity-events:write` role to its service account. Its secret is separate from the admin client secret. The script must be run before production event delivery is enabled.
+
+## Deployment and verification references
+
+- `docker/production/README.md`: nginx, API container, DNS/TLS, S3 and environment requirements.
+- `docs/KEYCLOAK_PRODUCTION_SETUP.md`: realm-scoped admin and identity-events service accounts.
+- `docs/PRODUCTION_VERIFICATION_PLAN.md`: security, 10× peak load, and restore verification protocol.
+- `docs/PRODUCTION_BACKUP_RUNBOOK.md`: A6 backup-agent scheduling handoff. The current A6 agent is development-only, so the production CronJob is a template and must not be deployed until A6 publishes its production image and contract.
