@@ -10,12 +10,12 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
   const dpo = await apiFor("platform", requiredToken("EDU360_E2E_DPO_TOKEN"));
   try {
     const tenant = await createTenant(owner);
-    const requestResponse = await owner.post("/platform/deletion-requests", {
+    const requestResponse = await owner.post("/api/platform/deletion-requests", {
       tenantId: tenant.tenantId,
       origin: "PRODUCT_OWNER",
     }, { headers: { "Idempotency-Key": crypto.randomUUID() } });
     const deletion = await json<{ deletionRequestId: string; rowVersion?: number }>(requestResponse);
-    const confirmResponse = await owner.post(`/platform/deletion-requests/${deletion.deletionRequestId}/confirm`, {
+    const confirmResponse = await owner.post(`/api/platform/deletion-requests/${deletion.deletionRequestId}/confirm`, {
       waiveRetentionWait: false,
     }, {
       headers: {
@@ -25,7 +25,7 @@ test("DPO decides a deletion request after Product Owner confirmation", async ({
     });
     await json(confirmResponse);
 
-    const decision = await dpo.post(`/platform/deletion-requests/${deletion.deletionRequestId}/decision`, {
+    const decision = await dpo.post(`/api/platform/deletion-requests/${deletion.deletionRequestId}/decision`, {
       decision: "APPROVED",
       remark: "A8 E2E DPO approval; purge remains deferred until retention expiry.",
     }, { headers: { "Idempotency-Key": crypto.randomUUID() } });
@@ -47,7 +47,7 @@ test("Billing cycle creates a payable invoice and payment moves it to PAID", asy
   try {
     const tenant = await createTenant(api);
     const invoiceId = await makeInvoicePaid(api, tenant.tenantId);
-    const response = await api.get(`/platform/invoices?tenantId=${tenant.tenantId}`);
+    const response = await api.get(`/api/platform/invoices?tenantId=${tenant.tenantId}`);
     const invoices = await json<Array<{ invoiceId: string; status: string }>>(response);
     expect(invoices.find((item) => item.invoiceId === invoiceId)?.status).toBe("PAID");
 
