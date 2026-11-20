@@ -10,8 +10,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -39,14 +40,19 @@ public class S3FileStorage implements FileStorage {
     public S3FileStorage(
             @Value("${app.file-storage.s3.bucket}") String bucket,
             @Value("${app.file-storage.s3.region:ap-south-1}") String region,
-            @Value("${app.file-storage.s3.endpoint:}") String endpoint) {
+            @Value("${app.file-storage.s3.endpoint:}") String endpoint,
+            @Value("${app.file-storage.s3.access-key:}") String accessKey,
+            @Value("${app.file-storage.s3.secret-key:}") String secretKey) {
         if (bucket == null || bucket.isBlank()) {
             throw new IllegalStateException("app.file-storage.s3.bucket must be configured when S3 storage is enabled.");
         }
         this.bucket = bucket;
         var builder = S3Client.builder()
                 .region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.create());
+                .credentialsProvider(accessKey != null && !accessKey.isBlank()
+                        && secretKey != null && !secretKey.isBlank()
+                        ? StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
+                        : DefaultCredentialsProvider.create());
         if (endpoint != null && !endpoint.isBlank()) {
             builder.endpointOverride(java.net.URI.create(endpoint))
                     .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build());
