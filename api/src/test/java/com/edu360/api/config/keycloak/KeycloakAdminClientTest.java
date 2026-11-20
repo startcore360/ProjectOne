@@ -17,10 +17,9 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 /**
- * Exercises the real HTTP calls KeycloakAdminClient makes against a mocked Keycloak server -
- * now authenticating once as the master-realm admin (see KeycloakProperties' class comment for
- * why), then calling the TARGET realm's admin endpoints, so both URLs stay covered without
- * needing a live Keycloak instance.
+ * Exercises the real HTTP calls KeycloakAdminClient makes against a mocked Keycloak server:
+ * master-realm credentials for realm lifecycle and realm-scoped service-account credentials
+ * for user/client administration. A separate Failsafe test exercises the live Keycloak service.
  */
 class KeycloakAdminClientTest {
 
