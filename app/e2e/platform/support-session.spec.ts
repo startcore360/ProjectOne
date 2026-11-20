@@ -18,7 +18,7 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
       priority: "NORMAL",
       category: "ACCESS",
     });
-    const ticket = await json<{ supportTicketId: string }>(ticketResponse);
+    const ticket = await json<{ supportTicketId: string; ticketNumber: string }>(ticketResponse);
 
     const grantResponse = await tenantApi.post(`/api/tenants/${tenantId}/support-access-grants`, {
       ticketId: ticket.supportTicketId,
@@ -35,11 +35,11 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
     expect(new Date(session.expiresAt).getTime()).toBeGreaterThan(Date.now());
 
     const tenantHost = process.env.EDU360_E2E_TENANT_SUBDOMAIN ?? "abc";
-    const tenantOrigin = `http://${tenantHost}.edu360.localhost:5173`;
+    const tenantOrigin = session.tenantLoginAddress || `http://${tenantHost}.edu360.localhost:5173`;
     const fragment = new URLSearchParams({
       support_session: session.token,
       expires_at: session.expiresAt,
-      ticket_number: ticket.supportTicketId,
+      ticket_number: ticket.ticketNumber,
       platform_origin: process.env.EDU360_E2E_PLATFORM_URL ?? "http://platform.edu360.localhost:5173",
     });
     await page.goto(`${tenantOrigin}/dashboard#${fragment.toString()}`);
