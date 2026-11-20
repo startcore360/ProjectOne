@@ -135,10 +135,7 @@ public class KeycloakAdminClient {
                     // (app.keycloak.frontend-redirect-uris=${KEYCLOAK_FRONTEND_REDIRECT_URIS}), e.g.
                     // https://*.edu360.com/* - HTTPS only, the real domain covered by the wildcard
                     // DNS record and certificate. Verified custom school domains are added on top.
-                    "redirectUris", List.of(
-                            "http://*.edu360.localhost:5173/*",
-                            "http://*.edu360.local:5173/*",
-                            "http://localhost:5173/*"));
+                    "redirectUris", properties.getFrontendRedirectUris());
             restClient.post()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients")
                     .header("Authorization", "Bearer " + adminToken)
