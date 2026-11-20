@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PreDestroy;
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -111,6 +113,11 @@ public class S3FileStorage implements FileStorage {
         } catch (RuntimeException ex) {
             throw new S3FileStorageException("Could not delete file from object storage.", ex);
         }
+    }
+
+    @PreDestroy
+    public void close() {
+        s3.close();
     }
 
     private static String validateKey(String storageKey) {
