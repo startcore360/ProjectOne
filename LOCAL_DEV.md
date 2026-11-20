@@ -2,7 +2,7 @@
 
 How to run the full stack locally: Postgres (with the approved V4.0 schema + RLS), three
 Keycloak realms (two tenants + platform), LocalStack (Secrets Manager stand-in for `ISOLATED`
-tenants), the Spring Boot backend, and the Vite frontend.
+tenants plus the development S3 object-storage bucket), the Spring Boot backend, and the Vite frontend.
 
 ## Prerequisites
 
@@ -59,6 +59,12 @@ startup if missing (password logged to the backend console on first seed — gre
 "Seeded default dev"). There is no seeded tenant user by default; create one via
 Keycloak's admin API (`http://127.0.0.1:8081`, master realm, `kcadmin`/`kcadmin`) plus matching
 `app.user_account`/`app.user_identity_link` rows if you need one for testing.
+
+## LocalStack object storage
+
+The dev profile selects `S3FileStorage` and connects to LocalStack at `http://localhost:4566`. The `edu360-files` bucket is created automatically by the LocalStack ready hook when the service starts. The hook is packaged executable in the LocalStack image; no manual bucket creation is needed. Development credentials are test-only and must never be copied into production.
+
+Support-session hand-off URLs use `http://<subdomain>.edu360.localhost:5173` and a development-only signing key. Production requires its own `SUPPORT_SESSION_SIGNING_SECRET` and apex domain configuration.
 
 ## Known quirks (found the hard way — save yourself the debugging time)
 
