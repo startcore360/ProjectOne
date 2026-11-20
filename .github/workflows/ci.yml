@@ -291,6 +291,9 @@ jobs:
       - name: Run Failsafe integration suite
         env:
           LOCALSTACK_ENDPOINT: http://127.0.0.1:4566
+          KEYCLOAK_BASE_URL: http://127.0.0.1:8081
+          KEYCLOAK_MASTER_ADMIN_USERNAME: kcadmin
+          KEYCLOAK_MASTER_ADMIN_PASSWORD: kcadmin
           S3_FILE_BUCKET: edu360-files
           S3_REGION: ap-south-1
           AWS_ACCESS_KEY_ID: test
