@@ -15,8 +15,8 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
     const ticketResponse = await tenantApi.post(`/api/tenants/${tenantId}/support-tickets`, {
       subject: `A8 support test ${Date.now()}`,
       description: "Automated E2E validation of ticket-bound support access.",
-      priority: "NORMAL",
-      category: "ACCESS",
+      priority: "MEDIUM",
+      category: "OTHER",
     });
     const ticket = await json<{ supportTicketId: string; ticketNumber: string }>(ticketResponse);
 
@@ -42,7 +42,7 @@ test("E2E-033: tenant grants ticket-bound support access and platform opens a re
       ticket_number: ticket.ticketNumber,
       platform_origin: process.env.EDU360_E2E_PLATFORM_URL ?? "http://platform.edu360.localhost:5173",
     });
-    await page.goto(`${tenantOrigin}/dashboard#${fragment.toString()}`);
+    await page.goto(`${tenantOrigin}/support#${fragment.toString()}`);
     await expect(page.locator("#root")).toBeVisible();
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem("edu360.support-session.token")))
       .toBe(session.token);
