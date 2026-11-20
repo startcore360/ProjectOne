@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { Provider } from "react-redux";
@@ -89,10 +89,89 @@ describe("Sprint 1 platform screens", () => {
       return Promise.resolve({ data: { items: [] } });
     });
     renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>);
-    expect(screen.getByRole("heading", { name: "Platform overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("Greenwood Public School")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Go-live and trials" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Platform activity" })).toBeInTheDocument();
     });
+  });
+
+
+
+  it("shows the Platform Admin dashboard only for Platform Admin and uses its existing read endpoints", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes("/platform/tenants")) {
+        return Promise.resolve({ data: {
+          items: [{ tenantId: "tenant-pa-1", state: "TRIAL" }],
+          page: 0, size: 200, totalElements: 1, totalPages: 1,
+        } });
+      }
+      if (url.includes("/provisioning")) {
+        return Promise.resolve({ data: { overallStatus: "DONE", steps: [] } });
+      }
+      if (url.includes("/support-tickets")) return Promise.resolve({ data: [] });
+      if (url.includes("/backup-status")) {
+        return Promise.resolve({ data: { wiredToRealBackupSystem: true, note: "", tenants: [{ tenantId: "tenant-pa-1", stale: true }] } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<MemoryRouter><PlatformOverviewPage /></MemoryRouter>, "PLATFORM_ADMIN");
+
+    expect(screen.getByRole("heading", { name: "Platform Admin dashboard" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Tenants pending activation")).toBeInTheDocument());
+    expect(screen.getByText("Failed setups")).toBeInTheDocument();
+    expect(screen.getByText("Open tickets")).toBeInTheDocument();
+    expect(screen.getByText("Backup alerts")).toBeInTheDocument();
+    expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
+    expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining("/platform/backup-status"));
+  });
+
+  it("loads only billing dashboard sources for a Billing Manager", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url === "/platform/reports/REVENUE") {
+        return Promise.resolve({ data: { currency: "INR", metrics: { totalCollectionsThisMonth: 0, renewalsDueIn60Days: 0 } } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+    renderWithStore(<PlatformOverviewPage />, "BILLING_MANAGER");
+
+    expect(screen.getByRole("heading", { name: "Billing Manager dashboard" })).toBeInTheDocument();
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalledWith("/platform/invoices/overdue"));
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/invoices");
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/reports/REVENUE");
+    expect(mockedApi.get).not.toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/platform-users");
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
+  });
+
+  it("renders the DPO workspace without calling unrelated admin endpoints", async () => {
+    renderWithStore(<PlatformOverviewPage />, "DATA_PROTECTION_OFFICER");
+    expect(await screen.findByText(/Data protection workspace/)).toBeInTheDocument();
+    expect(mockedApi.get).not.toHaveBeenCalledWith(expect.stringContaining("/platform/tenants"));
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/platform-users");
+    expect(mockedApi.get).not.toHaveBeenCalledWith("/platform/audit-logs");
+  });
+
+
+  it("hides usage and compliance actions from a Billing Manager", async () => {
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes("/platform/tenants")) {
+        return Promise.resolve({ data: { items: [{
+          tenantId: "TEN-BILL", tenantName: "Billing School", tenantType: "STANDALONE_SCHOOL",
+          planName: "Standard", state: "ACTIVE", isolationMode: "SHARED", subdomain: "billing",
+          timeZone: "Asia/Kolkata", dataRegion: "IN", keycloakRealm: "billing-realm",
+          createdAt: "2026-11-01T00:00:00Z",
+        }] } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<TenantsPage />, "BILLING_MANAGER");
+    expect(await screen.findByText("Billing School")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Tenant actions|⋯/i }));
+    expect(screen.queryByRole("menuitem", { name: "Usage" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Compliance" })).not.toBeInTheDocument();
   });
 
   it("filters tenants by search text", async () => {
@@ -142,6 +221,31 @@ describe("Sprint 1 platform screens", () => {
     expect(screen.queryByText("Greenwood Public School")).not.toBeInTheDocument();
   });
 
+
+  it("shows suspension and archival timestamps in the tenant register", async () => {
+    const suspendedAt = "2026-11-02T10:30:00Z";
+    const archivedAt = "2026-11-03T11:45:00Z";
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url.includes("/platform/tenants")) {
+        return Promise.resolve({ data: { items: [{
+          tenantId: "TEN-ARCH", tenantName: "Archived School", tenantType: "STANDALONE_SCHOOL",
+          planName: "Standard", state: "ARCHIVED", isolationMode: "SHARED", subdomain: "archived",
+          timeZone: "Asia/Kolkata", dataRegion: "IN", keycloakRealm: "archived-realm",
+          createdAt: "2026-11-01T00:00:00Z", suspendedAt, archivedAt,
+        }] } });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithStore(<TenantsPage />);
+    expect(await screen.findByText("Archived School")).toBeInTheDocument();
+    // "Archived" is also a status-filter option, so check it inside the tenant's own row.
+    const row = screen.getByText("Archived School").closest("tr") as HTMLElement;
+    expect(within(row).getByText("Archived")).toBeInTheDocument();
+    expect(within(row).getByText(new Date(suspendedAt).toLocaleString())).toBeInTheDocument();
+    expect(within(row).getByText(new Date(archivedAt).toLocaleString())).toBeInTheDocument();
+  });
+
   it("opens the create trial tenant modal with statutory privacy note and fields", () => {
     renderWithStore(<TenantsPage />);
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
@@ -152,7 +256,7 @@ describe("Sprint 1 platform screens", () => {
   });
 
   it("submits new trial tenant to platform tenants API", async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockImplementation((url: string) => Promise.resolve({ data: url === "/platform/plans" ? [{ planId: "plan-1", planName: "Standard trial", pricingType: "PER_STUDENT_YEAR", priceAmount: 499, currencyCode: "INR", status: "ACTIVE" }] : [] }));
     mockedApi.post.mockResolvedValue({
       data: {
         tenantId: "ten-99",
@@ -164,6 +268,7 @@ describe("Sprint 1 platform screens", () => {
 
     renderWithStore(<TenantsPage />);
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
+    await screen.findByRole("option", { name: /Standard trial/ });
 
     fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Doon World Academy" } });
     fireEvent.change(screen.getByLabelText(/Assigned subdomain/i), { target: { value: "doon-world" } });
@@ -171,6 +276,9 @@ describe("Sprint 1 platform screens", () => {
     fireEvent.change(screen.getByLabelText(/Primary administrator email/i), { target: { value: "principal@doon.edu" } });
     fireEvent.change(screen.getByLabelText(/Primary contact mobile/i), { target: { value: "+919876543210" } });
     fireEvent.change(screen.getByLabelText(/Aadhaar \/ National ID/i), { target: { value: "7891" } });
+    // PD-9: retention is required at creation, with no default.
+    fireEvent.change(screen.getByLabelText(/Data retention \(months\)/i), { target: { value: "84" } });
+    fireEvent.change(screen.getByLabelText(/Backup retention \(days\)/i), { target: { value: "30" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Submit & create tenant/i }));
 
@@ -181,12 +289,14 @@ describe("Sprint 1 platform screens", () => {
         firstAdminEmail: "principal@doon.edu",
         firstAdminMobile: "+919876543210",
         firstAdminNationalIdLast4: "7891",
-      }));
+        retentionMonths: 84,
+        backupRetentionDays: 30,
+      }), expect.objectContaining({ headers: expect.objectContaining({ "Idempotency-Key": expect.any(String) }) }));
     });
   });
 
   it("shows the first admin's temporary password once after creating a tenant, until dismissed", async () => {
-    mockedApi.get.mockResolvedValue({ data: [] });
+    mockedApi.get.mockImplementation((url: string) => Promise.resolve({ data: url === "/platform/plans" ? [{ planId: "plan-1", planName: "Standard trial", pricingType: "PER_STUDENT_YEAR", priceAmount: 499, currencyCode: "INR", status: "ACTIVE" }] : [] }));
     mockedApi.post.mockResolvedValue({
       data: {
         tenantId: "ten-99",
@@ -200,12 +310,15 @@ describe("Sprint 1 platform screens", () => {
 
     renderWithStore(<TenantsPage />);
     fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
+    await screen.findByRole("option", { name: /Standard trial/ });
     fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Doon World Academy" } });
     fireEvent.change(screen.getByLabelText(/Assigned subdomain/i), { target: { value: "doon-world" } });
     fireEvent.change(screen.getByLabelText(/Primary administrator full name/i), { target: { value: "Anita Roy" } });
     fireEvent.change(screen.getByLabelText(/Primary administrator email/i), { target: { value: "principal@doon.edu" } });
     fireEvent.change(screen.getByLabelText(/Primary contact mobile/i), { target: { value: "+919876543210" } });
     fireEvent.change(screen.getByLabelText(/Aadhaar \/ National ID/i), { target: { value: "7891" } });
+    fireEvent.change(screen.getByLabelText(/Data retention \(months\)/i), { target: { value: "84" } });
+    fireEvent.change(screen.getByLabelText(/Backup retention \(days\)/i), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: /Submit & create tenant/i }));
 
     expect(await screen.findByText("Edu@abc12345!")).toBeInTheDocument();
@@ -230,7 +343,7 @@ describe("Sprint 1 platform screens", () => {
             subdomain: "riverbank",
             timeZone: "Asia/Kolkata",
             dataRegion: "IN",
-            keycloakRealm: "riverbank-realm",
+            keycloakRealm: "riverbank-realm", rowVersion: 7,
             createdAt: "2026-11-01T00:00:00Z",
           },
         ],
@@ -272,7 +385,8 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         "/platform/tenants/TEN-0003/activation",
-        { paymentReference: "PAY-2026-X8841", note: "Verified" }
+        { paymentReference: "PAY-2026-X8841", note: "Verified" },
+        { headers: { "Idempotency-Key": expect.any(String), "If-Match": "\"7\"" } }
       );
     });
   });
@@ -293,6 +407,69 @@ describe("Sprint 1 platform screens", () => {
     renderWithStore(<PlatformUsersPage />);
     expect(screen.getByRole("heading", { name: "Platform users" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Aarav Mehta")).toBeInTheDocument());
+  });
+
+  it("shows recent platform sign-ins as relative days and older ones as dates", async () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9);
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 15);
+    const older = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3, 10);
+    mockedApi.get.mockResolvedValue({
+      data: [
+        {
+          platformUserId: "plt-today",
+          fullName: "Today User",
+          email: "today@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: today.toISOString(),
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          platformUserId: "plt-yesterday",
+          fullName: "Yesterday User",
+          email: "yesterday@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: yesterday.toISOString(),
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          platformUserId: "plt-older",
+          fullName: "Older User",
+          email: "older@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: older.toISOString(),
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          platformUserId: "plt-never",
+          fullName: "Never User",
+          email: "never@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: null,
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+      ],
+    });
+
+    renderWithStore(<PlatformUsersPage />);
+
+    await waitFor(() => expect(screen.getByText("Today User")).toBeInTheDocument());
+    expect(screen.getByText("Today")).toBeInTheDocument();
+    expect(screen.getByText("Yesterday")).toBeInTheDocument();
+    expect(screen.getByText(new Intl.DateTimeFormat("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(older))).toBeInTheDocument();
+    expect(screen.getByText("Never logged in")).toBeInTheDocument();
   });
 
   it("only lets a Product Owner invite a platform user", async () => {
@@ -329,7 +506,8 @@ describe("Sprint 1 platform screens", () => {
         email: "priya.nair@edu360.com",
       }));
     });
-    await waitFor(() => expect(screen.getByText("Temp1234Pass")).toBeInTheDocument());
+    // The one-time password is shown in a read-only, copyable field.
+    await waitFor(() => expect(screen.getByDisplayValue("Temp1234Pass")).toBeInTheDocument());
   });
 
   it("hides tenant lifecycle actions from a Platform Admin", async () => {
@@ -371,9 +549,11 @@ describe("Sprint 1 platform screens", () => {
       return Promise.resolve({ data: [] });
     });
     renderWithStore(<TenantsPage />, "PLATFORM_ADMIN");
-    await waitFor(() => {
-      expect(screen.getAllByRole("button", { name: "Settings" }).length).toBeGreaterThan(0);
-    });
+    // Settings lives in each row's "⋯" menu; a Platform Admin can still open it.
+    await waitFor(() => expect(screen.getByText("Greenwood Public School")).toBeInTheDocument());
+    const row = screen.getByText("Greenwood Public School").closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: /Tenant actions|⋯/i }));
+    expect(within(row).getByRole("menuitem", { name: "Settings" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Suspend" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reactivate" })).not.toBeInTheDocument();
@@ -455,6 +635,29 @@ describe("Sprint 1 platform screens", () => {
     );
   });
 
+  it("lets a Product Owner clear another active platform user's sign-in lockout", async () => {
+    mockedApi.get.mockResolvedValue({
+      data: [
+        { platformUserId: "plt-1", fullName: "Me Myself", email: "me@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" },
+        { platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "BILLING_MANAGER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" },
+      ],
+    });
+    mockedApi.post.mockResolvedValue({ data: undefined });
+    renderWithStore(<PlatformUsersPage />);
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    expect(screen.getAllByRole("button", { name: "Unlock sign-in" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Unlock sign-in" }));
+    expect(screen.getByText(/clears the failed-login lockout only/i)).toBeInTheDocument();
+    const confirmButtons = screen.getAllByRole("button", { name: "Unlock sign-in" });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith("/platform/platform-users/plt-2/unlock");
+      expect(screen.getByText(/Priya Nair's sign-in lockout was cleared/i)).toBeInTheDocument();
+    });
+  });
+
   it("shows the plan catalogue", async () => {
     mockedApi.get.mockResolvedValue({
       data: [
@@ -491,7 +694,8 @@ describe("Sprint 1 platform screens", () => {
       },
     });
 
-    render(<PlansPage />);
+    // The plan form reads the caller's role (price fields are Product Owner only), so it needs the store.
+    renderWithStore(<PlansPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /Add subscription plan/i }));
     expect(screen.getByRole("heading", { name: "Add subscription plan" })).toBeInTheDocument();
@@ -524,7 +728,7 @@ describe("Sprint 1 platform screens", () => {
           subdomain: "greenwood",
           timeZone: "Asia/Kolkata",
           dataRegion: "IN",
-          keycloakRealm: "greenwood-realm",
+          keycloakRealm: "greenwood-realm", rowVersion: 2,
           createdAt: "2026-11-01T00:00:00Z",
         }],
       },
@@ -551,7 +755,8 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith(
         "/platform/tenants/TEN-0001/suspension",
-        { reason: "Statutory compliance audit pending." }
+        { reason: "Statutory compliance audit pending." },
+        { headers: { "Idempotency-Key": expect.any(String), "If-Match": "\"2\"" } }
       );
     });
   });
@@ -600,8 +805,10 @@ describe("Sprint 1 platform screens", () => {
       expect(screen.getByText("Greenwood Public School")).toBeInTheDocument();
     });
 
-    const settingsBtns = screen.getAllByRole("button", { name: /Settings/i });
-    fireEvent.click(settingsBtns[0]);
+    // Settings is in the row's "⋯" menu.
+    const row = screen.getByText("Greenwood Public School").closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: /Tenant actions|⋯/i }));
+    fireEvent.click(within(row).getByRole("menuitem", { name: "Settings" }));
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /Tenant Settings: Greenwood Public School/i })).toBeInTheDocument();
@@ -674,7 +881,8 @@ describe("AuditLogPage (wired to GET /api/platform/audit-logs)", () => {
     mockedApi.get.mockResolvedValue({ data: { items: [], page: 0, size: 100, totalElements: 0, totalPages: 0 } });
     render(<AuditLogPage />);
     await waitFor(() => expect(screen.getByText("No platform audit events recorded yet.")).toBeInTheDocument());
-    expect(mockedApi.get).toHaveBeenCalledWith("/platform/audit-logs", { params: { page: 0, size: 100 } });
+    // The audit log is paged, 25 events per page.
+    expect(mockedApi.get).toHaveBeenCalledWith("/platform/audit-logs", { params: { page: 0, size: 25 } });
   });
 
   it("renders real audit rows when the backend returns them", async () => {
@@ -712,23 +920,26 @@ describe("AuditLogPage (wired to GET /api/platform/audit-logs)", () => {
 });
 
 describe("UsageCountsPage (wired to GET /api/platform/usage-counts)", () => {
-  it("shows real counts and marks the flagged gap as not available", async () => {
+  it("shows real counts including materialized active users", async () => {
     mockedApi.get.mockResolvedValue({
       data: {
         totalTenantCount: 4,
+        tenantsInAnalytics: 3,
+        tenantsOptedOut: 1,
         metrics: [
           { metricCode: "LOGINS", value: 120, asOfDate: "2026-11-04" },
           { metricCode: "ATTENDANCE_MARKED", value: null, asOfDate: null },
+          { metricCode: "ACTIVE_USERS", value: 45, asOfDate: "2026-11-01" },
         ],
-        totalUserCountGap: "Not available: cross-tenant RLS boundary.",
       },
     });
     render(<UsageCountsPage />);
     await waitFor(() => expect(screen.getByText("Logins")).toBeInTheDocument());
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("Not available")).toBeInTheDocument();
-    expect(screen.getByText(/Total user count: not available\./)).toBeInTheDocument();
-    expect(screen.getByText(/cross-tenant RLS boundary\./)).toBeInTheDocument();
+    expect(screen.getByText("Active users")).toBeInTheDocument();
+    expect(screen.getByText("45")).toBeInTheDocument();
+    expect(screen.queryByText(/Total user count: not available/)).not.toBeInTheDocument();
   });
 
   it("shows an error state on failure", async () => {

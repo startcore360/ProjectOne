@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
 
 export interface AcademicSessionOption {
@@ -55,7 +55,7 @@ export function AddMasterEventModal({
       onClose={onClose}
       title="Add Master Calendar Event"
       titleId="add-master-event-title"
-      description="Set semester dates or university holidays [CALENDAR_MASTER_SET, Rule CL-02]."
+      description="Set semester dates, university holidays or exam days [CALENDAR_MASTER_SET, CL-01/CL-02]."
       size="md"
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
@@ -64,7 +64,7 @@ export function AddMasterEventModal({
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
           <label htmlFor="master-event-session-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
             Academic Session
           </label>
@@ -92,7 +92,7 @@ export function AddMasterEventModal({
             />
           )}
         </div>
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
           <label htmlFor="master-event-type-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
             Event Type
           </label>
@@ -104,6 +104,7 @@ export function AddMasterEventModal({
           >
             <option value="SEMESTER_DATES">Semester Dates (SEMESTER_DATES)</option>
             <option value="UNIVERSITY_HOLIDAY">University Holiday (UNIVERSITY_HOLIDAY)</option>
+            <option value="EXAM_DAY">Exam day (EXAM_DAY)</option>
           </select>
         </div>
         <div style={{ marginBottom: "1rem" }}>
@@ -116,12 +117,12 @@ export function AddMasterEventModal({
             placeholder="e.g. Odd Semester 2026 or Diwali Break"
           />
         </div>
-        <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
-          <label className="platform-form-field">
+        <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
+          <label className="app-form-field">
             Start Date
             <input type="date" value={masterEventStart} onChange={(e) => setMasterEventStart(e.target.value)} required />
           </label>
-          <label className="platform-form-field">
+          <label className="app-form-field">
             End Date
             <input type="date" value={masterEventEnd} onChange={(e) => setMasterEventEnd(e.target.value)} required />
           </label>

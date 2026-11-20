@@ -1,4 +1,5 @@
 import type { ReactNode, SelectHTMLAttributes } from "react";
+import { Icon } from "../../components/ui/Icon";
 
 export type SelectOption = {
   value: string | number;
@@ -23,12 +24,14 @@ export default function SelectField({
   error,
   options,
   children,
+  "aria-describedby": callerDescribedBy,
+  "aria-invalid": callerInvalid,
   ...rest
 }: SelectFieldProps) {
   const hasAsterisk = label.includes("*");
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
-  const describedBy = [errorId, hintId, rest["aria-describedby"]].filter(Boolean).join(" ") || undefined;
+  const describedBy = [errorId, hintId, callerDescribedBy].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="eds-field">
@@ -38,9 +41,9 @@ export default function SelectField({
       <select
         id={id}
         required={required}
-        aria-describedby={describedBy}
-        aria-invalid={Boolean(error) || rest["aria-invalid"]}
         {...rest}
+        aria-describedby={describedBy}
+        aria-invalid={Boolean(error) || Boolean(callerInvalid)}
       >
         {options
           ? options.map((opt) => (
@@ -52,13 +55,13 @@ export default function SelectField({
       </select>
       {hint && (
         <p id={hintId} className="eds-field__hint">
-          <span aria-hidden="true">ⓘ</span> {hint}
+          <Icon name="info" size={14} /> {hint}
         </p>
       )}
-      {error && (
-        <p id={errorId} className="eds-field__error" role="alert">
-          {error}
-        </p>
+      {error ? (
+        <p id={errorId} className="eds-field__error" role="alert">{error}</p>
+      ) : (
+        <p className="eds-field__error-placeholder" aria-hidden="true">&nbsp;</p>
       )}
     </div>
   );

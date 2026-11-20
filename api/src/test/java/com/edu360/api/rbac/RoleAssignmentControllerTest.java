@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -23,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
+import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
@@ -511,4 +514,52 @@ class RoleAssignmentControllerTest {
                     assertThat(bre.getErrorCode()).isEqualTo("MX_04_SENSITIVE_ROLE_PROHIBITED");
                 });
     }
+    @Test
+    @DisplayName("C2-2: Department role grants are authorized against the exact institution and department scope")
+    void departmentRoleGrantUsesExactRequestedScope() {
+        UUID departmentId = UUID.randomUUID();
+        AssignRoleRequest request = new AssignRoleRequest(
+                ROLE_DEF_ID, null, ScopeType.DEPARTMENT, INSTITUTION_ID, departmentId, null, null);
+
+        UserAccount targetAccount = mock(UserAccount.class);
+        when(targetAccount.getUserType()).thenReturn(UserType.STAFF);
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, TARGET_USER_ID)))
+                .thenReturn(Optional.of(targetAccount));
+
+        RoleDefinition roleDefinition = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID))
+                .roleCode("OFFICE_STAFF")
+                .roleName("Office Staff")
+                .roleOrigin(RoleOrigin.STANDARD)
+                .roleLevel(RoleLevel.COLLEGE)
+                .status(RoleDefinitionStatus.ACTIVE)
+                .build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID)))
+                .thenReturn(Optional.of(roleDefinition));
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, TARGET_USER_ID, ScopeType.DEPARTMENT, INSTITUTION_ID, departmentId, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of());
+        when(userRoleAssignmentRepository.save(any(UserRoleAssignment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseEntity<UserRoleAssignmentResponse> response = controller.assignRole(
+                TENANT_ID, TARGET_USER_ID, request, authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().scopeType()).isEqualTo(ScopeType.DEPARTMENT);
+        verify(permissionEvaluatorService).can(
+                eq(new RbacPrincipal(TENANT_ID, ADMIN_USER_ID)),
+                eq("ROLE_ASSIGN"),
+                eq(RbacScope.department(INSTITUTION_ID, departmentId)),
+                any(RbacTarget.class));
+        // C2-2: the grant must emit the immutable role-assignment audit event.
+        verify(auditLogService).record(
+                eq(AuditEventType.ROLE_ASSIGNED),
+                isNull(),
+                eq(ADMIN_USER_ID.toString()),
+                isNull(),
+                contains("Assigned role OFFICE_STAFF"));
+    }
+
 }

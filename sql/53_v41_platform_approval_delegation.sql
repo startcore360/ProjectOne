@@ -1,0 +1,9 @@
+BEGIN;
+CREATE TABLE IF NOT EXISTS platform.approval_delegation(delegation_id uuid PRIMARY KEY,delegator_user_id uuid NOT NULL REFERENCES platform.platform_user(platform_user_id),delegate_user_id uuid NOT NULL REFERENCES platform.platform_user(platform_user_id),from_date date NOT NULL,to_date date NOT NULL,status varchar(16) NOT NULL DEFAULT 'ACTIVE',created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL REFERENCES platform.platform_user(platform_user_id),updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL REFERENCES platform.platform_user(platform_user_id),row_version integer NOT NULL DEFAULT 1,CONSTRAINT ck_platform_approval_delegation_dates CHECK(from_date<to_date),CONSTRAINT ck_platform_approval_delegation_not_self CHECK(delegator_user_id<>delegate_user_id),CONSTRAINT ck_platform_approval_delegation_status CHECK(status IN('ACTIVE','CANCELLED')),CONSTRAINT ck_platform_approval_delegation_version CHECK(row_version>=1));
+CREATE INDEX IF NOT EXISTS ix_platform_approval_delegation_active ON platform.approval_delegation(delegate_user_id,from_date,to_date) WHERE status='ACTIVE';
+CREATE OR REPLACE FUNCTION platform.fn_validate_approval_delegation_dpo() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM platform.platform_user u WHERE u.platform_user_id=NEW.delegate_user_id AND u.platform_role::text='DATA_PROTECTION_OFFICER' AND u.status::text='ACTIVE') THEN RAISE EXCEPTION 'DELEGATE_NOT_DPO' USING ERRCODE='23514'; END IF; RETURN NEW; END; $$;
+DROP TRIGGER IF EXISTS trg_platform_approval_delegation_dpo ON platform.approval_delegation;
+CREATE TRIGGER trg_platform_approval_delegation_dpo BEFORE INSERT OR UPDATE OF delegate_user_id ON platform.approval_delegation FOR EACH ROW EXECUTE FUNCTION platform.fn_validate_approval_delegation_dpo();
+GRANT SELECT,INSERT,UPDATE ON platform.approval_delegation TO edu_platform; REVOKE ALL ON platform.approval_delegation FROM edu_app;
+COMMIT;

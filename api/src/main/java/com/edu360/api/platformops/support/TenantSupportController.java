@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,8 +50,28 @@ public class TenantSupportController {
             Authentication auth
     ) {
         TenantPrincipal principal = requireTenantUser(tenantId, auth);
+        permissionEvaluatorService.authorize(
+                new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
+                "SUPPORT_TICKET_RAISE",
+                RbacScope.tenant(),
+                RbacTarget.NONE);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 supportService.raiseTicket(tenantId, req, principal.userAccountId(), principal.displayName()));
+    }
+
+    /** Returns only tickets raised by the authenticated tenant user. */
+    @GetMapping("/support-tickets")
+    public ResponseEntity<java.util.List<SupportTicketResponse>> myTickets(
+            @PathVariable UUID tenantId,
+            Authentication auth
+    ) {
+        TenantPrincipal principal = requireTenantUser(tenantId, auth);
+        permissionEvaluatorService.authorize(
+                new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
+                "SUPPORT_TICKET_RAISE",
+                RbacScope.tenant(),
+                RbacTarget.NONE);
+        return ResponseEntity.ok(supportService.listTicketsRaisedBy(tenantId, principal.userAccountId()));
     }
 
     @PostMapping("/support-access-grants")

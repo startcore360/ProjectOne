@@ -64,6 +64,16 @@ public class DeletionRequest {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    /** E5-S2/PD-7: set together with the two fields below when the Product Owner waives the retention wait. */
+    @Column(name = "retention_waived_by")
+    private UUID retentionWaivedBy;
+
+    @Column(name = "retention_waived_at")
+    private Instant retentionWaivedAt;
+
+    @Column(name = "retention_waiver_reason")
+    private String retentionWaiverReason;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

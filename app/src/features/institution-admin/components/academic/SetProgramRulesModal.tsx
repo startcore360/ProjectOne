@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal } from "../../../../design-system/components";
+import { Button, Modal, Notice, TextAreaField, DateField } from "../../../../design-system/components";
+import { getLocalDateString } from "../../../../utils/dateUtils";
+import { getApiErrorMessage } from "../../../../services/apiHelper";
 
 export interface SetProgramRulesModalProps {
   isOpen: boolean;
@@ -15,53 +17,62 @@ export function SetProgramRulesModal({
   saving,
 }: SetProgramRulesModalProps) {
   const [ruleJson, setRuleJson] = useState('{\n  "minCredits": 160,\n  "maxYears": 6\n}');
-  const [ruleEffectiveFrom, setRuleEffectiveFrom] = useState(
-    new Date().toISOString().substring(0, 10),
-  );
+  const [ruleEffectiveFrom, setRuleEffectiveFrom] = useState(getLocalDateString());
+  const [modalError, setModalError] = useState("");
+
+  const handleClose = () => {
+    setModalError("");
+    onClose();
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit(ruleJson, ruleEffectiveFrom);
+    setModalError("");
+    try {
+      await onSubmit(ruleJson, ruleEffectiveFrom);
+      handleClose();
+    } catch (err: unknown) {
+      setModalError(getApiErrorMessage(err));
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
-      kicker="PROGRAM_RULES_SET • Action #30"
+      onClose={handleClose}
+      kicker="ACADEMIC GOVERNANCE"
       title="Set Curriculum Rules"
       titleId="rules-modal-title"
       size="sm"
     >
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
+      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }} noValidate>
+        {modalError && (
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <Notice tone="danger">{modalError}</Notice>
+          </div>
+        )}
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <label htmlFor="rule-json" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            Rules JSON *
-          </label>
-          <textarea
+          <TextAreaField
             id="rule-json"
+            label="Rules JSON"
             rows={4}
             value={ruleJson}
             onChange={(e) => setRuleJson(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)", fontFamily: "monospace" }}
+            style={{ fontFamily: "monospace" }}
           />
         </div>
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label htmlFor="rule-effective-from" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            Effective From *
-          </label>
-          <input
+          <DateField
             id="rule-effective-from"
-            type="date"
+            label="Effective From"
             value={ruleEffectiveFrom}
             onChange={(e) => setRuleEffectiveFrom(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)" }}
           />
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" disabled={saving}>

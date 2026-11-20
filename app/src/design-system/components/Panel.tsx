@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 
 export interface PanelProps {
   title: string;
@@ -6,12 +6,13 @@ export interface PanelProps {
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
 }
 
-export function Panel({ title, description, action, children, className = "" }: PanelProps) {
+export function Panel({ title, description, action, children, className = "", id }: PanelProps) {
   return (
-    <section className={`platform-panel ${className}`.trim()}>
-      <header className="platform-panel__header">
+    <section id={id} className={`app-panel ${className}`.trim()}>
+      <header className="app-panel__header">
         <div>
           <h2>{title}</h2>
           {description && <p>{description}</p>}

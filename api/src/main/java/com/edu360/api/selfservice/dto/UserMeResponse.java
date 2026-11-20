@@ -17,5 +17,6 @@ public record UserMeResponse(
         String currentRoleCode,
         String currentRoleName,
         UUID currentAssignmentId,
-        List<UserRoleOption> roles
+        List<UserRoleOption> roles,
+        int idleTimeoutMinutes
 ) {}

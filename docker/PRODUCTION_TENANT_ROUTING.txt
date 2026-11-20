@@ -147,14 +147,17 @@ The list is a proposal, because the documents don't define one. Confirm it, and 
 `KeycloakAdminClient.provisionRealm` creates each realm's client with hard-coded dev addresses:
 
 ```java
-"redirectUris", List.of("http://*.edu360.local:5173/*", "http://localhost:5173/*")
+"redirectUris", List.of(
+        "http://*.edu360.localhost:5173/*",
+        "http://*.edu360.local:5173/*",
+        "http://localhost:5173/*")
 ```
 
 Make it configuration:
 
 ```java
 // In KeycloakProperties, with the dev value in application-dev.properties:
-// app.keycloak.frontend-redirect-uris=http://*.edu360.local:5173/*,http://localhost:5173/*
+// app.keycloak.frontend-redirect-uris=http://*.edu360.localhost:5173/*,http://*.edu360.local:5173/*,http://localhost:5173/*
 // and in application-prod.properties:
 // app.keycloak.frontend-redirect-uris=${KEYCLOAK_FRONTEND_REDIRECT_URIS}
 private List<String> frontendRedirectUris = List.of();
@@ -237,8 +240,9 @@ Check all of these on a real staging environment that matches production:
 
 ## Local development (already working)
 
-- **Frontend:** `app/vite.config.ts` allows every `.edu360.local` address.
-- **New tenant:** run `.\docker\dev-hosts-setup.ps1` as Administrator. It adds an entry for every ACTIVE or TRIAL tenant. The hosts file doesn't support wildcards, so this step is local-only and doesn't exist in production. `dev-up.ps1` warns about any missing entries.
+- **Addresses:** use `<subdomain>.edu360.localhost:5173`. Browsers send every `*.localhost` name to `127.0.0.1` by themselves, which is the local copy of P1's wildcard DNS. A new tenant opens straight away, with no hosts file and no Administrator step.
+- **Frontend:** `app/vite.config.ts` allows every `.edu360.localhost`, `.edu360.local` and `.duckdns.org` address.
+- **Older `.edu360.local` style:** still works, but each tenant needs a hosts-file line from `.\docker\dev-hosts-setup.ps1` (as Administrator), because the hosts file doesn't support wildcards.
 
 ## Keycloak extension (in-app authenticator set-up)
 

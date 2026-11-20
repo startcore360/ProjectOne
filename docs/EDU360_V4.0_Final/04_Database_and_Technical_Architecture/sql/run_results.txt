@@ -1,0 +1,129 @@
+# EDU 360 V4.0 database build and test run — 2026-10-30T12:00:42Z
+DB-01 | PASS | SEC-03 fail-closed RLS (no tenant context) | got 0, expected 0
+DB-02 | PASS | K-002 tenant RLS: tenant A sees only A rows | got 2, expected 2
+DB-03 | PASS | K-002 WITH CHECK blocks writing a row for tenant B | new row violates row-level security policy for table "department"
+DB-04 | PASS | K-001 composite FK blocks cross-tenant parent | insert or update on table "program" violates foreign key constraint "fk_program_department_id"
+DB-05 | PASS | NEW-03 composite FK pins institution | insert or update on table "program" violates foreign key constraint "fk_program_department_id"
+DB-06 | PASS | PTD-I1 institution RLS limits rows to assigned institutions | got 1, expected 1
+DB-07 | PASS | NEW-01 go-live gate: no Principal leave approver | GO_LIVE_BLOCKED: Principal's-leave approver not set for institution a0000000-0000-0000-0000-000000000201 [C7]
+DB-08 | PASS | NEW-04 GBA approver must be a governance account [C6] | APPROVER_KIND_MISMATCH: Management / Governing Body Approver must be a governance account [C6]
+DB-09 | PASS | NEW-01 approver set (GBA) | accepted
+DB-10 | PASS | NEW-01 activation allowed once approver set | accepted
+DB-11 | PASS | NEW-01 go_live_blockers lists institution A2 only | got PRINCIPAL_LEAVE_APPROVER_MISSING, expected PRINCIPAL_LEAVE_APPROVER_MISSING
+DB-12 | PASS | K-015 no self-approval | SELF_APPROVAL: requester cannot decide own request [AP-04, PQ-18, D-002]
+DB-13 | PASS | K-016 reject needs a remark | new row for relation "approval_step" violates check constraint "ck_approval_step_r1"
+DB-14 | PASS | approve step 1 | accepted
+DB-15 | PASS | K-014 one actor cannot decide two steps | duplicate key value violates unique constraint "ux_approval_step_2"
+DB-16 | PASS | K-017 decided step is immutable | APPROVAL_IMMUTABLE: decided step a0000000-0000-0000-0000-000000000a02 cannot change [R2-01]
+DB-17 | PASS | K-018 conditional update on PENDING (second decider updates 0 rows) | ALREADY_ACTIONED
+DB-18 | PASS | delegation HOD -> other | accepted
+DB-19 | PASS | K-013 a delegate cannot delegate again [AP-08] | REDELEGATION: a delegate cannot delegate again [AP-08]
+DB-20 | PASS | NEW-05 merit lists cannot be delegated [WF-37] | DELEGATION_NOT_ALLOWED: process MERIT_LIST cannot be delegated [WF-37]
+DB-21 | PASS | K-041 out-of-range line needs an approved exception | FEE_OUT_OF_POLICY_RANGE: approved exception required [R2-03]
+DB-22 | PASS | structure submitted (installments = lines) | accepted
+DB-23 | PASS | NEW-02 no line edit after DRAFT (finding 36) | FEE_STRUCTURE_LOCKED: only a DRAFT structure can change; any later change is a new version approved by the Principal [R2-03, FE-02]
+DB-24 | PASS | Principal approval -> LIVE | accepted
+DB-25 | PASS | NEW-02 LIVE structure content immutable | FEE_STRUCTURE_LOCKED: content of a submitted structure never changes
+DB-26 | PASS | NEW-02 LIVE -> DRAFT forbidden | STATE_TRANSITION_NOT_ALLOWED: fee_structure LIVE -> DRAFT
+DB-27 | PASS | fee assignment and installment | accepted
+DB-28 | PASS | NEW-06 one live online payment per account (PAYMENT_IN_PROGRESS) | duplicate key value violates unique constraint "ux_payment_2"
+DB-29 | PASS | K-044 same request key ignored (unique) | duplicate key value violates unique constraint "ux_payment_1"
+DB-30 | PASS | K-045 partial payment allocation refused [FE-04] | PARTIAL_PAYMENT_NOT_ALLOWED: 15000.00 <> net due 20000.00 [FE-04]
+DB-31 | PASS | NEW-07 PAID needs amount = allocated + credit | new row for relation "payment" violates check constraint "ck_payment_r2"
+DB-32 | PASS | PO-A1 confirm: 25000 received, installment 1 settled, 5000 credit | accepted
+DB-33 | PASS | PTD-34 credit balance = 5000 after overpayment | got 5000.00, expected 5000.00
+DB-34 | PASS | K-042 financial year derived by trigger (Oct 2026 -> 2026) | got 2026, expected 2026
+DB-35 | PASS | K-045 installment settled once | INSTALLMENT_ALREADY_PAID
+DB-36 | PASS | K-042 ledger append-only (UPDATE) | permission denied for table ledger_entry
+DB-37 | PASS | K-042 ledger append-only (DELETE) | permission denied for table ledger_entry
+DB-38 | PASS | K-043 no posting into a locked month | PERIOD_LOCKED: posting into a locked month [FE-20, PQ-50]
+DB-39 | PASS | K-042 no REFUND entry type [R2-21] | new row for relation "ledger_entry" violates check constraint "ck_ledger_entry_entry_type"
+DB-40 | PASS | receipt issued with gap-free number | accepted
+DB-41 | PASS | K-048 rolled-back receipt leaves no gap (number re-used) | ROLLBACK_SIMULATED
+DB-42 | PASS | K-048 next number after rollback is 2 | got 2, expected 2
+DB-43 | PASS | K-047 receipt never edited | RECEIPT_IMMUTABLE: only ISSUED -> VOID is allowed [FE-12]
+DB-44 | PASS | K-047 second ISSUED receipt for the same payment | duplicate key value violates unique constraint "ux_receipt_2"
+DB-45 | PASS | attendance session + entry | accepted
+DB-46 | PASS | K-024 one session per slot per day | duplicate key value violates unique constraint "ux_attendance_session_1"
+DB-47 | PASS | K-026 entry status mirrors session (NOT_HELD) | NOT_HELD_MISMATCH: entry status must mirror the session [AT-12]
+DB-48 | PASS | Principal locks the term | accepted
+DB-49 | PASS | K-027 no attendance change while term locked | TERM_LOCKED: attendance cannot change while the term is locked [R2-08]
+DB-50 | PASS | K-029 unlock > 3 days refused | new row for relation "term_lock_event" violates check constraint "ck_term_lock_event_r2"
+DB-51 | PASS | K-053 note cannot be edited [MD-19] | permission denied for table student_note
+DB-52 | PASS | K-054 app role cannot delete a note | permission denied for table student_note
+DB-53 | PASS | K-053 audit rows immutable for the app role | permission denied for table audit_outbox
+DB-54 | PASS | ref data: rows visible to app role | got 2, expected 2
+DB-55 | PASS | N-02 tenant setting never set in this connection: zero rows, no error | got 0, expected 0
+DB-56 | PASS | PTD-I1 institution settings never set: institution-bound rows hidden (fail-closed) | got 0, expected 0
+DB-57 | PASS | PTD-I1 scope ALL shows the tenant's rows | got true, expected true
+DB-58 | PASS | K-002 switching tenant context hides tenant A rows | got 0, expected 0
+DB-59 | PASS | SEC-04 tenant app role has no access to the platform schema | permission denied for schema platform
+DB-60 | PASS | K-022 student code unique per tenant | duplicate key value violates unique constraint "ux_student_profile_1"
+DB-61 | PASS | K-008 staff email unique per tenant | duplicate key value violates unique constraint "ux_user_account_1"
+DB-62 | PASS | K-019 department cannot belong to a school | insert or update on table "department" violates foreign key constraint "fk_department_institution_typed"
+DB-63 | PASS | leave request (pending, full day) | accepted
+DB-64 | PASS | K-031 overlapping full-day leave refused [LV-05] | conflicting key value violates exclusion constraint "ex_leave_full_day_overlap"
+DB-65 | PASS | K-030 leave needs exactly one subject | new row for relation "leave_request" violates check constraint "ck_leave_request_r1"
+DB-66 | PASS | grading scheme version activated | accepted
+DB-67 | PASS | K-033 band of an ACTIVE scheme cannot change [PQ-38] | GRADING_SCHEME_FROZEN: an active or retired scheme version never changes; create a new version [PQ-38, PQ-43]
+DB-68 | PASS | K-033 no new band on an ACTIVE scheme | GRADING_SCHEME_FROZEN: an active or retired scheme version never changes; create a new version [PQ-38, PQ-43]
+DB-69 | PASS | correction request (DRAFT) with one line | accepted
+DB-70 | PASS | K-028 old status must differ from new | new row for relation "attendance_correction" violates check constraint "ck_attendance_correction_r1"
+DB-71 | PASS | correction request submitted (REQUESTED, approval linked) | accepted
+DB-72 | PASS | K-028 correction lines frozen after DRAFT [PQ-33] | CORRECTION_LOCKED: correction lines change only while the request is DRAFT [PQ-33]
+DB-73 | PASS | K-049 period month must start on day 1 | new row for relation "financial_period_lock" violates check constraint "ck_financial_period_lock_period_month"
+DB-74 | PASS | K-052 WhatsApp delivery channel refused [CM-07] | new row for relation "notification_delivery" violates check constraint "ck_notification_delivery_channel"
+DB-75 | PASS | complaint resolved with a note | accepted
+DB-76 | PASS | K-055 a resolved complaint is never reopened [CP-04] | COMPLAINT_FINAL: no reopening [CP-04]
+DB-77 | PASS | V4-DB-01 the Principal is never their own leave approver [D-002] | APPROVER_IS_SUBJECT: the person whose leave this is can never be its approver [D-002, AP-04]
+DB-78 | PASS | V4-DB-01 Registrar kind needs an active Registrar assignment [A30] | APPROVER_ROLE_MISSING: approver kind REGISTRAR requires an active REGISTRAR assignment [A30, C7]
+DB-79 | PASS | V4-DB-01 governance account still accepted for institution A2 (regression of DB-09) | accepted
+DB-80 | PASS | RD standalone college: Vice-Chancellor approval rolls to the Principal [V4-PD-01] | got PRINCIPAL_COLLEGE|ROLLDOWN, expected PRINCIPAL_COLLEGE|ROLLDOWN
+DB-81 | PASS | RD a role with an active holder resolves to itself | got PRINCIPAL_COLLEGE|HOLDER, expected PRINCIPAL_COLLEGE|HOLDER
+DB-82 | PASS | RD loop or no holder anywhere → UNRESOLVED (level above decides) | got UNRESOLVED, expected UNRESOLVED
+DB-83 | PASS | RD Governing Body Approver (no Management) assigns another stand-in | accepted
+DB-84 | PASS | RD override wins over the default | got VICE_PRINCIPAL_COLLEGE|VICE_CHANCELLOR>VICE_PRINCIPAL_COLLEGE, expected VICE_PRINCIPAL_COLLEGE|VICE_CHANCELLOR>VICE_PRINCIPAL_COLLEGE
+DB-85 | PASS | RD-G5 a student can never act for another role | ROLLDOWN_TARGET_NOT_ALLOWED: STUDENT_COLLEGE cannot act for another role [RD-G5]
+DB-86 | PASS | RD-G4 the Governing Body Approver role never rolls down | ROLLDOWN_ROLE_FIXED: GOVERNING_BODY_APPROVER never rolls down [RD-G4, RD-G5]
+DB-87 | PASS | RD an approval right is never withheld | ROLLDOWN_WITHHOLD_APPROVAL: an approval can only be given to another role, never withheld (requests would wait forever)
+DB-88 | PASS | RD Vice-Chancellor setter refused in a standalone tenant | ROLLDOWN_SETTER_NOT_ALLOWED: the setter does not hold VICE_CHANCELLOR
+DB-89 | PASS | RD action kind must match (INSTITUTION_ACTIVATE is an approval) | ROLLDOWN_KIND_MISMATCH: INSTITUTION_ACTIVATE is an APPROVE action
+DB-90 | PASS | RD setter must hold the role it claims | ROLLDOWN_SETTER_NOT_ALLOWED: the setter does not hold MANAGEMENT
+DB-91 | PASS | RD a non-approval right can be withheld | accepted
+DB-92 | PASS | RD withheld right resolves to nobody | got WITHHELD, expected WITHHELD
+DB-93 | PASS | RD one active override per role, kind and action | duplicate key value violates unique constraint "ux_role_rolldown_override_1"
+DB-94 | PASS | RD-G7 "acting for" is recorded only on a decided step | new row for relation "approval_step" violates check constraint "ck_approval_step_r5"
+DB-95 | PASS | RD overrides are tenant-isolated (RLS) | got 0, expected 0
+DB-96 | PASS | RD Governing Body Approver cannot change roll-down once Management exists [C13] | ROLLDOWN_SETTER_NOT_ALLOWED: Management exists, so the Governing Body Approver cannot change roll-down [C13]
+DB-97 | PASS | RD Management changes roll-down | accepted
+SUMMARY | PASS | 97
+REFCHECK | actions|278|278
+REFCHECK | phase1 actions|234|234
+REFCHECK | phase2 actions|32|32
+REFCHECK | phase3 actions|12|12
+REFCHECK | roles|71|71
+REFCHECK | feature areas|28|28
+REFCHECK | modules|29|29
+REFCHECK | matrix cells|1988|1988
+REFCHECK | sensitive actions|101|101
+REFCHECK | role-action pairs|1851|1851
+REFCHECK | chain steps referencing a non-approval action|0|0
+REFCHECK | V4.0 actions (278 + 2 roll-down)|280|280
+REFCHECK | V4.0 role-action pairs (1851 + 12)|1863|1863
+REFCHECK | roll-down default rows|182|182
+REFCHECK | roles with a roll-down|52|52
+REFCHECK | roll-down stand-ins that are personal / platform / GBA roles|0|0
+REFCHECK | reference rows after first load | 4620
+REFCHECK | second load of 05_ref_data.sql + 10d inserted rows | 0 | 0
+CATALOGUE | parent tables | 208
+CATALOGUE | partitions | 39
+CATALOGUE | columns on parent tables | 2824
+CATALOGUE | declared foreign keys (conparentid = 0) | 696
+CATALOGUE | all foreign-key rows incl. partition clones | 717
+CATALOGUE | check constraints | 1266
+CATALOGUE | RLS policies | 282
+CATALOGUE | user triggers | 217
+CATALOGUE | app tables with RLS forced | 160
+CATALOGUE | FKs without a covering index (AC-S4) | 0
+CATALOGUE | FKs with CASCADE / SET NULL (AC-R2) | 0
+CATALOGUE | edu_ roles with superuser or bypassrls (AC-I3) | 0

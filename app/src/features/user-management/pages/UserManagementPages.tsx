@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Button,
@@ -11,16 +11,22 @@ import {
   PageHeader,
   Panel,
   SearchBox,
-  Spinner,
+  SkeletonCard,
+  SkeletonTable,
+  SkeletonText,
   StatusBadge,
   TextField,
 } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
+import { MfaResetDialog } from "../../auth/components/MfaResetDialog";
+import { serverMessage } from "../../auth/serverMessage";
+import { UserLimitBanner } from "../components/users/UserLimitBanner";
 import { getApiErrorMessage, type ApiError } from "../../../services/apiHelper";
 import {
   userManagementService,
   type ActingScope,
   type CreateUserResponse,
+  type StudentProfileResponse,
   type ScopeType,
   type TopUserResponse,
   type UserSummary,
@@ -29,6 +35,7 @@ import {
   ScopeFields,
   CreateUserCheckModal,
   CreateUserModal,
+  CreateStudentModal,
   CreatedCredentialsModal,
   CreateTopUserModal,
   BulkUploadModal,
@@ -40,6 +47,7 @@ export {
   ScopeFields,
   CreateUserCheckModal,
   CreateUserModal,
+  CreateStudentModal,
   CreatedCredentialsModal,
   CreateTopUserModal,
   BulkUploadModal,
@@ -97,6 +105,139 @@ export function ConfirmDialog({
   );
 }
 
+function MoreActionsMenu({ items }: { items: { label: string; onClick: () => void }[] }) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        !triggerRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && menuRef.current) {
+      const menuItems = menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+      if (menuItems.length > 0) menuItems[0].focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) {
+      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+
+    const menuItems = menuRef.current
+      ? Array.from(menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      : [];
+    if (menuItems.length === 0) return;
+    const activeIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextIndex = activeIndex < menuItems.length - 1 ? activeIndex + 1 : 0;
+      menuItems[nextIndex]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevIndex = activeIndex > 0 ? activeIndex - 1 : menuItems.length - 1;
+      menuItems[prevIndex]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      menuItems[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      menuItems[menuItems.length - 1]?.focus();
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  const closeMenu = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  return (
+    <div onKeyDown={handleKeyDown} style={{ position: "relative" }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="eds-button eds-button--secondary"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="More user actions"
+      >
+        More ▾
+      </button>
+      {open && (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label="More user actions"
+          style={{
+            position: "absolute",
+            right: 0,
+            top: "calc(100% + 4px)",
+            zIndex: 50,
+            background: "var(--color-bg-surface)",
+            border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--elevation-2)",
+            minWidth: "220px",
+            padding: "4px 0",
+          }}
+          onClick={closeMenu}
+        >
+          {items.map((item) => (
+            <button
+              key={item.label}
+              role="menuitem"
+              onClick={item.onClick}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 16px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                color: "var(--color-text)",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserListPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [scope, setScope] = useState<ActingScope>({ scopeType: "TENANT" });
@@ -106,14 +247,16 @@ export function UserListPage() {
   const [query, setQuery] = useState("");
   const [showCreateCheck, setShowCreateCheck] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateStudentModal, setShowCreateStudentModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showGovernanceModal, setShowGovernanceModal] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreateUserResponse | TopUserResponse | null>(null);
+  const [createdStudent, setCreatedStudent] = useState<StudentProfileResponse | null>(null);
 
   if (!tenantId) {
     return (
-      <div className="platform-page">
-        <PageHeader title="Users & roles" description="User account management (USER_VIEW)." />
+      <div className="app-page">
+        <PageHeader title="Users & roles" description="Manage tenant user accounts within your permitted scope." />
         <ErrorState
           title="Not available"
           message="This screen is for tenant accounts. No tenant is associated with your sign-in."
@@ -155,21 +298,20 @@ export function UserListPage() {
   );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Users & roles"
-        description="View and manage tenant user accounts in a chosen scope (USER_VIEW)."
+        description="View and manage tenant user accounts within your permitted scope."
         actions={
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <Button variant="secondary" onClick={() => setShowCreateCheck(true)}>
-              Check if I can create a user
-            </Button>
-            <Button variant="secondary" onClick={() => setShowBulkModal(true)}>
-              Bulk import users
-            </Button>
-            <Button variant="secondary" onClick={() => setShowGovernanceModal(true)}>
-              Create governance user
-            </Button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <MoreActionsMenu
+              items={[
+                { label: "Check if I can create a user", onClick: () => setShowCreateCheck(true) },
+                { label: "Create student profile", onClick: () => setShowCreateStudentModal(true) },
+                { label: "Bulk import user accounts", onClick: () => setShowBulkModal(true) },
+                { label: "Create governance user", onClick: () => setShowGovernanceModal(true) },
+              ]}
+            />
             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
               Create user
             </Button>
@@ -177,12 +319,14 @@ export function UserListPage() {
         }
       />
 
+      <UserLimitBanner tenantId={tenantId} />
+
       <Panel
         title="Choose a scope"
         description="State the scope your own role assignment is acting in, then load the register."
       >
         <form
-          className="platform-toolbar"
+          className="app-toolbar"
           style={{ flexDirection: "column", alignItems: "stretch" }}
           onSubmit={(e) => {
             e.preventDefault();
@@ -215,14 +359,14 @@ export function UserListPage() {
           }
         />
       )}
-      {state === "loading" && <Spinner label="Loading users" />}
+      {state === "loading" && <Panel title="User register"><SkeletonTable rows={5} columns={6} /></Panel>}
 
       {state === "loaded" && (
         <Panel
           title="User register"
           description={`${filtered.length} of ${users.length} user${users.length === 1 ? "" : "s"} in this scope`}
         >
-          <div className="platform-toolbar">
+          <div className="app-toolbar">
             <SearchBox
               value={query}
               onChange={setQuery}
@@ -299,6 +443,17 @@ export function UserListPage() {
         }}
       />
 
+      <CreateStudentModal
+        tenantId={tenantId}
+        isOpen={showCreateStudentModal}
+        onClose={() => setShowCreateStudentModal(false)}
+        onCreated={(student) => {
+          setShowCreateStudentModal(false);
+          setCreatedStudent(student);
+          void load();
+        }}
+      />
+
       <CreateUserModal
         tenantId={tenantId}
         isOpen={showCreateModal}
@@ -309,6 +464,22 @@ export function UserListPage() {
           void load();
         }}
       />
+
+      {createdStudent && (
+        <CreatedCredentialsModal
+          user={{
+            displayName: createdStudent.fullName,
+            identifier: { label: "Student code", value: createdStudent.studentCode },
+            temporaryPassword: createdStudent.temporaryPassword ?? undefined,
+            message: "Student profile and enrolment were created. Login provisioning follows the institution and class settings.",
+          }}
+          isOpen={true}
+          onClose={() => setCreatedStudent(null)}
+          title="Student profile created successfully"
+          kicker="STUDENT PROFILE"
+          description="Share any issued temporary password securely. It is shown only in this confirmation."
+        />
+      )}
 
       {createdUser && (
         <CreatedCredentialsModal
@@ -328,6 +499,8 @@ export function UserDetailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  // MFA-01: nobody resets their own two-step login (the server refuses it too).
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
 
   const initialScopeType = searchParams.get("scopeType") as ScopeType | null;
   const [scope, setScope] = useState<ActingScope>({
@@ -346,7 +519,8 @@ export function UserDetailPage() {
   const [saveBanner, setSaveBanner] = useState<ActionBanner>(null);
 
   const [actionInstitutionId, setActionInstitutionId] = useState(scope.institutionId ?? "");
-  const [confirming, setConfirming] = useState<"deactivate" | "reset" | "unlock" | null>(null);
+  const [confirming, setConfirming] = useState<"deactivate" | "reset" | "unlock" | "mfa" | null>(null);
+  const [mfaError, setMfaError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [actionBanner, setActionBanner] = useState<ActionBanner>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
@@ -375,8 +549,8 @@ export function UserDetailPage() {
 
   if (!tenantId || !userId) {
     return (
-      <div className="platform-page">
-        <PageHeader title="User detail" description="User account management (USER_VIEW)." />
+      <div className="app-page">
+        <PageHeader title="User detail" description="Manage tenant user accounts and their profile details." />
         <ErrorState
           title="Not available"
           message="This screen is for tenant accounts with a valid user ID."
@@ -468,6 +642,21 @@ export function UserDetailPage() {
     }
   };
 
+  const runMfaReset = async (reason: string) => {
+    setActionBusy(true);
+    setActionBanner(null);
+    setMfaError("");
+    try {
+      const { data } = await userManagementService.resetMfa(tenantId, userId, actionInstitutionId, reason);
+      setActionBanner({ tone: "success", message: data.message });
+      setConfirming(null);
+    } catch (error) {
+      setMfaError(serverMessage(error));
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
   const copyTempPassword = async () => {
     if (!temporaryPassword) return;
     try {
@@ -479,10 +668,10 @@ export function UserDetailPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="User detail"
-        description="View, edit and manage a single user account (USER_VIEW / USER_EDIT / USER_DEACTIVATE / USER_PASSWORD_RESET_UNLOCK)."
+        description="View, edit and manage a single user account. Sensitive changes are checked against your active role and institution scope."
         actions={
           <Button variant="secondary" onClick={() => navigate("/tenants/users")}>
             Back to register
@@ -496,7 +685,7 @@ export function UserDetailPage() {
           description="State the scope your own role assignment is acting in, then load this user."
         >
           <form
-            className="platform-toolbar"
+            className="app-toolbar"
             style={{ flexDirection: "column", alignItems: "stretch" }}
             onSubmit={submitScope}
           >
@@ -508,7 +697,7 @@ export function UserDetailPage() {
         </Panel>
       )}
 
-      {!needsScope && state === "loading" && <Spinner label="Loading user" />}
+      {!needsScope && state === "loading" && <SkeletonCard><SkeletonText height="1.25rem" width="50%" /><SkeletonText lines={5} /></SkeletonCard>}
       {!needsScope && state === "denied" && (
         <ErrorState
           title="Permission denied"
@@ -535,7 +724,7 @@ export function UserDetailPage() {
             action={<StatusBadge status={user.status} />}
           >
             <form
-              className="platform-form-grid"
+              className="app-form-grid"
               style={{ padding: "0 var(--space-5) var(--space-5)" }}
               onSubmit={saveEdit}
             >
@@ -562,7 +751,7 @@ export function UserDetailPage() {
                 onChange={(e) => setFields({ ...fields, mobile: e.target.value })}
               />
               {user.status === "DEACTIVATED" ? (
-                <div className="platform-modal-note" style={{ gridColumn: "1 / -1" }}>
+                <div className="app-note" style={{ gridColumn: "1 / -1" }}>
                   This account is deactivated. Deactivation is permanent in this system (no
                   reactivate), so it can no longer be edited.
                 </div>
@@ -585,7 +774,7 @@ export function UserDetailPage() {
 
           <Panel
             title="Institution-scoped actions"
-            description="USER_DEACTIVATE and USER_PASSWORD_RESET_UNLOCK are always checked against your own institution-scoped grant, never tenant or department scope."
+            description="Account deactivation and password recovery are always checked against your own institution scope."
           >
             <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
               <TextField
@@ -625,9 +814,17 @@ export function UserDetailPage() {
                 >
                   Unlock account
                 </Button>
+                <Button
+                  variant="secondary"
+                  disabled={!actionInstitutionId || user.status === "DEACTIVATED" || userId === currentUserId}
+                  title={userId === currentUserId ? "You cannot reset your own two-step login" : undefined}
+                  onClick={() => { setMfaError(""); setConfirming("mfa"); }}
+                >
+                  Reset two-step login
+                </Button>
               </div>
               {user.status === "DEACTIVATED" && (
-                <p className="platform-empty-inline">This user is already deactivated.</p>
+                <p className="app-empty-inline">This user is already deactivated.</p>
               )}
               {actionBanner && (
                 <div style={{ marginTop: "var(--space-3)" }}>
@@ -675,6 +872,14 @@ export function UserDetailPage() {
           onCancel={() => setConfirming(null)}
         />
       )}
+      <MfaResetDialog
+        isOpen={confirming === "mfa"}
+        personName={user?.displayName ?? "this user"}
+        busy={actionBusy}
+        error={mfaError}
+        onConfirm={(reason) => void runMfaReset(reason)}
+        onCancel={() => setConfirming(null)}
+      />
       {confirming === "unlock" && (
         <ConfirmDialog
           titleId="confirm-unlock-title"
@@ -741,7 +946,7 @@ export function UserDetailPage() {
             }}
           />
         </div>
-        {copyNotice && <p className="platform-empty-inline" style={{ marginTop: "8px" }}>{copyNotice}</p>}
+        {copyNotice && <p className="app-empty-inline" style={{ marginTop: "8px" }}>{copyNotice}</p>}
       </Modal>
     </div>
   );

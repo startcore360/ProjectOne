@@ -6,7 +6,8 @@ export type IconName =
   | "wallet" | "upload" | "download" | "lock" | "shield" | "clock" | "eye"
   | "edit" | "send" | "return" | "archive" | "ban" | "refresh" | "printer"
   | "wifi-off" | "more" | "help" | "sun" | "moon" | "chevron-down" | "monitor" | "smartphone"
-  | "x" | "close";
+  | "x" | "close" | "chevron-left" | "chevron-right"
+  | "building" | "grid" | "layers" | "file-text" | "activity" | "key" | "package" | "cpu";
 
 const paths: Record<IconName, ReactNode> = {
   home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1Z"/></>,
@@ -17,7 +18,7 @@ const paths: Record<IconName, ReactNode> = {
   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></>,
   "x-circle": <><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></>,
   search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></>,
-  bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
+  bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>,
   user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
   users: <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
   chart: <><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-4 4"/></>,
@@ -42,10 +43,20 @@ const paths: Record<IconName, ReactNode> = {
   sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m16 0h2M4.2 19.8l1.4-1.4m12.8-12.8 1.4-1.4"/></>,
   moon: <><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></>,
   "chevron-down": <><path d="m6 9 6 6 6-6"/></>,
+  "chevron-left": <><path d="m15 18-6-6 6-6"/></>,
+  "chevron-right": <><path d="m9 6 6 6-6 6"/></>,
   monitor: <><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></>,
   smartphone: <><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></>,
   x: <><path d="M18 6 6 18M6 6l12 12"/></>,
   close: <><path d="M18 6 6 18M6 6l12 12"/></>,
+  building: <><path d="M3 21h18M6 21V7l6-4 6 4v14"/><path d="M9 21v-4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/></>,
+  grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
+  layers: <><path d="m12 2 10 6.5-10 6.5L2 8.5Z"/><path d="m2 15.5 10 6.5 10-6.5"/><path d="m2 11.5 10 6.5 10-6.5"/></>,
+  "file-text": <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></>,
+  activity: <><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></>,
+  key: <><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></>,
+  package: <><path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.29 7 12 12l8.71-5M12 22V12"/></>,
+  cpu: <><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2"/></>,
 };
 
 export function Icon({ name, size = 20, ...props }: SVGProps<SVGSVGElement> & { name: IconName; size?: number }) {

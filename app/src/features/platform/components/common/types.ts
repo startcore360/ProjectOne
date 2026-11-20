@@ -5,9 +5,16 @@ export type Tenant = {
   name: string;
   type: string;
   plan: string;
-  status: "Active" | "Trial" | "Suspended";
+  planId?: string;
+  status: "Active" | "Trial" | "Suspended" | "Archived" | "Setup failed";
+  subdomain?: string;
+  trialEndsAt?: string;
   gates: number;
   updated: string;
+  suspendedAt?: string;
+  archivedAt?: string;
+  /** E8-S5: row version from the server, sent back as If-Match on activate / suspend / archive. */
+  rowVersion?: number;
 };
 
 export type PlatformUser = {
@@ -70,13 +77,23 @@ export function titleCaseOutcome(outcome: string): string {
 export function readErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === "object" && "response" in err) {
     const response = (err as { response?: { data?: { error?: string; message?: string } } }).response;
-    if (response?.data?.error) return response.data.error.replace("STEP_IN_REQUIRED: ", "");
-    if (response?.data?.message) return response.data.message;
-  }
-  if (err instanceof Error && err.message) {
-    if (!err.message.startsWith("Request failed with status code")) {
-      return err.message;
+    const raw = response?.data?.error ?? response?.data?.message;
+    if (raw) {
+      if (/does not hold action\s+[A-Z0-9_]+/i.test(raw) || /does not hold permission\s+[A-Z0-9_]+/i.test(raw)) {
+        return "Your current role does not have permission to perform this action. Ask your administrator to review your access.";
+      }
+      const safe = raw
+        .replace(/^STEP_IN_REQUIRED:\s*/i, "")
+        .replace(/\s*(?:please contact support quoting\s*)?correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "")
+        .replace(/\s*\(?(?:code|error)\s*:\s*[A-Z][A-Z0-9_]{2,}\)?/g, "")
+        .trim();
+      if (!safe || /^[A-Z][A-Z0-9_]{2,}$/.test(safe) || /org\.springframework|java\./.test(safe)) return fallback;
+      return safe;
     }
+  }
+  if (err instanceof Error && err.message && !err.message.startsWith("Request failed with status code")) {
+    const safe = err.message.replace(/\s*(?:please contact support quoting\s*)?correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "").trim();
+    if (safe && !/^[A-Z][A-Z0-9_]{2,}$/.test(safe)) return safe;
   }
   return fallback;
 }
@@ -85,13 +102,15 @@ export type UsageMetric = { metricCode: string; value: number | null; asOfDate: 
 
 export type UsageCounts = {
   totalTenantCount: number;
+  tenantsInAnalytics: number;
+  tenantsOptedOut: number;
   metrics: UsageMetric[];
-  totalUserCountGap: string | null;
 };
 
 export const USAGE_METRIC_LABELS: Record<string, string> = {
   LOGINS: "Logins",
   ATTENDANCE_MARKED: "Attendance marked",
   FEES_PAID_ONLINE: "Fees paid online",
+  ACTIVE_USERS: "Active users",
 };
 

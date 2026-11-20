@@ -29,11 +29,12 @@ class UsageCountsControllerTest {
 
     @Mock private TenantRepository tenantRepository;
     @Mock private UsageMetricDailyRepository usageMetricDailyRepository;
+    @Mock private com.edu360.api.platformops.usage.TenantUsageMonthlyRepository tenantUsageMonthlyRepository;
 
     private final PlatformPermissionService platformPermissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
 
     private UsageCountsController controller() {
-        return new UsageCountsController(platformPermissionService, tenantRepository, usageMetricDailyRepository);
+        return new UsageCountsController(platformPermissionService, tenantRepository, usageMetricDailyRepository, tenantUsageMonthlyRepository);
     }
 
     private Authentication authFor(PlatformRole role) {
@@ -42,8 +43,11 @@ class UsageCountsControllerTest {
     }
 
     @Test
-    void usageCounts_returnsTenantCountAndMetricsAndFlagsTheUserCountGap() {
+    void usageCounts_returnsMaterializedActiveUsersWithoutTheOldGapText() {
         when(tenantRepository.count()).thenReturn(7L);
+        when(tenantUsageMonthlyRepository.sumMeasuredQuantityForAnalyticsTenants(
+                LocalDate.now(java.time.ZoneOffset.UTC).withDayOfMonth(1), "ACTIVE_USERS"))
+                .thenReturn(java.math.BigDecimal.valueOf(9));
         UsageMetricDaily loginsRow = UsageMetricDaily.builder()
                 .usageMetricDailyId(UUID.randomUUID())
                 .metricCode("LOGINS")
@@ -62,10 +66,11 @@ class UsageCountsControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         UsageCountsResponse body = response.getBody();
         assertThat(body.totalTenantCount()).isEqualTo(7L);
-        assertThat(body.metrics()).hasSize(3);
+        assertThat(body.metrics()).hasSize(4);
         assertThat(body.metrics().get(0).metricCode()).isEqualTo("LOGINS");
         assertThat(body.metrics().get(0).value()).isEqualTo(42L);
-        assertThat(body.totalUserCountGap()).isNotBlank();
+        assertThat(body.metrics().get(3).metricCode()).isEqualTo("ACTIVE_USERS");
+        assertThat(body.metrics().get(3).value()).isEqualTo(9L);
     }
 
     @Test

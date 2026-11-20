@@ -33,10 +33,10 @@ export function UnlockTermModal({
         setHours(72);
         onClose();
       }}
-      kicker="TERM_UNLOCK • Action #44 / Rule AT-09"
+      kicker="TEMPORARY ACCESS"
       title="Temporary Term Unlock"
       titleId="unlock-modal-title"
-      description="Per statutory Rule AT-09, unlock requires an explicit reason, lasts at most 3 days (72 hours), and automatically relocks. HOD and Admin are notified."
+      description="Enter a reason for the temporary unlock. Access can be restored for up to 72 hours, after which the term locks automatically."
       size="sm"
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>

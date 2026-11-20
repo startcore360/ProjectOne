@@ -58,6 +58,21 @@ public class Plan {
     @Column(name = "max_institutions")
     private Integer maxInstitutions;
 
+    @Column(name = "custom_domain_allowed", nullable = false)
+    private boolean customDomainAllowed;
+
+    @Column(name = "branding_colors_allowed", nullable = false)
+    private boolean brandingColorsAllowed;
+
+    @Column(name = "billing_cycle_months", nullable = false)
+    private Integer billingCycleMonths;
+
+    @Column(name = "sms_unit_amount", precision = 14, scale = 2)
+    private BigDecimal smsUnitAmount;
+
+    @Column(name = "storage_unit_amount_per_gb", precision = 14, scale = 2)
+    private BigDecimal storageUnitAmountPerGb;
+
     @Column(name = "status", nullable = false)
     private String status;
 

@@ -6,6 +6,9 @@ import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
+import com.edu360.api.identity.StudentEnrollmentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.time.LocalDate;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
@@ -26,6 +29,12 @@ public class StudentStatusService {
     private final StudentProfileRepository repository;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
+    private StudentEnrollmentRepository enrollmentRepository;
+
+    @Autowired(required = false)
+    public void setEnrollmentRepository(StudentEnrollmentRepository enrollmentRepository) {
+        this.enrollmentRepository = enrollmentRepository;
+    }
 
     private static final Set<String> VALID_STATUSES = Set.of(
             "ACTIVE", "ON_HOLD", "WITHDRAWN", "TRANSFERRED", "DROPPED", "DETAINED", "GRADUATED"
@@ -60,6 +69,16 @@ public class StudentStatusService {
         student.setStatusReason(request.reason());
         student.setStatusChangedAt(Instant.now());
         student = repository.save(student);
+
+        if (enrollmentRepository != null && Set.of("WITHDRAWN", "TRANSFERRED", "DROPPED", "DETAINED", "GRADUATED").contains(upperStatus)) {
+            enrollmentRepository.findFirstByIdTenantIdAndStudentProfileIdAndOutcome(
+                    tenantId, studentId, "IN_PROGRESS").ifPresent(enrollment -> {
+                enrollment.setOutcome(upperStatus);
+                enrollment.setEndedOn(LocalDate.now());
+                enrollment.setUpdatedBy(principal.userAccountId());
+                enrollmentRepository.save(enrollment);
+            });
+        }
 
         auditLogService.record(
                 AuditEventType.ACCOUNT_CREATED,

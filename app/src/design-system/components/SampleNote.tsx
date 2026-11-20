@@ -1,4 +1,4 @@
-import { Icon } from "../../components/ui/Icon";
+﻿import { Icon } from "../../components/ui/Icon";
 
 export interface SampleNoteProps {
   message?: string;
@@ -10,7 +10,7 @@ export function SampleNote({
   className = "",
 }: SampleNoteProps) {
   return (
-    <p className={`platform-sample-note ${className}`.trim()}>
+    <p className={`app-sample-note ${className}`.trim()}>
       <span aria-hidden="true">
         <Icon name="shield" size={15} />
       </span>{" "}

@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
  * codebase already lives under /api.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/departments/{departmentId}")
+@RequestMapping({"/v1/tenants/{tenantId}/departments/{departmentId}", "/api/tenants/{tenantId}/departments/{departmentId}"})
 @RequiredArgsConstructor
 @Tag(name = "Institution setup", description = "Department-level institution setup (HOD_ASSIGN)")
 public class DepartmentController {

@@ -61,7 +61,12 @@ public class DevAdminSeeder implements CommandLineRunner {
     }
     private static final List<DevAccount> DEFAULT_ACCOUNTS = List.of(
             new DevAccount("admin@edu360-platform.local", "Platform Admin", PlatformRole.PLATFORM_ADMIN),
-            new DevAccount("owner@edu360-platform.local", "Product Owner", PlatformRole.PRODUCT_OWNER));
+            new DevAccount("owner@edu360-platform.local", "Product Owner", PlatformRole.PRODUCT_OWNER),
+            // For automated API checks (scratch/ scripts, Newman runs) ONLY. Those scripts set up
+            // their own authenticator, which replaces the account's authenticator and backup codes -
+            // so they must never sign in as a person's account. On 2026-11-16 a run did exactly
+            // that to productowner2 and its owner's saved backup codes stopped working.
+            new DevAccount("api-check@edu360-platform.local", "API Check (automated tests)", PlatformRole.PRODUCT_OWNER));
 
     private record DevAccount(String email, String name, PlatformRole role) {
     }

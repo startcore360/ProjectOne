@@ -57,7 +57,44 @@ public class KeycloakAdminClient {
     public String provisionUser(String realm, String name, String email, String initialPassword,
                                  boolean mustChangePassword) {
         String adminToken = fetchMasterAdminAccessToken();
-        return createUser(adminToken, realm, name, email, initialPassword, mustChangePassword);
+        return createUser(adminToken, realm, name, email, email, initialPassword, mustChangePassword);
+    }
+
+    /** Provisions a student account whose Keycloak username is the institution-generated student code. */
+    public String provisionStudentUser(String realm, String name, String studentCode, String initialPassword,
+                                       boolean mustChangePassword) {
+        String adminToken = fetchMasterAdminAccessToken();
+        return createUser(adminToken, realm, name, studentCode, null, initialPassword, mustChangePassword);
+    }
+
+    /** Removes a just-provisioned identity when its enclosing database transaction cannot complete. */
+    public void deleteUser(String realm, String keycloakUserId) {
+        String adminToken = fetchMasterAdminAccessToken();
+        restClient.delete()
+                .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId)
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    /**
+     * Deletes a tenant realm during reverse-order provisioning compensation.
+     * Missing realms are treated as already compensated so retries remain idempotent.
+     */
+    public void deleteRealm(String realm) {
+        String adminToken = fetchMasterAdminAccessToken();
+        try {
+            restClient.delete()
+                    .uri(properties.getBaseUrl() + "/admin/realms/" + realm)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode() != HttpStatusCode.valueOf(404)) {
+                throw new KeycloakProvisioningException(
+                        "Failed to remove tenant realm '" + realm + "' during compensation.", ex);
+            }
+        }
     }
 
     /**
@@ -92,8 +129,16 @@ public class KeycloakAdminClient {
                     "publicClient", true,
                     "directAccessGrantsEnabled", true,
                     "protocolMappers", List.of(mustChangePasswordClaimMapper()),
-                    // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P7): dev addresses. Must come from configuration.
-                    "redirectUris", List.of("http://*.edu360.local:5173/*", "http://localhost:5173/*"));
+                    // Dev addresses: *.edu360.localhost (no hosts file needed), *.edu360.local (hosts
+                    // file) and plain localhost.
+                    // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P7): must come from configuration
+                    // (app.keycloak.frontend-redirect-uris=${KEYCLOAK_FRONTEND_REDIRECT_URIS}), e.g.
+                    // https://*.edu360.com/* - HTTPS only, the real domain covered by the wildcard
+                    // DNS record and certificate. Verified custom school domains are added on top.
+                    "redirectUris", List.of(
+                            "http://*.edu360.localhost:5173/*",
+                            "http://*.edu360.local:5173/*",
+                            "http://localhost:5173/*"));
             restClient.post()
                     .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/clients")
                     .header("Authorization", "Bearer " + adminToken)
@@ -182,31 +227,28 @@ public class KeycloakAdminClient {
         return token.toString();
     }
 
-    private String createUser(String adminToken, String realm, String name, String email,
+    private String createUser(String adminToken, String realm, String name, String username, String email,
                                String initialPassword, boolean mustChangePassword) {
         Map<String, Object> credential = Map.of(
                 "type", "password",
                 "value", initialPassword,
                 "temporary", false);
-        // Keycloak's default "Verify Profile" required action triggers automatically - even
-        // though we never set it explicitly - whenever a managed profile field (lastName) is
-        // missing, which would reintroduce the same "account not fully set up" problem the
-        // non-temporary credential above was meant to fix. Split the single "name" field this
-        // app collects into first/last so the profile is considered complete. emailVerified is
-        // set true for the same reason: there's no email-verification flow in this app, and an
-        // account the admin just created is treated as already trusted.
+        // Split the supplied display name into both managed Keycloak name fields. Email is
+        // intentionally omitted for students: their login identity is the student code.
         String[] nameParts = name.trim().split("\\s+", 2);
         String firstName = nameParts[0];
         String lastName = nameParts.length > 1 ? nameParts[1] : nameParts[0];
-        Map<String, Object> userRepresentation = Map.of(
-                "username", email,
-                "email", email,
-                "firstName", firstName,
-                "lastName", lastName,
-                "enabled", true,
-                "emailVerified", true,
-                "credentials", List.of(credential),
-                "attributes", Map.of(MUST_CHANGE_PASSWORD_ATTRIBUTE, List.of(String.valueOf(mustChangePassword))));
+        Map<String, Object> userRepresentation = new HashMap<>();
+        userRepresentation.put("username", username);
+        userRepresentation.put("firstName", firstName);
+        userRepresentation.put("lastName", lastName);
+        userRepresentation.put("enabled", true);
+        userRepresentation.put("credentials", List.of(credential));
+        userRepresentation.put("attributes", Map.of(MUST_CHANGE_PASSWORD_ATTRIBUTE, List.of(String.valueOf(mustChangePassword))));
+        if (email != null && !email.isBlank()) {
+            userRepresentation.put("email", email);
+            userRepresentation.put("emailVerified", true);
+        }
 
         String usersUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users";
         try {
@@ -223,9 +265,8 @@ public class KeycloakAdminClient {
             }
             return location.substring(location.lastIndexOf('/') + 1);
         } catch (HttpClientErrorException ex) {
-            // BS-22: Reject account hijacking on 409 conflict. An identity cannot be silently linked.
             if (ex.getStatusCode() == HttpStatusCode.valueOf(409)) {
-                throw new DuplicateResourceException("A user with username/email '" + email + "' already exists in identity provider (BS-22).");
+                throw new DuplicateResourceException("A user with username '" + username + "' already exists in identity provider (BS-22).");
             }
             throw ex;
         }
@@ -329,12 +370,21 @@ public class KeycloakAdminClient {
     }
 
     public void logoutSession(String realm, String sessionId) {
-        String adminToken = fetchMasterAdminAccessToken();
-        restClient.delete()
-                .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/sessions/" + sessionId)
-                .header("Authorization", "Bearer " + adminToken)
-                .retrieve()
-                .toBodilessEntity();
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            restClient.delete()
+                    .uri(properties.getBaseUrl() + "/admin/realms/" + realm + "/sessions/" + sessionId)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException.NotFound ignored) {
+            // Idempotent: session is already ended in Keycloak
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode() == HttpStatusCode.valueOf(404)) {
+                return;
+            }
+            throw ex;
+        }
     }
 
     /**
@@ -383,6 +433,40 @@ public class KeycloakAdminClient {
         } catch (Exception ex) {
             log.warn("KeycloakAdminClient.setUserEnabled({}) skipped or non-fatal for user {} in realm {}: {}",
                     enabled, keycloakUserId, realm, ex.getMessage());
+        }
+    }
+
+    /**
+     * Strict variant for platform staff lifecycle changes: the database status must not change
+     * unless Keycloak confirms the enabled flag was updated.
+     */
+    @SuppressWarnings("unchecked")
+    public void setUserEnabledStrict(String realm, String keycloakUserId, boolean enabled) {
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
+            Map<String, Object> current = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+            if (current == null) {
+                throw new KeycloakProvisioningException("Keycloak user could not be read for a status change.");
+            }
+            Map<String, Object> updated = new java.util.HashMap<>(current);
+            updated.put("enabled", enabled);
+            restClient.put()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .body(updated)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RuntimeException ex) {
+            if (ex instanceof KeycloakProvisioningException provisioningException) {
+                throw provisioningException;
+            }
+            // Do not surface provider response bodies or credential-bearing URLs.
+            throw new KeycloakProvisioningException("Keycloak could not update the platform user's enabled state.", ex);
         }
     }
 
@@ -577,6 +661,32 @@ public class KeycloakAdminClient {
                 .map(c -> new CredentialInfo(String.valueOf(c.get("type")),
                         c.get("createdDate") instanceof Number n ? java.time.Instant.ofEpochMilli(n.longValue()) : null))
                 .toList();
+    }
+
+    /**
+     * MFA-01: removes every authenticator ("otp" credential) the user holds, so the next sign-in
+     * sets up a new one through the existing in-app enrolment. The password is never touched.
+     * Returns how many authenticators were removed.
+     */
+    @SuppressWarnings("unchecked")
+    public int removeOtpCredentials(String realm, String keycloakUserId) {
+        String adminToken = fetchMasterAdminAccessToken();
+        String base = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId + "/credentials";
+        List<Map<String, Object>> body = restClient.get().uri(base)
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .body(List.class);
+        int removed = 0;
+        for (Map<String, Object> credential : body == null ? List.<Map<String, Object>>of() : body) {
+            if ("otp".equalsIgnoreCase(String.valueOf(credential.get("type"))) && credential.get("id") != null) {
+                restClient.delete().uri(base + "/" + credential.get("id"))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .retrieve()
+                        .toBodilessEntity();
+                removed++;
+            }
+        }
+        return removed;
     }
 
     /**

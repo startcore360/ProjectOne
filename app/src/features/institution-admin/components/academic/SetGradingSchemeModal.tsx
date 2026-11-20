@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal } from "../../../../design-system/components";
+import { Button, Modal, Notice, TextField, DateField } from "../../../../design-system/components";
+import { getLocalDateString } from "../../../../utils/dateUtils";
+import { getApiErrorMessage } from "../../../../services/apiHelper";
 
 export interface SetGradingSchemeModalProps {
   isOpen: boolean;
@@ -15,53 +17,61 @@ export function SetGradingSchemeModal({
   saving,
 }: SetGradingSchemeModalProps) {
   const [schemeName, setSchemeName] = useState("Standard 10-Point CGPA Scale");
-  const [schemeEffectiveFrom, setSchemeEffectiveFrom] = useState(
-    new Date().toISOString().substring(0, 10),
-  );
+  const [schemeEffectiveFrom, setSchemeEffectiveFrom] = useState(getLocalDateString());
+  const [modalError, setModalError] = useState("");
+
+  const handleClose = () => {
+    setModalError("");
+    onClose();
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit(schemeName, schemeEffectiveFrom);
+    setModalError("");
+    try {
+      await onSubmit(schemeName, schemeEffectiveFrom);
+      handleClose();
+    } catch (err: unknown) {
+      setModalError(getApiErrorMessage(err));
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
-      kicker="GRADING_SCHEME_SET • Action #34"
+      onClose={handleClose}
+      kicker="ACADEMIC GOVERNANCE"
       title="Set Grading Scheme"
       titleId="scheme-modal-title"
       size="sm"
     >
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
+      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }} noValidate>
+        {modalError && (
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <Notice tone="danger">{modalError}</Notice>
+          </div>
+        )}
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <label htmlFor="scheme-name" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            Scheme Name *
-          </label>
-          <input
+          <TextField
             id="scheme-name"
+            label="Scheme Name"
             type="text"
             value={schemeName}
             onChange={(e) => setSchemeName(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)" }}
           />
         </div>
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label htmlFor="scheme-effective-from" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            Effective From *
-          </label>
-          <input
+          <DateField
             id="scheme-effective-from"
-            type="date"
+            label="Effective From"
             value={schemeEffectiveFrom}
             onChange={(e) => setSchemeEffectiveFrom(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)" }}
           />
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" disabled={saving}>

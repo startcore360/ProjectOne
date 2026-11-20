@@ -3,6 +3,7 @@ package com.edu360.api.config;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -17,6 +18,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.edu360.api.platformops.support.SupportSessionAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
 
@@ -44,6 +47,8 @@ public class SecurityConfig {
     private final TenantIssuerAuthenticationManagerResolver tenantIssuerAuthenticationManagerResolver;
     private final MustChangePasswordFilter mustChangePasswordFilter;
     private final TrialReadOnlyFilter trialReadOnlyFilter;
+    private final SupportSessionAuthenticationFilter supportSessionAuthenticationFilter;
+    private final TokenHostMatchingFilter tokenHostMatchingFilter;
     private final Environment environment;
 
     @Value("${app.cors.allowed-origin:http://localhost:5173}")
@@ -86,9 +91,13 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     // BS-27: Both /api/auth/** and /v1/auth/** permitted consistently, plus identity-events webhooks (M-03)
-                    auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/internal/identity-events", "/v1/internal/identity-events").permitAll();
+                    auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/internal/identity-events", "/v1/internal/identity-events", "/v1/ws", "/api/ws").permitAll();
                     // BS-25: Swagger and H2 console only open in dev or test profiles
                     if (isDevOrTest) {
+                        // The local backup-agent route has its own dev-only shared-secret check.
+                        if (environment.matchesProfiles("dev")) {
+                            auth.requestMatchers(HttpMethod.POST, "/api/platform/backup-status", "/v1/platform/backup-status").permitAll();
+                        }
                         auth.requestMatchers("/h2-console/**").permitAll();
                         auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
                     }
@@ -104,7 +113,9 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationManagerResolver(
                                 new JwtIssuerAuthenticationManagerResolver(tenantIssuerAuthenticationManagerResolver)))
-                .addFilterAfter(mustChangePasswordFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterBefore(supportSessionAuthenticationFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(tokenHostMatchingFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(mustChangePasswordFilter, TokenHostMatchingFilter.class)
                 .addFilterAfter(trialReadOnlyFilter, MustChangePasswordFilter.class);
         return http.build();
     }

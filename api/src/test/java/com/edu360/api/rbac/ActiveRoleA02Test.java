@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,6 +44,8 @@ import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.DepartmentRepository;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.OfferingDepartmentResolver;
+import com.edu360.api.institution.StaffAssignment;
+import com.edu360.api.institution.StaffAssignmentRepository;
 import com.edu360.api.selfservice.UserMeService;
 import com.edu360.api.selfservice.dto.SwitchActiveRoleResponse;
 import com.edu360.api.tenant.TenantContext;
@@ -60,6 +63,7 @@ class ActiveRoleA02Test {
     private SubjectAllocationService allocationService;
     private final List<SubjectAllocation> savedAllocations = new ArrayList<>();
     private final OfferingDepartmentResolver departments = mock(OfferingDepartmentResolver.class);
+    private final StaffAssignmentRepository staffAssignments = mock(StaffAssignmentRepository.class);
 
     private final UUID collegeA = UUID.randomUUID();
     private final UUID deptA = UUID.randomUUID();
@@ -80,7 +84,12 @@ class ActiveRoleA02Test {
             savedAllocations.add(a);
             return a;
         });
-        allocationService = new SubjectAllocationService(allocations, world.evaluator, world.auditLogService);
+        lenient().when(staffAssignments.findByTenantIdAndStaffAssignmentId(any(), any())).thenAnswer(inv -> {
+            StaffAssignment staff = new StaffAssignment(); staff.setTenantId(world.tenantId);
+            staff.setStaffAssignmentId(inv.getArgument(1)); staff.setInstitutionId(collegeA); staff.setStatus("ACTIVE");
+            return Optional.of(staff);
+        });
+        allocationService = new SubjectAllocationService(allocations, world.evaluator, world.auditLogService, null, staffAssignments);
         allocationService.setOfferingDepartmentResolver(departments);
         when(departments.departmentOf(world.tenantId, offeringInDeptA)).thenReturn(Optional.of(deptA));
     }
@@ -236,7 +245,7 @@ class ActiveRoleA02Test {
         world.signIn(user);
         allocateInDeptA(user);
         AuditLog actionRow = world.auditRows.get(world.auditRows.size() - 1);
-        assertThat(actionRow.getEventType()).isEqualTo(AuditEventType.ROLE_ASSIGNED);
+        assertThat(actionRow.getEventType()).isEqualTo(AuditEventType.SUBJECT_ALLOCATION_CREATED);
         assertThat(actionRow.getActorRoleCode()).isEqualTo("HEAD_OF_DEPARTMENT");
         assertThat(actionRow.getScopeType()).isEqualTo("DEPARTMENT");
     }

@@ -45,22 +45,28 @@ public class LoginTenantResolver {
     }
 
     public Resolution resolve(HttpServletRequest request) {
-        String host = request.getServerName();
+        String host = request.getHeader("Host");
+        if (host != null && host.contains(":")) {
+            host = host.split(":")[0].trim();
+        }
+        if (host == null || host.isBlank()) {
+            host = request.getServerName();
+        }
         String label = stripLocalDevSuffix(host);
 
         if (label.equals(keycloakProperties.getPlatformHostLabel())) {
             return new PlatformLogin(keycloakProperties.getPlatformRealm());
         }
 
-        Tenant tenant = tenantRepository.findBySubdomain(label)
+        Tenant tenant = tenantRepository.findByCustomDomainIgnoreCase(host)
+                .or(() -> tenantRepository.findBySubdomain(label))
                 .filter(t -> t.getState() == TenantState.ACTIVE || t.getState() == TenantState.TRIAL)
                 .orElseThrow(() -> new InvalidCredentialsException("Unknown sign-in address"));
         return new TenantLogin(tenant);
     }
 
-    // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P4 and P9): the suffix is blank in production today, so
-    // abc.edu360.com is looked up as the full name and login fails. Custom domains aren't read
-    // here either. Required before the first production deployment.
+    // Custom domains are matched exactly before the subdomain fallback above. Local-dev suffixes
+    // continue to be stripped only for the configured local hostname forms.
     //
     // Several endings may be configured (comma-separated), so more than one address style works
     // at once - e.g. ".edu360.local" (abc.edu360.local) and "-edu360.duckdns.org"

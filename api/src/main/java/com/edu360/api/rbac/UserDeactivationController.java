@@ -41,7 +41,7 @@ import jakarta.validation.Valid;
  * Enforces T01 (institution scope boundary) and T02 (hierarchy boundary) protection.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/users")
+@RequestMapping({"/v1/tenants/{tenantId}/users", "/api/tenants/{tenantId}/users"})
 @Tag(name = "Users", description = "USER_DEACTIVATE - deactivate a user (soft delete only)")
 public class UserDeactivationController {
 

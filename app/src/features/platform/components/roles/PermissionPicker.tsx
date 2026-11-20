@@ -1,4 +1,4 @@
-import { Badge } from "../../../../design-system/components";
+﻿import { Badge } from "../../../../design-system/components";
 import type { PlatformRole } from "../../api/platformUserService";
 import { baseLimitReason, type AccessMode, type ActionCatalogItem } from "../../api/platformRoleService";
 
@@ -29,10 +29,10 @@ export function PermissionPicker({
   };
 
   return (
-    <div className="platform-form-field" style={{ maxHeight: "min(36vh, 320px)", overflowY: "auto" }}>
+    <div className="app-form-field" style={{ maxHeight: "min(36vh, 320px)", overflowY: "auto" }}>
       {modules.map((moduleName) => (
         <fieldset key={moduleName} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
-          <legend className="platform-field-hint" style={{ padding: "var(--space-2) 0" }}>
+          <legend className="app-field-hint" style={{ padding: "var(--space-2) 0" }}>
             {moduleName}
           </legend>
           {catalog
@@ -68,7 +68,7 @@ export function PermissionPicker({
                           <Badge tone="warning">Sensitive</Badge>
                         </>
                       )}
-                      <small className="platform-cell-sub">{lockedReason ?? item.actionCode}</small>
+                      <small className="app-cell-sub">{lockedReason ?? item.actionCode}</small>
                     </span>
                   </label>
                   {lockedReason ? (

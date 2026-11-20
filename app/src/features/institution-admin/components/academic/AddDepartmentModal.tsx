@@ -36,7 +36,7 @@ export function AddDepartmentModal({
       }}
       title="Add Department"
       titleId="add-dept-title"
-      description="Create an academic department for this college [Rule HI-12]."
+      description="Create an academic department for this college."
       size="sm"
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>

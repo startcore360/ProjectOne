@@ -1,27 +1,153 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
   DataTable,
   MetricCard,
+  Modal,
   Notice,
   Panel,
   SearchBox,
+  SelectField,
+  SkeletonTable,
   StatusBadge,
+  TextField,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   platformOpsService,
   type InvoiceItem,
   type CreateInvoicePayload,
+  type InvoiceLineItem,
+  type BillingCycleResponse,
 } from "../../api/platformOpsService";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
+import { getLocalDateString, getLocalMonthStart } from "../../../../utils/dateUtils";
+
+function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoiceNumber?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && menuRef.current) {
+      const firstItem = menuRef.current.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])');
+      firstItem?.focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!menuRef.current) return;
+      const items = Array.from(menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])'));
+      if (!items.length) return;
+      const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+      let nextIndex = 0;
+      if (e.key === "ArrowDown") {
+        nextIndex = currentIndex >= 0 && currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+      } else {
+        nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+      }
+      items[nextIndex]?.focus();
+    }
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="eds-button eds-button--secondary eds-button--sm"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={invoiceNumber ? `Actions for invoice ${invoiceNumber}` : "Row actions"}
+      >
+        ⋯
+      </button>
+      {open && (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={invoiceNumber ? `Actions for invoice ${invoiceNumber}` : "Row actions"}
+          tabIndex={-1}
+          onKeyDown={handleKeyDown}
+          style={{
+            position: "absolute",
+            right: 0,
+            top: "calc(100% + 4px)",
+            zIndex: 50,
+            background: "var(--color-bg-surface)",
+            border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--elevation-2)",
+            minWidth: "140px",
+            padding: "4px 0",
+          }}
+          onClick={() => {
+            setOpen(false);
+            triggerRef.current?.focus();
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      style={{
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        padding: "8px 14px",
+        background: "none",
+        border: "none",
+        fontSize: "var(--fs-body-sm)",
+        color: "var(--color-text)",
+        cursor: "pointer",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = "none";
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function InvoicesView() {
   const { can, role } = usePlatformAccess();
   const canManageInvoice = can("INVOICE_MANAGE");
   const canApplyDiscount = can("DISCOUNT_APPLY");
+  const canFlagOverdue = can("OVERDUE_FLAG");
   const isProductOwner = role === "PRODUCT_OWNER";
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
@@ -30,15 +156,34 @@ export function InvoicesView() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
+
+  const [lineInvoice, setLineInvoice] = useState<InvoiceItem | null>(null);
+  const [invoiceLines, setInvoiceLines] = useState<InvoiceLineItem[]>([]);
+  const [loadingLines, setLoadingLines] = useState(false);
+  const [lineDescription, setLineDescription] = useState("");
+  const [lineQuantity, setLineQuantity] = useState("1");
+  const [lineUnitAmount, setLineUnitAmount] = useState("0");
+  const [savingLine, setSavingLine] = useState(false);
+  const [lineError, setLineError] = useState("");
+
+  const [showBillingCycle, setShowBillingCycle] = useState(false);
+  const [runningBillingCycle, setRunningBillingCycle] = useState(false);
+  const [cyclePeriodStart, setCyclePeriodStart] = useState(getLocalMonthStart());
+  const [cyclePeriodEnd, setCyclePeriodEnd] = useState(getLocalDateString());
+  const [cycleIdempotencyKey, setCycleIdempotencyKey] = useState("");
+  const [cycleResult, setCycleResult] = useState<BillingCycleResponse | null>(null);
+  const [cycleError, setCycleError] = useState("");
 
   // Create Invoice Modal
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
   const [createDraft, setCreateDraft] = useState<CreateInvoicePayload>({
     tenantId: "",
-    periodStart: new Date().toISOString().substring(0, 7) + "-01",
-    periodEnd: new Date().toISOString().substring(0, 10),
+    periodStart: getLocalMonthStart(),
+    periodEnd: getLocalDateString(),
     subtotalAmount: 50000,
     currencyCode: "INR",
   });
@@ -48,15 +193,20 @@ export function InvoicesView() {
   const [paymentMode, setPaymentMode] = useState("GATEWAY");
   const [paymentRef, setPaymentRef] = useState("");
   const [recordingPay, setRecordingPay] = useState(false);
+  const [payError, setPayError] = useState("");
 
   // Discount Modal
   const [discountInvoice, setDiscountInvoice] = useState<InvoiceItem | null>(null);
-  const [discountAmount, setDiscountAmount] = useState(5000);
+  const [discountPercent, setDiscountPercent] = useState("10");
+  const [discountReason, setDiscountReason] = useState("");
+  const [discountIdempotencyKey, setDiscountIdempotencyKey] = useState("");
   const [applyingDiscount, setApplyingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState("");
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setError("");
+    setLoadError("");
+    setActionError("");
     try {
       const [invs, tenantRes] = await Promise.all([
         platformOpsService.listInvoices(),
@@ -69,49 +219,82 @@ export function InvoicesView() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load invoices";
-      setError(msg);
+      setLoadError(msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+  }, [loadData]);
+
+  const handleRunBillingCycle = async (e: FormEvent) => {
+    e.preventDefault();
+    setRunningBillingCycle(true);
+    setCycleError("");
+    try {
+      const result = await platformOpsService.createBillingCycle({
+        periodStart: cyclePeriodStart,
+        periodEnd: cyclePeriodEnd,
+      }, cycleIdempotencyKey);
+      setCycleResult(result);
+      setMessage(`Billing cycle completed: ${result.created.length} invoice(s) created, ${result.skipped.length} skipped.`);
+      setShowBillingCycle(false);
+      void loadData();
+    } catch (err: unknown) {
+      setCycleError(err instanceof Error ? err.message : "Failed to run billing cycle");
+    } finally {
+      setRunningBillingCycle(false);
+    }
+  };
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setCreating(true);
-    setError("");
+    setCreateError("");
     try {
       await platformOpsService.createInvoice(createDraft);
       setMessage("Invoice created successfully.");
       setShowCreate(false);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create invoice");
+      setCreateError(err instanceof Error ? err.message : "Failed to create invoice");
     } finally {
       setCreating(false);
     }
   };
 
+  const handleApprove = async (inv: InvoiceItem) => {
+    setActionError("");
+    try {
+      await platformOpsService.approveInvoice(inv.invoiceId, `invoice-approval-${inv.invoiceId}`);
+      setMessage(`Invoice ${inv.invoiceNumber} approved.`);
+      void loadData();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to approve invoice");
+    }
+  };
+
   const handleSend = async (inv: InvoiceItem) => {
+    setActionError("");
     try {
       await platformOpsService.sendInvoice(inv.invoiceId);
       setMessage(`Invoice ${inv.invoiceNumber} marked as SENT.`);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to send invoice");
+      setActionError(err instanceof Error ? err.message : "Failed to send invoice");
     }
   };
 
   const handleFlagOverdue = async (inv: InvoiceItem) => {
+    setActionError("");
     try {
       await platformOpsService.flagOverdue(inv.invoiceId);
-      setMessage(`Invoice ${inv.invoiceNumber} flagged as overdue.`);
-      loadData();
+      setMessage(`Invoice ${inv.invoiceNumber} flagged for suspension review.`);
+      void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to flag overdue");
+      setActionError(err instanceof Error ? err.message : "Failed to flag overdue");
     }
   };
 
@@ -119,7 +302,7 @@ export function InvoicesView() {
     e.preventDefault();
     if (!payInvoice) return;
     setRecordingPay(true);
-    setError("");
+    setPayError("");
     try {
       await platformOpsService.recordPayment(payInvoice.invoiceId, {
         paymentMode,
@@ -128,9 +311,9 @@ export function InvoicesView() {
       setMessage(`Payment recorded for ${payInvoice.invoiceNumber}.`);
       setPayInvoice(null);
       setPaymentRef("");
-      loadData();
+      void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to record payment");
+      setPayError(err instanceof Error ? err.message : "Failed to record payment");
     } finally {
       setRecordingPay(false);
     }
@@ -140,16 +323,73 @@ export function InvoicesView() {
     e.preventDefault();
     if (!discountInvoice) return;
     setApplyingDiscount(true);
-    setError("");
+    setDiscountError("");
     try {
-      await platformOpsService.applyDiscount(discountInvoice.invoiceId, Number(discountAmount));
+      await platformOpsService.applyDiscount(discountInvoice.invoiceId, {
+        discountPercent: Number(discountPercent),
+        reason: discountReason.trim(),
+      }, discountIdempotencyKey);
       setMessage(`Discount applied to ${discountInvoice.invoiceNumber}.`);
       setDiscountInvoice(null);
-      loadData();
+      void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to apply discount");
+      setDiscountError(err instanceof Error ? err.message : "Failed to apply discount");
     } finally {
       setApplyingDiscount(false);
+    }
+  };
+
+  const openInvoiceLines = async (invoice: InvoiceItem) => {
+    setLineInvoice(invoice);
+    setInvoiceLines([]);
+    setLoadingLines(true);
+    setLineError("");
+    try {
+      setInvoiceLines(await platformOpsService.listInvoiceLines(invoice.invoiceId));
+    } catch (err: unknown) {
+      setLineError(err instanceof Error ? err.message : "Failed to load invoice lines");
+    } finally {
+      setLoadingLines(false);
+    }
+  };
+
+  const handleAddOtherLine = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!lineInvoice) return;
+    setSavingLine(true);
+    setLineError("");
+    try {
+      const updated = await platformOpsService.addInvoiceLine(lineInvoice.invoiceId, {
+        description: lineDescription.trim(),
+        quantity: Number(lineQuantity),
+        unitAmount: Number(lineUnitAmount),
+      });
+      setLineInvoice(updated);
+      setInvoiceLines(await platformOpsService.listInvoiceLines(lineInvoice.invoiceId));
+      setLineDescription("");
+      setLineQuantity("1");
+      setLineUnitAmount("0");
+      void loadData();
+    } catch (err: unknown) {
+      setLineError(err instanceof Error ? err.message : "Failed to add invoice line");
+    } finally {
+      setSavingLine(false);
+    }
+  };
+
+  const handleRemoveOtherLine = async (line: InvoiceLineItem) => {
+    if (!lineInvoice) return;
+    setSavingLine(true);
+    setLineError("");
+    try {
+      const updated = await platformOpsService.removeInvoiceLine(lineInvoice.invoiceId, line.invoiceLineId);
+      setLineInvoice(updated);
+      setInvoiceLines(await platformOpsService.listInvoiceLines(lineInvoice.invoiceId));
+      void loadData();
+    } catch (err: unknown) {
+      setLineError(err instanceof Error ? err.message : "Failed to remove invoice line");
+    } finally {
+      setSavingLine(false);
     }
   };
 
@@ -157,7 +397,7 @@ export function InvoicesView() {
     const matchesQuery =
       inv.invoiceNumber.toLowerCase().includes(query.toLowerCase()) ||
       inv.tenantId.toLowerCase().includes(query.toLowerCase());
-    const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
+    const matchesStatus = statusFilter === "All" || (statusFilter === "OVERDUE" ? inv.overdue : inv.status === statusFilter);
     return matchesQuery && matchesStatus;
   });
 
@@ -165,25 +405,32 @@ export function InvoicesView() {
   const totalPaid = invoices
     .filter((i) => i.status === "PAID")
     .reduce((sum, i) => sum + Number(i.totalAmount || 0), 0);
-  const overdueCount = invoices.filter((i) => !!i.overdueFlaggedAt).length;
+  const overdueCount = invoices.filter((i) => i.overdue).length;
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Invoices & Billing"
         description="Tenant subscription invoicing, payment recording, overdue flagging and Product Owner discounts."
         actions={
           canManageInvoice && (
-            <Button onClick={() => setShowCreate(true)}>Create Invoice</Button>
+            <>
+              <Button variant="secondary" onClick={() => { setCycleIdempotencyKey(crypto.randomUUID()); setCycleResult(null); setShowBillingCycle(true); }}>Run billing cycle</Button>
+              <Button onClick={() => setShowCreate(true)}>Create Invoice</Button>
+            </>
           )
         }
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {actionError && <Notice tone="danger">{actionError}</Notice>}
+      {loadError && <ErrorState message={loadError} action={<Button variant="secondary" onClick={() => void loadData()}>Retry</Button>} />}
+      {cycleResult && cycleResult.skipped.length > 0 && (
+        <Notice tone="info">Skipped tenants: {cycleResult.skipped.map((item) => `${item.tenantId.substring(0, 8)} (${item.reason})`).join(", ")}</Notice>
+      )}
 
       <div className="kpi-grid">
-        <MetricCard label="Total Invoices" value={invoices.length} note="Platform-wide" mark="book" />
+        <MetricCard label="Total Invoices" value={invoices.length} note="app-wide" mark="book" />
         <MetricCard
           label="Total Billed"
           value={`₹${totalInvoiced.toLocaleString("en-IN")}`}
@@ -197,48 +444,45 @@ export function InvoicesView() {
           mark="check-circle"
         />
         <MetricCard
-          label="Overdue Flagged"
+          label="Past Due"
           value={overdueCount}
-          note="Requires attention"
+          note="Sent invoices beyond due date"
           mark="alert"
         />
       </div>
 
       <Panel title="Platform Invoices" description="Manage invoices across all tenants">
-        <div className="platform-toolbar" style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+        <div className="app-toolbar" style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <SearchBox
             value={query}
             onChange={(val) => setQuery(val)}
             placeholder="Search invoice number..."
           />
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--fs-body-sm)", color: "var(--color-text-muted)" }}>Status:</span>
-            {["All", "DRAFT", "SENT", "PAID"].map((st) => (
-              <Button
-                key={st}
-                size="sm"
-                variant={statusFilter === st ? "primary" : "secondary"}
-                onClick={() => setStatusFilter(st)}
-              >
-                {st}
-              </Button>
-            ))}
-          </div>
+          <label className="app-select-label">
+            Status{" "}
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="All">All</option>
+              <option value="DRAFT">Draft</option>
+              <option value="APPROVED">Approved</option>
+              <option value="SENT">Sent</option>
+              <option value="OVERDUE">Overdue</option>
+              <option value="PAID">Paid</option>
+            </select>
+          </label>
         </div>
 
-        {loading ? (
-          <div className="platform-empty-inline">
-            <Spinner label="Loading invoices..." />
-          </div>
-        ) : filteredInvoices.length === 0 ? (
-          <p className="platform-empty-inline">No invoices found matching criteria.</p>
-        ) : (
-          <DataTable headers={["Invoice #", "Period", "Amount", "Status", "Flags", "Actions"]}>
+        <DataTable
+          headers={["Invoice #", "Period", "Amount", "Status", "Flags", "Actions"]}
+          loading={loading && invoices.length === 0}
+          loadingLabel="Loading invoices"
+          empty={!loading && filteredInvoices.length === 0}
+          emptyMessage="No invoices found matching criteria."
+        >
             {filteredInvoices.map((inv) => (
               <tr key={inv.invoiceId}>
                 <td>
                   <strong>{inv.invoiceNumber}</strong>
-                  <small className="platform-cell-sub">Tenant: {inv.tenantId.substring(0, 8)}...</small>
+                  <small className="app-cell-sub">Tenant: {inv.tenantId.substring(0, 8)}...</small>
                 </td>
                 <td>
                   {inv.periodStart} to {inv.periodEnd}
@@ -246,202 +490,285 @@ export function InvoicesView() {
                 <td>
                   <strong>₹{Number(inv.totalAmount).toLocaleString("en-IN")}</strong>
                   {Number(inv.discountAmount) > 0 && (
-                    <small className="platform-cell-sub" style={{ color: "var(--color-status-success-fg)" }}>
+                    <small className="app-cell-sub" style={{ color: "var(--color-status-success-fg)" }}>
                       -₹{Number(inv.discountAmount).toLocaleString("en-IN")} discount
                     </small>
                   )}
                 </td>
                 <td>
-                  <StatusBadge value={inv.status} />
+                  <StatusBadge value={inv.overdue ? "OVERDUE" : inv.status} />
                 </td>
                 <td>
                   {inv.overdueFlaggedAt ? (
-                    <span style={{ color: "var(--color-status-danger-fg)", fontWeight: "bold" }}>OVERDUE</span>
+                    <span style={{ color: "var(--color-status-danger-fg)", fontWeight: "bold" }}>REVIEW FLAGGED</span>
                   ) : (
                     "—"
                   )}
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                    {inv.status === "DRAFT" && canManageInvoice && (
-                      <Button size="sm" variant="secondary" onClick={() => handleSend(inv)}>
-                        Send
-                      </Button>
+                  <RowMenu invoiceNumber={inv.invoiceNumber}>
+                    <MenuAction onClick={() => void openInvoiceLines(inv)}>View lines</MenuAction>
+                    {inv.status === "DRAFT" && isProductOwner && canManageInvoice && (
+                      <MenuAction onClick={() => handleApprove(inv)}>Approve</MenuAction>
+                    )}
+                    {inv.status === "APPROVED" && canManageInvoice && (
+                      <MenuAction onClick={() => handleSend(inv)}>Send</MenuAction>
                     )}
                     {inv.status !== "PAID" && canManageInvoice && (
-                      <Button size="sm" variant="secondary" onClick={() => setPayInvoice(inv)}>
-                        Record Pay
-                      </Button>
+                      <MenuAction onClick={() => {
+                        setPayInvoice(inv);
+                        setPaymentRef(`TXN-${Date.now()}`);
+                        setPayError("");
+                      }}>Record payment</MenuAction>
                     )}
-                    {inv.status !== "PAID" && !inv.overdueFlaggedAt && (
-                      <Button size="sm" variant="secondary" onClick={() => handleFlagOverdue(inv)}>
-                        Flag Overdue
-                      </Button>
+                    {inv.overdue && canFlagOverdue && !inv.overdueFlaggedAt && (
+                      <MenuAction onClick={() => handleFlagOverdue(inv)}>Flag for suspension review</MenuAction>
                     )}
-                    {isProductOwner && inv.status !== "PAID" && canApplyDiscount && (
-                      <Button size="sm" variant="secondary" onClick={() => setDiscountInvoice(inv)}>
-                        Discount
-                      </Button>
+                    {isProductOwner && (inv.status === "DRAFT" || inv.status === "APPROVED") && canApplyDiscount && (
+                      <MenuAction onClick={() => {
+                        setDiscountInvoice(inv);
+                        setDiscountPercent("10");
+                        setDiscountReason("");
+                        setDiscountIdempotencyKey(crypto.randomUUID());
+                        setDiscountError("");
+                      }}>Apply discount</MenuAction>
                     )}
-                  </div>
+                  </RowMenu>
                 </td>
+              </tr>
+            ))}
+        </DataTable>
+      </Panel>
+
+      <Modal isOpen={showBillingCycle} onClose={() => setShowBillingCycle(false)} kicker="BILLING"
+        title="Run billing cycle"
+        titleId="run-billing-cycle-title"
+        description="Create draft invoices for active tenants whose renewal dates fall within this period. Only recorded usage rows are billed."
+        size="sm">
+        <form onSubmit={handleRunBillingCycle}>
+          {cycleError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{cycleError}</Notice>
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "12px" }}>
+            <TextField id="billing-cycle-period-start" label="Period start" type="date" value={cyclePeriodStart} onChange={(e) => setCyclePeriodStart(e.target.value)} required />
+            <TextField id="billing-cycle-period-end" label="Period end" type="date" value={cyclePeriodEnd} onChange={(e) => setCyclePeriodEnd(e.target.value)} required />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" type="button" onClick={() => setShowBillingCycle(false)}>Cancel</Button>
+            <Button type="submit" busy={runningBillingCycle}>Generate draft invoices</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Create Invoice Modal */}
+      <Modal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        kicker="BILLING"
+        title="Create Tenant Invoice"
+        titleId="create-invoice-title"
+        description="Issue a new billing statement for an enrolled tenant institution."
+        size="sm"
+      >
+        <form onSubmit={handleCreate}>
+          {createError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{createError}</Notice>
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "12px" }}>
+            <SelectField
+              id="create-invoice-tenant"
+              label="Tenant Institution"
+              value={createDraft.tenantId}
+              onChange={(e) => setCreateDraft({ ...createDraft, tenantId: e.target.value })}
+              required
+              options={tenants.map((t) => ({
+                value: t.tenantId,
+                label: `${t.tenantName} (${t.subdomain})`,
+              }))}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <TextField
+                id="invoice-period-start"
+                label="Period Start"
+                type="date"
+                value={createDraft.periodStart}
+                onChange={(e) => setCreateDraft({ ...createDraft, periodStart: e.target.value })}
+                required
+              />
+              <TextField
+                id="invoice-period-end"
+                label="Period End"
+                type="date"
+                value={createDraft.periodEnd}
+                onChange={(e) => setCreateDraft({ ...createDraft, periodEnd: e.target.value })}
+                required
+              />
+            </div>
+            <TextField
+              id="invoice-subtotal"
+              label="Subtotal Amount (₹ INR)"
+              type="number"
+              value={String(createDraft.subtotalAmount)}
+              onChange={(e) => setCreateDraft({ ...createDraft, subtotalAmount: Number(e.target.value) })}
+              required
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={creating}>
+              Save Draft Invoice
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Invoice lines drawer */}
+      <Modal
+        isOpen={!!lineInvoice}
+        onClose={() => setLineInvoice(null)}
+        kicker="INVOICE REVIEW"
+        title={lineInvoice ? `Invoice lines · ${lineInvoice.invoiceNumber}` : "Invoice lines"}
+        titleId="invoice-lines-title"
+        description={lineInvoice ? `Subtotal ₹${Number(lineInvoice.subtotalAmount).toLocaleString("en-IN")} · Total ₹${Number(lineInvoice.totalAmount).toLocaleString("en-IN")}` : undefined}
+        size="lg"
+      >
+        {lineError && (
+          <div style={{ marginBottom: "12px" }}>
+            <Notice tone="danger">{lineError}</Notice>
+          </div>
+        )}
+        {loadingLines ? <SkeletonTable columns={6} rows={3} /> : invoiceLines.length === 0 ? (
+          <p className="app-empty-inline">No invoice lines have been recorded.</p>
+        ) : (
+          <DataTable headers={["Type", "Description", "Quantity", "Unit amount", "Line amount", ""]}>
+            {invoiceLines.map((line) => (
+              <tr key={line.invoiceLineId}>
+                <td><StatusBadge value={line.lineType} /></td>
+                <td>{line.description}</td>
+                <td>{Number(line.quantity).toLocaleString("en-IN")}</td>
+                <td>₹{Number(line.unitAmount).toLocaleString("en-IN")}</td>
+                <td><strong>₹{Number(line.lineAmount).toLocaleString("en-IN")}</strong></td>
+                <td>{line.lineType === "OTHER" && lineInvoice?.status === "DRAFT" && canManageInvoice && (
+                  <Button size="sm" variant="secondary" disabled={savingLine} onClick={() => void handleRemoveOtherLine(line)}>Remove</Button>
+                )}</td>
               </tr>
             ))}
           </DataTable>
         )}
-      </Panel>
-
-      {/* Create Invoice Modal */}
-      {showCreate && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Create Invoice">
-            <header>
-              <h2>Create Tenant Invoice</h2>
-              <p>Issue a new billing statement for an enrolled tenant institution.</p>
-            </header>
-            <form onSubmit={handleCreate}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Tenant Institution</span>
-                  <select
-                    className="platform-input"
-                    value={createDraft.tenantId}
-                    onChange={(e) => setCreateDraft({ ...createDraft, tenantId: e.target.value })}
-                    required
-                  >
-                    {tenants.map((t) => (
-                      <option key={t.tenantId} value={t.tenantId}>
-                        {t.tenantName} ({t.subdomain})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <label className="field-label">
-                    <span>Period Start</span>
-                    <input
-                      type="date"
-                      className="platform-input"
-                      value={createDraft.periodStart}
-                      onChange={(e) => setCreateDraft({ ...createDraft, periodStart: e.target.value })}
-                      required
-                    />
-                  </label>
-                  <label className="field-label">
-                    <span>Period End</span>
-                    <input
-                      type="date"
-                      className="platform-input"
-                      value={createDraft.periodEnd}
-                      onChange={(e) => setCreateDraft({ ...createDraft, periodEnd: e.target.value })}
-                      required
-                    />
-                  </label>
-                </div>
-                <label className="field-label">
-                  <span>Subtotal Amount (₹ INR)</span>
-                  <input
-                    type="number"
-                    className="platform-input"
-                    value={createDraft.subtotalAmount}
-                    onChange={(e) => setCreateDraft({ ...createDraft, subtotalAmount: Number(e.target.value) })}
-                    min="1"
-                    required
-                  />
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={creating}>
-                  {creating ? "Creating..." : "Save Draft Invoice"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        {lineInvoice?.status === "DRAFT" && canManageInvoice && (
+          <form onSubmit={handleAddOtherLine} style={{ display: "grid", gap: "12px", marginTop: "20px", borderTop: "1px solid var(--color-border-divider)", paddingTop: "16px" }}>
+            <strong>Add an OTHER line</strong>
+            <TextField id="invoice-line-description" label="Description" value={lineDescription} onChange={(e) => setLineDescription(e.target.value)} required />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <TextField id="invoice-line-quantity" label="Quantity" type="number" value={lineQuantity} onChange={(e) => setLineQuantity(e.target.value)} required />
+              <TextField id="invoice-line-unit-amount" label="Unit amount (₹)" type="number" value={lineUnitAmount} onChange={(e) => setLineUnitAmount(e.target.value)} required />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Button type="submit" busy={savingLine}>Add line</Button>
+            </div>
+          </form>
+        )}
+        {lineInvoice && lineInvoice.status !== "DRAFT" && (
+          <Notice tone="info">This invoice is read-only. Lines can only be changed while the invoice is DRAFT.</Notice>
+        )}
+      </Modal>
 
       {/* Record Payment Modal */}
-      {payInvoice && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Record Payment">
-            <header>
-              <h2>Record Payment · {payInvoice.invoiceNumber}</h2>
-              <p>Amount due: ₹{Number(payInvoice.totalAmount).toLocaleString("en-IN")}</p>
-            </header>
-            <form onSubmit={handleRecordPayment}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Payment Mode</span>
-                  <select
-                    className="platform-input"
-                    value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value)}
-                  >
-                    <option value="GATEWAY">Payment Gateway</option>
-                    <option value="OFFLINE">Offline Bank Transfer / Cheque</option>
-                  </select>
-                </label>
-                <label className="field-label">
-                  <span>Payment Reference / UTR Number</span>
-                  <input
-                    type="text"
-                    className="platform-input"
-                    placeholder="e.g. UTR20261107009823"
-                    value={paymentRef}
-                    onChange={(e) => setPaymentRef(e.target.value)}
-                    required
-                  />
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setPayInvoice(null)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={recordingPay}>
-                  {recordingPay ? "Recording..." : "Confirm Payment"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={!!payInvoice}
+        onClose={() => setPayInvoice(null)}
+        kicker="PAYMENT"
+        title={payInvoice ? `Record Payment · ${payInvoice.invoiceNumber}` : "Record Payment"}
+        titleId="record-payment-title"
+        description={payInvoice ? `Amount due: ₹${Number(payInvoice.totalAmount).toLocaleString("en-IN")}` : undefined}
+        size="sm"
+      >
+        <form onSubmit={handleRecordPayment}>
+          {payError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{payError}</Notice>
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "12px" }}>
+            <SelectField
+              id="payment-mode"
+              label="Payment Mode"
+              value={paymentMode}
+              onChange={(e) => setPaymentMode(e.target.value)}
+              options={[
+                { value: "GATEWAY", label: "Payment Gateway" },
+                { value: "OFFLINE", label: "Offline Bank Transfer / Cheque" },
+              ]}
+            />
+            <TextField
+              id="payment-ref"
+              label="Payment Reference / UTR Number"
+              placeholder="e.g. UTR20261107009823"
+              value={paymentRef}
+              onChange={(e) => setPaymentRef(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setPayInvoice(null)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={recordingPay}>
+              Confirm Payment
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Apply Discount Modal */}
-      {discountInvoice && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Apply Discount">
-            <header>
-              <h2>Apply Discount (Product Owner only)</h2>
-              <p>Invoice {discountInvoice.invoiceNumber} · Subtotal: ₹{discountInvoice.subtotalAmount}</p>
-            </header>
-            <form onSubmit={handleApplyDiscount}>
-              <label className="field-label">
-                <span>Discount Amount (₹ INR)</span>
-                <input
-                  type="number"
-                  className="platform-input"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                  max={discountInvoice.subtotalAmount}
-                  min="1"
-                  required
-                />
-              </label>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setDiscountInvoice(null)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={applyingDiscount}>
-                  {applyingDiscount ? "Applying..." : "Apply Discount"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={!!discountInvoice}
+        onClose={() => setDiscountInvoice(null)}
+        kicker="DISCOUNT"
+        title="Apply Discount (Product Owner only)"
+        titleId="apply-discount-title"
+        description={discountInvoice ? `Invoice ${discountInvoice.invoiceNumber} · Subtotal: ₹${discountInvoice.subtotalAmount}` : undefined}
+        size="sm"
+      >
+        <form onSubmit={handleApplyDiscount}>
+          {discountError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{discountError}</Notice>
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "12px" }}>
+            <TextField
+              id="discount-percent"
+              label="Discount percentage (%)"
+              type="number"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(e.target.value)}
+              required
+            />
+            <TextField
+              id="discount-reason"
+              label="Reason"
+              value={discountReason}
+              onChange={(e) => setDiscountReason(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+            <Button variant="secondary" onClick={() => setDiscountInvoice(null)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={applyingDiscount}>
+              Apply Discount
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

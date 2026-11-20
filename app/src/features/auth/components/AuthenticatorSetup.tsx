@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { Button, LinkButton, TextField } from "../../../design-system/components";
+import { authenticatorLink } from "./authenticatorLink";
 import "./AuthenticatorSetup.css";
 
 export interface PendingEnrolment {
@@ -12,6 +13,8 @@ export interface PendingEnrolment {
 
 export interface AuthenticatorSetupProps {
   enrolment: PendingEnrolment;
+  /** Shown as the account name inside the authenticator app (the sign-in email). */
+  accountName?: string;
   busy: boolean;
   onConfirm: (code: string) => void;
   onCancel: () => void;
@@ -22,7 +25,7 @@ export interface AuthenticatorSetupProps {
  * password was accepted for a two-step role with no authenticator yet. The secret stays in
  * Keycloak; this screen only displays it once so the user can scan or type it.
  */
-export function AuthenticatorSetup({ enrolment, busy, onConfirm, onCancel }: AuthenticatorSetupProps) {
+export function AuthenticatorSetup({ enrolment, accountName, busy, onConfirm, onCancel }: AuthenticatorSetupProps) {
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -54,8 +57,20 @@ export function AuthenticatorSetup({ enrolment, busy, onConfirm, onCancel }: Aut
           Install an authenticator app on your phone, such as <strong>Google Authenticator</strong>,{" "}
           <strong>Microsoft Authenticator</strong> or <strong>Authy</strong>.
         </li>
-        <li>In the app, add an account and scan this code.</li>
+        <li>
+          <span className="mfa-setup__on-phone">On this phone? Tap the button below. </span>
+          <span className="mfa-setup__on-computer">On a computer? In the app, add an account and scan this code.</span>
+        </li>
       </ol>
+
+      <div className="mfa-setup__open-app">
+        <a className="eds-button eds-button--primary eds-button--lg eds-button--block" href={authenticatorLink(enrolment.secret, accountName)}>
+          Open in authenticator app
+        </a>
+        <p className="mfa-setup__open-app-hint">
+          Adds EDU 360 to your authenticator app in one tap. Then come back here and enter the 6-digit code.
+        </p>
+      </div>
 
       <div className="mfa-setup__qr-row">
         <img

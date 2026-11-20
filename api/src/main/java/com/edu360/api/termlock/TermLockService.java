@@ -1,6 +1,11 @@
 package com.edu360.api.termlock;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import com.edu360.api.tenant.TenantContext;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -35,6 +40,19 @@ public class TermLockService {
     private final TermLockEventRepository termLockEventRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired(required = false)
+    public void setDataSource(DataSource dataSource) { this.jdbcTemplate = new JdbcTemplate(dataSource); }
+
+    /** Shared date-based lock check; mirrors app.is_term_locked used by SQL guards. */
+    @Transactional(readOnly = true)
+    public boolean isLocked(UUID tenantId, UUID sectionId, LocalDate date) {
+        if (tenantId == null || sectionId == null || date == null || !tenantId.equals(TenantContext.currentTenantId()))
+            throw new ResourceNotFoundException("Term lock scope not found");
+        if (jdbcTemplate == null) throw new IllegalStateException("Term-lock JDBC function is unavailable.");
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject("SELECT app.is_term_locked(?, ?, ?)", Boolean.class, tenantId, sectionId, date));
+    }
 
     @Transactional(readOnly = true)
     public List<TermLockResponse> listTermLocks(UUID tenantId, UUID institutionId, TenantPrincipal principal) {

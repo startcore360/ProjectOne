@@ -1,6 +1,5 @@
-import type { FormEvent } from "react";
-import { Button, Kicker, TextField, Notice } from "../../../../design-system/components";
-import { Icon } from "../../../../components/ui/Icon";
+﻿import type { FormEvent } from "react";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export type IntegrationTypeStatusValue = "ALLOWED" | "DISALLOWED";
 
@@ -42,66 +41,54 @@ export function EditIntegrationTypeModal({
   saving,
   editError,
 }: EditIntegrationTypeModalProps) {
-  if (!isOpen || !editing) return null;
-
   return (
-    <div
-      className="platform-modal-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={isOpen && !!editing}
+      onClose={onClose}
+      kicker="EDIT"
+      title={editing ? `Edit ${editing.integrationTypeCode}` : "Edit integration type"}
+      titleId="integration-edit-title"
+      description="Updates apply immediately to the platform catalogue."
+      size="sm"
     >
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="integration-edit-title">
-        <header>
-          <div>
-            <Kicker>EDIT</Kicker>
-            <h2 id="integration-edit-title">Edit {editing.integrationTypeCode}</h2>
-            <p>Updates apply immediately to the platform catalogue.</p>
-          </div>
-          <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={16} />
-          </button>
-        </header>
-        <form onSubmit={onSubmit}>
-          <TextField
-            id="integration-edit-description"
-            label="Description"
-            required
-            value={editDraft.description}
-            onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
+      <form onSubmit={onSubmit}>
+        <TextField
+          id="integration-edit-description"
+          label="Description"
+          required
+          value={editDraft.description}
+          onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
+        />
+        <div className="app-form-grid">
+          <SelectField
+            id="integration-edit-status"
+            label="Status"
+            value={editDraft.status}
+            onChange={(e) =>
+              setEditDraft({ ...editDraft, status: e.target.value as IntegrationTypeStatusValue })
+            }
+            options={[
+              { value: "ALLOWED", label: "Allowed" },
+              { value: "DISALLOWED", label: "Disallowed" },
+            ]}
           />
-          <div className="platform-form-grid">
-            <label className="platform-form-field">
-              Status
-              <select
-                value={editDraft.status}
-                onChange={(e) =>
-                  setEditDraft({ ...editDraft, status: e.target.value as IntegrationTypeStatusValue })
-                }
-              >
-                <option value="ALLOWED">Allowed</option>
-                <option value="DISALLOWED">Disallowed</option>
-              </select>
-            </label>
-          </div>
-          <TextField
-            id="integration-edit-providers"
-            label="Allowed providers (comma-separated)"
-            value={editDraft.allowedProviders}
-            onChange={(e) => setEditDraft({ ...editDraft, allowedProviders: e.target.value })}
-          />
-          {editError && <Notice tone="danger">{editError}</Notice>}
-          <footer>
-            <Button variant="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" busy={saving}>
-              Save changes
-            </Button>
-          </footer>
-        </form>
-      </section>
-    </div>
+        </div>
+        <TextField
+          id="integration-edit-providers"
+          label="Allowed providers (comma-separated)"
+          value={editDraft.allowedProviders}
+          onChange={(e) => setEditDraft({ ...editDraft, allowedProviders: e.target.value })}
+        />
+        {editError && <Notice tone="danger">{editError}</Notice>}
+        <footer>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" busy={saving}>
+            Save changes
+          </Button>
+        </footer>
+      </form>
+    </Modal>
   );
 }

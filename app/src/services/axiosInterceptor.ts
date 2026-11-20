@@ -5,6 +5,7 @@ import { authService } from "./modules/authService";
 import { getLogoutReason, setLogoutReason } from "./logoutNotice";
 import { clearTokens, getRefreshToken, setTokens } from "./tokenStorage";
 import { announceActiveRoleRequired, isActiveRoleRequired } from "./activeRoleRequired";
+import { announceTrialExpired } from "./trialNotice";
 
 type RetriableRequest = {
   _retried?: boolean;
@@ -77,6 +78,10 @@ export const setupAxiosInterceptors = () => {
       // A-02: several roles and none chosen - send the user to the role switcher.
       if (isActiveRoleRequired(error?.response?.status, error?.response?.data)) {
         announceActiveRoleRequired();
+      }
+      // E1-S7: the trial has ended - the app shell shows a persistent read-only banner.
+      if (error?.response?.status === 403 && error.response.data?.code === "TRIAL_EXPIRED") {
+        announceTrialExpired(error.response.data?.trialEndsAt ?? null);
       }
       return Promise.reject(error);
     },

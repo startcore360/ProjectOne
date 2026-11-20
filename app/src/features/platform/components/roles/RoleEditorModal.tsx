@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
 import { PLATFORM_ROLE_LABELS, readErrorMessage } from "../common/types";
 import type { PlatformRole } from "../../api/platformUserService";
@@ -33,6 +33,8 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
   const [updateTemplate, setUpdateTemplate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [createdRoleId, setCreatedRoleId] = useState<string | null>(null);
 
   const usableTemplates = templates.filter((t) => !t.locked && t.status === "ACTIVE");
   const count = Object.keys(selected).length;
@@ -54,7 +56,9 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
 
   const save = async (activate: boolean) => {
     if (name.trim().length < 2) {
-      setError("Enter a role name of at least 2 characters.");
+      const message = "Enter a role name of at least 2 characters.";
+      setNameError(message);
+      setError(message);
       return;
     }
     if (activate && count === 0) {
@@ -68,6 +72,9 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
       if (role) {
         await platformRoleService.updateRole(role.platformRoleId, { roleName: name.trim(), actions });
         onSaved(`Saved ${name.trim()}.`);
+      } else if (createdRoleId) {
+        await platformRoleService.activateRole(createdRoleId);
+        onSaved(`${name.trim()} is active. Assign it to someone on the Platform users page.`);
       } else {
         const created = await platformRoleService.createRole({
           roleName: name.trim(),
@@ -76,7 +83,11 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
           actions,
           updateTemplate,
         });
-        if (activate) await platformRoleService.activateRole(created.data.platformRoleId);
+        const newRoleId = created.data.platformRoleId;
+        setCreatedRoleId(newRoleId);
+        if (activate) {
+          await platformRoleService.activateRole(newRoleId);
+        }
         onSaved(
           activate
             ? `${name.trim()} is active. Assign it to someone on the Platform users page.`
@@ -97,6 +108,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
       size="lg"
       kicker={role ? "EDIT ROLE" : "NEW ROLE"}
       title={role ? `Edit ${role.roleName}` : "Create platform role"}
+      titleId="role-editor-title"
       description={
         role
           ? "Changes take effect at once for everyone holding this role."
@@ -111,6 +123,19 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
             <Button onClick={() => save(false)} busy={busy}>
               Save changes
             </Button>
+          ) : createdRoleId ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => onSaved(`${name.trim()} is saved as a draft. Activate it before assigning it.`)}
+                disabled={busy}
+              >
+                Keep as draft
+              </Button>
+              <Button onClick={() => save(true)} busy={busy}>
+                Retry activation
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="secondary" onClick={() => save(false)} busy={busy}>
@@ -124,18 +149,20 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
         </>
       }
     >
+      {error && <Notice tone="danger">{error}</Notice>}
       <TextField
-        id="platform-role-name"
+        id="app-role-name"
         label="Role name"
         required
         maxLength={100}
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => { setName(e.target.value); if (e.target.value.trim().length >= 2) { setNameError(""); setError(""); } }}
         placeholder="e.g. Billing Assistant"
+        error={nameError}
       />
       {!role && (
-        <div className="platform-form-grid">
-          <label className="platform-form-field">
+        <div className="app-form-grid">
+          <label className="app-form-field">
             Start from template
             <select value={templateId} onChange={(e) => chooseTemplate(e.target.value)}>
               <option value="">Blank</option>
@@ -146,7 +173,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
               ))}
             </select>
           </label>
-          <label className="platform-form-field">
+          <label className="app-form-field">
             Based on
             <select value={base} onChange={(e) => chooseBase(e.target.value as PlatformRole)}>
               {CUSTOMISABLE_ROLES.map((value) => (
@@ -159,12 +186,12 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
         </div>
       )}
       <PermissionPicker catalog={catalog} base={base} selected={selected} onChange={setSelected} />
-      <p className="platform-field-hint" aria-live="polite">
+      <p className="app-field-hint" aria-live="polite">
         {count} {count === 1 ? "permission" : "permissions"} chosen. "Only this person" means you step in with a reason
         to do that work yourself. You can take any permission back at any time.
       </p>
       {!role && (
-        <label className="platform-form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <label className="app-form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
           <input
             type="checkbox"
             checked={updateTemplate}
@@ -174,7 +201,6 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
           Also update this template for future roles (existing roles won't change)
         </label>
       )}
-      {error && <Notice tone="danger">{error}</Notice>}
     </Modal>
   );
 }

@@ -1,16 +1,53 @@
+import { useEffect, useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
-import { PageHeader, Kpi } from "../../../design-system/components";
+import { PageHeader, Kpi, Panel, SkeletonCard, SkeletonText } from "../../../design-system/components";
 import { DashboardPanel, QuietEmpty } from "./DashboardPanel";
+import { selfServiceApi, type NoticeItem, type LeaveBalanceItem } from "../../self-service/api/selfServiceApi";
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export interface StudentDashboardProps {
   name: string;
+  tenantId?: string;
 }
 
-export function StudentDashboard({ name }: StudentDashboardProps) {
+export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
+  const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(Boolean(tenantId));
+  const [noticesError, setNoticesError] = useState(!tenantId);
+
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceItem[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    if (!tenantId) return () => { active = false; };
+    selfServiceApi.getNotices(tenantId)
+      .then((items) => { if (active) setNotices(Array.isArray(items) ? items.slice(0, 3) : []); })
+      .catch(() => { if (active) setNoticesError(true); })
+      .finally(() => { if (active) setNoticesLoading(false); });
+    return () => { active = false; };
+  }, [tenantId]);
+
+  useEffect(() => {
+    let active = true;
+    if (!tenantId) return () => { active = false; };
+    selfServiceApi.getLeaveBalances(tenantId)
+      .then((bals) => { if (active) setLeaveBalances(Array.isArray(bals) ? bals : []); })
+      .catch(() => { /* silent — the KPI stays at "—" */ });
+    return () => { active = false; };
+  }, [tenantId]);
+
+  const totalLeaveRemaining = leaveBalances.reduce((sum, b) => sum + b.remainingDays, 0);
+
   return (
-    <div className="student-dashboard">
+    <div className="app-dashboard app-page">
       <PageHeader
-        title={`Good morning, ${name}.`}
+        title={`${greeting()}, ${name}.`}
         description="A little clarity for the day ahead."
       />
 
@@ -27,7 +64,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
             institution timetable is connected.
           </p>
           <a className="hero__cta" href="#student-plan">
-            View today&rsquo;s plan
+            View timetable status
             <Icon name="send" size={16} />
           </a>
         </div>
@@ -38,41 +75,29 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
         </div>
       </section>
 
-      <section className="student-section" aria-labelledby="student-glance">
-        <div className="student-section__heading">
-          <div>
-            <p className="student-eyebrow">AT A GLANCE</p>
-            <h2 id="student-glance">Your progress</h2>
+      <Panel title="Your progress" description="AT A GLANCE · Key metrics for this term">
+        <div className="app-panel__body">
+          <div className="kpi-grid">
+            <Kpi label="Attendance" value="—" context="Term-to-date · awaiting timetable data" icon="calendar" />
+            <Kpi label="Current CGPA" value="—" context="Awaiting published results" icon="chart" />
+            <Kpi
+              label="Leave balance"
+              value={leaveBalances.length > 0 ? String(totalLeaveRemaining) : "—"}
+              context={leaveBalances.length > 0 ? `${leaveBalances.length} quota${leaveBalances.length !== 1 ? "s" : ""} · days remaining` : "Awaiting leave service"}
+              icon="clock"
+            />
+            <Kpi label="Fee status" value="—" context="Awaiting finance service" icon="wallet" />
           </div>
-          <span className="student-muted">A clear view of this term</span>
         </div>
-        <div className="kpi-grid">
-          <Kpi label="Attendance" value="—" context="Term-to-date · awaiting data" icon="calendar" />
-          <Kpi
-            label="Current CGPA"
-            value="—"
-            context="Latest published academic record"
-            icon="chart"
-          />
-          <Kpi label="To-do list" value="—" context="Tasks due soon" icon="book" />
-          <Kpi label="Fee status" value="—" context="Current outstanding balance" icon="wallet" />
-        </div>
-      </section>
+      </Panel>
 
-      <div className="student-content-grid">
+      <div className="app-content-grid">
         <DashboardPanel
           id="student-plan"
           title="Your timetable"
           eyebrow="TODAY · WHAT’S AHEAD"
-          action={{ label: "Full calendar", href: "#student-plan" }}
+          
         >
-          <div className="student-week-strip" aria-label="Weekly timetable preview">
-            <span>MON</span>
-            <span>TUE</span>
-            <span>WED</span>
-            <span>THU</span>
-            <span>FRI</span>
-          </div>
           <QuietEmpty
             title="Your classes will appear here"
             description="See today’s periods, subjects, rooms and teachers when your institution timetable is connected."
@@ -82,29 +107,50 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           id="student-focus"
           title="Next small steps"
           eyebrow="CLEAR PRIORITIES, NO CLUTTER"
-          action={{ label: "All tasks", href: "#student-focus" }}
+          
         >
           <QuietEmpty
-            title="You’re all caught up for now"
-            description="Published assignments, due dates and tasks that need your attention will appear here."
+            title="Assignments are not connected yet"
+            description="Published assignments and due dates will appear here when the assignment service is available."
           />
         </DashboardPanel>
         <DashboardPanel
           id="student-updates"
           title="From your campus"
           eyebrow="USEFUL UPDATES, IN ONE PLACE"
-          action={{ label: "All notices", href: "#student-updates" }}
+          action={{ label: "All notices", href: "/self-service" }}
         >
-          <QuietEmpty
-            title="No new notices"
-            description="School announcements, class updates and useful reminders will appear here."
-          />
+          {noticesLoading ? (
+            <div className="app-stack--sm" role="status" aria-busy="true" aria-label="Loading campus notices">
+              <span className="sr-only">Loading published campus notices</span>
+              {Array.from({ length: 2 }, (_, index) => (
+                <SkeletonCard key={index} className="app-card app-card--notice">
+                  <SkeletonText height="1rem" width="55%" />
+                  <SkeletonText lines={2} height="0.875rem" />
+                </SkeletonCard>
+              ))}
+            </div>
+          ) : noticesError ? (
+            <p role="status">{tenantId ? "Campus notices could not be loaded. Open Self-Service to retry." : "Sign in as a student to view campus notices."}</p>
+          ) : notices.length === 0 ? (
+            <QuietEmpty title="No published campus notices" description="There are no published notices available to your account right now." />
+          ) : (
+            <div className="app-stack--sm">
+              {notices.map((notice) => (
+                <article key={notice.noticeId} className="app-card app-card--notice">
+                  <strong>{notice.title}</strong>
+                  <p>{notice.body}</p>
+                  <span className="app-card__meta">{notice.publishedAt ? new Date(notice.publishedAt).toLocaleDateString() : "Recently published"}</span>
+                </article>
+              ))}
+            </div>
+          )}
         </DashboardPanel>
         <DashboardPanel
           id="student-results"
           title="Recent results"
           eyebrow="LATEST PUBLISHED ASSESSMENTS"
-          action={{ label: "All results", href: "#student-results" }}
+          
         >
           <QuietEmpty
             title="Your results will appear here"
@@ -113,15 +159,15 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
         </DashboardPanel>
       </div>
 
-      <div className="student-content-grid student-content-grid--lower">
+      <div className="app-content-grid app-content-grid--lower">
         <DashboardPanel
           id="student-attendance"
           title="Attendance, at a glance"
           eyebrow="TERM TO DATE · ALL SUBJECTS"
-          action={{ label: "Attendance details", href: "#student-attendance" }}
+          
         >
-          <div className="student-attendance-summary">
-            <div className="student-attendance-ring" aria-hidden="true">
+          <div className="app-attendance-summary">
+            <div className="app-attendance-ring" aria-hidden="true">
               <span>—</span>
             </div>
             <div>
@@ -140,7 +186,7 @@ export function StudentDashboard({ name }: StudentDashboardProps) {
           />
         </DashboardPanel>
       </div>
-      <p className="student-data-note">
+      <p className="app-data-note">
         <Icon name="info" size={16} /> Your dashboard shows information available to your signed-in
         account. No sample scores, attendance figures or assignment counts are presented as live
         data.

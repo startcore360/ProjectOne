@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.audit.AuditEventType;
@@ -23,6 +24,8 @@ import com.edu360.api.identity.UserAccountId;
 import com.edu360.api.identity.UserAccountRepository;
 import com.edu360.api.identity.UserIdentityLink;
 import com.edu360.api.identity.UserIdentityLinkRepository;
+import com.edu360.api.identity.UserType;
+import com.edu360.api.institution.StaffDirectoryService;
 import com.edu360.api.rbac.dto.AssignRoleRequest;
 import com.edu360.api.rbac.dto.RoleDefinitionResponse;
 import com.edu360.api.rbac.dto.UserRoleAssignmentResponse;
@@ -55,6 +58,12 @@ public class RoleAssignmentService {
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final KeycloakAdminClient keycloakAdminClient;
     private final AuditLogService auditLogService;
+
+    @Autowired(required = false)
+    private StaffDirectoryService staffDirectoryService;
+
+    @Autowired(required = false)
+    private com.edu360.api.live.LiveEventPublisher liveEventPublisher;
 
     /**
      * Assigns a role to a user within an authorized scope (ROLE_ASSIGN).
@@ -98,7 +107,7 @@ public class RoleAssignmentService {
         }
 
         // 3. Verify target user exists in this tenant
-        userAccountRepository.findById(new UserAccountId(tenantId, targetUserId))
+        var targetAccount = userAccountRepository.findById(new UserAccountId(tenantId, targetUserId))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Target user " + targetUserId + " does not exist in tenant " + tenantId
                 ));
@@ -169,6 +178,18 @@ public class RoleAssignmentService {
                 .build();
 
         UserRoleAssignment saved = userRoleAssignmentRepository.save(newAssignment);
+        if (targetAccount.getUserType() == UserType.STAFF
+                && request.scopeType() != ScopeType.TENANT
+                && staffDirectoryService != null) {
+            java.time.LocalDate staffEffectiveFrom = request.effectiveFrom() == null
+                    ? java.time.LocalDate.now()
+                    : request.effectiveFrom().atZone(java.time.ZoneOffset.UTC).toLocalDate();
+            java.time.LocalDate staffEffectiveTo = request.effectiveTo() == null ? null
+                    : request.effectiveTo().atZone(java.time.ZoneOffset.UTC).toLocalDate();
+            staffDirectoryService.ensureStaffAssignment(tenantId, targetUserId,
+                    request.institutionId(), request.departmentId(), principal.userAccountId(),
+                    roleDefinition.getRoleName(), staffEffectiveFrom, staffEffectiveTo);
+        }
         log.info("Assigned role '{}' ({}) to user {} in tenant {} scope {}",
                 roleDefinition.getRoleCode(), roleDefinition.getId().getRoleDefinitionId(),
                 targetUserId, tenantId, request.scopeType());
@@ -480,6 +501,12 @@ public class RoleAssignmentService {
                     .ifPresent(link -> keycloakAdminClient.logoutUser(link.getIdentityRealm(), link.getIdentitySubject()));
         } catch (Exception ex) {
             log.warn("Session logout skipped or non-fatal for user {} in tenant {}: {}", userId, tenantId, ex.getMessage());
+        }
+        if (liveEventPublisher != null) {
+            liveEventPublisher.publishToUser(tenantId, userId, "PERMISSIONS_CHANGED",
+                    java.util.Map.of("reason", "ROLE_ASSIGNMENT_CHANGED"));
+            liveEventPublisher.publishToUser(tenantId, userId, "SESSION_REVOKED",
+                    java.util.Map.of("reason", "ROLE_ASSIGNMENT_CHANGED"));
         }
     }
 

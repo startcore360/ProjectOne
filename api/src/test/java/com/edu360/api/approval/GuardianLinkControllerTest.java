@@ -12,12 +12,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 
+import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.guardian.GuardianLinkController;
 import com.edu360.api.guardian.dto.GuardianChangeRequestDto;
 import com.edu360.api.guardian.dto.LinkGuardianRequest;
 import com.edu360.api.identity.StudentProfile;
+import com.edu360.api.identity.UserType;
+import com.edu360.api.guardian.dto.GuardianChildResponse;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.tenant.TenantContext;
 
@@ -45,7 +48,27 @@ class GuardianLinkControllerTest {
     }
 
     private LinkGuardianRequest guardian(String mobile) {
+        t.guardianAccount(mobile);
         return new LinkGuardianRequest("Guardian", mobile, null, "FATHER", false);
+    }
+
+    @Test
+    @DisplayName("SCOPE: guardian child switcher returns only the authenticated guardian's active children")
+    void scope_guardianSeesOwnActiveChildren() {
+        StudentProfile child = t.student(inst);
+        child.setStudentCode("STU-001");
+        t.activeChildren.add(child);
+        TenantPrincipal guardian = new TenantPrincipal(t.tenantId, UUID.randomUUID(), UserType.GUARDIAN, "Parent", false);
+        var response = controller.listActiveChildren(t.tenantId, t.auth(guardian));
+        assertThat(response.getBody()).containsExactly(new GuardianChildResponse(
+                child.getStudentProfileId(), inst, "STU-001", "ACTIVE"));
+    }
+
+    @Test
+    @DisplayName("DENY: non-guardian account cannot enumerate linked children")
+    void deny_nonGuardianCannotListChildren() {
+        assertThatThrownBy(() -> controller.listActiveChildren(t.tenantId, t.auth(t.as(admin))))
+                .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
@@ -57,6 +80,26 @@ class GuardianLinkControllerTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(t.links.size()).isEqualTo(1);
         assertThat(t.audited("Linked guardian")).isTrue();
+    }
+
+    @Test
+    @DisplayName("GUARD: a guardian profile cannot be created without its provisioned guardian account")
+    void guard_missingGuardianAccount() {
+        Authentication auth = t.auth(t.as(admin));
+        assertThatThrownBy(() -> controller.linkGuardian(t.tenantId, student.getStudentProfileId(),
+                new LinkGuardianRequest("Guardian", "+919876543210", null, "FATHER", false), auth))
+                .isInstanceOf(BusinessRuleViolationException.class);
+        assertThat(t.links).isEmpty();
+    }
+
+    @Test
+    @DisplayName("GUARD: blocked links do not consume the three-guardian limit")
+    void guard_blockedLinksDoNotConsumeGuardianLimit() {
+        Authentication auth = t.auth(t.as(admin));
+        for (int i = 0; i < 3; i++) t.link(student.getStudentProfileId()).setStatus("BLOCKED");
+        var response = controller.linkGuardian(t.tenantId, student.getStudentProfileId(), guardian("+919876543210"), auth);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(t.links).hasSize(4);
     }
 
     @Test

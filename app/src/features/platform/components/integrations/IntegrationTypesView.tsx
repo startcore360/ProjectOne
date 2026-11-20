@@ -1,13 +1,13 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import {
   Button,
+  Notice,
   Panel,
   StatusBadge,
   DataTable,
   SearchBox,
-  Notice,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { formatTimestamp, readErrorMessage, type FetchStatus } from "../common/types";
 import api from "../../../../services/axios";
@@ -126,7 +126,7 @@ export function IntegrationTypesView() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Integration types"
         description="The catalogue of integration types a tenant may enable (e.g. SMS, payments). Type catalogue only - never a tenant's own keys or webhooks."
@@ -142,28 +142,26 @@ export function IntegrationTypesView() {
           </Button>
         }
       />
-      {message && (
-        <div className="platform-inline-notice" role="status">
-          {message}
-        </div>
+      {message && <Notice tone="success">{message}</Notice>}
+      {status === "error" && (
+        <ErrorState
+          message={`Could not load integration types: ${errorMessage}`}
+          action={<Button variant="secondary" onClick={() => void load()}>Retry</Button>}
+        />
       )}
-      {status === "error" && <Notice tone="danger">Could not load integration types: {errorMessage}</Notice>}
       <Panel title="Allowed integration types" description="platform.integration_type">
-        <div className="platform-toolbar">
+        <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search by code or description" />
         </div>
-        {status === "loading" ? (
-          <div className="platform-empty-inline">
-            <Spinner label="Loading integration types" />
-          </div>
-        ) : (
-          <DataTable
-            headers={["Code", "Description", "Status", "Allowed providers", "Updated", ""]}
-            empty={!filtered.length}
-            emptyMessage={
-              status === "error" ? "Integration types could not be loaded." : "No integration types defined yet."
-            }
-          >
+        <DataTable
+          headers={["Code", "Description", "Status", "Allowed providers", "Updated", ""]}
+          loading={status === "loading" && items.length === 0}
+          loadingLabel="Loading integration types"
+          empty={status !== "loading" && !filtered.length}
+          emptyMessage={
+            status === "error" ? "Integration types could not be loaded." : "No integration types defined yet."
+          }
+        >
             {filtered.map((item) => (
               <tr key={item.integrationTypeId}>
                 <td>
@@ -182,8 +180,7 @@ export function IntegrationTypesView() {
                 </td>
               </tr>
             ))}
-          </DataTable>
-        )}
+        </DataTable>
       </Panel>
 
       <CreateIntegrationTypeModal

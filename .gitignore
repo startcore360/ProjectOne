@@ -2,7 +2,7 @@
 .vscode/
 .idea/
 *.iml
-*.md
+# *.md   (temporarily un-ignored so agents on sprint-2-development get CLAUDE.md and the docs)
 
 
 # Operating system files
@@ -37,4 +37,22 @@ Thumbs.db
 *.swo
 
 # Private/local documentation — do not commit project docs
-/docs/
+# /docs/   (temporarily un-ignored so agents on sprint-2-development get the plan and spec)
+
+# Generated Graphify index can contain copied source excerpts; do not commit it.
+/graphify-out/cache/stat-index.json
+
+# Local test scripts and outputs (contain live tokens); never commit.
+/scratch/
+
+# Local development backup artifacts and credentials
+/docker/backup/backups/
+/docker/backup/.env.local
+
+# dev-host.ps1 process list (local only)
+logs/dev-host.pids
+# Local Playwright UI audit output (app/edu360-playwright-audit.mjs)
+app/playwright-report/
+app/audit-output/
+# Local sign-in for app/edu360-playwright-audit.mjs (never commit)
+app/.audit-login.json

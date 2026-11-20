@@ -12,6 +12,17 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   busy?: boolean;
 };
 
+// Written out in full on purpose. components.css is loaded inside Tailwind's `components`
+// layer, and Tailwind drops any rule whose class name it cannot find as a literal string in the
+// source. A dynamic `eds-button--${variant}` therefore removed the colour rules from the build.
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
+  primary: "eds-button--primary",
+  secondary: "eds-button--secondary",
+  tertiary: "eds-button--tertiary",
+  danger: "eds-button--danger",
+  accent: "eds-button--accent",
+};
+
 export default function Button({
   variant = "primary",
   size = "default",
@@ -24,7 +35,7 @@ export default function Button({
 }: ButtonProps) {
   const classes = [
     "eds-button",
-    `eds-button--${variant}`,
+    VARIANT_CLASS[variant],
     size === "sm" && "eds-button--sm",
     size === "lg" && "eds-button--lg",
     block && "eds-button--block",

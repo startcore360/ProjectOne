@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,10 +16,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.edu360.api.audit.AuditLogService;
+import com.edu360.api.auth.dto.AuthTokenResponse;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
@@ -312,6 +315,7 @@ class AuthServiceTest {
         // Likewise: no FileObject stubbed -> resolvePhotoUrl finds nothing, photoUrl stays null
         // rather than pointing at a photo that does not exist.
         assertThat(response.user().photoUrl()).isNull();
+        verify(platformUserRepository, never()).updateLastLogin(any(), any());
     }
 
     @Test
@@ -376,8 +380,7 @@ class AuthServiceTest {
         assertThat(response.user().roleName()).isEqualTo("Class Teacher");
     }
 
-    @Test
-    void login_platformResolution_buildsPlatformUserResponse() {
+    private PlatformUser preparePlatformLogin() {
         when(loginTenantResolver.resolve(httpServletRequest))
                 .thenReturn(new LoginTenantResolver.PlatformLogin("edu360-platform"));
         // PLATFORM_ADMIN is a two-step role (PD-8): this sign-in carries the authenticator code.
@@ -400,10 +403,37 @@ class AuthServiceTest {
                 .updatedBy(UUID.randomUUID())
                 .build();
         when(platformUserRepository.findByIdentitySubject("kc-subject")).thenReturn(Optional.of(platformUser));
+        return platformUser;
+    }
 
-        var response = authService.login(httpServletRequest, "admin@edu360-platform.local", "pw", "123456", "127.0.0.1");
+    private AuthTokenResponse loginPlatform() {
+        return authService.login(httpServletRequest, "admin@edu360-platform.local", "pw", "123456", "127.0.0.1");
+    }
+
+    @Test
+    void login_platformResolution_buildsPlatformUserResponseAndRecordsLastLogin() {
+        PlatformUser platformUser = preparePlatformLogin();
+        when(platformUserRepository.updateLastLogin(eq(platformUser.getPlatformUserId()), any(Instant.class)))
+                .thenReturn(1);
+
+        var response = loginPlatform();
 
         assertThat(response.user().tenantId()).isNull();
         assertThat(response.user().platformRole()).isEqualTo(PlatformRole.PLATFORM_ADMIN);
+        ArgumentCaptor<Instant> lastLoginAt = ArgumentCaptor.forClass(Instant.class);
+        verify(platformUserRepository).updateLastLogin(eq(platformUser.getPlatformUserId()), lastLoginAt.capture());
+        assertThat(lastLoginAt.getValue()).isAfter(Instant.now().minusSeconds(10));
+    }
+
+    @Test
+    void login_platformResolution_lastLoginWriteFailureDoesNotRejectSignIn() {
+        PlatformUser platformUser = preparePlatformLogin();
+        when(platformUserRepository.updateLastLogin(eq(platformUser.getPlatformUserId()), any(Instant.class)))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        var response = loginPlatform();
+
+        assertThat(response.user().platformRole()).isEqualTo(PlatformRole.PLATFORM_ADMIN);
+        verify(platformUserRepository).updateLastLogin(eq(platformUser.getPlatformUserId()), any(Instant.class));
     }
 }

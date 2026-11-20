@@ -25,7 +25,7 @@ export function BlockRequestModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!reason.trim()) {
-      setError("Reason for blocking is required [Rule RL-01].");
+      setError("Enter a reason for the block request.");
       return;
     }
     setBlocking(true);
@@ -52,7 +52,7 @@ export function BlockRequestModal({
       }}
       title={`Request to block ${institution.institutionName}`}
       titleId="block-modal-title"
-      description="Submits a formal institution blocking request for Vice Chancellor governance review [Story #27 / Rule RL-01]."
+      description="Submit a formal institution block request for Vice Chancellor review."
       size="sm"
     >
       {error && (
@@ -67,7 +67,7 @@ export function BlockRequestModal({
             htmlFor="block-reason"
             style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
           >
-            Reason for blocking * [Rule RL-01]
+            Reason for blocking *
           </label>
           <textarea
             id="block-reason"

@@ -1,5 +1,6 @@
 package com.edu360.api.institution;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +14,12 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
     List<AcademicSession> findByTenantIdAndInstitutionIdOrderByAcademicYearDesc(UUID tenantId, UUID institutionId);
 
     Optional<AcademicSession> findByTenantIdAndAcademicSessionId(UUID tenantId, UUID academicSessionId);
+
+    List<AcademicSession> findByTenantIdAndInstitutionIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            UUID tenantId, UUID institutionId, LocalDate startDate, LocalDate endDate);
+
+    List<AcademicSession> findByTenantIdAndInstitutionIdIsNullAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            UUID tenantId, LocalDate startDate, LocalDate endDate);
 
     boolean existsByTenantIdAndInstitutionIdAndSessionLabel(UUID tenantId, UUID institutionId, String sessionLabel);
 

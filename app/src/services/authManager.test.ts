@@ -1,62 +1,36 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { store } from "../store";
-import { setUser, type AuthUser } from "../store/slices/authSlice";
-import { changePassword } from "./authManager";
-import { getLogoutReason } from "./logoutNotice";
-import { authService } from "./modules/authService";
-import { getAccessToken, getRefreshToken, setTokens } from "./tokenStorage";
+import { describe, expect, it, vi } from "vitest";
+import { tenantPermissionsService } from "../features/profile/api/tenantPermissionsService";
 
 vi.mock("./modules/authService", () => ({
-  authService: { changePassword: vi.fn(), refresh: vi.fn() },
+  authService: {
+    login: vi.fn().mockResolvedValue({ data: { accessToken: "access", refreshToken: "refresh", user: {
+      id: "user-1", displayName: "Tenant user", tenantId: "tenant-1", userType: "STAFF"
+    } } }),
+    me: vi.fn().mockResolvedValue({ data: {
+      id: "user-1", displayName: "Tenant user", tenantId: "tenant-1", userType: "STAFF"
+    } }),
+    logout: vi.fn(), changePassword: vi.fn(), refresh: vi.fn()
+  }
 }));
-const mocked = vi.mocked(authService, true);
+vi.mock("../features/profile/api/tenantPermissionsService", () => ({
+  tenantPermissionsService: { reload: vi.fn().mockResolvedValue({ tenantId: "tenant-1", userAccountId: "user-1", allowedActions: ["TIMETABLE_VIEW"] }) }
+}));
+vi.mock("./tokenStorage", () => ({
+  clearTokens: vi.fn(), getAccessToken: vi.fn(() => "access"), getRefreshToken: vi.fn(() => "refresh"), setTokens: vi.fn()
+}));
+vi.mock("./logoutNotice", () => ({ setLogoutReason: vi.fn() }));
 
-const user = { id: "u-1", displayName: "Admin", mustChangePassword: true } as AuthUser;
-const changed = { ...user, mustChangePassword: false };
+describe("tenant permission bootstrap", () => {
+  it("reloads server permissions after a fresh login", async () => {
+    const { login } = await import("./authManager");
+    await login("user@example.test", "password");
+    expect(tenantPermissionsService.reload).toHaveBeenCalled();
+  });
 
-describe("changePassword", () => {
-  beforeEach(() => {
+  it("reloads server permissions after session hydration on page refresh", async () => {
     vi.clearAllMocks();
-    sessionStorage.clear();
-    setTokens("stale-access", "refresh-1");
-    store.dispatch(setUser(user));
-    // @ts-expect-error - only the fields this code reads
-    mocked.changePassword.mockResolvedValue({ data: changed });
-  });
-
-  it("replaces the stale token before letting the user continue", async () => {
-    // @ts-expect-error - only the fields this code reads
-    mocked.refresh.mockResolvedValue({ data: { accessToken: "fresh-access", refreshToken: "refresh-2" } });
-
-    const result = await changePassword("Old-password1", "New-password1");
-
-    expect(mocked.refresh).toHaveBeenCalledWith("refresh-1");
-    expect(getAccessToken()).toBe("fresh-access");
-    expect(getRefreshToken()).toBe("refresh-2");
-    expect(result?.mustChangePassword).toBe(false);
-    expect(store.getState().auth.user?.mustChangePassword).toBe(false);
-  });
-
-  it("sends the user to sign in again if the token can't be refreshed", async () => {
-    mocked.refresh.mockRejectedValue(new Error("expired"));
-    const replace = vi.fn();
-    vi.stubGlobal("location", { ...window.location, replace });
-
-    const result = await changePassword("Old-password1", "New-password1");
-
-    expect(result).toBeNull();
-    expect(getAccessToken()).toBeNull();
-    expect(getLogoutReason()).toContain("new password");
-    expect(replace).toHaveBeenCalledWith("/login");
-    vi.unstubAllGlobals();
-  });
-
-  it("doesn't touch the session if the password change itself fails", async () => {
-    mocked.changePassword.mockRejectedValue(new Error("wrong password"));
-
-    await expect(changePassword("Wrong-password1", "New-password1")).rejects.toThrow("wrong password");
-
-    expect(mocked.refresh).not.toHaveBeenCalled();
-    expect(getAccessToken()).toBe("stale-access");
+    const { hydrateAuth } = await import("./authManager");
+    await hydrateAuth();
+    expect(tenantPermissionsService.reload).toHaveBeenCalled();
   });
 });

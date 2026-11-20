@@ -4,6 +4,7 @@ import com.edu360.api.config.TenantPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,6 +34,17 @@ public class PromotionController {
     ) {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
         return ResponseEntity.status(HttpStatus.CREATED).body(promotionService.createPromotionRun(tenantId, principal, request));
+    }
+
+    @GetMapping({"/v1/tenants/{tenantId}/promotion-runs", "/api/tenants/{tenantId}/promotion-runs"})
+    @Operation(summary = "List promotion runs [PROMOTION_RUN, PROMOTION_APPROVE]")
+    public ResponseEntity<List<PromotionRunResponse>> listPromotionRuns(
+            @PathVariable UUID tenantId,
+            @RequestParam(required = false) UUID institutionId,
+            Authentication authentication
+    ) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(promotionService.listPromotionRuns(tenantId, principal, institutionId));
     }
 
     @GetMapping({"/v1/tenants/{tenantId}/promotion-runs/{id}", "/api/tenants/{tenantId}/promotion-runs/{id}"})

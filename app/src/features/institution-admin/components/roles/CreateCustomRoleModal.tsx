@@ -75,10 +75,10 @@ export function CreateCustomRoleModal({
         resetForm();
         onClose();
       }}
-      kicker="ROLE_CUSTOM_MANAGE • Action #16"
+      kicker="ROLE MANAGEMENT"
       title="Create Custom Role"
       titleId="custom-role-modal-title"
-      description="Define a tenant-specific custom role extending the institution catalog [Rule 16]."
+      description="Define a tenant-specific role using permissions from the institution role catalogue."
       size="md"
     >
       {error && (

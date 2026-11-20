@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Button,
   ConfirmDialog,
   DataTable,
+  ErrorState,
   Modal,
   Notice,
   Panel,
   SearchBox,
   StatusBadge,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { CreatedCredentialsModal } from "../../../user-management/components/users/CreatedCredentialsModal";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { PLATFORM_ROLE_LABELS, readErrorMessage } from "../common/types";
 import { useAppSelector } from "../../../../store/hooks";
@@ -17,11 +18,30 @@ import { usePlatformAccess } from "../../platformAccess";
 import { platformUserService, roleChoicePayload, type PlatformUserItem } from "../../api/platformUserService";
 import { platformRoleService, type PlatformRoleItem } from "../../api/platformRoleService";
 import { CreatePlatformUserModal, RoleOptions, type CreatePlatformUserDraft } from "./CreatePlatformUserModal";
+import { MfaResetDialog } from "../../../auth/components/MfaResetDialog";
 
 const EMPTY_DRAFT: CreatePlatformUserDraft = { fullName: "", email: "", roleChoice: "std:PLATFORM_ADMIN" };
 
 function roleLabel(user: PlatformUserItem) {
   return user.customRoleName ?? PLATFORM_ROLE_LABELS[user.platformRole] ?? user.platformRole;
+}
+
+function formatLastLogin(value?: string | null, now = new Date()) {
+  if (!value) return "Never logged in";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Never logged in";
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const loginDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysAgo = Math.round((today.getTime() - loginDay.getTime()) / 86_400_000);
+  if (daysAgo === 0) return "Today";
+  if (daysAgo === 1) return "Yesterday";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
 
 function ChangeRoleModal({
@@ -68,7 +88,7 @@ function ChangeRoleModal({
         </>
       }
     >
-      <label className="platform-form-field">
+      <label className="app-form-field">
         Platform role
         <select value={choice} onChange={(e) => setChoice(e.target.value)}>
           <RoleOptions customRoles={customRoles} />
@@ -86,8 +106,9 @@ export function PlatformUsersView() {
 
   const [users, setUsers] = useState<PlatformUserItem[]>([]);
   const [customRoles, setCustomRoles] = useState<PlatformRoleItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [rolesError, setRolesError] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [showCreate, setShowCreate] = useState(false);
@@ -100,6 +121,27 @@ export function PlatformUsersView() {
   const [changingRole, setChangingRole] = useState<PlatformUserItem | null>(null);
   const [statusTarget, setStatusTarget] = useState<PlatformUserItem | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [unlockTarget, setUnlockTarget] = useState<PlatformUserItem | null>(null);
+  const [unlockBusy, setUnlockBusy] = useState(false);
+  // MFA-01 / E8-S4: reset a staff member's two-step login (never your own).
+  const [mfaTarget, setMfaTarget] = useState<PlatformUserItem | null>(null);
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaError, setMfaError] = useState("");
+
+  const resetMfa = async (reason: string) => {
+    if (!mfaTarget) return;
+    setMfaBusy(true);
+    setMfaError("");
+    try {
+      await platformUserService.resetMfa(mfaTarget.platformUserId, reason);
+      setNotice(`${mfaTarget.fullName}'s two-step login was reset. They set up a new authenticator at their next sign-in.`);
+      setMfaTarget(null);
+    } catch (err) {
+      setMfaError(readErrorMessage(err, "Could not reset two-step login."));
+    } finally {
+      setMfaBusy(false);
+    }
+  };
 
   const loadUsers = useCallback(() => {
     setLoading(true);
@@ -111,14 +153,21 @@ export function PlatformUsersView() {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadRoles = useCallback(async () => {
+    if (!canManage) return;
+    setRolesError("");
+    try {
+      const res = await platformRoleService.getRoles();
+      setCustomRoles(Array.isArray(res?.data) ? res.data : []);
+    } catch (err) {
+      setRolesError(readErrorMessage(err, "Could not load custom platform roles."));
+    }
+  }, [canManage]);
+
   useEffect(() => {
     loadUsers();
-    if (canManage) {
-      Promise.resolve(platformRoleService.getRoles())
-        .then((res) => setCustomRoles(Array.isArray(res?.data) ? res.data : []))
-        .catch(() => setCustomRoles([]));
-    }
-  }, [loadUsers, canManage]);
+    void loadRoles();
+  }, [loadUsers, loadRoles]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -160,6 +209,21 @@ export function PlatformUsersView() {
     }
   };
 
+  const unlockAccount = async () => {
+    if (!unlockTarget) return;
+    setUnlockBusy(true);
+    setActionError("");
+    try {
+      await platformUserService.unlockPlatformUser(unlockTarget.platformUserId);
+      setNotice(`${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`);
+      setUnlockTarget(null);
+    } catch (err) {
+      setActionError(readErrorMessage(err, "Could not unlock this account."));
+    } finally {
+      setUnlockBusy(false);
+    }
+  };
+
   const filtered = users.filter(
     (u) =>
       (filter === "All" || (filter === "Active") === (u.status === "ACTIVE")) &&
@@ -167,7 +231,7 @@ export function PlatformUsersView() {
   );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Platform users"
         description="Manage access for people who operate the EDU 360 platform."
@@ -186,27 +250,39 @@ export function PlatformUsersView() {
           </Button>
         }
       />
-      {createdUser && (
-        <Notice tone="info">
-          Created <strong>{createdUser.fullName}</strong> ({createdUser.email}). Temporary password (shown once):{" "}
-          <strong>{createdUser.tempPassword}</strong>. They must change it at first login.
-        </Notice>
-      )}
+      <CreatedCredentialsModal
+        isOpen={!!createdUser}
+        onClose={() => setCreatedUser(null)}
+        kicker="PLATFORM USER CREATED"
+        title="Platform user created"
+        description="Share this temporary password securely. It will only be shown once."
+        user={{
+          displayName: createdUser?.fullName ?? "",
+          email: createdUser?.email,
+          temporaryPassword: createdUser?.tempPassword,
+        }}
+      />
       {notice && <Notice tone="success">{notice}</Notice>}
       {actionError && <Notice tone="danger">{actionError}</Notice>}
+      {rolesError && (
+        <ErrorState
+          message={rolesError}
+          action={<Button variant="secondary" size="sm" onClick={() => void loadRoles()}>Retry custom roles</Button>}
+        />
+      )}
       {loadError && (
-        <Notice tone="danger">
-          {loadError}{" "}
-          <Button variant="secondary" size="sm" onClick={loadUsers}>Try again</Button>
-        </Notice>
+        <ErrorState
+          message={loadError}
+          action={<Button variant="secondary" size="sm" onClick={loadUsers}>Try again</Button>}
+        />
       )}
       <Panel
         title="Platform access"
         description="Platform staff accounts only. Institution users are managed within their institution."
       >
-        <div className="platform-toolbar">
+        <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search name, email or role" />
-          <label className="platform-select-label">
+          <label className="app-select-label">
             Status{" "}
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option>All</option>
@@ -215,13 +291,11 @@ export function PlatformUsersView() {
             </select>
           </label>
         </div>
-        {loading ? (
-          <div className="platform-empty-inline">
-            <Spinner label="Loading platform users" />
-          </div>
-        ) : (
+        {!loadError && (
           <DataTable
             headers={["Name", "Email", "Platform role", "Status", "Last active", "Actions"]}
+            loading={loading && users.length === 0}
+            loadingLabel="Loading platform users"
             empty={!filtered.length}
             emptyMessage={users.length ? "No matching people." : "No platform staff yet."}
           >
@@ -231,7 +305,7 @@ export function PlatformUsersView() {
                 <td>{u.email}</td>
                 <td>{roleLabel(u)}</td>
                 <td><StatusBadge value={u.status === "ACTIVE" ? "Active" : "Inactive"} /></td>
-                <td>{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never logged in"}</td>
+                <td>{formatLastLogin(u.lastLoginAt)}</td>
                 <td>
                   {canManage && u.platformUserId !== myId ? (
                     <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
@@ -241,9 +315,19 @@ export function PlatformUsersView() {
                       <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setStatusTarget(u); }}>
                         {u.status === "ACTIVE" ? "Deactivate" : "Reactivate"}
                       </Button>
+                      {u.status === "ACTIVE" && (
+                        <>
+                          <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setMfaError(""); setMfaTarget(u); }}>
+                            Reset two-step login
+                          </Button>
+                          <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setActionError(""); setUnlockTarget(u); }}>
+                            Unlock sign-in
+                          </Button>
+                        </>
+                      )}
                     </div>
                   ) : (
-                    u.platformUserId === myId && <small className="platform-cell-sub">This is you</small>
+                    u.platformUserId === myId && <small className="app-cell-sub">This is you</small>
                   )}
                 </td>
               </tr>
@@ -252,6 +336,24 @@ export function PlatformUsersView() {
         )}
       </Panel>
 
+      <MfaResetDialog
+        isOpen={!!mfaTarget}
+        personName={mfaTarget?.fullName ?? ""}
+        busy={mfaBusy}
+        error={mfaError}
+        onConfirm={(reason) => void resetMfa(reason)}
+        onCancel={() => setMfaTarget(null)}
+      />
+      <ConfirmDialog
+        isOpen={!!unlockTarget}
+        onClose={() => setUnlockTarget(null)}
+        onConfirm={() => void unlockAccount()}
+        title={unlockTarget ? `Unlock sign-in for ${unlockTarget.fullName}?` : "Unlock sign-in?"}
+        message="This clears the failed-login lockout only. It does not change the password, MFA, role, or account activation."
+        confirmLabel="Unlock sign-in"
+        confirmTone="primary"
+        busy={unlockBusy}
+      />
       <CreatePlatformUserModal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}

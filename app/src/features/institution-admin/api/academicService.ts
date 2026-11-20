@@ -101,6 +101,11 @@ export const academicService = {
   },
 
   // Promotion runs
+  listPromotionRuns: async (tenantId: string, institutionId?: string): Promise<PromotionRunItem[]> => {
+    const params = institutionId ? `?institutionId=${institutionId}` : "";
+    const res = await api.get<PromotionRunItem[]>(`/v1/tenants/${tenantId}/promotion-runs${params}`);
+    return res.data;
+  },
   createPromotionRun: async (
     tenantId: string,
     req: { institutionId: string; fromSessionId: string; toSessionId: string }
@@ -118,6 +123,12 @@ export const academicService = {
     decision: { decision: string; comment?: string }
   ): Promise<PromotionRunItem> => {
     const res = await api.post<PromotionRunItem>(`/v1/tenants/${tenantId}/promotion-runs/${id}/decisions`, decision);
+    return res.data;
+  },
+
+  // Get current student status
+  getStudentStatus: async (tenantId: string, studentId: string): Promise<StudentStatusItem> => {
+    const res = await api.get<StudentStatusItem>(`/v1/tenants/${tenantId}/students/${studentId}`);
     return res.data;
   },
 

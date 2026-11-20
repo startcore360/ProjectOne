@@ -1,6 +1,7 @@
 package com.edu360.api.tenant;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -87,6 +88,18 @@ public class Tenant {
     @Column(name = "branding_logo_file_ref")
     private UUID brandingLogoFileRef;
 
+    /** E1-S4: FileStorage key of the logo (never sent to clients) and its checked content type. */
+    @Column(name = "branding_logo_storage_key")
+    private String brandingLogoStorageKey;
+
+    @Column(name = "branding_logo_content_type")
+    private String brandingLogoContentType;
+
+    /** E1-S4: {"primary":"#RRGGBB","accent":"#RRGGBB"}, only on plans that allow colours. */
+    @Column(name = "branding_colors", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private String brandingColors;
+
     /** Unique per tenant — used by bootstrap resolver to validate issuer JWKS. */
     @Column(name = "keycloak_realm", unique = true)
     private String keycloakRealm;
@@ -106,6 +119,12 @@ public class Tenant {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "next_renewal_at")
+    private LocalDate nextRenewalAt;
+
+    @Column(name = "pending_plan_id")
+    private UUID pendingPlanId;
 
     @Column(name = "created_at", nullable = false)
     @Builder.Default

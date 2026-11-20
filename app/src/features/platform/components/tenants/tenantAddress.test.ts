@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { tenantLoginAddress } from "./tenantAddress";
 
 describe("tenantLoginAddress", () => {
+  it("follows the .localhost style that needs no hosts file", () => {
+    expect(tenantLoginAddress("abc", { protocol: "http:", hostname: "platform.edu360.localhost", port: "5173" }))
+      .toBe("http://abc.edu360.localhost:5173");
+  });
+
   it("keeps the dot style used with the hosts file", () => {
     expect(tenantLoginAddress("abc", { protocol: "http:", hostname: "platform.edu360.local", port: "5173" }))
       .toBe("http://abc.edu360.local:5173");

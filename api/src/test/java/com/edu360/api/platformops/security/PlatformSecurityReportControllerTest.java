@@ -3,7 +3,11 @@ package com.edu360.api.platformops.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,6 +24,10 @@ import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.platform.PlatformRole;
 import com.edu360.api.platformops.PlatformPermissionService;
+import com.edu360.api.platformops.billing.Invoice;
+import com.edu360.api.platformops.billing.InvoiceRepository;
+import com.edu360.api.tenant.TenantRepository;
+import com.edu360.api.tenant.TenantState;
 import com.edu360.api.platformops.entitlement.PlatformFeatureToggleController;
 import com.edu360.api.platformops.report.PlatformReportController;
 
@@ -38,7 +46,7 @@ class PlatformSecurityReportControllerTest {
         permissionService = com.edu360.api.platformops.PlatformTestSupport.permissions(com.edu360.api.platformops.PlatformAccessLookup.standardRolesOnly());
         auditLogService = mock(AuditLogService.class);
         securityPolicyController = new PlatformSecurityPolicyController(permissionService, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class), null);
-        featureToggleController = new PlatformFeatureToggleController(permissionService, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
+        featureToggleController = new PlatformFeatureToggleController(permissionService, null, null, null, org.mockito.Mockito.mock(com.edu360.api.platformops.role.PlatformAuditWriter.class));
         reportController = new PlatformReportController(permissionService);
     }
 
@@ -115,6 +123,50 @@ class PlatformSecurityReportControllerTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody().metrics()).containsKey("totalRevenueYtd");
+    }
+
+
+    @Test
+    void ACT_PLATFORM_REPORTS_VIEW_ALLOW_productOwnerGetsCurrentMonthCollectionsIncludingMonthStart() {
+        InvoiceRepository invoiceRepository = mock(InvoiceRepository.class);
+        var monthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+                .atStartOfDay().toInstant(ZoneOffset.UTC);
+        Invoice paidAtMonthStart = Invoice.builder()
+                .paidAt(monthStart)
+                .totalAmount(new BigDecimal("125.00"))
+                .build();
+        when(invoiceRepository.findByStatus("PAID")).thenReturn(List.of(paidAtMonthStart));
+        PlatformReportController controller = new PlatformReportController(
+                permissionService, invoiceRepository, null, null, null);
+
+        ResponseEntity<PlatformReportController.PlatformReportResponse> response =
+                controller.getReport("REVENUE", authFor(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().metrics()).containsEntry(
+                "totalCollectionsThisMonth", new BigDecimal("125.00"));
+    }
+
+
+    @Test
+    void ACT_PLATFORM_REPORTS_VIEW_ALLOW_productOwnerGetsTenantMetricsOnNonRevenueReport() {
+        TenantRepository tenantRepository = mock(TenantRepository.class);
+        when(tenantRepository.countByState(TenantState.ACTIVE)).thenReturn(7L);
+        when(tenantRepository.count()).thenReturn(12L);
+        PlatformReportController controller = new PlatformReportController(
+                permissionService, null, null, null, tenantRepository);
+
+        ResponseEntity<PlatformReportController.PlatformReportResponse> response =
+                controller.getReport("PLATFORM_SUMMARY", authFor(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().metrics())
+                .containsEntry("activeTenants", 7)
+                .containsEntry("totalTenants", 12)
+                .containsKey("storageUsedGb")
+                .containsKey("apiRequestsToday")
+                .containsKey("usageNote")
+                .doesNotContainKey("totalCollectionsThisMonth");
     }
 
     @Test

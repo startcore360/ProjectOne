@@ -1,12 +1,17 @@
 package com.edu360.api.identity;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.exception.InvalidCredentialsException;
 import com.edu360.api.rbac.AssignmentStatus;
 import com.edu360.api.rbac.RoleDefinition;
@@ -28,7 +33,7 @@ import com.edu360.api.tenant.TenantContext;
  *
  * Scopes: Reads user's active role assignment(s) and computes real institution scope:
  * - TENANT scope: institutionScope = "ALL" (per D4 §2.2 reserved for tenant-wide roles)
- * - INSTITUTION / DEPARTMENT scope: institutionScope = "LIST", institutionIds = {institutionId}
+ * - INSTITUTION / DEPARTMENT scope: institutionScope = "LIST", institutionIds = the selected assignment's institution
  * - No active assignment: institutionScope = "NONE", institutionIds = {}
  */
 @Component
@@ -39,13 +44,24 @@ public class TenantUserLookup {
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final RoleDefinitionRepository roleDefinitionRepository;
     private final UserActiveRoleRepository userActiveRoleRepository;
+    private final AuditLogService auditLogService;
+    private final TransactionTemplate transactionTemplate;
 
     public TenantUserLookup(
             UserIdentityLinkRepository userIdentityLinkRepository,
             UserAccountRepository userAccountRepository,
-            @Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
-            @Autowired(required = false) RoleDefinitionRepository roleDefinitionRepository) {
-        this(userIdentityLinkRepository, userAccountRepository, userRoleAssignmentRepository, roleDefinitionRepository, null);
+            UserRoleAssignmentRepository userRoleAssignmentRepository,
+            RoleDefinitionRepository roleDefinitionRepository,
+            UserActiveRoleRepository userActiveRoleRepository,
+            AuditLogService auditLogService,
+            TransactionTemplate transactionTemplate) {
+        this.userIdentityLinkRepository = userIdentityLinkRepository;
+        this.userAccountRepository = userAccountRepository;
+        this.userRoleAssignmentRepository = userRoleAssignmentRepository;
+        this.roleDefinitionRepository = roleDefinitionRepository;
+        this.userActiveRoleRepository = userActiveRoleRepository;
+        this.auditLogService = Objects.requireNonNull(auditLogService, "auditLogService is required");
+        this.transactionTemplate = Objects.requireNonNull(transactionTemplate, "transactionTemplate is required");
     }
 
     @Autowired
@@ -54,12 +70,12 @@ public class TenantUserLookup {
             UserAccountRepository userAccountRepository,
             @Autowired(required = false) UserRoleAssignmentRepository userRoleAssignmentRepository,
             @Autowired(required = false) RoleDefinitionRepository roleDefinitionRepository,
-            @Autowired(required = false) UserActiveRoleRepository userActiveRoleRepository) {
-        this.userIdentityLinkRepository = userIdentityLinkRepository;
-        this.userAccountRepository = userAccountRepository;
-        this.userRoleAssignmentRepository = userRoleAssignmentRepository;
-        this.roleDefinitionRepository = roleDefinitionRepository;
-        this.userActiveRoleRepository = userActiveRoleRepository;
+            @Autowired(required = false) UserActiveRoleRepository userActiveRoleRepository,
+            AuditLogService auditLogService,
+            PlatformTransactionManager transactionManager) {
+        this(userIdentityLinkRepository, userAccountRepository, userRoleAssignmentRepository,
+                roleDefinitionRepository, userActiveRoleRepository, auditLogService,
+                new TransactionTemplate(Objects.requireNonNull(transactionManager, "transactionManager is required")));
     }
 
     public record ResolvedUser(UserAccount account, UserIdentityLink link) {
@@ -76,8 +92,12 @@ public class TenantUserLookup {
 
         UserAccount account = userAccountRepository
                 .findById(new UserAccountId(tenant.getTenantId(), link.getUserAccountId()))
-                .filter(a -> a.getStatus() == UserAccountStatus.ACTIVE)
+                .filter(a -> a.getStatus() == UserAccountStatus.ACTIVE || a.getStatus() == UserAccountStatus.PENDING_ACTIVATION)
                 .orElseThrow(() -> new InvalidCredentialsException("Account is not active"));
+
+        if (account.getStatus() == UserAccountStatus.PENDING_ACTIVATION) {
+            activateAccountWithAudit(tenant, account);
+        }
 
         String institutionScope = "NONE";
         Set<UUID> institutionIds = Set.of();
@@ -121,9 +141,10 @@ public class TenantUserLookup {
                         institutionScope = "ALL";
                     } else {
                         institutionScope = "LIST";
-                        if (chosen.getInstitutionId() != null) {
-                            institutionIds = Set.of(chosen.getInstitutionId());
-                        }
+                        // Keep the selected active role, but include its active institution assignments.
+                        institutionIds = chosen.getInstitutionId() == null
+                                ? Set.of()
+                                : Set.of(chosen.getInstitutionId());
                     }
 
                     if (roleDefinitionRepository != null) {
@@ -150,5 +171,26 @@ public class TenantUserLookup {
             return false;
         }
         return assignment.getEffectiveTo() == null || assignment.getEffectiveTo().isAfter(now);
+    }
+
+    private void activateAccountWithAudit(Tenant tenant, UserAccount account) {
+        transactionTemplate.execute(status -> {
+            int updated = userAccountRepository.updateStatusIfMatches(
+                    tenant.getTenantId(),
+                    account.getId().getUserAccountId(),
+                    UserAccountStatus.ACTIVE,
+                    UserAccountStatus.PENDING_ACTIVATION);
+            if (updated == 1) {
+                auditLogService.record(
+                        AuditEventType.USER_ACTIVATED,
+                        null,
+                        account.getEmail(),
+                        null,
+                        "tenant=" + tenant.getTenantId() + " user=" + account.getId().getUserAccountId() + " activated on first login"
+                );
+            }
+            return null;
+        });
+        account.setStatus(UserAccountStatus.ACTIVE);
     }
 }

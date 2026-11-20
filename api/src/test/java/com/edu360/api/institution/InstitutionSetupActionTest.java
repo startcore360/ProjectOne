@@ -212,7 +212,9 @@ class InstitutionSetupActionTest {
         subjectAllocationService = new SubjectAllocationService(
                 subjectAllocationRepository,
                 permissionEvaluatorService,
-                auditLogService
+                auditLogService,
+                sectionRepository,
+                staffAssignmentRepository
         );
 
         mentorAssignmentService = new MentorAssignmentService(
@@ -434,7 +436,7 @@ class InstitutionSetupActionTest {
         assertThatThrownBy(() -> masterCalendarService.createAcademicSession(p,
                 new CreateAcademicSessionRequest(null, "Invalid", LocalDate.of(2027, 5, 1), LocalDate.of(2026, 5, 1), 2026, "ACTIVE")))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("endDate must be after startDate");
+                .hasMessageContaining("endDate must be on or after startDate");
     }
 
     // =========================================================================
@@ -447,7 +449,9 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(academicSessionRepository.findByTenantIdAndAcademicSessionId(tenantId, sessionId))
                 .thenReturn(Optional.of(new AcademicSession()));
-        when(academicCalendarEventRepository.findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(tenantId, sessionId, "UNIVERSITY"))
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(tenantId, "UNIVERSITY"))
+                .thenReturn(List.of());
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(tenantId, institutionId))
                 .thenReturn(List.of());
 
         CalendarEventResponse resp = calendarEventService.addLocalEvent(p,
@@ -501,15 +505,18 @@ class InstitutionSetupActionTest {
                 .thenReturn(Optional.of(new AcademicSession()));
         AcademicCalendarEvent examEvent = new AcademicCalendarEvent();
         examEvent.setTitle("Final Semester Exam");
+        examEvent.setEventType("EXAM_DAY");
         examEvent.setStartDate(LocalDate.of(2026, 10, 1));
         examEvent.setEndDate(LocalDate.of(2026, 10, 5));
-        when(academicCalendarEventRepository.findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(tenantId, sessionId, "UNIVERSITY"))
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(tenantId, "UNIVERSITY"))
                 .thenReturn(List.of(examEvent));
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(tenantId, institutionId))
+                .thenReturn(List.of());
 
         assertThatThrownBy(() -> calendarEventService.addLocalEvent(p,
                 new CalendarEventRequest(institutionId, sessionId, "LOCAL_HOLIDAY", "Local Holiday", LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 2))))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("overlaps with scheduled university exam dates");
+                .hasMessageContaining("overlaps an exam day");
     }
 
     // =========================================================================
@@ -639,6 +646,7 @@ class InstitutionSetupActionTest {
         staff.setInstitutionId(institutionId);
         staff.setDepartmentId(departmentId);
         staff.setStatus("ACTIVE");
+        staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
         HodAssignResponse resp = hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId));
@@ -705,6 +713,11 @@ class InstitutionSetupActionTest {
     @DisplayName("ACT-SUBJECT_ALLOCATE-ALLOW: Admin / HOD allocates subject to section teacher")
     void actSubjectAllocate_allow() {
         when(subjectAllocationRepository.save(any(SubjectAllocation.class))).thenAnswer(inv -> inv.getArgument(0));
+        Section section = new Section(); section.setSectionId(sectionId); section.setInstitutionId(institutionId);
+        when(sectionRepository.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.of(section));
+        StaffAssignment staff = new StaffAssignment(); staff.setStaffAssignmentId(staffAssignmentId); staff.setTenantId(tenantId);
+        staff.setInstitutionId(institutionId); staff.setStatus("ACTIVE");
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
         SubjectAllocationResponse resp = subjectAllocationService.allocateSubject(tenantId, tenantPrincipal(),
                 new CreateSubjectAllocationRequest(institutionId, UUID.randomUUID(), sectionId, null, staffAssignmentId));
@@ -771,7 +784,9 @@ class InstitutionSetupActionTest {
         StaffAssignment staff = new StaffAssignment();
         staff.setStaffAssignmentId(staffAssignmentId);
         staff.setDepartmentId(departmentId);
+        staff.setInstitutionId(institutionId);
         staff.setStatus("ACTIVE");
+        staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
         MentorAssignResponse resp = mentorAssignmentService.assignMentor(p, sectionId, new MentorAssignRequest(staffAssignmentId));
@@ -850,6 +865,7 @@ class InstitutionSetupActionTest {
         staff.setStaffAssignmentId(staffAssignmentId);
         staff.setInstitutionId(institutionId);
         staff.setStatus("ACTIVE");
+        staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
         ClassTeacherAssignResponse resp = classTeacherAssignmentService.assignClassTeacher(p, sectionId, new ClassTeacherAssignRequest(staffAssignmentId));

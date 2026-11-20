@@ -1,0 +1,15 @@
+/* Feature styles for Staff Records Page */
+.staff-record-list__copy {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+.staff-record-list__copy strong,
+.staff-record-list__copy small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.staff-record-list__copy small {
+  color: var(--color-text-muted);
+  font-size: var(--fs-body-xs, 0.75rem);
+}

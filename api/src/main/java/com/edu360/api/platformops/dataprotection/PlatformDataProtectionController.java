@@ -1,6 +1,7 @@
 package com.edu360.api.platformops.dataprotection;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -11,10 +12,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.platformops.PlatformPermissionService;
+import com.edu360.api.platformops.PlatformConcurrency;
+import com.edu360.api.idempotency.PlatformIdempotencyService;
+import tools.jackson.databind.json.JsonMapper;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.CreateRetentionChangeRequest;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.DecideDeletionRequestDto;
 import com.edu360.api.platformops.dataprotection.dto.DataProtectionDtos.ExportRequestResponse;
@@ -36,12 +42,33 @@ public class PlatformDataProtectionController {
 
     private final PlatformDataProtectionService dataProtectionService;
     private final PlatformPermissionService permissionService;
+    private final PlatformIdempotencyService idempotencyService;
+    private final JsonMapper objectMapper;
+    private final PlatformConcurrency platformConcurrency;
 
     @PostMapping("/tenants/{tenantId}/export")
-    public ResponseEntity<ExportRequestResponse> exportTenant(@PathVariable UUID tenantId, Authentication auth) {
+    public ResponseEntity<ExportRequestResponse> exportTenant(
+            @PathVariable UUID tenantId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "TENANT_EXPORT_REQUEST");
-        return ResponseEntity.ok(dataProtectionService.exportTenant(tenantId, principal));
+        PlatformIdempotencyService.Claim claim = idempotencyService.claim(
+                principal.platformUserId(), "requestTenantExportPlatform", idempotencyKey,
+                Map.of("tenantId", tenantId));
+        if (claim.replay()) {
+            int status = claim.responseStatus() == null ? HttpStatus.OK.value() : claim.responseStatus();
+            return ResponseEntity.status(status)
+                    .body(objectMapper.convertValue(claim.responseBody(), ExportRequestResponse.class));
+        }
+        try {
+            ExportRequestResponse response = dataProtectionService.exportTenant(tenantId, principal);
+            idempotencyService.complete(principal.platformUserId(), claim.id(), HttpStatus.OK.value(), response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            idempotencyService.release(principal.platformUserId(), claim.id());
+            throw ex;
+        }
     }
 
     @GetMapping("/tenants/{tenantId}/export")
@@ -49,6 +76,39 @@ public class PlatformDataProtectionController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "TENANT_EXPORT_REQUEST");
         return ResponseEntity.ok(dataProtectionService.listExports(tenantId));
+    }
+
+    /** DPO queue: all tenant export requests awaiting review or already decided. */
+    @GetMapping("/export-requests")
+    public ResponseEntity<List<ExportRequestResponse>> listAllExports(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID tenantId,
+            Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
+        return ResponseEntity.ok(dataProtectionService.listAllExports(status, tenantId));
+    }
+
+    @GetMapping("/export-requests/{id}")
+    public ResponseEntity<ExportRequestResponse> getExportRequest(@PathVariable UUID id, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
+        ExportRequestResponse response = dataProtectionService.getExportRequest(id);
+        return ResponseEntity.ok()
+                .eTag(platformConcurrency.etag(response.rowVersion()))
+                .body(response);
+    }
+
+    /** Approval only changes request status and notifies the requester; A5 owns export execution. */
+    @PostMapping("/export-requests/{id}/decision")
+    public ResponseEntity<ExportRequestResponse> decideExportRequest(
+            @PathVariable UUID id,
+            @Valid @RequestBody DecideDeletionRequestDto request,
+            @RequestHeader("If-Match") String ifMatch,
+            Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "TENANT_EXPORT_APPROVE");
+        return ResponseEntity.ok(dataProtectionService.decideExportRequest(id, request.decision(), request.remark(), ifMatch, principal));
     }
 
     @GetMapping("/tenants/{tenantId}/retention")
@@ -81,6 +141,33 @@ public class PlatformDataProtectionController {
     public ResponseEntity<RetentionChangeRequestResponse> decideRetentionChange(
             @PathVariable UUID id,
             @Valid @RequestBody DecideDeletionRequestDto request,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "RETENTION_CHANGE_APPROVE");
+        // E8-S5: D5 decideRetentionChange requires an Idempotency-Key.
+        PlatformIdempotencyService.Claim claim = idempotencyService.claim(principal.platformUserId(),
+                "decideRetentionChange", idempotencyKey, Map.of("id", id, "request", request));
+        if (claim.replay()) {
+            int status = claim.responseStatus() == null ? HttpStatus.OK.value() : claim.responseStatus();
+            return ResponseEntity.status(status)
+                    .body(objectMapper.convertValue(claim.responseBody(), RetentionChangeRequestResponse.class));
+        }
+        try {
+            RetentionChangeRequestResponse response = dataProtectionService.decideRetentionChange(
+                    id, request.decision(), request.remark(), principal);
+            idempotencyService.complete(principal.platformUserId(), claim.id(), HttpStatus.OK.value(), response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            idempotencyService.release(principal.platformUserId(), claim.id());
+            throw ex;
+        }
+    }
+
+    /** Internal / test path: no Idempotency-Key. */
+    public ResponseEntity<RetentionChangeRequestResponse> decideRetentionChange(
+            UUID id,
+            DecideDeletionRequestDto request,
             Authentication auth) {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "RETENTION_CHANGE_APPROVE");

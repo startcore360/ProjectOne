@@ -39,6 +39,7 @@ import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLog;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.Department;
@@ -47,6 +48,8 @@ import com.edu360.api.institution.Institution;
 import com.edu360.api.institution.InstitutionId;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.OfferingDepartmentResolver;
+import com.edu360.api.institution.StaffAssignment;
+import com.edu360.api.institution.StaffAssignmentRepository;
 import com.edu360.api.institution.ProgramRepository;
 import com.edu360.api.institution.StructureService;
 import com.edu360.api.institution.dto.CreateDepartmentRequest;
@@ -74,6 +77,7 @@ class ScopeA05Test {
     private SubjectAllocationService allocationService;
     private final Map<UUID, SubjectAllocation> allocations = new HashMap<>();
     private final OfferingDepartmentResolver departments = mock(OfferingDepartmentResolver.class);
+    private final StaffAssignmentRepository staffAssignments = mock(StaffAssignmentRepository.class);
     private final UUID offeringInA1 = UUID.randomUUID();
     private final UUID offeringInA2 = UUID.randomUUID();
 
@@ -102,7 +106,12 @@ class ScopeA05Test {
         });
         lenient().when(allocationRepository.findByIdTenantIdAndIdSubjectAllocationId(any(), any())).thenAnswer(inv ->
                 world.tenantId.equals(inv.getArgument(0)) ? Optional.ofNullable(allocations.get((UUID) inv.getArgument(1))) : Optional.empty());
-        allocationService = new SubjectAllocationService(allocationRepository, world.evaluator, world.auditLogService);
+        lenient().when(staffAssignments.findByTenantIdAndStaffAssignmentId(any(), any())).thenAnswer(inv -> {
+            StaffAssignment staff = new StaffAssignment();
+            staff.setTenantId(world.tenantId); staff.setStaffAssignmentId(inv.getArgument(1));
+            staff.setInstitutionId(collegeA); staff.setStatus("ACTIVE"); return Optional.of(staff);
+        });
+        allocationService = new SubjectAllocationService(allocationRepository, world.evaluator, world.auditLogService, null, staffAssignments);
         allocationService.setOfferingDepartmentResolver(departments);
         lenient().when(departments.departmentOf(world.tenantId, offeringInA1)).thenReturn(Optional.of(deptA1));
         lenient().when(departments.departmentOf(world.tenantId, offeringInA2)).thenReturn(Optional.of(deptA2));
@@ -215,6 +224,41 @@ class ScopeA05Test {
         assertThat(allocations).isEmpty();
     }
 
+
+    @Test
+    @DisplayName("ACT-SUBJECT_ALLOCATE-GUARD: staff assignment from another institution is rejected")
+    void actSubjectAllocateRejectsForeignStaffAssignment() {
+        UUID hod = world.user("HOD A1");
+        world.assign(hod, "HEAD_OF_DEPARTMENT", ScopeType.DEPARTMENT, collegeA, deptA1);
+        world.signIn(hod);
+        UUID staffId = UUID.randomUUID();
+        StaffAssignment foreign = new StaffAssignment();
+        foreign.setTenantId(world.tenantId); foreign.setStaffAssignmentId(staffId);
+        foreign.setInstitutionId(collegeB); foreign.setStatus("ACTIVE");
+        org.mockito.Mockito.when(staffAssignments.findByTenantIdAndStaffAssignmentId(world.tenantId, staffId))
+                .thenReturn(Optional.of(foreign));
+        assertThatThrownBy(() -> allocationService.allocateSubject(world.tenantId, tp(hod),
+                new CreateSubjectAllocationRequest(collegeA, offeringInA1, UUID.randomUUID(), null, staffId)))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Staff assignment does not belong");
+        assertThat(allocations).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ACT-SUBJECT_ALLOCATE-DENY: staff assignment outside tenant is not found")
+    void actSubjectAllocateRejectsMissingStaffAssignment() {
+        UUID hod = world.user("HOD A1");
+        world.assign(hod, "HEAD_OF_DEPARTMENT", ScopeType.DEPARTMENT, collegeA, deptA1);
+        world.signIn(hod);
+        UUID missingId = UUID.randomUUID();
+        org.mockito.Mockito.when(staffAssignments.findByTenantIdAndStaffAssignmentId(world.tenantId, missingId))
+                .thenReturn(Optional.empty());
+        assertThatThrownBy(() -> allocationService.allocateSubject(world.tenantId, tp(hod),
+                new CreateSubjectAllocationRequest(collegeA, offeringInA1, UUID.randomUUID(), null, missingId)))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThat(allocations).isEmpty();
+    }
+
     // ------------------------------------------------- GRADING_SCHEME_SET activation (College Admin)
 
     @Test
@@ -259,7 +303,7 @@ class ScopeA05Test {
         allocationService.endAllocation(world.tenantId, tp(admin), allocation.getId().getSubjectAllocationId());
 
         assertThat(allocation.getStatus()).isEqualTo("ENDED");
-        assertThat(lastAudit().getEventType()).isEqualTo(AuditEventType.ROLE_ASSIGNMENT_ENDED);
+        assertThat(lastAudit().getEventType()).isEqualTo(AuditEventType.SUBJECT_ALLOCATION_ENDED);
         assertThat(lastAudit().getActorRoleCode()).isEqualTo("COLLEGE_ADMIN");
     }
 

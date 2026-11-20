@@ -13,9 +13,14 @@ public record BackupStatusEntryResponse(
         Instant earliestRestorableAt,
         Instant latestRestorableAt,
         Instant lastRestoreTestAt,
-        String lastRestoreTestOutcome) {
+        String lastRestoreTestOutcome,
+        boolean stale) {
 
-    public static BackupStatusEntryResponse from(TenantBackupStatus status) {
+    public static BackupStatusEntryResponse from(TenantBackupStatus status, java.time.Duration threshold, Instant now) {
+        Instant cutoff = now.minus(threshold);
+        boolean stale = status.getLastDailyBackupAt() == null
+                || !"SUCCESS".equals(status.getLastBackupOutcome())
+                || status.getLastDailyBackupAt().isBefore(cutoff);
         return new BackupStatusEntryResponse(
                 status.getTenantId(),
                 status.getLastDailyBackupAt(),
@@ -23,6 +28,7 @@ public record BackupStatusEntryResponse(
                 status.getEarliestRestorableAt(),
                 status.getLatestRestorableAt(),
                 status.getLastRestoreTestAt(),
-                status.getLastRestoreTestOutcome());
+                status.getLastRestoreTestOutcome(),
+                stale);
     }
 }

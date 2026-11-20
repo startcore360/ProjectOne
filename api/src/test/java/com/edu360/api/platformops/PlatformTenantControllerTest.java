@@ -101,7 +101,7 @@ class PlatformTenantControllerTest {
                 platformAuditWriter
         );
 
-        controller = new PlatformTenantController(platformPermissionService, tenantManagementService);
+        controller = new PlatformTenantController(platformPermissionService, tenantManagementService, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
     }
 
     private Authentication authFor(PlatformRole role) {
@@ -115,7 +115,9 @@ class PlatformTenantControllerTest {
                 .tenantType("STANDALONE_SCHOOL")
                 .planId(PLAN_ID)
                 .subdomain("dwps-delhi")
-                .isolationMode(IsolationMode.ISOLATED)
+                .isolationMode(IsolationMode.SHARED)
+                .retentionMonths(12)
+                .backupRetentionDays(90)
                 .firstAdminName("Dr. Sunita Sharma")
                 .firstAdminEmail("principal@dwps-delhi.edu")
                 .firstAdminMobile("+919876543210")
@@ -137,6 +139,7 @@ class PlatformTenantControllerTest {
                 .smsLimit(5000)
                 .apiLimit(10000)
                 .status("ACTIVE")
+                .rowVersion(1)
                 .build();
     }
 
@@ -163,7 +166,7 @@ class PlatformTenantControllerTest {
         assertThat(body.subdomain()).isEqualTo("dwps-delhi");
         assertThat(body.state()).isEqualTo(TenantState.TRIAL);
         assertThat(body.keycloakRealm()).isEqualTo("dwps-delhi-realm");
-        assertThat(body.isolationMode()).isEqualTo(IsolationMode.ISOLATED);
+        assertThat(body.isolationMode()).isEqualTo(IsolationMode.SHARED);
         assertThat(body.userLimit()).isEqualTo(1000);
         assertThat(body.firstAdminEmail()).isEqualTo("principal@dwps-delhi.edu");
         assertThat(body.firstAdminMobile()).isEqualTo("+919876543210");
@@ -172,6 +175,48 @@ class PlatformTenantControllerTest {
 
         verify(keycloakAdminClient).provisionRealm("dwps-delhi-realm", "Delhi World Public School");
         verify(tenantRepository).save(any(Tenant.class));
+    }
+
+    @Test
+    void act_tenantCreate_rejectsIsolatedModeBeforeProvisioning() {
+        TenantCreateRequest request = sampleRequest();
+        request.setIsolationMode(IsolationMode.ISOLATED);
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.createTenant(request, authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(error.getErrorCode()).isEqualTo("ISOLATION_NOT_AVAILABLE");
+        org.mockito.Mockito.verifyNoInteractions(keycloakAdminClient);
+    }
+
+    @Test
+    void act_tenantCreate_rejectsReservedSubdomain() {
+        TenantCreateRequest request = sampleRequest();
+        request.setSubdomain("platform");
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.createTenant(request, authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(error.getErrorCode()).isEqualTo("SUBDOMAIN_RESERVED");
+        org.mockito.Mockito.verifyNoInteractions(keycloakAdminClient);
+    }
+
+    @Test
+    void act_tenantCreate_rejectsInvalidSubdomain() {
+        TenantCreateRequest request = sampleRequest();
+        request.setSubdomain("bad_name");
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.createTenant(request, authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(error.getErrorCode()).isEqualTo("SUBDOMAIN_INVALID");
+        org.mockito.Mockito.verifyNoInteractions(keycloakAdminClient);
     }
 
     @Test
@@ -196,7 +241,7 @@ class PlatformTenantControllerTest {
                 userRepo, linkRepo, roleDefRepo, stdRoleRepo, stdActionRepo, roleActionRepo, assignRepo,
                 null, platformAuditWriter
         );
-        PlatformTenantController testController = new PlatformTenantController(platformPermissionService, serviceWithAdmin);
+        PlatformTenantController testController = new PlatformTenantController(platformPermissionService, serviceWithAdmin, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
 
         when(tenantRepository.findBySubdomain("dwps-delhi")).thenReturn(Optional.empty());
         when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(samplePlan()));
@@ -427,7 +472,12 @@ class PlatformTenantControllerTest {
                 60,
                 6000,
                 12000,
-                2
+                2,
+                true,
+                true,
+                6,
+                new BigDecimal("0.05"),
+                new BigDecimal("12.50")
         );
 
         ResponseEntity<PlanResponse> response = controller.createPlan(request, authFor(PlatformRole.PRODUCT_OWNER));
@@ -435,6 +485,11 @@ class PlatformTenantControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().planName()).isEqualTo("Custom High School Plan");
         assertThat(response.getBody().priceAmount()).isEqualTo(new BigDecimal("650.00"));
+        assertThat(response.getBody().customDomainAllowed()).isTrue();
+        assertThat(response.getBody().brandingColorsAllowed()).isTrue();
+        assertThat(response.getBody().billingCycleMonths()).isEqualTo(6);
+        assertThat(response.getBody().smsUnitAmount()).isEqualByComparingTo("0.05");
+        assertThat(response.getBody().storageUnitAmountPerGb()).isEqualByComparingTo("12.50");
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq("CREATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(response.getBody().planId()));
     }
 
@@ -449,7 +504,12 @@ class PlatformTenantControllerTest {
                 50,
                 5000,
                 10000,
-                1
+                1,
+                false,
+                false,
+                12,
+                null,
+                null
         );
 
         assertThatThrownBy(() -> controller.createPlan(request, authFor(PlatformRole.PLATFORM_ADMIN)))
@@ -468,22 +528,30 @@ class PlatformTenantControllerTest {
 
         UpdatePlanRequest request = new UpdatePlanRequest(
                 "Updated Standard Plan",
-                existing.getPriceAmount(), // unchanged price
-                "INR",
-                2000,
-                100,
-                10000,
-                20000,
-                3,
+                null, // priceAmount: Platform Admin omits price; existing price must remain unchanged
+                null, // pricingType
+                null, // currencyCode
+                2000, // userLimit
+                100, // storageLimitGb
+                10000, // smsLimit
+                20000, // apiLimit
+                3, // maxInstitutions
+                null, // customDomainAllowed
+                null, // brandingColorsAllowed
+                null, // billingCycleMonths
+                null, // smsUnitAmount
+                null, // storageUnitAmountPerGb
                 "ACTIVE"
         );
-
-        ResponseEntity<PlanResponse> response = controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN));
+        ResponseEntity<PlanResponse> response = controller.updatePlan(planId, request, "\"1\"", authFor(PlatformRole.PLATFORM_ADMIN));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().planName()).isEqualTo("Updated Standard Plan");
         assertThat(response.getBody().userLimit()).isEqualTo(2000);
-        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq("UPDATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
+        assertThat(response.getBody().priceAmount()).isEqualByComparingTo(existing.getPriceAmount());
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), org.mockito.ArgumentMatchers.isNull(),
+                eq("PLAN_UPDATED"), eq("UPDATE"), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId),
+                eq(com.edu360.api.platformops.role.PlatformAuditWriter.SUCCESS), any());
     }
 
     @Test
@@ -497,18 +565,165 @@ class PlatformTenantControllerTest {
         UpdatePlanRequest request = new UpdatePlanRequest(
                 "Standard Plan",
                 new BigDecimal("9999.00"), // altered price!
+                null,
                 "INR",
                 1000,
                 50,
                 5000,
                 10000,
                 1,
+                null,
+                null,
+                null,
+                null,
+                null,
                 "ACTIVE"
         );
 
-        assertThatThrownBy(() -> controller.updatePlan(planId, request, authFor(PlatformRole.PLATFORM_ADMIN)))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessageContaining("Rule [F-4]");
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, "\"1\"", authFor(PlatformRole.PLATFORM_ADMIN)));
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+        verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
+    }
+
+    @Test
+    void DENY_platformAdminCannotSetSmsOrStorageUnitPricing() {
+        UUID planId = UUID.randomUUID();
+        Plan existing = samplePlan();
+        existing.setPlanId(planId);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(existing));
+
+        UpdatePlanRequest request = new UpdatePlanRequest(
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, new BigDecimal("0.10"), null, null
+        );
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, "\"1\"", authFor(PlatformRole.PLATFORM_ADMIN)));
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+        verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
+    }
+
+    @Test
+    void DENY_platformAdminCannotAlterCurrencyOrPricingType() {
+        UUID planId = UUID.randomUUID();
+        Plan existing = samplePlan();
+        existing.setPlanId(planId);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(existing));
+
+        UpdatePlanRequest request = new UpdatePlanRequest(
+                null, null, "FLAT", "USD", null, null, null, null, null,
+                null, null, null, null, null, null
+        );
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, "\"1\"", authFor(PlatformRole.PLATFORM_ADMIN)));
+        assertThat(error.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+        verify(platformAuditWriter).recordDenied(any(PlatformPrincipal.class), eq("PLAN_MANAGE"), eq("PLAN"), eq(planId));
+    }
+
+
+    @Test
+    void getPlanReturnsStrongEtagFromRowVersion() {
+        UUID planId = UUID.randomUUID();
+        Plan plan = samplePlan();
+        plan.setPlanId(planId);
+        plan.setRowVersion(4);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        ResponseEntity<PlanResponse> response = controller.getPlan(planId, authFor(PlatformRole.PLATFORM_ADMIN));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"4\"");
+        assertThat(response.getBody().rowVersion()).isEqualTo(4);
+    }
+
+    @Test
+    void updatePlanRejectsStaleIfMatchVersion() {
+        UUID planId = UUID.randomUUID();
+        Plan plan = samplePlan();
+        plan.setPlanId(planId);
+        plan.setRowVersion(4);
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        UpdatePlanRequest request = new UpdatePlanRequest(
+                "Updated Standard Plan", null, null, null, 2000, null, null, null, null,
+                null, null, null, null, null, null);
+
+        com.edu360.api.exception.ApiException error = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> controller.updatePlan(planId, request, "\"3\"", authFor(PlatformRole.PLATFORM_ADMIN)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(error.getErrorCode()).isEqualTo("VERSION_CONFLICT");
+        verify(planRepository, org.mockito.Mockito.never()).save(any(Plan.class));
+    }
+
+    /** E8-S5: suspend over HTTP needs the tenant's current version; missing → 428, stale → 409, current → bumped. */
+    @Test
+    void E8S5_suspendRequiresCurrentIfMatchAndReturnsTheNewVersion() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenant = Tenant.builder()
+                .tenantId(tenantId)
+                .tenantName("Doon Valley Academy")
+                .planId(PLAN_ID)
+                .state(TenantState.ACTIVE)
+                .subdomain("doon-valley")
+                .timeZone("Asia/Kolkata")
+                .dataRegion("IN")
+                .build();
+        tenant.setRowVersion(4);
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(samplePlan()));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
+        PlatformPrincipal po = (PlatformPrincipal) authFor(PlatformRole.PRODUCT_OWNER).getPrincipal();
+
+        com.edu360.api.exception.ApiException missing = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> tenantManagementService.suspendTenant(tenantId, "Overdue", po, null));
+        assertThat(missing.getStatus()).isEqualTo(HttpStatus.PRECONDITION_REQUIRED);
+        assertThat(missing.getErrorCode()).isEqualTo("IF_MATCH_REQUIRED");
+
+        com.edu360.api.exception.ApiException stale = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> tenantManagementService.suspendTenant(tenantId, "Overdue", po, "\"3\""));
+        assertThat(stale.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(stale.getErrorCode()).isEqualTo("VERSION_CONFLICT");
+        verify(tenantRepository, org.mockito.Mockito.never()).save(any(Tenant.class));
+        assertThat(tenant.getState()).isEqualTo(TenantState.ACTIVE);
+
+        TenantResponse ok = tenantManagementService.suspendTenant(tenantId, "Overdue", po, "\"4\"");
+        assertThat(ok.state()).isEqualTo(TenantState.SUSPENDED);
+        // Matches what the platform.fn_touch trigger writes, so the next If-Match the screen sends is correct.
+        assertThat(ok.rowVersion()).isEqualTo(5);
+    }
+
+    /** E8-S5: a stale archive is refused before any state change. */
+    @Test
+    void E8S5_archiveWithStaleVersionIsRefused() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenant = Tenant.builder()
+                .tenantId(tenantId)
+                .tenantName("Doon Valley Academy")
+                .planId(PLAN_ID)
+                .state(TenantState.SUSPENDED)
+                .subdomain("doon-valley")
+                .timeZone("Asia/Kolkata")
+                .dataRegion("IN")
+                .build();
+        tenant.setRowVersion(2);
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        PlatformPrincipal po = (PlatformPrincipal) authFor(PlatformRole.PRODUCT_OWNER).getPrincipal();
+
+        com.edu360.api.exception.ApiException stale = org.junit.jupiter.api.Assertions.assertThrows(
+                com.edu360.api.exception.ApiException.class,
+                () -> tenantManagementService.archiveTenant(tenantId, "Closed", po, "\"1\""));
+        assertThat(stale.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(tenant.getState()).isEqualTo(TenantState.SUSPENDED);
+        verify(tenantRepository, org.mockito.Mockito.never()).save(any(Tenant.class));
     }
 
     @Test
@@ -533,6 +748,8 @@ class PlatformTenantControllerTest {
                 tenantId, new TenantLifecycleActionRequest("Overdue fee settlement"), authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(suspendRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(suspendRes.getBody().state()).isEqualTo(TenantState.SUSPENDED);
+        assertThat(tenant.getSuspendedAt()).isNotNull();
+        assertThat(tenant.getArchivedAt()).isNull();
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SUSPENDED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
 
         // Reactivate
@@ -540,6 +757,8 @@ class PlatformTenantControllerTest {
                 tenantId, authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(reactivateRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(reactivateRes.getBody().state()).isEqualTo(TenantState.ACTIVE);
+        assertThat(tenant.getSuspendedAt()).isNull();
+        assertThat(tenant.getArchivedAt()).isNull();
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_REACTIVATED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
     }
 
@@ -564,6 +783,8 @@ class PlatformTenantControllerTest {
                 tenantId, new TenantLifecycleActionRequest("Institution merger closed"), authFor(PlatformRole.PRODUCT_OWNER));
         assertThat(archiveRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(archiveRes.getBody().state()).isEqualTo(TenantState.ARCHIVED);
+        assertThat(tenant.getArchivedAt()).isNotNull();
+        assertThat(tenant.getSuspendedAt()).isNull();
         verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_ARCHIVED"), eq("TENANT_SUSPEND_ARCHIVE"), eq("TENANT"), eq(tenantId));
     }
 
@@ -583,7 +804,10 @@ class PlatformTenantControllerTest {
                 .build();
 
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
-        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(samplePlan()));
+        // E1-S3: a custom domain needs a plan that includes it, and a Platform Admin stays within the plan.
+        Plan plan = samplePlan();
+        plan.setCustomDomainAllowed(true);
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateTenantSettingsRequest request = new UpdateTenantSettingsRequest(
@@ -592,7 +816,7 @@ class PlatformTenantControllerTest {
                 true, // opt out of platform analytics [Rule PV-07]
                 "portal.northbridge.edu",
                 800,
-                100,
+                40,
                 null,
                 null
         );
@@ -604,7 +828,10 @@ class PlatformTenantControllerTest {
         assertThat(response.getBody().analyticsOptOut()).isTrue();
         assertThat(response.getBody().customDomain()).isEqualTo("portal.northbridge.edu");
         assertThat(response.getBody().userLimit()).isEqualTo(800);
-        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SETTINGS_UPDATED"), eq("TENANT_SETTINGS"), eq("TENANT"), eq(tenantId));
+        // E1-S3: the audit row now carries the old and new values.
+        verify(platformAuditWriter).record(any(PlatformPrincipal.class), eq(tenantId), eq("TENANT_SETTINGS_UPDATED"),
+                eq("UPDATE"), eq("TENANT_SETTINGS"), eq("TENANT"), eq(tenantId), eq("SUCCESS"),
+                org.mockito.ArgumentMatchers.argThat(changes -> changes.containsKey("userLimit")));
     }
 
     @Test
@@ -613,7 +840,7 @@ class PlatformTenantControllerTest {
         Authentication supportAuth = authFor(PlatformRole.SUPPORT_MANAGER);
 
         assertThatThrownBy(() -> controller.createPlan(
-                new CreatePlanRequest("Test", "FLAT", BigDecimal.ZERO, "INR", null, null, null, null, null),
+                new CreatePlanRequest("Test", "FLAT", BigDecimal.ZERO, "INR", null, null, null, null, null, null, null, null, null, null),
                 supportAuth))
                 .isInstanceOf(UnauthorizedException.class);
 

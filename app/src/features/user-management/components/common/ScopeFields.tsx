@@ -1,4 +1,4 @@
-import { TextField } from "../../../../design-system/components";
+﻿import { SelectField, TextField } from "../../../../design-system/components";
 import type { ActingScope, ScopeType } from "../../api/userManagementService";
 
 export interface ScopeFieldsProps {
@@ -9,18 +9,17 @@ export interface ScopeFieldsProps {
 
 export function ScopeFields({ scope, onChange, idPrefix }: ScopeFieldsProps) {
   return (
-    <div className="platform-form-grid">
-      <label className="platform-form-field">
-        Acting scope
-        <select
-          value={scope.scopeType}
-          onChange={(e) => onChange({ ...scope, scopeType: e.target.value as ScopeType })}
-        >
-          <option value="TENANT">Tenant (university-wide)</option>
-          <option value="INSTITUTION">Institution</option>
-          <option value="DEPARTMENT">Department</option>
-        </select>
-      </label>
+    <div className="app-form-grid">
+      <SelectField
+        id={`${idPrefix}-scope-type`}
+        label="Acting scope"
+        value={scope.scopeType}
+        onChange={(e) => onChange({ ...scope, scopeType: e.target.value as ScopeType })}
+      >
+        <option value="TENANT">Tenant (university-wide)</option>
+        <option value="INSTITUTION">Institution</option>
+        <option value="DEPARTMENT">Department</option>
+      </SelectField>
       {scope.scopeType !== "TENANT" && (
         <TextField
           id={`${idPrefix}-institution-id`}

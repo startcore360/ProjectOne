@@ -14,6 +14,8 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
 import com.edu360.api.identity.UserType;
+import com.edu360.api.institution.StaffAssignment;
+import com.edu360.api.institution.StaffAssignmentRepository;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.tenant.IsolationMode;
@@ -45,6 +47,8 @@ class AcademicControllerTest {
     @Mock
     private SubjectAllocationRepository subjectAllocationRepository;
     @Mock
+    private StaffAssignmentRepository staffAssignmentRepository;
+    @Mock
     private PromotionRunRepository promotionRunRepository;
     @Mock
     private StudentProfileRepository studentProfileRepository;
@@ -72,7 +76,7 @@ class AcademicControllerTest {
         GradingSchemeService gradingSchemeService = new GradingSchemeService(gradingSchemeVersionRepository, permissionEvaluatorService, auditLogService);
         gradingSchemeController = new GradingSchemeController(gradingSchemeService);
 
-        SubjectAllocationService subjectAllocationService = new SubjectAllocationService(subjectAllocationRepository, permissionEvaluatorService, auditLogService);
+        SubjectAllocationService subjectAllocationService = new SubjectAllocationService(subjectAllocationRepository, permissionEvaluatorService, auditLogService, null, staffAssignmentRepository);
         subjectAllocationController = new SubjectAllocationController(subjectAllocationService);
 
         PromotionService promotionService = new PromotionService(promotionRunRepository, permissionEvaluatorService, auditLogService);
@@ -149,12 +153,12 @@ class AcademicControllerTest {
         doNothing().when(permissionEvaluatorService).authorize(any(), eq("SUBJECT_ALLOCATE"), any(), any());
         when(subjectAllocationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
+        UUID staffAssignmentId = UUID.randomUUID();
+        StaffAssignment staff = new StaffAssignment(); staff.setTenantId(tenantId); staff.setStaffAssignmentId(staffAssignmentId);
+        staff.setInstitutionId(institutionId); staff.setStatus("ACTIVE");
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
         CreateSubjectAllocationRequest req = new CreateSubjectAllocationRequest(
-                institutionId,
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                null,
-                UUID.randomUUID()
+                institutionId, UUID.randomUUID(), UUID.randomUUID(), null, staffAssignmentId
         );
         ResponseEntity<SubjectAllocationResponse> res = subjectAllocationController.allocateSubject(tenantId, req, auth);
 
