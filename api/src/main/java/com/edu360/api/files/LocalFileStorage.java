@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * WHAT: stores a file's bytes on local disk and returns the relative path to record as
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Component;
  * while object storage and expiring download links remain a later integration.
  */
 @Component
+@ConditionalOnProperty(prefix = "app.file-storage", name = "provider", havingValue = "local", matchIfMissing = true)
 public class LocalFileStorage implements FileStorage {
     private final Path baseDir;
 
