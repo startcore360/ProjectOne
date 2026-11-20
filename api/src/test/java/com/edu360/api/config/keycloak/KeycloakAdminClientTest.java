@@ -63,6 +63,14 @@ class KeycloakAdminClientTest {
                 .andExpect(jsonPath("$.protocolMappers[0].config['access.token.claim']").value("true"))
                 .andExpect(jsonPath("$.redirectUris[0]").value("https://*.example.edu/*"))
                 .andRespond(withStatus(HttpStatus.CREATED));
+        server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/clients?clientId=edu360-frontend"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[{\"id\":\"frontend-client-id\",\"clientId\":\"edu360-frontend\",\"redirectUris\":[\"http://localhost:5173/*\"]}]",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://kc.test/admin/realms/" + REALM + "/clients/frontend-client-id"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(jsonPath("$.redirectUris[0]").value("https://*.example.edu/*"))
+                .andRespond(withSuccess());
 
         client.provisionRealm(REALM, "ABC University");
 
