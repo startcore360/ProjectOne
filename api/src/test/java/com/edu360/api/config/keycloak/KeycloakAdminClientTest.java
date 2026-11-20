@@ -40,6 +40,7 @@ class KeycloakAdminClientTest {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         KeycloakProperties properties = properties();
         properties.setFrontendClientId("edu360-frontend");
+        properties.setFrontendRedirectUris(java.util.List.of("https://*.example.edu/*"));
         KeycloakAdminClient client = new KeycloakAdminClient(builder, properties);
         String profileUrl = "http://kc.test/admin/realms/" + REALM + "/users/profile";
 
@@ -60,6 +61,7 @@ class KeycloakAdminClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.protocolMappers[0].config['claim.name']").value("must_change_password"))
                 .andExpect(jsonPath("$.protocolMappers[0].config['access.token.claim']").value("true"))
+                .andExpect(jsonPath("$.redirectUris[0]").value("https://*.example.edu/*"))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
         client.provisionRealm(REALM, "ABC University");
