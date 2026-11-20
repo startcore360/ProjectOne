@@ -51,7 +51,7 @@ test("Billing cycle generates the renewal invoice and the maker-checker flow rec
   const billing = await apiFor("platform", requiredToken("EDU360_E2E_BILLING_MANAGER_TOKEN"));
   try {
     const tenant = await createTenant(owner);
-    await makeInvoicePaid(billing, owner, tenant.tenantId);
+    await makeInvoicePaid(billing, owner, tenant);
     await (await import("./helpers")).activateTenant(owner, tenant);
 
     const today = new Date();
