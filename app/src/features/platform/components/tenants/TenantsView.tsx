@@ -10,7 +10,6 @@ import {
   Modal,
 } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
-import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 
 /** E1-S7: whole days left in a trial (0 once it has ended), or null when no end date is known. */
@@ -20,30 +19,110 @@ function trialDaysLeft(trialEndsAt?: string): number | null {
   return ms <= 0 ? 0 : Math.ceil(ms / 86_400_000);
 }
 
-function RowMenu({ children }: { children: React.ReactNode }) {
+function RowMenu({ tenantName, children }: { tenantName?: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        !triggerRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
   }, [open]);
+
+  useEffect(() => {
+    if (open && menuRef.current) {
+      const items = menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+      if (items.length > 0) items[0].focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) {
+      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+
+    const items = menuRef.current
+      ? Array.from(menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      : [];
+    if (items.length === 0) return;
+    const activeIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextIndex = activeIndex < items.length - 1 ? activeIndex + 1 : 0;
+      items[nextIndex]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevIndex = activeIndex > 0 ? activeIndex - 1 : items.length - 1;
+      items[prevIndex]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      items[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  const closeMenu = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)} aria-haspopup="true" aria-expanded={open}>
+    <div onKeyDown={handleKeyDown} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="eds-button eds-button--secondary eds-button--sm"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={tenantName ? `Tenant actions for ${tenantName}` : "Tenant actions"}
+      >
         ⋯
-      </Button>
+      </button>
       {open && (
         <div
+          ref={menuRef}
           role="menu"
+          aria-label={tenantName ? `Tenant actions for ${tenantName}` : "Tenant actions"}
           style={{
-            position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50,
-            background: "var(--color-bg-surface)", border: "1px solid var(--color-border-divider)",
-            borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-2)",
-            minWidth: "140px", padding: "4px 0",
+            position: "absolute",
+            right: 0,
+            top: "calc(100% + 4px)",
+            zIndex: 50,
+            background: "var(--color-bg-surface)",
+            border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--elevation-2)",
+            minWidth: "140px",
+            padding: "4px 0",
           }}
-          onClick={() => setOpen(false)}
+          onClick={closeMenu}
         >
           {children}
         </div>
@@ -581,16 +660,14 @@ export function TenantsView() {
             </select>
           </label>
         </div>
-        {loading && tenants.length === 0 ? (
-          <div className="app-empty-inline">
-            <Spinner label="Loading tenants" />
-          </div>
-        ) : loadError && tenants.length === 0 ? (
+        {loadError && tenants.length === 0 ? (
           <p className="app-empty-inline">Tenant data is unavailable until the request succeeds.</p>
         ) : (
           <DataTable
             headers={["Institution", "Type", "Plan", "Status", "Open gates", "Last updated", "Suspended at", "Archived at", "Action"]}
-            empty={!filtered.length}
+            loading={loading && tenants.length === 0}
+            loadingLabel="Loading tenants"
+            empty={!loading && !filtered.length}
           >
             {filtered.map((tenant) => (
               <tr key={tenant.id}>
@@ -634,7 +711,7 @@ export function TenantsView() {
                         {tenant.status === "Suspended" && <Button size="sm" variant="secondary" onClick={() => handleOpenArchive(tenant)}>Archive</Button>}
                       </>
                     )}
-                    <RowMenu>
+                    <RowMenu tenantName={tenant.name}>
                       {canEditSettings && tenant.status === "Active" && (
                         <MenuAction onClick={() => handleOpenPlanChange(tenant)}>Change plan</MenuAction>
                       )}

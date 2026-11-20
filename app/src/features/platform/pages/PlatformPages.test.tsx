@@ -169,7 +169,7 @@ describe("Sprint 1 platform screens", () => {
 
     renderWithStore(<TenantsPage />, "BILLING_MANAGER");
     expect(await screen.findByText("Billing School")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "⋯" }));
+    fireEvent.click(screen.getByRole("button", { name: /Tenant actions|⋯/i }));
     expect(screen.queryByRole("menuitem", { name: "Usage" })).not.toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Compliance" })).not.toBeInTheDocument();
   });
@@ -409,6 +409,69 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() => expect(screen.getByText("Aarav Mehta")).toBeInTheDocument());
   });
 
+  it("shows recent platform sign-ins as relative days and older ones as dates", async () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9);
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 15);
+    const older = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3, 10);
+    mockedApi.get.mockResolvedValue({
+      data: [
+        {
+          platformUserId: "plt-today",
+          fullName: "Today User",
+          email: "today@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: today.toISOString(),
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          platformUserId: "plt-yesterday",
+          fullName: "Yesterday User",
+          email: "yesterday@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: yesterday.toISOString(),
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          platformUserId: "plt-older",
+          fullName: "Older User",
+          email: "older@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: older.toISOString(),
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          platformUserId: "plt-never",
+          fullName: "Never User",
+          email: "never@edu360.com",
+          platformRole: "PLATFORM_ADMIN",
+          status: "ACTIVE",
+          mfaRequired: true,
+          lastLoginAt: null,
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+      ],
+    });
+
+    renderWithStore(<PlatformUsersPage />);
+
+    await waitFor(() => expect(screen.getByText("Today User")).toBeInTheDocument());
+    expect(screen.getByText("Today")).toBeInTheDocument();
+    expect(screen.getByText("Yesterday")).toBeInTheDocument();
+    expect(screen.getByText(new Intl.DateTimeFormat("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(older))).toBeInTheDocument();
+    expect(screen.getByText("Never logged in")).toBeInTheDocument();
+  });
+
   it("only lets a Product Owner invite a platform user", async () => {
     mockedApi.get.mockResolvedValue({ data: [] });
     renderWithStore(<PlatformUsersPage />, "PLATFORM_ADMIN");
@@ -489,7 +552,7 @@ describe("Sprint 1 platform screens", () => {
     // Settings lives in each row's "⋯" menu; a Platform Admin can still open it.
     await waitFor(() => expect(screen.getByText("Greenwood Public School")).toBeInTheDocument());
     const row = screen.getByText("Greenwood Public School").closest("tr") as HTMLElement;
-    fireEvent.click(within(row).getByRole("button", { name: "⋯" }));
+    fireEvent.click(within(row).getByRole("button", { name: /Tenant actions|⋯/i }));
     expect(within(row).getByRole("menuitem", { name: "Settings" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Suspend" })).not.toBeInTheDocument();
@@ -570,6 +633,29 @@ describe("Sprint 1 platform screens", () => {
     await waitFor(() =>
       expect(mockedApi.patch).toHaveBeenCalledWith("/platform/platform-users/plt-2", { status: "INACTIVE" }),
     );
+  });
+
+  it("lets a Product Owner clear another active platform user's sign-in lockout", async () => {
+    mockedApi.get.mockResolvedValue({
+      data: [
+        { platformUserId: "plt-1", fullName: "Me Myself", email: "me@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" },
+        { platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "BILLING_MANAGER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" },
+      ],
+    });
+    mockedApi.post.mockResolvedValue({ data: undefined });
+    renderWithStore(<PlatformUsersPage />);
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    expect(screen.getAllByRole("button", { name: "Unlock sign-in" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Unlock sign-in" }));
+    expect(screen.getByText(/clears the failed-login lockout only/i)).toBeInTheDocument();
+    const confirmButtons = screen.getAllByRole("button", { name: "Unlock sign-in" });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith("/platform/platform-users/plt-2/unlock");
+      expect(screen.getByText(/Priya Nair's sign-in lockout was cleared/i)).toBeInTheDocument();
+    });
   });
 
   it("shows the plan catalogue", async () => {
@@ -721,7 +807,7 @@ describe("Sprint 1 platform screens", () => {
 
     // Settings is in the row's "⋯" menu.
     const row = screen.getByText("Greenwood Public School").closest("tr") as HTMLElement;
-    fireEvent.click(within(row).getByRole("button", { name: "⋯" }));
+    fireEvent.click(within(row).getByRole("button", { name: /Tenant actions|⋯/i }));
     fireEvent.click(within(row).getByRole("menuitem", { name: "Settings" }));
 
     await waitFor(() => {

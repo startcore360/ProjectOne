@@ -7,6 +7,7 @@ import {
   Notice,
   Panel,
   ErrorState,
+  SkeletonTable,
   TextField,
 } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
@@ -189,7 +190,9 @@ export function GuardianManagementPanel({
         ) : loadError ? (
           <ErrorState title="Could not load guardian links" message={loadError} action={<Button variant="secondary" onClick={() => void fetchLinks()}>Retry</Button>} />
         ) : loading ? (
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>Loading guardian linkages...</p>
+          <div role="status" aria-busy="true" aria-label="Loading guardian linkages">
+            <SkeletonTable columns={5} rows={3} />
+          </div>
         ) : (
           <DataTable
             headers={["Guardian Name", "Relationship", "Primary?", "Status", "Actions"]}

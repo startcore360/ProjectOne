@@ -9,11 +9,11 @@ import {
   Panel,
   SearchBox,
   SelectField,
+  SkeletonTable,
   StatusBadge,
   TextField,
 } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
-import { Spinner } from "../../../../components/ui";
 import {
   platformOpsService,
   type InvoiceItem,
@@ -23,10 +23,14 @@ import {
 } from "../../api/platformOpsService";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
+import { getLocalDateString, getLocalMonthStart } from "../../../../utils/dateUtils";
 
-function RowMenu({ children }: { children: React.ReactNode }) {
+function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoiceNumber?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => {
@@ -35,21 +39,73 @@ function RowMenu({ children }: { children: React.ReactNode }) {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
+
+  useEffect(() => {
+    if (open && menuRef.current) {
+      const firstItem = menuRef.current.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])');
+      firstItem?.focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!menuRef.current) return;
+      const items = Array.from(menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])'));
+      if (!items.length) return;
+      const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+      let nextIndex = 0;
+      if (e.key === "ArrowDown") {
+        nextIndex = currentIndex >= 0 && currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+      } else {
+        nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+      }
+      items[nextIndex]?.focus();
+    }
+  };
+
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)} aria-haspopup="true" aria-expanded={open}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="eds-button eds-button--secondary eds-button--sm"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={invoiceNumber ? `Actions for invoice ${invoiceNumber}` : "Row actions"}
+      >
         ⋯
-      </Button>
+      </button>
       {open && (
         <div
+          ref={menuRef}
           role="menu"
+          aria-label={invoiceNumber ? `Actions for invoice ${invoiceNumber}` : "Row actions"}
+          tabIndex={-1}
+          onKeyDown={handleKeyDown}
           style={{
-            position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50,
-            background: "var(--color-bg-surface)", border: "1px solid var(--color-border-divider)",
-            borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-2)",
-            minWidth: "140px", padding: "4px 0",
+            position: "absolute",
+            right: 0,
+            top: "calc(100% + 4px)",
+            zIndex: 50,
+            background: "var(--color-bg-surface)",
+            border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--elevation-2)",
+            minWidth: "140px",
+            padding: "4px 0",
           }}
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            setOpen(false);
+            triggerRef.current?.focus();
+          }}
         >
           {children}
         </div>
@@ -61,15 +117,26 @@ function RowMenu({ children }: { children: React.ReactNode }) {
 function MenuAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
     <button
+      type="button"
       role="menuitem"
       onClick={onClick}
       style={{
-        display: "block", width: "100%", textAlign: "left",
-        padding: "8px 14px", background: "none", border: "none",
-        fontSize: "var(--fs-body-sm)", color: "var(--color-text)", cursor: "pointer",
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        padding: "8px 14px",
+        background: "none",
+        border: "none",
+        fontSize: "var(--fs-body-sm)",
+        color: "var(--color-text)",
+        cursor: "pointer",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = "none";
+      }}
     >
       {children}
     </button>
@@ -89,7 +156,9 @@ export function InvoicesView() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
+
   const [lineInvoice, setLineInvoice] = useState<InvoiceItem | null>(null);
   const [invoiceLines, setInvoiceLines] = useState<InvoiceLineItem[]>([]);
   const [loadingLines, setLoadingLines] = useState(false);
@@ -97,20 +166,24 @@ export function InvoicesView() {
   const [lineQuantity, setLineQuantity] = useState("1");
   const [lineUnitAmount, setLineUnitAmount] = useState("0");
   const [savingLine, setSavingLine] = useState(false);
+  const [lineError, setLineError] = useState("");
+
   const [showBillingCycle, setShowBillingCycle] = useState(false);
   const [runningBillingCycle, setRunningBillingCycle] = useState(false);
-  const [cyclePeriodStart, setCyclePeriodStart] = useState(new Date().toISOString().substring(0, 7) + "-01");
-  const [cyclePeriodEnd, setCyclePeriodEnd] = useState(new Date().toISOString().substring(0, 10));
+  const [cyclePeriodStart, setCyclePeriodStart] = useState(getLocalMonthStart());
+  const [cyclePeriodEnd, setCyclePeriodEnd] = useState(getLocalDateString());
   const [cycleIdempotencyKey, setCycleIdempotencyKey] = useState("");
   const [cycleResult, setCycleResult] = useState<BillingCycleResponse | null>(null);
+  const [cycleError, setCycleError] = useState("");
 
   // Create Invoice Modal
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
   const [createDraft, setCreateDraft] = useState<CreateInvoicePayload>({
     tenantId: "",
-    periodStart: new Date().toISOString().substring(0, 7) + "-01",
-    periodEnd: new Date().toISOString().substring(0, 10),
+    periodStart: getLocalMonthStart(),
+    periodEnd: getLocalDateString(),
     subtotalAmount: 50000,
     currencyCode: "INR",
   });
@@ -120,6 +193,7 @@ export function InvoicesView() {
   const [paymentMode, setPaymentMode] = useState("GATEWAY");
   const [paymentRef, setPaymentRef] = useState("");
   const [recordingPay, setRecordingPay] = useState(false);
+  const [payError, setPayError] = useState("");
 
   // Discount Modal
   const [discountInvoice, setDiscountInvoice] = useState<InvoiceItem | null>(null);
@@ -127,10 +201,12 @@ export function InvoicesView() {
   const [discountReason, setDiscountReason] = useState("");
   const [discountIdempotencyKey, setDiscountIdempotencyKey] = useState("");
   const [applyingDiscount, setApplyingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setError("");
+    setLoadError("");
+    setActionError("");
     try {
       const [invs, tenantRes] = await Promise.all([
         platformOpsService.listInvoices(),
@@ -143,7 +219,7 @@ export function InvoicesView() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load invoices";
-      setError(msg);
+      setLoadError(msg);
     } finally {
       setLoading(false);
     }
@@ -156,7 +232,7 @@ export function InvoicesView() {
   const handleRunBillingCycle = async (e: FormEvent) => {
     e.preventDefault();
     setRunningBillingCycle(true);
-    setError("");
+    setCycleError("");
     try {
       const result = await platformOpsService.createBillingCycle({
         periodStart: cyclePeriodStart,
@@ -167,7 +243,7 @@ export function InvoicesView() {
       setShowBillingCycle(false);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to run billing cycle");
+      setCycleError(err instanceof Error ? err.message : "Failed to run billing cycle");
     } finally {
       setRunningBillingCycle(false);
     }
@@ -176,46 +252,49 @@ export function InvoicesView() {
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setCreating(true);
-    setError("");
+    setCreateError("");
     try {
       await platformOpsService.createInvoice(createDraft);
       setMessage("Invoice created successfully.");
       setShowCreate(false);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create invoice");
+      setCreateError(err instanceof Error ? err.message : "Failed to create invoice");
     } finally {
       setCreating(false);
     }
   };
 
   const handleApprove = async (inv: InvoiceItem) => {
+    setActionError("");
     try {
       await platformOpsService.approveInvoice(inv.invoiceId, `invoice-approval-${inv.invoiceId}`);
       setMessage(`Invoice ${inv.invoiceNumber} approved.`);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to approve invoice");
+      setActionError(err instanceof Error ? err.message : "Failed to approve invoice");
     }
   };
 
   const handleSend = async (inv: InvoiceItem) => {
+    setActionError("");
     try {
       await platformOpsService.sendInvoice(inv.invoiceId);
       setMessage(`Invoice ${inv.invoiceNumber} marked as SENT.`);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to send invoice");
+      setActionError(err instanceof Error ? err.message : "Failed to send invoice");
     }
   };
 
   const handleFlagOverdue = async (inv: InvoiceItem) => {
+    setActionError("");
     try {
       await platformOpsService.flagOverdue(inv.invoiceId);
       setMessage(`Invoice ${inv.invoiceNumber} flagged for suspension review.`);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to flag overdue");
+      setActionError(err instanceof Error ? err.message : "Failed to flag overdue");
     }
   };
 
@@ -223,7 +302,7 @@ export function InvoicesView() {
     e.preventDefault();
     if (!payInvoice) return;
     setRecordingPay(true);
-    setError("");
+    setPayError("");
     try {
       await platformOpsService.recordPayment(payInvoice.invoiceId, {
         paymentMode,
@@ -234,7 +313,7 @@ export function InvoicesView() {
       setPaymentRef("");
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to record payment");
+      setPayError(err instanceof Error ? err.message : "Failed to record payment");
     } finally {
       setRecordingPay(false);
     }
@@ -244,7 +323,7 @@ export function InvoicesView() {
     e.preventDefault();
     if (!discountInvoice) return;
     setApplyingDiscount(true);
-    setError("");
+    setDiscountError("");
     try {
       await platformOpsService.applyDiscount(discountInvoice.invoiceId, {
         discountPercent: Number(discountPercent),
@@ -254,7 +333,7 @@ export function InvoicesView() {
       setDiscountInvoice(null);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to apply discount");
+      setDiscountError(err instanceof Error ? err.message : "Failed to apply discount");
     } finally {
       setApplyingDiscount(false);
     }
@@ -264,11 +343,11 @@ export function InvoicesView() {
     setLineInvoice(invoice);
     setInvoiceLines([]);
     setLoadingLines(true);
-    setError("");
+    setLineError("");
     try {
       setInvoiceLines(await platformOpsService.listInvoiceLines(invoice.invoiceId));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load invoice lines");
+      setLineError(err instanceof Error ? err.message : "Failed to load invoice lines");
     } finally {
       setLoadingLines(false);
     }
@@ -278,7 +357,7 @@ export function InvoicesView() {
     e.preventDefault();
     if (!lineInvoice) return;
     setSavingLine(true);
-    setError("");
+    setLineError("");
     try {
       const updated = await platformOpsService.addInvoiceLine(lineInvoice.invoiceId, {
         description: lineDescription.trim(),
@@ -292,7 +371,7 @@ export function InvoicesView() {
       setLineUnitAmount("0");
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to add invoice line");
+      setLineError(err instanceof Error ? err.message : "Failed to add invoice line");
     } finally {
       setSavingLine(false);
     }
@@ -301,14 +380,14 @@ export function InvoicesView() {
   const handleRemoveOtherLine = async (line: InvoiceLineItem) => {
     if (!lineInvoice) return;
     setSavingLine(true);
-    setError("");
+    setLineError("");
     try {
       const updated = await platformOpsService.removeInvoiceLine(lineInvoice.invoiceId, line.invoiceLineId);
       setLineInvoice(updated);
       setInvoiceLines(await platformOpsService.listInvoiceLines(lineInvoice.invoiceId));
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to remove invoice line");
+      setLineError(err instanceof Error ? err.message : "Failed to remove invoice line");
     } finally {
       setSavingLine(false);
     }
@@ -344,7 +423,8 @@ export function InvoicesView() {
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <ErrorState message={error} action={<Button variant="secondary" onClick={() => void loadData()}>Retry</Button>} />}
+      {actionError && <Notice tone="danger">{actionError}</Notice>}
+      {loadError && <ErrorState message={loadError} action={<Button variant="secondary" onClick={() => void loadData()}>Retry</Button>} />}
       {cycleResult && cycleResult.skipped.length > 0 && (
         <Notice tone="info">Skipped tenants: {cycleResult.skipped.map((item) => `${item.tenantId.substring(0, 8)} (${item.reason})`).join(", ")}</Notice>
       )}
@@ -391,14 +471,13 @@ export function InvoicesView() {
           </label>
         </div>
 
-        {loading ? (
-          <div className="app-empty-inline">
-            <Spinner label="Loading invoices..." />
-          </div>
-        ) : filteredInvoices.length === 0 ? (
-          <p className="app-empty-inline">No invoices found matching criteria.</p>
-        ) : (
-          <DataTable headers={["Invoice #", "Period", "Amount", "Status", "Flags", "Actions"]}>
+        <DataTable
+          headers={["Invoice #", "Period", "Amount", "Status", "Flags", "Actions"]}
+          loading={loading && invoices.length === 0}
+          loadingLabel="Loading invoices"
+          empty={!loading && filteredInvoices.length === 0}
+          emptyMessage="No invoices found matching criteria."
+        >
             {filteredInvoices.map((inv) => (
               <tr key={inv.invoiceId}>
                 <td>
@@ -427,7 +506,7 @@ export function InvoicesView() {
                   )}
                 </td>
                 <td>
-                  <RowMenu>
+                  <RowMenu invoiceNumber={inv.invoiceNumber}>
                     <MenuAction onClick={() => void openInvoiceLines(inv)}>View lines</MenuAction>
                     {inv.status === "DRAFT" && isProductOwner && canManageInvoice && (
                       <MenuAction onClick={() => handleApprove(inv)}>Approve</MenuAction>
@@ -436,7 +515,11 @@ export function InvoicesView() {
                       <MenuAction onClick={() => handleSend(inv)}>Send</MenuAction>
                     )}
                     {inv.status !== "PAID" && canManageInvoice && (
-                      <MenuAction onClick={() => setPayInvoice(inv)}>Record payment</MenuAction>
+                      <MenuAction onClick={() => {
+                        setPayInvoice(inv);
+                        setPaymentRef(`TXN-${Date.now()}`);
+                        setPayError("");
+                      }}>Record payment</MenuAction>
                     )}
                     {inv.overdue && canFlagOverdue && !inv.overdueFlaggedAt && (
                       <MenuAction onClick={() => handleFlagOverdue(inv)}>Flag for suspension review</MenuAction>
@@ -447,21 +530,27 @@ export function InvoicesView() {
                         setDiscountPercent("10");
                         setDiscountReason("");
                         setDiscountIdempotencyKey(crypto.randomUUID());
+                        setDiscountError("");
                       }}>Apply discount</MenuAction>
                     )}
                   </RowMenu>
                 </td>
               </tr>
             ))}
-          </DataTable>
-        )}
+        </DataTable>
       </Panel>
 
       <Modal isOpen={showBillingCycle} onClose={() => setShowBillingCycle(false)} kicker="BILLING"
         title="Run billing cycle"
+        titleId="run-billing-cycle-title"
         description="Create draft invoices for active tenants whose renewal dates fall within this period. Only recorded usage rows are billed."
         size="sm">
         <form onSubmit={handleRunBillingCycle}>
+          {cycleError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{cycleError}</Notice>
+            </div>
+          )}
           <div style={{ display: "grid", gap: "12px" }}>
             <TextField id="billing-cycle-period-start" label="Period start" type="date" value={cyclePeriodStart} onChange={(e) => setCyclePeriodStart(e.target.value)} required />
             <TextField id="billing-cycle-period-end" label="Period end" type="date" value={cyclePeriodEnd} onChange={(e) => setCyclePeriodEnd(e.target.value)} required />
@@ -484,23 +573,23 @@ export function InvoicesView() {
         size="sm"
       >
         <form onSubmit={handleCreate}>
+          {createError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{createError}</Notice>
+            </div>
+          )}
           <div style={{ display: "grid", gap: "12px" }}>
-            {/* Raw <select> kept — dynamic tenant options not suitable for static DS SelectField options array */}
-            <label className="field-label">
-              <span>Tenant Institution</span>
-              <select
-                className="app-input"
-                value={createDraft.tenantId}
-                onChange={(e) => setCreateDraft({ ...createDraft, tenantId: e.target.value })}
-                required
-              >
-                {tenants.map((t) => (
-                  <option key={t.tenantId} value={t.tenantId}>
-                    {t.tenantName} ({t.subdomain})
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              id="create-invoice-tenant"
+              label="Tenant Institution"
+              value={createDraft.tenantId}
+              onChange={(e) => setCreateDraft({ ...createDraft, tenantId: e.target.value })}
+              required
+              options={tenants.map((t) => ({
+                value: t.tenantId,
+                label: `${t.tenantName} (${t.subdomain})`,
+              }))}
+            />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <TextField
                 id="invoice-period-start"
@@ -545,10 +634,16 @@ export function InvoicesView() {
         onClose={() => setLineInvoice(null)}
         kicker="INVOICE REVIEW"
         title={lineInvoice ? `Invoice lines · ${lineInvoice.invoiceNumber}` : "Invoice lines"}
+        titleId="invoice-lines-title"
         description={lineInvoice ? `Subtotal ₹${Number(lineInvoice.subtotalAmount).toLocaleString("en-IN")} · Total ₹${Number(lineInvoice.totalAmount).toLocaleString("en-IN")}` : undefined}
         size="lg"
       >
-        {loadingLines ? <Spinner label="Loading invoice lines..." /> : invoiceLines.length === 0 ? (
+        {lineError && (
+          <div style={{ marginBottom: "12px" }}>
+            <Notice tone="danger">{lineError}</Notice>
+          </div>
+        )}
+        {loadingLines ? <SkeletonTable columns={6} rows={3} /> : invoiceLines.length === 0 ? (
           <p className="app-empty-inline">No invoice lines have been recorded.</p>
         ) : (
           <DataTable headers={["Type", "Description", "Quantity", "Unit amount", "Line amount", ""]}>
@@ -595,6 +690,11 @@ export function InvoicesView() {
         size="sm"
       >
         <form onSubmit={handleRecordPayment}>
+          {payError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{payError}</Notice>
+            </div>
+          )}
           <div style={{ display: "grid", gap: "12px" }}>
             <SelectField
               id="payment-mode"
@@ -637,6 +737,11 @@ export function InvoicesView() {
         size="sm"
       >
         <form onSubmit={handleApplyDiscount}>
+          {discountError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{discountError}</Notice>
+            </div>
+          )}
           <div style={{ display: "grid", gap: "12px" }}>
             <TextField
               id="discount-percent"

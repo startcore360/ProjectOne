@@ -131,6 +131,12 @@
   --eds-color-danger-border: var(--color-status-danger-border);
   --eds-color-danger-bg: var(--color-status-danger-bg);
   --eds-color-danger-text: var(--color-status-danger-fg);
+  --color-status-danger-text: var(--color-status-danger-fg);
+  --color-text-placeholder: var(--p-neutral-600);
+  --text-primary: var(--color-text);
+  --color-text-primary: var(--color-text);
+  --fs-body-xs: 0.75rem;
+  --elevation-modal: var(--elevation-3);
   --eds-color-success-border: var(--color-status-success-border);
   --eds-color-success-bg: var(--color-status-success-bg);
   --eds-color-success-text: var(--color-status-success-fg);
@@ -291,6 +297,10 @@
     --color-status-warning-bg: #3a3020;
     --color-status-warning-border: #8e7543;
     --color-status-danger-fg: #f0a49a;
+    --color-status-danger-text: #f0a49a;
+    --color-text-placeholder: var(--p-dk-muted);
+    --text-primary: var(--color-text);
+    --color-text-primary: var(--color-text);
     --color-status-danger-bg: #3d2321;
     --color-status-danger-border: #a0574d;
     --color-status-info-fg: #a9cbe3;
@@ -370,6 +380,10 @@
   --color-status-warning-bg: #3a3020;
   --color-status-warning-border: #8e7543;
   --color-status-danger-fg: #f0a49a;
+  --color-status-danger-text: #f0a49a;
+  --color-text-placeholder: var(--p-dk-muted);
+  --text-primary: var(--color-text);
+  --color-text-primary: var(--color-text);
   --color-status-danger-bg: #3d2321;
   --color-status-danger-border: #a0574d;
   --color-status-info-fg: #a9cbe3;

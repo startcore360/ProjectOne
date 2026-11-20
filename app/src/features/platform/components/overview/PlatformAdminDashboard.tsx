@@ -3,8 +3,7 @@ import { PageHeader } from "../../../../components/layout/PageHeader";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { platformOpsService, type SupportTicketItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
-import { Spinner } from "../../../../components/ui";
-import { Notice } from "../../../../design-system/components";
+import { Notice, SkeletonText } from "../../../../design-system/components";
 
 type BackupRow = { stale?: boolean };
 type BackupResponse = { tenants?: BackupRow[] };
@@ -27,7 +26,12 @@ type MetricState = { status: "loading" | "ok" | "not-measured" | "error" | "deni
 function MetricTile({ title, metric }: { title: string; metric: MetricState }) {
   return <section className="kpi" aria-label={title}>
     <div className="kpi__head"><h2 className="kpi__label">{title}</h2></div>
-    {metric.status === "loading" ? <Spinner label={`Loading ${title.toLowerCase()}...`} /> :
+    {metric.status === "loading" ? (
+      <>
+        <span className="sr-only">Loading {title.toLowerCase()}...</span>
+        <SkeletonText height="2rem" width="70%" />
+      </>
+    ) :
       metric.status === "error" ? <Notice tone="warning">{metric.detail || "Could not load this metric."}</Notice> :
       metric.status === "denied" ? <p className="kpi__context">Not available for this role</p> :
       metric.status === "not-measured" ? <p className="kpi__context">Not measured{metric.detail ? ` — ${metric.detail}` : ""}</p> :

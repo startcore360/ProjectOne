@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Notice, Spinner } from "../../../design-system/components";
+import { Button, Notice, SkeletonCard, SkeletonText } from "../../../design-system/components";
 import { sessionsService, type SessionResponse } from "../../sessions/api/sessionsService";
 
 // AUTH_DEVICES_MANAGE (Scope: Self) - a summary only. Signing devices out stays on the full
@@ -53,7 +53,10 @@ export function ProfileDevicesTab() {
       </header>
 
       {sessions === null && !error && (
-        <div className="app-profile-loading"><Spinner label="Loading your devices" /></div>
+        <div className="app-profile-loading" role="status" aria-busy="true" aria-label="Loading your devices">
+          <span className="sr-only">Loading your devices...</span>
+          <SkeletonCard><SkeletonText height="1rem" width="55%" /><SkeletonText lines={2} /></SkeletonCard>
+        </div>
       )}
 
       {error && (

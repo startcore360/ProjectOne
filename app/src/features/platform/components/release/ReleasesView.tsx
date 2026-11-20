@@ -2,6 +2,7 @@
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
+  CheckboxField,
   DataTable,
   MetricCard,
   Modal,
@@ -12,7 +13,6 @@ import {
   TextAreaField,
   TextField,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   platformOpsService,
@@ -29,11 +29,13 @@ export function ReleasesView() {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   // Create Release Modal
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
   const [createDraft, setCreateDraft] = useState<CreateReleasePayload>({
     versionLabel: "v4.1.0",
     releaseNotes: "Includes support access, billing invoices, and tenant lifecycle updates.",
@@ -47,15 +49,16 @@ export function ReleasesView() {
   const [editHotfix, setEditHotfix] = useState(false);
   const [editSchema, setEditSchema] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const loadReleases = async () => {
     setLoading(true);
-    setError("");
+    setLoadError("");
     try {
       const data = await platformOpsService.listReleases();
       setReleases(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load releases");
+      setLoadError(err instanceof Error ? err.message : "Failed to load releases");
     } finally {
       setLoading(false);
     }
@@ -68,26 +71,27 @@ export function ReleasesView() {
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setCreating(true);
-    setError("");
+    setCreateError("");
     try {
       await platformOpsService.createRelease(createDraft);
       setMessage(`Release ${createDraft.versionLabel} created.`);
       setShowCreate(false);
       void loadReleases();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create release");
+      setCreateError(err instanceof Error ? err.message : "Failed to create release");
     } finally {
       setCreating(false);
     }
   };
 
   const handleTransition = async (releaseId: string, versionLabel: string, targetStatus: string) => {
+    setActionError("");
     try {
       await platformOpsService.transitionRelease(releaseId, targetStatus);
       setMessage(`Release ${versionLabel} transitioned to ${targetStatus}.`);
       void loadReleases();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to transition release");
+      setActionError(err instanceof Error ? err.message : "Failed to transition release");
     }
   };
 
@@ -96,13 +100,14 @@ export function ReleasesView() {
     setEditNotes(r.releaseNotes);
     setEditHotfix(r.isHotfix);
     setEditSchema(r.schemaVersion);
+    setEditError("");
   };
 
   const handleSaveEdit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editingRelease) return;
     setSavingEdit(true);
-    setError("");
+    setEditError("");
     try {
       await platformOpsService.updateRelease(editingRelease.releaseId, {
         releaseNotes: editNotes,
@@ -113,7 +118,7 @@ export function ReleasesView() {
       setEditingRelease(null);
       void loadReleases();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update release");
+      setEditError(err instanceof Error ? err.message : "Failed to update release");
     } finally {
       setSavingEdit(false);
     }
@@ -142,7 +147,8 @@ export function ReleasesView() {
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <ErrorState message={error} action={<Button variant="secondary" onClick={() => void loadReleases()}>Retry</Button>} />}
+      {actionError && <Notice tone="danger">{actionError}</Notice>}
+      {loadError && <ErrorState message={loadError} action={<Button variant="secondary" onClick={() => void loadReleases()}>Retry</Button>} />}
 
       <div className="kpi-grid">
         <MetricCard
@@ -165,14 +171,13 @@ export function ReleasesView() {
           />
         </div>
 
-        {loading ? (
-          <div className="app-empty-inline">
-            <Spinner label="Loading releases..." />
-          </div>
-        ) : filteredReleases.length === 0 ? (
-          <p className="app-empty-inline">No releases recorded yet.</p>
-        ) : (
-          <DataTable headers={["Version", "Schema Migration", "Notes", "Status", "Actions"]}>
+        <DataTable
+          headers={["Version", "Schema Migration", "Notes", "Status", "Actions"]}
+          loading={loading && releases.length === 0}
+          loadingLabel="Loading releases"
+          empty={!loading && filteredReleases.length === 0}
+          emptyMessage="No releases recorded yet."
+        >
             {filteredReleases.map((r) => (
               <tr key={r.releaseId}>
                 <td>
@@ -223,8 +228,7 @@ export function ReleasesView() {
                 </td>
               </tr>
             ))}
-          </DataTable>
-        )}
+        </DataTable>
       </Panel>
 
       {/* Create Release Modal */}
@@ -238,6 +242,11 @@ export function ReleasesView() {
         size="sm"
       >
         <form onSubmit={handleCreate}>
+          {createError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{createError}</Notice>
+            </div>
+          )}
           <div style={{ display: "grid", gap: "12px" }}>
             <TextField
               id="release-version-label"
@@ -261,14 +270,12 @@ export function ReleasesView() {
               onChange={(e) => setCreateDraft({ ...createDraft, releaseNotes: e.target.value })}
               required
             />
-            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input
-                type="checkbox"
-                checked={createDraft.isHotfix}
-                onChange={(e) => setCreateDraft({ ...createDraft, isHotfix: e.target.checked })}
-              />
-              <span>Mark as Emergency Hotfix</span>
-            </label>
+            <CheckboxField
+              id="release-is-hotfix"
+              label="Mark as Emergency Hotfix"
+              checked={createDraft.isHotfix}
+              onChange={(e) => setCreateDraft({ ...createDraft, isHotfix: e.target.checked })}
+            />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
             <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
@@ -292,6 +299,11 @@ export function ReleasesView() {
         size="sm"
       >
         <form onSubmit={handleSaveEdit}>
+          {editError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{editError}</Notice>
+            </div>
+          )}
           <div style={{ display: "grid", gap: "12px" }}>
             <TextField
               id="edit-release-schema"
@@ -308,14 +320,12 @@ export function ReleasesView() {
               onChange={(e) => setEditNotes(e.target.value)}
               required
             />
-            <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input
-                type="checkbox"
-                checked={editHotfix}
-                onChange={(e) => setEditHotfix(e.target.checked)}
-              />
-              <span>Emergency Hotfix</span>
-            </label>
+            <CheckboxField
+              id="edit-release-hotfix"
+              label="Emergency Hotfix"
+              checked={editHotfix}
+              onChange={(e) => setEditHotfix(e.target.checked)}
+            />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
             <Button variant="secondary" onClick={() => setEditingRelease(null)} type="button">

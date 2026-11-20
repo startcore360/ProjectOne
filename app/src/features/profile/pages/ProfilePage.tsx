@@ -6,7 +6,7 @@ import {
   ConfirmDialog,
   ErrorState,
   PageHeader,
-  Spinner,
+  SkeletonText,
   Tabs,
   Button,
   toast,
@@ -235,13 +235,15 @@ export default function ProfilePage() {
     <div className="app-page app-profile-page">
       <PageHeader title="My profile" description="Your account, sign-in security, and active devices." />
 
-      {loading && (
-        <section className="app-profile-card app-profile-loading-card" aria-busy="true">
+      {loading && !profile && (
+        <section className="app-profile-card app-profile-loading-card" role="status" aria-busy="true" aria-label="Loading your profile">
+          <span className="sr-only">Loading your profile...</span>
           <div className="app-profile-skeleton" aria-hidden="true">
             <span />
             <div><span /><span /><span /></div>
           </div>
-          <Spinner label="Loading your profile…" />
+          <SkeletonText height="1rem" width="55%" />
+          <SkeletonText height="0.875rem" width="35%" />
         </section>
       )}
 
@@ -256,7 +258,7 @@ export default function ProfilePage() {
         />
       )}
 
-      {!loading && !loadError && profile && (
+      {!loadError && profile && (
         <>
           <ProfileHeader
             profile={profile}

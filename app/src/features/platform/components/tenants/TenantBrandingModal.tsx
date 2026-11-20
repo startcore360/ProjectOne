@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Modal, Notice, Spinner, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SkeletonCard, SkeletonText, TextField } from "../../../../design-system/components";
 import api from "../../../../services/axios";
 import { readErrorMessage } from "../common/types";
 
@@ -109,7 +109,15 @@ export function TenantBrandingModal({ isOpen, tenantId, tenantName, onClose, onS
       }
     >
       {loading ? (
-        <Spinner label="Loading branding" />
+        <div role="status" aria-busy="true" aria-label="Loading branding">
+          <span className="sr-only">Loading branding...</span>
+          <SkeletonCard>
+            <SkeletonText height="1rem" width="30%" />
+            <SkeletonText height="3rem" width="45%" />
+            <SkeletonText height="1rem" width="55%" />
+            <SkeletonText height="2.5rem" />
+          </SkeletonCard>
+        </div>
       ) : loadError ? (
         <Notice tone="danger">{loadError}</Notice>
       ) : branding ? (

@@ -169,6 +169,11 @@ final class ApprovalTestWorld {
         lenient().when(profileRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(promotionRunRepository.findByIdTenantIdAndIdPromotionRunId(any(), any())).thenAnswer(inv ->
                 Optional.ofNullable(runs.get((UUID) inv.getArgument(1))));
+        lenient().when(promotionRunRepository.findByIdTenantId(any())).thenAnswer(inv ->
+                runs.values().stream().filter(r -> r.getId().getTenantId().equals(inv.getArgument(0))).toList());
+        lenient().when(promotionRunRepository.findByIdTenantIdAndInstitutionId(any(), any())).thenAnswer(inv ->
+                runs.values().stream().filter(r -> r.getId().getTenantId().equals(inv.getArgument(0))
+                        && inv.getArgument(1).equals(r.getInstitutionId())).toList());
         lenient().when(promotionRunRepository.save(any())).thenAnswer(inv -> {
             PromotionRun r = inv.getArgument(0);
             runs.put(r.getId().getPromotionRunId(), r);

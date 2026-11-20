@@ -123,10 +123,12 @@ export default function Toast({
     ...style,
   };
 
+  const isUrgent = variant === "error";
+
   const card = (
     <div
-      role="alert"
-      aria-live="polite"
+      role={isUrgent ? "alert" : "status"}
+      aria-live={isUrgent ? "assertive" : "polite"}
       data-testid="toast"
       className={`eds-toast eds-toast--${variant} ${className}`.trim()}
       style={cardStyle}

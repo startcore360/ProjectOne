@@ -8,7 +8,9 @@ import {
   Modal,
   PageHeader,
   SelectField,
-  Spinner,
+  SkeletonCard,
+  SkeletonText,
+  SkeletonPage,
   StatusBadge,
   Tabs,
   TextAreaField,
@@ -145,7 +147,7 @@ export function DataProtectionWorkspacePage() {
       )}
 
       {loading ? (
-        <div className="app-empty-inline"><Spinner label="Loading data protection queues" /></div>
+        <SkeletonPage title="Loading data protection queues" showTable tableRows={5} tableColumns={5} />
       ) : !error ? (
         <>
           <Tabs
@@ -155,7 +157,19 @@ export function DataProtectionWorkspacePage() {
             ariaLabel="Data protection queues"
           />
 
-          {activeTab === "rbac" ? <RbacMappingCheckView /> : <section className="data-protection-workspace__queue" aria-label={`${TAB_LABELS[activeTab]} queue`}>
+          {activeTab === "rbac" ? (
+            <div id="panel-rbac" role="tabpanel" aria-labelledby="tab-rbac" tabIndex={0}>
+              <RbacMappingCheckView />
+            </div>
+          ) : (
+            <section
+              id={`panel-${activeTab}`}
+              role="tabpanel"
+              aria-labelledby={`tab-${activeTab}`}
+              tabIndex={0}
+              className="data-protection-workspace__queue"
+              aria-label={`${TAB_LABELS[activeTab]} queue`}
+            >
             {activeTab === "exports" && (exports.length ? (
               <DataTable headers={["Tenant", "Requested by", "Status", "Requested", "Decision"]}>
                 {exports.map((item) => (
@@ -212,13 +226,13 @@ export function DataProtectionWorkspacePage() {
                 ))}
               </DataTable>
             ) : <EmptyState title="No retention changes" description="There are no retention change requests awaiting review." />)}
-          </section>}
+          </section>)}
         </>
       ) : null}
 
       {canDelegate&&<section className="data-protection-workspace__delegation" aria-labelledby="dpo-delegation-heading">
         <h2 id="dpo-delegation-heading">Delegate DPO approvals</h2><p>Temporarily allow another active Data Protection Officer to approve exports, deletions, and retention changes.</p>
-        {delegationLoading?<Spinner label="Loading DPO delegates"/>:<form className="data-protection-workspace__delegation-form" onSubmit={saveDelegation}>
+        {delegationLoading?<div role="status" aria-busy="true" aria-label="Loading DPO delegates"><span className="sr-only">Loading DPO delegates...</span><SkeletonCard><SkeletonText height="2.5rem"/><SkeletonText height="2.5rem"/><SkeletonText height="2.5rem"/></SkeletonCard></div>:<form className="data-protection-workspace__delegation-form" onSubmit={saveDelegation}>
           <label>Data Protection Officer<select aria-label="Data Protection Officer" value={delegateUserId} onChange={e=>setDelegateUserId(e.target.value)} required><option value="">Choose a DPO</option>{delegateCandidates.map(d=><option key={d.userId} value={d.userId}>{d.fullName} ({d.email})</option>)}</select></label>
           <label>From<input aria-label="Delegation from" type="date" value={delegationFrom} onChange={e=>setDelegationFrom(e.target.value)} required/></label>
           <label>To<input aria-label="Delegation to" type="date" value={delegationTo} min={delegationFrom||undefined} onChange={e=>setDelegationTo(e.target.value)} required/></label>

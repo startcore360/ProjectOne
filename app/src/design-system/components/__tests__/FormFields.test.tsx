@@ -44,6 +44,24 @@ describe("Design System Form Controls", () => {
       expect(screen.getByLabelText(/Code \*/i)).toBeInTheDocument();
       expect(screen.queryByText("(Required)")).not.toBeInTheDocument();
     });
+
+    it("merges caller-provided aria-describedby with hint and error (EDU-UX-020)", () => {
+      render(
+        <TextField
+          id="test-merge"
+          label="Field"
+          hint="Some hint"
+          error="Some error"
+          aria-describedby="external-help-id"
+        />
+      );
+
+      const input = screen.getByLabelText(/Field/i);
+      const describedBy = input.getAttribute("aria-describedby") || "";
+      expect(describedBy).toContain("test-merge-error");
+      expect(describedBy).toContain("test-merge-hint");
+      expect(describedBy).toContain("external-help-id");
+    });
   });
 
   describe("SelectField", () => {

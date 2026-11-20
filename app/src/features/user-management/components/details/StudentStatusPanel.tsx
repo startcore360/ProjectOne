@@ -1,6 +1,5 @@
 ﻿import { useEffect, useState, type FormEvent } from "react";
-import { Button, Modal, Notice, Panel, StatusBadge } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { Button, Modal, Notice, Panel, SkeletonText, StatusBadge } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { academicService } from "../../../institution-admin/api/academicService";
 
@@ -82,12 +81,12 @@ export function StudentStatusPanel({
         {feedback && <Notice tone={feedback.tone}>{feedback.message}</Notice>}
         <div className="app-panel__status">
           <span className="app-panel__status-label">Current Status:</span>
-          {statusLoading ? (
-            <Spinner label="Loading status" />
+          {statusLoading && !currentStatus ? (
+            <span role="status" aria-label="Loading student status"><SkeletonText height="1rem" width="7rem" /></span>
           ) : statusLoadError ? (
             <span className="app-panel__status-error">{statusLoadError}</span>
           ) : currentStatus ? (
-            <StatusBadge status={currentStatus} />
+            <StatusBadge status={currentStatus} label={formatStudentStatus(currentStatus)} />
           ) : (
             <span className="app-panel__status-label">—</span>
           )}

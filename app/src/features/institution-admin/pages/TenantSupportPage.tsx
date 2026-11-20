@@ -4,7 +4,7 @@ import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
-import { Button, Panel, TextField, TextAreaField, SelectField } from "../../../design-system/components";
+import { Button, Panel, SkeletonTable, TextField, TextAreaField, SelectField } from "../../../design-system/components";
 import { ErrorState } from "../../../components/feedback/ErrorState";
 import { useSupportSession } from "../../support/useSupportSession";
 
@@ -138,7 +138,7 @@ export default function TenantSupportPage() {
           </Panel>
 
           <Panel title="My support tickets" description="Only tickets raised by your signed-in account are listed.">
-            {loading ? <p role="status">Loading tickets…</p> : tickets.length === 0 ? <p>No support tickets have been raised by this account.</p> : (
+            {loading && tickets.length === 0 ? <SkeletonTable rows={4} columns={4} /> : tickets.length === 0 ? <p>No support tickets have been raised by this account.</p> : (
               <div className="app-table-wrap"><table className="app-table">
                 <thead><tr><th>Ticket</th><th>Subject</th><th>Status</th><th>Created</th></tr></thead>
                 <tbody>{tickets.map((ticket) => <tr key={ticket.supportTicketId}>
@@ -158,7 +158,7 @@ export default function TenantSupportPage() {
           </Panel>
 
           <Panel title="Support access history" description="Review active, expired and withdrawn grants.">
-            {loading ? <p role="status">Loading grants…</p> : grants.length === 0 ? <p>No support access grants have been issued.</p> : (
+            {loading && grants.length === 0 ? <SkeletonTable rows={4} columns={5} /> : grants.length === 0 ? <p>No support access grants have been issued.</p> : (
               <div className="app-table-wrap"><table className="app-table">
                 <thead><tr><th>Ticket</th><th>Granted</th><th>Expires</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>{grants.map((grant) => {

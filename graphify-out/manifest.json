@@ -1506,9 +1506,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/PlatformAuditLogController.java": {
-    "mtime": 1795102186.4732623,
-    "seen": 1795104204.3311608,
-    "ast_hash": "fa3ebf10327f8cb3f2872f3a035402f1",
+    "mtime": 1795104628.236761,
+    "seen": 1795145070.3701801,
+    "ast_hash": "735826f7231e69a5e3cbe25148292672",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/PlatformAuditOutboxEvent.java": {
@@ -1536,15 +1536,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/PlatformUserController.java": {
-    "mtime": 1794028794.4812553,
-    "seen": 1794064862.8413644,
-    "ast_hash": "30b243c8f308f77f796f856cb594f4f8",
-    "semantic_hash": "30b243c8f308f77f796f856cb594f4f8"
+    "mtime": 1795156702.1445649,
+    "seen": 1795157839.360091,
+    "ast_hash": "347334887c3e16a95e1444beadc9cb13",
+    "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/PlatformUserManagementService.java": {
-    "mtime": 1795102186.4812312,
-    "seen": 1795104204.333942,
-    "ast_hash": "2c115b733ea09d028ec930ef4b8a2afd",
+    "mtime": 1795156702.1120794,
+    "seen": 1795157839.360091,
+    "ast_hash": "444419e9bce7f704cfdefe6db4735074",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/TenantBackupStatus.java": {
@@ -3168,9 +3168,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/PlatformAuditLogControllerTest.java": {
-    "mtime": 1795102186.598259,
-    "seen": 1795104204.4487643,
-    "ast_hash": "3f26fc72f5130ad08adaba48a1803bc7",
+    "mtime": 1795104628.3103533,
+    "seen": 1795145070.5022078,
+    "ast_hash": "1adf895ac9b95ead3979ca45b4773cfe",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/PlatformPermissionServiceTest.java": {
@@ -3186,15 +3186,15 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/PlatformUserControllerTest.java": {
-    "mtime": 1794283804.8904335,
-    "seen": 1794286945.7846656,
-    "ast_hash": "c40a01f8e1a85baa6d41cffb0ffd5886",
+    "mtime": 1795156868.0426648,
+    "seen": 1795157839.4437373,
+    "ast_hash": "a94ce893d5631e22e217fd879d8b7cd8",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/PlatformUserUpdateTest.java": {
-    "mtime": 1795102186.6048212,
-    "seen": 1795104204.4529564,
-    "ast_hash": "e6bc8d59d5e361baeb6b636fb30b35c0",
+    "mtime": 1795156722.2319431,
+    "seen": 1795157839.444331,
+    "ast_hash": "7988f3c6b1f6cdcf7357d951608c974e",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/UsageCountsControllerTest.java": {
@@ -3546,9 +3546,9 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/DataTable.tsx": {
-    "mtime": 1794838222.713209,
-    "seen": 1794918833.0357718,
-    "ast_hash": "4049c77c87418e64eeee898ec06f4766",
+    "mtime": 1795157503.4217088,
+    "seen": 1795157839.460131,
+    "ast_hash": "22df893960e5ba5b821e174d9c1b3cf9",
     "semantic_hash": ""
   },
   "app/src/design-system/components/EmptyState.tsx": {
@@ -3630,9 +3630,9 @@
     "semantic_hash": "3cf2674b2e60732c26f9254cd067e4ba"
   },
   "app/src/design-system/components/StatusBadge.tsx": {
-    "mtime": 1794560143.4315398,
-    "seen": 1794834308.8357413,
-    "ast_hash": "4f7d82dbedd5cf4b38e075cdad93ce26",
+    "mtime": 1795157672.4441907,
+    "seen": 1795157839.4702458,
+    "ast_hash": "c74690d045b072db9825f8ddcf4458d5",
     "semantic_hash": ""
   },
   "app/src/design-system/components/Tabs.tsx": {
@@ -3642,9 +3642,9 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/TextField.tsx": {
-    "mtime": 1794549476.4341574,
-    "seen": 1794834308.8357413,
-    "ast_hash": "f9bee3d8f5374b692b0b9aa31a5f455a",
+    "mtime": 1795157564.5936708,
+    "seen": 1795157839.4702458,
+    "ast_hash": "e886b4cff502d928ad9f628bb95f89a3",
     "semantic_hash": ""
   },
   "app/src/design-system/components/index.ts": {
@@ -3882,9 +3882,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/api/platformOpsService.ts": {
-    "mtime": 1795102186.6560757,
-    "seen": 1795104204.5366957,
-    "ast_hash": "92951ce1f70137e65782371158453e53",
+    "mtime": 1795106837.1855395,
+    "seen": 1795145070.5511243,
+    "ast_hash": "04a1dfb721942e0db6039f0cf79a6fe5",
     "semantic_hash": ""
   },
   "app/src/features/platform/api/platformRoleService.ts": {
@@ -3900,9 +3900,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/api/platformUserService.ts": {
-    "mtime": 1794834709.1441307,
-    "seen": 1794918833.1481466,
-    "ast_hash": "e5b76349d296f29ffda400daa26fbd9c",
+    "mtime": 1795156702.176556,
+    "seen": 1795157839.4842417,
+    "ast_hash": "1b69ef1740352081a6e5fdf4ae7cee6c",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/billing/InvoicesView.tsx": {
@@ -3936,9 +3936,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/observability/AuditLogView.tsx": {
-    "mtime": 1795102186.6727102,
-    "seen": 1795104204.5431042,
-    "ast_hash": "f6ee021c0645be6cf2278d8e131361e1",
+    "mtime": 1795157391.9485528,
+    "seen": 1795157839.4861388,
+    "ast_hash": "e1e22f6b712ebe433284e9b82cb598a3",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/observability/BackupStatusView.tsx": {
@@ -3954,9 +3954,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/PlatformOverviewView.tsx": {
-    "mtime": 1795103961.8192992,
-    "seen": 1795104204.545127,
-    "ast_hash": "406095fbe843977546df0ed034db475b",
+    "mtime": 1795106928.398037,
+    "seen": 1795145070.553744,
+    "ast_hash": "28fad875bf4e6c415e0f5fa10bf9736d",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/plans/CreatePlanModal.tsx": {
@@ -4080,15 +4080,15 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/users/PlatformUsersView.tsx": {
-    "mtime": 1794834702.5325613,
-    "seen": 1794918833.1724746,
-    "ast_hash": "c2d477db4cbebb66b1b3575f470fa173",
+    "mtime": 1795156702.2288177,
+    "seen": 1795157839.491757,
+    "ast_hash": "7f262a1ab5d253cd7e277d9d20ecfb83",
     "semantic_hash": ""
   },
   "app/src/features/platform/pages/PlatformPages.test.tsx": {
-    "mtime": 1795103969.3659525,
-    "seen": 1795104204.5555048,
-    "ast_hash": "20b5df48a91f535ef5d38bc6d19e9c3f",
+    "mtime": 1795156722.3251147,
+    "seen": 1795157839.491757,
+    "ast_hash": "93fb05b10fa8fe1faba6b93e669232b5",
     "semantic_hash": ""
   },
   "app/src/features/platform/pages/PlatformPages.tsx": {
@@ -4104,9 +4104,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/platformAccess.ts": {
-    "mtime": 1795103855.6933682,
-    "seen": 1795104204.5555048,
-    "ast_hash": "48cb28a7d18f18b45b8899c019a4906f",
+    "mtime": 1795104290.941159,
+    "seen": 1795145070.553744,
+    "ast_hash": "9c9bba4c231b74127d0a5a6d3f9aa92c",
     "semantic_hash": ""
   },
   "app/src/features/profile/api/meService.ts": {
@@ -4416,9 +4416,9 @@
     "semantic_hash": ""
   },
   "app/src/services/axios.ts": {
-    "mtime": 1794833987.4202864,
-    "seen": 1794834308.875296,
-    "ast_hash": "bca0270655de112c869e764a38da57c8",
+    "mtime": 1795109422.094138,
+    "seen": 1795145070.567275,
+    "ast_hash": "fc4ce863413638d7a51fb1053c59be75",
     "semantic_hash": ""
   },
   "app/src/services/axiosInterceptor.ts": {
@@ -4512,9 +4512,9 @@
     "semantic_hash": ""
   },
   "app/src/test/setup.tsx": {
-    "mtime": 1794591816.8238544,
-    "seen": 1794834308.8817506,
-    "ast_hash": "abaf61963bfc4ef16651f9c049457ec5",
+    "mtime": 1795157457.741535,
+    "seen": 1795157839.508865,
+    "ast_hash": "7f100094830a67d3d9682c622eff13c9",
     "semantic_hash": ""
   },
   "app/src/utils/formErrorMapping.ts": {
@@ -5394,9 +5394,9 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/CheckboxField.tsx": {
-    "mtime": 1794397713.5439374,
-    "seen": 1794398334.2464557,
-    "ast_hash": "468da996c39b0febb2a499cf5e1bb7ce",
+    "mtime": 1795157606.9921691,
+    "seen": 1795157839.460131,
+    "ast_hash": "26eadfd16b0c3db81dbfa1a677b82b19",
     "semantic_hash": ""
   },
   "app/src/design-system/components/DateField.tsx": {
@@ -5412,21 +5412,21 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/SelectField.tsx": {
-    "mtime": 1794549476.4341574,
-    "seen": 1794834308.8337321,
-    "ast_hash": "acf96cb81b56b0f282e4685400635b7c",
+    "mtime": 1795157573.3990128,
+    "seen": 1795157839.4702458,
+    "ast_hash": "d4f31334bc1751eba39699384a1c2e69",
     "semantic_hash": ""
   },
   "app/src/design-system/components/TextAreaField.tsx": {
-    "mtime": 1794549476.4341574,
-    "seen": 1794834308.8357413,
-    "ast_hash": "32368ebcc76e16fe19fa8aef41504f13",
+    "mtime": 1795157583.2389603,
+    "seen": 1795157839.4702458,
+    "ast_hash": "615426cde004e05416d5e0409e94fc29",
     "semantic_hash": ""
   },
   "app/src/design-system/components/__tests__/FormFields.test.tsx": {
-    "mtime": 1794398119.415892,
-    "seen": 1794398334.2584157,
-    "ast_hash": "4cadc2058b699d18e568d5f8ee8ac9cb",
+    "mtime": 1795157632.3747163,
+    "seen": 1795157839.4702458,
+    "ast_hash": "d6f57e4c17412809c370816ee6622a92",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/approval/ApprovalOutcomeHandler.java": {
@@ -5514,9 +5514,9 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/Toast.tsx": {
-    "mtime": 1794399407.1020117,
-    "seen": 1794399644.6023045,
-    "ast_hash": "e2174ce5e4f11d4690788b649b2e2210",
+    "mtime": 1795157720.6662674,
+    "seen": 1795157839.4702458,
+    "ast_hash": "c36a482531c99a837f5d782ca269ca77",
     "semantic_hash": ""
   },
   "app/src/design-system/components/ToastHost.tsx": {
@@ -6594,15 +6594,15 @@
     "semantic_hash": ""
   },
   "app/src/components/common/FileDrop.test.tsx": {
-    "mtime": 1794591251.0701594,
-    "seen": 1794834308.819631,
-    "ast_hash": "7ee6a149af8f032b5942737fb3b31d6e",
+    "mtime": 1795157765.7475128,
+    "seen": 1795157839.460131,
+    "ast_hash": "53353c025065f88b5a873b32a6fc5220",
     "semantic_hash": ""
   },
   "app/src/components/common/FileDrop.tsx": {
-    "mtime": 1794591251.0701594,
-    "seen": 1794834308.819631,
-    "ast_hash": "c0717054ecbd2d6e85ee759d779564ed",
+    "mtime": 1795157756.6118045,
+    "seen": 1795157839.460131,
+    "ast_hash": "a981555c078741f95fcca8af7d82c431",
     "semantic_hash": ""
   },
   "app/src/components/common/PersonPicker.tsx": {
@@ -6672,9 +6672,9 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/DataTable.test.tsx": {
-    "mtime": 1794811534.821301,
-    "seen": 1794834308.8297145,
-    "ast_hash": "9cf87c7cc3fbdb9e511b14486b989315",
+    "mtime": 1795157477.5029533,
+    "seen": 1795157839.460131,
+    "ast_hash": "bc79c2a283d7924ba80cffd76e9a0d59",
     "semantic_hash": ""
   },
   "app/src/design-system/components/DateField.test.tsx": {
@@ -6720,9 +6720,9 @@
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/StaffRecordsPage.tsx": {
-    "mtime": 1794811534.8723936,
-    "seen": 1794834308.8439558,
-    "ast_hash": "a4336ef5acfbb3ab00316ebc0bf98182",
+    "mtime": 1795157363.7391677,
+    "seen": 1795157839.4821296,
+    "ast_hash": "4eb390882900648db54da4aa98648a11",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/TenantSupportPage.test.tsx": {
@@ -6744,9 +6744,9 @@
     "semantic_hash": ""
   },
   "app/src/features/live/liveSocket.ts": {
-    "mtime": 1794549442.9926157,
-    "seen": 1794834308.8439558,
-    "ast_hash": "3c10a960091baed9f6c80438f4eb19bf",
+    "mtime": 1795144092.439736,
+    "seen": 1795145070.548602,
+    "ast_hash": "f910f94f24636864420a46073dac68e0",
     "semantic_hash": ""
   },
   "app/src/features/notifications/api/notificationsApi.ts": {
@@ -7038,9 +7038,9 @@
     "semantic_hash": ""
   },
   "docs/LIVE_API_VERIFICATION_REPORT.md": {
-    "mtime": 1795104058.8268065,
-    "seen": 1795104204.6065757,
-    "ast_hash": "95c39968a25d8935dc1deaf8b6fe0cae",
+    "mtime": 1795145017.273993,
+    "seen": 1795145070.585374,
+    "ast_hash": "cf76f2f1b21e49d75bcefdeb8f652e33",
     "semantic_hash": ""
   },
   "docs/NEW_DEVELOPER_GUIDE.md": {
@@ -7854,9 +7854,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/BillingManagerDashboard.tsx": {
-    "mtime": 1795103839.1014023,
-    "seen": 1795104204.545127,
-    "ast_hash": "8da4b340ae85588068fdb0c99eb4c71a",
+    "mtime": 1795106793.7292795,
+    "seen": 1795145070.553744,
+    "ast_hash": "b75188abbbd4dad19aea5ac28d32ad25",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/PlatformAdminDashboard.test.tsx": {
@@ -7866,27 +7866,21 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/PlatformAdminDashboard.tsx": {
-    "mtime": 1795103838.989788,
-    "seen": 1795104204.545127,
-    "ast_hash": "3740b5fca8d563ea8108be73dd94463b",
-    "semantic_hash": ""
-  },
-  "app/src/features/platform/components/overview/PlatformMetricTile.tsx": {
-    "mtime": 1795103824.663565,
-    "seen": 1795104204.545127,
-    "ast_hash": "57365d4afb6e77a38ba399af656ff2f8",
+    "mtime": 1795106793.612407,
+    "seen": 1795145070.553744,
+    "ast_hash": "7cf4b314c7009ff10da2972a7b68b448",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/ProductOwnerDashboard.test.tsx": {
-    "mtime": 1795102186.6827905,
-    "seen": 1795104204.545127,
-    "ast_hash": "417abac48c17fd899c1bf9dfa98355d4",
+    "mtime": 1795108154.1289697,
+    "seen": 1795145070.553744,
+    "ast_hash": "fae99c57cf68c7301efc96e30b20caae",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/ProductOwnerDashboard.tsx": {
-    "mtime": 1795103951.0858734,
-    "seen": 1795104204.545127,
-    "ast_hash": "83997af12c41d66128b6273e443d8420",
+    "mtime": 1795108128.7798908,
+    "seen": 1795145070.553744,
+    "ast_hash": "33fdaeafe7ecd88adb3864aed3c4b8e3",
     "semantic_hash": ""
   },
   "app/src/features/platform/platformAccess.test.ts": {
@@ -7925,10 +7919,52 @@
     "ast_hash": "d76c03ba0495c5e9407d4e27ca7e9c20",
     "semantic_hash": ""
   },
+  "app/.audit-login.example.json": {
+    "mtime": 1795111981.1021895,
+    "seen": 1795145070.5270174,
+    "ast_hash": "c9054fc76606bd3f30556eac3701efc5",
+    "semantic_hash": ""
+  },
+  "app/edu360-playwright-audit.mjs": {
+    "mtime": 1795112007.1308644,
+    "seen": 1795145070.5270174,
+    "ast_hash": "36e06cffbc60c54f356fd168e3130d8e",
+    "semantic_hash": ""
+  },
+  "app/vite.tunnel.config.ts": {
+    "mtime": 1795144635.9791286,
+    "seen": 1795145070.567275,
+    "ast_hash": "af689b3e83e2d8ba54935b64895fcbd7",
+    "semantic_hash": ""
+  },
+  "dev-host.ps1": {
+    "mtime": 1795144657.1268113,
+    "seen": 1795145070.567275,
+    "ast_hash": "b0629a821eca456dd0d8ff85a9d55280",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1795110563.8440478,
+    "seen": 1795145070.5814614,
+    "ast_hash": "81a50e64ad05af0429b3000e2b44d298",
+    "semantic_hash": ""
+  },
+  "app/src/design-system/components/StatusBadge.test.tsx": {
+    "mtime": 1795157682.1658072,
+    "seen": 1795157839.4702458,
+    "ast_hash": "65912b7bf85d1210351a8a32d73c398a",
+    "semantic_hash": ""
+  },
   "app/package-lock.json": {
     "mtime": 1795026004.0217538,
     "seen": 1795104204.6153276,
     "ast_hash": "fb0a540d5cab4caa9845a390a23fcf6e",
+    "semantic_hash": ""
+  },
+  "package-lock.json": {
+    "mtime": 1795110563.855525,
+    "seen": 1795145070.5992718,
+    "ast_hash": "fd3f03b190619da2adc205d735b0450e",
     "semantic_hash": ""
   }
 }

@@ -65,3 +65,14 @@
     justify-items: center;
   }
 }
+
+/* One-tap set-up for people already on their phone: the QR code cannot be scanned by the phone that
+   shows it. Shown on touch screens only; laptops keep the QR code. */
+.mfa-setup__open-app { display: none; margin: 0 0 var(--space-4); }
+.mfa-setup__open-app .eds-button { text-decoration: none; }
+.mfa-setup__open-app-hint { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--fs-caption); text-align: center; }
+.mfa-setup__on-phone { display: none; }
+@media (pointer: coarse) {
+  .mfa-setup__open-app { display: block; }
+  .mfa-setup__on-phone { display: inline; }
+}

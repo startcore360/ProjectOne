@@ -78,21 +78,17 @@ export function CreateTenantModal({
               { value: "UNIVERSITY_GROUP", label: "University Group" },
             ]}
           />
-          {/* Raw <select> kept because plan options include dynamic price values and optgroup-style would need SelectField extension */}
-          <label className="app-form-field">
-            Subscription plan
-            <select value={draft.planId} onChange={(e) => setDraft({ ...draft, planId: e.target.value })}>
-              {plans.length > 0 ? (
-                plans.map((p) => (
-                  <option key={p.planId} value={p.planId}>
-                    {p.planName} (₹{p.priceAmount})
-                  </option>
-                ))
-              ) : (
-                <option value="">No subscription plans available</option>
-              )}
-            </select>
-          </label>
+          <SelectField
+            id="tenant-plan-id"
+            label="Subscription plan"
+            value={draft.planId}
+            onChange={(e) => setDraft({ ...draft, planId: e.target.value })}
+            options={
+              plans.length > 0
+                ? plans.map((p) => ({ value: p.planId, label: `${p.planName} (₹${p.priceAmount})` }))
+                : [{ value: "", label: "No subscription plans available" }]
+            }
+          />
         </div>
         {plans.length === 0 && (
           <Notice tone="warning">
@@ -121,22 +117,14 @@ export function CreateTenantModal({
           Set at creation: data retention 1–240 months; backup retention 7–3650 days. Later changes require Data Protection Officer approval.
         </small>
         <div className="app-form-grid">
-          <label className="app-form-field">
-            Database isolation
-            <select
-              value={draft.isolationMode}
-              onChange={(e) => setDraft({ ...draft, isolationMode: e.target.value as IsolationMode })}
-            >
-              <option value="SHARED">Shared Database with RLS (SHARED)</option>
-              <option value="ISOLATED" disabled>
-                Dedicated Database (ISOLATED - not yet available)
-              </option>
-            </select>
-            <small className="app-field-hint">
-              Dedicated-database tenants aren&rsquo;t provisionable yet - every tenant is created on the shared,
-              RLS-isolated database for now.
-            </small>
-          </label>
+          <SelectField
+            id="tenant-isolation-mode"
+            label="Database isolation"
+            value={draft.isolationMode}
+            onChange={(e) => setDraft({ ...draft, isolationMode: e.target.value as IsolationMode })}
+            options={[{ value: "SHARED", label: "Shared Database with RLS (SHARED)" }]}
+            hint="Dedicated-database tenants aren't provisionable yet - every tenant is created on the shared, RLS-isolated database for now."
+          />
           <TextField
             id="tenant-admin-name"
             label="Primary administrator full name"
@@ -167,8 +155,15 @@ export function CreateTenantModal({
             id="tenant-admin-national-id"
             label="Aadhaar / National ID (Last 4 digits)"
             value={draft.firstAdminNationalIdLast4}
-            onChange={(e) => setDraft({ ...draft, firstAdminNationalIdLast4: e.target.value })}
+            onChange={(e) => {
+              const sanitized = e.target.value.replace(/\D/g, "").slice(0, 4);
+              setDraft({ ...draft, firstAdminNationalIdLast4: sanitized });
+            }}
             placeholder="e.g. 4582"
+            maxLength={4}
+            inputMode="numeric"
+            pattern="\d{4}"
+            hint="Enter exactly 4 numeric digits."
           />
         </div>
         <div className="app-note">

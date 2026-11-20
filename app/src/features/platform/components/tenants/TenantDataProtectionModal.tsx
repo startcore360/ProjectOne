@@ -5,9 +5,11 @@ import {
   CheckboxField,
   DataTable,
   Notice,
+  SelectField,
   StatusBadge,
-  Spinner,
+  Tabs,
   TextAreaField,
+  TextField,
 } from "../../../../design-system/components";
 import { usePlatformAccess } from "../../platformAccess";
 import {
@@ -208,42 +210,29 @@ export function TenantDataProtectionModal({
         {notice && <Notice tone={notice.tone}>{notice.message}</Notice>}
 
         {/* Tab Navigation */}
-        <div style={{ display: "flex", gap: "var(--space-2)", borderBottom: "1px solid var(--color-border-divider)" }}>
-          <Button
-            variant={activeTab === "export" ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => {
-              setActiveTab("export");
-              setNotice(null);
-            }}
-          >
-            Tenant Export
-          </Button>
-          <Button
-            variant={activeTab === "retention" ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => {
-              setActiveTab("retention");
-              setNotice(null);
-            }}
-          >
-            Retention Policy
-          </Button>
-          <Button
-            variant={activeTab === "deletion" ? "danger" : "secondary"}
-            size="sm"
-            onClick={() => {
-              setActiveTab("deletion");
-              setNotice(null);
-            }}
-          >
-            Tenant Deletion (GDPR/DPDP)
-          </Button>
-        </div>
+        <Tabs
+          items={[
+            { id: "export", label: "Tenant Export" },
+            { id: "retention", label: "Retention Policy" },
+            { id: "deletion", label: "Tenant Deletion (GDPR/DPDP)" },
+          ]}
+          activeId={activeTab}
+          onChange={(id) => {
+            setActiveTab(id as "export" | "retention" | "deletion");
+            setNotice(null);
+          }}
+          ariaLabel="Tenant data protection sections"
+        />
 
         {/* Export Tab */}
         {activeTab === "export" && (
-          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+          <div
+            id="panel-export"
+            role="tabpanel"
+            aria-labelledby="tab-export"
+            tabIndex={0}
+            style={{ display: "grid", gap: "var(--space-3)" }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ margin: 0, fontSize: "var(--fs-body-sm)", color: "var(--color-text-muted)" }}>
                 Export tenant data bundle adhering to standard legal export specifications.
@@ -253,13 +242,12 @@ export function TenantDataProtectionModal({
               </Button>
             </div>
 
-            {loading ? (
-              <Spinner label="Loading export records" />
-            ) : (
-              <DataTable
-                headers={["Export ID", "Requested By", "Status", "Requested At", "File Ref", "Download Expires"]}
-                empty={exports.length === 0}
-              >
+            <DataTable
+              headers={["Export ID", "Requested By", "Status", "Requested At", "File Ref", "Download Expires"]}
+              loading={loading && exports.length === 0}
+              loadingLabel="Loading export records"
+              empty={!loading && exports.length === 0}
+            >
                 {exports.map((exp) => (
                   <tr key={exp.exportRequestId}>
                     <td>
@@ -274,14 +262,19 @@ export function TenantDataProtectionModal({
                     <td>{exp.downloadExpiresAt ? new Date(exp.downloadExpiresAt).toLocaleString() : "—"}</td>
                   </tr>
                 ))}
-              </DataTable>
-            )}
+            </DataTable>
           </div>
         )}
 
         {/* Retention Tab */}
         {activeTab === "retention" && (
-          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+          <div
+            id="panel-retention"
+            role="tabpanel"
+            aria-labelledby="tab-retention"
+            tabIndex={0}
+            style={{ display: "grid", gap: "var(--space-3)" }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ margin: 0, fontSize: "var(--fs-body-sm)", color: "var(--color-text-muted)" }}>
                 Data retention periods for this tenant. Alterations require Data Protection Officer verification.
@@ -304,56 +297,45 @@ export function TenantDataProtectionModal({
                 }}
               >
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                  <div>
-                    <label htmlFor="retention-data-class" style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
-                      Data Category
-                    </label>
-                    <select
-                      id="retention-data-class"
-                      className="form-control"
-                      value={retentionDraft.dataClassCode}
-                      onChange={(e) => setRetentionDraft({ ...retentionDraft, dataClassCode: e.target.value })}
-                    >
-                      <option value="STRUCTURE">Structure</option>
-                      <option value="PERSON">Person</option>
-                      <option value="ACADEMIC_RECORD">Academic Record</option>
-                      <option value="FINANCIAL">Financial</option>
-                      <option value="COMMUNICATION">Communication</option>
-                      <option value="STUDENT_NOTE">Student Note</option>
-                      <option value="GOVERNANCE">Governance</option>
-                      <option value="APPROVAL">Approval</option>
-                      <option value="AUDIT">Audit</option>
-                      <option value="BACKUP">Backup</option>
-                      <option value="OPERATIONAL">Operational</option>
-                      <option value="BY_OWNER">By Owner</option>
-                      <option value="TENANT_LIFETIME">Tenant Lifetime</option>
-                      <option value="REFERENCE">Reference</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
-                      Requested Retention (Months)
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      min={1}
-                      max={120}
-                      value={retentionDraft.requestedMonths}
-                      onChange={(e) =>
-                        setRetentionDraft({ ...retentionDraft, requestedMonths: parseInt(e.target.value, 10) || 12 })
-                      }
-                      required
-                    />
-                  </div>
+                  <SelectField
+                    id="retention-data-class"
+                    label="Data Category"
+                    value={retentionDraft.dataClassCode}
+                    onChange={(e) => setRetentionDraft({ ...retentionDraft, dataClassCode: e.target.value })}
+                    options={[
+                      { value: "STRUCTURE", label: "Structure" },
+                      { value: "PERSON", label: "Person" },
+                      { value: "ACADEMIC_RECORD", label: "Academic Record" },
+                      { value: "FINANCIAL", label: "Financial" },
+                      { value: "COMMUNICATION", label: "Communication" },
+                      { value: "STUDENT_NOTE", label: "Student Note" },
+                      { value: "GOVERNANCE", label: "Governance" },
+                      { value: "APPROVAL", label: "Approval" },
+                      { value: "AUDIT", label: "Audit" },
+                      { value: "BACKUP", label: "Backup" },
+                      { value: "OPERATIONAL", label: "Operational" },
+                      { value: "BY_OWNER", label: "By Owner" },
+                      { value: "TENANT_LIFETIME", label: "Tenant Lifetime" },
+                      { value: "REFERENCE", label: "Reference" },
+                    ]}
+                  />
+                  <TextField
+                    id="retention-requested-months"
+                    label="Requested Retention (Months)"
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={String(retentionDraft.requestedMonths)}
+                    onChange={(e) =>
+                      setRetentionDraft({ ...retentionDraft, requestedMonths: parseInt(e.target.value, 10) || 12 })
+                    }
+                    required
+                  />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
-                    Reason for Change
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
+                  <TextField
+                    id="retention-change-reason"
+                    label="Reason for Change"
                     placeholder="e.g. Legal compliance with State Education Board mandate"
                     value={retentionDraft.reason}
                     onChange={(e) => setRetentionDraft({ ...retentionDraft, reason: e.target.value })}
@@ -368,13 +350,12 @@ export function TenantDataProtectionModal({
               </form>
             )}
 
-            {loading ? (
-              <Spinner label="Loading retention policies" />
-            ) : (
-              <DataTable
-                headers={["Data Class", "Retention (Months)", "Effective From", "Status"]}
-                empty={retentionPolicies.length === 0}
-              >
+            <DataTable
+              headers={["Data Class", "Retention (Months)", "Effective From", "Status"]}
+              loading={loading && retentionPolicies.length === 0}
+              loadingLabel="Loading retention policies"
+              empty={!loading && retentionPolicies.length === 0}
+            >
                 {retentionPolicies.map((rp) => (
                   <tr key={rp.tenantRetentionPolicyId}>
                     <td>
@@ -387,14 +368,19 @@ export function TenantDataProtectionModal({
                     </td>
                   </tr>
                 ))}
-              </DataTable>
-            )}
+            </DataTable>
           </div>
         )}
 
         {/* Deletion Tab */}
         {activeTab === "deletion" && (
-          <>
+          <div
+            id="panel-deletion"
+            role="tabpanel"
+            aria-labelledby="tab-deletion"
+            tabIndex={0}
+            style={{ display: "grid", gap: "var(--space-3)" }}
+          >
           <form onSubmit={handleConfirmDeletion} style={{ display: "grid", gap: "var(--space-3)" }}>
             <Notice tone="danger">
               <strong>Deletion request only.</strong> This step does not delete or purge tenant data.
@@ -405,12 +391,9 @@ export function TenantDataProtectionModal({
             </Notice>
 
             <div>
-              <label style={{ display: "block", fontSize: "var(--fs-caption)", marginBottom: "4px" }}>
-                Type <strong>{tenant.name}</strong> to request deletion
-              </label>
-              <input
-                type="text"
-                className="form-control"
+              <TextField
+                id="confirm-deletion-name"
+                label={`Type exact name "${tenant.name}" to request deletion`}
                 value={confirmName}
                 onChange={(e) => setConfirmName(e.target.value)}
                 placeholder={tenant.name}
@@ -426,12 +409,13 @@ export function TenantDataProtectionModal({
           </form>
           <section aria-label="Existing deletion requests" style={{ display: "grid", gap: "var(--space-2)" }}>
             <h3 style={{ margin: 0 }}>Existing deletion requests</h3>
-            {loading ? <Spinner label="Loading deletion requests" /> : (
-              <DataTable
-                headers={["Request ID", "Status", "Requested At", "PO Confirmed", "Action"]}
-                empty={deletionRequests.length === 0}
-                emptyMessage="No deletion requests for this tenant."
-              >
+            <DataTable
+              headers={["Request ID", "Status", "Requested At", "PO Confirmed", "Action"]}
+              loading={loading && deletionRequests.length === 0}
+              loadingLabel="Loading deletion requests"
+              empty={!loading && deletionRequests.length === 0}
+              emptyMessage="No deletion requests for this tenant."
+            >
                 {deletionRequests.map((request) => (
                   <tr key={request.deletionRequestId}>
                     <td><code>{request.deletionRequestId.slice(0, 8)}…</code></td>
@@ -447,8 +431,7 @@ export function TenantDataProtectionModal({
                       : "—"}</td>
                   </tr>
                 ))}
-              </DataTable>
-            )}
+            </DataTable>
           </section>
           {confirmTarget && canConfirmDeletion && (
             <section
@@ -502,7 +485,7 @@ export function TenantDataProtectionModal({
               </div>
             </section>
           )}
-          </>
+          </div>
         )}
       </div>
     </Modal>

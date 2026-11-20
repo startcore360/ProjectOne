@@ -8,10 +8,11 @@ import {
   Notice,
   Panel,
   SearchBox,
+  SelectField,
   StatusBadge,
+  TextAreaField,
 } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
-import { Spinner } from "../../../../components/ui";
 import {
   platformOpsService,
   type SupportTicketItem,
@@ -40,14 +41,19 @@ export function TicketsView() {
   const [resolvingTicket, setResolvingTicket] = useState<SupportTicketItem | null>(null);
   const [resolutionNote, setResolutionNote] = useState("");
   const [submittingResolve, setSubmittingResolve] = useState(false);
+  const [resolveError, setResolveError] = useState("");
+
   const [triagingTicket, setTriagingTicket] = useState<SupportTicketItem | null>(null);
   const [triagePriority, setTriagePriority] = useState("MEDIUM");
   const [triageCategory, setTriageCategory] = useState("OTHER");
   const [submittingTriage, setSubmittingTriage] = useState(false);
+  const [triageError, setTriageError] = useState("");
+
   const [escalatingTicket, setEscalatingTicket] = useState<SupportTicketItem | null>(null);
   const [escalationTarget, setEscalationTarget] = useState<"ENGINEERING" | "RELEASE_MANAGER">("ENGINEERING");
   const [escalationNote, setEscalationNote] = useState("");
   const [submittingEscalation, setSubmittingEscalation] = useState(false);
+  const [escalateError, setEscalateError] = useState("");
 
 
   const loadData = useCallback(async () => {
@@ -90,10 +96,15 @@ export function TicketsView() {
     return () => window.removeEventListener("message", onSupportSessionEnd);
   }, []);
 
+  const handleOpenResolve = (ticket: SupportTicketItem) => {
+    setResolvingTicket(ticket);
+    setResolutionNote("");
+    setResolveError("");
+  };
+
   const handleUpdateStatus = async (ticket: SupportTicketItem, newStatus: string) => {
     if (newStatus === "RESOLVED" || newStatus === "CLOSED") {
-      setResolvingTicket(ticket);
-      setResolutionNote("");
+      handleOpenResolve(ticket);
       return;
     }
 
@@ -110,13 +121,21 @@ export function TicketsView() {
     setTriagingTicket(ticket);
     setTriagePriority(ticket.priority || "MEDIUM");
     setTriageCategory(ticket.category || "OTHER");
+    setTriageError("");
+  };
+
+  const handleOpenEscalate = (ticket: SupportTicketItem) => {
+    setEscalatingTicket(ticket);
+    setEscalationTarget("ENGINEERING");
+    setEscalationNote("");
+    setEscalateError("");
   };
 
   const handleConfirmTriage = async (e: FormEvent) => {
     e.preventDefault();
     if (!triagingTicket) return;
     setSubmittingTriage(true);
-    setError("");
+    setTriageError("");
     try {
       await platformOpsService.updateSupportTicket(triagingTicket.supportTicketId, {
         priority: triagePriority,
@@ -126,7 +145,7 @@ export function TicketsView() {
       setTriagingTicket(null);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to triage ticket");
+      setTriageError(err instanceof Error ? err.message : "Failed to triage ticket");
     } finally {
       setSubmittingTriage(false);
     }
@@ -136,7 +155,7 @@ export function TicketsView() {
     e.preventDefault();
     if (!resolvingTicket) return;
     setSubmittingResolve(true);
-    setError("");
+    setResolveError("");
     try {
       await platformOpsService.updateSupportTicket(resolvingTicket.supportTicketId, {
         status: "RESOLVED",
@@ -146,22 +165,33 @@ export function TicketsView() {
       setResolvingTicket(null);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to resolve ticket");
+      setResolveError(err instanceof Error ? err.message : "Failed to resolve ticket");
     } finally {
       setSubmittingResolve(false);
     }
   };
 
   const handleConfirmEscalation = async (e: FormEvent) => {
-    e.preventDefault(); if (!escalatingTicket) return;
-    const note = escalationNote.trim(); if (!note) { setError("An escalation note is required."); return; }
-    setSubmittingEscalation(true); setError("");
+    e.preventDefault();
+    if (!escalatingTicket) return;
+    const note = escalationNote.trim();
+    if (!note) {
+      setEscalateError("An escalation note is required.");
+      return;
+    }
+    setSubmittingEscalation(true);
+    setEscalateError("");
     try {
       await platformOpsService.escalateSupportTicket(escalatingTicket.supportTicketId, { to: escalationTarget, note });
       setMessage(`Ticket ${escalatingTicket.ticketNumber} escalated to ${escalationTarget.replace("_", " ")}.`);
-      setEscalatingTicket(null); setEscalationNote(""); void loadData();
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Failed to escalate ticket"); }
-    finally { setSubmittingEscalation(false); }
+      setEscalatingTicket(null);
+      setEscalationNote("");
+      void loadData();
+    } catch (err: unknown) {
+      setEscalateError(err instanceof Error ? err.message : "Failed to escalate ticket");
+    } finally {
+      setSubmittingEscalation(false);
+    }
   };
 
   const handleAssumeSession = async (ticketId: string, ticketNumber: string) => {
@@ -265,14 +295,14 @@ export function TicketsView() {
           </label>
         </div>
 
-        {loading ? (
-          <div className="app-empty-inline">
-            <Spinner label="Loading support tickets..." />
-          </div>
-        ) : loadError ? null : filteredTickets.length === 0 ? (
-          <p className="app-empty-inline">No support tickets found matching criteria.</p>
-        ) : (
-          <DataTable headers={["Ticket #", "Subject", "Requester", "Priority", "Status", "Support Grant", "Actions"]}>
+        {!loadError && (
+          <DataTable
+            headers={["Ticket #", "Subject", "Requester", "Priority", "Status", "Support Grant", "Actions"]}
+            loading={loading && tickets.length === 0}
+            loadingLabel="Loading support tickets"
+            empty={!loading && filteredTickets.length === 0}
+            emptyMessage="No support tickets found matching criteria."
+          >
             {filteredTickets.map((t) => {
               const hasGrant = activeGrantsByTicket.has(t.supportTicketId);
               return (
@@ -336,10 +366,12 @@ export function TicketsView() {
                         </Button>
                       )}
                       {(t.status === "TRIAGED" || t.status === "ASSIGNED") && canManageTickets && (
-                        <Button size="sm" variant="secondary" onClick={() => { setEscalatingTicket(t); setEscalationTarget("ENGINEERING"); setEscalationNote(""); }}>Escalate</Button>
+                        <Button size="sm" variant="secondary" onClick={() => handleOpenEscalate(t)}>
+                          Escalate
+                        </Button>
                       )}
                       {(t.status === "ASSIGNED" || t.status === "ESCALATED") && canManageTickets && (
-                        <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(t, "RESOLVED")}>
+                        <Button size="sm" variant="secondary" onClick={() => handleOpenResolve(t)}>
                           Resolve
                         </Button>
                       )}
@@ -347,7 +379,7 @@ export function TicketsView() {
                         <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => handleUpdateStatus(t, "CLOSED")}
+                          onClick={() => handleOpenResolve(t)}
                         >
                           Close
                         </Button>
@@ -366,6 +398,7 @@ export function TicketsView() {
         onClose={() => setResolvingTicket(null)}
         kicker="SUPPORT TICKET"
         title={`Resolve · ${resolvingTicket?.ticketNumber ?? ""}`}
+        titleId="resolve-ticket-title"
         description="Mandatory resolution remark required per Rule ck_support_ticket_r1."
         size="sm"
         footer={
@@ -380,39 +413,69 @@ export function TicketsView() {
         }
       >
         <form id="resolve-ticket-form" onSubmit={handleConfirmResolve}>
-          <label style={{ display: "block", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", marginBottom: "var(--space-1)" }}>
-            Resolution note
-          </label>
-          <textarea
+          {resolveError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{resolveError}</Notice>
+            </div>
+          )}
+          <TextAreaField
+            id="resolve-resolution-note"
+            label="Resolution note"
             rows={4}
             value={resolutionNote}
             onChange={(e) => setResolutionNote(e.target.value)}
             placeholder="Describe the diagnostics performed and fix applied..."
             required
-            style={{
-              width: "100%",
-              padding: "var(--space-2) var(--space-3)",
-              border: "1px solid var(--color-border-divider)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "var(--fs-body)",
-              resize: "vertical",
-            }}
           />
         </form>
       </Modal>
 
-      <Modal isOpen={!!escalatingTicket} onClose={() => setEscalatingTicket(null)} kicker="SUPPORT ESCALATION"
+      <Modal
+        isOpen={!!escalatingTicket}
+        onClose={() => setEscalatingTicket(null)}
+        kicker="SUPPORT ESCALATION"
         title={`Escalate · ${escalatingTicket?.ticketNumber ?? ""}`}
+        titleId="escalate-ticket-title"
         description="Route this ticket to Engineering or the Release Manager. The Product Owner is always notified."
         size="sm"
-        footer={<><Button variant="secondary" onClick={() => setEscalatingTicket(null)} disabled={submittingEscalation}>Cancel</Button><Button form="escalate-ticket-form" type="submit" busy={submittingEscalation}>Confirm escalation</Button></>}>
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEscalatingTicket(null)} disabled={submittingEscalation}>
+              Cancel
+            </Button>
+            <Button form="escalate-ticket-form" type="submit" busy={submittingEscalation}>
+              Confirm escalation
+            </Button>
+          </>
+        }
+      >
         <form id="escalate-ticket-form" onSubmit={handleConfirmEscalation}>
-          <label>Escalate to</label>
-          <select value={escalationTarget} onChange={(e) => setEscalationTarget(e.target.value as "ENGINEERING" | "RELEASE_MANAGER")}>
-            <option value="ENGINEERING">Engineering</option><option value="RELEASE_MANAGER">Release Manager</option>
-          </select>
-          <label>Escalation note</label>
-          <textarea rows={4} value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} placeholder="Explain why this ticket needs escalation..." required />
+          {escalateError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{escalateError}</Notice>
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "12px" }}>
+            <SelectField
+              id="escalate-target"
+              label="Escalate to"
+              value={escalationTarget}
+              onChange={(e) => setEscalationTarget(e.target.value as "ENGINEERING" | "RELEASE_MANAGER")}
+              options={[
+                { value: "ENGINEERING", label: "Engineering" },
+                { value: "RELEASE_MANAGER", label: "Release Manager" },
+              ]}
+            />
+            <TextAreaField
+              id="escalate-note"
+              label="Escalation note"
+              rows={4}
+              value={escalationNote}
+              onChange={(e) => setEscalationNote(e.target.value)}
+              placeholder="Explain why this ticket needs escalation..."
+              required
+            />
+          </div>
         </form>
       </Modal>
 
@@ -421,6 +484,7 @@ export function TicketsView() {
         onClose={() => setTriagingTicket(null)}
         kicker="SUPPORT TRIAGE"
         title={`Triage · ${triagingTicket?.ticketNumber ?? ""}`}
+        titleId="triage-ticket-title"
         description={triagingTicket?.subject ?? "Set the ticket category and priority."}
         size="sm"
         footer={
@@ -435,22 +499,35 @@ export function TicketsView() {
         }
       >
         <form id="triage-ticket-form" onSubmit={handleConfirmTriage}>
-          <label style={{ display: "block", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", marginBottom: "var(--space-1)" }}>
-            Category
-          </label>
-          <select value={triageCategory} onChange={(e) => setTriageCategory(e.target.value)} required>
-            {["LOGIN", "ACCESS", "DATA", "BILLING", "PERFORMANCE", "BUG", "OTHER"].map((category) => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-          <label style={{ display: "block", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", margin: "12px 0 4px" }}>
-            Priority
-          </label>
-          <select value={triagePriority} onChange={(e) => setTriagePriority(e.target.value)} required>
-            {["LOW", "MEDIUM", "HIGH", "CRITICAL"].map((priority) => (
-              <option key={priority} value={priority}>{priority}</option>
-            ))}
-          </select>
+          {triageError && (
+            <div style={{ marginBottom: "12px" }}>
+              <Notice tone="danger">{triageError}</Notice>
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "12px" }}>
+            <SelectField
+              id="triage-category"
+              label="Category"
+              value={triageCategory}
+              onChange={(e) => setTriageCategory(e.target.value)}
+              required
+              options={["LOGIN", "ACCESS", "DATA", "BILLING", "PERFORMANCE", "BUG", "OTHER"].map((cat) => ({
+                value: cat,
+                label: cat.charAt(0) + cat.slice(1).toLowerCase(),
+              }))}
+            />
+            <SelectField
+              id="triage-priority"
+              label="Priority"
+              value={triagePriority}
+              onChange={(e) => setTriagePriority(e.target.value)}
+              required
+              options={["LOW", "MEDIUM", "HIGH", "CRITICAL"].map((pri) => ({
+                value: pri,
+                label: pri.charAt(0) + pri.slice(1).toLowerCase(),
+              }))}
+            />
+          </div>
         </form>
       </Modal>
     </div>

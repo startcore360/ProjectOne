@@ -238,10 +238,25 @@ public class AuthService {
         }
 
         AuthTokenResponse response = toResponse(resolution, tokens);
+        recordPlatformLastLogin(resolution, response.user());
         auditLogService.record(AuditEventType.LOGIN_SUCCESS, null, identifier, ipAddress,
                 totp == null || totp.isBlank() ? null : "Two-step login completed");
         recordSignedInDevice(httpRequest, resolution, response, tokens, ipAddress);
         return response;
+    }
+
+    private void recordPlatformLastLogin(Resolution resolution, AuthUserResponse user) {
+        if (!(resolution instanceof PlatformLogin) || user == null || user.id() == null) {
+            return;
+        }
+        try {
+            int updated = platformUserRepository.updateLastLogin(user.id(), Instant.now());
+            if (updated != 1) {
+                log.warn("Could not record last login for platform user {}: updated {} rows", user.id(), updated);
+            }
+        } catch (RuntimeException ex) {
+            log.warn("Could not record last login for platform user {}: {}", user.id(), ex.getMessage());
+        }
     }
 
     /**

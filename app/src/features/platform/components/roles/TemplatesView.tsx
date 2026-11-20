@@ -7,10 +7,10 @@ import {
   Modal,
   Notice,
   Panel,
+  SkeletonPage,
   StatusBadge,
   TextField,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { PLATFORM_ROLE_LABELS, readErrorMessage } from "../common/types";
 import type { PlatformRole } from "../../api/platformUserService";
@@ -200,9 +200,7 @@ export function TemplatesView() {
       {actionError && <Notice tone="danger">{actionError}</Notice>}
 
       {loading ? (
-        <div className="app-empty-inline">
-          <Spinner label="Loading role templates" />
-        </div>
+        <SkeletonPage title="Loading role templates" showTable tableRows={5} tableColumns={6} />
       ) : loadError ? (
         <ErrorState
           title="Role templates didn't load"

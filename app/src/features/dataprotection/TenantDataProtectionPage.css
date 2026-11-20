@@ -13,9 +13,9 @@
 .tenant-data-protection__history {
   min-width: 0;
   padding: 1.25rem;
-  border: 1px solid var(--border, #d8dee8);
-  border-radius: var(--radius-lg, 12px);
-  background: var(--surface, #fff);
+  border: 1px solid var(--color-border-divider);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
 }
 
 .tenant-data-protection__request-card h2,
@@ -26,21 +26,21 @@
 
 .tenant-data-protection__request-card p,
 .tenant-data-protection__section-heading p {
-  color: var(--text-muted, #667085);
+  color: var(--color-text-muted);
   margin: 0 0 1rem;
   line-height: 1.5;
 }
 
 .tenant-data-protection__hint {
-  color: var(--text-muted, #667085);
+  color: var(--color-text-muted);
   font-size: .9rem;
 }
 
 .tenant-data-protection__notice {
   padding: .85rem 1rem;
-  border: 1px solid var(--border, #d8dee8);
-  border-radius: 8px;
-  background: var(--surface-subtle, #f8fafc);
+  border: 1px solid var(--color-border-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
 }
 
 .tenant-data-protection__section-heading {
@@ -52,7 +52,7 @@
 }
 
 .tenant-data-protection__empty {
-  color: var(--text-muted, #667085);
+  color: var(--color-text-muted);
   margin: 0;
 }
 

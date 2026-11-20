@@ -232,6 +232,7 @@ export default function LoginPage() {
         ) : step === "enrol" && enrolment ? (
           <AuthenticatorSetup
             enrolment={enrolment}
+            accountName={email.trim()}
             busy={busy}
             onConfirm={(setupCode) => void confirmEnrolment(setupCode)}
             onCancel={cancelEnrolment}

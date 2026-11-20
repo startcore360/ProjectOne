@@ -4,7 +4,7 @@ import { useAppSelector } from "../store/hooks";
 import AppLayout from "../layout/AppLayout";
 import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
-import { Spinner } from "../design-system/components";
+import { SkeletonPage } from "../design-system/components";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole, platformLandingPath } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
@@ -70,18 +70,7 @@ function LazyRouteView() {
     <RouteErrorBoundary>
       <Suspense
         fallback={
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: "var(--space-8)",
-              minHeight: "200px",
-              width: "100%",
-            }}
-          >
-            <Spinner label="Loading page…" />
-          </div>
+          <SkeletonPage title="Loading page" showKpis showTable tableRows={5} tableColumns={5} />
         }
       >
         <Outlet />

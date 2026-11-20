@@ -6,10 +6,26 @@ type Props = {
   error?: string;
   maxBytes?: number;
   accept?: string;
+  helpText?: string;
 };
 
 const DEFAULT_MAX_BYTES = 10_485_760;
 const DEFAULT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.txt";
+
+function formatAcceptList(accept: string): string {
+  if (accept === DEFAULT_ACCEPT) {
+    return "PDF, Office documents, JPG, PNG or TXT";
+  }
+  const parts = accept
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const extensions = parts.map((p) => p.replace(/^\./, "").toUpperCase());
+  if (extensions.length === 0) return "Supported files";
+  if (extensions.length === 1) return extensions[0];
+  if (extensions.length === 2) return `${extensions[0]} or ${extensions[1]}`;
+  return `${extensions.slice(0, -1).join(", ")}, or ${extensions[extensions.length - 1]}`;
+}
 
 function formatMiB(bytes: number) {
   if (bytes < 104_858) return `${bytes.toLocaleString()} bytes`;
@@ -23,6 +39,7 @@ export function FileDrop({
   error,
   maxBytes = DEFAULT_MAX_BYTES,
   accept = DEFAULT_ACCEPT,
+  helpText,
 }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const id = useId();
@@ -54,7 +71,7 @@ export function FileDrop({
         aria-describedby={visibleError ? `${helpId} ${errorId}` : helpId}
         onChange={(event) => select(event.target.files?.[0])}
       />
-      <p id={helpId}>PDF, Office documents, JPG, PNG or TXT. Maximum {formatMiB(maxBytes)}.</p>
+      <p id={helpId}>{helpText ?? `${formatAcceptList(accept)}. Maximum ${formatMiB(maxBytes)}.`}</p>
       {visibleError && <p id={errorId} role="alert">{visibleError}</p>}
     </div>
   );

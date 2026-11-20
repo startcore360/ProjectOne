@@ -34,6 +34,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
+  const [createdRoleId, setCreatedRoleId] = useState<string | null>(null);
 
   const usableTemplates = templates.filter((t) => !t.locked && t.status === "ACTIVE");
   const count = Object.keys(selected).length;
@@ -71,6 +72,9 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
       if (role) {
         await platformRoleService.updateRole(role.platformRoleId, { roleName: name.trim(), actions });
         onSaved(`Saved ${name.trim()}.`);
+      } else if (createdRoleId) {
+        await platformRoleService.activateRole(createdRoleId);
+        onSaved(`${name.trim()} is active. Assign it to someone on the Platform users page.`);
       } else {
         const created = await platformRoleService.createRole({
           roleName: name.trim(),
@@ -79,7 +83,11 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
           actions,
           updateTemplate,
         });
-        if (activate) await platformRoleService.activateRole(created.data.platformRoleId);
+        const newRoleId = created.data.platformRoleId;
+        setCreatedRoleId(newRoleId);
+        if (activate) {
+          await platformRoleService.activateRole(newRoleId);
+        }
         onSaved(
           activate
             ? `${name.trim()} is active. Assign it to someone on the Platform users page.`
@@ -100,6 +108,7 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
       size="lg"
       kicker={role ? "EDIT ROLE" : "NEW ROLE"}
       title={role ? `Edit ${role.roleName}` : "Create platform role"}
+      titleId="role-editor-title"
       description={
         role
           ? "Changes take effect at once for everyone holding this role."
@@ -114,6 +123,19 @@ export function RoleEditorModal({ role, catalog, templates, onClose, onSaved }: 
             <Button onClick={() => save(false)} busy={busy}>
               Save changes
             </Button>
+          ) : createdRoleId ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => onSaved(`${name.trim()} is saved as a draft. Activate it before assigning it.`)}
+                disabled={busy}
+              >
+                Keep as draft
+              </Button>
+              <Button onClick={() => save(true)} busy={busy}>
+                Retry activation
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="secondary" onClick={() => save(false)} busy={busy}>

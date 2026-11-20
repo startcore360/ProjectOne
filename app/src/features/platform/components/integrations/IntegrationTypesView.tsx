@@ -8,7 +8,6 @@ import {
   SearchBox,
 } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
-import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { formatTimestamp, readErrorMessage, type FetchStatus } from "../common/types";
 import api from "../../../../services/axios";
@@ -154,18 +153,15 @@ export function IntegrationTypesView() {
         <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search by code or description" />
         </div>
-        {status === "loading" ? (
-          <div className="app-empty-inline">
-            <Spinner label="Loading integration types" />
-          </div>
-        ) : (
-          <DataTable
-            headers={["Code", "Description", "Status", "Allowed providers", "Updated", ""]}
-            empty={!filtered.length}
-            emptyMessage={
-              status === "error" ? "Integration types could not be loaded." : "No integration types defined yet."
-            }
-          >
+        <DataTable
+          headers={["Code", "Description", "Status", "Allowed providers", "Updated", ""]}
+          loading={status === "loading" && items.length === 0}
+          loadingLabel="Loading integration types"
+          empty={status !== "loading" && !filtered.length}
+          emptyMessage={
+            status === "error" ? "Integration types could not be loaded." : "No integration types defined yet."
+          }
+        >
             {filtered.map((item) => (
               <tr key={item.integrationTypeId}>
                 <td>
@@ -184,8 +180,7 @@ export function IntegrationTypesView() {
                 </td>
               </tr>
             ))}
-          </DataTable>
-        )}
+        </DataTable>
       </Panel>
 
       <CreateIntegrationTypeModal

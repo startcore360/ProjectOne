@@ -101,6 +101,11 @@ export const academicService = {
   },
 
   // Promotion runs
+  listPromotionRuns: async (tenantId: string, institutionId?: string): Promise<PromotionRunItem[]> => {
+    const params = institutionId ? `?institutionId=${institutionId}` : "";
+    const res = await api.get<PromotionRunItem[]>(`/v1/tenants/${tenantId}/promotion-runs${params}`);
+    return res.data;
+  },
   createPromotionRun: async (
     tenantId: string,
     req: { institutionId: string; fromSessionId: string; toSessionId: string }

@@ -10,11 +10,20 @@ export type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
   error?: string;
 };
 
-export default function TextField({ label, id, required, hint, error, ...rest }: TextFieldProps) {
+export default function TextField({
+  label,
+  id,
+  required,
+  hint,
+  error,
+  "aria-describedby": callerDescribedBy,
+  "aria-invalid": callerInvalid,
+  ...rest
+}: TextFieldProps) {
   const hasAsterisk = label.includes("*");
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
-  const describedBy = [errorId, hintId, rest["aria-describedby"]].filter(Boolean).join(" ") || undefined;
+  const describedBy = [errorId, hintId, callerDescribedBy].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="eds-field">
@@ -24,9 +33,9 @@ export default function TextField({ label, id, required, hint, error, ...rest }:
       <input
         id={id}
         required={required}
-        aria-describedby={describedBy}
-        aria-invalid={Boolean(error) || rest["aria-invalid"]}
         {...rest}
+        aria-describedby={describedBy}
+        aria-invalid={Boolean(error) || Boolean(callerInvalid)}
       />
       {hint && (
         <p id={hintId} className="eds-field__hint">

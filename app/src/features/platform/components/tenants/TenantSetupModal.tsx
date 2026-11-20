@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Modal, Notice, Spinner, StatusBadge, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SkeletonCard, SkeletonText, StatusBadge, TextField } from "../../../../design-system/components";
 import { readErrorMessage } from "../common/types";
 import {
   platformTenantService,
@@ -103,7 +103,17 @@ export function TenantSetupModal({ isOpen, tenantId, tenantName, canRetry, onClo
       }
     >
       {loading ? (
-        <Spinner label="Loading setup steps" />
+        <div role="status" aria-busy="true" aria-label="Loading setup steps">
+          <span className="sr-only">Loading setup steps...</span>
+          <div className="app-stack--sm">
+            {Array.from({ length: 4 }, (_, index) => (
+              <SkeletonCard key={index}>
+                <SkeletonText height="1rem" width="55%" />
+                <SkeletonText height="0.875rem" width="80%" />
+              </SkeletonCard>
+            ))}
+          </div>
+        </div>
       ) : loadError ? (
         <Notice tone="danger">{loadError}</Notice>
       ) : status ? (

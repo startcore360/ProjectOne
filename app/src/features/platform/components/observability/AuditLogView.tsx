@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Spinner } from "../../../../components/ui";
+import "./AuditLogView.css";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
   Modal,
+  Notice,
   Panel,
   StatusBadge,
   DataTable,
@@ -191,19 +192,21 @@ export function AuditLogView() {
             <Button variant="secondary" onClick={exportCsv} busy={exporting} disabled={exporting}>Export CSV</Button>
           </div>
         </div>
-        {exportError && <p className="notice notice--danger" role="alert">{exportError}</p>}
-        {status === "loading" ? (
-          <div className="app-empty-inline"><Spinner label="Loading audit events" /></div>
-        ) : (
-          <>
-            <DataTable
-              headers={["When", "Actor", "Action", "Target", "Outcome", "Details"]}
-              ariaLabel="Platform audit events"
-              pagination={false}
-              pageSize={PAGE_SIZE}
-              empty={!filtered.length}
-              emptyMessage={status === "error" ? "Audit events could not be loaded." : "No platform audit events recorded yet."}
-            >
+        {exportError && (
+          <div style={{ padding: "0 var(--space-5) var(--space-3)" }}>
+            <Notice tone="danger">{exportError}</Notice>
+          </div>
+        )}
+        <DataTable
+          headers={["When", "Actor", "Action", "Target", "Outcome", "Details"]}
+          ariaLabel="Platform audit events"
+          pagination={false}
+          pageSize={PAGE_SIZE}
+          loading={status === "loading" && events.length === 0}
+          loadingLabel="Loading audit events"
+          empty={status !== "loading" && !filtered.length}
+          emptyMessage={status === "error" ? "Audit events could not be loaded." : "No platform audit events recorded yet."}
+        >
               {filtered.map((event) => (
                 <tr key={event.auditOutboxId}>
                   <td>{formatTimestamp(event.occurredAt)}</td>
@@ -223,8 +226,8 @@ export function AuditLogView() {
                   <td><Button variant="secondary" size="sm" onClick={() => setSelectedEvent(event)}>Details</Button></td>
                 </tr>
               ))}
-            </DataTable>
-            {totalPages > 1 && (
+        </DataTable>
+        {status !== "loading" && totalPages > 1 && (
               <nav className="app-pagination" aria-label="Audit log pagination">
                 <span className="app-pagination__range">
                   Showing {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + events.length} of {totalElements}
@@ -235,8 +238,6 @@ export function AuditLogView() {
                   <Button variant="secondary" size="sm" disabled={page + 1 >= totalPages} onClick={() => { setStatus("loading"); setPage((p) => p + 1); }}>Next</Button>
                 </div>
               </nav>
-            )}
-          </>
         )}
       </Panel>
 
