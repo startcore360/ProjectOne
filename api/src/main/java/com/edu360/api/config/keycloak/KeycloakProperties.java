@@ -54,6 +54,18 @@ public class KeycloakProperties {
      *  styles work at once, e.g. ".edu360.local,-edu360.duckdns.org". */
     private String localDevHostSuffix = "";
 
+    /** Production wildcard tenant domain ending, e.g. ".example.edu". */
+    private String tenantHostSuffix = "";
+
+    /** All configured tenant address endings, with longest-match-first applied by the resolver. */
+    public java.util.List<String> getTenantHostSuffixes() {
+        java.util.List<String> suffixes = new java.util.ArrayList<>(getLocalDevHostSuffixes());
+        if (tenantHostSuffix != null && !tenantHostSuffix.isBlank()) {
+            suffixes.add(tenantHostSuffix.trim().toLowerCase(java.util.Locale.ROOT));
+        }
+        return suffixes.stream().distinct().toList();
+    }
+
     /** localDevHostSuffix split into its non-blank, lower-cased endings. */
     public java.util.List<String> getLocalDevHostSuffixes() {
         if (localDevHostSuffix == null || localDevHostSuffix.isBlank()) {
@@ -132,6 +144,10 @@ public class KeycloakProperties {
     public void setLocalDevHostSuffix(String localDevHostSuffix) {
         this.localDevHostSuffix = localDevHostSuffix;
     }
+
+    public String getTenantHostSuffix() { return tenantHostSuffix; }
+
+    public void setTenantHostSuffix(String tenantHostSuffix) { this.tenantHostSuffix = tenantHostSuffix; }
 
     public String getPlatformHostLabel() {
         return platformHostLabel;
