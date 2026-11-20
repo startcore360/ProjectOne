@@ -31,7 +31,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  */
 @Component
 @ConditionalOnProperty(prefix = "app.file-storage", name = "provider", havingValue = "s3")
-public class S3FileStorage implements FileStorage {
+public class S3FileStorage implements FileStorage, AutoCloseable {
 
     private static final Pattern KEY_PATTERN = Pattern.compile(
             "^tenants/[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}$");
@@ -115,6 +115,7 @@ public class S3FileStorage implements FileStorage {
         }
     }
 
+    @Override
     @PreDestroy
     public void close() {
         s3.close();
