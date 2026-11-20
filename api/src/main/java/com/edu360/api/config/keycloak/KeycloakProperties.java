@@ -7,15 +7,11 @@ import org.springframework.stereotype.Component;
  * WHAT: connection details for Keycloak, shared by every realm this app ever talks to - never
  * one realm's worth of config, since this app is now multi-tenant and multi-realm.
  *
- * WHY admin access is done through the MASTER realm instead of each realm's own admin-cli
- * client (the pre-migration design): each tenant realm having its own separately-secreted
- * admin-cli client does not scale to tenants being created dynamically at runtime (the real
- * V4.0 provisioning flow, not yet built - TENANT_CREATE). One set of master-realm credentials
- * with cross-realm admin rights (the same kind of account docker/keycloak/docker-compose.yml's
- * KC_BOOTSTRAP_ADMIN_USERNAME/PASSWORD already is) can administer ANY realm by name, so no new
- * secret is needed every time a tenant realm is created. In production this must be a real,
- * tightly-scoped platform-admin Keycloak account, supplied by the deployment environment -
- * never the dev bootstrap kcadmin/kcadmin shown in docker-compose.yml.
+ * Production uses one confidential client ID with distinct service-account instances:
+ * the master-realm instance can create/delete realms, and each tenant-realm instance can manage
+ * users only within that realm. The dev profile retains the local bootstrap-admin password
+ * fallback for imported test realms. Production secrets are supplied by the deployment
+ * environment and must never use the development credentials in docker/keycloak/docker-compose.yml.
  */
 @Component
 @ConfigurationProperties(prefix = "app.keycloak")
