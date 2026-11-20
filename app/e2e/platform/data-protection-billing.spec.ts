@@ -45,7 +45,10 @@ test("Billing cycle generates a renewal invoice and maker-checker records paymen
   const billing = await apiFor("platform", requiredToken("EDU360_E2E_BILLING_MANAGER_TOKEN"));
   try {
     const today = new Date();
-    const periodStart = today.toISOString().slice(0, 10);
+    const startOffsetDays = Number.parseInt(randomUUID().slice(0, 4), 16) % 365;
+    const periodStartDate = new Date(today);
+    periodStartDate.setUTCDate(periodStartDate.getUTCDate() - startOffsetDays);
+    const periodStart = periodStartDate.toISOString().slice(0, 10);
     const future = new Date(Date.UTC(today.getUTCFullYear() + 5, today.getUTCMonth(), today.getUTCDate()));
     const cycleResponse = await billing.post("/api/platform/billing-cycles", {
       periodStart,
