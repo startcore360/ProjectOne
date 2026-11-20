@@ -9,7 +9,7 @@ test("E2E-001: onboard a tenant, pay its first invoice and activate it", async (
   try {
     const tenant = await createTenant(api, "STANDALONE_SCHOOL");
     expect(tenant.firstAdminTemporaryPassword).toBeTruthy();
-    await makeInvoicePaid(billingApi, api, tenant.tenantId);
+    await makeInvoicePaid(billingApi, api, tenant);
     await activateTenant(api, tenant);
 
     await openPlatformPage(page, token, "/platform/tenants");
