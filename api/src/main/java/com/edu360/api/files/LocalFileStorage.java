@@ -12,17 +12,16 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * WHAT: stores a file's bytes on local disk and returns the relative path to record as
- * app.file_object.storage_key. This is a deliberate interim implementation, not the real
- * object-store the V4.0 schema's own comment on file_object.storage_key describes ("Object-store
- * key prefixed tenants/{tenant_id}/") - there is no S3/equivalent configured anywhere in this
- * codebase yet. The key remains server-side and is never returned by an API.
+ * app.file_object.storage_key. This provider is selected for local/test profiles only; production
+ * selects S3FileStorage. The key remains server-side and is never returned by an API.
  *
  * HOW: tenant files are isolated below tenants/{tenant_id}/ and identified by random UUIDs.
  * Every read normalizes the key, checks lexical containment, resolves symlinks, and checks the
  * real target remains beneath the real storage root before opening it.
  *
- * WHY: the interim local implementation preserves tenant partitioning and prevents path traversal
- * while object storage and expiring download links remain a later integration.
+ * WHY: the local provider preserves tenant partitioning and prevents path traversal for tests
+ * and local development. Production object storage is provided by S3FileStorage; expiring
+ * download links remain a separate follow-up.
  */
 @Component
 @ConditionalOnProperty(prefix = "app.file-storage", name = "provider", havingValue = "local", matchIfMissing = true)
