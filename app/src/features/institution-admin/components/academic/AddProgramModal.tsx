@@ -72,7 +72,7 @@ export function AddProgramModal({
             id="prog-dept-select"
             value={deptId || departments[0]?.departmentId || ""}
             onChange={(e) => setDeptId(e.target.value)}
-            style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
+            className="app-input"
           >
             {departments.map((d) => (
               <option key={d.departmentId} value={d.departmentId}>

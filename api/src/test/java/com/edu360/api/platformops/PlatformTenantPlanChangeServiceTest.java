@@ -70,6 +70,13 @@ class PlatformTenantPlanChangeServiceTest {
   assertThatThrownBy(()->service.changePlan(tenantId,new ChangeTenantPlanRequest(targetId,PlanChangeEffective.NOW),owner))
    .isInstanceOf(ApiException.class).hasFieldOrPropertyWithValue("errorCode","IMMEDIATE_DOWNGRADE_NOT_ALLOWED");
  }
+ @Test void ACT_PLAN_CHANGE_GUARD_v2PlanRequiresRenewalEffectiveDate() {
+  target.setPricingEngineVersion("V2");
+  assertThatThrownBy(()->service.changePlan(tenantId,new ChangeTenantPlanRequest(targetId,PlanChangeEffective.NOW),owner))
+   .isInstanceOf(ApiException.class).hasFieldOrPropertyWithValue("errorCode","V2_PLAN_CHANGE_REQUIRES_RENEWAL");
+  verify(tenants,never()).save(any(Tenant.class));
+  verifyNoInteractions(lines);
+ }
  @Test void ACT_PLAN_CHANGE_GUARD_cannotScheduleAfterRenewalInvoiceExists() {
   when(invoices.existsByTenantIdAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(tenantId,tenant.getNextRenewalAt(),tenant.getNextRenewalAt())).thenReturn(true);
   assertThatThrownBy(()->service.changePlan(tenantId,new ChangeTenantPlanRequest(targetId,PlanChangeEffective.RENEWAL),owner))

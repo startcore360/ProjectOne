@@ -71,6 +71,9 @@
   --color-border-divider: var(--p-neutral-200);
   --color-border-control: var(--p-neutral-500);
   --color-border-disabled: var(--p-neutral-200);
+  --color-border: var(--p-neutral-200);
+  --color-bg-muted: var(--p-neutral-100);
+  --color-text-secondary: var(--color-text-muted);
   --color-action-primary: var(--p-green-700);
   --color-action-primary-hover: var(--p-green-800);
   --color-action-accent: var(--p-gold-200);
@@ -270,6 +273,9 @@
     --color-border-divider: var(--p-dk-border);
     --color-border-control: var(--p-dk-control);
     --color-border-disabled: var(--p-dk-border);
+    --color-border: var(--p-dk-border);
+    --color-bg-muted: var(--p-dk-surface-2);
+    --color-text-secondary: var(--p-dk-muted);
     --color-action-primary: var(--p-dk-brand);
     --color-action-primary-hover: var(--p-dk-brand-strong);
     --color-action-accent: var(--p-dk-accent);
@@ -352,6 +358,9 @@
   --color-border-divider: var(--p-dk-border);
   --color-border-control: var(--p-dk-control);
   --color-border-disabled: var(--p-dk-border);
+  --color-border: var(--p-dk-border);
+  --color-bg-muted: var(--p-dk-surface-2);
+  --color-text-secondary: var(--p-dk-muted);
   --color-action-primary: var(--p-dk-brand);
   --color-action-primary-hover: var(--p-dk-brand-strong);
   --color-action-accent: var(--p-dk-accent);

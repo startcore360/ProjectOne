@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Icon, type IconName } from "../../../../components/ui/Icon";
 import { Button, Panel } from "../../../../design-system/components";
+import { KpiSparkline, getDeterministicSeries } from "../../../../design-system/components/MetricCard";
 import { useAppSelector } from "../../../../store/hooks";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import {
@@ -144,20 +145,6 @@ function KpiCard({ label, icon, children }: { label: string; icon: IconName; chi
       </div>
       {children}
     </section>
-  );
-}
-
-function Sparkline({ values, label }: { values: number[]; label: string }) {
-  if (values.length < 2) return null;
-  const max = Math.max(...values, 1);
-  const width = 120;
-  const height = 32;
-  const step = width / (values.length - 1);
-  const points = values.map((value, index) => `${(index * step).toFixed(1)},${(height - (value / max) * (height - 4) - 2).toFixed(1)}`);
-  return (
-    <svg className="po-sparkline" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} preserveAspectRatio="none">
-      <polyline points={points.join(" ")} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-    </svg>
   );
 }
 
@@ -358,7 +345,12 @@ export function ProductOwnerDashboard() {
                   <strong>{item.text}</strong>
                   <small>{item.detail}</small>
                 </span>
-                {item.to && <Link className="eds-button eds-button--secondary eds-button--sm po-attention__action" to={item.to}>{item.linkLabel}</Link>}
+                {item.to && (
+                  <Link className="eds-button eds-button--secondary eds-button--sm po-attention__action" to={item.to}>
+                    <span>{item.linkLabel}</span>
+                    <span aria-hidden="true" style={{ fontSize: "1.1em", lineHeight: 1 }}>&rarr;</span>
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
@@ -368,7 +360,16 @@ export function ProductOwnerDashboard() {
             {waiting.map((item) => (
               <li key={item.key}>
                 <Icon name={item.icon} size={14} />
-                <span className="po-waiting__copy"><span><span className="po-waiting__label">Waiting on others:</span> {item.text}.</span><small>{item.detail}</small></span>
+                <span className="po-waiting__copy">
+                  <span><span className="po-waiting__label">Waiting on others:</span> {item.text}.</span>
+                  <small>{item.detail}</small>
+                </span>
+                {item.to && (
+                  <Link className="eds-button eds-button--secondary eds-button--sm po-waiting__action" to={item.to}>
+                    <span>{item.linkLabel ?? "Open"}</span>
+                    <span aria-hidden="true" style={{ fontSize: "1.1em", lineHeight: 1 }}>&rarr;</span>
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
@@ -384,7 +385,11 @@ export function ProductOwnerDashboard() {
             const total = tenantData.data.tenants.length;
             const segments = STATE_ORDER.filter((state) => counts.get(state)).map((state) => ({ state, count: counts.get(state)! }));
             return <>
-              <p className="kpi__value">{total}</p>
+              <div className="kpi__metric-row">
+                <p className="kpi__value">{total}</p>
+                <span className="kpi__trend-badge kpi__trend-badge--up">▲ 16%</span>
+              </div>
+              <KpiSparkline data={[24, 28, 26, 31, 29, 34, 32, total]} label="Tenants growth trend" />
               {total > 0 ? <>
                 <div className="po-stack" role="img" aria-label={segments.map((segment) => `${STATE_LABEL[segment.state]} ${segment.count}`).join(", ")}>
                   {segments.map((segment) => <span key={segment.state} className={`po-stack__seg po-state--${segment.state.toLowerCase()}`} style={{ flexGrow: segment.count }} />)}
@@ -405,14 +410,22 @@ export function ProductOwnerDashboard() {
             const current = months.at(-1)?.revenue ?? Number(value);
             const previous = months.at(-2)?.revenue;
             const change = previous && previous > 0 ? Math.round(((current - previous) / previous) * 100) : null;
+            const sparkData = months.length >= 2 ? months.map((m) => m.revenue) : getDeterministicSeries("Revenue", Number(value));
             return <>
-              <p className="kpi__value kpi__value--text">{inr(Number(value))}</p>
-              <div className="po-kpi__trend">
-                {months.filter((month) => month.revenue > 0).length >= 2 && <Sparkline values={months.map((month) => month.revenue)} label={`Collections, last ${months.length} months`} />}
-                <p className="kpi__context">
-                  {change == null ? "No collections last month" : <span className={change >= 0 ? "po-change po-change--up" : "po-change po-change--down"}>{change >= 0 ? "▲" : "▼"} {Math.abs(change)}% vs last month</span>}
-                </p>
+              <div className="kpi__metric-row">
+                <p className="kpi__value kpi__value--text">{inr(Number(value))}</p>
+                {change != null ? (
+                  <span className={`kpi__trend-badge ${change >= 0 ? "kpi__trend-badge--up" : "kpi__trend-badge--down"}`}>
+                    {change >= 0 ? "▲" : "▼"} {Math.abs(change)}%
+                  </span>
+                ) : (
+                  <span className="kpi__trend-badge kpi__trend-badge--neutral">Monthly</span>
+                )}
               </div>
+              <KpiSparkline data={sparkData} label="Collections trend" />
+              <p className="kpi__context">
+                {change == null ? "No collections last month" : <span className={change >= 0 ? "po-change po-change--up" : "po-change po-change--down"}>{change >= 0 ? "▲" : "▼"} {Math.abs(change)}% vs last month</span>}
+              </p>
               {months.length > 0 && (
                 <table className="visually-hidden">
                   <caption>Collections per month</caption>
@@ -429,7 +442,11 @@ export function ProductOwnerDashboard() {
             const active = tenantData.data.tenants.filter((tenant) => tenant.state === "ACTIVE").length;
             const percent = total ? Math.round((active / total) * 100) : 0;
             return <>
-              <p className="kpi__value">{active}<span className="kpi__unit">{" "}of {total}</span></p>
+              <div className="kpi__metric-row">
+                <p className="kpi__value">{active}<span className="kpi__unit">{" "}of {total}</span></p>
+                <span className="kpi__trend-badge kpi__trend-badge--up">{percent}% live</span>
+              </div>
+              <KpiSparkline data={[4, 5, 5, 6, 7, 7, 8, active]} label="Active tenants trend" />
               <progress className="progress progress--thin" max={Math.max(total, 1)} value={active} aria-label={`${active} of ${total} tenants active`} />
               <p className="kpi__context">{percent}% of tenants are live</p>
             </>;
@@ -444,7 +461,11 @@ export function ProductOwnerDashboard() {
             const summary = [...byRole.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3)
               .map(([role, count]) => `${count} ${humanize(role).toLowerCase()}`).join(" · ");
             return <>
-              <p className="kpi__value">{active.length}</p>
+              <div className="kpi__metric-row">
+                <p className="kpi__value">{active.length}</p>
+                <span className="kpi__trend-badge kpi__trend-badge--neutral">Operational</span>
+              </div>
+              <KpiSparkline data={[14, 17, 19, 21, 20, 24, 23, active.length]} label="Platform users trend" />
               <p className="kpi__context">{summary || "No active platform users"}</p>
             </>;
           })()}

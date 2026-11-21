@@ -36,6 +36,9 @@ public class PlatformBillingService {
     private final BillingSettingsRepository billingSettingsRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
 
+    @Autowired(required = false)
+    private com.edu360.api.platformops.subscription.PlatformSubscriptionService subscriptionService;
+
     @Autowired
     public PlatformBillingService(
             InvoiceRepository invoiceRepository,
@@ -265,7 +268,7 @@ public class PlatformBillingService {
         return InvoiceResponse.fromEntity(saved);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "platformTransactionManager")
     public InvoiceResponse recordPayment(UUID invoiceId, com.edu360.api.platformops.billing.dto.RecordPaymentRequest req, PlatformPrincipal principal) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
@@ -279,6 +282,9 @@ public class PlatformBillingService {
         invoice.setUpdatedBy(principal.platformUserId());
 
         Invoice saved = invoiceRepository.save(invoice);
+        if (subscriptionService != null) {
+            subscriptionService.activatePaidAddons(saved.getInvoiceId(), principal, now);
+        }
         platformAuditWriter.record(principal, "INVOICE_PAID", "INVOICE_MANAGE", "INVOICE", saved.getInvoiceId());
         return InvoiceResponse.fromEntity(saved);
     }

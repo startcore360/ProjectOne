@@ -46,6 +46,8 @@ public class PlatformTenantRenewalService {
    }
    tenant.setPlanId(effectivePlanId);
    tenant.setPendingPlanId(null);
+   tenant.setSubscriptionEngineVersion(plan.getPricingEngineVersion() == null
+    ? "LEGACY" : plan.getPricingEngineVersion());
    tenant.setNextRenewalAt(renewalAt.plusMonths(plan.getBillingCycleMonths()));
    tenant.setUpdatedAt(Instant.now());
    tenant.setUpdatedBy(SYSTEM_ACTOR);

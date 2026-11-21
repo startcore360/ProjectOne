@@ -85,6 +85,36 @@ public class Tenant {
     @Column(name = "api_limit")
     private Integer apiLimit;
 
+    @Column(name = "max_students")
+    private Integer maxStudents;
+
+    @Column(name = "max_staff")
+    private Integer maxStaff;
+
+    @Column(name = "max_colleges")
+    private Integer maxColleges;
+
+    @Column(name = "max_schools")
+    private Integer maxSchools;
+
+    @Column(name = "subscription_engine_version", nullable = false)
+    @Builder.Default
+    private String subscriptionEngineVersion = "LEGACY";
+
+    @Column(name = "renewal_mode", nullable = false)
+    @Builder.Default
+    private String renewalMode = "AUTOMATIC";
+
+    @Column(name = "contract_duration_months")
+    private Integer contractDurationMonths;
+
+    @Column(name = "contract_end_at")
+    private LocalDate contractEndAt;
+
+    @Column(name = "grace_period_days", nullable = false)
+    @Builder.Default
+    private Integer gracePeriodDays = 15;
+
     @Column(name = "branding_logo_file_ref")
     private UUID brandingLogoFileRef;
 
@@ -143,4 +173,5 @@ public class Tenant {
     @Column(name = "row_version", nullable = false)
     @Builder.Default
     private Integer rowVersion = 1;
+
 }

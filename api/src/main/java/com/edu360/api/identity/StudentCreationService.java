@@ -45,6 +45,9 @@ public class StudentCreationService {
     private final AuditLogService audit;
     private final PermissionEvaluatorService permissions;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.edu360.api.platformops.TenantQuotaService tenantQuotaService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -81,6 +84,9 @@ public class StudentCreationService {
         }
         RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
         permissions.authorize(principal, "USER_CREATE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        if (tenantQuotaService != null) {
+            tenantQuotaService.checkStudentCapacity(tenantId);
+        }
 
         Section section = sections.findByTenantIdAndSectionId(tenantId, request.sectionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Section not found."));

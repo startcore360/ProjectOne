@@ -274,6 +274,14 @@ public class TenantManagementService {
                 .storageLimitGb(plan.getStorageLimitGb())
                 .smsLimit(plan.getSmsLimit())
                 .apiLimit(plan.getApiLimit())
+                .maxStudents(plan.getMaxStudents())
+                .maxStaff(plan.getMaxStaff())
+                .maxColleges(plan.getMaxColleges())
+                .maxSchools(plan.getMaxSchools())
+                .subscriptionEngineVersion(plan.getPricingEngineVersion() == null ? "LEGACY" : plan.getPricingEngineVersion())
+                .renewalMode(plan.getRenewalMode() == null ? "AUTOMATIC" : plan.getRenewalMode())
+                .contractDurationMonths(plan.getContractDurationMonths())
+                .gracePeriodDays(plan.getGracePeriodDays() == null ? 15 : plan.getGracePeriodDays())
                 .keycloakRealm(realmName)
                 .analyticsOptOut(false)
                 .createdAt(now)
@@ -765,6 +773,14 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
                 .storageLimitGb(plan.getStorageLimitGb())
                 .smsLimit(plan.getSmsLimit())
                 .apiLimit(plan.getApiLimit())
+                .maxStudents(plan.getMaxStudents())
+                .maxStaff(plan.getMaxStaff())
+                .maxColleges(plan.getMaxColleges())
+                .maxSchools(plan.getMaxSchools())
+                .subscriptionEngineVersion(plan.getPricingEngineVersion() == null ? "LEGACY" : plan.getPricingEngineVersion())
+                .renewalMode(plan.getRenewalMode() == null ? "AUTOMATIC" : plan.getRenewalMode())
+                .contractDurationMonths(plan.getContractDurationMonths())
+                .gracePeriodDays(plan.getGracePeriodDays() == null ? 15 : plan.getGracePeriodDays())
                 .keycloakRealm(realmName)
                 .analyticsOptOut(false)
                 .createdAt(now)
@@ -1144,8 +1160,13 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
             if ((request.priceAmount() != null && request.priceAmount().compareTo(BigDecimal.ZERO) != 0)
                     || (request.pricingType() != null && !"PER_STUDENT_YEAR".equals(request.pricingType()))
                     || (request.currencyCode() != null && !"INR".equalsIgnoreCase(request.currencyCode()))
+                    || (request.billingCycleMonths() != null && request.billingCycleMonths() != 12)
                     || (request.smsUnitAmount() != null && request.smsUnitAmount().compareTo(BigDecimal.ZERO) != 0)
-                    || (request.storageUnitAmountPerGb() != null && request.storageUnitAmountPerGb().compareTo(BigDecimal.ZERO) != 0)) {
+                    || (request.storageUnitAmountPerGb() != null && request.storageUnitAmountPerGb().compareTo(BigDecimal.ZERO) != 0)
+                    || (request.setupFeeAmount() != null && request.setupFeeAmount().compareTo(BigDecimal.ZERO) != 0)
+                    || request.discountType() != null || request.discountValue() != null
+                    || request.contractDurationMonths() != null || request.gracePeriodDays() != null
+                    || (request.renewalMode() != null && !"AUTOMATIC".equals(request.renewalMode()))) {
                 throw new UnauthorizedException("Rule [F-4]: only the Product Owner can configure plan pricing.");
             }
         }
@@ -1163,11 +1184,23 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
                 .smsLimit(request.smsLimit() != null ? request.smsLimit() : 5000)
                 .apiLimit(request.apiLimit() != null ? request.apiLimit() : 10000)
                 .maxInstitutions(request.maxInstitutions() != null ? request.maxInstitutions() : 1)
+                .maxColleges(request.maxColleges())
+                .maxSchools(request.maxSchools())
+                .maxStudents(request.maxStudents())
+                .maxStaff(request.maxStaff())
                 .customDomainAllowed(Boolean.TRUE.equals(request.customDomainAllowed()))
                 .brandingColorsAllowed(Boolean.TRUE.equals(request.brandingColorsAllowed()))
                 .billingCycleMonths(request.billingCycleMonths() != null ? request.billingCycleMonths() : 12)
                 .smsUnitAmount(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.smsUnitAmount() : null)
                 .storageUnitAmountPerGb(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.storageUnitAmountPerGb() : null)
+                .setupFeeAmount(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.setupFeeAmount() : null)
+                .discountType(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.discountType() : null)
+                .discountValue(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.discountValue() : null)
+                .contractDurationMonths(principal.platformRole() == PlatformRole.PRODUCT_OWNER ? request.contractDurationMonths() : null)
+                .gracePeriodDays(request.gracePeriodDays() != null ? request.gracePeriodDays() : 15)
+                .renewalMode(principal.platformRole() == PlatformRole.PRODUCT_OWNER && request.renewalMode() != null
+                        ? request.renewalMode() : "AUTOMATIC")
+                .pricingEngineVersion("V2")
                 .status("ACTIVE")
                 .createdAt(now)
                 .createdBy(principal.platformUserId())
@@ -1203,7 +1236,16 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
                 || (request.smsUnitAmount() != null && (plan.getSmsUnitAmount() == null
                         || request.smsUnitAmount().compareTo(plan.getSmsUnitAmount()) != 0))
                 || (request.storageUnitAmountPerGb() != null && (plan.getStorageUnitAmountPerGb() == null
-                        || request.storageUnitAmountPerGb().compareTo(plan.getStorageUnitAmountPerGb()) != 0));
+                        || request.storageUnitAmountPerGb().compareTo(plan.getStorageUnitAmountPerGb()) != 0))
+                || (request.setupFeeAmount() != null && (plan.getSetupFeeAmount() == null
+                        || request.setupFeeAmount().compareTo(plan.getSetupFeeAmount()) != 0))
+                || (request.discountType() != null && !Objects.equals(request.discountType(), plan.getDiscountType()))
+                || (request.discountValue() != null && (plan.getDiscountValue() == null
+                        || request.discountValue().compareTo(plan.getDiscountValue()) != 0))
+                || (request.billingCycleMonths() != null && !Objects.equals(request.billingCycleMonths(), plan.getBillingCycleMonths()))
+                || (request.contractDurationMonths() != null && !Objects.equals(request.contractDurationMonths(), plan.getContractDurationMonths()))
+                || (request.gracePeriodDays() != null && !Objects.equals(request.gracePeriodDays(), plan.getGracePeriodDays()))
+                || (request.renewalMode() != null && !Objects.equals(request.renewalMode(), plan.getRenewalMode()));
         if (principal.platformRole() != PlatformRole.PRODUCT_OWNER && priceChangeAttempted) {
             platformAuditWriter.recordDenied(principal, "PLAN_MANAGE", "PLAN", planId);
             throw new ApiException(HttpStatus.FORBIDDEN, "PRICE_CHANGE_PO_ONLY",
@@ -1249,6 +1291,22 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
             addAuditChange(auditChanges, "maxInstitutions", plan.getMaxInstitutions(), request.maxInstitutions());
             plan.setMaxInstitutions(request.maxInstitutions());
         }
+        if (request.maxColleges() != null) {
+            addAuditChange(auditChanges, "maxColleges", plan.getMaxColleges(), request.maxColleges());
+            plan.setMaxColleges(request.maxColleges());
+        }
+        if (request.maxSchools() != null) {
+            addAuditChange(auditChanges, "maxSchools", plan.getMaxSchools(), request.maxSchools());
+            plan.setMaxSchools(request.maxSchools());
+        }
+        if (request.maxStudents() != null) {
+            addAuditChange(auditChanges, "maxStudents", plan.getMaxStudents(), request.maxStudents());
+            plan.setMaxStudents(request.maxStudents());
+        }
+        if (request.maxStaff() != null) {
+            addAuditChange(auditChanges, "maxStaff", plan.getMaxStaff(), request.maxStaff());
+            plan.setMaxStaff(request.maxStaff());
+        }
         if (request.customDomainAllowed() != null) {
             addAuditChange(auditChanges, "customDomainAllowed", plan.isCustomDomainAllowed(), request.customDomainAllowed());
             plan.setCustomDomainAllowed(request.customDomainAllowed());
@@ -1260,6 +1318,30 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
         if (request.billingCycleMonths() != null) {
             addAuditChange(auditChanges, "billingCycleMonths", plan.getBillingCycleMonths(), request.billingCycleMonths());
             plan.setBillingCycleMonths(request.billingCycleMonths());
+        }
+        if (request.setupFeeAmount() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            addAuditChange(auditChanges, "setupFeeAmount", plan.getSetupFeeAmount(), request.setupFeeAmount());
+            plan.setSetupFeeAmount(request.setupFeeAmount());
+        }
+        if (request.discountType() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            String nextType = "NONE".equals(request.discountType()) ? null : request.discountType();
+            BigDecimal nextValue = "NONE".equals(request.discountType()) ? null : request.discountValue();
+            addAuditChange(auditChanges, "discountType", plan.getDiscountType(), nextType);
+            addAuditChange(auditChanges, "discountValue", plan.getDiscountValue(), nextValue);
+            plan.setDiscountType(nextType);
+            plan.setDiscountValue(nextValue);
+        }
+        if (request.contractDurationMonths() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            addAuditChange(auditChanges, "contractDurationMonths", plan.getContractDurationMonths(), request.contractDurationMonths());
+            plan.setContractDurationMonths(request.contractDurationMonths());
+        }
+        if (request.gracePeriodDays() != null) {
+            addAuditChange(auditChanges, "gracePeriodDays", plan.getGracePeriodDays(), request.gracePeriodDays());
+            plan.setGracePeriodDays(request.gracePeriodDays());
+        }
+        if (request.renewalMode() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
+            addAuditChange(auditChanges, "renewalMode", plan.getRenewalMode(), request.renewalMode());
+            plan.setRenewalMode(request.renewalMode());
         }
         if (request.smsUnitAmount() != null && principal.platformRole() == PlatformRole.PRODUCT_OWNER) {
             addAuditChange(auditChanges, "smsUnitAmount", plan.getSmsUnitAmount(), request.smsUnitAmount());

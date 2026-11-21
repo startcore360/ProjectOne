@@ -8,6 +8,7 @@ import {
   DataTable,
   SearchBox,
   Modal,
+  Notice,
 } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { PageHeader } from "../../../../components/layout/PageHeader";
@@ -233,6 +234,11 @@ export function TenantsView() {
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState("");
+
+  const planChangeCurrentPlan = plans.find((plan) => plan.planId === selectedTenant?.planId);
+  const planChangeTargetPlan = plans.find((plan) => plan.planId === planChangePlanId);
+  const planChangeRequiresRenewal = planChangeCurrentPlan?.pricingEngineVersion === "V2"
+    || planChangeTargetPlan?.pricingEngineVersion === "V2";
 
   const [draft, setDraft] = useState<CreateTenantDraft>({
     tenantName: "",
@@ -782,27 +788,75 @@ export function TenantsView() {
 
       <Modal isOpen={showPlanChange} onClose={() => setShowPlanChange(false)} kicker="SUBSCRIPTION"
         title={`Change plan · ${selectedTenant?.name ?? "Tenant"}`}
-        description="Immediate changes are upgrades only and create a pro-rata draft invoice. Downgrades should be scheduled for renewal."
+        titleId="tenant-plan-change-title"
+        description={planChangeRequiresRenewal
+          ? "V2 subscription changes are scheduled for renewal so the new pricing and active-enrolment snapshot apply to the full term."
+          : "Immediate legacy upgrades create a pro-rata draft invoice. Downgrades should be scheduled for renewal."}
         size="md">
-        <form onSubmit={handlePlanChangeSubmit}>
-          <div style={{ display: "grid", gap: "12px" }}>
-            <label htmlFor="tenant-plan-change-plan">New plan</label>
-            <select id="tenant-plan-change-plan" value={planChangePlanId} onChange={(e) => setPlanChangePlanId(e.target.value)} required
-              style={{ padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)" }}>
-              <option value="">Select a plan</option>
-              {plans.filter((plan) => plan.status === "ACTIVE" && plan.planId !== selectedTenant?.planId).map((plan) => (
-                <option key={plan.planId} value={plan.planId}>{plan.planName} · {plan.currencyCode} {plan.priceAmount.toLocaleString("en-IN")} · {plan.billingCycleMonths} months</option>
-              ))}
-            </select>
-            <label htmlFor="tenant-plan-change-effective">Effective</label>
-            <select id="tenant-plan-change-effective" value={planChangeEffective} onChange={(e) => setPlanChangeEffective(e.target.value as "NOW" | "RENEWAL")}
-              style={{ padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)" }}>
-              <option value="RENEWAL">At next renewal</option>
-              <option value="NOW">Immediately (upgrade only)</option>
-            </select>
+        <form onSubmit={handlePlanChangeSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", padding: "var(--space-3)", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)" }}>
+            <div>
+              <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--color-text-muted)" }}>Current Plan</span>
+              <strong style={{ display: "block", fontSize: "var(--fs-body)", color: "var(--color-text)", marginTop: "2px" }}>{selectedTenant?.plan ?? "—"}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--color-text-muted)" }}>Target Plan</span>
+              <strong style={{ display: "block", fontSize: "var(--fs-body)", color: planChangePlanId ? "var(--color-action-primary)" : "var(--color-text-muted)", marginTop: "2px" }}>
+                {plans.find((p) => p.planId === planChangePlanId)?.planName ?? "Select below"}
+              </strong>
+            </div>
           </div>
-          {planChangeError && <p role="alert" className="app-error-inline">{planChangeError}</p>}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+            <div className="eds-form-field">
+              <label htmlFor="tenant-plan-change-plan" className="eds-label" style={{ fontWeight: "var(--fw-medium)", display: "block", marginBottom: "var(--space-1)" }}>
+                New plan
+              </label>
+              <select id="tenant-plan-change-plan" value={planChangePlanId} onChange={(e) => {
+                const nextPlanId = e.target.value;
+                setPlanChangePlanId(nextPlanId);
+                if (planChangeCurrentPlan?.pricingEngineVersion === "V2"
+                  || plans.some((plan) => plan.planId === nextPlanId && plan.pricingEngineVersion === "V2")) {
+                  setPlanChangeEffective("RENEWAL");
+                }
+              }} required
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)", fontSize: "var(--fs-body-sm)" }}>
+                <option value="">Select a plan</option>
+                {plans.filter((plan) => plan.status === "ACTIVE" && plan.planId !== selectedTenant?.planId).map((plan) => (
+                  <option key={plan.planId} value={plan.planId}>{plan.planName} · {plan.currencyCode} {plan.priceAmount.toLocaleString("en-IN")} · {plan.billingCycleMonths} months</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="eds-form-field">
+              <label htmlFor="tenant-plan-change-effective" className="eds-label" style={{ fontWeight: "var(--fw-medium)", display: "block", marginBottom: "var(--space-1)" }}>
+                Effective schedule
+              </label>
+              <select id="tenant-plan-change-effective" value={planChangeEffective} onChange={(e) => setPlanChangeEffective(e.target.value as "NOW" | "RENEWAL")}
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)", fontSize: "var(--fs-body-sm)" }}>
+                <option value="RENEWAL">At next renewal (recommended for downgrades)</option>
+                <option value="NOW" disabled={planChangeRequiresRenewal}>
+                  Immediately (legacy upgrades only · creates pro-rata invoice)
+                </option>
+              </select>
+            </div>
+          </div>
+
+          {planChangeRequiresRenewal && (
+            <Notice tone="info">
+              This plan uses V2 pricing. Immediate price changes are disabled to avoid an inaccurate pro-rata amount. The existing plan remains active until renewal; the next invoice uses the selected plan’s pricing.
+            </Notice>
+          )}
+
+          {planChangeEffective === "NOW" && !planChangeRequiresRenewal && (
+            <Notice tone="info">
+              An immediate upgrade will generate a pro-rata draft invoice for the remaining term in the current billing cycle.
+            </Notice>
+          )}
+
+          {planChangeError && <Notice tone="danger">{planChangeError}</Notice>}
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
             <Button variant="secondary" type="button" onClick={() => setShowPlanChange(false)}>Cancel</Button>
             <Button type="submit" busy={changingPlan} disabled={!planChangePlanId}>Save plan change</Button>
           </div>

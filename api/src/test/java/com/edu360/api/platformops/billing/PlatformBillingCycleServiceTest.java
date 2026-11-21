@@ -89,6 +89,30 @@ class PlatformBillingCycleServiceTest {
   assertThat(result.created()).isEmpty(); assertThat(result.skipped()).singleElement().satisfies(x->assertThat(x.reason()).isEqualTo("SMS_RATE_NOT_CONFIGURED"));
  }
 
+ @Test void ACT_BILLING_CYCLE_V2_billsStudentYearsFromFinalEnrollmentSnapshot() {
+  tenant.setSubscriptionEngineVersion("V2");
+  plan.setPricingType("PER_STUDENT_YEAR");
+  plan.setPricingEngineVersion("V2");
+  plan.setPriceAmount(new BigDecimal("120.00"));
+  TenantUsageMonthly snapshot=usage("BILLABLE_ACTIVE_STUDENTS","100");
+  snapshot.setFinal(true);
+  snapshot.setMeasured(true);
+  when(usageRepository.findByTenantIdAndUsageMonthBetweenOrderByUsageMonthAsc(tenantId,start,end))
+   .thenReturn(List.of(snapshot));
+
+  var result=service.createBillingCycle(new CreateBillingCycleRequest(start,end),actor);
+
+  assertThat(result.created()).hasSize(1);
+  assertThat(result.created().get(0).subtotalAmount()).isEqualByComparingTo("1000.00");
+  org.mockito.ArgumentCaptor<List<InvoiceLine>> captor=org.mockito.ArgumentCaptor.forClass(List.class);
+  verify(invoiceLineRepository).saveAll(captor.capture());
+  assertThat(captor.getValue()).singleElement().satisfies(line -> {
+   assertThat(line.getQuantity()).isEqualByComparingTo("8.333333");
+   assertThat(line.getUnitAmount()).isEqualByComparingTo("120.00");
+   assertThat(line.getLineAmount()).isEqualByComparingTo("1000.00");
+  });
+ }
+
  private TenantUsageMonthly usage(String metric,String quantity) {
   Instant now=Instant.now();
   return TenantUsageMonthly.builder().tenantUsageMonthlyId(UUID.randomUUID()).tenantId(tenantId).usageMonth(start)

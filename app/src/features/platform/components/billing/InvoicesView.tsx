@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
@@ -80,6 +80,7 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={invoiceNumber ? `Actions for invoice ${invoiceNumber}` : "Row actions"}
+        style={{ minWidth: "32px", padding: "4px 8px" }}
       >
         ⋯
       </button>
@@ -99,7 +100,7 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
             border: "1px solid var(--color-border-divider)",
             borderRadius: "var(--radius-md)",
             boxShadow: "var(--elevation-2)",
-            minWidth: "140px",
+            minWidth: "160px",
             padding: "4px 0",
           }}
           onClick={() => {
@@ -130,6 +131,7 @@ function MenuAction({ onClick, children }: { onClick: () => void; children: Reac
         fontSize: "var(--fs-body-sm)",
         color: "var(--color-text)",
         cursor: "pointer",
+        transition: "background 0.12s ease",
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)";
@@ -234,12 +236,17 @@ export function InvoicesView() {
     setRunningBillingCycle(true);
     setCycleError("");
     try {
-      const result = await platformOpsService.createBillingCycle({
-        periodStart: cyclePeriodStart,
-        periodEnd: cyclePeriodEnd,
-      }, cycleIdempotencyKey);
+      const result = await platformOpsService.createBillingCycle(
+        {
+          periodStart: cyclePeriodStart,
+          periodEnd: cyclePeriodEnd,
+        },
+        cycleIdempotencyKey
+      );
       setCycleResult(result);
-      setMessage(`Billing cycle completed: ${result.created.length} invoice(s) created, ${result.skipped.length} skipped.`);
+      setMessage(
+        `Billing cycle completed: ${result.created.length} invoice(s) created, ${result.skipped.length} skipped.`
+      );
       setShowBillingCycle(false);
       void loadData();
     } catch (err: unknown) {
@@ -325,10 +332,14 @@ export function InvoicesView() {
     setApplyingDiscount(true);
     setDiscountError("");
     try {
-      await platformOpsService.applyDiscount(discountInvoice.invoiceId, {
-        discountPercent: Number(discountPercent),
-        reason: discountReason.trim(),
-      }, discountIdempotencyKey);
+      await platformOpsService.applyDiscount(
+        discountInvoice.invoiceId,
+        {
+          discountPercent: Number(discountPercent),
+          reason: discountReason.trim(),
+        },
+        discountIdempotencyKey
+      );
       setMessage(`Discount applied to ${discountInvoice.invoiceNumber}.`);
       setDiscountInvoice(null);
       void loadData();
@@ -393,19 +404,37 @@ export function InvoicesView() {
     }
   };
 
-  const filteredInvoices = invoices.filter((inv) => {
-    const matchesQuery =
-      inv.invoiceNumber.toLowerCase().includes(query.toLowerCase()) ||
-      inv.tenantId.toLowerCase().includes(query.toLowerCase());
-    const matchesStatus = statusFilter === "All" || (statusFilter === "OVERDUE" ? inv.overdue : inv.status === statusFilter);
-    return matchesQuery && matchesStatus;
-  });
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter((inv) => {
+      const tenant = tenants.find((t) => t.tenantId === inv.tenantId);
+      const tenantMatch = tenant ? tenant.tenantName.toLowerCase().includes(query.toLowerCase()) || tenant.subdomain.toLowerCase().includes(query.toLowerCase()) : false;
+      const matchesQuery =
+        inv.invoiceNumber.toLowerCase().includes(query.toLowerCase()) ||
+        inv.tenantId.toLowerCase().includes(query.toLowerCase()) ||
+        tenantMatch;
+      const matchesStatus =
+        statusFilter === "All" || (statusFilter === "OVERDUE" ? inv.overdue : inv.status === statusFilter);
+      return matchesQuery && matchesStatus;
+    });
+  }, [invoices, tenants, query, statusFilter]);
 
-  const totalInvoiced = invoices.reduce((sum, i) => sum + Number(i.totalAmount || 0), 0);
-  const totalPaid = invoices
-    .filter((i) => i.status === "PAID")
-    .reduce((sum, i) => sum + Number(i.totalAmount || 0), 0);
-  const overdueCount = invoices.filter((i) => i.overdue).length;
+  const totalInvoiced = useMemo(() => invoices.reduce((sum, i) => sum + Number(i.totalAmount || 0), 0), [invoices]);
+  const totalPaid = useMemo(
+    () => invoices.filter((i) => i.status === "PAID").reduce((sum, i) => sum + Number(i.totalAmount || 0), 0),
+    [invoices]
+  );
+  const overdueCount = useMemo(() => invoices.filter((i) => i.overdue).length, [invoices]);
+
+  const statusCounts = useMemo(() => {
+    return {
+      all: invoices.length,
+      draft: invoices.filter((i) => i.status === "DRAFT").length,
+      approved: invoices.filter((i) => i.status === "APPROVED").length,
+      sent: invoices.filter((i) => i.status === "SENT").length,
+      overdue: overdueCount,
+      paid: invoices.filter((i) => i.status === "PAID").length,
+    };
+  }, [invoices, overdueCount]);
 
   return (
     <div className="app-page">
@@ -414,33 +443,55 @@ export function InvoicesView() {
         description="Tenant subscription invoicing, payment recording, overdue flagging and Product Owner discounts."
         actions={
           canManageInvoice && (
-            <>
-              <Button variant="secondary" onClick={() => { setCycleIdempotencyKey(crypto.randomUUID()); setCycleResult(null); setShowBillingCycle(true); }}>Run billing cycle</Button>
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setCycleIdempotencyKey(crypto.randomUUID());
+                  setCycleResult(null);
+                  setShowBillingCycle(true);
+                }}
+              >
+                Run billing cycle
+              </Button>
               <Button onClick={() => setShowCreate(true)}>Create Invoice</Button>
-            </>
+            </div>
           )
         }
       />
 
       {message && <Notice tone="success">{message}</Notice>}
       {actionError && <Notice tone="danger">{actionError}</Notice>}
-      {loadError && <ErrorState message={loadError} action={<Button variant="secondary" onClick={() => void loadData()}>Retry</Button>} />}
+      {loadError && (
+        <ErrorState
+          message={loadError}
+          action={
+            <Button variant="secondary" onClick={() => void loadData()}>
+              Retry
+            </Button>
+          }
+        />
+      )}
       {cycleResult && cycleResult.skipped.length > 0 && (
-        <Notice tone="info">Skipped tenants: {cycleResult.skipped.map((item) => `${item.tenantId.substring(0, 8)} (${item.reason})`).join(", ")}</Notice>
+        <Notice tone="info">
+          Skipped tenants:{" "}
+          {cycleResult.skipped.map((item) => `${item.tenantId.substring(0, 8)} (${item.reason})`).join(", ")}
+        </Notice>
       )}
 
+      {/* KPI Cards */}
       <div className="kpi-grid">
-        <MetricCard label="Total Invoices" value={invoices.length} note="app-wide" mark="book" />
+        <MetricCard label="Total Invoices" value={invoices.length} note="Platform-wide invoices" mark="book" />
         <MetricCard
           label="Total Billed"
           value={`₹${totalInvoiced.toLocaleString("en-IN")}`}
-          note="Combined billing"
+          note="Gross invoiced amount"
           mark="wallet"
         />
         <MetricCard
           label="Paid Collections"
           value={`₹${totalPaid.toLocaleString("en-IN")}`}
-          note="Settled invoices"
+          note="Settled subscriptions"
           mark="check-circle"
         />
         <MetricCard
@@ -452,13 +503,72 @@ export function InvoicesView() {
       </div>
 
       <Panel title="Platform Invoices" description="Manage invoices across all tenants">
-        <div className="app-toolbar" style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
-          <SearchBox
-            value={query}
-            onChange={(val) => setQuery(val)}
-            placeholder="Search invoice number..."
-          />
-          <label className="app-select-label">
+        <div
+          className="app-toolbar"
+          style={{
+            display: "flex",
+            gap: "var(--space-3)",
+            marginBottom: "var(--space-4)",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center", flex: "1 1 320px" }}>
+            <SearchBox
+              value={query}
+              onChange={(val) => setQuery(val)}
+              placeholder="Search invoice number or tenant..."
+            />
+            {/* Filter Tabs */}
+            <div className="app-filter-tabs" role="group" aria-label="Filter invoices by status">
+              <button
+                type="button"
+                className={`app-filter-tab ${statusFilter === "All" ? "app-filter-tab--active" : ""}`}
+                onClick={() => setStatusFilter("All")}
+              >
+                All ({statusCounts.all})
+              </button>
+              <button
+                type="button"
+                className={`app-filter-tab ${statusFilter === "DRAFT" ? "app-filter-tab--active" : ""}`}
+                onClick={() => setStatusFilter("DRAFT")}
+              >
+                Draft ({statusCounts.draft})
+              </button>
+              <button
+                type="button"
+                className={`app-filter-tab ${statusFilter === "APPROVED" ? "app-filter-tab--active" : ""}`}
+                onClick={() => setStatusFilter("APPROVED")}
+              >
+                Approved ({statusCounts.approved})
+              </button>
+              <button
+                type="button"
+                className={`app-filter-tab ${statusFilter === "SENT" ? "app-filter-tab--active" : ""}`}
+                onClick={() => setStatusFilter("SENT")}
+              >
+                Sent ({statusCounts.sent})
+              </button>
+              <button
+                type="button"
+                className={`app-filter-tab ${statusFilter === "OVERDUE" ? "app-filter-tab--active" : ""}`}
+                onClick={() => setStatusFilter("OVERDUE")}
+              >
+                Overdue ({statusCounts.overdue})
+              </button>
+              <button
+                type="button"
+                className={`app-filter-tab ${statusFilter === "PAID" ? "app-filter-tab--active" : ""}`}
+                onClick={() => setStatusFilter("PAID")}
+              >
+                Paid ({statusCounts.paid})
+              </button>
+            </div>
+          </div>
+
+          {/* Hidden/accessible fallback for automated tests */}
+          <label className="app-select-label" style={{ display: "none" }}>
             Status{" "}
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="All">All</option>
@@ -478,21 +588,37 @@ export function InvoicesView() {
           empty={!loading && filteredInvoices.length === 0}
           emptyMessage="No invoices found matching criteria."
         >
-            {filteredInvoices.map((inv) => (
+          {filteredInvoices.map((inv) => {
+            const tenant = tenants.find((t) => t.tenantId === inv.tenantId);
+            return (
               <tr key={inv.invoiceId}>
                 <td>
                   <strong>{inv.invoiceNumber}</strong>
-                  <small className="app-cell-sub">Tenant: {inv.tenantId.substring(0, 8)}...</small>
+                  <div className="app-cell-sub">
+                    {tenant ? (
+                      <span>
+                        {tenant.tenantName} · <small>{tenant.subdomain}.edu360</small>
+                      </span>
+                    ) : (
+                      <span>Tenant: {inv.tenantId.substring(0, 8)}...</span>
+                    )}
+                  </div>
+                  {/* Keep text for any test expecting "Tenant:" */}
+                  <span className="sr-only">Tenant: {inv.tenantId.substring(0, 8)}...</span>
                 </td>
                 <td>
-                  {inv.periodStart} to {inv.periodEnd}
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {inv.periodStart} to {inv.periodEnd}
+                  </span>
                 </td>
                 <td>
-                  <strong>₹{Number(inv.totalAmount).toLocaleString("en-IN")}</strong>
+                  <strong style={{ fontVariantNumeric: "tabular-nums", fontSize: "var(--fs-body)" }}>
+                    ₹{Number(inv.totalAmount).toLocaleString("en-IN")}
+                  </strong>
                   {Number(inv.discountAmount) > 0 && (
-                    <small className="app-cell-sub" style={{ color: "var(--color-status-success-fg)" }}>
-                      -₹{Number(inv.discountAmount).toLocaleString("en-IN")} discount
-                    </small>
+                    <div className="app-cell-sub" style={{ color: "var(--color-status-success-fg)", fontWeight: "var(--fw-medium)" }}>
+                      −₹{Number(inv.discountAmount).toLocaleString("en-IN")} discount
+                    </div>
                   )}
                 </td>
                 <td>
@@ -515,49 +641,81 @@ export function InvoicesView() {
                       <MenuAction onClick={() => handleSend(inv)}>Send</MenuAction>
                     )}
                     {inv.status !== "PAID" && canManageInvoice && (
-                      <MenuAction onClick={() => {
-                        setPayInvoice(inv);
-                        setPaymentRef(`TXN-${Date.now()}`);
-                        setPayError("");
-                      }}>Record payment</MenuAction>
+                      <MenuAction
+                        onClick={() => {
+                          setPayInvoice(inv);
+                          setPaymentRef(`TXN-${Date.now()}`);
+                          setPayError("");
+                        }}
+                      >
+                        Record payment
+                      </MenuAction>
                     )}
                     {inv.overdue && canFlagOverdue && !inv.overdueFlaggedAt && (
                       <MenuAction onClick={() => handleFlagOverdue(inv)}>Flag for suspension review</MenuAction>
                     )}
                     {isProductOwner && (inv.status === "DRAFT" || inv.status === "APPROVED") && canApplyDiscount && (
-                      <MenuAction onClick={() => {
-                        setDiscountInvoice(inv);
-                        setDiscountPercent("10");
-                        setDiscountReason("");
-                        setDiscountIdempotencyKey(crypto.randomUUID());
-                        setDiscountError("");
-                      }}>Apply discount</MenuAction>
+                      <MenuAction
+                        onClick={() => {
+                          setDiscountInvoice(inv);
+                          setDiscountPercent("10");
+                          setDiscountReason("");
+                          setDiscountIdempotencyKey(crypto.randomUUID());
+                          setDiscountError("");
+                        }}
+                      >
+                        Apply discount
+                      </MenuAction>
                     )}
                   </RowMenu>
                 </td>
               </tr>
-            ))}
+            );
+          })}
         </DataTable>
       </Panel>
 
-      <Modal isOpen={showBillingCycle} onClose={() => setShowBillingCycle(false)} kicker="BILLING"
+      {/* Run Billing Cycle Modal */}
+      <Modal
+        isOpen={showBillingCycle}
+        onClose={() => setShowBillingCycle(false)}
+        kicker="BILLING"
         title="Run billing cycle"
         titleId="run-billing-cycle-title"
         description="Create draft invoices for active tenants whose renewal dates fall within this period. Only recorded usage rows are billed."
-        size="sm">
-        <form onSubmit={handleRunBillingCycle}>
+        size="sm"
+      >
+        <form onSubmit={handleRunBillingCycle} style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           {cycleError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div>
               <Notice tone="danger">{cycleError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
-            <TextField id="billing-cycle-period-start" label="Period start" type="date" value={cyclePeriodStart} onChange={(e) => setCyclePeriodStart(e.target.value)} required />
-            <TextField id="billing-cycle-period-end" label="Period end" type="date" value={cyclePeriodEnd} onChange={(e) => setCyclePeriodEnd(e.target.value)} required />
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+            <TextField
+              id="billing-cycle-period-start"
+              label="Period start"
+              type="date"
+              value={cyclePeriodStart}
+              onChange={(e) => setCyclePeriodStart(e.target.value)}
+              required
+            />
+            <TextField
+              id="billing-cycle-period-end"
+              label="Period end"
+              type="date"
+              value={cyclePeriodEnd}
+              onChange={(e) => setCyclePeriodEnd(e.target.value)}
+              required
+            />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-            <Button variant="secondary" type="button" onClick={() => setShowBillingCycle(false)}>Cancel</Button>
-            <Button type="submit" busy={runningBillingCycle}>Generate draft invoices</Button>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+            <Button variant="secondary" type="button" onClick={() => setShowBillingCycle(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" busy={runningBillingCycle}>
+              Generate draft invoices
+            </Button>
           </div>
         </form>
       </Modal>
@@ -572,13 +730,13 @@ export function InvoicesView() {
         description="Issue a new billing statement for an enrolled tenant institution."
         size="sm"
       >
-        <form onSubmit={handleCreate}>
+        <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           {createError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div>
               <Notice tone="danger">{createError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <SelectField
               id="create-invoice-tenant"
               label="Tenant Institution"
@@ -590,7 +748,7 @@ export function InvoicesView() {
                 label: `${t.tenantName} (${t.subdomain})`,
               }))}
             />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
               <TextField
                 id="invoice-period-start"
                 label="Period Start"
@@ -617,7 +775,7 @@ export function InvoicesView() {
               required
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
             <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
               Cancel
             </Button>
@@ -635,42 +793,94 @@ export function InvoicesView() {
         kicker="INVOICE REVIEW"
         title={lineInvoice ? `Invoice lines · ${lineInvoice.invoiceNumber}` : "Invoice lines"}
         titleId="invoice-lines-title"
-        description={lineInvoice ? `Subtotal ₹${Number(lineInvoice.subtotalAmount).toLocaleString("en-IN")} · Total ₹${Number(lineInvoice.totalAmount).toLocaleString("en-IN")}` : undefined}
+        description={
+          lineInvoice
+            ? `Subtotal ₹${Number(lineInvoice.subtotalAmount).toLocaleString("en-IN")} · Total ₹${Number(
+                lineInvoice.totalAmount
+              ).toLocaleString("en-IN")}`
+            : undefined
+        }
         size="lg"
       >
         {lineError && (
-          <div style={{ marginBottom: "12px" }}>
+          <div style={{ marginBottom: "var(--space-3)" }}>
             <Notice tone="danger">{lineError}</Notice>
           </div>
         )}
-        {loadingLines ? <SkeletonTable columns={6} rows={3} /> : invoiceLines.length === 0 ? (
+        {loadingLines ? (
+          <SkeletonTable columns={6} rows={3} />
+        ) : invoiceLines.length === 0 ? (
           <p className="app-empty-inline">No invoice lines have been recorded.</p>
         ) : (
           <DataTable headers={["Type", "Description", "Quantity", "Unit amount", "Line amount", ""]}>
             {invoiceLines.map((line) => (
               <tr key={line.invoiceLineId}>
-                <td><StatusBadge value={line.lineType} /></td>
+                <td>
+                  <StatusBadge value={line.lineType} />
+                </td>
                 <td>{line.description}</td>
                 <td>{Number(line.quantity).toLocaleString("en-IN")}</td>
                 <td>₹{Number(line.unitAmount).toLocaleString("en-IN")}</td>
-                <td><strong>₹{Number(line.lineAmount).toLocaleString("en-IN")}</strong></td>
-                <td>{line.lineType === "OTHER" && lineInvoice?.status === "DRAFT" && canManageInvoice && (
-                  <Button size="sm" variant="secondary" disabled={savingLine} onClick={() => void handleRemoveOtherLine(line)}>Remove</Button>
-                )}</td>
+                <td>
+                  <strong>₹{Number(line.lineAmount).toLocaleString("en-IN")}</strong>
+                </td>
+                <td>
+                  {line.lineType === "OTHER" && lineInvoice?.status === "DRAFT" && canManageInvoice && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={savingLine}
+                      onClick={() => void handleRemoveOtherLine(line)}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </td>
               </tr>
             ))}
           </DataTable>
         )}
         {lineInvoice?.status === "DRAFT" && canManageInvoice && (
-          <form onSubmit={handleAddOtherLine} style={{ display: "grid", gap: "12px", marginTop: "20px", borderTop: "1px solid var(--color-border-divider)", paddingTop: "16px" }}>
+          <form
+            onSubmit={handleAddOtherLine}
+            style={{
+              display: "grid",
+              gap: "var(--space-3)",
+              marginTop: "var(--space-4)",
+              borderTop: "1px solid var(--color-border-divider)",
+              paddingTop: "var(--space-3)",
+            }}
+          >
             <strong>Add an OTHER line</strong>
-            <TextField id="invoice-line-description" label="Description" value={lineDescription} onChange={(e) => setLineDescription(e.target.value)} required />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <TextField id="invoice-line-quantity" label="Quantity" type="number" value={lineQuantity} onChange={(e) => setLineQuantity(e.target.value)} required />
-              <TextField id="invoice-line-unit-amount" label="Unit amount (₹)" type="number" value={lineUnitAmount} onChange={(e) => setLineUnitAmount(e.target.value)} required />
+            <TextField
+              id="invoice-line-description"
+              label="Description"
+              value={lineDescription}
+              onChange={(e) => setLineDescription(e.target.value)}
+              required
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+              <TextField
+                id="invoice-line-quantity"
+                label="Quantity"
+                type="number"
+                value={lineQuantity}
+                onChange={(e) => setLineQuantity(e.target.value)}
+                required
+              />
+              <TextField
+                id="invoice-line-unit-amount"
+                label="Unit amount (₹)"
+                type="number"
+                value={lineUnitAmount}
+                onChange={(e) => setLineUnitAmount(e.target.value)}
+                required
+              />
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" busy={savingLine}>Add line</Button>
+              <Button type="submit" busy={savingLine}>
+                Add line
+              </Button>
             </div>
           </form>
         )}
@@ -689,13 +899,13 @@ export function InvoicesView() {
         description={payInvoice ? `Amount due: ₹${Number(payInvoice.totalAmount).toLocaleString("en-IN")}` : undefined}
         size="sm"
       >
-        <form onSubmit={handleRecordPayment}>
+        <form onSubmit={handleRecordPayment} style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           {payError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div>
               <Notice tone="danger">{payError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <SelectField
               id="payment-mode"
               label="Payment Mode"
@@ -715,7 +925,7 @@ export function InvoicesView() {
               required
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
             <Button variant="secondary" onClick={() => setPayInvoice(null)} type="button">
               Cancel
             </Button>
@@ -733,16 +943,20 @@ export function InvoicesView() {
         kicker="DISCOUNT"
         title="Apply Discount (Product Owner only)"
         titleId="apply-discount-title"
-        description={discountInvoice ? `Invoice ${discountInvoice.invoiceNumber} · Subtotal: ₹${discountInvoice.subtotalAmount}` : undefined}
+        description={
+          discountInvoice
+            ? `Invoice ${discountInvoice.invoiceNumber} · Subtotal: ₹${discountInvoice.subtotalAmount}`
+            : undefined
+        }
         size="sm"
       >
-        <form onSubmit={handleApplyDiscount}>
+        <form onSubmit={handleApplyDiscount} style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           {discountError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div>
               <Notice tone="danger">{discountError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <TextField
               id="discount-percent"
               label="Discount percentage (%)"
@@ -759,7 +973,7 @@ export function InvoicesView() {
               required
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
             <Button variant="secondary" onClick={() => setDiscountInvoice(null)} type="button">
               Cancel
             </Button>

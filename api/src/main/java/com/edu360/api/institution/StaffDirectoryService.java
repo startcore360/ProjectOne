@@ -44,6 +44,9 @@ public class StaffDirectoryService {
     private final AuditLogService audit;
     private final JdbcTemplate jdbc;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.edu360.api.platformops.TenantQuotaService tenantQuotaService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -104,6 +107,10 @@ public class StaffDirectoryService {
 
         validateProfile(request.fullName(), request.personalEmail(), request.personalMobile(),
                 request.nationalIdLast4(), request.employmentStatus(), request.joinedOn(), request.leftOn());
+        String employmentStatus = request.employmentStatus() == null ? "ACTIVE" : request.employmentStatus().trim().toUpperCase();
+        if ("ACTIVE".equals(employmentStatus) && tenantQuotaService != null) {
+            tenantQuotaService.checkStaffCapacity(actor.tenantId());
+        }
         int joiningYear = request.joinedOn() == null ? LocalDate.now().getYear() : request.joinedOn().getYear();
         String staffCode = idFormats.resolveStaffCode(actor.tenantId(), institutionId,
                 request.staffCode(), joiningYear);
@@ -119,7 +126,7 @@ public class StaffDirectoryService {
         profile.setPersonalMobile(trimToNull(request.personalMobile()));
         profile.setNationalIdLast4(trimToNull(request.nationalIdLast4()));
         profile.setPhotoFileId(request.photoFileId());
-        profile.setEmploymentStatus(request.employmentStatus() == null ? "ACTIVE" : request.employmentStatus().trim().toUpperCase());
+        profile.setEmploymentStatus(employmentStatus);
         profile.setJoinedOn(request.joinedOn());
         profile.setLeftOn(request.leftOn());
         profile.setCreatedBy(actor.userAccountId());
@@ -172,7 +179,14 @@ public class StaffDirectoryService {
         if (request.personalMobile() != null) profile.setPersonalMobile(trimToNull(request.personalMobile()));
         if (request.nationalIdLast4() != null) profile.setNationalIdLast4(trimToNull(request.nationalIdLast4()));
         if (request.photoFileId() != null) profile.setPhotoFileId(request.photoFileId());
-        if (request.employmentStatus() != null) profile.setEmploymentStatus(request.employmentStatus().trim().toUpperCase());
+        if (request.employmentStatus() != null) {
+            String nextStatus = request.employmentStatus().trim().toUpperCase();
+            if (!"ACTIVE".equals(profile.getEmploymentStatus()) && "ACTIVE".equals(nextStatus)
+                    && tenantQuotaService != null) {
+                tenantQuotaService.checkStaffCapacity(actor.tenantId());
+            }
+            profile.setEmploymentStatus(nextStatus);
+        }
         if (request.joinedOn() != null) profile.setJoinedOn(request.joinedOn());
         if (request.leftOn() != null) profile.setLeftOn(request.leftOn());
         validateProfile(profile.getFullName(), profile.getPersonalEmail(), profile.getPersonalMobile(),

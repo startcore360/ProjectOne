@@ -50,6 +50,12 @@ public class Invoice {
     @Column(name = "discount_applied_by")
     private UUID discountAppliedBy;
 
+    @Column(name = "discount_type")
+    private String discountType;
+
+    @Column(name = "discount_value", precision = 14, scale = 2)
+    private BigDecimal discountValue;
+
     @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal totalAmount;
 

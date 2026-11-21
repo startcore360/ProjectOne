@@ -107,7 +107,13 @@ export default function AppLayout() {
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try { return localStorage.getItem("edu360-sidebar-collapsed") === "true"; } catch { return false; }
+    try {
+      const stored = localStorage.getItem("edu360-sidebar-collapsed");
+      if (stored !== null) return stored === "true";
+      return typeof window !== "undefined" && window.innerWidth <= 1024;
+    } catch {
+      return false;
+    }
   });
   const [logoSpin, setLogoSpin] = useState<"cw" | "ccw" | null>(null);
   const toggleSidebar = () => {
@@ -126,6 +132,31 @@ export default function AppLayout() {
   }, [logoSpin]);
   // Scroll the page to the top whenever the route path changes.
   useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [location.pathname]);
+
+  // Auto-collapse expanded sidebar drawer on tablet navigation
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 1024) {
+      setSidebarCollapsed(true);
+    }
+  }, [location.pathname]);
+
+  // Adjust default rail on resize when no manual preference is stored
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleResize = () => {
+      try {
+        if (localStorage.getItem("edu360-sidebar-collapsed") === null) {
+          if (window.innerWidth <= 1024) {
+            setSidebarCollapsed(true);
+          }
+        }
+      } catch {
+        /* noop */
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // User card ⋮ menu
   const [userMenuOpen, setUserMenuOpen] = useState(false);

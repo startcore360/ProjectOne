@@ -124,15 +124,15 @@ export function BulkUploadModal({
             justifyContent: "space-between",
             alignItems: "center",
             padding: "0.75rem 1rem",
-            background: "var(--color-bg-subtle, #f8fafc)",
+            background: "var(--color-bg-subtle)",
             borderRadius: "6px",
             marginBottom: "1rem",
-            border: "1px solid var(--color-border, #e2e8f0)",
+            border: "1px solid var(--color-border-divider)",
           }}
         >
           <div>
             <strong>1. Need a template?</strong>
-            <div style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary, #64748b)" }}>
+            <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
               Download a standard CSV template with the required headers and sample data.
             </div>
           </div>
@@ -160,7 +160,14 @@ export function BulkUploadModal({
               type="file"
               accept=".csv,text/csv"
               onChange={handleFileChange}
-              style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
+              style={{
+                width: "100%",
+                padding: "0.5rem",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--color-border-divider)",
+                backgroundColor: "var(--color-bg-surface)",
+                color: "var(--color-text)",
+              }}
             />
           </div>
 
@@ -182,8 +189,10 @@ export function BulkUploadModal({
                 padding: "0.5rem",
                 fontFamily: "monospace",
                 fontSize: "0.85rem",
-                borderRadius: "4px",
-                border: "1px solid var(--color-border, #cbd5e1)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--color-border-divider)",
+                backgroundColor: "var(--color-bg-surface)",
+                color: "var(--color-text)",
               }}
             />
           </div>
@@ -224,14 +233,14 @@ export function BulkUploadModal({
 
         {/* Pre-validation Report */}
         {job && (
-          <div style={{ marginTop: "1.25rem", borderTop: "1px solid var(--color-border, #e2e8f0)", paddingTop: "1rem" }}>
+          <div style={{ marginTop: "1.25rem", borderTop: "1px solid var(--color-border-divider)", paddingTop: "1rem" }}>
             <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>
               Pre-validation results
             </h3>
 
             <div className="app-stat-row">
-              <div style={{ background: "var(--color-bg-subtle, #f8fafc)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary, #64748b)" }}>Total Rows</div>
+              <div style={{ background: "var(--color-bg-subtle)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Total Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.totalRows}</div>
               </div>
               <div style={{ background: "var(--color-status-success-bg)", padding: "0.75rem", borderRadius: "6px", textAlign: "center", color: "var(--color-status-success-fg)" }}>

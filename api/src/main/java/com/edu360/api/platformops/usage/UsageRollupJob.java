@@ -114,10 +114,27 @@ public class UsageRollupJob {
     private MonthlySnapshot collectMonthly(Timestamp from, Timestamp to) {
         EventCounts events = collectEvents(from, to);
         long activeUsers = scalar("SELECT count(*) FROM app.user_account WHERE status = 'ACTIVE'");
+        long activeStudents = scalar("SELECT count(*) FROM app.student_profile WHERE status = 'ACTIVE'");
+        long activeStaff = scalar("SELECT count(*) FROM app.staff_profile WHERE employment_status = 'ACTIVE'");
+        long activeColleges = scalar("SELECT count(*) FROM app.institution WHERE institution_type = 'COLLEGE' AND status <> 'ARCHIVED'");
+        long activeSchools = scalar("SELECT count(*) FROM app.institution WHERE institution_type = 'SCHOOL' AND status <> 'ARCHIVED'");
+        LocalDate snapshotDate = to.toInstant().atZone(ZoneOffset.UTC).toLocalDate().minusDays(1);
+        Long billableStudents = tenantJdbc.queryForObject("""
+                SELECT count(DISTINCT e.student_profile_id)
+                  FROM app.student_enrollment e
+                  JOIN app.student_profile s
+                    ON s.tenant_id = e.tenant_id
+                   AND s.student_profile_id = e.student_profile_id
+                 WHERE e.outcome = 'IN_PROGRESS'
+                   AND e.started_on <= ?
+                   AND (e.ended_on IS NULL OR e.ended_on >= ?)
+                   AND s.status = 'ACTIVE'
+                """, Long.class, snapshotDate, snapshotDate);
         long storageBytes = scalar("SELECT COALESCE(sum(size_bytes), 0) FROM app.file_object WHERE status <> 'DELETED'");
         BigDecimal storageGb = BigDecimal.valueOf(storageBytes)
                 .divide(BigDecimal.valueOf(1024L * 1024L * 1024L), 2, RoundingMode.HALF_UP);
-        return new MonthlySnapshot(events, activeUsers, storageGb);
+        return new MonthlySnapshot(events, activeUsers, activeStudents, activeStaff, activeColleges,
+                activeSchools, billableStudents == null ? 0L : billableStudents, storageGb);
     }
 
     private long count(String sql, Timestamp from, Timestamp to) {
@@ -140,6 +157,12 @@ public class UsageRollupJob {
         saveMonthly(tenantId, month, "SMS_SENT", BigDecimal.ZERO, false, false, finalMonth, now);
         saveMonthly(tenantId, month, "STORAGE_GB", snapshot.storageGb(), true, true, finalMonth, now);
         saveMonthly(tenantId, month, "ACTIVE_USERS", BigDecimal.valueOf(snapshot.activeUsers()), true, true, finalMonth, now);
+        saveMonthly(tenantId, month, "ACTIVE_STUDENTS", BigDecimal.valueOf(snapshot.activeStudents()), true, true, finalMonth, now);
+        saveMonthly(tenantId, month, "ACTIVE_STAFF", BigDecimal.valueOf(snapshot.activeStaff()), true, true, finalMonth, now);
+        saveMonthly(tenantId, month, "ACTIVE_COLLEGES", BigDecimal.valueOf(snapshot.activeColleges()), true, true, finalMonth, now);
+        saveMonthly(tenantId, month, "ACTIVE_SCHOOLS", BigDecimal.valueOf(snapshot.activeSchools()), true, true, finalMonth, now);
+        saveMonthly(tenantId, month, "BILLABLE_ACTIVE_STUDENTS",
+                BigDecimal.valueOf(snapshot.billableActiveStudents()), true, false, finalMonth, now);
     }
 
     private void saveMonthly(UUID tenantId, LocalDate month, String code, BigDecimal value,
@@ -173,5 +196,6 @@ public class UsageRollupJob {
     }
 
     private record EventCounts(long logins, long attendanceMarked, long feesPaidOnline) { }
-    private record MonthlySnapshot(EventCounts events, long activeUsers, BigDecimal storageGb) { }
+    private record MonthlySnapshot(EventCounts events, long activeUsers, long activeStudents, long activeStaff,
+            long activeColleges, long activeSchools, long billableActiveStudents, BigDecimal storageGb) { }
 }

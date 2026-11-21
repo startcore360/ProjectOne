@@ -25,11 +25,22 @@ export type PlanItem = {
   smsLimit?: number;
   apiLimit?: number;
   maxInstitutions?: number;
+  maxColleges?: number | null;
+  maxSchools?: number | null;
+  maxStudents?: number | null;
+  maxStaff?: number | null;
   customDomainAllowed: boolean;
   brandingColorsAllowed: boolean;
   billingCycleMonths: number;
   smsUnitAmount?: number;
   storageUnitAmountPerGb?: number;
+  setupFeeAmount?: number;
+  discountType?: "NONE" | "PERCENT" | "FIXED";
+  discountValue?: number;
+  contractDurationMonths?: number;
+  gracePeriodDays?: number;
+  renewalMode?: "AUTOMATIC" | "MANUAL";
+  pricingEngineVersion?: "LEGACY" | "V2";
   status: string;
   rowVersion: number;
 };
@@ -98,11 +109,21 @@ export type CreatePlanPayload = {
   smsLimit?: number;
   apiLimit?: number;
   maxInstitutions?: number;
+  maxColleges?: number | null;
+  maxSchools?: number | null;
+  maxStudents?: number | null;
+  maxStaff?: number | null;
   customDomainAllowed?: boolean;
   brandingColorsAllowed?: boolean;
   billingCycleMonths?: number;
   smsUnitAmount?: number;
   storageUnitAmountPerGb?: number;
+  setupFeeAmount?: number;
+  discountType?: "NONE" | "PERCENT" | "FIXED";
+  discountValue?: number;
+  contractDurationMonths?: number;
+  gracePeriodDays?: number;
+  renewalMode?: "AUTOMATIC" | "MANUAL";
 };
 
 export type UpdatePlanPayload = {
@@ -115,12 +136,112 @@ export type UpdatePlanPayload = {
   smsLimit?: number;
   apiLimit?: number;
   maxInstitutions?: number;
+  maxColleges?: number | null;
+  maxSchools?: number | null;
+  maxStudents?: number | null;
+  maxStaff?: number | null;
   customDomainAllowed?: boolean;
   brandingColorsAllowed?: boolean;
   billingCycleMonths?: number;
   smsUnitAmount?: number;
   storageUnitAmountPerGb?: number;
+  setupFeeAmount?: number;
+  discountType?: "NONE" | "PERCENT" | "FIXED";
+  discountValue?: number;
+  contractDurationMonths?: number;
+  gracePeriodDays?: number;
+  renewalMode?: "AUTOMATIC" | "MANUAL";
   status?: string;
+};
+
+export type CommercialCatalogItemDto = {
+  catalogItemId: string;
+  itemCode: string;
+  itemName: string;
+  category: string;
+  unitCode: string;
+  pricingBasis: string;
+  unitAmount: number;
+  unitsPerQuantity: number;
+  billingIntervalMonths?: number;
+  moduleCode?: string;
+  description?: string;
+  available: boolean;
+  rowVersion: number;
+};
+
+export type CommercialCatalogItemRequest = {
+  itemCode: string;
+  itemName: string;
+  category: string;
+  unitCode: string;
+  pricingBasis: string;
+  unitAmount: number;
+  unitsPerQuantity: number;
+  billingIntervalMonths: number;
+  moduleCode: string | null;
+  description: string | null;
+  available: boolean;
+};
+
+export type PlanComponentDraft = {
+  catalogItemId: string;
+  includedQuantity: number;
+  unitAmountOverride?: number | null;
+  enabled?: boolean;
+};
+
+export type PlanComponentDto = PlanComponentDraft & {
+  planComponentId: string;
+  itemCode: string;
+  itemName: string;
+  category: string;
+  unitCode: string;
+  pricingBasis: string;
+  unitAmount: number;
+  enabled: boolean;
+};
+
+export type CustomerQuoteRequest = {
+  tenantType: TenantType;
+  colleges: number;
+  schools: number;
+  students: number;
+  staff: number;
+  requiredModules: string[];
+  billingCycleMonths: number;
+  includeSetupFee: boolean;
+};
+
+export type CustomerQuoteLine = {
+  code: string;
+  description: string;
+  quantity: number;
+  unitAmount: number;
+  amount: number;
+};
+
+export type CustomerPlanQuote = {
+  planId: string;
+  planName: string;
+  pricingType: string;
+  eligible: boolean;
+  recommendation: string | null;
+  fitReasons: string[];
+  unmetRequirements: string[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  tax: number;
+  lines: CustomerQuoteLine[];
+};
+
+export type CustomerQuoteResponse = {
+  currencyCode: string;
+  billingCycleMonths: number;
+  plans: CustomerPlanQuote[];
+  lowestCostPlanId: string | null;
+  bestFitPlanId: string | null;
 };
 
 export type TenantPlanChangeResponse = {
@@ -248,6 +369,22 @@ export const platformTenantService = {
     api.put<PlanItem>(`/platform/plans/${planId}`, data, {
       headers: { "If-Match": `"${rowVersion}"` },
     }),
+  getCommercialCatalog: () =>
+    api.get<CommercialCatalogItemDto[]>("/platform/subscriptions/catalog"),
+  createCommercialCatalogItem: (request: CommercialCatalogItemRequest) =>
+    api.post<CommercialCatalogItemDto>("/platform/subscriptions/catalog", request),
+  updateCommercialCatalogItem: (itemId: string, request: CommercialCatalogItemRequest, rowVersion: number) =>
+    api.put<CommercialCatalogItemDto>(`/platform/subscriptions/catalog/${itemId}`, request, {
+      headers: { "If-Match": `"${rowVersion}"` },
+    }),
+  getPlanComponents: (planId: string) =>
+    api.get<PlanComponentDto[]>(`/platform/subscriptions/plans/${planId}/components`),
+  replacePlanComponents: (planId: string, components: PlanComponentDraft[], rowVersion: number) =>
+    api.put<PlanComponentDto[]>(`/platform/subscriptions/plans/${planId}/components`, components, {
+      headers: { "If-Match": `"${rowVersion}"` },
+    }),
+  quoteCustomer: (request: CustomerQuoteRequest) =>
+    api.post<CustomerQuoteResponse>("/platform/subscriptions/quote", request),
   getTenants: (page = 0, size = 50) =>
     api.get<TenantPageResponse>(`/platform/tenants?page=${page}&size=${size}`),
   // E8-S5: D5 marks these writes IdempotencyKey (and If-Match where a version is passed); a fresh key per

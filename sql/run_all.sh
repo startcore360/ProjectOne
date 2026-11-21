@@ -35,6 +35,8 @@ run edu360_v4_test 44_v41_release_scheduling.sql > /dev/null  # E7-S1 release sc
 $PSQL -q -d edu360_v4_test -f "$D/44t_tests_release_scheduling.sql" > /dev/null
 run edu360_v4_test 45_v41_usage_rollup.sql > /dev/null  # E6-S1 usage rollup
 $PSQL -q -d edu360_v4_test -f "$D/45t_tests_usage_rollup.sql" > /dev/null
+run edu360_v4_test 54_v41_subscription_commercial_engine.sql > /dev/null
+run edu360_v4_test 54t_tests_subscription_commercial_engine.sql > /dev/null
 run edu360_v4_test 42_v41_deletion_retention_waiver.sql > /dev/null  # E5-S2 deletion retention waiver
 $PSQL -q -d edu360_v4_test -f "$D/42t_tests_deletion_retention_waiver.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/52t_tests_tenant_branding_logo.sql" > /dev/null
@@ -75,6 +77,7 @@ run edu360_v4_ref 50_v41_platform_audit_payload_idempotency.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/49t_tests_platform_notification.sql" > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/50t_tests_platform_audit_payload_idempotency.sql" > /dev/null
 run edu360_v4_ref 36_v41_plan_commercial.sql > /dev/null
+run edu360_v4_ref 54_v41_subscription_commercial_engine.sql > /dev/null
 run edu360_v4_ref 37_v41_feature_catalog_and_provisioning.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/37t_tests_feature_catalog_and_provisioning.sql" > /dev/null
 run edu360_v4_ref 38_v41_invoice_approval_and_renewal.sql > /dev/null

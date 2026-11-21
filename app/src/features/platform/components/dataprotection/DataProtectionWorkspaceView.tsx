@@ -3,10 +3,12 @@ import "./DataProtectionWorkspaceView.css";
 import {
   Button,
   DataTable,
+  DateField,
   EmptyState,
   ErrorState,
   Modal,
   PageHeader,
+  Panel,
   SelectField,
   SkeletonCard,
   SkeletonText,
@@ -15,6 +17,7 @@ import {
   Tabs,
   TextAreaField,
 } from "../../../../design-system/components";
+import { MetricCard } from "../../../../design-system/components/MetricCard";
 import { usePlatformAccess } from "../../platformAccess";
 import {
   platformDataProtectionService,
@@ -150,6 +153,37 @@ export function DataProtectionWorkspacePage() {
         <SkeletonPage title="Loading data protection queues" showTable tableRows={5} tableColumns={5} />
       ) : !error ? (
         <>
+          <div className="kpi-grid">
+            <MetricCard
+              label="Pending Decisions"
+              value={
+                exports.filter((e) => e.status === "REQUESTED").length +
+                deletions.filter((d) => d.status === "REQUESTED").length +
+                retentionChanges.filter((r) => r.status === "REQUESTED").length
+              }
+              note="Awaiting DPO decision"
+              mark="shield"
+            />
+            <MetricCard
+              label="Export Requests"
+              value={exports.length}
+              note="Tenant data portability archives"
+              mark="book"
+            />
+            <MetricCard
+              label="Deletion Requests"
+              value={deletions.length}
+              note="Statutory erasure requests"
+              mark="alert"
+            />
+            <MetricCard
+              label="Retention Changes"
+              value={retentionChanges.length}
+              note="Policy tenure modifications"
+              mark="clock"
+            />
+          </div>
+
           <Tabs
             items={tabs}
             activeId={activeTab}
@@ -230,15 +264,78 @@ export function DataProtectionWorkspacePage() {
         </>
       ) : null}
 
-      {canDelegate&&<section className="data-protection-workspace__delegation" aria-labelledby="dpo-delegation-heading">
-        <h2 id="dpo-delegation-heading">Delegate DPO approvals</h2><p>Temporarily allow another active Data Protection Officer to approve exports, deletions, and retention changes.</p>
-        {delegationLoading?<div role="status" aria-busy="true" aria-label="Loading DPO delegates"><span className="sr-only">Loading DPO delegates...</span><SkeletonCard><SkeletonText height="2.5rem"/><SkeletonText height="2.5rem"/><SkeletonText height="2.5rem"/></SkeletonCard></div>:<form className="data-protection-workspace__delegation-form" onSubmit={saveDelegation}>
-          <label>Data Protection Officer<select aria-label="Data Protection Officer" value={delegateUserId} onChange={e=>setDelegateUserId(e.target.value)} required><option value="">Choose a DPO</option>{delegateCandidates.map(d=><option key={d.userId} value={d.userId}>{d.fullName} ({d.email})</option>)}</select></label>
-          <label>From<input aria-label="Delegation from" type="date" value={delegationFrom} onChange={e=>setDelegationFrom(e.target.value)} required/></label>
-          <label>To<input aria-label="Delegation to" type="date" value={delegationTo} min={delegationFrom||undefined} onChange={e=>setDelegationTo(e.target.value)} required/></label>
-          <Button type="submit" disabled={delegationSaving||!delegateUserId||!delegationFrom||!delegationTo||delegationFrom>=delegationTo} busy={delegationSaving}>Save delegation</Button>
-        </form>}{delegationError&&<p role="alert">{delegationError}</p>}{delegationSuccess&&<p role="status">DPO delegation saved.</p>}
-      </section>}
+      {canDelegate && (
+        <Panel
+          id="dpo-delegation-panel"
+          title="Delegate DPO approvals"
+          description="Temporarily allow another active Data Protection Officer to approve exports, deletions, and retention changes."
+          className="data-protection-workspace__delegation"
+        >
+          <div className="app-panel__body">
+            {delegationLoading ? (
+              <div role="status" aria-busy="true" aria-label="Loading DPO delegates">
+                <span className="sr-only">Loading DPO delegates...</span>
+                <SkeletonCard>
+                  <SkeletonText height="2.5rem" />
+                  <SkeletonText height="2.5rem" />
+                  <SkeletonText height="2.5rem" />
+                </SkeletonCard>
+              </div>
+            ) : (
+              <form className="data-protection-workspace__delegation-form" onSubmit={saveDelegation}>
+                <div className="data-protection-workspace__delegation-grid">
+                  <div style={{ flex: "1.4 1 220px", minWidth: "200px" }}>
+                    <SelectField
+                      id="dpo-delegate-select"
+                      label="Data Protection Officer"
+                      aria-label="Data Protection Officer"
+                      value={delegateUserId}
+                      onChange={(e) => setDelegateUserId(e.target.value)}
+                      options={[
+                        { value: "", label: "Choose a DPO" },
+                        ...delegateCandidates.map((d) => ({
+                          value: d.userId,
+                          label: `${d.fullName} (${d.email})`,
+                        })),
+                      ]}
+                    />
+                  </div>
+                  <div style={{ flex: "1 1 170px", minWidth: "150px" }}>
+                    <DateField
+                      id="dpo-delegation-from"
+                      label="Delegation from"
+                      aria-label="Delegation from"
+                      value={delegationFrom}
+                      onChange={(e) => setDelegationFrom(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ flex: "1 1 170px", minWidth: "150px" }}>
+                    <DateField
+                      id="dpo-delegation-to"
+                      label="Delegation to"
+                      aria-label="Delegation to"
+                      value={delegationTo}
+                      min={delegationFrom || undefined}
+                      onChange={(e) => setDelegationTo(e.target.value)}
+                    />
+                  </div>
+                  <div className="data-protection-workspace__delegation-submit">
+                    <Button
+                      type="submit"
+                      disabled={delegationSaving || !delegateUserId || !delegationFrom || !delegationTo || delegationFrom >= delegationTo}
+                      busy={delegationSaving}
+                    >
+                      Save delegation
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            )}
+            {delegationError && <p role="alert" className="app-feedback-error" style={{ marginTop: "var(--space-3)" }}>{delegationError}</p>}
+            {delegationSuccess && <p role="status" className="app-feedback-success" style={{ marginTop: "var(--space-3)" }}>DPO delegation saved.</p>}
+          </div>
+        </Panel>
+      )}
       <Modal
         isOpen={Boolean(target)}
         onClose={() => setTarget(null)}

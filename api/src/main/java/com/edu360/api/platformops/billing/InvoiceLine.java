@@ -35,7 +35,7 @@ public class InvoiceLine {
     @Column(name = "description", nullable = false, length = 300)
     private String description;
 
-    @Column(name = "quantity", nullable = false, precision = 14, scale = 2)
+    @Column(name = "quantity", nullable = false, precision = 14, scale = 6)
     private BigDecimal quantity;
 
     @Column(name = "unit_amount", nullable = false, precision = 14, scale = 2)
@@ -46,6 +46,12 @@ public class InvoiceLine {
 
     @Column(name = "tenant_usage_monthly_id")
     private UUID tenantUsageMonthlyId;
+
+    @Column(name = "catalog_item_id")
+    private UUID catalogItemId;
+
+    @Column(name = "subscription_addon_id")
+    private UUID subscriptionAddonId;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

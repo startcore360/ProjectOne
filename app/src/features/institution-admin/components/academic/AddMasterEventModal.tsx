@@ -73,7 +73,7 @@ export function AddMasterEventModal({
               id="master-event-session-select"
               value={targetSessionId || sessions[0]?.academicSessionId || ""}
               onChange={(e) => setTargetSessionId(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
+              className="app-input"
             >
               {sessions.map((s) => (
                 <option key={s.academicSessionId} value={s.academicSessionId}>
@@ -100,7 +100,7 @@ export function AddMasterEventModal({
             id="master-event-type-select"
             value={masterEventType}
             onChange={(e) => setMasterEventType(e.target.value)}
-            style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
+            className="app-input"
           >
             <option value="SEMESTER_DATES">Semester Dates (SEMESTER_DATES)</option>
             <option value="UNIVERSITY_HOLIDAY">University Holiday (UNIVERSITY_HOLIDAY)</option>
@@ -118,14 +118,22 @@ export function AddMasterEventModal({
           />
         </div>
         <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
-          <label className="app-form-field">
-            Start Date
-            <input type="date" value={masterEventStart} onChange={(e) => setMasterEventStart(e.target.value)} required />
-          </label>
-          <label className="app-form-field">
-            End Date
-            <input type="date" value={masterEventEnd} onChange={(e) => setMasterEventEnd(e.target.value)} required />
-          </label>
+          <TextField
+            id="master-event-start-date"
+            label="Start Date"
+            type="date"
+            value={masterEventStart}
+            onChange={(e) => setMasterEventStart(e.target.value)}
+            required
+          />
+          <TextField
+            id="master-event-end-date"
+            label="End Date"
+            type="date"
+            value={masterEventEnd}
+            onChange={(e) => setMasterEventEnd(e.target.value)}
+            required
+          />
         </div>
         <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>

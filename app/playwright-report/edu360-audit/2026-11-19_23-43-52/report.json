@@ -1,0 +1,5614 @@
+{
+  "generatedAt": "2026-11-19T18:19:26.750Z",
+  "baseUrl": "http://platform.edu360.local:5173",
+  "note": "Read-only UI audit. No form submissions.",
+  "totals": {
+    "pagesVisited": 108,
+    "errors": 0,
+    "horizontalOverflow": 0,
+    "controlsMissingAccessibleName": 0,
+    "unnamedButtons": 0,
+    "imagesWithoutAlt": 0,
+    "failedApiCalls": 0,
+    "pagesWithRepeatedApiCalls": 0,
+    "pageErrors": 0,
+    "consoleErrors": 2,
+    "failedRequests": 0
+  },
+  "findings": [
+    {
+      "route": "/login",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/login",
+      "signedOut": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 917
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Welcome back."
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": false,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 5,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\login-light-1440x900.png"
+    },
+    {
+      "route": "/login",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/login",
+      "signedOut": true,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 917
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Welcome back."
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": false,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 5,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\login-light-1366x768.png"
+    },
+    {
+      "route": "/login",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/login",
+      "signedOut": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Welcome back."
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": false,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 5,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\login-light-390x844.png"
+    },
+    {
+      "route": "/login",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/login",
+      "signedOut": true,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 917
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Welcome back."
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": false,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 5,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\login-dark-1440x900.png"
+    },
+    {
+      "route": "/login",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/login",
+      "signedOut": true,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 917
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Welcome back."
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": false,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 5,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\login-dark-1366x768.png"
+    },
+    {
+      "route": "/login",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/login",
+      "signedOut": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Welcome back."
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": false,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 5,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\login-dark-390x844.png"
+    },
+    {
+      "route": "/platform",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1306
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Good evening"
+        },
+        {
+          "level": "H2",
+          "text": "All clear — nothing needs your action"
+        },
+        {
+          "level": "H2",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Revenue this month"
+        },
+        {
+          "level": "H2",
+          "text": "Active tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Go-live and trials"
+        },
+        {
+          "level": "H2",
+          "text": "Platform activity"
+        },
+        {
+          "level": "H2",
+          "text": "Collections, last 6 months"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 35,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform-light-1440x900.png"
+    },
+    {
+      "route": "/platform",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1329
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Good evening"
+        },
+        {
+          "level": "H2",
+          "text": "All clear — nothing needs your action"
+        },
+        {
+          "level": "H2",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Revenue this month"
+        },
+        {
+          "level": "H2",
+          "text": "Active tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Go-live and trials"
+        },
+        {
+          "level": "H2",
+          "text": "Platform activity"
+        },
+        {
+          "level": "H2",
+          "text": "Collections, last 6 months"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 35,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform-light-1366x768.png"
+    },
+    {
+      "route": "/platform",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 2695
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Good evening"
+        },
+        {
+          "level": "H2",
+          "text": "All clear — nothing needs your action"
+        },
+        {
+          "level": "H2",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Revenue this month"
+        },
+        {
+          "level": "H2",
+          "text": "Active tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Go-live and trials"
+        },
+        {
+          "level": "H2",
+          "text": "Platform activity"
+        },
+        {
+          "level": "H2",
+          "text": "Collections, last 6 months"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 35,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform-light-390x844.png"
+    },
+    {
+      "route": "/platform/tenants",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/tenants",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1805
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant register"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tenants-light-1440x900.png"
+    },
+    {
+      "route": "/platform/tenants",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/tenants",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 2015
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant register"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tenants-light-1366x768.png"
+    },
+    {
+      "route": "/platform/tenants",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/tenants",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 5781
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant register"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tenants-light-390x844.png"
+    },
+    {
+      "route": "/platform/plans",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/plans",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 3364
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Plans & billing"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 3646"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 5068"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 9486"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1457"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1983"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 4730"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 5448"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 6084"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8078"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8186"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8255"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 9621"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise University Group Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Live Premium Plan 1794063479473"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 3873"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4408"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4649"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5205"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5480"
+        },
+        {
+          "level": "H2",
+          "text": "Premium College Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Probe Plan 1794058025781"
+        },
+        {
+          "level": "H2",
+          "text": "Standard School Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Test Enterprise Plan 429"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_plans-light-1440x900.png"
+    },
+    {
+      "route": "/platform/plans",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/plans",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 3418
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Plans & billing"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 3646"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 5068"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 9486"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1457"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1983"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 4730"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 5448"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 6084"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8078"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8186"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8255"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 9621"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise University Group Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Live Premium Plan 1794063479473"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 3873"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4408"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4649"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5205"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5480"
+        },
+        {
+          "level": "H2",
+          "text": "Premium College Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Probe Plan 1794058025781"
+        },
+        {
+          "level": "H2",
+          "text": "Standard School Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Test Enterprise Plan 429"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_plans-light-1366x768.png"
+    },
+    {
+      "route": "/platform/plans",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/plans",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 9173
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Plans & billing"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 3646"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 5068"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 9486"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1457"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1983"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 4730"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 5448"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 6084"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8078"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8186"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8255"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 9621"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise University Group Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Live Premium Plan 1794063479473"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 3873"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4408"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4649"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5205"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5480"
+        },
+        {
+          "level": "H2",
+          "text": "Premium College Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Probe Plan 1794058025781"
+        },
+        {
+          "level": "H2",
+          "text": "Standard School Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Test Enterprise Plan 429"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_plans-light-390x844.png"
+    },
+    {
+      "route": "/platform/invoices",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/invoices",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1379
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Invoices & Billing"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Invoices"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_invoices-light-1440x900.png"
+    },
+    {
+      "route": "/platform/invoices",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/invoices",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1379
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Invoices & Billing"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Invoices"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_invoices-light-1366x768.png"
+    },
+    {
+      "route": "/platform/invoices",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/invoices",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4517
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Invoices & Billing"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Invoices"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_invoices-light-390x844.png"
+    },
+    {
+      "route": "/platform/releases",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/releases",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1373
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Releases & Deployments"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Releases"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_releases-light-1440x900.png"
+    },
+    {
+      "route": "/platform/releases",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/releases",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1373
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Releases & Deployments"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Releases"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_releases-light-1366x768.png"
+    },
+    {
+      "route": "/platform/releases",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/releases",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4174
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Releases & Deployments"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Releases"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_releases-light-390x844.png"
+    },
+    {
+      "route": "/platform/reports",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/reports",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform Reports"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Report: PLATFORM_OVERVIEW"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_reports-light-1440x900.png"
+    },
+    {
+      "route": "/platform/reports",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/reports",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform Reports"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Report: PLATFORM_OVERVIEW"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_reports-light-1366x768.png"
+    },
+    {
+      "route": "/platform/reports",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/reports",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 1349
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform Reports"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Report: PLATFORM_OVERVIEW"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_reports-light-390x844.png"
+    },
+    {
+      "route": "/platform/security-policy",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/security-policy",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1549
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Security Policy & Incidents"
+        },
+        {
+          "level": "H2",
+          "text": "Realm Security Policy Re-application"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Security Rules"
+        },
+        {
+          "level": "H2",
+          "text": "Security Incidents"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_security-policy-light-1440x900.png"
+    },
+    {
+      "route": "/platform/security-policy",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/security-policy",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1549
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Security Policy & Incidents"
+        },
+        {
+          "level": "H2",
+          "text": "Realm Security Policy Re-application"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Security Rules"
+        },
+        {
+          "level": "H2",
+          "text": "Security Incidents"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_security-policy-light-1366x768.png"
+    },
+    {
+      "route": "/platform/security-policy",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/security-policy",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4190
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Security Policy & Incidents"
+        },
+        {
+          "level": "H2",
+          "text": "Realm Security Policy Re-application"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Security Rules"
+        },
+        {
+          "level": "H2",
+          "text": "Security Incidents"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_security-policy-light-390x844.png"
+    },
+    {
+      "route": "/platform/tickets",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/tickets",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1806
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support Tickets"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Support Queue"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tickets-light-1440x900.png"
+    },
+    {
+      "route": "/platform/tickets",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/tickets",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 2078
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support Tickets"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Support Queue"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tickets-light-1366x768.png"
+    },
+    {
+      "route": "/platform/tickets",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/tickets",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 5907
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support Tickets"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Support Queue"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tickets-light-390x844.png"
+    },
+    {
+      "route": "/platform/users",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/users",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1614
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Platform access"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_users-light-1440x900.png"
+    },
+    {
+      "route": "/platform/users",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/users",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1614
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Platform access"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_users-light-1366x768.png"
+    },
+    {
+      "route": "/platform/users",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/users",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4332
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Platform access"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_users-light-390x844.png"
+    },
+    {
+      "route": "/platform/roles",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/roles",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1435
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform roles"
+        },
+        {
+          "level": "H2",
+          "text": "Roles"
+        },
+        {
+          "level": "H2",
+          "text": "Handed over"
+        },
+        {
+          "level": "H2",
+          "text": "Step-in history"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 25,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_roles-light-1440x900.png"
+    },
+    {
+      "route": "/platform/roles",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/roles",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1435
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform roles"
+        },
+        {
+          "level": "H2",
+          "text": "Roles"
+        },
+        {
+          "level": "H2",
+          "text": "Handed over"
+        },
+        {
+          "level": "H2",
+          "text": "Step-in history"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 25,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_roles-light-1366x768.png"
+    },
+    {
+      "route": "/platform/roles",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/roles",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 3678
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform roles"
+        },
+        {
+          "level": "H2",
+          "text": "Roles"
+        },
+        {
+          "level": "H2",
+          "text": "Handed over"
+        },
+        {
+          "level": "H2",
+          "text": "Step-in history"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 25,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_roles-light-390x844.png"
+    },
+    {
+      "route": "/platform/role-templates",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/role-templates",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1111
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Role templates"
+        },
+        {
+          "level": "H2",
+          "text": "Templates"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_role-templates-light-1440x900.png"
+    },
+    {
+      "route": "/platform/role-templates",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/role-templates",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1111
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Role templates"
+        },
+        {
+          "level": "H2",
+          "text": "Templates"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_role-templates-light-1366x768.png"
+    },
+    {
+      "route": "/platform/role-templates",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/role-templates",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 3469
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Role templates"
+        },
+        {
+          "level": "H2",
+          "text": "Templates"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_role-templates-light-390x844.png"
+    },
+    {
+      "route": "/platform/support",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/support",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support access"
+        },
+        {
+          "level": "H2",
+          "text": "Active Support Grants"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_support-light-1440x900.png"
+    },
+    {
+      "route": "/platform/support",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/support",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support access"
+        },
+        {
+          "level": "H2",
+          "text": "Active Support Grants"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_support-light-1366x768.png"
+    },
+    {
+      "route": "/platform/support",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/support",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support access"
+        },
+        {
+          "level": "H2",
+          "text": "Active Support Grants"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_support-light-390x844.png"
+    },
+    {
+      "route": "/platform/audit",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/audit",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 2955
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Audit log"
+        },
+        {
+          "level": "H2",
+          "text": "Platform audit events"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_audit-light-1440x900.png"
+    },
+    {
+      "route": "/platform/audit",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/audit",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 2962
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Audit log"
+        },
+        {
+          "level": "H2",
+          "text": "Platform audit events"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_audit-light-1366x768.png"
+    },
+    {
+      "route": "/platform/audit",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/audit",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 10462
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Audit log"
+        },
+        {
+          "level": "H2",
+          "text": "Platform audit events"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_audit-light-390x844.png"
+    },
+    {
+      "route": "/platform/usage-counts",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/usage-counts",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Usage counts"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_usage-counts-light-1440x900.png"
+    },
+    {
+      "route": "/platform/usage-counts",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/usage-counts",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Usage counts"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_usage-counts-light-1366x768.png"
+    },
+    {
+      "route": "/platform/usage-counts",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/usage-counts",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 1090
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Usage counts"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_usage-counts-light-390x844.png"
+    },
+    {
+      "route": "/platform/backup-status",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/backup-status",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Backup status"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant backup status"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_backup-status-light-1440x900.png"
+    },
+    {
+      "route": "/platform/backup-status",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/backup-status",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Backup status"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant backup status"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_backup-status-light-1366x768.png"
+    },
+    {
+      "route": "/platform/backup-status",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/backup-status",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Backup status"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant backup status"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_backup-status-light-390x844.png"
+    },
+    {
+      "route": "/platform/integration-types",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/integration-types",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1176
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Integration types"
+        },
+        {
+          "level": "H2",
+          "text": "Allowed integration types"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_integration-types-light-1440x900.png"
+    },
+    {
+      "route": "/platform/integration-types",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/integration-types",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1196
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Integration types"
+        },
+        {
+          "level": "H2",
+          "text": "Allowed integration types"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_integration-types-light-1366x768.png"
+    },
+    {
+      "route": "/platform/integration-types",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/integration-types",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 3582
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Integration types"
+        },
+        {
+          "level": "H2",
+          "text": "Allowed integration types"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_integration-types-light-390x844.png"
+    },
+    {
+      "route": "/platform/data-protection",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/data-protection",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H2",
+          "text": "Access unavailable"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 12,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_data-protection-light-1440x900.png"
+    },
+    {
+      "route": "/platform/data-protection",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/data-protection",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H2",
+          "text": "Access unavailable"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 12,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_data-protection-light-1366x768.png"
+    },
+    {
+      "route": "/platform/data-protection",
+      "theme": "light",
+      "url": "http://platform.edu360.local:5173/platform/data-protection",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H2",
+          "text": "Access unavailable"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "light",
+        "background": "rgb(243, 246, 243)",
+        "text": "rgb(28, 48, 45)"
+      },
+      "api": {
+        "total": 12,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_data-protection-light-390x844.png"
+    },
+    {
+      "route": "/platform",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1306
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Good evening"
+        },
+        {
+          "level": "H2",
+          "text": "All clear — nothing needs your action"
+        },
+        {
+          "level": "H2",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Revenue this month"
+        },
+        {
+          "level": "H2",
+          "text": "Active tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Go-live and trials"
+        },
+        {
+          "level": "H2",
+          "text": "Platform activity"
+        },
+        {
+          "level": "H2",
+          "text": "Collections, last 6 months"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 35,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform-dark-1440x900.png"
+    },
+    {
+      "route": "/platform",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1329
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Good evening"
+        },
+        {
+          "level": "H2",
+          "text": "All clear — nothing needs your action"
+        },
+        {
+          "level": "H2",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Revenue this month"
+        },
+        {
+          "level": "H2",
+          "text": "Active tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Go-live and trials"
+        },
+        {
+          "level": "H2",
+          "text": "Platform activity"
+        },
+        {
+          "level": "H2",
+          "text": "Collections, last 6 months"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 35,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform-dark-1366x768.png"
+    },
+    {
+      "route": "/platform",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 2695
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Good evening"
+        },
+        {
+          "level": "H2",
+          "text": "All clear — nothing needs your action"
+        },
+        {
+          "level": "H2",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Revenue this month"
+        },
+        {
+          "level": "H2",
+          "text": "Active tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Go-live and trials"
+        },
+        {
+          "level": "H2",
+          "text": "Platform activity"
+        },
+        {
+          "level": "H2",
+          "text": "Collections, last 6 months"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 35,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform-dark-390x844.png"
+    },
+    {
+      "route": "/platform/tenants",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/tenants",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1805
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant register"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tenants-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/tenants",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/tenants",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 2015
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant register"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tenants-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/tenants",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/tenants",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 5781
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Tenants"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant register"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tenants-dark-390x844.png"
+    },
+    {
+      "route": "/platform/plans",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/plans",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 3364
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Plans & billing"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 3646"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 5068"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 9486"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1457"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1983"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 4730"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 5448"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 6084"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8078"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8186"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8255"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 9621"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise University Group Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Live Premium Plan 1794063479473"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 3873"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4408"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4649"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5205"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5480"
+        },
+        {
+          "level": "H2",
+          "text": "Premium College Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Probe Plan 1794058025781"
+        },
+        {
+          "level": "H2",
+          "text": "Standard School Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Test Enterprise Plan 429"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_plans-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/plans",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/plans",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 3418
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Plans & billing"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 3646"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 5068"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 9486"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1457"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1983"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 4730"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 5448"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 6084"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8078"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8186"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8255"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 9621"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise University Group Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Live Premium Plan 1794063479473"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 3873"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4408"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4649"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5205"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5480"
+        },
+        {
+          "level": "H2",
+          "text": "Premium College Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Probe Plan 1794058025781"
+        },
+        {
+          "level": "H2",
+          "text": "Standard School Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Test Enterprise Plan 429"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_plans-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/plans",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/plans",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 9173
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Plans & billing"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 3646"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 5068"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan 9486"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1457"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 1983"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 4730"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 5448"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 6084"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8078"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8186"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 8255"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise Plan Updated 9621"
+        },
+        {
+          "level": "H2",
+          "text": "Enterprise University Group Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Live Premium Plan 1794063479473"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 3873"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4408"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 4649"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5205"
+        },
+        {
+          "level": "H2",
+          "text": "Live Verification Plan 5480"
+        },
+        {
+          "level": "H2",
+          "text": "Premium College Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Probe Plan 1794058025781"
+        },
+        {
+          "level": "H2",
+          "text": "Standard School Plan"
+        },
+        {
+          "level": "H2",
+          "text": "Test Enterprise Plan 429"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_plans-dark-390x844.png"
+    },
+    {
+      "route": "/platform/invoices",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/invoices",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1379
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Invoices & Billing"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Invoices"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_invoices-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/invoices",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/invoices",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1379
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Invoices & Billing"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Invoices"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_invoices-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/invoices",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/invoices",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4517
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Invoices & Billing"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Invoices"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_invoices-dark-390x844.png"
+    },
+    {
+      "route": "/platform/releases",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/releases",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1373
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Releases & Deployments"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Releases"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_releases-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/releases",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/releases",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1373
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Releases & Deployments"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Releases"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_releases-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/releases",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/releases",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4174
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Releases & Deployments"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Releases"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_releases-dark-390x844.png"
+    },
+    {
+      "route": "/platform/reports",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/reports",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform Reports"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Report: PLATFORM_OVERVIEW"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_reports-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/reports",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/reports",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform Reports"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Report: PLATFORM_OVERVIEW"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_reports-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/reports",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/reports",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 1349
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform Reports"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Report: PLATFORM_OVERVIEW"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_reports-dark-390x844.png"
+    },
+    {
+      "route": "/platform/security-policy",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/security-policy",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1549
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Security Policy & Incidents"
+        },
+        {
+          "level": "H2",
+          "text": "Realm Security Policy Re-application"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Security Rules"
+        },
+        {
+          "level": "H2",
+          "text": "Security Incidents"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_security-policy-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/security-policy",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/security-policy",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1549
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Security Policy & Incidents"
+        },
+        {
+          "level": "H2",
+          "text": "Realm Security Policy Re-application"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Security Rules"
+        },
+        {
+          "level": "H2",
+          "text": "Security Incidents"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_security-policy-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/security-policy",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/security-policy",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4190
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Security Policy & Incidents"
+        },
+        {
+          "level": "H2",
+          "text": "Realm Security Policy Re-application"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Security Rules"
+        },
+        {
+          "level": "H2",
+          "text": "Security Incidents"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_security-policy-dark-390x844.png"
+    },
+    {
+      "route": "/platform/tickets",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/tickets",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1806
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support Tickets"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Support Queue"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tickets-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/tickets",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/tickets",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 2078
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support Tickets"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Support Queue"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tickets-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/tickets",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/tickets",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 5907
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support Tickets"
+        },
+        {
+          "level": "H2",
+          "text": "Platform Support Queue"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_tickets-dark-390x844.png"
+    },
+    {
+      "route": "/platform/users",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/users",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1614
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Platform access"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_users-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/users",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/users",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1614
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Platform access"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_users-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/users",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/users",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 4310
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform users"
+        },
+        {
+          "level": "H2",
+          "text": "Platform access"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_users-dark-390x844.png"
+    },
+    {
+      "route": "/platform/roles",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/roles",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1435
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform roles"
+        },
+        {
+          "level": "H2",
+          "text": "Roles"
+        },
+        {
+          "level": "H2",
+          "text": "Handed over"
+        },
+        {
+          "level": "H2",
+          "text": "Step-in history"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 25,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_roles-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/roles",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/roles",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1435
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform roles"
+        },
+        {
+          "level": "H2",
+          "text": "Roles"
+        },
+        {
+          "level": "H2",
+          "text": "Handed over"
+        },
+        {
+          "level": "H2",
+          "text": "Step-in history"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 25,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_roles-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/roles",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/roles",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 3678
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Platform roles"
+        },
+        {
+          "level": "H2",
+          "text": "Roles"
+        },
+        {
+          "level": "H2",
+          "text": "Handed over"
+        },
+        {
+          "level": "H2",
+          "text": "Step-in history"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 25,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_roles-dark-390x844.png"
+    },
+    {
+      "route": "/platform/role-templates",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/role-templates",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1111
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Role templates"
+        },
+        {
+          "level": "H2",
+          "text": "Templates"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_role-templates-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/role-templates",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/role-templates",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1111
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Role templates"
+        },
+        {
+          "level": "H2",
+          "text": "Templates"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_role-templates-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/role-templates",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/role-templates",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 3469
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Role templates"
+        },
+        {
+          "level": "H2",
+          "text": "Templates"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_role-templates-dark-390x844.png"
+    },
+    {
+      "route": "/platform/support",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/support",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support access"
+        },
+        {
+          "level": "H2",
+          "text": "Active Support Grants"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_support-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/support",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/support",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support access"
+        },
+        {
+          "level": "H2",
+          "text": "Active Support Grants"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_support-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/support",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/support",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Support access"
+        },
+        {
+          "level": "H2",
+          "text": "Active Support Grants"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 21,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_support-dark-390x844.png"
+    },
+    {
+      "route": "/platform/audit",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/audit",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 2955
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Audit log"
+        },
+        {
+          "level": "H2",
+          "text": "Platform audit events"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_audit-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/audit",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/audit",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 2963
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Audit log"
+        },
+        {
+          "level": "H2",
+          "text": "Platform audit events"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_audit-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/audit",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/audit",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 10440
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Audit log"
+        },
+        {
+          "level": "H2",
+          "text": "Platform audit events"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_audit-dark-390x844.png"
+    },
+    {
+      "route": "/platform/usage-counts",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/usage-counts",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Usage counts"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_usage-counts-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/usage-counts",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/usage-counts",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Usage counts"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_usage-counts-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/usage-counts",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/usage-counts",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 1090
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Usage counts"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_usage-counts-dark-390x844.png"
+    },
+    {
+      "route": "/platform/backup-status",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/backup-status",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Backup status"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant backup status"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_backup-status-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/backup-status",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/backup-status",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Backup status"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant backup status"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_backup-status-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/backup-status",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/backup-status",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Backup status"
+        },
+        {
+          "level": "H2",
+          "text": "Tenant backup status"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_backup-status-dark-390x844.png"
+    },
+    {
+      "route": "/platform/integration-types",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/integration-types",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "scrollHeight": 1176
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Integration types"
+        },
+        {
+          "level": "H2",
+          "text": "Allowed integration types"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_integration-types-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/integration-types",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/integration-types",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1356,
+        "clientWidth": 1356,
+        "scrollHeight": 1196
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Integration types"
+        },
+        {
+          "level": "H2",
+          "text": "Allowed integration types"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_integration-types-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/integration-types",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/integration-types",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 380,
+        "clientWidth": 380,
+        "scrollHeight": 3582
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H1",
+          "text": "Integration types"
+        },
+        {
+          "level": "H2",
+          "text": "Allowed integration types"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": true
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 19,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_integration-types-dark-390x844.png"
+    },
+    {
+      "route": "/platform/data-protection",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/data-protection",
+      "signedOut": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H2",
+          "text": "Access unavailable"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 12,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_data-protection-dark-1440x900.png"
+    },
+    {
+      "route": "/platform/data-protection",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/data-protection",
+      "signedOut": false,
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "document": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H2",
+          "text": "Access unavailable"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 12,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_data-protection-dark-1366x768.png"
+    },
+    {
+      "route": "/platform/data-protection",
+      "theme": "dark",
+      "url": "http://platform.edu360.local:5173/platform/data-protection",
+      "signedOut": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844
+      },
+      "horizontalOverflow": false,
+      "headings": [
+        {
+          "level": "H2",
+          "text": "Access unavailable"
+        }
+      ],
+      "controlsMissingAccessibleName": [],
+      "unnamedButtons": [],
+      "imagesWithoutAlt": [],
+      "landmarks": {
+        "main": true,
+        "nav": true,
+        "banner": false
+      },
+      "themeInfo": {
+        "dataTheme": "dark",
+        "background": "rgb(20, 29, 27)",
+        "text": "rgb(237, 244, 239)"
+      },
+      "api": {
+        "total": 12,
+        "failed": [],
+        "repeated": []
+      },
+      "screenshot": "C:\\Users\\manoj.gowda\\Documents\\Personal project\\app\\playwright-report\\edu360-audit\\2026-11-19_23-43-52\\platform_data-protection-dark-390x844.png"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "url": "http://platform.edu360.local:5173/login",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "resource": "http://platform.edu360.local:5173/favicon.ico"
+    },
+    {
+      "url": "http://platform.edu360.local:5173/login",
+      "text": "Failed to load resource: the server responded with a status of 401 ()",
+      "resource": "http://platform.edu360.local:8080/api/auth/login"
+    }
+  ],
+  "pageErrors": [],
+  "failedRequests": []
+}

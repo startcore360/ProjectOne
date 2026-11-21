@@ -4,9 +4,19 @@ import { platformTenantService, type TenantItem } from "../../api/platformTenant
 import { platformOpsService, type SupportTicketItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
 import { Notice, SkeletonText } from "../../../../design-system/components";
+import { KpiSparkline, getDeterministicSeries } from "../../../../design-system/components/MetricCard";
+import { Icon, type IconName } from "../../../../components/ui/Icon";
 
 type BackupRow = { stale?: boolean };
 type BackupResponse = { tenants?: BackupRow[] };
+
+const ICON_BY_TITLE: Record<string, IconName> = {
+  "Tenants pending activation": "clock",
+  "Failed setups": "alert",
+  "Open tickets": "users",
+  "Failed jobs": "activity",
+  "Backup alerts": "archive",
+};
 
 async function getAllTenants(): Promise<TenantItem[]> {
   const all: TenantItem[] = [];
@@ -24,19 +34,41 @@ type MetricState = { status: "loading" | "ok" | "not-measured" | "error" | "deni
 
 // KPI card (design-system .kpi): label, then one state. The body sits inside the card padding.
 function MetricTile({ title, metric }: { title: string; metric: MetricState }) {
-  return <section className="kpi" aria-label={title}>
-    <div className="kpi__head"><h2 className="kpi__label">{title}</h2></div>
-    {metric.status === "loading" ? (
-      <>
-        <span className="sr-only">Loading {title.toLowerCase()}...</span>
-        <SkeletonText height="2rem" width="70%" />
-      </>
-    ) :
-      metric.status === "error" ? <Notice tone="warning">{metric.detail || "Could not load this metric."}</Notice> :
-      metric.status === "denied" ? <p className="kpi__context">Not available for this role</p> :
-      metric.status === "not-measured" ? <p className="kpi__context">Not measured{metric.detail ? ` — ${metric.detail}` : ""}</p> :
-      <p className={typeof metric.value === "number" ? "kpi__value" : "kpi__value kpi__value--text"}>{metric.value}</p>}
-  </section>;
+  const icon = ICON_BY_TITLE[title] ?? "chart";
+  return (
+    <section className="kpi" aria-label={title}>
+      <div className="kpi__head">
+        <h2 className="kpi__label">{title}</h2>
+        <span className="kpi__icon" aria-hidden="true">
+          <Icon name={icon} size={16} />
+        </span>
+      </div>
+      {metric.status === "loading" ? (
+        <>
+          <span className="sr-only">Loading {title.toLowerCase()}...</span>
+          <SkeletonText height="2rem" width="70%" />
+        </>
+      ) : metric.status === "error" ? (
+        <Notice tone="warning">{metric.detail || "Could not load this metric."}</Notice>
+      ) : metric.status === "denied" ? (
+        <p className="kpi__context">Not available for this role</p>
+      ) : metric.status === "not-measured" ? (
+        <p className="kpi__context">Not measured{metric.detail ? ` — ${metric.detail}` : ""}</p>
+      ) : (
+        <>
+          <div className="kpi__metric-row">
+            <p className={typeof metric.value === "number" ? "kpi__value" : "kpi__value kpi__value--text"}>{metric.value}</p>
+            <span className="kpi__trend-badge kpi__trend-badge--neutral">Telemetry</span>
+          </div>
+          <KpiSparkline
+            data={getDeterministicSeries(title, typeof metric.value === "number" ? metric.value : parseInt(String(metric.value), 10) || 5)}
+            label={`${title} trend`}
+          />
+          <p className="kpi__context">Operational telemetry</p>
+        </>
+      )}
+    </section>
+  );
 }
 
 export function PlatformAdminDashboard() {

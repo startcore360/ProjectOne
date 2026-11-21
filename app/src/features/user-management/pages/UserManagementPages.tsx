@@ -940,8 +940,10 @@ export function UserDetailPage() {
               fontFamily: "monospace",
               fontSize: "1.1rem",
               padding: "0.5rem",
-              borderRadius: "4px",
-              border: "1px solid var(--color-border, #cbd5e1)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--color-border-divider)",
+              backgroundColor: "var(--color-bg-surface)",
+              color: "var(--color-text)",
               width: "100%",
             }}
           />

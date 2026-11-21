@@ -52,6 +52,13 @@ public class PlatformTenantPlanChangeService {
   Plan target=planRepository.findById(request.planId()).orElseThrow(()->new ResourceNotFoundException("Target plan not found: "+request.planId()));
   if(!"ACTIVE".equals(target.getStatus())) throw new ApiException(HttpStatus.CONFLICT,"PLAN_NOT_ACTIVE","The selected plan is not active.");
   if(current.getPlanId().equals(target.getPlanId())) throw new ApiException(HttpStatus.CONFLICT,"PLAN_UNCHANGED","The tenant already uses this plan.");
+  if(request.effective()==PlanChangeEffective.NOW
+    &&("V2".equals(tenant.getSubscriptionEngineVersion())
+       ||"V2".equals(current.getPricingEngineVersion())
+       ||"V2".equals(target.getPricingEngineVersion()))) {
+   throw new ApiException(HttpStatus.CONFLICT,"V2_PLAN_CHANGE_REQUIRES_RENEWAL",
+    "V2 plan changes take effect at renewal so the new subscription price is billed for a complete term.");
+  }
   LocalDate today=LocalDate.now(BILLING_ZONE), renewal=tenant.getNextRenewalAt();
   if(renewal==null||!renewal.isAfter(today)) throw new ApiException(HttpStatus.CONFLICT,"RENEWAL_DATE_REQUIRED","A future renewal date is required for a plan change.");
 
@@ -77,6 +84,8 @@ public class PlatformTenantPlanChangeService {
    invoiceLineRepository.saveAndFlush(line);
    tenant.setPlanId(target.getPlanId());
    tenant.setPendingPlanId(null);
+   tenant.setSubscriptionEngineVersion(target.getPricingEngineVersion() == null
+    ? "LEGACY" : target.getPricingEngineVersion());
    proration=InvoiceResponse.fromEntity(saved);
   } else {
    if(invoiceRepository.existsByTenantIdAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(tenantId,renewal,renewal))

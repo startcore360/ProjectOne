@@ -64,13 +64,23 @@ export function CreatedCredentialsModal({
         {user.temporaryPassword && (
           <div
             style={{
-              padding: "12px",
-              backgroundColor: "var(--color-bg-muted, #f8fafc)",
-              borderRadius: "6px",
-              border: "1px dashed var(--color-border, #cbd5e1)",
+              padding: "14px 16px",
+              backgroundColor: "var(--color-bg-subtle)",
+              borderRadius: "var(--radius-md)",
+              border: "1px dashed var(--color-border-divider)",
             }}
           >
-            <label htmlFor="created-temp-password" style={{ display: "block", fontSize: "0.75rem", color: "var(--color-text-muted, #64748b)", marginBottom: "4px" }}>
+            <label
+              htmlFor="created-temp-password"
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: "var(--fw-semibold)",
+                color: "var(--color-text-muted)",
+                marginBottom: "6px",
+                letterSpacing: "0.04em",
+              }}
+            >
               ONE-TIME TEMPORARY PASSWORD
             </label>
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -83,16 +93,24 @@ export function CreatedCredentialsModal({
                   fontFamily: "monospace",
                   fontSize: "1.1rem",
                   padding: "0.5rem 0.75rem",
-                  borderRadius: "4px",
-                  border: "1px solid var(--color-border, #cbd5e1)",
-                  width: "100%",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--color-border-divider)",
+                  backgroundColor: "var(--color-bg-surface)",
+                  color: "var(--color-text)",
+                  flex: 1,
+                  minWidth: 0,
                 }}
               />
-              <Button type="button" variant="secondary" onClick={copyToClipboard}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={copyToClipboard}
+                style={{ whiteSpace: "nowrap", flexShrink: 0, minWidth: "76px" }}
+              >
                 {copied ? "Copied!" : "Copy"}
               </Button>
             </div>
-            <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "var(--color-text-secondary, #64748b)" }}>
+            <p style={{ marginTop: "8px", marginBottom: 0, fontSize: "0.8rem", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
               This temporary password will not be shown again. Securely share it with the user. They will be prompted to choose a new password on first sign-in.
             </p>
           </div>

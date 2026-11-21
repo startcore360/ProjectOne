@@ -20,6 +20,7 @@ export function SearchBox({
       </span>
       <span className="visually-hidden">Search</span>
       <input
+        className="app-search__input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

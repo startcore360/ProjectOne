@@ -39,9 +39,6 @@ Thumbs.db
 # Private/local documentation — do not commit project docs
 # /docs/   (temporarily un-ignored so agents on sprint-2-development get the plan and spec)
 
-# Generated Graphify index can contain copied source excerpts; do not commit it.
-/graphify-out/cache/stat-index.json
-
 # Local test scripts and outputs (contain live tokens); never commit.
 /scratch/
 

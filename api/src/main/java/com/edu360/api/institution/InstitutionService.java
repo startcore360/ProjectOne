@@ -74,6 +74,9 @@ public class InstitutionService {
     @Autowired(required = false)
     private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
 
+    @Autowired(required = false)
+    private com.edu360.api.platformops.TenantQuotaService tenantQuotaService;
+
     public InstitutionService(
             InstitutionRepository institutionRepository,
             LeaveApproverSettingRepository leaveApproverSettingRepository,
@@ -121,7 +124,11 @@ public class InstitutionService {
         UUID tenantId = principal.tenantId();
 
         // 2. Enforce Plan Limits (WF-14)
-        enforcePlanLimits(tenantId);
+        if (tenantQuotaService != null) {
+            tenantQuotaService.checkInstitutionCapacity(tenantId, request.institutionType());
+        } else {
+            enforcePlanLimits(tenantId);
+        }
 
         // 3. Enforce Uniqueness
         String code = request.institutionCode().trim().toUpperCase();

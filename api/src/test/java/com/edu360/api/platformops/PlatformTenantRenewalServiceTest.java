@@ -23,12 +23,14 @@ class PlatformTenantRenewalServiceTest {
    .createdAt(Instant.now()).createdBy(UUID.randomUUID()).updatedAt(Instant.now()).updatedBy(UUID.randomUUID()).build();
   when(tenants.findByStateAndNextRenewalAtLessThanEqual(TenantState.ACTIVE,renewalAt)).thenReturn(List.of(tenant));
   when(invoices.existsByTenantIdAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(tenantId,renewalAt,renewalAt)).thenReturn(true);
-  when(plans.findById(newPlanId)).thenReturn(Optional.of(Plan.builder().planId(newPlanId).billingCycleMonths(12).status("ACTIVE").build()));
+  when(plans.findById(newPlanId)).thenReturn(Optional.of(Plan.builder().planId(newPlanId).billingCycleMonths(12)
+   .pricingEngineVersion("V2").status("ACTIVE").build()));
   when(tenants.save(any(Tenant.class))).thenAnswer(inv->inv.getArgument(0));
  }
  @Test void ACT_RENEWAL_JOB_ALLOW_appliesPendingPlanAfterInvoiceAndAdvancesDate() {
   assertThat(service.processDueRenewals(renewalAt)).isEqualTo(1); assertThat(tenant.getPlanId()).isEqualTo(newPlanId);
   assertThat(tenant.getPendingPlanId()).isNull(); assertThat(tenant.getNextRenewalAt()).isEqualTo(renewalAt.plusMonths(12));
+  assertThat(tenant.getSubscriptionEngineVersion()).isEqualTo("V2");
   assertThat(tenant.getUpdatedBy()).isEqualTo(new UUID(0L,0L)); verify(tenants).save(tenant);
  }
  @Test void ACT_RENEWAL_JOB_GUARD_doesNotApplyBeforeRenewalInvoiceExists() {

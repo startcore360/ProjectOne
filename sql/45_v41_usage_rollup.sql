@@ -12,7 +12,12 @@ END $$;
 ALTER TABLE platform.tenant_usage_monthly ADD COLUMN IF NOT EXISTS measured boolean NOT NULL DEFAULT true;
 ALTER TABLE platform.tenant_usage_monthly DROP CONSTRAINT IF EXISTS ck_tenant_usage_monthly_metric_code;
 ALTER TABLE platform.tenant_usage_monthly ADD CONSTRAINT ck_tenant_usage_monthly_metric_code
-CHECK (metric_code IN ('SMS_SENT','STORAGE_GB_PEAK','ACTIVE_USERS_PEAK','API_CALLS','LOGINS','ATTENDANCE_MARKED','FEES_PAID_ONLINE','STORAGE_GB','ACTIVE_USERS'));
+CHECK (metric_code IN (
+    'SMS_SENT', 'STORAGE_GB_PEAK', 'ACTIVE_USERS_PEAK', 'API_CALLS', 'LOGINS',
+    'ATTENDANCE_MARKED', 'FEES_PAID_ONLINE', 'STORAGE_GB', 'ACTIVE_USERS',
+    'ACTIVE_STUDENTS', 'ACTIVE_STAFF', 'ACTIVE_COLLEGES', 'ACTIVE_SCHOOLS',
+    'BILLABLE_ACTIVE_STUDENTS'
+));
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tenant_usage_monthly_tenant_month_metric ON platform.tenant_usage_monthly(tenant_id,usage_month,metric_code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_usage_metric_daily_date_metric ON platform.usage_metric_daily(usage_date,metric_code);
 COMMENT ON COLUMN platform.tenant_usage_monthly.measured IS
