@@ -23,6 +23,30 @@ numeric discrepancies between the spec's own sources (e.g. a 79-vs-97 test-count
 206-vs-208-table count disagreement, a 29-vs-30 module-count disagreement within the same file) —
 don't silently resolve those if asked for exact figures; cite them as open discrepancies.
 
+## Completion Plans and Multi-Agent Execution Prompts
+
+Implementation is governed by two master completion plans and their corresponding autonomous agent execution prompt suites:
+
+### 1. SaaS Platform Control Plane
+- **Master Plan:** [`docs/PLATFORM_COMPLETION_PLAN.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/PLATFORM_COMPLETION_PLAN.md) (Epics E0–E11, 98.5% Complete)
+- **Platform Agent Prompts:** [`docs/agent-prompts/`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/agent-prompts/) (`A1` to `A8`)
+
+### 2. Tenant Application (Educational ERP)
+- **Master Plan:** [`docs/TENANT_COMPLETION_PLAN.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/TENANT_COMPLETION_PLAN.md) (All 21 Phase 1 Modules, 236 Actions, 48 Approval Processes, 71 Roles)
+- **Target Branch:** **`sprint-3-development`** (all tenant work must branch from and push to this branch)
+- **Tenant Agent Prompts Suite ([`docs/tenant-agent-prompts/`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/)):**
+  - [`README.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/README.md) — Master Execution Index, Dependency Graph & Migration Ranges (55–74)
+  - [`T1-foundation-term-lock-and-rolldown.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T1-foundation-term-lock-and-rolldown.md) — Foundations, Term Lock Engine, Roll-Down Revocation Rule (RD-G8), Native Form CSS Fixes (Migrations 55, 56)
+  - [`T2-academic-hierarchy-and-departments.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T2-academic-hierarchy-and-departments.md) — Multi-Institution Hierarchy, Academic Terms, Departments, Programs, Executive Override PO-T06 (Migrations 57, 58)
+  - [`T3-staff-hr-leaves-and-appraisals.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T3-staff-hr-leaves-and-appraisals.md) — Staff Service Book, Credential Verification, Leaves, Delegations D-001, KPI Appraisals (Migrations 59, 60)
+  - [`T4-student-information-system-sis.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T4-student-information-system-sis.md) — SIS Master Directory, Guardians, Immutable Notes (`fn_note_guard`), Legal Holds (Migrations 61, 62)
+  - [`T5-admissions-merit-and-enrollment.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T5-admissions-merit-and-enrollment.md) — Admissions Intake, Scrutiny, Quota Reservations, Non-Delegable Merit Approval C12 (Migrations 63, 64)
+  - [`T6-timetable-and-attendance-engine.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T6-timetable-and-attendance-engine.md) — Timetable GiST Exclusion Constraints, Daily/Period Attendance, Medical Exemption, Configurable Gate PO-T02 (Migrations 65, 66)
+  - [`T7-assignments-examinations-and-grading.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T7-assignments-examinations-and-grading.md) — Homework, Exam Schedules, Moderation, SGPA/CGPA Formulas, Customizable Scales PO-T01, Publish Gate (Migrations 67, 68)
+  - [`T8-fee-structure-invoicing-and-payments.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T8-fee-structure-invoicing-and-payments.md) — Fee Structures, Quota Invoicing, Late Fine Cron PO-T03, Concession Approvals PO-T04, Payment Webhooks (Migrations 69, 70)
+  - [`T9-id-cards-certificates-and-grievances.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T9-id-cards-certificates-and-grievances.md) — ID Cards, Transfer/Bonafide Certificates (No-Dues), Confidential Grievances `fn_complaint_guard` PO-T05 (Migrations 71, 72)
+  - [`T10-communications-library-and-transport.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/T10-communications-library-and-transport.md) — Circulars, Multi-Channel Messaging, Library Fines, Transport Routes, Executive Analytics via `edu_report` (Migrations 73, 74)
+
 ## How to work in this repository (mandatory)
 
 ### Act as a senior team, not a code generator

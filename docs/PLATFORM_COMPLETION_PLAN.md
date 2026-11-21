@@ -3,6 +3,7 @@
 **Status:** approved scope for building the platform side to 100% — screens, backend, database, tests and production readiness.
 **Written:** 2026-11-16, from a line-by-line comparison of the code on `manoj_feature` against D1 §7.13/§8.20/§10.2/§11/§26.24, D2 (Data, Open Decisions), D3 (Role Catalogue, Scoped Letters), D4 (platform schema, §2.4), D5 (46 `x-kind: PLATFORM` operations), D6 (E2E-001/033/035, ACT-* tests), D7 (flows 02, 12, 14, 15, 18), D8 (Security Controls), `GOVERNANCE_DECISION_LOG.md` (TPA-01..05, SES-01), `TOP_POST_AUTHORITY_RULES.md` and `docker/PRODUCTION_TENANT_ROUTING.txt`.
 **Authority order (D1 V4-2.1):** Product Owner decisions → D1 Part II with D2/D3 → D4/D5 → D7/D9/D10. Where this plan deviates from a deliverable, the deviation is named and the decision it rests on is cited.
+**Companion Plan & Tenant Agent Prompts:** See [`docs/TENANT_COMPLETION_PLAN.md`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/TENANT_COMPLETION_PLAN.md) and [`docs/tenant-agent-prompts/`](file:///c:/Users/manoj.gowda/Documents/Personal%20project/docs/tenant-agent-prompts/) (Prompts `T1` through `T10` on branch `sprint-3-development`) for the complete educational ERP tenant completion plan.
 **How to use:** build epics in order E0 → E11. Every story has a backend, frontend, database and test section; a story is *done* only when all four pass and the acceptance criteria are demonstrated on the local stack. Follow `CLAUDE.md` (brief → approval → build → validate) for every story.
 
 ---
