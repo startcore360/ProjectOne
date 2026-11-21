@@ -15,8 +15,8 @@ Your acceptance criteria are **every bullet, rule, and table cell for these stor
 | ID | Action Code(s) | What | Plan Section |
 |---|---|---|---|
 | **T8-S1** | `ACT-088`..`ACT-092` | Fee Head & Structure Configuration: fee categories (Tuition, Lab, Library, Exam, Transport), program-level structures, quota variants (Merit, General, Management), and installment frequency. | §7.8 |
-| **T8-S2** | `ACT-093`..`ACT-097` | Installment Invoicing & Automated Late Fine Engine: bulk invoice generation for enrolled students, installment due dates, and scheduled cron engine accruing daily/fixed late fines past grace period. | §7.8 |
-| **T8-S3** | `ACT-098`..`ACT-101` | Fee Concession & Scholarship Workflow: 2-step financial approval chain (Accountant review $\rightarrow$ Principal/Management signoff) with statutory concession audit ledger. | §7.8 |
+| **T8-S2** | `ACT-093`..`ACT-097` | Installment Invoicing & Automated Late Fine Engine: bulk invoice generation for enrolled students, installment due dates, and customizable late fine policy (Decision PO-T03: configurable grace days, flat daily or monthly percentage, fine caps). | §7.8 |
+| **T8-S3** | `ACT-098`..`ACT-101` | Fee Concession & Scholarship Workflow: Approval hierarchy (Decision PO-T04: Management/Trustee first; rolls down to Principal if Management unassigned) with statutory concession audit ledger. | §7.8 |
 | **T8-S4** | `ACT-102`..`ACT-105` | Online Payment Integration & HMAC Webhooks: student checkout modal (Razorpay / Stripe), HMAC-SHA256 signature verification in webhook controller, and idempotent invoice reconciliation. | §7.8 |
 | **T8-S5** | `ACT-106`..`ACT-109` | Offline Payments, Refunds & Receipts: counter payment collection (Cash, DD, Cheque), partial payments, refund disbursements, and PDF receipt generation. | §7.8 |
 

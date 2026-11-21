@@ -36,6 +36,21 @@ A comprehensive audit of the codebase reveals a distinct bifurcation between the
 4. **Append-Only Immutable Audit Trail:** Every mutating API call records an immutable event to `app.audit_outbox` within the same database transaction.
 5. **Full Subscription & Commercial Flexibility:** Comprehensive support for Per-Student, Flat, Per-Module, Add-on, and custom institutional Combo Packages (e.g. University Groups, Multi-Campus Colleges, K-12 School Networks) with capacity limit enforcement and usage metering.
 
+### 1.4 Implementation Reality vs Target Specification Matrix (REV-01)
+As mandated by `CLAUDE.md`, this plan explicitly distinguishes between the **current implementation reality** and the **V4.0 target-state specifications**:
+- The current application is an enterprise **Spring Boot 3.4.3 / Java 21 modular monolith** deployed with PostgreSQL 16 and Keycloak.
+- The 10 V4.0 specification deliverables (`docs/EDU360_V4.0_Final/`) define target-state functional rules, contracts, and aspirational multi-service boundaries.
+- This plan directs the **functional and architectural completion of the modular monolith** toward full V4.0 compliance, without presuming that microservices are running today.
+
+| Architectural Dimension | Current Implemented Reality (Codebase Baseline) | V4.0 Target-State Specification (Aspirational Design) | Completion Plan Role & Execution Path |
+|---|---|---|---|
+| **Deployment Architecture** | Single Spring Boot 3 modular monolith (`api/`), Vite/React 19 SPA (`app/`), single PostgreSQL database (`sql/`). | Distributed multi-service architecture with decoupled domain microservices and independent databases. | **Retains the modular monolith.** Implements all functional domains within cleanly separated Spring module packages under `com.edu360.api.*`. |
+| **Data Isolation & Multi-Tenancy** | Shared PostgreSQL database enforcing Row-Level Security (RLS) via GUCs (`app.tenant_id`, `app.institution_id`). | Isolated database per tenant option (V4-TE-01 / E10-S9) alongside shared RLS pools. | **Enforces Shared RLS (Decision PD-8).** `ISOLATED` mode returns HTTP 422 until E10-S9. All 160 `app.*` tables enforce `p_tenant` and `p_institution`. |
+| **Identity & Authentication** | Keycloak v24+ with single realm / multi-client integration, JWT Bearer tokens with active role claims. | Dynamic Keycloak realm-per-tenant broker with automated federated SAML/OIDC enterprise directories. | **Builds automated provisioning of tenant realms** via `TenantProvisioningService` (Step P04/P05). Active role claim enforced without permission merging. |
+| **Role & Authorization Model** | Imperative service-level checks (`PermissionEvaluatorService`), initial role seed, role assignment tables. | 71 discrete standard roles across Levels 2–6, 182 seeded roll-down fallbacks, scoped letters (`O, D, C, S, U, T, A`). | **Executes full 71-role matrix and Roll-Down Engine (V4-PD-01)** walking `ref.role_rolldown_default` and `app.role_rolldown_override`. |
+| **Asynchronous & Scheduled Tasks** | Spring `@Scheduled` tasks and thread pools (`ThreadPoolTaskScheduler`, `LateFeeCalculationScheduler`). | Dedicated distributed job queue / event broker (Kafka / RabbitMQ) for background workers. | **Maintains Spring-managed transactional schedulers** for term auto-relocks, late fines, and audit log shipping (`edu_shipper`). |
+| **Testing & Verification** | 1,190 Java `@Test`s passing, 441 Vitest tests passing, Spring Boot slice tests (`*IT`) on real Postgres. | Comprehensive 97-scenario database test suite (DB-01–DB-97) and end-to-end Playwright journeys (E2E-001–037). | **Expands existing Spring/Vitest suites** to achieve 100% coverage across ACT-* permission slices and DB-01..97 constraints. |
+
 ---
 
 ## 2. Project Context and Objectives
@@ -492,12 +507,46 @@ In strict accordance with the project owner's commercial specifications (preserv
 | **Per-Student Annual** | Any Institution | Dynamic capacity based on actual enrolled student count snapshot | ₹60 / student / year (min 500 students) | Monthly active student count reconciliation |
 | **Enterprise Custom** | Multi-State Education Trust | Unlimited Institutions, custom student/staff caps, dedicated DB isolation option (E10-S9) | Custom Quote / Annual Contract | Dedicated support SLA, custom integrations |
 
-### 14.3 Capacity Limits vs Billable Usage Snapshots
-- **Hard Capacity Limits:** Prevent system overuse (`max_institutions`, `max_students`, `max_staff`, `storage_gigabytes`). When reached, new creations fail with HTTP 422 `PLAN_CAPACITY_EXCEEDED`.
-- **Metered Usage Billing (OD-73 Resolution):**
-  - Carrier SMS dispatches tracked in `platform.tenant_usage_monthly` (metric code `SMS_SENT`).
-  - Cloud file storage tracked in `platform.tenant_usage_monthly` (metric code `STORAGE_GB`).
-  - Monthly automated billing cycle consolidates Plan Base Price + Overage Units into a single `platform.invoice`.
+### 14.3 Capacity Limits vs Billable Usage Snapshots (OD-73 Alignment - REV-02)
+- **Hard Capacity Limits:** Prevent system overuse (`max_colleges`, `max_schools`, `max_students`, `max_staff`, `storage_gigabytes`). Enforced at the service boundary during creation workflows; when limits are exceeded, operations reject with HTTP 422 `PLAN_CAPACITY_EXCEEDED`.
+- **Metered Usage Billing & Decision OD-73 Status:**
+  - **Status of OD-73:** **OPEN.** As established in `PLATFORM_COMPLETION_PLAN.md` (§0.4) and `GOVERNANCE_DECISION_LOG.md`, the commercial unit tariff rates for billable carrier SMS and storage overages remain an open Product Owner decision.
+  - **Structural Implementation:** The architectural mechanism is fully established:
+    - Carrier SMS dispatches are tracked in `platform.tenant_usage_monthly` (metric code `SMS_SENT`).
+    - Cloud file storage volume is snapshot monthly into `platform.tenant_usage_monthly` (metric code `STORAGE_GB`).
+    - The billing cycle engine reads actual measured rows from `platform.tenant_usage_monthly`. Tenants with recorded usage rows receive corresponding invoice line items; tenants with zero recorded rows get plan base lines only.
+    - When the Product Owner finalizes tariff rates (closing OD-73), the rates will be populated into `platform.plan.usage_rate_sms` and `platform.plan.usage_rate_storage_gb` without any code redesign.
+
+### 14.4 Platform Commercial Integration & Tenant Entitlement Consumption (REV-08)
+The tenant application does not duplicate subscription logic; instead, it directly consumes the rich commercial engine delivered by **`sql/54_v41_subscription_commercial_engine.sql`**:
+
+```mermaid
+graph LR
+    subgraph "Platform Commercial Engine (Migration 54)"
+        Plan["platform.plan<br>• pricing_type (COMBO, CUSTOM, etc.)<br>• max_colleges / max_schools<br>• max_students / max_staff<br>• setup_fee_amount / grace_period_days"]
+        TenantSub["platform.tenant<br>• max_students / max_staff<br>• max_colleges / max_schools<br>• contract_end_at / renewal_mode"]
+        Addon["platform.tenant_subscription_addon<br>• addon_type (MODULE, CAPACITY)<br>• module_code / quantity"]
+    end
+
+    subgraph "Tenant Runtime Consumption (TenantSubscriptionService)"
+        Guard["Enforcement Guards:<br>1. fn_institution_capacity_guard<br>2. fn_student_capacity_guard<br>3. fn_staff_capacity_guard<br>4. Module Entitlement Check"]
+    end
+
+    Plan --> TenantSub
+    Addon --> TenantSub
+    TenantSub --> Guard
+```
+
+1. **Schema Integration from Migration 54:**
+   - **Plan Pricing Types:** Evaluates `pricing_type IN ('PER_STUDENT_YEAR', 'FLAT', 'PER_MODULE', 'COMBO', 'CUSTOM')`.
+   - **Capacity Quotas:** Directly reads `max_colleges`, `max_schools`, `max_students`, and `max_staff` stored on `platform.tenant` (overridden or inherited from `platform.plan`).
+   - **Purchased Add-Ons:** Queries `platform.tenant_subscription_addon` for active add-on rows (`status = 'ACTIVE'`) covering optional modules (e.g. `LIBRARY`, `TRANSPORT`) and capacity extensions.
+2. **Tenant Runtime Consumption Pattern:**
+   - `TenantSubscriptionService.java` resolves tenant subscription status upon request initialization (cached with Caffeine for high throughput).
+   - **Institution Creation Guard (M03):** Before creating a new constituent College or School, validates current active count against `tenant.max_colleges` or `tenant.max_schools`. Exceeding returns HTTP 422 `INSTITUTION_CAPACITY_EXCEEDED`.
+   - **Student Enrollment Guard (M14 / M15):** Admissions conversion (`ACT-186`) and SIS creation (`ACT-162`) verify active enrolled count against `tenant.max_students`. Exceeding returns HTTP 422 `STUDENT_CAPACITY_EXCEEDED`.
+   - **Staff Onboarding Guard (M11):** Staff creation (`ACT-123`) verifies active staff count against `tenant.max_staff`. Exceeding returns HTTP 422 `STAFF_CAPACITY_EXCEEDED`.
+   - **Module Activation Guard:** Tenant routes and API endpoints verify that requested modules are enabled in `platform.tenant_entitlement` or active via `platform.tenant_subscription_addon`. Attempting to access an unpurchased module returns HTTP 403 `MODULE_NOT_ENTITLED`.
 
 ---
 
@@ -643,8 +692,14 @@ A deep inspection of the current UI components revealed subtle rendering defects
 ### 25.1 Summary of Open & Resolved Decisions
 - **OD-03 (Institution Scope):** RESOLVED. Colleges and schools enforce strict `institution_id` filtering; only tenant-wide governance roles use `ALL`.
 - **OD-09 (Audit Strategy):** RESOLVED. Immutable append-only audit outbox within transaction.
-- **OD-73 (Usage Billing Rates):** RESOLVED. Standard flat rate for carrier SMS and cloud storage overages integrated into monthly invoice generation.
+- **OD-73 (Usage Billing Rates):** OPEN. The architectural mechanism for capturing usage metrics (`platform.tenant_usage_monthly`) and consolidating them into `platform.invoice` via Migration 54 is implemented; however, final production tariff rates per SMS and storage GB remain open pending Product Owner sign-off (non-blocking for tenant feature execution).
 - **V4-PD-01 (Roll-Down Engine):** RESOLVED. GBA roll-down authority is active only when no `MANAGEMENT` assignment exists (RD-G8).
+- **PO-T01 (Hierarchical Grade Scales — Decided 2026-11-21):** APPROVED. Fully customizable grade scales across the institutional hierarchy (Tenant -> University -> College -> School -> Department). Pre-seeded defaults provided out-of-the-box; lower levels inherit or configure custom grade boundaries, letters, and point values.
+- **PO-T02 (Configurable Attendance Exam Gate — Decided 2026-11-21):** APPROVED. Exam hall ticket eligibility threshold is not hardcoded; it is configurable per institution and per department in settings (with medical exemption adjustments applied).
+- **PO-T03 (Customizable Late Fee Policies — Decided 2026-11-21):** APPROVED. Late fee rules are fully customizable per fee structure/institution: configurable grace period days, calculation mode (`FLAT_DAILY`, `PERCENTAGE_MONTHLY`, `NONE`), and fine cap limits.
+- **PO-T04 (Fee Concession Approval Hierarchy — Decided 2026-11-21):** APPROVED. Primary approval authority for all fee discounts and scholarships belongs to Management / Trustees. If Management is not assigned, authority rolls down to the Principal and designated financial approvers.
+- **PO-T05 (Confidential Grievance Privacy — Decided 2026-11-21):** APPROVED. Strict privacy enforced via `fn_complaint_guard` and RLS. Only the Internal Complaints Committee (ICC) and Principal can view cases; accused faculty and their immediate HOD are strictly barred from viewing to prevent bias.
+- **PO-T06 (Delegated Autonomy with Executive Override — Decided 2026-11-21):** APPROVED. Constituent College and School Principals operate autonomously for daily academic schedules, internal examinations, and student admissions without requiring central approval for routine operations. However, the University Head (Vice-Chancellor / Registrar / Management) holds supreme supervisory authority and can execute an "Executive Override" on any affiliated institution's decision whenever required, provided a mandatory rationale (minimum 20 characters) is entered and recorded in `app.audit_outbox`.
 
 
 ---

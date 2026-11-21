@@ -18,7 +18,7 @@ Your acceptance criteria are **every bullet, rule, and table cell for these stor
 | **T9-S2** | `ACT-116`..`ACT-122` | Official Certificates & Document Verification: Transfer Certificates (TC), Bonafide, Conduct certificates; automated No-Dues clearance check across Library, Fees, and Dept. | §7.10 |
 | **T9-S3** | `ACT-121`, `ACT-122` | Public Certificate Verification: public lightweight endpoint (`/verify-certificate/{code}`) validating authenticity via cryptographic QR hash without authentication. | §7.10 |
 | **T9-S4** | `ACT-187`..`ACT-191` | Disciplinary Tracking & Case Management: incident recording, evidence upload, hearing notices, disciplinary committee minutes, and penalty issuance. | §7.16 |
-| **T9-S5** | `ACT-192`..`ACT-195` | Confidential Grievance Gate (`fn_complaint_guard`): anonymous/named grievance submission; database gate preventing accused faculty or staff from discovering or viewing tickets naming them. | §7.16 |
+| **T9-S5** | `ACT-192`..`ACT-195` | Confidential Grievance Gate (`fn_complaint_guard`): anonymous/named grievance submission; database gate enforcing Decision PO-T05: only Internal Complaints Committee (ICC) and Principal can view cases; accused faculty and immediate HOD are strictly barred from viewing to prevent bias. | §7.16 |
 
 ---
 

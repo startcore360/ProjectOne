@@ -30,8 +30,13 @@ Your acceptance criteria are **every bullet, rule, and table cell for these stor
   - `InstitutionController.java`: `GET /api/institutions`, `POST /api/institutions`, `GET /api/institutions/{id}`, `PUT /api/institutions/{id}`.
   - Validate that standalone colleges/schools have `parent_institution_id = NULL`, while university colleges link to the university institution.
   - Enforce `RESTRICTIVE` RLS policy `p_institution` ensuring college users see only their institution records.
+  - **Decision PO-T06 (Delegated Autonomy with Executive Override):**
+    - Constituent colleges operate autonomously for daily academic schedules and internal evaluations.
+    - Implement `POST /api/institutions/{id}/override` allowing University officers (`VICE_CHANCELLOR`, `REGISTRAR`, `MANAGEMENT`) to execute an executive override on any affiliated institution's decision.
+    - Requires mandatory `overrideReason` (min 20 characters) and records an immutable audit record in `app.audit_outbox` with before/after state payloads.
 - **Frontend:**
   - `InstitutionHierarchyView.tsx`: Interactive tree viewer rendering University $\rightarrow$ Constituent Colleges $\rightarrow$ Departments.
+  - Add "Executive Override" action button visible strictly to University executive roles, triggering an override confirmation modal with mandatory rationale input.
 
 #### Story T2-S2: Academic Calendar & Term Configuration
 - **Database Tables:** `app.academic_year` (`id`, `tenant_id`, `institution_id`, `name`, `start_date`, `end_date`, `is_current`), `app.term` (`id`, `academic_year_id`, `name`, `term_number`, `start_date`, `end_date`, `is_locked`).

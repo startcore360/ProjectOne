@@ -18,7 +18,7 @@ Your acceptance criteria are **every bullet, rule, and table cell for these stor
 | **T7-S2** | `ACT-066`..`ACT-072` | Exam Cycle & Schedule Management: exam types (Internal, Mid-term, Final Semester), exam timetable, hall allocation, and invigilator assignment. | §7.7 |
 | **T7-S3** | `ACT-073`..`ACT-075` | Hall Ticket Generation & Attendance Gate: verify student meets minimum 75% adjusted attendance (via Chat T6) before issuing downloadable cryptographic hall tickets. | §7.7 |
 | **T7-S4** | `ACT-076`..`ACT-080` | Marks Capture, Moderation & Term Lock: faculty marks sheet, two-tier moderation workflow (Course Teacher $\rightarrow$ External Examiner), and Term Lock blocking edits with 409 `TERM_LOCKED`. | §7.7 |
-| **T7-S5** | `ACT-081`..`ACT-087` | SGPA/CGPA Compilation & Publish Gate: automated SGPA and CGPA weighted formulas (§20.1–§20.3); enforce **`fn_publish_gate`** blocking publication if fee dues exceed threshold or moderation is pending. | §7.7 |
+| **T7-S5** | `ACT-081`..`ACT-087` | SGPA/CGPA Compilation & Publish Gate: automated SGPA and CGPA weighted formulas (§20.1–§20.3) using hierarchical customizable grade scales (Decision PO-T01); enforce **`fn_publish_gate`** blocking publication if fee dues exceed threshold or moderation is pending. | §7.7 |
 
 ---
 

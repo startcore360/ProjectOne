@@ -18,7 +18,7 @@ Your acceptance criteria are **every bullet, rule, and table cell for these stor
 | **T6-S2** | `ACT-042`..`ACT-044` | Online Class Sessions: schedule virtual lecture links (Zoom, Google Meet, Teams) with automated cryptographic session tokens and student access logs. | §7.4 |
 | **T6-S3** | `ACT-045`..`ACT-049` | Attendance Capture (Daily & Period): faculty attendance entry sheet (Present, Absent, Late, Excused), mobile-first quick toggles, and bulk submission API. | §7.5 |
 | **T6-S4** | `ACT-050`..`ACT-052` | Medical Exemption & Adjusted Attendance (§20.4): student medical exemption request submission, doctor certificate attachment, and automated recalculation of adjusted attendance %. | §7.5 |
-| **T6-S5** | `ACT-053`, `ACT-054` | Term Lock & Attendance Gates: verify **`is_term_locked()`** rejecting attendance edits on locked terms with HTTP 409 `TERM_LOCKED`; attendance threshold gate (75%) for exam eligibility. | §7.5 |
+| **T6-S5** | `ACT-053`, `ACT-054` | Term Lock & Attendance Gates: verify **`is_term_locked()`** rejecting attendance edits on locked terms with HTTP 409 `TERM_LOCKED`; configurable attendance threshold gate per institution/department (Decision PO-T02) for exam eligibility. | §7.5 |
 
 ---
 
