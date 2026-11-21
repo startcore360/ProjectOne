@@ -5,6 +5,10 @@ This directory contains the complete multi-agent execution prompt suite for taki
 It mirrors and expands upon the platform prompt structure in \`docs/agent-prompts/\`, dividing all 21 Phase 1 modules, all 236 Phase 1 actions, and all 48 approval processes into **10 autonomous, highly detailed agent chat prompts (T1 to T10)**.
 
 ---
+> [!IMPORTANT]
+> **Target Development Branch: `sprint-3-development`**  
+> All agents, subagents, and developers working on prompts T1 through T10 must branch from and push their pull requests / commits directly to **`sprint-3-development`**.
+
 
 ## 1. Prompt Inventory & Module Mapping
 

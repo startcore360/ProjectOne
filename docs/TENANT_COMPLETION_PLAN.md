@@ -2,6 +2,7 @@
 
 **Status:** Authoritative, fully detailed engineering blueprint for taking the EDU 360 Tenant Application (Educational ERP) to 100% completion across all 21 Phase 1 modules, all institutional levels (Levels 2–6), all 236 Phase 1 Actions, all 48 approval processes, and all database/API contracts.  
 **File Path:** `docs/TENANT_COMPLETION_PLAN.md`  
+**Target Branch:** `sprint-3-development` (all tenant work branches from and pushes to this branch)  
 **Companion File:** `docs/PLATFORM_COMPLETION_PLAN.md` (Platform SaaS Control Plane counterpart)  
 **Written:** 2026-11-21, from a line-by-line audit of source code across `api/`, `app/`, and `sql/` against the complete 10-deliverable specification suite under `docs/EDU360_V4.0_Final/`, `CLAUDE.md`, and `docs/GOVERNANCE_DECISION_LOG.md`.  
 **Authority Order (D1 §V4-2.1 / CLAUDE.md):**
@@ -161,7 +162,7 @@ Every mutating operation in the tenant domain writes an audit record in the **sa
 ## 5. Existing System Analysis
 
 ### 5.1 Codebase Audit Metrics
-A rigorous technical inspection of the repository on branch `manoj_feature` reveals:
+A rigorous technical inspection of the repository on branch `sprint-3-development` reveals:
 - **Backend (`api/`):**
   - **731 Java source files** organized under `com.edu360.api`.
   - **77 Spring `@RestController` classes** implementing platform and tenant endpoints.
