@@ -41,6 +41,8 @@ run edu360_v4_test 55_v41_term_lock_engine.sql > /dev/null
 run edu360_v4_test 56_v41_rolldown_management_revocation.sql > /dev/null
 run edu360_v4_test 57_v41_academic_hierarchy_constraints.sql > /dev/null
 run edu360_v4_test 58_v41_department_program_section_schema.sql > /dev/null
+run edu360_v4_test 61_v41_student_profile_and_guardians.sql > /dev/null
+run edu360_v4_test 62_v41_student_notes_and_legal_holds.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/57_58_migration_smoke_tests.sql" > /dev/null
 run edu360_v4_test 59_v41_staff_qualification_and_leave_indexes.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/59t_tests_staff_qualification_and_leave.sql" > /dev/null
@@ -94,6 +96,8 @@ run edu360_v4_ref 55_v41_term_lock_engine.sql > /dev/null
 run edu360_v4_ref 56_v41_rolldown_management_revocation.sql > /dev/null
 run edu360_v4_ref 57_v41_academic_hierarchy_constraints.sql > /dev/null
 run edu360_v4_ref 58_v41_department_program_section_schema.sql > /dev/null
+run edu360_v4_ref 61_v41_student_profile_and_guardians.sql > /dev/null
+run edu360_v4_ref 62_v41_student_notes_and_legal_holds.sql > /dev/null
 run edu360_v4_ref 59_v41_staff_qualification_and_leave_indexes.sql > /dev/null
 run edu360_v4_ref 60_v41_leave_delegation.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/59t_tests_staff_qualification_and_leave.sql" > /dev/null
