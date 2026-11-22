@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
@@ -8,8 +8,8 @@ type Cycle={id:string;cycle_name:string;status:string;start_date:string;end_date
 export default function AdmissionCyclesPage(){
  const tenantId=useAppSelector(s=>s.auth.user?.tenantId);
  const [rows,setRows]=useState<Cycle[]>([]),[institutionId,setInstitutionId]=useState(""),[academicYearId,setAcademicYearId]=useState(""),[programId,setProgramId]=useState(""),[name,setName]=useState(""),[start,setStart]=useState(""),[end,setEnd]=useState(""),[seats,setSeats]=useState(""),[fee,setFee]=useState("0"),[busy,setBusy]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState("");
- const load=async()=>{if(!tenantId)return;try{const r=await api.get(`/tenants/${tenantId}/admissions/cycles`);setRows(r.data);}catch(e){setError(getApiErrorMessage(e));}};
- useEffect(()=>{void load();},[tenantId]);
+ const load=useCallback(async()=>{if(!tenantId)return;try{const r=await api.get(`/tenants/${tenantId}/admissions/cycles`);setRows(r.data);}catch(e){setError(getApiErrorMessage(e));}},[tenantId]);
+ useEffect(()=>{void load();},[load]);
  const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError("");setSuccess("");try{await api.post(`/tenants/${tenantId}/admissions/cycles`,{institutionId,academicYearId,programId,cycleName:name,startDate:start,endDate:end,totalSeats:Number(seats),applicationFee:Number(fee)});setSuccess("Admission cycle created.");setName("");await load();}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
  return <div className="app-page"><PageHeader title="Admission cycles" description="Configure program intake windows, application fees and seat capacity."/>
  {error&&<Notice tone="danger">{error}</Notice>}{success&&<Notice tone="success">{success}</Notice>}
