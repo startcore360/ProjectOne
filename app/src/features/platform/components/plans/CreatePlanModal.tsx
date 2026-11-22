@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useMemo, useState, type FormEvent } from "react";
 import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import type { CommercialCatalogItemDto, PlanComponentDraft } from "../../api/platformTenantService";
