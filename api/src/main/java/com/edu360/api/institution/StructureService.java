@@ -435,7 +435,7 @@ public class StructureService {
                 "0.0.0.0",
                 "Section '" + name + "' (" + secId + ") created in institution " + institutionId);
 
-        return new SectionResponse(sec.getSectionId(), sec.getInstitutionId(), sec.getAcademicSessionId(), sec.getSemesterId(), sec.getClassId(), sec.getSectionName(), sec.getStatus());
+        return new SectionResponse(sec.getSectionId(), sec.getInstitutionId(), sec.getAcademicSessionId(), sec.getSemesterId(), sec.getClassId(), sec.getSectionName(), sec.getStatus(), sec.getCapacity(), sec.getClassTeacherUserId());
     }
 
     @Transactional(readOnly = true)
@@ -637,7 +637,7 @@ public class StructureService {
                 .filter(value -> institutionId.equals(value.getInstitutionId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found"));
         return new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(),
-                s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus());
+                s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId());
     }
 
     @Transactional(readOnly = true)
