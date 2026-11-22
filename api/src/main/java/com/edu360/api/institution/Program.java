@@ -3,7 +3,6 @@ package com.edu360.api.institution;
 import java.time.Instant;
 import java.util.UUID;
 import java.math.BigDecimal;
-import java.math.BigDecimal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,16 +50,6 @@ public class Program {
 
     @Column(name = "semesters_per_year", nullable = false)
     private Short semestersPerYear;
-
-    @Column(name = "degree_level")
-    private String degreeLevel;
-
-    @Column(name = "total_credits")
-    private BigDecimal totalCredits;
-
-    @Column(name = "curriculum_version", nullable = false)
-    @Builder.Default
-    private Integer curriculumVersion = 1;
 
     @Column(name = "degree_level")
     private String degreeLevel;
