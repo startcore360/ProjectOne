@@ -119,6 +119,16 @@ public class TermLockService {
             termLock.setRowVersion(termLock.getRowVersion() != null ? termLock.getRowVersion() + 1 : 1);
         }
 
+        if (jdbcTemplate == null) throw new IllegalStateException("Term unlock log JDBC store is unavailable.");
+        if ("TEMP_UNLOCKED".equals(termLock.getLockState())) {
+            jdbcTemplate.update("""
+                    UPDATE app.term_unlock_log
+                       SET is_active = false, relocked_at = now(), updated_at = now(),
+                           updated_by = ?, row_version = row_version + 1
+                     WHERE tenant_id = ? AND term_id = ? AND is_active
+                    """, principal.userAccountId(), tenantId, termLock.getTermLockId());
+        }
+
         TermLock saved = termLockRepository.save(termLock);
 
         // Record audit event in app.term_lock_event
@@ -147,6 +157,13 @@ public class TermLockService {
         log.info("TermLock {} locked by {} for institution {}", saved.getTermLockId(), principal.userAccountId(), institutionId);
 
         return TermLockResponse.from(saved);
+    }
+
+    @Transactional
+    public TermLockResponse unlockTerm(UUID tenantId, UUID termLockId, TenantPrincipal principal, UnlockTermRequest request) {
+        TermLock termLock = termLockRepository.findByIdTenantIdAndIdTermLockId(tenantId, termLockId)
+                .orElseThrow(() -> new ResourceNotFoundException("Term lock not found: " + termLockId));
+        return unlockTerm(tenantId, termLock.getInstitutionId(), termLockId, principal, request);
     }
 
     @Transactional
@@ -184,7 +201,24 @@ public class TermLockService {
                     "Term is currently temporarily unlocked until " + termLock.getUnlockUntil() + "; repeated re-unlocking is prohibited under Rule AT-09.");
         }
 
-        Instant unlockUntil = Instant.now().plus(hours, ChronoUnit.HOURS);
+        Instant unlockedAt = Instant.now();
+        Instant unlockUntil = unlockedAt.plus(hours, ChronoUnit.HOURS);
+        if (jdbcTemplate == null) throw new IllegalStateException("Term unlock log JDBC store is unavailable.");
+        jdbcTemplate.update("""
+                UPDATE app.term_unlock_log
+                   SET is_active = false, relocked_at = ?, updated_at = ?,
+                       updated_by = ?, row_version = row_version + 1
+                 WHERE tenant_id = ? AND term_id = ? AND is_active
+                   AND unlocked_at + interval '72 hours' <= ?
+                """, unlockedAt, unlockedAt, principal.userAccountId(), tenantId, termLockId, unlockedAt);
+        jdbcTemplate.update("""
+                INSERT INTO app.term_unlock_log
+                    (tenant_id, id, term_id, unlocked_by_user_id, reason, unlocked_at,
+                     is_active, created_at, created_by, updated_at, updated_by, row_version)
+                VALUES (?, ?, ?, ?, ?, ?, true, ?, ?, ?, ?, 1)
+                """, tenantId, UUID.randomUUID(), termLockId, principal.userAccountId(),
+                request.reason().trim(), unlockedAt, unlockedAt, principal.userAccountId(),
+                unlockedAt, principal.userAccountId());
         termLock.setLockState("TEMP_UNLOCKED");
         termLock.setUnlockUntil(unlockUntil);
         termLock.setUpdatedAt(Instant.now());

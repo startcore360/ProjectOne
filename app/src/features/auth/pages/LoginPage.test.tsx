@@ -250,4 +250,25 @@ describe("LoginPage", () => {
     await screen.findByLabelText(/Authenticator code/);
     expect(screen.queryByText("AAAAA-BBBBB")).toBeNull();
   });
+  it("shows the dedicated account-locked state after the lockout response", async () => {
+    mockedLogin.mockRejectedValueOnce(challenge("LOCKED", { error: "Locked for 30 minutes." }));
+    renderPage();
+    fireEvent.change(document.getElementById("login-email")!, { target: { value: "a@b.test" } });
+    fireEvent.change(document.getElementById("login-password")!, { target: { value: "wrong" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    expect(await screen.findByText("Please try again later.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("Locked for 30 minutes.");
+    expect(screen.getByRole("button", { name: /back to sign in/i })).toBeTruthy();
+  });
+
+  it("shows the dedicated password-expired state", async () => {
+    mockedLogin.mockRejectedValueOnce(challenge("PASSWORD_EXPIRED", { error: "Password expired." }));
+    renderPage();
+    fireEvent.change(document.getElementById("login-email")!, { target: { value: "a@b.test" } });
+    fireEvent.change(document.getElementById("login-password")!, { target: { value: "old-password" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    expect(await screen.findByText("Update your password.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("Password expired.");
+  });
+
 });

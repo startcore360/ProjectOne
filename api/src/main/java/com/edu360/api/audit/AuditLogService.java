@@ -169,7 +169,7 @@ public class AuditLogService {
   return new TenantAuditEvent(actor.tenantId(),id,institution,now,actor.userAccountId(),role,operation,null,type.name(),null,null,null,outcome,null,newJson,corr,hash);
  }
  static String operationOf(AuditEventType t){return switch(t){
-  case LOGIN_SUCCESS,LOGIN_FAILURE,LOGOUT->"LOGIN";case DENIED_ATTEMPT->"DENIED";case EXPORT->"EXPORT";case STAFF_DOCUMENT_ATTACHED->"CREATE";
+  case LOGIN_SUCCESS,LOGIN_FAILURE,ACCOUNT_LOCKED,LOGOUT->"LOGIN";case DENIED_ATTEMPT->"DENIED";case EXPORT->"EXPORT";case STAFF_DOCUMENT_ATTACHED->"CREATE";
   case SENSITIVE_VIEW->"VIEW_SENSITIVE";case DELETE->"DELETE";case APPROVAL,ATTENDANCE_CORRECTION_SELF_APPROVED->"APPROVE";
   case TERM_LOCKED,TERM_UNLOCKED,TENANT_SETTINGS_UPDATED,PRINCIPAL_LEAVE_APPROVER_SET,VC_LEAVE_APPROVER_SET,INSTITUTION_ID_FORMAT_UPDATED->"CONFIG_CHANGE";
   case ATTENDANCE_MARKED,ATTENDANCE_CORRECTION_APPLIED->"UPDATE";
@@ -177,7 +177,7 @@ public class AuditLogService {
    t.name().endsWith("_CREATED")||t.name().endsWith("_CREATED_DRAFT")||t.name().endsWith("_LINKED")||
    t.name().endsWith("_ASSIGNED")||t.name().endsWith("_UPLOADED")||t.name().endsWith("_REQUESTED")||t.name().equals("CREATE")?"CREATE":"UPDATE";
  };}
- static String outcomeOf(AuditEventType t){return t==AuditEventType.LOGIN_FAILURE?"FAILED":t==AuditEventType.DENIED_ATTEMPT?"DENIED":"SUCCESS";}
+ static String outcomeOf(AuditEventType t){return t==AuditEventType.LOGIN_FAILURE||t==AuditEventType.ACCOUNT_LOCKED?"FAILED":t==AuditEventType.DENIED_ATTEMPT?"DENIED":"SUCCESS";}
  private String json(Object v){if(v==null)return null;validateSafeValues(v);try{return mapper.writeValueAsString(v);}catch(JsonProcessingException e){throw new IllegalArgumentException("Invalid audit JSON.",e);}}
  static void validateSafeValues(Object value){
   if(value instanceof Map<?,?> map){for(Map.Entry<?,?> e:map.entrySet()){

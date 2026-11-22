@@ -19,8 +19,8 @@ export function UnlockTermModal({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) return;
-    await onSubmit(reason.trim(), hours);
+    if (reason.trim().length < 20) return;
+    await onSubmit(reason.trim(), 72);
     setReason("");
     setHours(72);
   };
@@ -36,7 +36,7 @@ export function UnlockTermModal({
       kicker="TEMPORARY ACCESS"
       title="Temporary Term Unlock"
       titleId="unlock-modal-title"
-      description="Enter a reason for the temporary unlock. Access can be restored for up to 72 hours, after which the term locks automatically."
+      description="Enter at least 20 characters explaining the emergency. Access is restored for exactly 72 hours, then the term locks automatically."
       size="sm"
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
@@ -45,13 +45,15 @@ export function UnlockTermModal({
             htmlFor="unlock-reason"
             style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
           >
-            Statutory Justification / Reason *
+            Statutory Justification / Reason * (minimum 20 characters)
           </label>
           <textarea
             id="unlock-reason"
             rows={3}
             required
-            placeholder="e.g. Grievance committee approved re-evaluation for cohort"
+            minLength={20}
+            maxLength={500}
+            placeholder="Explain the emergency and the reason for temporary access"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             style={{
@@ -63,6 +65,7 @@ export function UnlockTermModal({
               fontSize: "0.875rem",
             }}
           />
+          <small aria-live="polite">{reason.trim().length}/20 minimum characters</small>
         </div>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
@@ -70,15 +73,14 @@ export function UnlockTermModal({
             htmlFor="unlock-duration"
             style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
           >
-            Duration in Hours (Max 72 hours / 3 days)
+            Unlock Duration (fixed at 72 hours)
           </label>
           <input
             id="unlock-duration"
             type="number"
-            min={1}
-            max={72}
-            value={hours}
-            onChange={(e) => setHours(Number(e.target.value))}
+            value={72}
+            disabled
+            readOnly
             style={{
               width: "100%",
               padding: "var(--space-2)",
@@ -101,7 +103,7 @@ export function UnlockTermModal({
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={unlocking || !reason.trim()} busy={unlocking}>
+          <Button type="submit" disabled={unlocking || reason.trim().length < 20} busy={unlocking}>
             Confirm Unlock
           </Button>
         </div>

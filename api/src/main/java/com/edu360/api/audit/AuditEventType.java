@@ -7,6 +7,8 @@ package com.edu360.api.audit;
 public enum AuditEventType {
     LOGIN_SUCCESS,
     LOGIN_FAILURE,
+    /** Keycloak brute-force protection locked the account after repeated failures. */
+    ACCOUNT_LOCKED,
     LOGOUT,
     ACCOUNT_CREATED,
     PASSWORD_CHANGED,

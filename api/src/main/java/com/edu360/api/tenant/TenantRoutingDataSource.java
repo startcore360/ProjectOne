@@ -1,6 +1,10 @@
 package com.edu360.api.tenant;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
@@ -174,15 +178,47 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
     @Override
     public Connection getConnection() throws SQLException {
         Connection connection = super.getConnection();
-        applyTenantGucs(connection);
-        return connection;
+        return initializeAndWrap(connection);
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
         Connection connection = super.getConnection(username, password);
-        applyTenantGucs(connection);
-        return connection;
+        return initializeAndWrap(connection);
+    }
+
+    private Connection initializeAndWrap(Connection connection) throws SQLException {
+        try {
+            applyTenantGucs(connection);
+            return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                    new Class<?>[]{Connection.class}, (proxy, method, args) -> {
+                        if ("close".equals(method.getName()) && method.getParameterCount() == 0) {
+                            SQLException resetFailure = null;
+                            try { resetTenantGucs(connection); } catch (SQLException ex) { resetFailure = ex; }
+                            try { connection.close(); } catch (SQLException closeFailure) {
+                                if (resetFailure != null) closeFailure.addSuppressed(resetFailure);
+                                throw closeFailure;
+                            }
+                            if (resetFailure != null) throw resetFailure;
+                            return null;
+                        }
+                        try { return method.invoke(connection, args); }
+                        catch (InvocationTargetException ex) { throw ex.getCause(); }
+                    });
+        } catch (SQLException | RuntimeException ex) {
+            try { connection.close(); } catch (SQLException closeFailure) { ex.addSuppressed(closeFailure); }
+            throw ex;
+        }
+    }
+
+    private void resetTenantGucs(Connection connection) throws SQLException {
+        if (connection.isClosed()) return;
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("RESET app.tenant_id");
+            statement.execute("RESET app.institution_id");
+            statement.execute("RESET app.institution_scope");
+            statement.execute("RESET app.institution_ids");
+        }
     }
 
     /**
@@ -199,18 +235,36 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
             return;
         }
         UUID tenantId = TenantContext.currentTenantId();
+        String expectedTenant = tenantId == null ? "" : tenantId.toString();
+        String expectedScope = tenantId == null ? "" : TenantContext.currentInstitutionScope();
+        Set<UUID> institutionIds = TenantContext.currentInstitutionIds();
+        String expectedInstitution = tenantId != null && institutionIds.size() == 1
+                ? institutionIds.iterator().next().toString() : "";
         try (Statement statement = connection.createStatement()) {
             if (tenantId == null) {
-                // RESET, not skip: Hikari pools and reuses connections
                 statement.execute("RESET app.tenant_id");
+                statement.execute("RESET app.institution_id");
                 statement.execute("RESET app.institution_scope");
                 statement.execute("RESET app.institution_ids");
-                return;
+            } else {
+                statement.execute("SET app.tenant_id = '" + tenantId + "'");
+                if (expectedInstitution.isEmpty()) statement.execute("RESET app.institution_id");
+                else statement.execute("SET app.institution_id = '" + expectedInstitution + "'");
+                statement.execute("SET app.institution_scope = '" + expectedScope + "'");
+                statement.execute(institutionIdsSetStatement());
             }
-            statement.execute("SET app.tenant_id = '" + tenantId + "'");
-            String institutionScope = TenantContext.currentInstitutionScope();
-            statement.execute("SET app.institution_scope = '" + (institutionScope != null ? institutionScope : "NONE") + "'");
-            statement.execute(institutionIdsSetStatement());
+        }
+        try (PreparedStatement verify = connection.prepareStatement(
+                "SELECT COALESCE(current_setting('app.tenant_id', true), ''), " +
+                "COALESCE(current_setting('app.institution_id', true), ''), " +
+                "COALESCE(current_setting('app.institution_scope', true), '')");
+             ResultSet rs = verify.executeQuery()) {
+            if (!rs.next()
+                    || !expectedTenant.equals(rs.getString(1))
+                    || !expectedInstitution.equals(rs.getString(2))
+                    || !expectedScope.equals(rs.getString(3))) {
+                throw new SQLException("TENANT_GUC_VERIFICATION_FAILED: checkout GUCs did not match TenantContext");
+            }
         }
     }
 

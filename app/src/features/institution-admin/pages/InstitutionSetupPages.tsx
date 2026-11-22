@@ -1814,6 +1814,11 @@ export function TermLockPage() {
                       <Badge tone={lock.lockState === "LOCKED" ? "danger" : "warning"}>
                         {lock.lockState === "LOCKED" ? "Locked" : "Temporarily unlocked"}
                       </Badge>
+                      {lock.lockState === "LOCKED" && (
+                        <small className="block mt-1" role="status">
+                          Term Locked: Records are immutable
+                        </small>
+                      )}
                     </td>
                     <td>{lock.unlockUntil ? new Date(lock.unlockUntil).toLocaleString() : "—"}</td>
                     <td>

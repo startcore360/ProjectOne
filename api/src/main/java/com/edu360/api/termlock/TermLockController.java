@@ -102,6 +102,20 @@ public class TermLockController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/api/academic/terms/{id}/unlock")
+    @Operation(summary = "Emergency unlock by term-lock ID [ACT-038..ACT-041]")
+    public ResponseEntity<TermLockResponse> emergencyUnlock(
+            @PathVariable UUID id,
+            @Valid @RequestBody UnlockTermRequest request,
+            Authentication authentication
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
+            throw new UnauthorizedException("Tenant authentication required");
+        }
+        TermLockResponse response = termLockService.unlockTerm(principal.tenantId(), id, principal, request);
+        return ResponseEntity.ok(response);
+    }
+
     private TenantPrincipal extractPrincipal(Authentication authentication, UUID pathTenantId) {
         if (authentication == null || !(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
             throw new UnauthorizedException("Authenticated tenant principal required.");

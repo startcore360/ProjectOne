@@ -3015,12 +3015,14 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
   opacity: 0.8;
   background: transparent;
+  color: currentColor;
   filter: invert(0.5);
 }
 input[type=number] { -moz-appearance: textfield; }
 select { color-scheme: light dark; }
 html[data-theme="dark"] select,
-[data-theme="dark"] select {
+[data-theme="dark"] select,
+.dark select {
   color-scheme: dark;
   background-color: #0f172a;
   color: #f8fafc;
