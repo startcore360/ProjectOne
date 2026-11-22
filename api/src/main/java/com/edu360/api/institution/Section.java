@@ -56,6 +56,12 @@ public class Section {
     @Column(name = "class_teacher_user_id")
     private UUID classTeacherUserId;
 
+    @Column(name = "capacity")
+    private Integer capacity;
+
+    @Column(name = "class_teacher_user_id")
+    private UUID classTeacherUserId;
+
     @Column(name = "status", nullable = false)
     @Builder.Default
     private String status = "ACTIVE";
