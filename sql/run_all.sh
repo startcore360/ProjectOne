@@ -46,8 +46,6 @@ run edu360_v4_test 59_v41_staff_qualification_and_leave_indexes.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/59t_tests_staff_qualification_and_leave.sql" > /dev/null
 run edu360_v4_test 60_v41_leave_delegation.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/60t_tests_leave_delegation.sql" > /dev/null
-run edu360_v4_test 57_v41_academic_hierarchy_constraints.sql > /dev/null
-run edu360_v4_test 58_v41_department_program_section_schema.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/57_58_migration_smoke_tests.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/55t_tests_term_lock_engine.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/56t_tests_rolldown_management_revocation.sql" > /dev/null
@@ -100,8 +98,6 @@ run edu360_v4_ref 59_v41_staff_qualification_and_leave_indexes.sql > /dev/null
 run edu360_v4_ref 60_v41_leave_delegation.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/59t_tests_staff_qualification_and_leave.sql" > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/60t_tests_leave_delegation.sql" > /dev/null
-run edu360_v4_ref 57_v41_academic_hierarchy_constraints.sql > /dev/null
-run edu360_v4_ref 58_v41_department_program_section_schema.sql > /dev/null
 run edu360_v4_ref 37_v41_feature_catalog_and_provisioning.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/37t_tests_feature_catalog_and_provisioning.sql" > /dev/null
 run edu360_v4_ref 38_v41_invoice_approval_and_renewal.sql > /dev/null
@@ -166,7 +162,7 @@ $PSQL -q -d edu360_v4_ref -f "$D/42t_tests_deletion_retention_waiver.sql" > /dev
 $PSQL -q -d edu360_v4_ref -f "$D/52t_tests_tenant_branding_logo.sql" > /dev/null
 # D. Q-03 / Q-06: V4.1 migrations are idempotent and their rollbacks round-trip (third throw-away database).
 $PSQL -d postgres -qc "DROP DATABASE IF EXISTS edu360_v4_rb WITH (FORCE)" -qc "CREATE DATABASE edu360_v4_rb"
-V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 25_sprint2_foundations.sql 26_v41_student_login_switch_guard.sql 27_v41_notification_read_state.sql 28_v41_study_material_view.sql 29_v41_institution_code_formats.sql 30_v41_exam_day_event_type.sql 31_v41_staff_record_view_grants.sql 32_v41_staff_login_aliases.sql 33_v41_study_material_leadership_grants.sql 36_v41_plan_commercial.sql 37_v41_feature_catalog_and_provisioning.sql 38_v41_invoice_approval_and_renewal.sql 39_v41_billing_settings.sql 40_v41_support_session.sql 41_v41_support_readable.sql 49_v41_platform_notification.sql 50_v41_platform_audit_payload_idempotency.sql 51_v41_mfa_recovery.sql 52_v41_tenant_branding_logo.sql 44_v41_release_scheduling.sql 45_v41_usage_rollup.sql 42_v41_deletion_retention_waiver.sql 53_v41_platform_approval_delegation.sql 55_v41_term_lock_engine.sql 56_v41_rolldown_management_revocation.sql 59_v41_staff_qualification_and_leave_indexes.sql 60_v41_leave_delegation.sql"
+V41="14_v41_audit_foundation.sql 15_v41_user_active_role.sql 16_v41_tenant_top_post_authority.sql 18_v41_user_sessions.sql 20_v41_never_allowed_guard.sql 22_v41_platform_audit_event_type.sql 25_sprint2_foundations.sql 26_v41_student_login_switch_guard.sql 27_v41_notification_read_state.sql 28_v41_study_material_view.sql 29_v41_institution_code_formats.sql 30_v41_exam_day_event_type.sql 31_v41_staff_record_view_grants.sql 32_v41_staff_login_aliases.sql 33_v41_study_material_leadership_grants.sql 36_v41_plan_commercial.sql 37_v41_feature_catalog_and_provisioning.sql 38_v41_invoice_approval_and_renewal.sql 39_v41_billing_settings.sql 40_v41_support_session.sql 41_v41_support_readable.sql 49_v41_platform_notification.sql 50_v41_platform_audit_payload_idempotency.sql 51_v41_mfa_recovery.sql 52_v41_tenant_branding_logo.sql 44_v41_release_scheduling.sql 45_v41_usage_rollup.sql 42_v41_deletion_retention_waiver.sql 53_v41_platform_approval_delegation.sql 55_v41_term_lock_engine.sql 56_v41_rolldown_management_revocation.sql 57_v41_academic_hierarchy_constraints.sql 58_v41_department_program_section_schema.sql 59_v41_staff_qualification_and_leave_indexes.sql 60_v41_leave_delegation.sql"
 for f in 01_schema.sql 02_rules.sql 03_bindings.sql 03b_fk_indexes.sql 08_v40_rules.sql 10_v40_rolldown.sql 12_v41_platform_roles.sql 05_ref_data.sql $V41; do run edu360_v4_rb $f > /dev/null; done
 for f in $V41; do run edu360_v4_rb $f > /dev/null; done                      # second apply: idempotent
 echo "RBCHECK | apply V4.1 files twice | OK" >> "$OUT"
