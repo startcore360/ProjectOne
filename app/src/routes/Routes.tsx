@@ -14,6 +14,10 @@ import ActionGate from "./ActionGate";
 import TenantUserRoute from "./TenantUserRoute";
 import { TENANT_ROUTE_ACTIONS } from "./tenantRouteActions";
 
+const AdmissionCyclesPage = lazy(() => import("../features/admissions/pages/AdmissionCyclesPage"));
+const ApplicationScrutinyPage = lazy(() => import("../features/admissions/pages/ApplicationScrutinyPage"));
+const MeritListGenerationPage = lazy(() => import("../features/admissions/pages/MeritListGenerationPage"));
+
 // Lazy-loaded feature pages
 const ChangePasswordPage = lazy(() => import("../features/auth/pages/ChangePasswordPage"));
 const DashboardPage = lazy(() => import("../features/dashboard/pages/DashboardPage"));
@@ -195,6 +199,9 @@ export default function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route element={<LazyRouteView />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/admissions/cycles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.admissionCycles}><AdmissionCyclesPage /></ActionGate>} />
+            <Route path="/admissions/scrutiny" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.applicationScrutiny}><ApplicationScrutinyPage /></ActionGate>} />
+            <Route path="/admissions/merit" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.meritLists}><MeritListGenerationPage /></ActionGate>} />
             <Route path="/support" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.support}><TenantSupportPage /></ActionGate>} />
             {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
             <Route path="/profile" element={<ProfilePage />} />

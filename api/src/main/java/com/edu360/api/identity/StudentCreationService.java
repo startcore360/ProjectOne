@@ -156,6 +156,41 @@ public class StudentCreationService {
         return StudentProfileResponse.from(saved, temporaryPassword);
     }
 
+    /**
+     * Admission conversion creates the profile before section placement. Section/session validation
+     * remains exclusively in StudentEnrollmentService when the student is placed later.
+     */
+    @Transactional
+    public StudentProfileResponse createProfileOnly(TenantPrincipal actor, StudentProfileOnlyRequest request) {
+        if (actor == null || request == null) throw new IllegalArgumentException("Actor and request are required.");
+        if (request.fullName() == null || request.fullName().isBlank() || request.fullName().trim().length() > 150)
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "fullName must contain 1 to 150 characters.");
+        UUID tenantId=actor.tenantId(), institutionId=request.institutionId();
+        Institution institution=institutions.findByIdTenantIdAndIdInstitutionId(tenantId,institutionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Institution not found."));
+        if (!"ACTIVE".equals(institution.getStatus()))
+            throw new BusinessRuleViolationException("INSTITUTION_NOT_ACTIVE","Students can only be created in an active institution.");
+        RbacPrincipal principal=new RbacPrincipal(tenantId,actor.userAccountId());
+        permissions.authorize(principal,"USER_CREATE",RbacScope.institution(institutionId),RbacTarget.NONE);
+        if(tenantQuotaService!=null) tenantQuotaService.checkStudentCapacity(tenantId);
+        LocalDate admissionDate=request.admissionDate()==null?LocalDate.now():request.admissionDate();
+        String studentCode=idFormats.nextStudentCode(tenantId,institutionId,admissionDate.getYear());
+        if(students.existsByTenantIdAndStudentCode(tenantId,studentCode))
+            throw new DuplicateResourceException("Generated student code is already used in this tenant.");
+        UUID profileId=UUID.randomUUID();
+        StudentProfile profile=new StudentProfile(profileId,tenantId,institutionId,null,studentCode,"ACTIVE");
+        profile.setFullName(request.fullName().trim());
+        profile.setDateOfBirth(request.dateOfBirth());
+        profile.setAdmissionDate(admissionDate);
+        profile.setCreatedBy(actor.userAccountId());
+        profile.setUpdatedBy(actor.userAccountId());
+        StudentProfile saved=students.saveAndFlush(profile);
+        entityManager.refresh(saved);
+        audit.record(new AuditEntry(AuditEventType.STUDENT_PROFILE_CREATED,"USER_CREATE","STUDENT_PROFILE",
+                profileId,institutionId,null,Map.of("student_code",studentCode,"admission_source","ADMISSIONS"),1,"P","SUCCESS"));
+        return StudentProfileResponse.from(saved);
+    }
+
     private boolean resolveCreateLogin(Institution institution, Section section,
             Boolean requested, UUID tenantId) {
         String type = institution.getInstitutionType();

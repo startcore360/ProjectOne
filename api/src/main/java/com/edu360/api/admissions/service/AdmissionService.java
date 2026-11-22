@@ -1,0 +1,249 @@
+package com.edu360.api.admissions.service;
+
+import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.identity.StudentCreationService;
+import com.edu360.api.identity.StudentProfileResponse;
+import com.edu360.api.identity.StudentProfileOnlyRequest;
+import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.RbacPrincipal;
+import com.edu360.api.rbac.RbacScope;
+import com.edu360.api.rbac.RbacTarget;
+import com.edu360.api.tenant.TenantContext;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.*;
+
+@Service
+public class AdmissionService {
+    private final JdbcTemplate jdbc;
+    private final ObjectMapper json;
+    private final PermissionEvaluatorService permissions;
+    private final StudentCreationService students;
+
+    public AdmissionService(JdbcTemplate jdbc, ObjectMapper json, PermissionEvaluatorService permissions,
+            StudentCreationService students) {
+        this.jdbc=jdbc; this.json=json; this.permissions=permissions; this.students=students;
+    }
+
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> cycles(TenantPrincipal actor, UUID institutionId) {
+        authorize(actor,"STRUCTURE_MANAGE",institutionId);
+        return jdbc.queryForList("select * from app.admission_cycle where tenant_id=? and (? is null or institution_id=?) order by start_date desc",
+                actor.tenantId(),institutionId,institutionId);
+    }
+
+    @Transactional
+    public Map<String,Object> createCycle(TenantPrincipal actor, Map<String,Object> in) {
+        UUID institution=uuid(in,"institutionId"), session=uuid(in,"academicYearId"), program=uuid(in,"programId");
+        authorize(actor,"STRUCTURE_MANAGE",institution);
+        String name=required(in,"cycleName");
+        LocalDate start=LocalDate.parse(required(in,"startDate")), end=LocalDate.parse(required(in,"endDate"));
+        if(end.isBefore(start)) throw new BusinessRuleViolationException("VALIDATION_FAILED","endDate must not precede startDate.");
+        int seats=integer(in,"totalSeats");
+        if(seats<1) throw new BusinessRuleViolationException("VALIDATION_FAILED","totalSeats must be positive.");
+        BigDecimal fee=decimal(in.getOrDefault("applicationFee",0));
+        UUID id=UUID.randomUUID();
+        String quota=serialize(in.getOrDefault("quotaCapacity",Map.of("GENERAL",seats,"MERIT",0,"SPORTS",0,"MANAGEMENT",0)));
+        jdbc.update("""
+          insert into app.admission_cycle(tenant_id,id,institution_id,academic_year_id,program_id,cycle_name,start_date,end_date,
+          application_fee,total_seats,quota_capacity,status,created_by,updated_by)
+          values(?,?,?,?,?,?,?,?,?,?,?::jsonb,'DRAFT',?,?)
+          """,actor.tenantId(),id,institution,session,program,name,start,end,fee,seats,quota,actor.userAccountId(),actor.userAccountId());
+        return one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),id);
+    }
+
+    @Transactional
+    public Map<String,Object> updateCycle(TenantPrincipal actor, UUID id, Map<String,Object> in) {
+        Map<String,Object> old=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),id);
+        UUID institution=(UUID)old.get("institution_id"); authorize(actor,"STRUCTURE_MANAGE",institution);
+        String status=String.valueOf(in.getOrDefault("status",old.get("status")));
+        if(!Set.of("DRAFT","OPEN","CLOSED","ARCHIVED").contains(status)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Invalid cycle status.");
+        jdbc.update("update app.admission_cycle set status=?,updated_by=? where tenant_id=? and id=?",
+                status,actor.userAccountId(),actor.tenantId(),id);
+        return one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),id);
+    }
+
+    @Transactional
+    public Map<String,Object> submitApplication(TenantPrincipal actor, UUID cycleId, Map<String,Object> in) {
+        Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),cycleId);
+        if(!"OPEN".equals(cycle.get("status"))) throw new BusinessRuleViolationException("ADMISSION_CYCLE_CLOSED","This admission cycle is not open.");
+        LocalDate today=LocalDate.now();
+        if(today.isBefore((LocalDate)cycle.get("start_date"))||today.isAfter((LocalDate)cycle.get("end_date")))
+            throw new BusinessRuleViolationException("APPLICATION_WINDOW_CLOSED","Applications are outside the published date window.");
+        authorize(actor,"APPLICATION_SUBMIT",(UUID)cycle.get("institution_id"));
+        String number="ADM-"+LocalDate.now().getYear()+"-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.ROOT);
+        UUID id=UUID.randomUUID();
+        jdbc.update("""
+          insert into app.admission_application(tenant_id,id,institution_id,cycle_id,application_number,applicant_name,email,phone,
+          date_of_birth,qualifying_marks_percent,category,created_by,updated_by)
+          values(?,?,?,?,?,?,?,?,?,?,?,?,?)
+          """,actor.tenantId(),id,cycle.get("institution_id"),cycleId,number,required(in,"applicantName"),
+                required(in,"email"),required(in,"phone"),date(in.get("dateOfBirth")),decimal(in.get("qualifyingMarksPercent")),
+                String.valueOf(in.getOrDefault("category","GENERAL")).toUpperCase(Locale.ROOT),actor.userAccountId(),actor.userAccountId());
+        return one("select * from app.admission_application where tenant_id=? and id=?",actor.tenantId(),id);
+    }
+
+    @Transactional
+    public Map<String,Object> attachDocument(TenantPrincipal actor, UUID applicationId, UUID fileId, String documentType) {
+        Map<String,Object> app=application(actor,applicationId);
+        authorize(actor,"APPLICATION_SUBMIT",(UUID)app.get("institution_id"));
+        List<Map<String,Object>> docs;
+        try { docs=json.readValue(String.valueOf(app.get("documents_json")),new TypeReference<>(){}); }
+        catch(Exception ex){ docs=new ArrayList<>(); }
+        docs.add(Map.of("fileId",fileId.toString(),"documentType",documentType,"uploadedAt",java.time.Instant.now().toString()));
+        jdbc.update("update app.admission_application set documents_json=?::jsonb,updated_by=? where tenant_id=? and id=?",
+                serialize(docs),actor.userAccountId(),actor.tenantId(),applicationId);
+        return application(actor,applicationId);
+    }
+
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> scrutinyQueue(TenantPrincipal actor, UUID institutionId) {
+        authorize(actor,"APPLICATION_VERIFY",institutionId);
+        return jdbc.queryForList("select * from app.admission_application where tenant_id=? and institution_id=? and status<>'WITHDRAWN' order by submitted_at",
+                actor.tenantId(),institutionId);
+    }
+
+    @Transactional
+    public Map<String,Object> scrutinize(TenantPrincipal actor, UUID applicationId, String decision, String defectNotes) {
+        Map<String,Object> app=application(actor,applicationId);
+        authorize(actor,"APPLICATION_VERIFY",(UUID)app.get("institution_id"));
+        if(!Set.of("VERIFIED","DEFECTIVE","REJECTED").contains(decision)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Unsupported scrutiny decision.");
+        jdbc.update("update app.admission_application set verification_status=?,status=?,defect_notes=?,correction_requested_at=case when ?='DEFECTIVE' then now() else correction_requested_at end,updated_by=? where tenant_id=? and id=?",
+                decision, "REJECTED".equals(decision)?"WITHDRAWN":"SCRUTINIZED",defectNotes,decision,actor.userAccountId(),actor.tenantId(),applicationId);
+        return application(actor,applicationId);
+    }
+
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> meritLists(TenantPrincipal actor, UUID cycleId) {
+        Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),cycleId);
+        authorize(actor,"MERIT_LIST_GENERATE",(UUID)cycle.get("institution_id"));
+        return jdbc.queryForList("select * from app.merit_list where tenant_id=? and cycle_id=? order by round_number desc",actor.tenantId(),cycleId);
+    }
+
+    @Transactional
+    public Map<String,Object> generateMeritList(TenantPrincipal actor, UUID cycleId, int round) {
+        Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),cycleId);
+        authorize(actor,"MERIT_LIST_GENERATE",(UUID)cycle.get("institution_id"));
+        UUID list=UUID.randomUUID();
+        jdbc.update("insert into app.merit_list(tenant_id,id,cycle_id,round_number,created_by) values(?,?,?,?,?)",
+                actor.tenantId(),list,cycleId,round,actor.userAccountId());
+        List<Map<String,Object>> apps=jdbc.queryForList("""
+          select a.id,a.qualifying_marks_percent,a.category from app.admission_application a
+          where a.tenant_id=? and a.cycle_id=? and a.status in('SCRUTINIZED','SHORTLISTED')
+            and a.verification_status='VERIFIED' and a.fee_status in('CONFIRMED','WAIVED')
+          order by a.qualifying_marks_percent desc,a.submitted_at asc,a.id
+          """,actor.tenantId(),cycleId);
+        int rank=0;
+        for(Map<String,Object> a:apps){
+            rank++;
+            UUID item=UUID.randomUUID();
+            String quota=String.valueOf(a.get("category"));
+            jdbc.update("insert into app.merit_list_item(tenant_id,id,merit_list_id,application_id,merit_rank,computed_score,allocated_quota) values(?,?,?,?,?,?,?)",
+                    actor.tenantId(),item,list,a.get("id"),rank,a.get("qualifying_marks_percent"),quota);
+            jdbc.update("update app.admission_application set status='SHORTLISTED',updated_by=? where tenant_id=? and id=?",
+                    actor.userAccountId(),actor.tenantId(),a.get("id"));
+        }
+        return one("select * from app.merit_list where tenant_id=? and id=?",actor.tenantId(),list);
+    }
+
+    @Transactional
+    public Map<String,Object> approveMeritList(TenantPrincipal actor, UUID listId) {
+        Map<String,Object> list=one("select ml.*,c.institution_id from app.merit_list ml join app.admission_cycle c on c.tenant_id=ml.tenant_id and c.id=ml.cycle_id where ml.tenant_id=? and ml.id=?",actor.tenantId(),listId);
+        String role=TenantContext.currentActiveRoleCode();
+        if(!Set.of("PRINCIPAL","COLLEGE_PRINCIPAL","SCHOOL_PRINCIPAL","VICE_CHANCELLOR","PRODUCT_OWNER").contains(role))
+            throw new org.springframework.security.access.AccessDeniedException("MERIT_APPROVAL_NON_DELEGABLE");
+        Integer delegated=jdbc.queryForObject("select count(*) from app.delegation where tenant_id=? and delegate_user_id=? and status='ACTIVE' and starts_at<=now() and ends_at>now() and (process_code is null or process_code in('ALL','MERIT_LIST_APPROVE'))",
+                Integer.class,actor.tenantId(),actor.userAccountId());
+        if(delegated!=null&&delegated>0) throw new org.springframework.security.access.AccessDeniedException("MERIT_APPROVAL_NON_DELEGABLE");
+        authorize(actor,"MERIT_LIST_APPROVE",(UUID)list.get("institution_id"));
+        jdbc.update("update app.merit_list set status='APPROVED',approved_by_user_id=?,approved_at=now() where tenant_id=? and id=? and status='PROVISIONAL'",
+                actor.userAccountId(),actor.tenantId(),listId);
+        return one("select * from app.merit_list where tenant_id=? and id=?",actor.tenantId(),listId);
+    }
+
+    @Transactional
+    public Map<String,Object> allocateSeats(TenantPrincipal actor, UUID listId) {
+        Map<String,Object> list=one("select ml.*,c.institution_id,c.total_seats,c.quota_capacity,c.id as cycle_id from app.merit_list ml join app.admission_cycle c on c.tenant_id=ml.tenant_id and c.id=ml.cycle_id where ml.tenant_id=? and ml.id=?",actor.tenantId(),listId);
+        authorize(actor,"SEAT_ALLOCATE",(UUID)list.get("institution_id"));
+        if(!Set.of("APPROVED","PUBLISHED").contains(list.get("status"))) throw new BusinessRuleViolationException("MERIT_LIST_NOT_APPROVED","Merit list must be approved before allocation.");
+        List<Map<String,Object>> items=jdbc.queryForList("select * from app.merit_list_item where tenant_id=? and merit_list_id=? order by merit_rank",actor.tenantId(),listId);
+        int max=(Integer)list.get("total_seats"),count=0;
+        for(Map<String,Object> item:items){
+            if(count>=max) break;
+            UUID allotment=UUID.randomUUID();
+            jdbc.update("insert into app.seat_allotment(tenant_id,id,cycle_id,merit_list_id,merit_list_item_id,application_id,quota_code,created_by,updated_by) values(?,?,?,?,?,?,?,?,?)",
+                    actor.tenantId(),allotment,list.get("cycle_id"),listId,item.get("id"),item.get("application_id"),item.get("allocated_quota"),actor.userAccountId(),actor.userAccountId());
+            count++;
+        }
+        return Map.of("meritListId",listId,"offeredSeats",count);
+    }
+
+    @Transactional
+    public Map<String,Object> decideSeat(TenantPrincipal actor, UUID allotmentId, String decision) {
+        Map<String,Object> seat=one("select s.*,c.institution_id from app.seat_allotment s join app.admission_cycle c on c.tenant_id=s.tenant_id and c.id=s.cycle_id where s.tenant_id=? and s.id=?",actor.tenantId(),allotmentId);
+        authorize(actor,"SEAT_ALLOCATE",(UUID)seat.get("institution_id"));
+        if(!Set.of("ACCEPTED","DECLINED").contains(decision)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Seat decision must be ACCEPTED or DECLINED.");
+        jdbc.update("update app.seat_allotment set status=?,accepted_at=case when ?='ACCEPTED' then now() else null end,updated_by=? where tenant_id=? and id=?",
+                decision,decision,actor.userAccountId(),actor.tenantId(),allotmentId);
+        jdbc.update("update app.merit_list_item set seat_status=? where tenant_id=? and id=?",
+                decision,actor.tenantId(),seat.get("merit_list_item_id"));
+        return one("select * from app.seat_allotment where tenant_id=? and id=?",actor.tenantId(),allotmentId);
+    }
+
+    @Transactional
+    public Map<String,Object> confirmAdmissionFee(TenantPrincipal actor, UUID applicationId) {
+        Map<String,Object> app=application(actor,applicationId);
+        authorize(actor,"APPLICATION_FEE_VIEW",(UUID)app.get("institution_id"));
+        jdbc.update("update app.admission_application set admission_fee_status='CONFIRMED',updated_by=? where tenant_id=? and id=?",
+                actor.userAccountId(),actor.tenantId(),applicationId);
+        jdbc.update("update app.seat_allotment set admission_fee_confirmed_at=now(),updated_by=? where tenant_id=? and application_id=? and status='ACCEPTED'",
+                actor.userAccountId(),actor.tenantId(),applicationId);
+        return application(actor,applicationId);
+    }
+
+    @Transactional
+    public StudentProfileResponse convertToStudent(TenantPrincipal actor, UUID applicationId) {
+        Map<String,Object> app=application(actor,applicationId);
+        authorize(actor,"SEAT_ALLOCATE",(UUID)app.get("institution_id"));
+        Integer ready=jdbc.queryForObject("select count(*) from app.seat_allotment where tenant_id=? and application_id=? and status='ACCEPTED' and admission_fee_confirmed_at is not null",
+                Integer.class,actor.tenantId(),applicationId);
+        if(ready==null||ready!=1||!"ADMITTED".equals(app.get("status"))||!"CONFIRMED".equals(app.get("admission_fee_status")))
+            throw new BusinessRuleViolationException("ADMISSION_CONVERSION_NOT_READY","Applicant must be admitted, have an accepted seat, and have confirmed admission fee.");
+        if(app.get("student_profile_id")!=null) throw new BusinessRuleViolationException("ALREADY_CONVERTED","Application already has a student profile.");
+        StudentProfileResponse profile=students.createProfileOnly(actor,new StudentProfileOnlyRequest((UUID)app.get("institution_id"),
+                String.valueOf(app.get("applicant_name")),(LocalDate)app.get("date_of_birth"),LocalDate.now()));
+        jdbc.update("update app.admission_application set student_profile_id=?,updated_by=? where tenant_id=? and id=?",
+                profile.id(),actor.userAccountId(),actor.tenantId(),applicationId);
+        return profile;
+    }
+
+    private Map<String,Object> application(TenantPrincipal actor, UUID id) {
+        return one("select * from app.admission_application where tenant_id=? and id=?",actor.tenantId(),id);
+    }
+    private Map<String,Object> one(String sql,Object... args) {
+        List<Map<String,Object>> rows=jdbc.queryForList(sql,args);
+        if(rows.isEmpty()) throw new ResourceNotFoundException("Admission record not found.");
+        return rows.get(0);
+    }
+    private void authorize(TenantPrincipal actor,String action,UUID institution) {
+        permissions.authorize(new RbacPrincipal(actor.tenantId(),actor.userAccountId()),action,
+                institution==null?RbacScope.tenant():RbacScope.institution(institution),RbacTarget.NONE);
+    }
+    private static String required(Map<String,Object> m,String k) {
+        Object v=m.get(k); if(v==null||String.valueOf(v).isBlank()) throw new BusinessRuleViolationException("VALIDATION_FAILED",k+" is required.");
+        return String.valueOf(v).trim();
+    }
+    private static UUID uuid(Map<String,Object> m,String k){return UUID.fromString(required(m,k));}
+    private static int integer(Map<String,Object> m,String k){return Integer.parseInt(required(m,k));}
+    private static BigDecimal decimal(Object v){try{return new BigDecimal(String.valueOf(v));}catch(Exception e){throw new BusinessRuleViolationException("VALIDATION_FAILED","A valid numeric value is required.");}}
+    private static LocalDate date(Object v){return v==null||String.valueOf(v).isBlank()?null:LocalDate.parse(String.valueOf(v));}
+    private static String serialize(Object v){try{return new ObjectMapper().writeValueAsString(v);}catch(Exception e){throw new IllegalArgumentException("Invalid JSON value.",e);}}
+}
