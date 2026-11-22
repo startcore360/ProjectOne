@@ -155,7 +155,7 @@ public class FileService {
                     throw new UnauthorizedException("The active role cannot view staff documents.");
                 }
             }
-            case ADMISSION_DOCUMENT -> permissions.authorize(caller, "APPLICATION_VERIFY", scope, RbacTarget.NONE);
+            case ADMISSION_DOCUMENT -> { /* accessPolicy already checked applicant ownership or verifier authority */ }
             case ATTENDANCE_UPLOAD -> {
                 if (!permissions.can(caller, "ATTENDANCE_VIEW", scope, RbacTarget.NONE).allowed()
                         && !permissions.can(caller, "ATTENDANCE_BULK_UPLOAD", scope, RbacTarget.NONE).allowed()) {
