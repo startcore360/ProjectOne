@@ -2,6 +2,7 @@ package com.edu360.api.institution.dto;
 
 import java.util.UUID;
 import java.math.BigDecimal;
+import java.math.BigDecimal;
 
 public record ProgramResponse(
         UUID programId,
