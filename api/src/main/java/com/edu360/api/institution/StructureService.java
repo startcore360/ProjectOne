@@ -593,7 +593,8 @@ public class StructureService {
         AcademicSession session = academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), sessionId)
                 .filter(value -> institutionId.equals(value.getInstitutionId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session " + sessionId + " was not found"));
-        int updated = academicSessionRepository.setCurrentInScope(principal.tenantId(), sessionId, principal.userAccountId());
+        academicSessionRepository.clearCurrentInScope(principal.tenantId(), sessionId, principal.userAccountId());
+        int updated = academicSessionRepository.setCurrentById(principal.tenantId(), sessionId, principal.userAccountId());
         if (updated < 1) {
             throw new BusinessRuleViolationException("ACADEMIC_SESSION_CURRENT_FAILED", "Academic session could not be made current.");
         }
