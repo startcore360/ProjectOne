@@ -50,6 +50,13 @@ public class AdmissionService {
         int seats=integer(in,"totalSeats");
         if(seats<1) throw new BusinessRuleViolationException("VALIDATION_FAILED","totalSeats must be positive.");
         BigDecimal fee=decimal(in.getOrDefault("applicationFee",0));
+        if(fee.signum()<0) throw new BusinessRuleViolationException("VALIDATION_FAILED","Application fee cannot be negative.");
+        Integer sessionMatches=jdbc.queryForObject("select count(*) from app.academic_session where tenant_id=? and academic_session_id=? and (institution_id is null or institution_id=?)",
+                Integer.class,actor.tenantId(),session,institution);
+        Integer programMatches=jdbc.queryForObject("select count(*) from app.program where tenant_id=? and program_id=? and institution_id=?",
+                Integer.class,actor.tenantId(),program,institution);
+        if(sessionMatches==null||sessionMatches!=1||programMatches==null||programMatches!=1)
+            throw new BusinessRuleViolationException("ADMISSION_CYCLE_REFERENCE_MISMATCH","Academic session and program must belong to the selected institution.");
         UUID id=UUID.randomUUID();
         Object quotaValue=in.getOrDefault("quotaCapacity",Map.of("GENERAL",seats,"MERIT",0,"SPORTS",0,"MANAGEMENT",0));
         Map<String,Object> quotaMap=readJsonObject(quotaValue);
@@ -214,7 +221,7 @@ public class AdmissionService {
         Map<String,Object> list=one("select ml.*,c.institution_id,c.total_seats,c.quota_capacity,c.id as cycle_id from app.merit_list ml join app.admission_cycle c on c.tenant_id=ml.tenant_id and c.id=ml.cycle_id where ml.tenant_id=? and ml.id=?",actor.tenantId(),listId);
         authorize(actor,"SEAT_ALLOCATE",(UUID)list.get("institution_id"));
         if(!Set.of("APPROVED","PUBLISHED").contains(list.get("status"))) throw new BusinessRuleViolationException("MERIT_LIST_NOT_APPROVED","Merit list must be approved before allocation.");
-        List<Map<String,Object>> items=jdbc.queryForList("select * from app.merit_list_item where tenant_id=? and merit_list_id=? and seat_status='OFFERED' order by merit_rank",actor.tenantId(),listId);
+        List<Map<String,Object>> items=jdbc.queryForList("select i.* from app.merit_list_item i where i.tenant_id=? and i.merit_list_id=? and i.seat_status='OFFERED' and not exists (select 1 from app.seat_allotment s where s.tenant_id=i.tenant_id and s.merit_list_id=i.merit_list_id and s.application_id=i.application_id) order by i.merit_rank",actor.tenantId(),listId);
         int max=((Number)list.get("total_seats")).intValue(),count=0;
         Map<String,Object> capacities=readJsonObject(list.get("quota_capacity"));
         Map<String,Integer> used=new HashMap<>();
@@ -236,6 +243,7 @@ public class AdmissionService {
         Map<String,Object> seat=one("select s.*,c.institution_id from app.seat_allotment s join app.admission_cycle c on c.tenant_id=s.tenant_id and c.id=s.cycle_id where s.tenant_id=? and s.id=?",actor.tenantId(),allotmentId);
         authorize(actor,"SEAT_ALLOCATE",(UUID)seat.get("institution_id"));
         if(!Set.of("ACCEPTED","DECLINED").contains(decision)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Seat decision must be ACCEPTED or DECLINED.");
+        if(!"OFFERED".equals(seat.get("status"))) throw new BusinessRuleViolationException("SEAT_ALREADY_DECIDED","Only an offered seat can be accepted or declined.");
         jdbc.update("update app.seat_allotment set status=?,accepted_at=case when ?='ACCEPTED' then now() else null end,updated_by=? where tenant_id=? and id=?",
                 decision,decision,actor.userAccountId(),actor.tenantId(),allotmentId);
         jdbc.update("update app.merit_list_item set seat_status=? where tenant_id=? and id=?",
