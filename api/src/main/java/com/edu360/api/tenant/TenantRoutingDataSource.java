@@ -25,6 +25,9 @@ import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.edu360.api.config.TenantPrincipal;
 
 /**
  * WHAT: the one DataSource every repository in this app actually talks to. Picks, per request,
@@ -246,8 +249,16 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
                 statement.execute("RESET app.institution_id");
                 statement.execute("RESET app.institution_scope");
                 statement.execute("RESET app.institution_ids");
+                statement.execute("RESET app.user_id");
             } else {
                 statement.execute("SET app.tenant_id = '" + tenantId + "'");
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Object authenticatedPrincipal = authentication == null ? null : authentication.getPrincipal();
+            if (authenticatedPrincipal instanceof TenantPrincipal tenantPrincipal && tenantId.equals(tenantPrincipal.tenantId())) {
+                statement.execute("SET app.user_id = '" + tenantPrincipal.userAccountId() + "'");
+            } else {
+                statement.execute("RESET app.user_id");
+            }
                 if (expectedInstitution.isEmpty()) statement.execute("RESET app.institution_id");
                 else statement.execute("SET app.institution_id = '" + expectedInstitution + "'");
                 statement.execute("SET app.institution_scope = '" + expectedScope + "'");
