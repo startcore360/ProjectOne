@@ -308,6 +308,15 @@ public class StructureController {
         return ResponseEntity.ok(structureService.listAcademicSessions(principal, institutionId));
     }
 
+    @PostMapping("/academic-sessions/{academicSessionId}/current")
+    @Operation(summary = "Make an academic session current within its institution scope")
+    public ResponseEntity<AcademicSessionResponse> setCurrentAcademicSession(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID academicSessionId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.setCurrentAcademicSession(principal, institutionId, academicSessionId));
+    }
+
     @GetMapping("/program-rule-sets")
     @Operation(summary = "List program rule sets for this institution (STRUCTURE_MANAGE)")
     public ResponseEntity<List<ProgramRuleSetResponse>> listProgramRuleSets(
