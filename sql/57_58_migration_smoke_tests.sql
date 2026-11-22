@@ -24,4 +24,13 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='program_curriculum_version') THEN
     RAISE EXCEPTION 'DB-T2-06 curriculum version RLS policy missing';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='program_curriculum_version' AND policyname='p_institution') THEN
+    RAISE EXCEPTION 'DB-T2-07 curriculum institution scope policy missing';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='ex_semester_nonoverlap') THEN
+    RAISE EXCEPTION 'DB-T2-08 semester overlap exclusion missing';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='app.program_curriculum_version'::regclass AND tgname='trg_program_curriculum_version_append_only' AND NOT tgisinternal) THEN
+    RAISE EXCEPTION 'DB-T2-09 curriculum append-only trigger missing';
+  END IF;
 END $$;
