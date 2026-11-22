@@ -202,6 +202,9 @@ public class StructureService {
                 .programName(request.programName().trim())
                 .durationYears(request.durationYears())
                 .semestersPerYear(request.effectiveSemestersPerYear())
+                .degreeLevel(request.degreeLevel())
+                .totalCredits(request.totalCredits())
+                .curriculumVersion(1)
                 .status("ACTIVE")
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
@@ -414,6 +417,8 @@ public class StructureService {
                 .semesterId(request.semesterId())
                 .classId(request.classId())
                 .sectionName(name)
+                .capacity(request.capacity())
+                .classTeacherUserId(request.classTeacherUserId())
                 .status("ACTIVE")
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
@@ -450,7 +455,7 @@ public class StructureService {
         }
 
         return list.stream()
-                .map(s -> new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(), s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus()))
+                .map(s -> new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(), s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId()))
                 .toList();
     }
 
@@ -649,7 +654,10 @@ public class StructureService {
                 p.getProgramName(),
                 p.getDurationYears(),
                 p.getSemestersPerYear(),
-                p.getStatus());
+                p.getStatus(),
+                p.getDegreeLevel(),
+                p.getTotalCredits(),
+                p.getCurriculumVersion());
     }
 
     /**
