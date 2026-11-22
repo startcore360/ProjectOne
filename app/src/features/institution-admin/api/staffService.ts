@@ -34,6 +34,10 @@ export type StaffDocument = {
   documentType: "DEGREE" | "ID_PROOF" | "OTHER" | string;
   fileId: string;
   verificationStatus: "UPLOADED" | "VERIFIED" | "REJECTED" | string;
+  qualificationTitle?: string | null;
+  awardingInstitution?: string | null;
+  qualificationLevel?: string | null;
+  awardedOn?: string | null;
   verifiedBy?: string | null;
   verifiedAt?: string | null;
   createdAt: string;
@@ -176,7 +180,7 @@ export const staffService = {
     return response.data;
   },
 
-  async attachDocument(tenantId: string, staffId: string, payload: { documentType: string; fileId: string }) {
+  async attachDocument(tenantId: string, staffId: string, payload: { documentType: string; fileId: string; qualificationTitle?: string; awardingInstitution?: string; qualificationLevel?: string; awardedOn?: string }) {
     const response = await api.post<StaffDocument>(`/api/tenants/${tenantId}/staff/${staffId}/documents`, payload);
     return response.data;
   },
