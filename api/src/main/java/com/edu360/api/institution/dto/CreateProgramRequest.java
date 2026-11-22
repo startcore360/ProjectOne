@@ -35,8 +35,17 @@ public record CreateProgramRequest(
 
         @Min(value = 1, message = "Semesters per year must be at least 1")
         @Max(value = 6, message = "Semesters per year cannot exceed 6")
-        Short semestersPerYear
+        Short semestersPerYear,
+
+        @Pattern(regexp = "^(UG|PG|DIPLOMA|K12_GRADE)$", message = "degreeLevel must be UG, PG, DIPLOMA or K12_GRADE")
+        String degreeLevel,
+
+        @jakarta.validation.constraints.DecimalMin(value = "0.01", message = "totalCredits must be positive")
+        java.math.BigDecimal totalCredits
 ) {
+    public CreateProgramRequest(UUID departmentId, String programCode, String programName, Short durationYears, Short semestersPerYear) {
+        this(departmentId, programCode, programName, durationYears, semestersPerYear, null, null);
+    }
     public Short effectiveSemestersPerYear() {
         return semestersPerYear != null ? semestersPerYear : (short) 2;
     }
