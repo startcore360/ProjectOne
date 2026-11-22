@@ -1,10 +1,10 @@
 // Add only mappings that do not already exist. Use existing TenantPrincipal,
 // PermissionEvaluatorService, RLS setup, If-Match/row_version and audit_outbox patterns.
-// GET/PATCH /v1/tenants/{tenantId}/institutions/{institutionId}
-// GET/PATCH /v1/tenants/{tenantId}/institutions/departments/{departmentId}
-// GET/PATCH /v1/tenants/{tenantId}/institutions/programs/{programId}
-// GET/PATCH /v1/tenants/{tenantId}/institutions/sections/{sectionId}
-// GET/PATCH /v1/tenants/{tenantId}/academic-sessions/{academicSessionId}
+// GET/PATCH /api/tenants/{tenantId}/institutions/{institutionId}
+// GET/PATCH /api/tenants/{tenantId}/institutions/departments/{departmentId}
+// GET/PATCH /api/tenants/{tenantId}/institutions/programs/{programId}
+// GET/PATCH /api/tenants/{tenantId}/institutions/sections/{sectionId}
+// GET/PATCH /api/tenants/{tenantId}/academic-sessions/{academicSessionId}
 // Resolve every record by tenant_id + id; reject tenant mismatch; 404 out-of-scope;
 // authorize read/manage actions; PATCH requires If-Match and writes before/after audit
 // in the same transaction. Do not bypass the existing HOD assignment service.
