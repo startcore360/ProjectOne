@@ -50,6 +50,13 @@ const DataProtectionWorkspacePage = lazy(() => import("../features/platform/page
 
 // Lazy-loaded institution admin pages
 const InstitutionsPage = lazy(() => import("../features/institution-admin/pages/InstitutionAdminPages").then((m) => ({ default: m.InstitutionsPage })));
+
+const InstitutionDetailPage = lazy(() => import("../features/institution-admin/pages/InstitutionDetailPage"));
+const DepartmentDetailPage = lazy(() => import("../features/institution-admin/pages/DepartmentDetailPage"));
+const ProgramDetailPage = lazy(() => import("../features/institution-admin/pages/ProgramDetailPage"));
+const SectionDetailPage = lazy(() => import("../features/institution-admin/pages/SectionDetailPage"));
+const AcademicSessionDetailPage = lazy(() => import("../features/institution-admin/pages/AcademicSessionDetailPage"));
+
 const MissingRolesPage = lazy(() => import("../features/institution-admin/pages/InstitutionAdminPages").then((m) => ({ default: m.MissingRolesPage })));
 const RolesPermissionsPage = lazy(() => import("../features/institution-admin/pages/InstitutionAdminPages").then((m) => ({ default: m.RolesPermissionsPage })));
 
@@ -124,6 +131,13 @@ export default function AppRoutes() {
           <Route element={<AppLayout />}>
             <Route element={<LazyRouteView />}>
               <Route path="/university/institutions" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.institutions}><InstitutionsPage /></ActionGate>} />
+
+              <Route path="/university/institutions/:institutionId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.institutions}><InstitutionDetailPage /></ActionGate>} />
+              <Route path="/university/setup/structure/:institutionId/departments/:departmentId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><DepartmentDetailPage /></ActionGate>} />
+              <Route path="/university/setup/structure/:institutionId/programs/:programId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><ProgramDetailPage /></ActionGate>} />
+              <Route path="/university/setup/structure/:institutionId/sections/:sectionId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><SectionDetailPage /></ActionGate>} />
+              <Route path="/university/setup/structure/:institutionId/academic-sessions/:academicSessionId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><AcademicSessionDetailPage /></ActionGate>} />
+
               <Route path="/university/staff" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffRecordsPage /></ActionGate>} />
               <Route path="/university/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
               <Route path="/university/roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.roles}><RolesPermissionsPage /></ActionGate>} />
