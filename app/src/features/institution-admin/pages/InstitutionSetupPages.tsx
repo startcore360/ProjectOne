@@ -576,7 +576,7 @@ export function CalendarEventsPage() {
                   <tbody>
                     {sessions.map((s) => (
                       <tr key={s.academicSessionId}>
-                        <td><strong><a href={`/university/setup/structure/${institutionId}/academic-sessions/${s.academicSessionId}`}><code>{s.sessionLabel}</code></a></strong></td>
+                        <td><strong>{s.institutionId ? <a href={`/university/setup/structure/${s.institutionId}/academic-sessions/${s.academicSessionId}`}><code>{s.sessionLabel}</code></a> : <code>{s.sessionLabel}</code>}</strong></td>
                         <td>{s.academicYear}</td>
                         <td>{s.startDate}</td>
                         <td>{s.endDate}</td>
