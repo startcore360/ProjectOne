@@ -6,14 +6,16 @@ import { PageHeader } from "../../../components/layout/PageHeader";
 import { Panel, Button, TextField, DateField, Notice } from "../../../design-system/components";
 
 type Application={id:string;application_number:string;status:string;verification_status:string;fee_status:string;defect_notes?:string};
+type Cycle={id:string;cycle_name:string;start_date:string;end_date:string;application_fee:number;status:string};
 export default function ApplicantPortalPage(){
  const tenantId=useAppSelector(s=>s.auth.user?.tenantId);
- const [institutionId,setInstitutionId]=useState("");const [cycleId,setCycleId]=useState("");
+ const [institutionId,setInstitutionId]=useState("");const [cycleId,setCycleId]=useState("");const [cycles,setCycles]=useState<Cycle[]>([]);
  const [name,setName]=useState("");const [email,setEmail]=useState("");const [phone,setPhone]=useState("");const [dob,setDob]=useState("");const [marks,setMarks]=useState("");
  const [category,setCategory]=useState("GENERAL");const [application,setApplication]=useState<Application|null>(null);
  const [files,setFiles]=useState<File[]>([]);const [feeReceipt,setFeeReceipt]=useState<File|null>(null);
  const [error,setError]=useState("");const [message,setMessage]=useState("");const [busy,setBusy]=useState(false);
  const chooseFiles=(e:ChangeEvent<HTMLInputElement>)=>setFiles(Array.from(e.target.files??[]));
+ const loadCycles=async()=>{setError("");try{const r=await api.get(`/tenants/${tenantId}/admissions/cycles`,{params:{institutionId}});setCycles(r.data.filter((x:Cycle)=>x.status==="OPEN"));}catch(e){setError(getApiErrorMessage(e));}};
  const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError("");try{
   const r=await api.post(`/tenants/${tenantId}/admissions/cycles/${cycleId}/applications`,{applicantName:name,email,phone,dateOfBirth:dob||null,qualifyingMarksPercent:Number(marks),category});
   setApplication(r.data);setMessage("Application registered. Upload the required supporting documents and application-fee receipt."); 
@@ -26,7 +28,7 @@ export default function ApplicantPortalPage(){
  {error&&<Notice tone="danger">{error}</Notice>}{message&&<Notice tone="success">{message}</Notice>}
  {!application?<Panel title="Application registration"><form onSubmit={submit} className="app-form-grid">
  <TextField id="applicant-institution" label="Institution ID" required value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/>
- <TextField id="applicant-cycle" label="Admission cycle ID" required value={cycleId} onChange={e=>setCycleId(e.target.value)}/>
+ <div className="app-inline-actions"><Button type="button" variant="secondary" onClick={()=>void loadCycles()} disabled={!institutionId}>Load open cycles</Button><select aria-label="Admission cycle" value={cycleId} onChange={e=>setCycleId(e.target.value)} required><option value="">Select an open admission cycle</option>{cycles.map(c=><option key={c.id} value={c.id}>{c.cycle_name} · {c.start_date} to {c.end_date} · Fee {c.application_fee}</option>)}</select></div>
  <TextField id="applicant-name" label="Full name" required value={name} onChange={e=>setName(e.target.value)}/>
  <TextField id="applicant-email" label="Email" required value={email} onChange={e=>setEmail(e.target.value)}/>
  <TextField id="applicant-phone" label="Phone" required value={phone} onChange={e=>setPhone(e.target.value)}/>
