@@ -35,7 +35,7 @@ public class AdmissionService {
 
     @Transactional(readOnly=true)
     public List<Map<String,Object>> cycles(TenantPrincipal actor, UUID institutionId) {
-        authorize(actor,"APPLICATION_SUBMIT",institutionId);
+        authorizeAny(actor,institutionId,"APPLICATION_SUBMIT","STRUCTURE_MANAGE");
         return jdbc.queryForList("select * from app.admission_cycle where tenant_id=? and (? is null or institution_id=?) order by start_date desc",
                 actor.tenantId(),institutionId,institutionId);
     }
@@ -322,6 +322,12 @@ public class AdmissionService {
     private void authorize(TenantPrincipal actor,String action,UUID institution) {
         permissions.authorize(new RbacPrincipal(actor.tenantId(),actor.userAccountId()),action,
                 institution==null?RbacScope.tenant():RbacScope.institution(institution),RbacTarget.NONE);
+    }
+    private void authorizeAny(TenantPrincipal actor,UUID institution,String... actions) {
+        RbacPrincipal principal=new RbacPrincipal(actor.tenantId(),actor.userAccountId());
+        RbacScope scope=institution==null?RbacScope.tenant():RbacScope.institution(institution);
+        for(String action:actions) if(permissions.can(principal,action,scope,RbacTarget.NONE).allowed()) return;
+        throw new org.springframework.security.access.AccessDeniedException("The active role cannot view admission cycles.");
     }
     private static String required(Map<String,Object> m,String k) {
         Object v=m.get(k); if(v==null||String.valueOf(v).isBlank()) throw new BusinessRuleViolationException("VALIDATION_FAILED",k+" is required.");
