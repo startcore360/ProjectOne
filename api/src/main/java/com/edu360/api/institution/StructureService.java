@@ -582,8 +582,22 @@ public class StructureService {
                         s.getEndDate(),
                         s.getAcademicYear(),
                         s.getStatus(),
-                        s.getRowVersion()))
+                        s.getRowVersion(),
+                        s.isCurrent()))
                 .toList();
+    }
+
+    @Transactional
+    public AcademicSessionResponse setCurrentAcademicSession(RbacPrincipal principal, UUID institutionId, UUID sessionId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        AcademicSession session = academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), sessionId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Academic session " + sessionId + " was not found"));
+        int updated = academicSessionRepository.setCurrentInScope(principal.tenantId(), sessionId, principal.userAccountId());
+        if (updated < 1) {
+            throw new BusinessRuleViolationException("ACADEMIC_SESSION_CURRENT_FAILED", "Academic session could not be made current.");
+        }
+        return getAcademicSession(principal, institutionId, session.getAcademicSessionId());
     }
 
     @Transactional(readOnly = true)
@@ -632,7 +646,7 @@ public class StructureService {
                 .filter(value -> institutionId.equals(value.getInstitutionId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session " + sessionId + " was not found"));
         return new AcademicSessionResponse(s.getAcademicSessionId(), s.getTenantId(), s.getInstitutionId(),
-                s.getSessionLabel(), s.getStartDate(), s.getEndDate(), s.getAcademicYear(), s.getStatus(), s.getRowVersion());
+                s.getSessionLabel(), s.getStartDate(), s.getEndDate(), s.getAcademicYear(), s.getStatus(), s.getRowVersion(), s.isCurrent());
     }
 
     private DepartmentResponse mapDepartment(Department d) {
