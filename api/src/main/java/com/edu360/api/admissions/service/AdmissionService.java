@@ -35,7 +35,7 @@ public class AdmissionService {
 
     @Transactional(readOnly=true)
     public List<Map<String,Object>> cycles(TenantPrincipal actor, UUID institutionId) {
-        authorize(actor,"STRUCTURE_MANAGE",institutionId);
+        authorize(actor,"APPLICATION_SUBMIT",institutionId);
         return jdbc.queryForList("select * from app.admission_cycle where tenant_id=? and (? is null or institution_id=?) order by start_date desc",
                 actor.tenantId(),institutionId,institutionId);
     }
@@ -51,7 +51,16 @@ public class AdmissionService {
         if(seats<1) throw new BusinessRuleViolationException("VALIDATION_FAILED","totalSeats must be positive.");
         BigDecimal fee=decimal(in.getOrDefault("applicationFee",0));
         UUID id=UUID.randomUUID();
-        String quota=serialize(in.getOrDefault("quotaCapacity",Map.of("GENERAL",seats,"MERIT",0,"SPORTS",0,"MANAGEMENT",0)));
+        Object quotaValue=in.getOrDefault("quotaCapacity",Map.of("GENERAL",seats,"MERIT",0,"SPORTS",0,"MANAGEMENT",0));
+        Map<String,Object> quotaMap=readJsonObject(quotaValue);
+        int quotaSum=0;
+        for(String q:List.of("GENERAL","MERIT","SPORTS","MANAGEMENT")) {
+            int cap=((Number)quotaMap.getOrDefault(q,0)).intValue();
+            if(cap<0) throw new BusinessRuleViolationException("VALIDATION_FAILED","Quota capacity cannot be negative.");
+            quotaSum+=cap;
+        }
+        if(quotaSum>seats) throw new BusinessRuleViolationException("VALIDATION_FAILED","Quota capacities cannot exceed total seats.");
+        String quota=serialize(quotaValue);
         jdbc.update("""
           insert into app.admission_cycle(tenant_id,id,institution_id,academic_year_id,program_id,cycle_name,start_date,end_date,
           application_fee,total_seats,quota_capacity,status,created_by,updated_by)
@@ -93,15 +102,36 @@ public class AdmissionService {
 
     @Transactional
     public Map<String,Object> attachDocument(TenantPrincipal actor, UUID applicationId, UUID fileId, String documentType) {
-        Map<String,Object> app=application(actor,applicationId);
+        Map<String,Object> app=ownedApplication(actor,applicationId);
         authorize(actor,"APPLICATION_SUBMIT",(UUID)app.get("institution_id"));
+        if(!Set.of("PHOTO","IDENTITY","QUALIFICATION","SUPPORTING_DOCUMENT","APPLICATION_FEE_RECEIPT","ADMISSION_FEE_RECEIPT").contains(documentType))
+            throw new BusinessRuleViolationException("VALIDATION_FAILED","Unsupported admission document type.");
+        Integer clean=jdbc.queryForObject("select count(*) from app.file_object where tenant_id=? and file_id=? and institution_id=? and purpose='ADMISSION_DOCUMENT' and status='ACTIVE' and scan_status='CLEAN'",
+                Integer.class,actor.tenantId(),fileId,app.get("institution_id"));
+        if(clean==null||clean!=1) throw new BusinessRuleViolationException("ADMISSION_DOCUMENT_NOT_CLEAN","Admission documents must pass ClamAV scanning before attachment.");
         List<Map<String,Object>> docs;
         try { docs=json.readValue(String.valueOf(app.get("documents_json")),new TypeReference<>(){}); }
         catch(Exception ex){ docs=new ArrayList<>(); }
         docs.add(Map.of("fileId",fileId.toString(),"documentType",documentType,"uploadedAt",java.time.Instant.now().toString()));
-        jdbc.update("update app.admission_application set documents_json=?::jsonb,updated_by=? where tenant_id=? and id=?",
+        String receiptColumn="APPLICATION_FEE_RECEIPT".equals(documentType)?"application_fee_receipt_file_id":
+                "ADMISSION_FEE_RECEIPT".equals(documentType)?"admission_fee_receipt_file_id":null;
+        if(receiptColumn==null) jdbc.update("update app.admission_application set documents_json=?::jsonb,updated_by=? where tenant_id=? and id=?",
                 serialize(docs),actor.userAccountId(),actor.tenantId(),applicationId);
+        else jdbc.update("update app.admission_application set documents_json=?::jsonb,"+receiptColumn+"=?,updated_by=? where tenant_id=? and id=?",
+                serialize(docs),fileId,actor.userAccountId(),actor.tenantId(),applicationId);
         return application(actor,applicationId);
+    }
+
+    @Transactional(readOnly=true)
+    public Map<String,Object> applicationForApplicant(TenantPrincipal actor,UUID applicationId) { return ownedApplication(actor,applicationId); }
+
+    @Transactional
+    public Map<String,Object> resubmitCorrections(TenantPrincipal actor,UUID applicationId) {
+        Map<String,Object> app=ownedApplication(actor,applicationId);
+        if(!"DEFECTIVE".equals(app.get("verification_status"))) throw new BusinessRuleViolationException("CORRECTION_NOT_REQUESTED","No correction request is outstanding.");
+        jdbc.update("update app.admission_application set verification_status='PENDING',status='SUBMITTED',defect_notes=null,updated_by=? where tenant_id=? and id=?",
+                actor.userAccountId(),actor.tenantId(),applicationId);
+        return ownedApplication(actor,applicationId);
     }
 
     @Transactional(readOnly=true)
@@ -116,8 +146,14 @@ public class AdmissionService {
         Map<String,Object> app=application(actor,applicationId);
         authorize(actor,"APPLICATION_VERIFY",(UUID)app.get("institution_id"));
         if(!Set.of("VERIFIED","DEFECTIVE","REJECTED").contains(decision)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Unsupported scrutiny decision.");
+        if("VERIFIED".equals(decision)) {
+            Integer notClean=jdbc.queryForObject("select count(*) from jsonb_array_elements(?) d join app.file_object f on f.tenant_id=? and f.file_id=(d->>'fileId')::uuid where f.purpose='ADMISSION_DOCUMENT' and (f.status<>'ACTIVE' or f.scan_status<>'CLEAN')",
+                    Integer.class,String.valueOf(app.get("documents_json")),actor.tenantId());
+            if(notClean!=null&&notClean>0) throw new BusinessRuleViolationException("ADMISSION_DOCUMENT_NOT_CLEAN","Every attached document must pass virus scanning before verification.");
+        }
+        String nextStatus="REJECTED".equals(decision)?"WITHDRAWN":"DEFECTIVE".equals(decision)?"SUBMITTED":"SCRUTINIZED";
         jdbc.update("update app.admission_application set verification_status=?,status=?,defect_notes=?,correction_requested_at=case when ?='DEFECTIVE' then now() else correction_requested_at end,updated_by=? where tenant_id=? and id=?",
-                decision, "REJECTED".equals(decision)?"WITHDRAWN":"SCRUTINIZED",defectNotes,decision,actor.userAccountId(),actor.tenantId(),applicationId);
+                decision,nextStatus,defectNotes,decision,actor.userAccountId(),actor.tenantId(),applicationId);
         return application(actor,applicationId);
     }
 
@@ -132,6 +168,10 @@ public class AdmissionService {
     public Map<String,Object> generateMeritList(TenantPrincipal actor, UUID cycleId, int round) {
         Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),cycleId);
         authorize(actor,"MERIT_LIST_GENERATE",(UUID)cycle.get("institution_id"));
+        if(round<1) throw new BusinessRuleViolationException("VALIDATION_FAILED","Merit round must be positive.");
+        Integer duplicate=jdbc.queryForObject("select count(*) from app.merit_list where tenant_id=? and cycle_id=? and round_number=?",
+                Integer.class,actor.tenantId(),cycleId,round);
+        if(duplicate!=null&&duplicate>0) throw new BusinessRuleViolationException("MERIT_ROUND_EXISTS","A merit list already exists for this round.");
         UUID list=UUID.randomUUID();
         jdbc.update("insert into app.merit_list(tenant_id,id,cycle_id,round_number,created_by) values(?,?,?,?,?)",
                 actor.tenantId(),list,cycleId,round,actor.userAccountId());
@@ -174,14 +214,19 @@ public class AdmissionService {
         Map<String,Object> list=one("select ml.*,c.institution_id,c.total_seats,c.quota_capacity,c.id as cycle_id from app.merit_list ml join app.admission_cycle c on c.tenant_id=ml.tenant_id and c.id=ml.cycle_id where ml.tenant_id=? and ml.id=?",actor.tenantId(),listId);
         authorize(actor,"SEAT_ALLOCATE",(UUID)list.get("institution_id"));
         if(!Set.of("APPROVED","PUBLISHED").contains(list.get("status"))) throw new BusinessRuleViolationException("MERIT_LIST_NOT_APPROVED","Merit list must be approved before allocation.");
-        List<Map<String,Object>> items=jdbc.queryForList("select * from app.merit_list_item where tenant_id=? and merit_list_id=? order by merit_rank",actor.tenantId(),listId);
-        int max=(Integer)list.get("total_seats"),count=0;
+        List<Map<String,Object>> items=jdbc.queryForList("select * from app.merit_list_item where tenant_id=? and merit_list_id=? and seat_status='OFFERED' order by merit_rank",actor.tenantId(),listId);
+        int max=((Number)list.get("total_seats")).intValue(),count=0;
+        Map<String,Object> capacities=readJsonObject(list.get("quota_capacity"));
+        Map<String,Integer> used=new HashMap<>();
         for(Map<String,Object> item:items){
             if(count>=max) break;
+            String quota=String.valueOf(item.get("allocated_quota"));
+            int capacity=((Number)capacities.getOrDefault(quota,0)).intValue();
+            if(used.getOrDefault(quota,0)>=capacity) continue;
             UUID allotment=UUID.randomUUID();
             jdbc.update("insert into app.seat_allotment(tenant_id,id,cycle_id,merit_list_id,merit_list_item_id,application_id,quota_code,created_by,updated_by) values(?,?,?,?,?,?,?,?,?)",
-                    actor.tenantId(),allotment,list.get("cycle_id"),listId,item.get("id"),item.get("application_id"),item.get("allocated_quota"),actor.userAccountId(),actor.userAccountId());
-            count++;
+                    actor.tenantId(),allotment,list.get("cycle_id"),listId,item.get("id"),item.get("application_id"),quota,actor.userAccountId(),actor.userAccountId());
+            used.merge(quota,1,Integer::sum); count++;
         }
         return Map.of("meritListId",listId,"offeredSeats",count);
     }
@@ -195,15 +240,31 @@ public class AdmissionService {
                 decision,decision,actor.userAccountId(),actor.tenantId(),allotmentId);
         jdbc.update("update app.merit_list_item set seat_status=? where tenant_id=? and id=?",
                 decision,actor.tenantId(),seat.get("merit_list_item_id"));
+        if("ACCEPTED".equals(decision)) jdbc.update("update app.admission_application set status='ADMITTED',updated_by=? where tenant_id=? and id=?",
+                actor.userAccountId(),actor.tenantId(),seat.get("application_id"));
         return one("select * from app.seat_allotment where tenant_id=? and id=?",actor.tenantId(),allotmentId);
     }
 
     @Transactional
-    public Map<String,Object> confirmAdmissionFee(TenantPrincipal actor, UUID applicationId) {
+    public Map<String,Object> confirmApplicationFee(TenantPrincipal actor,UUID applicationId,String reference) {
         Map<String,Object> app=application(actor,applicationId);
         authorize(actor,"APPLICATION_FEE_VIEW",(UUID)app.get("institution_id"));
-        jdbc.update("update app.admission_application set admission_fee_status='CONFIRMED',updated_by=? where tenant_id=? and id=?",
-                actor.userAccountId(),actor.tenantId(),applicationId);
+        requireCleanReceipt(actor,(UUID)app.get("application_fee_receipt_file_id"),(UUID)app.get("institution_id"));
+        jdbc.update("update app.admission_application set fee_status='CONFIRMED',application_fee_reference=?,updated_by=? where tenant_id=? and id=?",
+                reference,actor.userAccountId(),actor.tenantId(),applicationId);
+        return application(actor,applicationId);
+    }
+
+    @Transactional
+    public Map<String,Object> confirmAdmissionFee(TenantPrincipal actor, UUID applicationId,String reference) {
+        Map<String,Object> app=application(actor,applicationId);
+        authorize(actor,"APPLICATION_FEE_VIEW",(UUID)app.get("institution_id"));
+        requireCleanReceipt(actor,(UUID)app.get("admission_fee_receipt_file_id"),(UUID)app.get("institution_id"));
+        Integer accepted=jdbc.queryForObject("select count(*) from app.seat_allotment where tenant_id=? and application_id=? and status='ACCEPTED'",
+                Integer.class,actor.tenantId(),applicationId);
+        if(accepted==null||accepted!=1) throw new BusinessRuleViolationException("SEAT_NOT_ACCEPTED","Admission fee can only be confirmed after seat acceptance.");
+        jdbc.update("update app.admission_application set admission_fee_status='CONFIRMED',admission_fee_reference=?,updated_by=? where tenant_id=? and id=?",
+                reference,actor.userAccountId(),actor.tenantId(),applicationId);
         jdbc.update("update app.seat_allotment set admission_fee_confirmed_at=now(),updated_by=? where tenant_id=? and application_id=? and status='ACCEPTED'",
                 actor.userAccountId(),actor.tenantId(),applicationId);
         return application(actor,applicationId);
@@ -225,8 +286,25 @@ public class AdmissionService {
         return profile;
     }
 
+    public UUID institutionForApplicant(TenantPrincipal actor,UUID applicationId) { return (UUID)ownedApplication(actor,applicationId).get("institution_id"); }
+    private Map<String,Object> ownedApplication(TenantPrincipal actor,UUID id) {
+        Map<String,Object> app=application(actor,id);
+        if(!actor.userAccountId().equals(app.get("created_by"))) throw new ResourceNotFoundException("Admission record not found.");
+        return app;
+    }
     private Map<String,Object> application(TenantPrincipal actor, UUID id) {
         return one("select * from app.admission_application where tenant_id=? and id=?",actor.tenantId(),id);
+    }
+    private void requireCleanReceipt(TenantPrincipal actor,UUID fileId,UUID institutionId) {
+        if(fileId==null) throw new BusinessRuleViolationException("FEE_RECEIPT_REQUIRED","Upload a fee receipt before confirming payment.");
+        Integer clean=jdbc.queryForObject("select count(*) from app.file_object where tenant_id=? and file_id=? and institution_id=? and purpose='ADMISSION_DOCUMENT' and status='ACTIVE' and scan_status='CLEAN'",
+                Integer.class,actor.tenantId(),fileId,institutionId);
+        if(clean==null||clean!=1) throw new BusinessRuleViolationException("FEE_RECEIPT_NOT_CLEAN","Fee receipt must be scanned and clean.");
+    }
+    private Map<String,Object> readJsonObject(Object raw) {
+        if(raw instanceof Map<?,?> map) { Map<String,Object> result=new HashMap<>(); map.forEach((k,v)->result.put(String.valueOf(k),v)); return result; }
+        try { return json.readValue(String.valueOf(raw),new TypeReference<Map<String,Object>>(){}); }
+        catch(Exception ex) { throw new BusinessRuleViolationException("VALIDATION_FAILED","Quota capacity must be a JSON object."); }
     }
     private Map<String,Object> one(String sql,Object... args) {
         List<Map<String,Object>> rows=jdbc.queryForList(sql,args);
