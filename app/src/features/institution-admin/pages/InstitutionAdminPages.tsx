@@ -320,7 +320,7 @@ export function InstitutionsPage() {
                       <code>{institution.institutionCode}</code>
                     </td>
                     <td>
-                      <strong>{institution.institutionName}</strong>
+                      <strong><a href={`/university/institutions/${institution.institutionId}`}>{institution.institutionName}</a></strong>
                       {institution.externalUniversityMode && (
                         <span
                           style={{
