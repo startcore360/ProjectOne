@@ -39,6 +39,9 @@ run edu360_v4_test 54_v41_subscription_commercial_engine.sql > /dev/null
 run edu360_v4_test 54t_tests_subscription_commercial_engine.sql > /dev/null
 run edu360_v4_test 55_v41_term_lock_engine.sql > /dev/null
 run edu360_v4_test 56_v41_rolldown_management_revocation.sql > /dev/null
+run edu360_v4_test 57_v41_academic_hierarchy_constraints.sql > /dev/null
+run edu360_v4_test 58_v41_department_program_section_schema.sql > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/57_58_migration_smoke_tests.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/55t_tests_term_lock_engine.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/56t_tests_rolldown_management_revocation.sql" > /dev/null
 run edu360_v4_test 42_v41_deletion_retention_waiver.sql > /dev/null  # E5-S2 deletion retention waiver
@@ -84,6 +87,8 @@ run edu360_v4_ref 36_v41_plan_commercial.sql > /dev/null
 run edu360_v4_ref 54_v41_subscription_commercial_engine.sql > /dev/null
 run edu360_v4_ref 55_v41_term_lock_engine.sql > /dev/null
 run edu360_v4_ref 56_v41_rolldown_management_revocation.sql > /dev/null
+run edu360_v4_ref 57_v41_academic_hierarchy_constraints.sql > /dev/null
+run edu360_v4_ref 58_v41_department_program_section_schema.sql > /dev/null
 run edu360_v4_ref 37_v41_feature_catalog_and_provisioning.sql > /dev/null
 $PSQL -q -d edu360_v4_ref -f "$D/37t_tests_feature_catalog_and_provisioning.sql" > /dev/null
 run edu360_v4_ref 38_v41_invoice_approval_and_renewal.sql > /dev/null
