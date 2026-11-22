@@ -31,6 +31,19 @@ ALTER TABLE app.semester
   ADD CONSTRAINT ck_semester_date_range
     CHECK (start_date IS NULL OR end_date IS NULL OR end_date >= start_date);
 
+DO $ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.semester'::regclass AND conname='ex_semester_nonoverlap') THEN
+    ALTER TABLE app.semester
+      ADD CONSTRAINT ex_semester_nonoverlap
+      EXCLUDE USING gist (
+        tenant_id WITH =,
+        program_year_id WITH =,
+        daterange(start_date, end_date + 1, '[)') WITH &&
+      )
+      WHERE (start_date IS NOT NULL AND end_date IS NOT NULL);
+  END IF;
+END $;
+
 ALTER TABLE app.section
   ADD COLUMN IF NOT EXISTS capacity integer,
   ADD COLUMN IF NOT EXISTS class_teacher_user_id uuid;
