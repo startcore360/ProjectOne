@@ -28,6 +28,7 @@ const SessionsPage = lazy(() => import("../features/sessions/pages/SessionsPage"
 const TenantSupportPage = lazy(() => import("../features/institution-admin/pages/TenantSupportPage"));
 const StaffRecordsPage = lazy(() => import("../features/institution-admin/pages/StaffRecordsPage"));
 const TenantDataProtectionPage = lazy(() => import("../features/dataprotection/TenantDataProtectionPage"));
+const StudentFeatureRoutes = lazy(() => import("./StudentFeatureRoutes"));
 
 // Lazy-loaded platform pages
 const PlatformOverviewPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.PlatformOverviewPage })));
@@ -213,6 +214,7 @@ export default function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route element={<LazyRouteView />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/tenants/students/*" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.students}><StudentFeatureRoutes /></ActionGate>} />
             <Route path="/admissions/cycles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.admissionCycles}><AdmissionCyclesPage /></ActionGate>} />
             <Route path="/admissions/scrutiny" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.applicationScrutiny}><ApplicationScrutinyPage /></ActionGate>} />
             <Route path="/admissions/merit" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.meritLists}><MeritListGenerationPage /></ActionGate>} />
