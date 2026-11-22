@@ -592,6 +592,44 @@ public class StructureService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public DepartmentResponse getDepartment(RbacPrincipal principal, UUID institutionId, UUID departmentId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Department d = departmentRepository.findByTenantIdAndDepartmentId(principal.tenantId(), departmentId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Department " + departmentId + " was not found"));
+        return mapDepartment(d);
+    }
+
+    @Transactional(readOnly = true)
+    public ProgramResponse getProgram(RbacPrincipal principal, UUID institutionId, UUID programId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Program p = programRepository.findByTenantIdAndProgramId(principal.tenantId(), programId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Program " + programId + " was not found"));
+        return mapProgram(p);
+    }
+
+    @Transactional(readOnly = true)
+    public SectionResponse getSection(RbacPrincipal principal, UUID institutionId, UUID sectionId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Section s = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found"));
+        return new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(),
+                s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus());
+    }
+
+    @Transactional(readOnly = true)
+    public AcademicSessionResponse getAcademicSession(RbacPrincipal principal, UUID institutionId, UUID sessionId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        AcademicSession s = academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), sessionId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Academic session " + sessionId + " was not found"));
+        return new AcademicSessionResponse(s.getAcademicSessionId(), s.getTenantId(), s.getInstitutionId(),
+                s.getSessionLabel(), s.getStartDate(), s.getEndDate(), s.getAcademicYear(), s.getStatus(), s.getRowVersion());
+    }
+
     private DepartmentResponse mapDepartment(Department d) {
         return new DepartmentResponse(
                 d.getDepartmentId(),
