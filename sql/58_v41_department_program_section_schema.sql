@@ -51,8 +51,12 @@ CREATE TABLE IF NOT EXISTS app.program_curriculum_version (
   created_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid NOT NULL,
   CONSTRAINT pk_program_curriculum_version PRIMARY KEY (tenant_id, program_curriculum_version_id),
+  CONSTRAINT fk_program_curriculum_version_tenant
+    FOREIGN KEY (tenant_id) REFERENCES app.tenant_local (tenant_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_program_curriculum_version_institution
+    FOREIGN KEY (tenant_id, institution_id) REFERENCES app.institution (tenant_id, institution_id) ON DELETE RESTRICT,
   CONSTRAINT fk_program_curriculum_version_program
-    FOREIGN KEY (tenant_id, program_id) REFERENCES app.program (tenant_id, program_id),
+    FOREIGN KEY (tenant_id, program_id) REFERENCES app.program (tenant_id, program_id) ON DELETE RESTRICT,
   CONSTRAINT ck_program_curriculum_version_number CHECK (version_number >= 1),
   CONSTRAINT ck_program_curriculum_version_json CHECK (jsonb_typeof(curriculum_json) = 'object'),
   CONSTRAINT ck_program_curriculum_version_dates CHECK (effective_to IS NULL OR effective_to >= effective_from),
@@ -65,6 +69,18 @@ DROP POLICY IF EXISTS p_tenant ON app.program_curriculum_version;
 CREATE POLICY p_tenant ON app.program_curriculum_version
   USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
   WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_institution ON app.program_curriculum_version;
+CREATE POLICY p_institution ON app.program_curriculum_version AS RESTRICTIVE
+  USING (current_setting('app.institution_scope', true) = 'ALL'
+      OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))
+  WITH CHECK (current_setting('app.institution_scope', true) = 'ALL'
+      OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]));
+DROP TRIGGER IF EXISTS trg_program_curriculum_version_append_only ON app.program_curriculum_version;
+CREATE TRIGGER trg_program_curriculum_version_append_only
+  BEFORE UPDATE OR DELETE ON app.program_curriculum_version
+  FOR EACH ROW EXECUTE FUNCTION app.fn_append_only();
+GRANT SELECT, INSERT ON app.program_curriculum_version TO edu_app;
+GRANT SELECT ON app.program_curriculum_version TO edu_report;
 
 CREATE INDEX IF NOT EXISTS ix_program_curriculum_version_program
   ON app.program_curriculum_version (tenant_id, program_id, version_number DESC);
