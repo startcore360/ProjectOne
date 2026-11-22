@@ -2,12 +2,16 @@
 -- The V4.0 canonical model is Tenant (university group) -> Institution (college/school).
 -- Do not create a second UNIVERSITY institution row or duplicate academic_session as academic_year.
 BEGIN;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 ALTER TABLE app.institution
   ADD COLUMN IF NOT EXISTS settings_json jsonb NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE app.institution
-  ADD CONSTRAINT ck_institution_settings_object
-  CHECK (jsonb_typeof(settings_json) = 'object');
+DO $ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.institution'::regclass AND conname='ck_institution_settings_object') THEN
+    ALTER TABLE app.institution ADD CONSTRAINT ck_institution_settings_object
+      CHECK (jsonb_typeof(settings_json) = 'object');
+  END IF;
+END $;
 
 -- A session is the V4.0 academic-year aggregate. One current session per scope.
 ALTER TABLE app.academic_session
@@ -19,13 +23,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_academic_session_current_scope
 -- Date windows cannot overlap inside the same tenant + institution scope. End date is inclusive.
 -- Closed historical sessions remain in the timeline but still participate in exclusion:
 -- a closed year is historical, not permission to reuse its dates.
-ALTER TABLE app.academic_session
-  ADD CONSTRAINT ex_academic_session_nonoverlap
-  EXCLUDE USING gist (
-    tenant_id WITH =,
-    (COALESCE(institution_id, '00000000-0000-0000-0000-000000000000'::uuid)) WITH =,
-    daterange(start_date, end_date + 1, '[)') WITH &&
-  );
+DO $ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.academic_session'::regclass AND conname='ex_academic_session_nonoverlap') THEN
+    ALTER TABLE app.academic_session
+      ADD CONSTRAINT ex_academic_session_nonoverlap
+      EXCLUDE USING gist (
+        tenant_id WITH =,
+        (COALESCE(institution_id, '00000000-0000-0000-0000-000000000000'::uuid)) WITH =,
+        daterange(start_date, end_date + 1, '[)') WITH &&
+      );
+  END IF;
+END $;
 
 CREATE INDEX IF NOT EXISTS ix_institution_tenant_status
   ON app.institution (tenant_id, status, institution_name);
