@@ -154,7 +154,7 @@ public class AdmissionService {
         authorize(actor,"APPLICATION_VERIFY",(UUID)app.get("institution_id"));
         if(!Set.of("VERIFIED","DEFECTIVE","REJECTED").contains(decision)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Unsupported scrutiny decision.");
         if("VERIFIED".equals(decision)) {
-            Integer notClean=jdbc.queryForObject("select count(*) from jsonb_array_elements(?) d join app.file_object f on f.tenant_id=? and f.file_id=(d->>'fileId')::uuid where f.purpose='ADMISSION_DOCUMENT' and (f.status<>'ACTIVE' or f.scan_status<>'CLEAN')",
+            Integer notClean=jdbc.queryForObject("select count(*) from jsonb_array_elements(?::jsonb) d join app.file_object f on f.tenant_id=? and f.file_id=(d->>'fileId')::uuid where f.purpose='ADMISSION_DOCUMENT' and (f.status<>'ACTIVE' or f.scan_status<>'CLEAN')",
                     Integer.class,String.valueOf(app.get("documents_json")),actor.tenantId());
             if(notClean!=null&&notClean>0) throw new BusinessRuleViolationException("ADMISSION_DOCUMENT_NOT_CLEAN","Every attached document must pass virus scanning before verification.");
         }
