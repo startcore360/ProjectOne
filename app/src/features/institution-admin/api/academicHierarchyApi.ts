@@ -12,3 +12,5 @@ export const getDepartmentDetail=(tenantId:string,institutionId:string,id:string
 export const getProgramDetail=(tenantId:string,institutionId:string,id:string)=>call<AcademicDetail>(`${institutionBase(tenantId,institutionId)}/programs/${encodeURIComponent(id)}`);
 export const getSectionDetail=(tenantId:string,institutionId:string,id:string)=>call<AcademicDetail>(`${institutionBase(tenantId,institutionId)}/sections/${encodeURIComponent(id)}`);
 export const getAcademicSessionDetail=(tenantId:string,institutionId:string,id:string)=>call<AcademicDetail>(`${institutionBase(tenantId,institutionId)}/academic-sessions/${encodeURIComponent(id)}`);
+
+export const setCurrentAcademicSession=(tenantId:string,institutionId:string,id:string)=>call<AcademicDetail>(`${institutionBase(tenantId,institutionId)}/academic-sessions/${encodeURIComponent(id)}/current`,{method:"POST"});
