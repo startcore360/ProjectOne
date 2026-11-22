@@ -1,0 +1,5 @@
+// Prefer semantic links in the primary cell of each table row:
+<td><Link to={`/institutions/${institution.institutionId}`}>{institution.institutionName}</Link></td>
+// Repeat for department.departmentId, program.programId, section.sectionId,
+// and session.academicSessionId using /departments, /programs, /sections,
+// and /academic-calendar respectively. Stop propagation in separate row action buttons.
