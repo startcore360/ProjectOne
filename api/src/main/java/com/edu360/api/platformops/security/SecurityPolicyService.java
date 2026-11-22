@@ -40,7 +40,7 @@ public class SecurityPolicyService {
     }
 
     /** D1 values used until the Product Owner saves a policy. */
-    public static final SecurityPolicy D1_DEFAULT = new SecurityPolicy(8, false, false, 5, 15, 30, true, 90, 120);
+    public static final SecurityPolicy D1_DEFAULT = new SecurityPolicy(12, true, true, 5, 30, 30, true, 90, 120);
 
     /** The policy as stored. passwordRotationDays: forced change after that many days (R2-12). */
     public record SecurityPolicy(
@@ -78,7 +78,11 @@ public class SecurityPolicyService {
             Optional<PlatformSettingValue> row = settingValueRepository
                     .findBySettingKeyAndStatus(SETTING_KEY_SECURITY_POLICY, "ACTIVE");
             if (row.isPresent()) {
-                return objectMapper.readValue(row.get().getValue(), SecurityPolicy.class);
+                SecurityPolicy saved = objectMapper.readValue(row.get().getValue(), SecurityPolicy.class);
+                return new SecurityPolicy(Math.max(12, saved.minPasswordLength()), true, true,
+                        Math.max(5, saved.maxFailedLogins()), Math.max(30, saved.lockoutMinutes()),
+                        saved.idleSessionTimeoutMinutes(), true, saved.defaultBackupRetentionDays(),
+                        saved.passwordRotationDays());
             }
         } catch (Exception ex) {
             log.warn("Could not read the saved security policy, using the D1 defaults: {}", ex.getMessage());

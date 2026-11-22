@@ -160,14 +160,14 @@ public class TermLockService {
         );
 
         // Rule AT-09: Reason required
-        if (request.reason() == null || request.reason().isBlank()) {
-            throw new BusinessRuleViolationException("REASON_REQUIRED", "Unlock reason is required under Rule AT-09.");
+        if (request.reason() == null || request.reason().trim().length() < 20) {
+            throw new BusinessRuleViolationException("REASON_REQUIRED", "Unlock reason must contain at least 20 characters under Rule AT-09.");
         }
 
         // Rule AT-09: Lasts at most 3 days (72 hours) then relocks
-        int hours = request.unlockDurationHours() != null ? request.unlockDurationHours() : 72;
-        if (hours <= 0 || hours > 72) {
-            throw new BusinessRuleViolationException("INVALID_DURATION", "Term unlock duration cannot exceed 72 hours (3 days) under Rule AT-09.");
+        int hours = 72;
+        if (request.unlockDurationHours() != null && request.unlockDurationHours() != 72) {
+            throw new BusinessRuleViolationException("INVALID_DURATION", "Emergency term unlock duration is fixed at 72 hours under Rule AT-09.");
         }
 
         TermLock termLock = termLockRepository.findByIdTenantIdAndIdTermLockId(tenantId, termLockId)

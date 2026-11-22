@@ -84,12 +84,14 @@ public class KeycloakRealmSecurityService {
     /** The passwordPolicy string pushed to Keycloak for these settings. */
     public String passwordPolicyFor(RealmSecuritySettings settings) {
         List<String> parts = new ArrayList<>();
-        parts.add("length(" + Math.max(8, settings.minPasswordLength()) + ")");
+        parts.add("length(" + Math.max(12, settings.minPasswordLength()) + ")");
+        parts.add("upperCase(1)");
+        parts.add("lowerCase(1)");
         parts.add("notUsername(undefined)");
-        if (settings.requireDigit()) {
+        {
             parts.add("digits(1)");
         }
-        if (settings.requireSpecialChar()) {
+        {
             parts.add("specialChars(1)");
         }
         String denylist = properties.getPasswordDenylistName();

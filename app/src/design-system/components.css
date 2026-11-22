@@ -3008,3 +3008,20 @@ input[type="number"] {
 
 /* Dashboard tile titles are h2 for structure; keep the small KPI label look. */
 .kpi .kpi__label { font-family: inherit; line-height: inherit; }
+
+
+/* T1-S5: normalize native controls in both color schemes. */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  opacity: 0.8;
+  background: transparent;
+  filter: invert(0.5);
+}
+input[type=number] { -moz-appearance: textfield; }
+select { color-scheme: light dark; }
+html[data-theme="dark"] select,
+[data-theme="dark"] select {
+  color-scheme: dark;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
