@@ -107,7 +107,7 @@ class MeritApprovalRuleC12IT {
             SQLException error = assertThrows(SQLException.class, () -> statement.execute(
                     "UPDATE app.merit_list SET status='APPROVED',approved_by_user_id='" + DELEGATE + "' WHERE tenant_id='" + TENANT + "' AND id='" + LIST + "'"));
             assertThat(error.getSQLState()).isEqualTo("42501");
-            assertThat(error).hasMessageContaining("MERIT_APPROVAL_NON_DELEGABLE");
+            assertThat(error.getMessage()).contains("MERIT_APPROVAL_NON_DELEGABLE");
         }
     }
 
