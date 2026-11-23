@@ -31,7 +31,7 @@ ALTER TABLE app.semester
   ADD CONSTRAINT ck_semester_date_range
     CHECK (start_date IS NULL OR end_date IS NULL OR end_date >= start_date);
 
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.semester'::regclass AND conname='ex_semester_nonoverlap') THEN
     ALTER TABLE app.semester
       ADD CONSTRAINT ex_semester_nonoverlap
@@ -42,7 +42,7 @@ DO $ BEGIN
       )
       WHERE (start_date IS NOT NULL AND end_date IS NOT NULL);
   END IF;
-END $;
+END $$;
 
 ALTER TABLE app.section
   ADD COLUMN IF NOT EXISTS capacity integer,
