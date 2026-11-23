@@ -256,6 +256,45 @@ describe("Institution setup action screens", () => {
     expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/hierarchy`);
   });
 
+  it("edits an institution profile with the current row-version If-Match header", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const institution = {
+      tenantId: TENANT_ID, institutionId, institutionType: "COLLEGE" as const,
+      institutionCode: "NBC-01", institutionName: "Northbridge College",
+      status: "ACTIVE" as const, externalUniversityMode: false, underUniversity: true,
+      addressLine: "Old address", city: "Bengaluru", stateName: "Karnataka",
+      postalCode: "560001", principalInviteEmail: "principal@example.edu",
+      createdAt: "", updatedAt: "", rowVersion: 3,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        tenantId: TENANT_ID, tenantName: "Northbridge University Group", tenantType: "UNIVERSITY_GROUP",
+        institutions: [{ institution, departments: [] }],
+      },
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...institution, institutionName: "Northbridge College of Science", rowVersion: 4 } });
+
+    renderWithTenant(<InstitutionHierarchyPage />);
+    await screen.findByText("Northbridge College");
+    fireEvent.click(screen.getByRole("button", { name: /edit profile/i }));
+    fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Northbridge College of Science" } });
+    fireEvent.click(screen.getByRole("button", { name: /save institution/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}`,
+      {
+        institutionName: "Northbridge College of Science",
+        addressLine: "Old address",
+        city: "Bengaluru",
+        stateName: "Karnataka",
+        postalCode: "560001",
+        principalInviteEmail: "principal@example.edu",
+        externalUniversityMode: false,
+      },
+      { headers: { "If-Match": "\"3\"" } },
+    ));
+  });
+
   it("loads academic structure (departments and programs) for an institution (Story #29: STRUCTURE_MANAGE)", async () => {
     (api.get as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
