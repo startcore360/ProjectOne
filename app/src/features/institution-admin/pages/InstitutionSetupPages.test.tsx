@@ -446,7 +446,7 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("B.Tech");
 
-    fireEvent.change(screen.getByLabelText("Program"), { target: { value: programId } });
+    fireEvent.change(screen.getAllByLabelText("Program")[1], { target: { value: programId } });
     fireEvent.click(screen.getByRole("button", { name: /load program years/i }));
     await screen.findByLabelText("Program year");
 
