@@ -78,10 +78,11 @@ class HodAssignmentServiceTest {
                 .thenReturn(Optional.of(staffAssignment(DEPARTMENT_ID, "ACTIVE")));
         when(departmentRepository.updateHodAssignment(TENANT_ID, DEPARTMENT_ID, 1, STAFF_ASSIGNMENT_ID, USER_ID)).thenReturn(1);
 
-        var response = service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID));
+        var response = service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID));
 
         assertThat(response.departmentId()).isEqualTo(DEPARTMENT_ID);
         assertThat(response.hodStaffAssignmentId()).isEqualTo(STAFF_ASSIGNMENT_ID);
+        assertThat(response.rowVersion()).isEqualTo(2);
         verify(permissionEvaluatorService).authorize(
                 principal, "HOD_ASSIGN", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
     }
@@ -94,7 +95,7 @@ class HodAssignmentServiceTest {
                 .when(permissionEvaluatorService)
                 .authorize(principal, "HOD_ASSIGN", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
 
-        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class);
 
         verifyNoInteractions(staffAssignmentRepository);
@@ -108,7 +109,7 @@ class HodAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(staffAssignment(otherDepartment, "ACTIVE")));
 
-        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("not a faculty member");
     }
@@ -120,7 +121,7 @@ class HodAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(staffAssignment(DEPARTMENT_ID, "ENDED")));
 
-        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("not ACTIVE");
     }
@@ -134,7 +135,7 @@ class HodAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(future));
 
-        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("not effective");
     }
@@ -150,7 +151,7 @@ class HodAssignmentServiceTest {
                 .thenReturn(Optional.of(staffAssignment(DEPARTMENT_ID, "ACTIVE")));
         when(departmentRepository.save(any(Department.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var response = service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID));
+        var response = service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID));
 
         assertThat(response.hodStaffAssignmentId()).isEqualTo(STAFF_ASSIGNMENT_ID);
         assertThat(response.hodStaffAssignmentId()).isNotEqualTo(priorHod);
@@ -165,7 +166,7 @@ class HodAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(otherInstitution));
 
-        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("department institution");
     }
@@ -175,7 +176,7 @@ class HodAssignmentServiceTest {
         when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPARTMENT_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignHod(principal, DEPARTMENT_ID, "\"1\"", new HodAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(ResourceNotFoundException.class);
 
         verifyNoInteractions(permissionEvaluatorService, staffAssignmentRepository);
