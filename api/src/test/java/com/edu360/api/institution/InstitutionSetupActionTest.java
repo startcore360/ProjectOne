@@ -2743,6 +2743,7 @@ class InstitutionSetupActionTest {
         staff.setStatus("ACTIVE");
         staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
+        when(sectionRepository.bumpRowVersion(tenantId, sectionId, 1, p.userAccountId())).thenReturn(1);
 
         MentorAssignResponse resp = mentorAssignmentService.assignMentor(p, sectionId, "\"1\"", new MentorAssignRequest(staffAssignmentId));
         assertThat(resp).isNotNull();
@@ -2824,6 +2825,7 @@ class InstitutionSetupActionTest {
         staff.setStatus("ACTIVE");
         staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
+        when(sectionRepository.bumpRowVersion(tenantId, sectionId, 1, p.userAccountId())).thenReturn(1);
 
         ClassTeacherAssignResponse resp = classTeacherAssignmentService.assignClassTeacher(p, sectionId, "\"1\"", new ClassTeacherAssignRequest(staffAssignmentId));
         assertThat(resp).isNotNull();
