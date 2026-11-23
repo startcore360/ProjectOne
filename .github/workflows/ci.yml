@@ -103,7 +103,7 @@ jobs:
       - name: Run T5 admissions merit and C12 tests
         id: t5
         continue-on-error: true
-        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=MeritListCalculationIT,MeritApprovalRuleC12IT
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=MeritListCalculationIT,MeritApprovalRuleC12IT,AdmissionPaymentEventHandlerTest
       - name: Verify backend
         id: verify
         continue-on-error: true
