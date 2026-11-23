@@ -19,6 +19,7 @@ public interface SectionRepository extends JpaRepository<Section, UUID> {
     boolean existsByTenantIdAndAcademicSessionIdAndClassIdAndSectionName(UUID tenantId, UUID academicSessionId, UUID classId, String sectionName);
     boolean existsByTenantIdAndAcademicSessionIdAndSemesterIdAndSectionNameAndSectionIdNot(UUID tenantId, UUID academicSessionId, UUID semesterId, String sectionName, UUID sectionId);
     boolean existsByTenantIdAndAcademicSessionIdAndClassIdAndSectionNameAndSectionIdNot(UUID tenantId, UUID academicSessionId, UUID classId, String sectionName, UUID sectionId);
+    boolean existsByTenantIdAndClassIdAndStatus(UUID tenantId, UUID classId, String status);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
