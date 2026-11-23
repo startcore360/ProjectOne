@@ -10,6 +10,7 @@ import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/s
 import {
   AcademicGovernancePage,
   AcademicStructurePage,
+  InstitutionHierarchyPage,
   CalendarEventsPage,
   ClassTeacherAssignmentPage,
   DelegationsApprovalsPage,
@@ -210,6 +211,49 @@ describe("Institution setup action screens", () => {
     );
     await waitFor(() => expect(screen.getAllByText("Sunday").length).toBeGreaterThan(0));
     expect(screen.getByText("Open-ended")).toBeInTheDocument();
+  });
+
+  it("renders the tenant-rooted hierarchy with colleges, schools and nested departments", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const schoolId = "66666666-6666-6666-6666-666666666666";
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        tenantId: TENANT_ID,
+        tenantName: "Northbridge University Group",
+        tenantType: "UNIVERSITY_GROUP",
+        institutions: [
+          {
+            institution: {
+              tenantId: TENANT_ID, institutionId, institutionType: "COLLEGE",
+              institutionCode: "NBC-01", institutionName: "Northbridge College",
+              status: "ACTIVE", externalUniversityMode: false, underUniversity: true,
+              createdAt: "", updatedAt: "", rowVersion: 3,
+            },
+            departments: [{
+              departmentId: DEPT_ID, institutionId, departmentCode: "CSE",
+              departmentName: "Computer Science", hodStaffAssignmentId: null, status: "ACTIVE",
+            }],
+          },
+          {
+            institution: {
+              tenantId: TENANT_ID, institutionId: schoolId, institutionType: "SCHOOL",
+              institutionCode: "NPS-01", institutionName: "Northbridge Public School",
+              status: "ACTIVE", externalUniversityMode: false, underUniversity: false,
+              createdAt: "", updatedAt: "", rowVersion: 1,
+            },
+            departments: [],
+          },
+        ],
+      },
+    });
+
+    renderWithTenant(<InstitutionHierarchyPage />);
+    expect(await screen.findByText("Northbridge University Group")).toBeInTheDocument();
+    expect(screen.getByText("Northbridge College")).toBeInTheDocument();
+    expect(screen.getByText("Northbridge Public School")).toBeInTheDocument();
+    expect(screen.getByText("Computer Science")).toBeInTheDocument();
+    expect(screen.getByText("HOD not assigned")).toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/hierarchy`);
   });
 
   it("loads academic structure (departments and programs) for an institution (Story #29: STRUCTURE_MANAGE)", async () => {
