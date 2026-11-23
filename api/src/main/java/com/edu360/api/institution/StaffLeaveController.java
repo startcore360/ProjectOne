@@ -28,7 +28,7 @@ public class StaffLeaveController {
     public ResponseEntity<List<StaffLeaveBalanceResponse>> getBalances(
             @PathVariable UUID tenantId, @PathVariable UUID staffProfileId, Authentication authentication) {
         TenantPrincipal principal = principal(authentication, tenantId);
-        return ResponseEntity.ok(staffLeaveService.balances(tenantId, staffProfileId));
+        return ResponseEntity.ok(staffLeaveService.balancesForActor(tenantId, principal.userAccountId(), staffProfileId));
     }
 
     @PostMapping({"/v1/tenants/{tenantId}/staff/{staffProfileId}/leave-balances",
