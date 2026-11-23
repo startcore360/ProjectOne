@@ -53,6 +53,7 @@ class HodAssignmentServiceTest {
         d.setDepartmentCode("CSE");
         d.setDepartmentName("Computer Science");
         d.setStatus("ACTIVE");
+        d.setRowVersion(1);
         return d;
     }
 
@@ -75,7 +76,7 @@ class HodAssignmentServiceTest {
                 .thenReturn(Optional.of(department()));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(staffAssignment(DEPARTMENT_ID, "ACTIVE")));
-        when(departmentRepository.save(any(Department.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(departmentRepository.updateHodAssignment(TENANT_ID, DEPARTMENT_ID, 1, STAFF_ASSIGNMENT_ID, USER_ID)).thenReturn(1);
 
         var response = service().assignHod(principal, DEPARTMENT_ID, new HodAssignRequest(STAFF_ASSIGNMENT_ID));
 
