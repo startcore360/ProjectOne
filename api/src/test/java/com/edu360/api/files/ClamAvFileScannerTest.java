@@ -1,6 +1,7 @@
 package com.edu360.api.files;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -18,20 +19,45 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
+import com.edu360.api.exception.ApiException;
+import org.springframework.http.HttpStatus;
+
 class ClamAvFileScannerTest {
 
     @Test
-    void pendingScannerIsTheSafeDefaultWhenClamAvIsNotEnabled() {
+    void missingClamAvConfigurationFailsClosedInsteadOfReturningPending() {
         new ApplicationContextRunner()
                 .withUserConfiguration(ScannerConfiguration.class)
                 .run(context -> {
                     assertThat(context).hasSingleBean(FileScanner.class);
-                    assertThat(context.getBean(FileScanner.class)).isInstanceOf(PendingFileScanner.class);
+                    FileScanner scanner = context.getBean(FileScanner.class);
+                    assertThat(scanner).isInstanceOf(PendingFileScanner.class);
+                    assertThatThrownBy(() -> scanner.scan(new byte[] {1, 2, 3}))
+                            .isInstanceOf(ApiException.class)
+                            .satisfies(error -> {
+                                ApiException apiError = (ApiException) error;
+                                assertThat(apiError.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                                assertThat(apiError.getErrorCode()).isEqualTo("SERVICE_UNAVAILABLE");
+                            });
                 });
     }
 
     @Test
-    void clamAvScannerReplacesThePendingScannerWhenEnabled() {
+    void explicitlyDisabledClamAvAlsoFailsClosed() {
+        new ApplicationContextRunner()
+                .withUserConfiguration(ScannerConfiguration.class)
+                .withPropertyValues("files.scanner.clamav.enabled=false")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(FileScanner.class);
+                    assertThat(context.getBean(FileScanner.class)).isInstanceOf(PendingFileScanner.class);
+                    assertThatThrownBy(() -> context.getBean(FileScanner.class).scan(new byte[] {1}))
+                            .isInstanceOf(ApiException.class)
+                            .hasMessageContaining("Malware scanning is not configured");
+                });
+    }
+
+    @Test
+    void clamAvScannerIsSelectedWhenEnabled() {
         new ApplicationContextRunner()
                 .withUserConfiguration(ScannerConfiguration.class)
                 .withPropertyValues("files.scanner.clamav.enabled=true")
