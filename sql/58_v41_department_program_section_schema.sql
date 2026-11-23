@@ -15,35 +15,35 @@ ALTER TABLE app.program
   ADD COLUMN IF NOT EXISTS degree_level text,
   ADD COLUMN IF NOT EXISTS total_credits numeric(7,2),
   ADD COLUMN IF NOT EXISTS curriculum_version integer NOT NULL DEFAULT 1;
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.program'::regclass AND conname='ck_program_degree_level') THEN
     ALTER TABLE app.program ADD CONSTRAINT ck_program_degree_level
       CHECK (degree_level IS NULL OR degree_level IN ('UG','PG','DIPLOMA','K12_GRADE'));
   END IF;
-END $;
-DO $ BEGIN
+END $$;
+DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.program'::regclass AND conname='ck_program_total_credits') THEN
     ALTER TABLE app.program ADD CONSTRAINT ck_program_total_credits
       CHECK (total_credits IS NULL OR total_credits > 0);
   END IF;
-END $;
-DO $ BEGIN
+END $$;
+DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.program'::regclass AND conname='ck_program_curriculum_version') THEN
     ALTER TABLE app.program ADD CONSTRAINT ck_program_curriculum_version
       CHECK (curriculum_version >= 1);
   END IF;
-END $;
+END $$;
 
 ALTER TABLE app.semester
   ADD COLUMN IF NOT EXISTS start_date date,
   ADD COLUMN IF NOT EXISTS end_date date,
   ADD COLUMN IF NOT EXISTS is_locked boolean NOT NULL DEFAULT false;
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.semester'::regclass AND conname='ck_semester_date_range') THEN
     ALTER TABLE app.semester ADD CONSTRAINT ck_semester_date_range
       CHECK (start_date IS NULL OR end_date IS NULL OR end_date >= start_date);
   END IF;
-END $;
+END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.semester'::regclass AND conname='ex_semester_nonoverlap') THEN
@@ -61,12 +61,12 @@ END $$;
 ALTER TABLE app.section
   ADD COLUMN IF NOT EXISTS capacity integer,
   ADD COLUMN IF NOT EXISTS class_teacher_user_id uuid;
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.section'::regclass AND conname='ck_section_capacity') THEN
     ALTER TABLE app.section ADD CONSTRAINT ck_section_capacity
       CHECK (capacity IS NULL OR capacity BETWEEN 1 AND 10000);
   END IF;
-END $;
+END $$;
 
 -- Curriculum snapshots are append-only by version; edits create a new version.
 CREATE TABLE IF NOT EXISTS app.program_curriculum_version (
