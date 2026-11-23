@@ -23,7 +23,7 @@ export function StudentDirectoryPage() {
   const tenantId=useAppSelector(s=>s.auth.user?.tenantId); const navigate=useNavigate();
   const [rows,setRows]=useState<StudentRow[]>([]); const [filters,setFilters]=useState({q:"",institutionId:"",departmentId:"",programId:"",batchId:"",sectionId:"",status:""});
   const [cursor,setCursor]=useState<string|undefined>(); const [next,setNext]=useState<string|undefined>(); const [busy,setBusy]=useState(false); const [error,setError]=useState("");
-  const load=async(reset=true)=>{if(!tenantId)return;setBusy(true);setError("");try{const params=Object.fromEntries(Object.entries({...filters,cursor:reset?"":cursor}).filter(([,v])=>v));const {data}=await studentApi.list(tenantId,params);setRows(old=>reset?data.items:[...old,...data.items]);setNext(data.nextCursor);setCursor(data.nextCursor);}catch(e){setError(e instanceof Error?e.message:"Unable to load student directory");}finally{setBusy(false);}};
+  const load=async(reset=true)=>{if(!tenantId)return;setBusy(true);setError("");try{const params: Record<string,string> = {}; for (const [key,value] of Object.entries({...filters,cursor:reset?"":cursor})) { if (typeof value === "string" && value.length > 0) params[key]=value; }const {data}=await studentApi.list(tenantId,params);setRows(old=>reset?data.items:[...old,...data.items]);setNext(data.nextCursor);setCursor(data.nextCursor);}catch(e){setError(e instanceof Error?e.message:"Unable to load student directory");}finally{setBusy(false);}};
   useEffect(()=>{void load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[tenantId]);
