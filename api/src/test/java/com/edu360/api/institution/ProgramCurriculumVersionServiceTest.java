@@ -70,6 +70,31 @@ class ProgramCurriculumVersionServiceTest {
     }
 
     @Test
+    void listAndGet_retrieveOnlyTheRequestedProgramsVersionHistory() throws Exception {
+        Program program = Program.builder().programId(PROGRAM).tenantId(TENANT)
+                .institutionId(INSTITUTION).programCode("BTECH").status("ACTIVE").build();
+        var versionId = UUID.randomUUID();
+        var curriculum = mapper.readTree("{\"courses\":[{\"code\":\"CS101\"}]}");
+        ProgramCurriculumVersion version = ProgramCurriculumVersion.builder()
+                .tenantId(TENANT).programCurriculumVersionId(versionId).institutionId(INSTITUTION)
+                .programId(PROGRAM).versionNumber(1).curriculumJson(curriculum)
+                .effectiveFrom(LocalDate.parse("2026-07-01")).createdBy(USER).build();
+        when(programRepository.findByTenantIdAndProgramId(TENANT, PROGRAM)).thenReturn(Optional.of(program));
+        when(versionRepository.findByTenantIdAndInstitutionIdAndProgramIdOrderByVersionNumberDesc(TENANT, INSTITUTION, PROGRAM))
+                .thenReturn(List.of(version));
+        when(versionRepository.findByTenantIdAndInstitutionIdAndProgramIdAndProgramCurriculumVersionId(
+                TENANT, INSTITUTION, PROGRAM, versionId)).thenReturn(Optional.of(version));
+
+        var listed = service.list(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM);
+        var retrieved = service.get(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM, versionId);
+
+        assertThat(listed).hasSize(1);
+        assertThat(listed.get(0).programCurriculumVersionId()).isEqualTo(versionId);
+        assertThat(retrieved.versionNumber()).isEqualTo(1);
+        assertThat(retrieved.curriculumJson().path("courses").get(0).path("code").asText()).isEqualTo("CS101");
+    }
+
+    @Test
     void create_rejectsNonObjectJsonBeforeWriting() throws Exception {
         var request = new CreateCurriculumVersionRequest(mapper.readTree("[1,2,3]"),
                 LocalDate.parse("2026-07-01"), null);
