@@ -23,6 +23,14 @@ public interface SectionRepository extends JpaRepository<Section, UUID> {
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
+            UPDATE app.section SET updated_by=:updatedBy
+             WHERE tenant_id=:tenantId AND section_id=:sectionId AND row_version=:expectedVersion
+            """, nativeQuery = true)
+    int bumpRowVersion(@Param("tenantId") UUID tenantId, @Param("sectionId") UUID sectionId,
+            @Param("expectedVersion") int expectedVersion, @Param("updatedBy") UUID updatedBy);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
             UPDATE app.section
                SET academic_session_id=:academicSessionId, semester_id=:semesterId, class_id=:classId,
                    section_name=:sectionName, capacity=:capacity, updated_by=:updatedBy
