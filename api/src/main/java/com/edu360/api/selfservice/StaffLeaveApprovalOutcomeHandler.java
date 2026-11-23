@@ -94,6 +94,23 @@ public class StaffLeaveApprovalOutcomeHandler implements ApprovalOutcomeHandler 
 
         Object delegate = leave.get("designated_delegate_staff_profile_id");
         if (delegate != null) {
+            Boolean assigned = jdbc.queryForObject("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM app.staff_assignment
+                         WHERE tenant_id=? AND staff_profile_id=? AND institution_id=? AND status='ACTIVE'
+                           AND effective_from<=? AND (effective_to IS NULL OR effective_to>=?)
+                    )
+                    """, Boolean.class, tenantId, delegate, leave.get("institution_id"),
+                    leave.get("start_date"), leave.get("end_date"));
+            Integer conflictingLeave = jdbc.queryForObject("""
+                    SELECT count(*) FROM app.leave_request
+                     WHERE tenant_id=? AND for_staff_profile_id=? AND status IN ('PENDING','APPROVED')
+                       AND start_date<=? AND end_date>=?
+                    """, Integer.class, tenantId, delegate, leave.get("end_date"), leave.get("start_date"));
+            if (!Boolean.TRUE.equals(assigned) || (conflictingLeave != null && conflictingLeave > 0)) {
+                throw new BusinessRuleViolationException("LEAVE_COVER_UNAVAILABLE",
+                        "The designated leave cover is no longer assigned or has overlapping leave.");
+            }
             jdbc.update("""
                     INSERT INTO app.leave_delegation
                       (tenant_id,leave_delegation_id,institution_id,leave_request_id,
