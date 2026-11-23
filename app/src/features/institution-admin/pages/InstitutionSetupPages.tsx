@@ -194,12 +194,6 @@ export function InstitutionHierarchyPage() {
   const [hodStaffAssignmentId, setHodStaffAssignmentId] = useState("");
   const [hodLoading, setHodLoading] = useState(false);
   const [hodError, setHodError] = useState("");
-  const [editingRecord, setEditingRecord] = useState<EditableStructureRecord | null>(null);
-  const [editSubmitting, setEditSubmitting] = useState(false);
-  const [editError, setEditError] = useState("");
-  const [archiveTarget, setArchiveTarget] = useState<{ kind: EditableStructureRecord["kind"]; id: string; name: string; rowVersion?: number } | null>(null);
-  const [archiveBusy, setArchiveBusy] = useState(false);
-  const [archiveError, setArchiveError] = useState("");
 
 
 
@@ -1059,29 +1053,6 @@ export function CalendarEventsPage() {
         </>
       )}
 
-      <EditStructureRecordModal
-        key={editingRecord ? `${editingRecord.kind}-${editingRecord.kind === "department" ? editingRecord.item.departmentId : editingRecord.kind === "program" ? editingRecord.item.programId : editingRecord.kind === "class" ? editingRecord.item.classId : editingRecord.item.sectionId}` : "none"}
-        record={editingRecord}
-        departments={departments}
-        classes={schoolClasses}
-        sessions={schoolSessions}
-        submitting={editSubmitting}
-        error={editError}
-        onClose={() => { if (!editSubmitting) { setEditingRecord(null); setEditError(""); } }}
-        onSave={(record, draft) => void saveStructureRecord(record, draft)}
-      />
-      {archiveTarget && (
-        <Modal isOpen onClose={() => { if (!archiveBusy) { setArchiveTarget(null); setArchiveError(""); } }}
-          title={`Archive ${archiveTarget.kind}`} titleId="archive-structure-record-title"
-          description={`Archive “${archiveTarget.name}”? The record is retained for audit and cannot be used for new assignments.`} size="sm">
-          {archiveError && <Notice tone="danger">{archiveError}</Notice>}
-          <div className="app-inline-actions">
-            <Button type="button" variant="secondary" disabled={archiveBusy} onClick={() => setArchiveTarget(null)}>Cancel</Button>
-            <Button type="button" variant="danger" busy={archiveBusy} onClick={() => void archiveStructureRecord()}>Archive record</Button>
-          </div>
-        </Modal>
-      )}
-
       {/* Add Academic Session Modal */}
       <AddAcademicSessionModal
         isOpen={showAddSessionModal}
@@ -1442,24 +1413,27 @@ function EditStructureRecordModal({
   onSave: (record: EditableStructureRecord, draft: StructureEditDraft) => void;
 }) {
   const [draft, setDraft] = useState<StructureEditDraft>(() => {
-    if (!record) return {
+    const empty: StructureEditDraft = {
       code: "", name: "", departmentId: "", durationYears: "4", semestersPerYear: "2",
       displayOrder: "0", classId: "", academicSessionId: "", capacity: "",
     };
-    const item = record.item;
+    if (!record) return empty;
+    if (record.kind === "department") return {
+      ...empty, code: record.item.departmentCode, name: record.item.departmentName,
+      departmentId: departments[0]?.departmentId ?? "",
+    };
+    if (record.kind === "program") return {
+      ...empty, code: record.item.programCode, name: record.item.programName,
+      departmentId: record.item.departmentId, durationYears: String(record.item.durationYears),
+      semestersPerYear: String(record.item.semestersPerYear),
+    };
+    if (record.kind === "class") return {
+      ...empty, name: record.item.className, displayOrder: String(record.item.displayOrder),
+    };
     return {
-      code: record.kind === "department" ? item.departmentCode : record.kind === "program" ? item.programCode : "",
-      name: record.kind === "department" ? item.departmentName
-        : record.kind === "program" ? item.programName
-        : record.kind === "class" ? item.className
-        : item.sectionName,
-      departmentId: record.kind === "program" ? item.departmentId : departments[0]?.departmentId ?? "",
-      durationYears: record.kind === "program" ? String(item.durationYears) : "4",
-      semestersPerYear: record.kind === "program" ? String(item.semestersPerYear) : "2",
-      displayOrder: record.kind === "class" ? String(item.displayOrder) : "0",
-      classId: record.kind === "section" ? item.classId ?? "" : classes[0]?.classId ?? "",
-      academicSessionId: record.kind === "section" ? item.academicSessionId : sessions.find((session) => session.status === "ACTIVE")?.academicSessionId ?? sessions[0]?.academicSessionId ?? "",
-      capacity: record.kind === "section" && item.capacity != null ? String(item.capacity) : "",
+      ...empty, name: record.item.sectionName, classId: record.item.classId ?? classes[0]?.classId ?? "",
+      academicSessionId: record.item.academicSessionId,
+      capacity: record.item.capacity != null ? String(record.item.capacity) : "",
     };
   });
 
@@ -1571,7 +1545,12 @@ export function AcademicStructurePage() {
   const [hodStaffAssignmentId, setHodStaffAssignmentId] = useState("");
   const [hodBusy, setHodBusy] = useState(false);
   const [hodError, setHodError] = useState("");
-
+  const [editingRecord, setEditingRecord] = useState<EditableStructureRecord | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<{ kind: EditableStructureRecord["kind"]; id: string; name: string; rowVersion?: number } | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveError, setArchiveError] = useState("");
 
   useEffect(() => {
     if (!tenantId || import.meta.env.MODE === "test") return;
@@ -2498,6 +2477,29 @@ export function AcademicStructurePage() {
             </div>
           </Panel>
         </>
+      )}
+
+      <EditStructureRecordModal
+        key={editingRecord ? `${editingRecord.kind}-${editingRecord.kind === "department" ? editingRecord.item.departmentId : editingRecord.kind === "program" ? editingRecord.item.programId : editingRecord.kind === "class" ? editingRecord.item.classId : editingRecord.item.sectionId}` : "none"}
+        record={editingRecord}
+        departments={departments}
+        classes={schoolClasses}
+        sessions={schoolSessions}
+        submitting={editSubmitting}
+        error={editError}
+        onClose={() => { if (!editSubmitting) { setEditingRecord(null); setEditError(""); } }}
+        onSave={(record, draft) => void saveStructureRecord(record, draft)}
+      />
+      {archiveTarget && (
+        <Modal isOpen onClose={() => { if (!archiveBusy) { setArchiveTarget(null); setArchiveError(""); } }}
+          title={`Archive ${archiveTarget.kind}`} titleId="archive-structure-record-title"
+          description={`Archive “${archiveTarget.name}”? The record is retained for audit and cannot be used for new assignments.`} size="sm">
+          {archiveError && <Notice tone="danger">{archiveError}</Notice>}
+          <div className="app-inline-actions">
+            <Button type="button" variant="secondary" disabled={archiveBusy} onClick={() => setArchiveTarget(null)}>Cancel</Button>
+            <Button type="button" variant="danger" busy={archiveBusy} onClick={() => void archiveStructureRecord()}>Archive record</Button>
+          </div>
+        </Modal>
       )}
 
       {/* Add Department Modal */}
