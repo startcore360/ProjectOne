@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "./StaffRecordsPage.css";
 import {
   Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
@@ -33,6 +33,7 @@ const today = () => getLocalDateString();
 
 export default function StaffRecordsPage() {
   const navigate = useNavigate();
+  const { staffId } = useParams<{ staffId: string }>();
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const userId = useAppSelector((state) => state.auth.user?.id);
   const { can } = useTenantAccess();
@@ -120,8 +121,15 @@ export default function StaffRecordsPage() {
   }, [tenantId]);
 
   useEffect(() => {
-    if (tenantId) void loadDirectory("");
-  }, [tenantId, loadDirectory]);
+    if (tenantId && !staffId) void loadDirectory("");
+  }, [tenantId, staffId, loadDirectory]);
+
+  useEffect(() => {
+    if (staffId) {
+      setSelected(null);
+      void loadProfile(staffId);
+    }
+  }, [staffId, loadProfile]);
 
   const createStaff = async (event: FormEvent) => {
     event.preventDefault();
@@ -263,11 +271,11 @@ export default function StaffRecordsPage() {
 
   return (
     <div className="app-page">
-      <PageHeader title="Staff records" description="Manage staff profiles, institution assignments, service history and verified documents."
+      <PageHeader title={staffId ? "Staff profile" : "Staff records"} description={staffId ? "Review and manage this staff member’s profile, qualifications, assignments and service history." : "Manage staff profiles, institution assignments, service history and verified documents."}
         actions={canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : null} />
       {feedback && <Notice tone={feedback.tone}>{feedback.message}</Notice>}
       <div className="app-two-col staff-records-layout">
-        <Panel title="Staff directory" description="Results are limited to the active role scope.">
+        {!staffId && <Panel title="Staff directory" description="Results are limited to the active role scope.">
           <div className="app-toolbar">
             <SearchBox value={query} onChange={setQuery} placeholder="Search staff name or code" />
             <Button variant="secondary" size="sm" onClick={() => { setDirectoryPage(1); void loadDirectory(query); }} busy={state === "loading"}>Search</Button>
@@ -313,10 +321,11 @@ export default function StaffRecordsPage() {
             </>
           )}
           <div className="app-inline-actions"><Button size="sm" variant="tertiary" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh directory</Button></div>
-        </Panel>
+        </Panel>}
 
         <div className="staff-record-detail">
-          {!selected && !detailLoading && <EmptyState title="Select a staff member" description="Choose a record to view profile details, assignments, documents and service history." icon="users" />}
+          {staffId && <div className="app-inline-actions"><Button variant="tertiary" onClick={() => navigate("/university/staff")}>Back to staff directory</Button></div>}
+          {!selected && !detailLoading && <EmptyState title={staffId ? "Staff profile unavailable" : "Select a staff member"} description={staffId ? "The requested staff record could not be loaded in your active role scope." : "Choose a record to view profile details, assignments, documents and service history."} icon="users" />}
           {detailLoading && <SkeletonCard><SkeletonText height="1.25rem" width="55%" /><SkeletonText lines={5} /></SkeletonCard>}
           {detailError && <ErrorState title="Could not load staff details" message={detailError} action={selected ? <Button variant="secondary" onClick={() => void loadProfile(selected.id)}>Retry</Button> : undefined} />}
           {selected && !detailLoading && !detailError && (
