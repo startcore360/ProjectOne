@@ -54,6 +54,10 @@ ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_admission_document_siz
  CHECK(purpose<>'ADMISSION_DOCUMENT' OR (content_type IN('application/pdf','image/jpeg','image/png') AND size_bytes<=5242880));
 ALTER TABLE app.admission_application ADD COLUMN IF NOT EXISTS application_fee_event_id text;
 ALTER TABLE app.admission_application ADD COLUMN IF NOT EXISTS admission_fee_event_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_admission_application_fee_reference
+ ON app.admission_application(tenant_id,application_fee_reference) WHERE application_fee_reference IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_admission_admission_fee_reference
+ ON app.admission_application(tenant_id,admission_fee_reference) WHERE admission_fee_reference IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_admission_application_fee_event
  ON app.admission_application(tenant_id,application_fee_event_id) WHERE application_fee_event_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_admission_admission_fee_event
