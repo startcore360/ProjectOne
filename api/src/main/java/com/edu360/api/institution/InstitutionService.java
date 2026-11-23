@@ -28,6 +28,7 @@ import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.institution.dto.BlockDecisionRequest;
 import com.edu360.api.institution.dto.BlockInstitutionRequest;
 import com.edu360.api.institution.dto.CreateInstitutionRequest;
+import com.edu360.api.institution.dto.UpdateInstitutionRequest;
 import com.edu360.api.institution.dto.InstitutionBlockResponse;
 import com.edu360.api.institution.dto.InstitutionPageResponse;
 import com.edu360.api.institution.dto.InstitutionResponse;
@@ -182,6 +183,72 @@ public class InstitutionService {
         );
 
         return InstitutionResponse.fromEntity(saved);
+    }
+
+
+    /**
+     * Updates editable institution profile fields using the row_version ETag.
+     * Institution type/code and lifecycle status remain controlled by their own workflows.
+     */
+    @Transactional
+    public InstitutionResponse updateInstitution(
+            RbacPrincipal principal, UUID institutionId, String ifMatch, UpdateInstitutionRequest request) {
+        Objects.requireNonNull(principal, "principal is required");
+        Objects.requireNonNull(institutionId, "institutionId is required");
+        Objects.requireNonNull(request, "request is required");
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_CREATE_DRAFT", RbacScope.tenant(), RbacTarget.NONE);
+
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        Institution current = institutionRepository.findByIdTenantIdAndIdInstitutionId(principal.tenantId(), institutionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found."));
+        int actualVersion = current.getRowVersion() == null ? 1 : current.getRowVersion();
+        if (expectedVersion != actualVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Institution was changed by another user. Reload it and retry with the latest ETag.");
+        }
+        if ("ARCHIVED".equalsIgnoreCase(current.getStatus())) {
+            throw new BusinessRuleViolationException("INSTITUTION_ARCHIVED", "Archived institutions cannot be edited.");
+        }
+
+        String name = request.institutionName().trim();
+        if (institutionRepository.existsByIdTenantIdAndInstitutionNameAndIdInstitutionIdNot(
+                principal.tenantId(), name, institutionId)) {
+            throw new DuplicateResourceException("An institution with name '" + name + "' already exists in this tenant.");
+        }
+
+        int updated = institutionRepository.updateEditableFields(
+                principal.tenantId(), institutionId, expectedVersion, name,
+                request.addressLine(), request.city(), request.stateName(), request.postalCode(),
+                request.principalInviteEmail(),
+                request.externalUniversityMode() == null ? current.isExternalUniversityMode() : request.externalUniversityMode(),
+                principal.userAccountId());
+        if (updated != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Institution was changed by another user. Reload it and retry with the latest ETag.");
+        }
+
+        Institution saved = institutionRepository.findByIdTenantIdAndIdInstitutionId(principal.tenantId(), institutionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found after update."));
+        auditLogService.record(AuditEventType.INSTITUTION_UPDATED, null, principal.userAccountId().toString(), null,
+                "Updated institution " + saved.getInstitutionName() + " (" + institutionId + "); row version "
+                        + actualVersion + " -> " + saved.getRowVersion());
+        return InstitutionResponse.fromEntity(saved);
+    }
+
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the current institution ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replace("\"", "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException("version must be positive");
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive institution row version.");
+        }
     }
 
     /**
