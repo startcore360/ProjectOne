@@ -103,6 +103,19 @@ class ClamAvFileScannerTest {
     }
 
     @Test
+    void unavailableClamAvEndpointFailsClosedWithServiceUnavailable() {
+        ClamAvFileScanner scanner = new ClamAvFileScanner("127.0.0.1", 1, 100, 100);
+
+        assertThatThrownBy(() -> scanner.scan("file".getBytes(StandardCharsets.US_ASCII)))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> {
+                    ApiException apiError = (ApiException) error;
+                    assertThat(apiError.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(apiError.getErrorCode()).isEqualTo("SERVICE_UNAVAILABLE");
+                });
+    }
+
+    @Test
     void quarantinesInfectedResponse() throws Exception {
         byte[] payload = "infected sample".getBytes(StandardCharsets.US_ASCII);
         try (ServerSocket server = new ServerSocket(0);
