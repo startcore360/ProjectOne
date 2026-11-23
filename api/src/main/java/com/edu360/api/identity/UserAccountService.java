@@ -216,8 +216,12 @@ public class UserAccountService {
             throw new IllegalArgumentException("Student name, student code and institution are required.");
         }
         UUID tenantId = principal.tenantId();
-        permissionEvaluatorService.authorize(principal, "USER_CREATE",
-                RbacScope.institution(institutionId), RbacTarget.NONE);
+        RbacScope studentScope = RbacScope.institution(institutionId);
+        boolean canCreateUser = permissionEvaluatorService.can(principal, "USER_CREATE", studentScope, RbacTarget.NONE).allowed();
+        boolean canAdmitStudent = permissionEvaluatorService.can(principal, "SEAT_ALLOCATE", studentScope, RbacTarget.NONE).allowed();
+        if (!canCreateUser && !canAdmitStudent) {
+            permissionEvaluatorService.authorize(principal, "USER_CREATE", studentScope, RbacTarget.NONE);
+        }
         enforcePlanUserLimit(tenantId);
 
         String realm = tenantRepository.findById(tenantId)
