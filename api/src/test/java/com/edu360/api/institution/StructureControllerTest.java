@@ -31,6 +31,8 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.dto.CreateDepartmentRequest;
 import com.edu360.api.institution.dto.CreateProgramRequest;
+import com.edu360.api.institution.dto.CreateSchoolClassRequest;
+import com.edu360.api.institution.dto.UpdateSectionRequest;
 import com.edu360.api.institution.dto.CreateSemesterRequest;
 import com.edu360.api.institution.dto.DepartmentResponse;
 import com.edu360.api.institution.dto.ProgramResponse;
@@ -48,6 +50,9 @@ class StructureControllerTest {
     @Mock private ProgramRepository programRepository;
     @Mock private ProgramYearRepository programYearRepository;
     @Mock private SemesterRepository semesterRepository;
+    @Mock private SchoolClassRepository schoolClassRepository;
+    @Mock private SectionRepository sectionRepository;
+    @Mock private AcademicSessionRepository academicSessionRepository;
     @Mock private AuditLogService auditLogService;
     @Mock private Authentication authentication;
 
@@ -70,6 +75,9 @@ class StructureControllerTest {
                 auditLogService);
         structureService.setProgramYearRepository(programYearRepository);
         structureService.setSemesterRepository(semesterRepository);
+        structureService.setSchoolClassRepository(schoolClassRepository);
+        structureService.setSectionRepository(sectionRepository);
+        structureService.setAcademicSessionRepository(academicSessionRepository);
         structureController = new StructureController(structureService);
     }
 
@@ -335,6 +343,76 @@ class StructureControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
         assertThat(response.getBody().programName()).isEqualTo("B.Tech Computer Science");
+        assertThat(response.getBody().rowVersion()).isEqualTo(3);
+    }
+
+    @Test
+    void updateSchoolClass_usesIfMatchAndReturnsNewRowVersion() {
+        mockPrincipal(TENANT_ID);
+        UUID classId = UUID.randomUUID();
+        SchoolClass current = SchoolClass.builder().classId(classId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).className("Grade 8").displayOrder((short) 8)
+                .studentLoginEnabled(true).status("ACTIVE").rowVersion(2).build();
+        SchoolClass updated = SchoolClass.builder().classId(classId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).className("Grade VIII").displayOrder((short) 8)
+                .studentLoginEnabled(true).status("ACTIVE").rowVersion(3).build();
+        when(schoolClassRepository.findByTenantIdAndClassId(TENANT_ID, classId))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(schoolClassRepository.existsByTenantIdAndInstitutionIdAndClassNameAndClassIdNot(
+                TENANT_ID, SCHOOL_ID, "Grade VIII", classId)).thenReturn(false);
+        when(schoolClassRepository.updateProfile(TENANT_ID, classId, 2, "Grade VIII", (short) 8, true, USER_ID))
+                .thenReturn(1);
+
+        ResponseEntity<SchoolClassResponse> response = structureController.updateSchoolClass(
+                TENANT_ID, SCHOOL_ID, classId, "\"2\"",
+                new CreateSchoolClassRequest("Grade VIII", (short) 8), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().className()).isEqualTo("Grade VIII");
+        assertThat(response.getBody().rowVersion()).isEqualTo(3);
+    }
+
+    @Test
+    void updateSection_usesIfMatchAndValidatesSchoolClassScope() {
+        mockPrincipal(TENANT_ID);
+        UUID sectionId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        Section current = Section.builder().sectionId(sectionId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).academicSessionId(sessionId).classId(classId)
+                .sectionName("A").capacity(45).status("ACTIVE").rowVersion(2).build();
+        Section updated = Section.builder().sectionId(sectionId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).academicSessionId(sessionId).classId(classId)
+                .sectionName("B").capacity(60).status("ACTIVE").rowVersion(3).build();
+        AcademicSession session = new AcademicSession();
+        session.setAcademicSessionId(sessionId);
+        session.setTenantId(TENANT_ID);
+        session.setInstitutionId(SCHOOL_ID);
+        SchoolClass schoolClass = SchoolClass.builder().classId(classId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).className("Grade 8").status("ACTIVE").build();
+        Institution school = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, SCHOOL_ID)).institutionType("SCHOOL")
+                .institutionName("Northbridge School").status("ACTIVE").build();
+        when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, sectionId))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, sessionId))
+                .thenReturn(Optional.of(session));
+        when(schoolClassRepository.findByTenantIdAndClassId(TENANT_ID, classId)).thenReturn(Optional.of(schoolClass));
+        when(institutionRepository.findById(new InstitutionId(TENANT_ID, SCHOOL_ID))).thenReturn(Optional.of(school));
+        when(sectionRepository.existsByTenantIdAndAcademicSessionIdAndClassIdAndSectionNameAndSectionIdNot(
+                TENANT_ID, sessionId, classId, "B", sectionId)).thenReturn(false);
+        when(sectionRepository.updateProfile(TENANT_ID, sectionId, 2, sessionId, null, classId, "B", 60, USER_ID))
+                .thenReturn(1);
+
+        ResponseEntity<SectionResponse> response = structureController.updateSection(
+                TENANT_ID, SCHOOL_ID, sectionId, "\"2\"",
+                new UpdateSectionRequest(sessionId, null, classId, "B", 60), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().sectionName()).isEqualTo("B");
+        assertThat(response.getBody().capacity()).isEqualTo(60);
         assertThat(response.getBody().rowVersion()).isEqualTo(3);
     }
 
