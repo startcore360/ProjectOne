@@ -1,6 +1,6 @@
 -- EDU 360 M15: admission intake and application scrutiny.
 BEGIN;
-CREATE TABLE app.admission_cycle (
+CREATE TABLE IF NOT EXISTS app.admission_cycle (
  tenant_id uuid NOT NULL, id uuid NOT NULL, institution_id uuid NOT NULL, academic_year_id uuid NOT NULL,
  program_id uuid NOT NULL, cycle_name text NOT NULL, start_date date NOT NULL, end_date date NOT NULL,
  application_fee numeric(12,2) NOT NULL DEFAULT 0, total_seats integer NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE app.admission_cycle (
  CONSTRAINT ck_admission_cycle_seats CHECK(total_seats>0), CONSTRAINT ck_admission_cycle_status CHECK(status IN('DRAFT','OPEN','CLOSED','ARCHIVED')),
  CONSTRAINT ck_admission_cycle_quota CHECK(jsonb_typeof(quota_capacity)='object'), CONSTRAINT ck_admission_cycle_version CHECK(row_version>=1)
 );
-CREATE TABLE app.admission_application (
+CREATE TABLE IF NOT EXISTS app.admission_application (
  tenant_id uuid NOT NULL, id uuid NOT NULL, institution_id uuid NOT NULL, cycle_id uuid NOT NULL,
  application_number text NOT NULL, applicant_name text NOT NULL, email text NOT NULL, phone text NOT NULL,
  date_of_birth date, qualifying_marks_percent numeric(5,2) NOT NULL, category text NOT NULL DEFAULT 'GENERAL',
@@ -48,19 +48,26 @@ ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK(purpose 
  'ACCREDITATION','COMPLIANCE','LEAVE_DOCUMENT','HALL_TICKET','COMMUNITY_MEDIA','IMPORT_SOURCE','EXPORT',
  'PROFILE_PHOTO','BRANDING','ATTENDANCE_UPLOAD','MARKS_SOURCE','SYLLABUS','CERTIFICATE','CONSENT_FORM',
  'SERVICE_RECORD','ADMISSION_DOCUMENT'));
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_admission_document_size;
 ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_admission_document_size
  CHECK(purpose<>'ADMISSION_DOCUMENT' OR (content_type IN('application/pdf','image/jpeg','image/png') AND size_bytes<=5242880));
-CREATE INDEX ix_admission_cycle_institution_status ON app.admission_cycle(tenant_id,institution_id,status,start_date);
-CREATE INDEX ix_admission_application_cycle_status ON app.admission_application(tenant_id,cycle_id,status,submitted_at);
-CREATE INDEX ix_admission_application_scrutiny ON app.admission_application(tenant_id,institution_id,verification_status,status);
+CREATE INDEX IF NOT EXISTS ix_admission_cycle_institution_status ON app.admission_cycle(tenant_id,institution_id,status,start_date);
+CREATE INDEX IF NOT EXISTS ix_admission_application_cycle_status ON app.admission_application(tenant_id,cycle_id,status,submitted_at);
+CREATE INDEX IF NOT EXISTS ix_admission_application_scrutiny ON app.admission_application(tenant_id,institution_id,verification_status,status);
+DROP TRIGGER IF EXISTS trg_touch ON app.admission_cycle;
 CREATE TRIGGER trg_touch BEFORE UPDATE ON app.admission_cycle FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
+DROP TRIGGER IF EXISTS trg_touch ON app.admission_application;
 CREATE TRIGGER trg_touch BEFORE UPDATE ON app.admission_application FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
 ALTER TABLE app.admission_cycle ENABLE ROW LEVEL SECURITY; ALTER TABLE app.admission_cycle FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS p_tenant ON app.admission_cycle;
 CREATE POLICY p_tenant ON app.admission_cycle USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
+DROP POLICY IF EXISTS p_institution ON app.admission_cycle;
 CREATE POLICY p_institution ON app.admission_cycle AS RESTRICTIVE USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[])) WITH CHECK(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]));
 GRANT SELECT,INSERT,UPDATE,DELETE ON app.admission_cycle TO edu_app; GRANT SELECT ON app.admission_cycle TO edu_report;
 ALTER TABLE app.admission_application ENABLE ROW LEVEL SECURITY; ALTER TABLE app.admission_application FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS p_tenant ON app.admission_application;
 CREATE POLICY p_tenant ON app.admission_application USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
+DROP POLICY IF EXISTS p_institution ON app.admission_application;
 CREATE POLICY p_institution ON app.admission_application AS RESTRICTIVE USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[])) WITH CHECK(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]));
 GRANT SELECT,INSERT,UPDATE,DELETE ON app.admission_application TO edu_app; GRANT SELECT ON app.admission_application TO edu_report;
 COMMIT;
