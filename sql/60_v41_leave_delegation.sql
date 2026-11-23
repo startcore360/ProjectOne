@@ -1,4 +1,14 @@
 BEGIN;
+ALTER TABLE app.leave_request
+ ADD COLUMN IF NOT EXISTS designated_delegate_staff_profile_id uuid;
+DO $$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_leave_request_designated_delegate') THEN
+  ALTER TABLE app.leave_request ADD CONSTRAINT fk_leave_request_designated_delegate
+   FOREIGN KEY (tenant_id, designated_delegate_staff_profile_id)
+   REFERENCES app.staff_profile(tenant_id, staff_profile_id) ON DELETE RESTRICT;
+ END IF;
+END $$;
 CREATE TABLE IF NOT EXISTS app.leave_delegation (
  tenant_id uuid NOT NULL, leave_delegation_id uuid NOT NULL, institution_id uuid, leave_request_id uuid NOT NULL,
  delegator_staff_profile_id uuid NOT NULL, delegate_staff_profile_id uuid NOT NULL, start_date date NOT NULL, end_date date NOT NULL, reason text,
