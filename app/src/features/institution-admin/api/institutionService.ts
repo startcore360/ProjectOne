@@ -47,6 +47,16 @@ export type InstitutionPageResponse = {
   total: number;
 };
 
+export type UpdateInstitutionPayload = {
+  institutionName: string;
+  addressLine?: string | null;
+  city?: string | null;
+  stateName?: string | null;
+  postalCode?: string | null;
+  principalInviteEmail?: string | null;
+  externalUniversityMode?: boolean;
+};
+
 export type CreateInstitutionRequest = {
   institutionType: InstitutionType;
   institutionCode: string;
@@ -191,6 +201,20 @@ export type CreateMasterCalendarEventPayload = {
 export const institutionService = {
   async listInstitutions(tenantId: string): Promise<InstitutionPageResponse> {
     const res = await api.get<InstitutionPageResponse>(`/api/tenants/${tenantId}/institutions`);
+    return res.data;
+  },
+
+  async updateInstitution(
+    tenantId: string,
+    institutionId: string,
+    rowVersion: number,
+    payload: UpdateInstitutionPayload
+  ): Promise<InstitutionItem> {
+    const res = await api.put<InstitutionItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}`,
+      payload,
+      { headers: { "If-Match": `"${rowVersion}"` } }
+    );
     return res.data;
   },
 
