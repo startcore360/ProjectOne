@@ -73,7 +73,6 @@ const InstitutionHierarchyPage = lazy(() => import("../features/institution-admi
 const CalendarEventsPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.CalendarEventsPage })));
 const DelegationsApprovalsPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.DelegationsApprovalsPage })));
 const ClassTeacherAssignmentPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.ClassTeacherAssignmentPage })));
-const HodAssignmentPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.HodAssignmentPage })));
 const MentorAssignmentPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.MentorAssignmentPage })));
 const StudentLoginSwitchPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.StudentLoginSwitchPage })));
 const TermLockPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.TermLockPage })));
@@ -152,7 +151,6 @@ export default function AppRoutes() {
               <Route path="/university/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
               <Route path="/university/roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.roles}><RolesPermissionsPage /></ActionGate>} />
               <Route path="/university/missing-roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.missingRoles}><MissingRolesPage /></ActionGate>} />
-              <Route path="/university/setup/hod" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.hodAssignment}><HodAssignmentPage /></ActionGate>} />
               <Route path="/university/setup/mentor" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.mentorAssignment}><MentorAssignmentPage /></ActionGate>} />
               <Route path="/university/setup/class-teacher" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.classTeacherAssignment}><ClassTeacherAssignmentPage /></ActionGate>} />
               <Route path="/university/setup/student-login" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.studentLogin}><StudentLoginSwitchPage /></ActionGate>} />
