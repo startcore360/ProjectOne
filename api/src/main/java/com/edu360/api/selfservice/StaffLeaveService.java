@@ -406,9 +406,10 @@ public class StaffLeaveService {
                 """, (rs, row) -> new java.sql.Date[] { rs.getDate(1), rs.getDate(2) }, tenantId, institutionId, end, start);
         BigDecimal days = ZERO;
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-            if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) continue;
+            LocalDate currentDate = date;
+            if (currentDate.getDayOfWeek() == DayOfWeek.SATURDAY || currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) continue;
             boolean holiday = holidays.stream().anyMatch(range ->
-                    !date.isBefore(range[0].toLocalDate()) && !date.isAfter(range[1].toLocalDate()));
+                    !currentDate.isBefore(range[0].toLocalDate()) && !currentDate.isAfter(range[1].toLocalDate()));
             if (!holiday) days = days.add(BigDecimal.ONE);
         }
         return days.setScale(1, RoundingMode.HALF_UP);
