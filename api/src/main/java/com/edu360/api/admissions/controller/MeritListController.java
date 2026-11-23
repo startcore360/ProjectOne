@@ -14,11 +14,11 @@ import java.util.UUID;
 public class MeritListController {
     private final AdmissionService service;
     public MeritListController(AdmissionService service){this.service=service;}
-    @GetMapping("/cycles/{cycleId}/merit-lists")
     @GetMapping("/merit-lists/{id}/items")
     public Object items(@PathVariable UUID tenantId,@PathVariable UUID id,Authentication auth){
         return service.meritListItems(AdmissionCycleController.actor(auth,tenantId),id);
     }
+    @GetMapping("/cycles/{cycleId}/merit-lists")
     public Object list(@PathVariable UUID tenantId,@PathVariable UUID cycleId,Authentication auth){
         return service.meritLists(AdmissionCycleController.actor(auth,tenantId),cycleId);
     }
