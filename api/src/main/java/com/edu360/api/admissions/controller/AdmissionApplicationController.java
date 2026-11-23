@@ -41,6 +41,10 @@ public class AdmissionApplicationController {
         return uploaded;
     }
     @GetMapping("/scrutiny")
+    @GetMapping("/applications/mine")
+    public List<Map<String,Object>> mine(@PathVariable UUID tenantId,Authentication auth){
+        return service.myApplications(AdmissionCycleController.actor(auth,tenantId));
+    }
     public List<Map<String,Object>> scrutiny(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth){
         return service.scrutinyQueue(AdmissionCycleController.actor(auth,tenantId),institutionId);
     }
