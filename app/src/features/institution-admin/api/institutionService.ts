@@ -78,6 +78,9 @@ export type DepartmentItem = {
   departmentName: string;
   hodStaffAssignmentId?: string;
   status: string;
+  facultyCount?: number;
+  studentCount?: number;
+  rowVersion?: number;
 };
 
 export type CreateDepartmentPayload = {
@@ -94,6 +97,7 @@ export type ProgramItem = {
   durationYears: number;
   semestersPerYear: number;
   status: string;
+  rowVersion?: number;
 };
 
 export type CreateProgramPayload = {
@@ -111,6 +115,7 @@ export type SchoolClassItem = {
   displayOrder: number;
   studentLoginEnabled: boolean;
   status: string;
+  rowVersion?: number;
 };
 
 export type SectionItem = {
@@ -122,6 +127,7 @@ export type SectionItem = {
   sectionName: string;
   status: string;
   capacity?: number | null;
+  rowVersion?: number;
 };
 
 export type CreateSchoolClassPayload = { className: string; displayOrder: number };
@@ -282,6 +288,20 @@ export const institutionService = {
     return res.data;
   },
 
+  async updateDepartment(tenantId: string, institutionId: string, departmentId: string, rowVersion: number, payload: CreateDepartmentPayload): Promise<DepartmentItem> {
+    const res = await api.put<DepartmentItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/departments/${departmentId}`,
+      payload,
+      { headers: { "If-Match": `"${rowVersion}"` } }
+    );
+    return res.data;
+  },
+
+  async archiveDepartment(tenantId: string, institutionId: string, departmentId: string, rowVersion: number): Promise<void> {
+    await api.delete(`/api/tenants/${tenantId}/institutions/${institutionId}/departments/${departmentId}`,
+      { headers: { "If-Match": `"${rowVersion}"` } });
+  },
+
   async listDepartments(tenantId: string, institutionId: string): Promise<DepartmentItem[]> {
     const res = await api.get<DepartmentItem[]>(
       `/api/tenants/${tenantId}/institutions/${institutionId}/departments`
@@ -299,6 +319,20 @@ export const institutionService = {
       payload
     );
     return res.data;
+  },
+
+  async updateProgram(tenantId: string, institutionId: string, programId: string, rowVersion: number, payload: CreateProgramPayload): Promise<ProgramItem> {
+    const res = await api.put<ProgramItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/programs/${programId}`,
+      payload,
+      { headers: { "If-Match": `"${rowVersion}"` } }
+    );
+    return res.data;
+  },
+
+  async archiveProgram(tenantId: string, institutionId: string, programId: string, rowVersion: number): Promise<void> {
+    await api.delete(`/api/tenants/${tenantId}/institutions/${institutionId}/programs/${programId}`,
+      { headers: { "If-Match": `"${rowVersion}"` } });
   },
 
   async listPrograms(tenantId: string, institutionId: string): Promise<ProgramItem[]> {
@@ -350,6 +384,20 @@ export const institutionService = {
     return res.data;
   },
 
+  async updateSchoolClass(tenantId: string, institutionId: string, classId: string, rowVersion: number, payload: CreateSchoolClassPayload): Promise<SchoolClassItem> {
+    const res = await api.put<SchoolClassItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/classes/${classId}`,
+      payload,
+      { headers: { "If-Match": `"${rowVersion}"` } }
+    );
+    return res.data;
+  },
+
+  async archiveSchoolClass(tenantId: string, institutionId: string, classId: string, rowVersion: number): Promise<void> {
+    await api.delete(`/api/tenants/${tenantId}/institutions/${institutionId}/classes/${classId}`,
+      { headers: { "If-Match": `"${rowVersion}"` } });
+  },
+
   async listSchoolClasses(tenantId: string, institutionId: string): Promise<SchoolClassItem[]> {
     const res = await api.get<SchoolClassItem[]>(
       `/api/tenants/${tenantId}/institutions/${institutionId}/classes`
@@ -367,6 +415,20 @@ export const institutionService = {
       payload
     );
     return res.data;
+  },
+
+  async updateSection(tenantId: string, institutionId: string, sectionId: string, rowVersion: number, payload: CreateSectionPayload & { semesterId?: string | null }): Promise<SectionItem> {
+    const res = await api.put<SectionItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/sections/${sectionId}`,
+      payload,
+      { headers: { "If-Match": `"${rowVersion}"` } }
+    );
+    return res.data;
+  },
+
+  async archiveSection(tenantId: string, institutionId: string, sectionId: string, rowVersion: number): Promise<void> {
+    await api.delete(`/api/tenants/${tenantId}/institutions/${institutionId}/sections/${sectionId}`,
+      { headers: { "If-Match": `"${rowVersion}"` } });
   },
 
   async listSections(tenantId: string, institutionId: string): Promise<SectionItem[]> {
