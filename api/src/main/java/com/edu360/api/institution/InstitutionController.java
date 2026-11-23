@@ -22,6 +22,7 @@ import com.edu360.api.institution.dto.BlockInstitutionRequest;
 import com.edu360.api.institution.dto.CreateInstitutionRequest;
 import com.edu360.api.institution.dto.InstitutionBlockResponse;
 import com.edu360.api.institution.dto.InstitutionPageResponse;
+import com.edu360.api.institution.dto.InstitutionHierarchyResponse;
 import com.edu360.api.institution.dto.InstitutionResponse;
 import com.edu360.api.institution.dto.UpdateInstitutionRequest;
 import com.edu360.api.rbac.RbacPrincipal;
@@ -105,6 +106,15 @@ public class InstitutionController {
 
         RbacPrincipal principal = extractTenantPrincipal(tenantId, authentication);
         return ResponseEntity.ok(institutionService.listInstitutions(principal));
+    }
+
+    @GetMapping("/hierarchy")
+    @Operation(summary = "Get tenant-rooted university group, college/school and department hierarchy")
+    public ResponseEntity<InstitutionHierarchyResponse> getHierarchy(
+            @PathVariable UUID tenantId,
+            Authentication authentication) {
+        RbacPrincipal principal = extractTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(institutionService.getHierarchy(principal));
     }
 
     @GetMapping("/{institutionId}")
