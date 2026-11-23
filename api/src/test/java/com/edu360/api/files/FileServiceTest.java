@@ -110,6 +110,23 @@ class FileServiceTest {
     }
 
     @Test
+    void scannerUnavailableRejectsUploadBeforeStorageOrPersistence() {
+        allowPermission();
+        when(scanner.scan(any())).thenThrow(new com.edu360.api.exception.ApiException(
+                org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                "SERVICE_UNAVAILABLE", "Malware scanning is not configured."));
+        MockMultipartFile upload = new MockMultipartFile("file", "lesson.pdf", "application/pdf",
+                "%PDF-1.7 sample".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+
+        assertThatThrownBy(() -> service.upload(principal, upload, "STUDY_MATERIAL", null))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasMessageContaining("Malware scanning is not configured");
+        verify(storage, never()).store(any(), any(), any());
+        verify(repository, never()).save(any());
+        verify(auditLog, never()).record(any(AuditEntry.class));
+    }
+
+    @Test
     void successfulUploadWritesOneStructuredAuditRecord() {
         allowUpload();
         MockMultipartFile upload = new MockMultipartFile("file", "lesson.pdf", "application/pdf",
