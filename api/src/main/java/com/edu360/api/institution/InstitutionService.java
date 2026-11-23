@@ -329,7 +329,10 @@ public class InstitutionService {
                                     .map(department -> new com.edu360.api.institution.dto.DepartmentResponse(
                                             department.getDepartmentId(), department.getInstitutionId(),
                                             department.getDepartmentCode(), department.getDepartmentName(),
-                                            department.getHodStaffAssignmentId(), department.getStatus()))
+                                            department.getHodStaffAssignmentId(), department.getStatus(),
+                                            departmentRepository.countActiveFaculty(principal.tenantId(), department.getDepartmentId()),
+                                            departmentRepository.countCurrentStudents(principal.tenantId(), department.getDepartmentId()),
+                                            department.getRowVersion() == null ? 1 : department.getRowVersion()))
                                     .toList();
                     return new com.edu360.api.institution.dto.InstitutionHierarchyNode(
                             InstitutionResponse.fromEntity(institution), departments);
