@@ -99,10 +99,11 @@ export type SectionItem = {
   classId: string | null;
   sectionName: string;
   status: string;
+  capacity?: number | null;
 };
 
 export type CreateSchoolClassPayload = { className: string; displayOrder: number };
-export type CreateSectionPayload = { academicSessionId: string; classId: string; sectionName: string };
+export type CreateSectionPayload = { academicSessionId: string; classId: string; sectionName: string; capacity?: number };
 
 export type AcademicSessionItem = {
   academicSessionId: string;
