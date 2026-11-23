@@ -324,9 +324,14 @@ public class StaffLeaveService {
         UUID approvalId = (UUID) row.get("approval_request_id");
         var approval = approvalRequests.findByIdTenantIdAndIdApprovalRequestId(tenantId, approvalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval request not found"));
+        List<com.edu360.api.approval.ApprovalStep> allSteps =
+                approvalSteps.findByIdTenantIdAndApprovalRequestIdOrderByStepNoAsc(tenantId, approvalId);
         var step = approvalSteps.findByIdTenantIdAndApprovalRequestIdAndStepNo(
                 tenantId, approvalId, approval.getCurrentStepNo())
                 .orElseThrow(() -> new ResourceNotFoundException("Final approval step not found"));
+        if (allSteps.isEmpty() || step.getStepNo() != allSteps.get(allSteps.size() - 1).getStepNo()) {
+            throw new BusinessRuleViolationException("FINAL_APPROVER_REQUIRED", "Only the final approver may cancel leave after its start date.");
+        }
         String action = com.edu360.api.approval.ApprovalInboxService.resolveApprovalAction(approval, step);
         if (action == null) throw new BusinessRuleViolationException("FINAL_APPROVER_REQUIRED", "The current leave approval step has no configured final-approver action.");
         RbacPrincipal actor = new RbacPrincipal(tenantId, actorId);
@@ -409,7 +414,7 @@ public class StaffLeaveService {
                 .orElseThrow(() -> new ResourceNotFoundException("Institution not found"));
         boolean school = institution.getInstitutionType() != null
                 && institution.getInstitutionType().toUpperCase().contains("SCHOOL");
-        if ("VICE_PRINCIPAL_COLLEGE".equalsIgnoreCase(role) || "VICE_PRINCIPAL_SCHOOL".equalsIgnoreCase(role)
+        if ((role != null && role.toUpperCase().contains("VICE_PRINCIPAL"))
                 || "HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) {
             return List.of(new StepSpec(school ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE", null));
         }
