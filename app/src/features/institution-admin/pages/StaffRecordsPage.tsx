@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import "./StaffRecordsPage.css";
 import {
   Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
@@ -31,6 +32,7 @@ function humanize(value: string) {
 const today = () => getLocalDateString();
 
 export default function StaffRecordsPage() {
+  const navigate = useNavigate();
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const userId = useAppSelector((state) => state.auth.user?.id);
   const { can } = useTenantAccess();
@@ -59,6 +61,7 @@ export default function StaffRecordsPage() {
   const [assignmentDraft, setAssignmentDraft] = useState({ institutionId: "", departmentId: "", designation: "", effectiveFrom: today() });
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [documentType, setDocumentType] = useState("DEGREE");
+  const [qualificationDraft, setQualificationDraft] = useState({ title: "", awardingInstitution: "", level: "UNDERGRADUATE", awardedOn: "" });
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
@@ -211,9 +214,18 @@ export default function StaffRecordsPage() {
       if (file.scanStatus !== "CLEAN" || file.status !== "ACTIVE") {
         throw new Error("The file is still being scanned or was rejected. Refresh the directory after scanning finishes.");
       }
-      await staffService.attachDocument(tenantId, selected.id, { documentType, fileId: file.fileId });
+      await staffService.attachDocument(tenantId, selected.id, {
+        documentType, fileId: file.fileId,
+        ...(documentType === "DEGREE" && qualificationDraft.title.trim() && qualificationDraft.awardingInstitution.trim() ? {
+          qualificationTitle: qualificationDraft.title.trim(),
+          awardingInstitution: qualificationDraft.awardingInstitution.trim(),
+          qualificationLevel: qualificationDraft.level,
+          awardedOn: qualificationDraft.awardedOn || undefined,
+        } : {}),
+      });
       setDocuments(await staffService.listDocuments(tenantId, selected.id));
       setDocumentFile(null);
+      setQualificationDraft({ title: "", awardingInstitution: "", level: "UNDERGRADUATE", awardedOn: "" });
       setFeedback({ tone: "success", message: "Document scanned and attached. Verification must be completed by another authorized person." });
     } catch (error) { setFeedback({ tone: "danger", message: getApiErrorMessage(error) }); }
     finally { setUploading(false); }
@@ -284,7 +296,7 @@ export default function StaffRecordsPage() {
                     <button type="button"
                       aria-pressed={selected?.id === person.id}
                       className={`app-record-item ${selected?.id === person.id ? "is-selected" : ""}`}
-                      onClick={() => { setSelected(person); void loadProfile(person.id); }}>
+                      onClick={() => navigate(`/university/staff/${person.id}`)}>
                       <span className="staff-record-list__copy"><strong>{person.fullName}</strong><small>{person.staffCode} · {humanize(person.employmentStatus)}</small></span>
                       <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>{humanize(person.employmentStatus)}</Badge>
                     </button>
@@ -363,6 +375,12 @@ export default function StaffRecordsPage() {
                   <div className="app-form-grid">
                     <SelectField id="staff-doc-type" label="Document type" value={documentType} onChange={(e) => setDocumentType(e.target.value)} options={[{ value: "DEGREE", label: "Degree certificate" }, { value: "ID_PROOF", label: "Identity proof" }, { value: "OTHER", label: "Other" }]} />
                     <FileDrop label="Choose file" onFile={setDocumentFile} accept=".pdf,.png,.jpg,.jpeg" maxBytes={10_485_760} />
+                    {documentType === "DEGREE" && <>
+                      <TextField id="staff-qualification-title" label="Qualification (optional)" value={qualificationDraft.title} onChange={(e) => setQualificationDraft({ ...qualificationDraft, title: e.target.value })} />
+                      <TextField id="staff-qualification-awarder" label="Awarding institution (optional)" value={qualificationDraft.awardingInstitution} onChange={(e) => setQualificationDraft({ ...qualificationDraft, awardingInstitution: e.target.value })} />
+                      <SelectField id="staff-qualification-level" label="Qualification level" value={qualificationDraft.level} onChange={(e) => setQualificationDraft({ ...qualificationDraft, level: e.target.value })} options={[{ value: "CERTIFICATE", label: "Certificate" }, { value: "DIPLOMA", label: "Diploma" }, { value: "UNDERGRADUATE", label: "Undergraduate" }, { value: "POSTGRADUATE", label: "Postgraduate" }, { value: "DOCTORATE", label: "Doctorate" }, { value: "OTHER", label: "Other" }]} />
+                      <DateField id="staff-qualification-awarded" label="Awarded on" value={qualificationDraft.awardedOn} onChange={(e) => setQualificationDraft({ ...qualificationDraft, awardedOn: e.target.value })} />
+                    </>}
                   </div>
                   <div className="app-inline-actions"><Button type="submit" variant="secondary" busy={uploading} disabled={!documentFile}>Upload and attach</Button></div>
                 </form>}
