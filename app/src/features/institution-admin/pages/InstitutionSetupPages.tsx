@@ -380,9 +380,12 @@ export function HodAssignmentPage() {
     const invalid = !isValidUuid(departmentId) || !isValidUuid(staffAssignmentId)
       ? "Select a department and an active faculty member."
       : null;
-    void run(invalid, () => api.put(`/tenants/${tenantId}/departments/${departmentId}/hod`, {
+    const selectedDepartment = departments.find((department) => department.departmentId === departmentId);
+    const missingVersion = !selectedDepartment ? "Reload the department list and try again." : null;
+    void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/departments/${departmentId}/hod`, {
       staffAssignmentId,
-    }), (data) => `HOD assignment recorded for department ${data.departmentId}.`);
+    }, { headers: { "If-Match": `"${selectedDepartment?.rowVersion ?? 1}"` } }),
+    (data) => `HOD assignment recorded for department ${data.departmentId}.`);
   };
 
   return (
@@ -1595,7 +1598,7 @@ export function AcademicStructurePage() {
     try {
       await api.put(`/tenants/${tenantId}/departments/${hodDepartment.departmentId}/hod`, {
         staffAssignmentId: hodStaffAssignmentId,
-      });
+      }, { headers: { "If-Match": `"${hodDepartment.rowVersion ?? 1}"` } });
       setHodDepartment(null);
       await loadStructureFor(institutionId);
     } catch (cause) {
