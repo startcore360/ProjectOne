@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,8 +31,10 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.dto.CreateDepartmentRequest;
 import com.edu360.api.institution.dto.CreateProgramRequest;
+import com.edu360.api.institution.dto.CreateSemesterRequest;
 import com.edu360.api.institution.dto.DepartmentResponse;
 import com.edu360.api.institution.dto.ProgramResponse;
+import com.edu360.api.institution.dto.SemesterResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
@@ -43,6 +46,8 @@ class StructureControllerTest {
     @Mock private InstitutionRepository institutionRepository;
     @Mock private DepartmentRepository departmentRepository;
     @Mock private ProgramRepository programRepository;
+    @Mock private ProgramYearRepository programYearRepository;
+    @Mock private SemesterRepository semesterRepository;
     @Mock private AuditLogService auditLogService;
     @Mock private Authentication authentication;
 
@@ -63,6 +68,8 @@ class StructureControllerTest {
                 departmentRepository,
                 programRepository,
                 auditLogService);
+        structureService.setProgramYearRepository(programYearRepository);
+        structureService.setSemesterRepository(semesterRepository);
         structureController = new StructureController(structureService);
     }
 
@@ -142,6 +149,97 @@ class StructureControllerTest {
         assertThat(response.getBody().semestersPerYear()).isEqualTo((short) 2);
 
         verify(auditLogService).record(eq(AuditEventType.PROGRAM_CREATED), any(), eq("BTECH_CSE"), any(), any());
+    }
+
+    @Test
+    void createSemester_persistsDateRangeAndRejectsInstitutionWideOverlap() {
+        mockPrincipal(TENANT_ID);
+        UUID programId = UUID.randomUUID();
+        UUID programYearId = UUID.randomUUID();
+        ProgramYear programYear = ProgramYear.builder()
+                .programYearId(programYearId)
+                .tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID)
+                .programId(programId)
+                .yearNumber((short) 1)
+                .label("Year 1")
+                .build();
+        when(programYearRepository.findByTenantIdAndProgramYearId(TENANT_ID, programYearId))
+                .thenReturn(Optional.of(programYear));
+        when(semesterRepository.existsByTenantIdAndProgramYearIdAndSemesterNumber(TENANT_ID, programYearId, (short) 1))
+                .thenReturn(false);
+        when(semesterRepository.existsOverlappingInstitutionTerm(
+                TENANT_ID, COLLEGE_ID, LocalDate.parse("2026-07-01"), LocalDate.parse("2026-11-30")))
+                .thenReturn(false);
+        when(semesterRepository.save(any(Semester.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CreateSemesterRequest request = new CreateSemesterRequest(
+                (short) 1, "Semester 1", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-11-30"));
+
+        ResponseEntity<SemesterResponse> response = structureController.createSemester(
+                TENANT_ID, COLLEGE_ID, programYearId, request, authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().startDate()).isEqualTo(LocalDate.parse("2026-07-01"));
+        assertThat(response.getBody().endDate()).isEqualTo(LocalDate.parse("2026-11-30"));
+        ArgumentCaptor<Semester> saved = ArgumentCaptor.forClass(Semester.class);
+        verify(semesterRepository).save(saved.capture());
+        assertThat(saved.getValue().getStartDate()).isEqualTo(LocalDate.parse("2026-07-01"));
+        assertThat(saved.getValue().getEndDate()).isEqualTo(LocalDate.parse("2026-11-30"));
+        verify(permissionEvaluatorService).authorize(any(), eq("STRUCTURE_MANAGE"),
+                eq(RbacScope.institution(COLLEGE_ID)), eq(RbacTarget.NONE));
+    }
+
+    @Test
+    void createSemester_rejectsDateRangeOverlappingAnotherProgramInInstitution() {
+        mockPrincipal(TENANT_ID);
+        UUID programYearId = UUID.randomUUID();
+        ProgramYear programYear = ProgramYear.builder()
+                .programYearId(programYearId)
+                .tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID)
+                .programId(UUID.randomUUID())
+                .yearNumber((short) 1)
+                .label("Year 1")
+                .build();
+        when(programYearRepository.findByTenantIdAndProgramYearId(TENANT_ID, programYearId))
+                .thenReturn(Optional.of(programYear));
+        when(semesterRepository.existsByTenantIdAndProgramYearIdAndSemesterNumber(TENANT_ID, programYearId, (short) 1))
+                .thenReturn(false);
+        when(semesterRepository.existsOverlappingInstitutionTerm(
+                TENANT_ID, COLLEGE_ID, LocalDate.parse("2026-08-01"), LocalDate.parse("2026-12-15")))
+                .thenReturn(true);
+
+        CreateSemesterRequest request = new CreateSemesterRequest(
+                (short) 1, "Semester 1", LocalDate.parse("2026-08-01"), LocalDate.parse("2026-12-15"));
+
+        assertThrows(BusinessRuleViolationException.class, () ->
+                structureController.createSemester(TENANT_ID, COLLEGE_ID, programYearId, request, authentication));
+        verify(semesterRepository, never()).save(any(Semester.class));
+    }
+
+    @Test
+    void createSemester_rejectsEndDateBeforeStartDate() {
+        mockPrincipal(TENANT_ID);
+        UUID programYearId = UUID.randomUUID();
+        ProgramYear programYear = ProgramYear.builder()
+                .programYearId(programYearId)
+                .tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID)
+                .programId(UUID.randomUUID())
+                .yearNumber((short) 1)
+                .label("Year 1")
+                .build();
+        when(programYearRepository.findByTenantIdAndProgramYearId(TENANT_ID, programYearId))
+                .thenReturn(Optional.of(programYear));
+
+        CreateSemesterRequest request = new CreateSemesterRequest(
+                (short) 1, "Semester 1", LocalDate.parse("2026-12-15"), LocalDate.parse("2026-08-01"));
+
+        assertThrows(BusinessRuleViolationException.class, () ->
+                structureController.createSemester(TENANT_ID, COLLEGE_ID, programYearId, request, authentication));
+        verify(semesterRepository, never()).save(any(Semester.class));
     }
 
     @Test
