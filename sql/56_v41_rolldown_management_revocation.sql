@@ -1,6 +1,15 @@
 -- 56_v41_rolldown_management_revocation.sql
 -- RD-G8: once a Management assignment exists, GBA-authored stand-in authority is permanently revoked.
 BEGIN;
+-- RD-G8 audit action. Action number 283 is reserved for the permanent GBA revocation event.
+INSERT INTO ref.action_catalog
+    (action_code, action_no, module_name, phase, description, is_approval_action, sensitive_class, changed_in)
+VALUES
+    ('ROLLDOWN_GBA_REVOKED', 283, 'Users and roles', 1,
+     'Record permanent revocation of Governing Body Approver roll-down authority when Management is assigned',
+     false, NULL, '4.1')
+ON CONFLICT DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS app.gba_rolldown_revocation (
     tenant_id uuid PRIMARY KEY,
     management_assignment_id uuid NOT NULL,

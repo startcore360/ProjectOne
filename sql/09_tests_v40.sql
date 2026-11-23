@@ -55,7 +55,25 @@ SELECT public.expect_fail('DB-67','K-033 band of an ACTIVE scheme cannot change 
 SELECT public.expect_fail('DB-68','K-033 no new band on an ACTIVE scheme', $q$INSERT INTO app.grade_band (tenant_id, grade_band_id, grading_scheme_version_id, lower_percent, grade_label, grade_points, created_by, updated_by) VALUES ('a0000000-0000-0000-0000-000000000000', gen_random_uuid(),'a0000000-0000-0000-0000-000000001201',80,'A+',9,'00000000-0000-0000-0000-0000000000aa','00000000-0000-0000-0000-0000000000aa')$q$, 'GRADING_SCHEME_FROZEN');
 -- K-028 correction lines frozen once the request leaves DRAFT (the term is unlocked first so only K-028 can refuse)
 RESET ROLE;
-UPDATE app.term_lock SET lock_state='TEMP_UNLOCKED', unlock_until=now() + interval '1 day' WHERE term_lock_id='a0000000-0000-0000-0000-000000000c03';
+-- The immutability trigger requires a matching, active 72-hour unlock log before the state change.
+INSERT INTO app.term_unlock_log
+    (tenant_id, id, term_id, unlocked_by_user_id, reason, unlocked_at, created_by, updated_by)
+VALUES
+    ('a0000000-0000-0000-0000-000000000000', gen_random_uuid(),
+     'a0000000-0000-0000-0000-000000000c03',
+     'a0000000-0000-0000-0000-000000000102',
+     'Temporary unlock for attendance correction acceptance fixture',
+     transaction_timestamp(),
+     '00000000-0000-0000-0000-0000000000aa',
+     '00000000-0000-0000-0000-0000000000aa');
+UPDATE app.term_lock
+   SET lock_state='TEMP_UNLOCKED',
+       unlock_until=(SELECT l.unlocked_at + interval '72 hours'
+                       FROM app.term_unlock_log l
+                      WHERE l.tenant_id='a0000000-0000-0000-0000-000000000000'
+                        AND l.term_id='a0000000-0000-0000-0000-000000000c03'
+                        AND l.is_active)
+ WHERE term_lock_id='a0000000-0000-0000-0000-000000000c03';
 SET ROLE edu_app;
 SELECT public.expect_ok('DB-69','correction request (DRAFT) with one line', $q$
   INSERT INTO app.attendance_correction_request (tenant_id, attendance_correction_request_id, institution_id, attendance_session_id, requested_by_user_id, reason, created_by, updated_by) VALUES ('a0000000-0000-0000-0000-000000000000','a0000000-0000-0000-0000-000000001501','a0000000-0000-0000-0000-000000000201','a0000000-0000-0000-0000-000000000c01','a0000000-0000-0000-0000-000000000101','Marked absent by mistake','00000000-0000-0000-0000-0000000000aa','00000000-0000-0000-0000-0000000000aa');
