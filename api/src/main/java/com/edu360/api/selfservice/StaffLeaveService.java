@@ -286,6 +286,9 @@ public class StaffLeaveService {
             if (!amounts.isEmpty()) available = amounts.get(0);
         }
         if (request.designatedDelegateStaffProfileId() != null) {
+            if (!isTeaching(assignment.getDesignation(), TenantContext.currentActiveRoleCode())) {
+                throw new BusinessRuleViolationException("LEAVE_COVER_TEACHING_ONLY", "A designated substitute is available only for teaching staff leave.");
+            }
             if (request.designatedDelegateStaffProfileId().equals(staffId)) {
                 throw new BusinessRuleViolationException("SELF_LEAVE_COVER_PROHIBITED", "A staff member cannot designate themselves as leave cover.");
             }
@@ -509,9 +512,13 @@ public class StaffLeaveService {
         boolean universityStaff = assignment.getInstitutionId() == null;
         boolean teaching = isTeaching(assignment.getDesignation(), role);
         if (universityStaff) {
-            chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
+            if (!"UNIVERSITY_HR_MANAGER".equalsIgnoreCase(role)) {
+                chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
+            }
         } else if (!school && !teaching) {
-            chain.add(new StepSpec("HR_MANAGER", null));
+            if (!"HR_MANAGER".equalsIgnoreCase(role)) {
+                chain.add(new StepSpec("HR_MANAGER", null));
+            }
         } else if (!school && assignment.getDepartmentId() != null) {
             UUID hodUser = jdbc.query("""
                     SELECT sa2.user_account_id
