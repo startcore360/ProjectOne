@@ -2065,7 +2065,7 @@ export function AcademicStructurePage() {
             ) : schoolClasses.length > 0 ? (
               <div className="app-table-wrap">
                 <table className="app-table">
-                  <thead><tr><th>Class or grade</th><th>Display order</th><th>Student access</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Class or grade</th><th>Display order</th><th>Student access</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
                     {schoolClasses.map((schoolClass) => (
                       <tr key={schoolClass.classId}>
@@ -2073,6 +2073,10 @@ export function AcademicStructurePage() {
                         <td>{schoolClass.displayOrder}</td>
                         <td>{schoolClass.studentLoginEnabled ? "Enabled" : "Disabled"}</td>
                         <td><Badge tone={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>{schoolClass.status === "ACTIVE" ? "Active" : schoolClass.status}</Badge></td>
+                        <td><div className="app-inline-actions">
+                          <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "class", item: schoolClass }); }}>Edit</Button>
+                          <Button size="sm" variant="danger" disabled={!schoolClass.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "class", id: schoolClass.classId, name: schoolClass.className, rowVersion: schoolClass.rowVersion }); }}>Archive</Button>
+                        </div></td>
                       </tr>
                     ))}
                   </tbody>
@@ -2150,7 +2154,7 @@ export function AcademicStructurePage() {
             ) : schoolSections.length > 0 ? (
               <div className="app-table-wrap">
                 <table className="app-table">
-                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Capacity</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
                     {schoolSections.map((section) => (
                       <tr key={section.sectionId}>
@@ -2159,6 +2163,10 @@ export function AcademicStructurePage() {
                         <td>{schoolSessions.find((item) => item.academicSessionId === section.academicSessionId)?.sessionLabel ?? section.academicSessionId}</td>
                         <td>{section.capacity ?? "Not set"}</td>
                         <td><Badge tone={section.status === "ACTIVE" ? "success" : "neutral"}>{section.status === "ACTIVE" ? "Active" : section.status}</Badge></td>
+                        <td><div className="app-inline-actions">
+                          <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "section", item: section }); }}>Edit</Button>
+                          <Button size="sm" variant="danger" disabled={!section.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "section", id: section.sectionId, name: `Section ${section.sectionName}`, rowVersion: section.rowVersion }); }}>Archive</Button>
+                        </div></td>
                       </tr>
                     ))}
                   </tbody>
@@ -2216,7 +2224,11 @@ export function AcademicStructurePage() {
                           <td>{d.studentCount ?? 0}</td>
                           <td><Badge tone={d.status === "ACTIVE" ? "success" : "neutral"}>{d.status}</Badge></td>
                           <td>{d.hodStaffAssignmentId ? "Assigned" : "Unassigned"}</td>
-                          <td><Button size="sm" variant="secondary" onClick={() => void openHodAssignment(d)}>Assign HOD</Button></td>
+                          <td><div className="app-inline-actions">
+                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "department", item: d }); }}>Edit</Button>
+                            <Button size="sm" variant="secondary" onClick={() => void openHodAssignment(d)}>Assign HOD</Button>
+                            <Button size="sm" variant="danger" disabled={!d.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "department", id: d.departmentId, name: d.departmentName, rowVersion: d.rowVersion }); }}>Archive</Button>
+                          </div></td>
                         </tr>
                       ))}
                     </tbody>
@@ -2282,6 +2294,7 @@ export function AcademicStructurePage() {
                         <th>Duration</th>
                         <th>Semesters / Year</th>
                         <th>Status</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2291,7 +2304,11 @@ export function AcademicStructurePage() {
                           <td><Link to={`/university/setup/structure/${institutionId}/programs/${p.programId}`}>{p.programName}</Link></td>
                           <td>{p.durationYears} {p.durationYears === 1 ? "Year" : "Years"}</td>
                           <td>{p.semestersPerYear}</td>
-                          <td><Badge tone="success">{p.status}</Badge></td>
+                          <td><Badge tone={p.status === "ACTIVE" ? "success" : "neutral"}>{p.status}</Badge></td>
+                          <td><div className="app-inline-actions">
+                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "program", item: p }); }}>Edit</Button>
+                            <Button size="sm" variant="danger" disabled={!p.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "program", id: p.programId, name: p.programName, rowVersion: p.rowVersion }); }}>Archive</Button>
+                          </div></td>
                         </tr>
                       ))}
                     </tbody>
