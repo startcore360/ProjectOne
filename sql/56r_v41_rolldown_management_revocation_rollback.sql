@@ -10,7 +10,7 @@ DROP TRIGGER IF EXISTS trg_revoke_gba_rolldown ON app.user_role_assignment;
 DROP FUNCTION IF EXISTS app.fn_revoke_gba_rolldown();
 DROP TABLE IF EXISTS app.gba_rolldown_revocation;
 CREATE OR REPLACE FUNCTION app.fn_rolldown_resolve(p_institution uuid, p_role text, p_action text)
-RETURNS TABLE (effective_role text, resolved_via text, path text[]) LANGUAGE plpgsql STABLE AS $
+RETURNS TABLE (effective_role text, resolved_via text, path text[]) LANGUAGE plpgsql STABLE AS $$
 DECLARE v_tenant uuid := NULLIF(current_setting('app.tenant_id', true), '')::uuid;
         v_ctx text; v_kind text; v_cur text := p_role; v_path text[] := ARRAY[p_role]; v_next text; v_mode text; i int;
 BEGIN
@@ -43,7 +43,7 @@ BEGIN
     v_path := v_path || v_next; v_cur := v_next;
   END LOOP;
   effective_role := NULL; resolved_via := 'UNRESOLVED'; path := v_path; RETURN NEXT;
-END $;
+END $$;
 
 CREATE OR REPLACE FUNCTION app.fn_rolldown_override_guard() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE v_type text; v_kind text;
