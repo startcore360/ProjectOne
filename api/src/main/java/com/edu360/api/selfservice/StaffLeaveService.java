@@ -66,6 +66,55 @@ public class StaffLeaveService {
     }
 
     @Transactional(readOnly = true)
+    public List<com.edu360.api.selfservice.dto.StaffLeaveTypeResponse> institutionLeaveTypes(UUID tenantId, UUID actorId, UUID institutionId) {
+        RbacPrincipal actor = new RbacPrincipal(tenantId, actorId);
+        permissions.authorize(actor, "LEAVE_TYPES_SET", RbacScope.institution(institutionId), RbacTarget.NONE);
+        return jdbc.query("""
+                SELECT leave_type_id,institution_id,leave_code,leave_name,tracks_balance,is_loss_of_pay
+                  FROM app.leave_type WHERE tenant_id=? AND institution_id=? AND audience='STAFF'
+                 ORDER BY is_default DESC,leave_name
+                """, (rs, row) -> new com.edu360.api.selfservice.dto.StaffLeaveTypeResponse(
+                    rs.getObject("leave_type_id", UUID.class), rs.getObject("institution_id", UUID.class),
+                    rs.getString("leave_code"), rs.getString("leave_name"),
+                    rs.getBoolean("tracks_balance"), rs.getBoolean("is_loss_of_pay")), tenantId, institutionId);
+    }
+
+    @Transactional
+    public com.edu360.api.selfservice.dto.StaffLeaveTypeResponse createLeaveType(UUID tenantId, UUID actorId,
+            UUID institutionId, com.edu360.api.selfservice.dto.StaffLeaveTypeSetRequest request) {
+        if (request == null || request.leaveCode() == null || !request.leaveCode().matches("^[A-Z_]{2,30}$")
+                || request.leaveName() == null || request.leaveName().isBlank() || request.leaveName().trim().length() > 60
+                || (request.tracksBalance() && request.isLossOfPay())) {
+            throw new BusinessRuleViolationException("INVALID_LEAVE_TYPE", "Provide a valid uppercase leave code, a 1-60 character name, and a non-loss-of-pay balance setting.");
+        }
+        if (!institutions.existsByIdTenantIdAndIdInstitutionId(tenantId, institutionId)) {
+            throw new ResourceNotFoundException("Institution not found");
+        }
+        RbacPrincipal actor = new RbacPrincipal(tenantId, actorId);
+        permissions.authorize(actor, "LEAVE_TYPES_SET", RbacScope.institution(institutionId), RbacTarget.NONE);
+        Integer duplicate = jdbc.queryForObject("""
+                SELECT count(*) FROM app.leave_type
+                 WHERE tenant_id=? AND institution_id=? AND audience='STAFF' AND leave_code=?
+                """, Integer.class, tenantId, institutionId, request.leaveCode());
+        if (duplicate != null && duplicate > 0) {
+            throw new BusinessRuleViolationException("LEAVE_TYPE_CODE_EXISTS", "A leave type with this code already exists in the institution.");
+        }
+        boolean isDefault = List.of("CASUAL", "SICK", "EARNED", "MATERNITY_PATERNITY", "DUTY", "LOSS_OF_PAY")
+                .contains(request.leaveCode());
+        UUID id = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO app.leave_type
+                  (tenant_id,leave_type_id,institution_id,audience,leave_code,leave_name,
+                   tracks_balance,is_loss_of_pay,is_default,status,created_by,updated_by)
+                VALUES (?,?,?,'STAFF',?,?,?,?,?,'ACTIVE',?,?)
+                """, tenantId, id, institutionId, request.leaveCode(), request.leaveName().trim(),
+                request.tracksBalance(), request.isLossOfPay(), isDefault, actorId, actorId);
+        return new com.edu360.api.selfservice.dto.StaffLeaveTypeResponse(
+                id, institutionId, request.leaveCode(), request.leaveName().trim(),
+                request.tracksBalance(), request.isLossOfPay());
+    }
+
+    @Transactional(readOnly = true)
     public List<com.edu360.api.selfservice.dto.StaffLeaveTypeResponse> availableLeaveTypes(UUID tenantId, UUID userId) {
         StaffProfile staff = staffProfiles.findByIdTenantIdAndUserAccountId(tenantId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
