@@ -54,6 +54,36 @@ public class StaffAppraisalService {
     }
 
     @Transactional
+    public Map<String,Object> updateCycleStatus(RbacPrincipal actor, UUID cycleId, String status) {
+        var cycle = cycle(actor.tenantId(), cycleId);
+        permissions.authorize(actor, "STAFF_APPRAISAL_CYCLE_MANAGE",
+                permissions.targetScope(actor, (UUID) cycle.get("institution_id"), null), RbacTarget.NONE);
+        String current = String.valueOf(cycle.get("status"));
+        if (!List.of("DRAFT", "OPEN", "CLOSED").contains(status)
+                || ("DRAFT".equals(current) && !"OPEN".equals(status))
+                || ("OPEN".equals(current) && !"CLOSED".equals(status))
+                || "CLOSED".equals(current)) {
+            throw new BusinessRuleViolationException("INVALID_APPRAISAL_CYCLE_TRANSITION",
+                    "Allowed appraisal cycle transitions are DRAFT → OPEN → CLOSED.");
+        }
+        jdbc.update("UPDATE app.appraisal_cycle SET status=?,updated_by=? WHERE tenant_id=? AND id=?",
+                status, actor.userAccountId(), actor.tenantId(), cycleId);
+        return jdbc.queryForMap("SELECT id,institution_id,academic_year_id,name,start_date,end_date,status,row_version FROM app.appraisal_cycle WHERE tenant_id=? AND id=?",
+                actor.tenantId(), cycleId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String,Object>> submissions(RbacPrincipal actor, UUID cycleId) {
+        var cycle = cycle(actor.tenantId(), cycleId);
+        permissions.authorize(actor, "STAFF_APPRAISAL_VIEW",
+                permissions.targetScope(actor, (UUID) cycle.get("institution_id"), null), RbacTarget.NONE);
+        return jdbc.queryForList("""
+            SELECT id,cycle_id,staff_id,self_score,hod_score,principal_score,final_rating,status,comments_json,row_version
+            FROM app.appraisal_submission WHERE tenant_id=? AND cycle_id=? ORDER BY status,staff_id
+            """, actor.tenantId(), cycleId);
+    }
+
+    @Transactional
     public Map<String,Object> submitSelfEvaluation(RbacPrincipal actor, UUID cycleId, BigDecimal score, String commentsJson) {
         var cycle = cycle(actor.tenantId(), cycleId);
         UUID staffId = staffId(actor);
