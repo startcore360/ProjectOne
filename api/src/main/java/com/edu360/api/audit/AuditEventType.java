@@ -28,6 +28,7 @@ public enum AuditEventType {
     /** MFA-01: a new set of backup codes was issued (earlier codes stop working). */
     MFA_RECOVERY_CODES_ISSUED,
     INSTITUTION_CREATED_DRAFT,
+    INSTITUTION_UPDATED,
     INSTITUTION_ID_FORMAT_UPDATED,
     INSTITUTION_ACTIVATED,
     INSTITUTION_ACTIVATION_REQUESTED,
