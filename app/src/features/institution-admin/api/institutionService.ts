@@ -30,6 +30,18 @@ export type InstitutionIdFormats = {
   staffFormatLocked: boolean;
 };
 
+export type InstitutionHierarchyNode = {
+  institution: InstitutionItem;
+  departments: DepartmentItem[];
+};
+
+export type InstitutionHierarchyResponse = {
+  tenantId: string;
+  tenantName: string;
+  tenantType: string;
+  institutions: InstitutionHierarchyNode[];
+};
+
 export type InstitutionPageResponse = {
   items: InstitutionItem[];
   total: number;
@@ -179,6 +191,11 @@ export type CreateMasterCalendarEventPayload = {
 export const institutionService = {
   async listInstitutions(tenantId: string): Promise<InstitutionPageResponse> {
     const res = await api.get<InstitutionPageResponse>(`/api/tenants/${tenantId}/institutions`);
+    return res.data;
+  },
+
+  async getHierarchy(tenantId: string): Promise<InstitutionHierarchyResponse> {
+    const res = await api.get<InstitutionHierarchyResponse>(`/api/tenants/${tenantId}/institutions/hierarchy`);
     return res.data;
   },
 
