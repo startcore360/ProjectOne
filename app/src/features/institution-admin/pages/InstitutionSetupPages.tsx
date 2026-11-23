@@ -1822,8 +1822,8 @@ export function AcademicStructurePage() {
           </Panel>
 
           {hodDepartment && (
-            <div className="app-modal-backdrop" role="presentation">
-              <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="assign-hod-title">
+            <div role="presentation" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: "1rem", background: "rgba(15, 23, 42, 0.55)" }}>
+              <div role="dialog" aria-modal="true" aria-label={`Assign HOD to ${hodDepartment.departmentName}`} style={{ width: "min(36rem, 100%)", maxHeight: "90vh", overflow: "auto" }}>
                 <Panel title={`Assign HOD — ${hodDepartment.departmentName}`} description="Choose an active faculty assignment in this department. The server validates institution and department scope.">
                   <form onSubmit={submitHodAssignment}>
                     <PersonPicker
