@@ -257,6 +257,8 @@ public class StructureService {
                 .programId(programId)
                 .yearNumber(request.yearNumber())
                 .label(request.label().trim())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
                 .build();
@@ -294,8 +296,17 @@ public class StructureService {
                         .orElseThrow(() -> new ResourceNotFoundException("ProgramYear " + programYearId + " was not found"))
                 : null;
 
+        if (py != null && !institutionId.equals(py.getInstitutionId())) {
+            throw new BusinessRuleViolationException("PROGRAM_YEAR_NOT_IN_INSTITUTION", "Program year does not belong to this institution.");
+        }
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BusinessRuleViolationException("INVALID_DATE_RANGE", "endDate must be on or after startDate for semester.");
+        }
         if (programYearRepository != null && semesterRepository != null && semesterRepository.existsByTenantIdAndProgramYearIdAndSemesterNumber(principal.tenantId(), programYearId, request.semesterNumber())) {
             throw new BusinessRuleViolationException("DUPLICATE_SEMESTER_NUMBER", "Semester " + request.semesterNumber() + " already exists for this program year.");
+        }
+        if (semesterRepository != null && semesterRepository.existsOverlappingInstitutionTerm(principal.tenantId(), institutionId, request.startDate(), request.endDate())) {
+            throw new BusinessRuleViolationException("SEMESTER_DATE_OVERLAP", "Semester dates overlap another term in this institution.");
         }
 
         UUID semId = UUID.randomUUID();
@@ -321,7 +332,7 @@ public class StructureService {
                 "0.0.0.0",
                 "Semester '" + semester.getLabel() + "' (" + semId + ") created for programYear " + programYearId);
 
-        return new SemesterResponse(semester.getSemesterId(), semester.getInstitutionId(), semester.getProgramYearId(), semester.getSemesterNumber(), semester.getLabel());
+        return new SemesterResponse(semester.getSemesterId(), semester.getInstitutionId(), semester.getProgramYearId(), semester.getSemesterNumber(), semester.getLabel(), semester.getStartDate(), semester.getEndDate());
     }
 
     @Transactional(readOnly = true)
@@ -330,7 +341,7 @@ public class StructureService {
         if (semesterRepository == null) return List.of();
         return semesterRepository.findByTenantIdAndProgramYearIdOrderBySemesterNumberAsc(principal.tenantId(), programYearId)
                 .stream()
-                .map(s -> new SemesterResponse(s.getSemesterId(), s.getInstitutionId(), s.getProgramYearId(), s.getSemesterNumber(), s.getLabel()))
+                .map(s -> new SemesterResponse(s.getSemesterId(), s.getInstitutionId(), s.getProgramYearId(), s.getSemesterNumber(), s.getLabel(), s.getStartDate(), s.getEndDate()))
                 .toList();
     }
 
