@@ -431,7 +431,7 @@ public class ApprovalInboxService {
     public static String resolveApprovalAction(ApprovalRequest request, ApprovalStep step) {
         if (request == null || step == null
                 || !"STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
-                || !"STAFF_LEAVE".equalsIgnoreCase(request.getProcessCode())) {
+                ) {
             return resolveApprovalAction(request);
         }
         String role = step.getApproverRoleCode();
@@ -509,8 +509,7 @@ public class ApprovalInboxService {
                 promotionRunRepository.save(run);
             });
         } else if (isAttendanceProcess(request)
-                || ("STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
-                    && "STAFF_LEAVE".equalsIgnoreCase(request.getProcessCode()))) {
+                || "STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())) {
             ApprovalOutcomeHandler handler = outcomeHandlers.stream().filter(candidate -> candidate.supports(request))
                     .findFirst().orElseThrow(() -> new BusinessRuleViolationException(
                             "APPROVAL_HANDLER_NOT_REGISTERED",
