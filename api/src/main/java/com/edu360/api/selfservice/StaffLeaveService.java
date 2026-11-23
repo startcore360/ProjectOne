@@ -521,10 +521,12 @@ public class StaffLeaveService {
             }
         } else if (!school && assignment.getDepartmentId() != null) {
             UUID hodUser = jdbc.query("""
-                    SELECT sa2.user_account_id
+                    SELECT sp.user_account_id
                       FROM app.department d
                       JOIN app.staff_assignment sa2 ON sa2.tenant_id=d.tenant_id
                        AND sa2.staff_assignment_id=d.hod_staff_assignment_id
+                      JOIN app.staff_profile sp ON sp.tenant_id=sa2.tenant_id
+                       AND sp.staff_profile_id=sa2.staff_profile_id
                      WHERE d.tenant_id=? AND d.department_id=? AND sa2.status='ACTIVE'
                     """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null, tenantId, assignment.getDepartmentId());
             if (hodUser == null) return List.of();
