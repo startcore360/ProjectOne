@@ -30,7 +30,9 @@ class MeritApprovalRuleC12IT {
     private static final UUID LIST = UUID.fromString("20000000-0000-0000-0000-000000000001");
     private static final UUID PRINCIPAL = UUID.fromString("30000000-0000-0000-0000-000000000001");
     private static final UUID DELEGATE = UUID.fromString("30000000-0000-0000-0000-000000000002");
+    private static final UUID NON_PRINCIPAL = UUID.fromString("30000000-0000-0000-0000-000000000003");
     private static final UUID PRINCIPAL_ROLE = UUID.fromString("40000000-0000-0000-0000-000000000001");
+    private static final UUID ADMIN_ROLE = UUID.fromString("40000000-0000-0000-0000-000000000002");
 
     @BeforeEach
     void installMigrationFunctionAndMinimalSchema() throws Exception {
@@ -73,8 +75,10 @@ class MeritApprovalRuleC12IT {
                 FOR EACH ROW EXECUTE FUNCTION app.fn_validate_merit_approval()
                 """);
             statement.execute("INSERT INTO app.role_definition VALUES ('" + TENANT + "','" + PRINCIPAL_ROLE + "','PRINCIPAL_COLLEGE','ACTIVE')");
+            statement.execute("INSERT INTO app.role_definition VALUES ('" + TENANT + "','" + ADMIN_ROLE + "','COLLEGE_ADMIN','ACTIVE')");
             statement.execute("INSERT INTO app.user_role_assignment VALUES ('" + TENANT + "','" + PRINCIPAL + "','" + PRINCIPAL_ROLE + "','ACTIVE',now()-interval '1 day',null)");
             statement.execute("INSERT INTO app.user_role_assignment VALUES ('" + TENANT + "','" + DELEGATE + "','" + PRINCIPAL_ROLE + "','ACTIVE',now()-interval '1 day',null)");
+            statement.execute("INSERT INTO app.user_role_assignment VALUES ('" + TENANT + "','" + NON_PRINCIPAL + "','" + ADMIN_ROLE + "','ACTIVE',now()-interval '1 day',null)");
             statement.execute("INSERT INTO app.merit_list VALUES ('" + TENANT + "','" + LIST + "','PROVISIONAL',null,null)");
         }
     }
@@ -107,9 +111,9 @@ class MeritApprovalRuleC12IT {
     @Test
     void nonPrincipalCannotApprove() throws Exception {
         try (Connection connection = connection(); Statement statement = connection.createStatement()) {
-            statement.execute("SELECT set_config('app.user_id','" + DELEGATE + "',false)");
+            statement.execute("SELECT set_config('app.user_id','" + NON_PRINCIPAL + "',false)");
             SQLException error = assertThrows(SQLException.class, () -> statement.execute(
-                    "UPDATE app.merit_list SET status='APPROVED',approved_by_user_id='" + DELEGATE + "' WHERE tenant_id='" + TENANT + "' AND id='" + LIST + "'"));
+                    "UPDATE app.merit_list SET status='APPROVED',approved_by_user_id='" + NON_PRINCIPAL + "' WHERE tenant_id='" + TENANT + "' AND id='" + LIST + "'"));
             assertThat(error.getSQLState()).isEqualTo("42501");
         }
     }

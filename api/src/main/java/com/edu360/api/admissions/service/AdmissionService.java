@@ -37,7 +37,7 @@ public class AdmissionService {
 
     @Transactional(readOnly=true)
     public List<Map<String,Object>> cycles(TenantPrincipal actor, UUID institutionId) {
-        authorizeAny(actor,institutionId,"APPLICATION_SUBMIT","STRUCTURE_MANAGE");
+        authorizeAny(actor,institutionId,"ADMISSION_FORM_CREATE","APPLICATION_SUBMIT","APPLICATION_VERIFY","MERIT_LIST_GENERATE","SEAT_ALLOCATE");
         return jdbc.queryForList("select * from app.admission_cycle where tenant_id=? and (? is null or institution_id=?) order by start_date desc",
                 actor.tenantId(),institutionId,institutionId);
     }

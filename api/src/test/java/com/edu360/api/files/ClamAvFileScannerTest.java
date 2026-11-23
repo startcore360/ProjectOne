@@ -76,6 +76,33 @@ class ClamAvFileScannerTest {
         }
     }
 
+    @Test
+    void quarantinesInfectedResponse() throws Exception {
+        byte[] payload = "infected sample".getBytes(StandardCharsets.US_ASCII);
+        try (ServerSocket server = new ServerSocket(0);
+                ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            Future<?> response = executor.submit(() -> {
+                try (Socket client = server.accept();
+                        DataInputStream input = new DataInputStream(client.getInputStream());
+                        DataOutputStream output = new DataOutputStream(client.getOutputStream())) {
+                    int next;
+                    while ((next = input.read()) != 0) {
+                        if (next < 0) throw new java.io.EOFException("INSTREAM command was not NUL terminated.");
+                    }
+                    int length = input.readInt();
+                    input.readNBytes(length);
+                    input.readInt();
+                    output.write("stream: Eicar-Test-Signature FOUND\\0".getBytes(StandardCharsets.US_ASCII));
+                    output.flush();
+                }
+                return null;
+            });
+            ClamAvFileScanner scanner = new ClamAvFileScanner("127.0.0.1", server.getLocalPort(), 1_000, 1_000);
+            assertThat(scanner.scan(payload)).isEqualTo(FileScanner.ScanResult.INFECTED);
+            response.get(2, TimeUnit.SECONDS);
+        }
+    }
+
     private record ReceivedRequest(String command, byte[] content, int terminalChunkLength) {}
 
     @Configuration(proxyBeanMethods = false)
