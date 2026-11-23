@@ -35,20 +35,44 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Lint
+        id: lint
+        continue-on-error: true
         run: npm run lint
       - name: Run T1 term-lock modal tests
+        id: t1
+        continue-on-error: true
         run: npm test -- TermLockModal
       - name: Run complete unit test suite
+        id: unit
+        continue-on-error: true
         run: npm test
       - name: Type-check and production build
+        id: build
+        continue-on-error: true
         run: npm run build
       - name: Upload frontend build
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: edu360-frontend-dist-${{ github.sha }}
           path: app/dist/
           if-no-files-found: error
           retention-days: 7
+      - name: Enforce frontend quality gate
+        if: always()
+        env:
+          LINT: ${{ steps.lint.outcome }}
+          T1: ${{ steps.t1.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+        run: |
+          failed=0
+          for check in LINT T1 UNIT BUILD; do
+            value="${!check}"
+            echo "$check: $value"
+            [ "$value" = "success" ] || failed=1
+          done
+          exit "$failed"
 
   backend:
     name: Spring Boot quality gates
@@ -64,16 +88,39 @@ jobs:
           cache: maven
           cache-dependency-path: api/pom.xml
       - name: Run T1 term-lock and roll-down tests
+        id: t1
+        continue-on-error: true
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=AcademicTermLockIT,RoleRolldownIT
+      - name: Run T4 student integration tests
+        id: t4
+        continue-on-error: true
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=StudentServiceIT,StudentNoteGuardIT
       - name: Verify backend
+        id: verify
+        continue-on-error: true
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml verify
       - name: Upload backend package
+        if: steps.verify.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: edu360-backend-package-${{ github.sha }}
           path: api/target/*.jar
           if-no-files-found: error
           retention-days: 7
+      - name: Enforce backend quality gate
+        if: always()
+        env:
+          T1: ${{ steps.t1.outcome }}
+          T4: ${{ steps.t4.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+        run: |
+          failed=0
+          for check in T1 T4 VERIFY; do
+            value="${!check}"
+            echo "$check: $value"
+            [ "$value" = "success" ] || failed=1
+          done
+          exit "$failed"
 
   security:
     name: Dependency and secret checks
