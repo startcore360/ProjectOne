@@ -277,7 +277,7 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
         authorize(actor,"SEAT_ALLOCATE",(UUID)list.get("institution_id"));
         if(!Set.of("APPROVED","PUBLISHED").contains(list.get("status"))) throw new BusinessRuleViolationException("MERIT_LIST_NOT_APPROVED","Merit list must be approved before allocation.");
         one("select id from app.admission_cycle where tenant_id=? and id=? for update",actor.tenantId(),list.get("cycle_id"));
-        List<Map<String,Object>> items=jdbc.queryForList("select i.* from app.merit_list_item i where i.tenant_id=? and i.merit_list_id=? and i.seat_status='OFFERED' and not exists (select 1 from app.seat_allotment s where s.tenant_id=i.tenant_id and s.cycle_id=? and s.application_id=i.application_id and s.status not in('DECLINED','EXPIRED')) order by i.merit_rank",actor.tenantId(),listId,list.get("cycle_id"));
+        List<Map<String,Object>> items=jdbc.queryForList("select i.* from app.merit_list_item i where i.tenant_id=? and i.merit_list_id=? and i.seat_status='OFFERED' and not exists (select 1 from app.seat_allotment s where s.tenant_id=i.tenant_id and s.cycle_id=? and s.application_id=i.application_id) order by i.merit_rank",actor.tenantId(),listId,list.get("cycle_id"));
         int max=((Number)list.get("total_seats")).intValue(),count=0;
         Map<String,Object> capacities=readJsonObject(list.get("quota_capacity"));
         Map<String,Integer> used=new HashMap<>();
