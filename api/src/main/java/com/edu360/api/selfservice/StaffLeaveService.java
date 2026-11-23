@@ -308,10 +308,10 @@ public class StaffLeaveService {
         BigDecimal lossOfPay = isLossOfPay ? days : (tracksBalance ? days.subtract(available).max(ZERO) : ZERO);
         UUID requestId = UUID.randomUUID();
         UUID approvalId = UUID.randomUUID();
+        String activeRole = TenantContext.currentActiveRoleCode();
+        String process = resolveProcessCode(tenantId, assignment, activeRole);
         List<StepSpec> steps = buildApprovalSteps(tenantId, staff, assignment, institutionId);
         boolean blocked = steps.isEmpty();
-        String process = "STAFF_LEAVE";
-        String activeRole = TenantContext.currentActiveRoleCode();
         if (activeRole == null || activeRole.isBlank()) {
             throw new BusinessRuleViolationException("ACTIVE_ROLE_REQUIRED", "Choose an active role before submitting leave.");
         }
@@ -529,13 +529,9 @@ public class StaffLeaveService {
         boolean universityStaff = assignment.getInstitutionId() == null;
         boolean teaching = isTeaching(assignment.getDesignation(), role);
         if (universityStaff) {
-            if (!"UNIVERSITY_HR_MANAGER".equalsIgnoreCase(role)) {
-                chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
-            }
+            chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
         } else if (!school && !teaching) {
-            if (!"HR_MANAGER".equalsIgnoreCase(role)) {
-                chain.add(new StepSpec("HR_MANAGER", null));
-            }
+            chain.add(new StepSpec("HR_MANAGER", null));
         } else if (!school && assignment.getDepartmentId() != null) {
             UUID hodUser = jdbc.query("""
                     SELECT sp.user_account_id
@@ -555,6 +551,30 @@ public class StaffLeaveService {
             chain.add(new StepSpec(school ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE", null));
         }
         return chain;
+    }
+
+    private String resolveProcessCode(UUID tenantId, StaffAssignment assignment, String role) {
+        if ("PRINCIPAL_COLLEGE".equalsIgnoreCase(role) || "SCHOOL_PRINCIPAL".equalsIgnoreCase(role)) return "PRINCIPAL_LEAVE";
+        if ("VICE_CHANCELLOR".equalsIgnoreCase(role)) return "VC_LEAVE";
+        if ("REGISTRAR".equalsIgnoreCase(role)) return "REGISTRAR_LEAVE";
+        if (role != null && role.toUpperCase().contains("VICE_PRINCIPAL")) return "VICE_PRINCIPAL_LEAVE";
+        if ("HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) return "HOD_LEAVE";
+        if (assignment.getInstitutionId() == null) return "UNIVERSITY_STAFF_LEAVE";
+        Institution institution = institutions.findByIdTenantIdAndIdInstitutionId(tenantId, assignment.getInstitutionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Institution not found"));
+        boolean school = institution.getInstitutionType() != null
+                && institution.getInstitutionType().toUpperCase().contains("SCHOOL");
+        if (school) {
+            return isTeaching(assignment.getDesignation(), role) ? "TEACHER_LEAVE_SCHOOL" : "SCHOOL_STAFF_LEAVE";
+        }
+        if (isTeaching(assignment.getDesignation(), role)) return "FACULTY_LEAVE_COLLEGE";
+        String designation = assignment.getDesignation() == null ? "" : assignment.getDesignation().toUpperCase();
+        String activeRole = role == null ? "" : role.toUpperCase();
+        if (designation.contains("ADMIN") || designation.contains("ACCOUNTANT")
+                || activeRole.contains("ADMIN") || activeRole.contains("ACCOUNTANT")) {
+            return "ADMIN_ACCOUNTANT_LEAVE_COLLEGE";
+        }
+        return "NON_TEACHING_LEAVE_COLLEGE";
     }
 
     private static boolean isTeaching(String designation, String activeRole) {
