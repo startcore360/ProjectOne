@@ -319,7 +319,7 @@ public class StaffLeaveService {
                 .id(new ApprovalRequestId(tenantId, approvalId))
                 .institutionId(institutionId)
                 .processCode(process)
-                .subjectType("STAFF_LEAVE_REQUEST")
+                .subjectType("LEAVE_REQUEST")
                 .subjectId(requestId)
                 .requestedByUserId(userId)
                 .requesterActiveRole(activeRole)
