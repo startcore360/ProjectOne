@@ -171,7 +171,7 @@ public class StudentCreationService {
         if (!"ACTIVE".equals(institution.getStatus()))
             throw new BusinessRuleViolationException("INSTITUTION_NOT_ACTIVE","Students can only be created in an active institution.");
         RbacPrincipal principal=new RbacPrincipal(tenantId,actor.userAccountId());
-        permissions.authorize(principal,"USER_CREATE",RbacScope.institution(institutionId),RbacTarget.NONE);
+        permissions.authorize(principal,"SEAT_ALLOCATE",RbacScope.institution(institutionId),RbacTarget.NONE);
         if(tenantQuotaService!=null) tenantQuotaService.checkStudentCapacity(tenantId);
         LocalDate admissionDate=request.admissionDate()==null?LocalDate.now():request.admissionDate();
         String studentCode=idFormats.nextStudentCode(tenantId,institutionId,admissionDate.getYear());
