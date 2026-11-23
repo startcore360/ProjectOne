@@ -16,7 +16,7 @@ export default function AcademicSessionDetailPage() {
     if (!institutionId) return Promise.reject(new Error("Missing institution identifier"));
     if (!academicSessionId) return Promise.reject(new Error("Missing academic session identifier"));
     return getAcademicSessionDetail(tenantId, institutionId, academicSessionId);
-  }, [tenantId, institutionId, academicSessionId, revision]);
+  }, [tenantId, institutionId, academicSessionId]);
 
   const makeCurrent = async () => {
     if (!tenantId || !institutionId || !academicSessionId) return;
@@ -42,6 +42,7 @@ export default function AcademicSessionDetailPage() {
         {feedback && <span role="status">{feedback}</span>}
       </div>
       <DetailFrame
+        key={revision}
         title="Academic session details"
         backTo="/university/setup/calendar-events"
         backLabel="Academic calendar"
