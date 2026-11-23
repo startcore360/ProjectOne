@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.institution.dto.StudentLoginSwitchRequest;
 import com.edu360.api.institution.dto.StudentLoginSwitchResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
@@ -33,7 +34,7 @@ public class StudentLoginSwitchService {
 
     @Transactional
     public StudentLoginSwitchResponse setStudentLogin(
-            RbacPrincipal principal, UUID classId, StudentLoginSwitchRequest request) {
+            RbacPrincipal principal, UUID classId, String ifMatch, StudentLoginSwitchRequest request) {
         SchoolClass schoolClass = schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class " + classId + " was not found."));
 
