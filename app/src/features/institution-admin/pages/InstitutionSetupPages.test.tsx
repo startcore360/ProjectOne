@@ -373,6 +373,47 @@ describe("Institution setup action screens", () => {
     ));
   });
 
+  it("creates and retrieves immutable curriculum versions for a program", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const programId = "66666666-6666-6666-6666-666666666666";
+    const version = {
+      programCurriculumVersionId: "77777777-7777-7777-7777-777777777777",
+      institutionId, programId, versionNumber: 1,
+      curriculumJson: { courses: [{ code: "CS101", credits: 4 }] },
+      effectiveFrom: "2026-07-01", effectiveTo: null, createdAt: "2026-06-01T00:00:00Z", createdBy: USER_ID,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/programs")) return Promise.resolve({ data: [{
+        programId, institutionId, departmentId: DEPT_ID, programCode: "BTECH",
+        programName: "B.Tech", durationYears: 4, semestersPerYear: 2, status: "ACTIVE", rowVersion: 1,
+      }] });
+      if (url.endsWith("/curriculum-versions")) return Promise.resolve({ data: [version] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: version });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "COLLEGE_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("B.Tech");
+
+    fireEvent.change(screen.getAllByLabelText("Program")[0], { target: { value: programId } });
+    fireEvent.click(screen.getByRole("button", { name: /load curriculum history/i }));
+    await screen.findByText("Version 1");
+
+    fireEvent.change(screen.getByLabelText(/Curriculum JSON/i), {
+      target: { value: '{"courses":[{"code":"CS101","credits":4}]}' },
+    });
+    fireEvent.change(screen.getByLabelText(/Effective from/i), { target: { value: "2026-07-01" } });
+    fireEvent.click(screen.getByRole("button", { name: /create immutable version/i }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}/programs/${programId}/curriculum-versions`,
+      { curriculumJson: { courses: [{ code: "CS101", credits: 4 }] }, effectiveFrom: "2026-07-01", effectiveTo: null },
+    ));
+  });
+
   it("creates a dated semester under a selected college program year", async () => {
     const institutionId = "55555555-5555-5555-5555-555555555555";
     const programId = "66666666-6666-6666-6666-666666666666";
