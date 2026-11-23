@@ -60,6 +60,7 @@ class MentorAssignmentServiceTest {
         s.setSemesterId(SEMESTER_ID);
         s.setSectionName("A");
         s.setStatus("ACTIVE");
+        s.setRowVersion(1);
         return s;
     }
 
@@ -109,9 +110,10 @@ class MentorAssignmentServiceTest {
         current.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).minusMonths(6));
         when(mentorAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(TENANT_ID, SECTION_ID))
                 .thenReturn(Optional.of(current));
+        when(sectionRepository.bumpRowVersion(TENANT_ID, SECTION_ID, 1, USER_ID)).thenReturn(1);
         when(mentorAssignmentRepository.save(any(MentorAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var response = service().assignMentor(principal, SECTION_ID, new MentorAssignRequest(STAFF_ASSIGNMENT_ID));
+        var response = service().assignMentor(principal, SECTION_ID, "\"1\"", new MentorAssignRequest(STAFF_ASSIGNMENT_ID));
 
         assertThat(response.sectionId()).isEqualTo(SECTION_ID);
         assertThat(response.staffAssignmentId()).isEqualTo(STAFF_ASSIGNMENT_ID);
@@ -129,7 +131,7 @@ class MentorAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(expired));
 
-        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, "\"1\"", new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("not effective");
     }
@@ -142,7 +144,7 @@ class MentorAssignmentServiceTest {
                 .when(permissionEvaluatorService)
                 .authorize(principal, "MENTOR_ASSIGN", RbacScope.department(INSTITUTION_ID, DEPARTMENT_ID), RbacTarget.NONE);
 
-        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, "\"1\"", new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class);
 
         org.mockito.Mockito.verifyNoInteractions(staffAssignmentRepository, mentorAssignmentRepository);
@@ -155,7 +157,7 @@ class MentorAssignmentServiceTest {
         schoolSection.setClassId(UUID.randomUUID());
         when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, SECTION_ID)).thenReturn(Optional.of(schoolSection));
 
-        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, "\"1\"", new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("school section");
 
@@ -170,7 +172,7 @@ class MentorAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(staffAssignment(otherDepartment, "ACTIVE")));
 
-        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignMentor(principal, SECTION_ID, "\"1\"", new MentorAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("not a faculty member");
     }
