@@ -1,0 +1,89 @@
+package com.edu360.api.institution;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditLogService;
+import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.institution.dto.CreateCurriculumVersionRequest;
+import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.RbacPrincipal;
+import com.edu360.api.rbac.RbacScope;
+import com.edu360.api.rbac.RbacTarget;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@ExtendWith(MockitoExtension.class)
+class ProgramCurriculumVersionServiceTest {
+    private static final UUID TENANT = UUID.randomUUID();
+    private static final UUID USER = UUID.randomUUID();
+    private static final UUID INSTITUTION = UUID.randomUUID();
+    private static final UUID PROGRAM = UUID.randomUUID();
+
+    @Mock private ProgramCurriculumVersionRepository versionRepository;
+    @Mock private ProgramRepository programRepository;
+    @Mock private PermissionEvaluatorService permissionEvaluatorService;
+    @Mock private AuditLogService auditLogService;
+
+    private ProgramCurriculumVersionService service;
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    @BeforeEach
+    void setUp() {
+        service = new ProgramCurriculumVersionService(versionRepository, programRepository,
+                permissionEvaluatorService, auditLogService);
+    }
+
+    @Test
+    void create_appendsNextVersionAndAuditsImmutableSnapshot() throws Exception {
+        Program program = Program.builder().programId(PROGRAM).tenantId(TENANT)
+                .institutionId(INSTITUTION).programCode("BTECH").status("ACTIVE").build();
+        when(programRepository.findForUpdate(TENANT, PROGRAM)).thenReturn(Optional.of(program));
+        when(versionRepository.findMaxVersionNumber(TENANT, PROGRAM)).thenReturn(2);
+        when(versionRepository.save(any(ProgramCurriculumVersion.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new CreateCurriculumVersionRequest(
+                mapper.readTree("{\"courses\":[{\"code\":\"CS101\",\"credits\":4}]}"),
+                LocalDate.parse("2026-07-01"), null);
+        var response = service.create(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM, request);
+
+        assertThat(response.versionNumber()).isEqualTo(3);
+        assertThat(response.curriculumJson().path("courses").get(0).path("code").asText()).isEqualTo("CS101");
+        verify(permissionEvaluatorService).authorize(any(), eq("STRUCTURE_MANAGE"),
+                eq(RbacScope.institution(INSTITUTION)), eq(RbacTarget.NONE));
+        verify(auditLogService).record(eq(AuditEventType.PROGRAM_CURRICULUM_VERSION_CREATED), any(), any(), any(), any());
+    }
+
+    @Test
+    void create_rejectsNonObjectJsonBeforeWriting() throws Exception {
+        var request = new CreateCurriculumVersionRequest(mapper.readTree("[1,2,3]"),
+                LocalDate.parse("2026-07-01"), null);
+        assertThatThrownBy(() -> service.create(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM, request))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("JSON object");
+    }
+
+    @Test
+    void create_rejectsEndDateBeforeStartDate() throws Exception {
+        var request = new CreateCurriculumVersionRequest(mapper.readTree("{\"courses\":[]}"),
+                LocalDate.parse("2026-07-01"), LocalDate.parse("2026-06-30"));
+        assertThatThrownBy(() -> service.create(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM, request))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("effectiveTo");
+    }
+}
