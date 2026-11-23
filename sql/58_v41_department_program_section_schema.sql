@@ -48,7 +48,7 @@ END $$;
 -- Preserve the program-year exclusion above and add the broader
 -- institution-wide rule, which also catches overlaps across different programs.
 -- The service pre-check provides a clear error; this GiST constraint is race-safe.
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.semester'::regclass AND conname='ex_semester_institution_nonoverlap') THEN
     ALTER TABLE app.semester
       ADD CONSTRAINT ex_semester_institution_nonoverlap
@@ -59,7 +59,7 @@ DO $ BEGIN
       )
       WHERE (start_date IS NOT NULL AND end_date IS NOT NULL);
   END IF;
-END $;
+END $$;
 
 ALTER TABLE app.section
   ADD COLUMN IF NOT EXISTS capacity integer,
