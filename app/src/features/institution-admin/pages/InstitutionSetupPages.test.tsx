@@ -337,6 +337,42 @@ describe("Institution setup action screens", () => {
     });
   });
 
+  it("assigns a department HOD from the integrated department-management modal", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const staffAssignmentId = "77777777-7777-7777-7777-777777777777";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [{
+        departmentId: DEPT_ID, institutionId, departmentCode: "CSE", departmentName: "Computer Science",
+        status: "ACTIVE", facultyCount: 5, studentCount: 42, rowVersion: 2,
+      }] });
+      if (url.endsWith("/programs")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{
+        staffProfileId: "88888888-8888-8888-8888-888888888888", staffAssignmentId,
+        staffCode: "FAC-01", fullName: "Dr. Ada Lovelace", designation: "Professor",
+        departmentId: DEPT_ID, departmentName: "Computer Science",
+      }], page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 1 } } });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { departmentId: DEPT_ID, hodStaffAssignmentId: staffAssignmentId } });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "COLLEGE_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Computer Science");
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /assign HOD/i }));
+    const facultyPicker = await screen.findByLabelText(/Faculty member/i);
+    fireEvent.change(facultyPicker, { target: { value: staffAssignmentId } });
+    fireEvent.click(screen.getByRole("button", { name: /save HOD assignment/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`,
+      { staffAssignmentId },
+    ));
+  });
+
   it("creates a dated semester under a selected college program year", async () => {
     const institutionId = "55555555-5555-5555-5555-555555555555";
     const programId = "66666666-6666-6666-6666-666666666666";
