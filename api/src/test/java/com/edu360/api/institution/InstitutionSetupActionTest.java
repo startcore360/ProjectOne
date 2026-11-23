@@ -637,6 +637,7 @@ class InstitutionSetupActionTest {
                 .departmentId(departmentId)
                 .tenantId(tenantId)
                 .institutionId(institutionId)
+                .rowVersion(1)
                 .build();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.of(dept));
 
@@ -648,8 +649,9 @@ class InstitutionSetupActionTest {
         staff.setStatus("ACTIVE");
         staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
+        when(departmentRepository.updateHodAssignment(tenantId, departmentId, 1, staffAssignmentId, p.userAccountId())).thenReturn(1);
 
-        HodAssignResponse resp = hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId));
+        HodAssignResponse resp = hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId));
         assertThat(resp).isNotNull();
         assertThat(resp.hodStaffAssignmentId()).isEqualTo(staffAssignmentId);
     }
@@ -662,12 +664,13 @@ class InstitutionSetupActionTest {
                 .departmentId(departmentId)
                 .tenantId(tenantId)
                 .institutionId(institutionId)
+                .rowVersion(1)
                 .build();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.of(dept));
         doThrow(new AccessDeniedException("Access denied")).when(permissionEvaluatorService)
                 .authorize(eq(p), eq("HOD_ASSIGN"), any(), any());
 
-        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -677,7 +680,7 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -689,6 +692,7 @@ class InstitutionSetupActionTest {
                 .departmentId(departmentId)
                 .tenantId(tenantId)
                 .institutionId(institutionId)
+                .rowVersion(1)
                 .build();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.of(dept));
 
@@ -701,7 +705,7 @@ class InstitutionSetupActionTest {
         staff.setStatus("ACTIVE");
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
-        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
