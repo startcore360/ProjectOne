@@ -73,6 +73,20 @@ public class StaffLeaveService {
     }
 
     @Transactional(readOnly = true)
+    public List<StaffLeaveBalanceResponse> balancesForActor(UUID tenantId, UUID actorId, UUID staffProfileId) {
+        StaffProfile target = staffProfiles.findByIdTenantIdAndIdStaffProfileId(tenantId, staffProfileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
+        if (!actorId.equals(target.getUserAccountId())) {
+            UUID institutionId = activeInstitution(tenantId, staffProfileId);
+            RbacPrincipal actor = new RbacPrincipal(tenantId, actorId);
+            permissions.authorize(actor, "STAFF_RECORD_VIEW",
+                    institutionId == null ? RbacScope.tenant() : permissions.targetScope(actor, institutionId, null),
+                    target.getUserAccountId() == null ? RbacTarget.NONE : RbacTarget.of(target.getUserAccountId()));
+        }
+        return balances(tenantId, staffProfileId);
+    }
+
+    @Transactional(readOnly = true)
     public List<StaffLeaveBalanceResponse> balances(UUID tenantId, UUID staffProfileId) {
         return jdbc.query("""
                 SELECT leave_balance_id, staff_profile_id, leave_type_id, leave_year,
@@ -104,7 +118,7 @@ public class StaffLeaveService {
         RbacPrincipal actor = new RbacPrincipal(tenantId, actorId);
         permissions.authorize(actor, "LEAVE_BALANCE_CREDIT",
                 institutionId == null ? RbacScope.tenant() : permissions.targetScope(actor, institutionId, null),
-                RbacTarget.of(staff.getUserAccountId()));
+                staff.getUserAccountId() == null ? RbacTarget.NONE : RbacTarget.of(staff.getUserAccountId()));
         Map<String, Object> type = leaveType(tenantId, request.leaveTypeId());
         if (!"STAFF".equals(type.get("audience")) || !Boolean.TRUE.equals(type.get("tracks_balance"))
                 || Boolean.TRUE.equals(type.get("is_loss_of_pay")) || !"ACTIVE".equals(type.get("status"))) {
@@ -200,6 +214,23 @@ public class StaffLeaveService {
                     """, (rs, row) -> rs.getBigDecimal(1), tenantId, staffId, request.leaveTypeId(), request.startDate().getYear());
             if (!amounts.isEmpty()) available = amounts.get(0);
         }
+        if (request.designatedDelegateStaffProfileId() != null) {
+            if (request.designatedDelegateStaffProfileId().equals(staffId)) {
+                throw new BusinessRuleViolationException("SELF_LEAVE_COVER_PROHIBITED", "A staff member cannot designate themselves as leave cover.");
+            }
+            StaffAssignment delegateAssignment = activeAssignment(tenantId, request.designatedDelegateStaffProfileId());
+            if (!institutionId.equals(delegateAssignment.getInstitutionId())) {
+                throw new BusinessRuleViolationException("LEAVE_COVER_SCOPE_MISMATCH", "Leave cover must be assigned within the same institution.");
+            }
+            Integer delegateOverlap = jdbc.queryForObject("""
+                    SELECT count(*) FROM app.leave_request
+                     WHERE tenant_id=? AND for_staff_profile_id=? AND status IN ('PENDING','APPROVED')
+                       AND start_date<=? AND end_date>=?
+                    """, Integer.class, tenantId, request.designatedDelegateStaffProfileId(), request.endDate(), request.startDate());
+            if (delegateOverlap != null && delegateOverlap > 0) {
+                throw new BusinessRuleViolationException("LEAVE_COVER_UNAVAILABLE", "The designated leave cover has overlapping leave.");
+            }
+        }
         BigDecimal lossOfPay = isLossOfPay ? days : (tracksBalance ? days.subtract(available).max(ZERO) : ZERO);
         UUID requestId = UUID.randomUUID();
         UUID approvalId = UUID.randomUUID();
@@ -290,11 +321,19 @@ public class StaffLeaveService {
             throw new BusinessRuleViolationException("LEAVE_NOT_CANCELLABLE", "Only pending leave can be cancelled by the final approver.");
         }
         UUID institutionId = (UUID) row.get("institution_id");
+        UUID approvalId = (UUID) row.get("approval_request_id");
+        var approval = approvalRequests.findByIdTenantIdAndIdApprovalRequestId(tenantId, approvalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Approval request not found"));
+        var step = approvalSteps.findByIdTenantIdAndApprovalRequestIdAndStepNo(
+                tenantId, approvalId, approval.getCurrentStepNo())
+                .orElseThrow(() -> new ResourceNotFoundException("Final approval step not found"));
+        String action = com.edu360.api.approval.ApprovalInboxService.resolveApprovalAction(approval, step);
+        if (action == null) throw new BusinessRuleViolationException("FINAL_APPROVER_REQUIRED", "The current leave approval step has no configured final-approver action.");
         RbacPrincipal actor = new RbacPrincipal(tenantId, actorId);
-        permissions.authorize(actor, "STAFF_LEAVE_APPROVE_PRINCIPAL",
+        permissions.authorize(actor, action,
                 institutionId == null ? RbacScope.tenant() : permissions.targetScope(actor, institutionId, null),
-                RbacTarget.of((UUID) row.get("requested_by_user_id")));
-        cancelRows(tenantId, leaveRequestId, actorId, (UUID) row.get("approval_request_id"));
+                row.get("requested_by_user_id") == null ? RbacTarget.NONE : RbacTarget.of((UUID) row.get("requested_by_user_id")));
+        cancelRows(tenantId, leaveRequestId, actorId, approvalId);
     }
 
     private void cancelRows(UUID tenantId, UUID leaveRequestId, UUID actorId, UUID approvalId) {
@@ -364,16 +403,20 @@ public class StaffLeaveService {
             return setting == null ? List.of() : List.of(new StepSpec(setting.getApproverKind(), setting.getApproverUserId()));
         }
         if ("REGISTRAR".equalsIgnoreCase(role)) {
-            return List.of(new StepSpec("VICE_CHANCELLOR", null));
+            return List.of(new StepSpec("UNIVERSITY_HR_MANAGER", null), new StepSpec("VICE_CHANCELLOR", null));
         }
         Institution institution = institutions.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Institution not found"));
         List<StepSpec> chain = new ArrayList<>();
         boolean universityStaff = assignment.getInstitutionId() == null;
+        boolean school = institution.getInstitutionType() != null
+                && institution.getInstitutionType().toUpperCase().contains("SCHOOL");
         boolean teaching = isTeaching(assignment.getDesignation(), role);
-        if (universityStaff || !teaching) {
-            chain.add(new StepSpec(universityStaff ? "UNIVERSITY_HR_MANAGER" : "HR_MANAGER", null));
-        } else if (assignment.getDepartmentId() != null) {
+        if (universityStaff) {
+            chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
+        } else if (!school && !teaching) {
+            chain.add(new StepSpec("HR_MANAGER", null));
+        } else if (!school && assignment.getDepartmentId() != null) {
             UUID hodUser = jdbc.query("""
                     SELECT sa2.user_account_id
                       FROM app.department d
@@ -384,10 +427,10 @@ public class StaffLeaveService {
             if (hodUser == null) return List.of();
             chain.add(new StepSpec("HEAD_OF_DEPARTMENT", hodUser));
         }
-        if (universityStaff || institution.isUnderUniversity()) {
+        if (universityStaff) {
             chain.add(new StepSpec("REGISTRAR", null));
         } else {
-            chain.add(new StepSpec("PRINCIPAL_COLLEGE", null));
+            chain.add(new StepSpec(school ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE", null));
         }
         return chain;
     }
@@ -401,7 +444,8 @@ public class StaffLeaveService {
     private BigDecimal workingDays(UUID tenantId, UUID institutionId, LocalDate start, LocalDate end) {
         List<java.sql.Date[]> holidays = jdbc.query("""
                 SELECT start_date,end_date FROM app.academic_calendar_event
-                 WHERE tenant_id=? AND institution_id=? AND event_type='LOCAL_HOLIDAY'
+                 WHERE tenant_id=? AND (institution_id=? OR (institution_id IS NULL AND source_level='UNIVERSITY'))
+                   AND event_type IN ('LOCAL_HOLIDAY','UNIVERSITY_HOLIDAY')
                    AND start_date<=? AND end_date>=?
                 """, (rs, row) -> new java.sql.Date[] { rs.getDate(1), rs.getDate(2) }, tenantId, institutionId, end, start);
         BigDecimal days = ZERO;
