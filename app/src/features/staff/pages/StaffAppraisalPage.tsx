@@ -67,11 +67,10 @@ export default function StaffAppraisalPage() {
 
   return (
     <div className="page-container">
-      <PageHeader title="Staff Performance & Appraisals" subtitle="Annual appraisal cycles, self-evaluations and review workflow." />
+      <PageHeader title="Staff Performance & Appraisals" description="Annual appraisal cycles, self-evaluations and review workflow." />
       {error && <Notice tone="danger">{error}</Notice>}
       {feedback && <Notice tone="success">{feedback}</Notice>}
-      <Panel>
-        <h2>Appraisal cycles</h2>
+      <Panel title="Appraisal cycles">
         {loading ? <p>Loading cycles…</p> : cycles.length === 0 ? <p>No appraisal cycles are configured for this institution.</p> : (
           <div className="table-responsive">
             <table><thead><tr><th>Cycle</th><th>Academic year</th><th>Dates</th><th>Status</th></tr></thead>
@@ -83,24 +82,22 @@ export default function StaffAppraisalPage() {
           </div>
         )}
       </Panel>
-      <Panel>
-        <h2>Create annual cycle</h2>
+      <Panel title="Create annual cycle">
         <form onSubmit={createCycle} className="form-grid">
-          <TextField label="Academic year ID" value={draft.academicYearId} onChange={(value) => setDraft((v) => ({ ...v, academicYearId: value }))} required />
-          <TextField label="Cycle name" value={draft.name} onChange={(value) => setDraft((v) => ({ ...v, name: value }))} required />
-          <TextField label="Start date" type="date" value={draft.startDate} onChange={(value) => setDraft((v) => ({ ...v, startDate: value }))} required />
-          <TextField label="End date" type="date" value={draft.endDate} onChange={(value) => setDraft((v) => ({ ...v, endDate: value }))} required />
+          <TextField id="academicYearId" label="Academic year ID" value={draft.academicYearId} onChange={(event) => setDraft((v) => ({ ...v, academicYearId: event.target.value }))} required />
+          <TextField id="cycleName" label="Cycle name" value={draft.name} onChange={(event) => setDraft((v) => ({ ...v, name: event.target.value }))} required />
+          <TextField id="cycleStartDate" label="Start date" type="date" value={draft.startDate} onChange={(event) => setDraft((v) => ({ ...v, startDate: event.target.value }))} required />
+          <TextField id="cycleEndDate" label="End date" type="date" value={draft.endDate} onChange={(event) => setDraft((v) => ({ ...v, endDate: event.target.value }))} required />
           <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Create cycle"}</Button>
         </form>
       </Panel>
-      <Panel>
-        <h2>Self-evaluation</h2>
+      <Panel title="Self-evaluation">
         <form onSubmit={submitSelfEvaluation} className="form-grid">
           <label>Open cycle<select value={selectedCycle} onChange={(event) => setSelectedCycle(event.target.value)} required>
             <option value="">Select a cycle</option>
             {cycles.filter((cycle) => cycle.status === "OPEN").map((cycle) => <option key={cycle.id} value={cycle.id}>{cycle.name}</option>)}
           </select></label>
-          <TextField label="Self score (0–100)" type="number" value={selfScore} onChange={setSelfScore} required />
+          <TextField id="selfScore" label="Self score (0–100)" type="number" min="0" max="100" value={selfScore} onChange={(event) => setSelfScore(event.target.value)} required />
           <Button type="submit" disabled={saving || !selectedCycle}>{saving ? "Submitting…" : "Submit self-evaluation"}</Button>
         </form>
       </Panel>
