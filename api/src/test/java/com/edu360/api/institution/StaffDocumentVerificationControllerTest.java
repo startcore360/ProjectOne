@@ -44,7 +44,8 @@ class StaffDocumentVerificationControllerTest {
                 new StaffDocumentVerificationRequest("VERIFIED", "Original checked");
         StaffDocumentResponse response = new StaffDocumentResponse(
                 documentId, UUID.randomUUID(), "DEGREE", UUID.randomUUID(),
-                "VERIFIED", userId, null, null, UUID.randomUUID(), null, userId, 2);
+                "VERIFIED", null, null, null, null,
+                userId, null, null, userId, null, userId, 2);
         when(service.verify(tenantPrincipal, documentId, "VERIFIED", "Original checked"))
                 .thenReturn(response);
 
