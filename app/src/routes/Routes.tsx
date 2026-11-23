@@ -32,6 +32,7 @@ const SelfServicePage = lazy(() => import("../features/self-service/pages/SelfSe
 const SessionsPage = lazy(() => import("../features/sessions/pages/SessionsPage"));
 const TenantSupportPage = lazy(() => import("../features/institution-admin/pages/TenantSupportPage"));
 const StaffRecordsPage = lazy(() => import("../features/institution-admin/pages/StaffRecordsPage"));
+const StaffAppraisalPage = lazy(() => import("../features/staff/pages/StaffAppraisalPage"));
 const TenantDataProtectionPage = lazy(() => import("../features/dataprotection/TenantDataProtectionPage"));
 
 // Lazy-loaded platform pages
@@ -147,6 +148,7 @@ export default function AppRoutes() {
 
               <Route path="/university/staff/:staffId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffRecordsPage /></ActionGate>} />
               <Route path="/university/staff" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffRecordsPage /></ActionGate>} />
+              <Route path="/university/institutions/:institutionId/appraisals" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffAppraisalPage /></ActionGate>} />
               <Route path="/university/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
               <Route path="/university/roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.roles}><RolesPermissionsPage /></ActionGate>} />
               <Route path="/university/missing-roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.missingRoles}><MissingRolesPage /></ActionGate>} />
