@@ -27,10 +27,12 @@ public class AdmissionService {
     private final ObjectMapper json;
     private final PermissionEvaluatorService permissions;
     private final StudentCreationService students;
+    private final MeritCalculationService meritCalculationService;
 
     public AdmissionService(JdbcTemplate jdbc, ObjectMapper json, PermissionEvaluatorService permissions,
-            StudentCreationService students) {
+            StudentCreationService students, MeritCalculationService meritCalculationService) {
         this.jdbc=jdbc; this.json=json; this.permissions=permissions; this.students=students;
+        this.meritCalculationService=meritCalculationService;
     }
 
     @Transactional(readOnly=true)
@@ -43,7 +45,7 @@ public class AdmissionService {
     @Transactional
     public Map<String,Object> createCycle(TenantPrincipal actor, Map<String,Object> in) {
         UUID institution=uuid(in,"institutionId"), session=uuid(in,"academicYearId"), program=uuid(in,"programId");
-        authorize(actor,"STRUCTURE_MANAGE",institution);
+        authorize(actor,"ADMISSION_FORM_CREATE",institution);
         String name=required(in,"cycleName");
         LocalDate start=LocalDate.parse(required(in,"startDate")), end=LocalDate.parse(required(in,"endDate"));
         if(end.isBefore(start)) throw new BusinessRuleViolationException("VALIDATION_FAILED","endDate must not precede startDate.");
@@ -79,11 +81,29 @@ public class AdmissionService {
     @Transactional
     public Map<String,Object> updateCycle(TenantPrincipal actor, UUID id, Map<String,Object> in) {
         Map<String,Object> old=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),id);
-        UUID institution=(UUID)old.get("institution_id"); authorize(actor,"STRUCTURE_MANAGE",institution);
+        UUID institution=(UUID)old.get("institution_id"); authorize(actor,"ADMISSION_FORM_CREATE",institution);
+        String name=String.valueOf(in.getOrDefault("cycleName",old.get("cycle_name")));
+        LocalDate start=LocalDate.parse(String.valueOf(in.getOrDefault("startDate",old.get("start_date"))));
+        LocalDate end=LocalDate.parse(String.valueOf(in.getOrDefault("endDate",old.get("end_date"))));
+        BigDecimal fee=decimal(in.getOrDefault("applicationFee",old.get("application_fee")));
+        int seats=((Number)in.getOrDefault("totalSeats",old.get("total_seats"))).intValue();
         String status=String.valueOf(in.getOrDefault("status",old.get("status")));
-        if(!Set.of("DRAFT","OPEN","CLOSED","ARCHIVED").contains(status)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Invalid cycle status.");
-        jdbc.update("update app.admission_cycle set status=?,updated_by=? where tenant_id=? and id=?",
-                status,actor.userAccountId(),actor.tenantId(),id);
+        Object quotaValue=in.getOrDefault("quotaCapacity",old.get("quota_capacity"));
+        Map<String,Object> quotas=readJsonObject(quotaValue);
+        int quotaTotal=0;
+        for(String q:List.of("GENERAL","MERIT","SPORTS","MANAGEMENT")) {
+            Object raw=quotas.getOrDefault(q,0);
+            int cap=raw instanceof Number n?n.intValue():Integer.parseInt(String.valueOf(raw));
+            if(cap<0) throw new BusinessRuleViolationException("VALIDATION_FAILED","Quota capacity cannot be negative.");
+            quotaTotal+=cap;
+        }
+        if(name.isBlank()||name.length()>120||end.isBefore(start)||fee.signum()<0||seats<1||quotaTotal>seats
+                ||!Set.of("DRAFT","OPEN","CLOSED","ARCHIVED").contains(status))
+            throw new BusinessRuleViolationException("VALIDATION_FAILED","Cycle name, dates, fee, seats, quota capacities or status are invalid.");
+        jdbc.update("""
+          update app.admission_cycle set cycle_name=?,start_date=?,end_date=?,application_fee=?,total_seats=?,
+            quota_capacity=?::jsonb,status=?,updated_by=? where tenant_id=? and id=?
+          """,name,start,end,fee,seats,serialize(quotaValue),status,actor.userAccountId(),actor.tenantId(),id);
         return one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),id);
     }
 
@@ -186,15 +206,17 @@ public class AdmissionService {
           select a.id,a.qualifying_marks_percent,a.category from app.admission_application a
           where a.tenant_id=? and a.cycle_id=? and a.status in('SCRUTINIZED','SHORTLISTED')
             and a.verification_status='VERIFIED' and a.fee_status in('CONFIRMED','WAIVED')
-          order by a.qualifying_marks_percent desc,a.submitted_at asc,a.id
+          order by a.submitted_at asc,a.id
           """,actor.tenantId(),cycleId);
+        apps=meritCalculationService.rank(apps);
         int rank=0;
         for(Map<String,Object> a:apps){
             rank++;
             UUID item=UUID.randomUUID();
             String quota=String.valueOf(a.get("category"));
+            BigDecimal score=meritCalculationService.score((BigDecimal)a.get("qualifying_marks_percent"));
             jdbc.update("insert into app.merit_list_item(tenant_id,id,merit_list_id,application_id,merit_rank,computed_score,allocated_quota) values(?,?,?,?,?,?,?)",
-                    actor.tenantId(),item,list,a.get("id"),rank,a.get("qualifying_marks_percent"),quota);
+                    actor.tenantId(),item,list,a.get("id"),rank,score,quota);
             jdbc.update("update app.admission_application set status='SHORTLISTED',updated_by=? where tenant_id=? and id=?",
                     actor.userAccountId(),actor.tenantId(),a.get("id"));
         }
@@ -211,8 +233,9 @@ public class AdmissionService {
                 Integer.class,actor.tenantId(),actor.userAccountId());
         if(delegated!=null&&delegated>0) throw new org.springframework.security.access.AccessDeniedException("MERIT_APPROVAL_NON_DELEGABLE");
         authorize(actor,"MERIT_LIST_APPROVE",(UUID)list.get("institution_id"));
-        jdbc.update("update app.merit_list set status='APPROVED',approved_by_user_id=?,approved_at=now() where tenant_id=? and id=? and status='PROVISIONAL'",
+        int changed=jdbc.update("update app.merit_list set status='APPROVED',approved_by_user_id=?,approved_at=now() where tenant_id=? and id=? and status='PROVISIONAL'",
                 actor.userAccountId(),actor.tenantId(),listId);
+        if(changed!=1) throw new BusinessRuleViolationException("MERIT_LIST_NOT_PROVISIONAL","Only a provisional merit list can be approved.");
         return one("select * from app.merit_list where tenant_id=? and id=?",actor.tenantId(),listId);
     }
 
