@@ -112,6 +112,18 @@ class MeritApprovalRuleC12IT {
     }
 
     @Test
+    void actingForAnotherRoleCannotApprove() throws Exception {
+        try (Connection connection = connection(); Statement statement = connection.createStatement()) {
+            statement.execute("SELECT set_config('app.user_id','" + PRINCIPAL + "',false)");
+            statement.execute("SELECT set_config('app.acting_for_role','VICE_CHANCELLOR',false)");
+            SQLException error = assertThrows(SQLException.class, () -> statement.execute(
+                    "UPDATE app.merit_list SET status='APPROVED',approved_by_user_id='" + PRINCIPAL + "' WHERE tenant_id='" + TENANT + "' AND id='" + LIST + "'"));
+            assertThat(error.getSQLState()).isEqualTo("42501");
+            assertThat(error.getMessage()).contains("MERIT_APPROVAL_NON_DELEGABLE");
+        }
+    }
+
+    @Test
     void nonPrincipalCannotApprove() throws Exception {
         try (Connection connection = connection(); Statement statement = connection.createStatement()) {
             statement.execute("SELECT set_config('app.user_id','" + NON_PRINCIPAL + "',false)");
