@@ -61,7 +61,11 @@ BEGIN
     RAISE EXCEPTION 'GUARDIAN_LIMIT_REACHED: at most 3 guardians' USING ERRCODE='23514';
   END IF;
   RETURN NEW;
-END $$;
+END $;
+DROP TRIGGER IF EXISTS trg_guardian_limit ON app.student_guardian_link;
+CREATE TRIGGER trg_guardian_limit
+  BEFORE INSERT OR UPDATE OF tenant_id, student_profile_id, status ON app.student_guardian_link
+  FOR EACH ROW EXECUTE FUNCTION app.fn_guardian_limit();
 
 -- Enforce no more than one primary at all times. Exactly one is required once a student has
 -- at least one non-blocked link; deferred checking permits an atomic primary hand-off.
