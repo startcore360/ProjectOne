@@ -1,6 +1,11 @@
 package com.edu360.api.staff;
 
-import static org.assertj.core.api.Assertions.assertThat;\n\nimport com.fasterxml.jackson.databind.ObjectMapper;\nimport org.springframework.boot.test.context.TestConfiguration;\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Import;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +15,14 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(StaffAppraisalIT.TestBeans.class)
 class StaffAppraisalIT {
-    @Autowired JdbcTemplate jdbc;\n\n    @TestConfiguration\n    static class TestBeans {\n        @Bean ObjectMapper objectMapper() { return new ObjectMapper(); }\n    }
+    @Autowired JdbcTemplate jdbc;
+
+    @TestConfiguration
+    static class TestBeans {
+        @Bean ObjectMapper objectMapper() { return new ObjectMapper(); }
+    }
 
     private boolean table(String name) {
         Integer count = jdbc.queryForObject(
