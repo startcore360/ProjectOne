@@ -1060,6 +1060,7 @@ export function CalendarEventsPage() {
       )}
 
       <EditStructureRecordModal
+        key={editingRecord ? `${editingRecord.kind}-${editingRecord.item.departmentId ?? editingRecord.item.programId ?? editingRecord.item.classId ?? editingRecord.item.sectionId}` : "none"}
         record={editingRecord}
         departments={departments}
         classes={schoolClasses}
@@ -1440,15 +1441,13 @@ function EditStructureRecordModal({
   onClose: () => void;
   onSave: (record: EditableStructureRecord, draft: StructureEditDraft) => void;
 }) {
-  const [draft, setDraft] = useState<StructureEditDraft>({
-    code: "", name: "", departmentId: "", durationYears: "4", semestersPerYear: "2",
-    displayOrder: "0", classId: "", academicSessionId: "", capacity: "",
-  });
-
-  useEffect(() => {
-    if (!record) return;
+  const [draft, setDraft] = useState<StructureEditDraft>(() => {
+    if (!record) return {
+      code: "", name: "", departmentId: "", durationYears: "4", semestersPerYear: "2",
+      displayOrder: "0", classId: "", academicSessionId: "", capacity: "",
+    };
     const item = record.item;
-    setDraft({
+    return {
       code: record.kind === "department" ? item.departmentCode : record.kind === "program" ? item.programCode : "",
       name: record.kind === "department" ? item.departmentName
         : record.kind === "program" ? item.programName
@@ -1461,8 +1460,8 @@ function EditStructureRecordModal({
       classId: record.kind === "section" ? item.classId ?? "" : classes[0]?.classId ?? "",
       academicSessionId: record.kind === "section" ? item.academicSessionId : sessions.find((session) => session.status === "ACTIVE")?.academicSessionId ?? sessions[0]?.academicSessionId ?? "",
       capacity: record.kind === "section" && item.capacity != null ? String(item.capacity) : "",
-    });
-  }, [record, departments, classes, sessions]);
+    };
+  });
 
   if (!record) return null;
   const title = record.kind === "department" ? "Edit department"
