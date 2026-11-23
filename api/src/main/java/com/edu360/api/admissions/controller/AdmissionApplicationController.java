@@ -28,6 +28,13 @@ public class AdmissionApplicationController {
     public FileUploadResponse upload(@PathVariable UUID tenantId,@PathVariable UUID applicationId,@RequestPart("file") MultipartFile file,
             @RequestParam(defaultValue="SUPPORTING_DOCUMENT") String documentType,Authentication auth){
         TenantPrincipal actor=AdmissionCycleController.actor(auth,tenantId);
+        if(file==null||file.isEmpty()||file.getSize()>5L*1024*1024)
+            throw new com.edu360.api.exception.BusinessRuleViolationException("ADMISSION_DOCUMENT_SIZE_INVALID","Admission documents must be non-empty and no larger than 5 MB.");
+        String mime=file.getContentType();
+        if(mime==null||!List.of("application/pdf","image/jpeg","image/png").contains(mime.toLowerCase()))
+            throw new com.edu360.api.exception.BusinessRuleViolationException("ADMISSION_DOCUMENT_TYPE_INVALID","Only PDF, JPG and PNG admission documents are accepted.");
+        if("PHOTO".equalsIgnoreCase(documentType)&&!"image/jpeg".equalsIgnoreCase(mime)&&!"image/png".equalsIgnoreCase(mime))
+            throw new com.edu360.api.exception.BusinessRuleViolationException("ADMISSION_PHOTO_TYPE_INVALID","Applicant photos must be JPG or PNG.");
         UUID institutionId=service.institutionForApplicant(actor,applicationId);
         FileUploadResponse uploaded=files.upload(actor,file,"ADMISSION_DOCUMENT",institutionId);
         service.attachDocument(actor,applicationId,uploaded.fileId(),documentType);
