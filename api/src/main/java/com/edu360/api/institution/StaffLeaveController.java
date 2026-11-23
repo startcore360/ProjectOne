@@ -6,6 +6,8 @@ import com.edu360.api.identity.UserType;
 import com.edu360.api.selfservice.StaffLeaveService;
 import com.edu360.api.selfservice.dto.LeaveBalanceCreditRequest;
 import com.edu360.api.selfservice.dto.StaffLeaveBalanceResponse;
+import com.edu360.api.selfservice.dto.StaffLeaveTypeResponse;
+import com.edu360.api.selfservice.dto.StaffLeaveTypeSetRequest;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class StaffLeaveController {
     private final StaffLeaveService staffLeaveService;
+
+    @GetMapping({"/v1/tenants/{tenantId}/institutions/{institutionId}/leave-types",
+                 "/api/tenants/{tenantId}/institutions/{institutionId}/leave-types"})
+    public ResponseEntity<List<StaffLeaveTypeResponse>> getInstitutionLeaveTypes(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, Authentication authentication) {
+        TenantPrincipal principal = principal(authentication, tenantId);
+        return ResponseEntity.ok(staffLeaveService.institutionLeaveTypes(
+                tenantId, principal.userAccountId(), institutionId));
+    }
+
+    @PostMapping({"/v1/tenants/{tenantId}/institutions/{institutionId}/leave-types",
+                  "/api/tenants/{tenantId}/institutions/{institutionId}/leave-types"})
+    public ResponseEntity<StaffLeaveTypeResponse> createInstitutionLeaveType(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @RequestBody StaffLeaveTypeSetRequest request, Authentication authentication) {
+        TenantPrincipal principal = principal(authentication, tenantId);
+        return ResponseEntity.status(201).body(staffLeaveService.createLeaveType(
+                tenantId, principal.userAccountId(), institutionId, request));
+    }
 
     @GetMapping({"/v1/tenants/{tenantId}/staff/{staffProfileId}/leave-balances",
                  "/api/tenants/{tenantId}/staff/{staffProfileId}/leave-balances"})
