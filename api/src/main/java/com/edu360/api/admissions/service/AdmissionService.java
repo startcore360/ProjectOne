@@ -372,7 +372,7 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
                 || paidAmount == null || paidAmount.signum() <= 0) {
             throw new BusinessRuleViolationException("INVALID_PAYMENT_EVENT", "A verified event ID, reference and positive amount are required.");
         }
-        Map<String,Object> app=one("select * from app.admission_application where tenant_id=? and id=?",tenantId,applicationId);
+        Map<String,Object> app=one("select * from app.admission_application where tenant_id=? and id=? for update",tenantId,applicationId);
         Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",tenantId,app.get("cycle_id"));
         BigDecimal expected=(BigDecimal)cycle.get("application_fee");
         if (expected.compareTo(paidAmount)!=0) {
@@ -380,8 +380,9 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
         }
         String status=String.valueOf(app.get("fee_status"));
         String previousEvent=(String)app.get("application_fee_event_id");
+        String previousReference=(String)app.get("application_fee_reference");
         if ("CONFIRMED".equals(status)) {
-            if (eventId.equals(previousEvent)) return;
+            if (eventId.equals(previousEvent) && paymentReference.equals(previousReference)) return;
             throw new BusinessRuleViolationException("APPLICATION_FEE_ALREADY_CONFIRMED","A different payment event has already confirmed this application fee.");
         }
         if (!"PENDING".equals(status)) {
@@ -393,7 +394,8 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
           """,paymentReference,eventId,tenantId,applicationId);
         if (changed==0) {
             Map<String,Object> latest=one("select * from app.admission_application where tenant_id=? and id=?",tenantId,applicationId);
-            if ("CONFIRMED".equals(latest.get("fee_status")) && eventId.equals(latest.get("application_fee_event_id"))) return;
+            if ("CONFIRMED".equals(latest.get("fee_status")) && eventId.equals(latest.get("application_fee_event_id"))
+                    && paymentReference.equals(latest.get("application_fee_reference"))) return;
             throw new BusinessRuleViolationException("APPLICATION_FEE_ALREADY_CONFIRMED","A different payment event has already confirmed this application fee.");
         }
     }
