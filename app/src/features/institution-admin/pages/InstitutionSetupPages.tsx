@@ -1060,7 +1060,7 @@ export function CalendarEventsPage() {
       )}
 
       <EditStructureRecordModal
-        key={editingRecord ? `${editingRecord.kind}-${editingRecord.item.departmentId ?? editingRecord.item.programId ?? editingRecord.item.classId ?? editingRecord.item.sectionId}` : "none"}
+        key={editingRecord ? `${editingRecord.kind}-${editingRecord.kind === "department" ? editingRecord.item.departmentId : editingRecord.kind === "program" ? editingRecord.item.programId : editingRecord.kind === "class" ? editingRecord.item.classId : editingRecord.item.sectionId}` : "none"}
         record={editingRecord}
         departments={departments}
         classes={schoolClasses}
