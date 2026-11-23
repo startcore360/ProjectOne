@@ -62,7 +62,7 @@ public class MentorAssignmentService {
     private LocalDate today(UUID tenantId) { return tenantClock != null ? tenantClock.today(tenantId) : LocalDate.now(TenantClock.DEFAULT_ZONE); }
 
     @Transactional
-    public MentorAssignResponse assignMentor(RbacPrincipal principal, UUID sectionId, MentorAssignRequest request) {
+    public MentorAssignResponse assignMentor(RbacPrincipal principal, UUID sectionId, String ifMatch, MentorAssignRequest request) {
         Section section = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found."));
 
@@ -75,6 +75,12 @@ public class MentorAssignmentService {
 
         permissionEvaluatorService.authorize(principal, "MENTOR_ASSIGN",
                 RbacScope.department(section.getInstitutionId(), departmentId), RbacTarget.NONE);
+
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        if (section.getRowVersion() == null || section.getRowVersion() != expectedVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Section was changed by another user. Reload and retry with the latest ETag.");
+        }
 
         StaffAssignment target = staffAssignmentRepository
                 .findByTenantIdAndStaffAssignmentId(principal.tenantId(), request.staffAssignmentId())
@@ -95,6 +101,9 @@ public class MentorAssignmentService {
         }
         LocalDate today = today(principal.tenantId());
         requireEffective(target, today);
+        if (sectionRepository.bumpRowVersion(principal.tenantId(), sectionId, expectedVersion, principal.userAccountId()) != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT", "Section was changed by another user. Reload and retry with the latest ETag.");
+        }
         mentorAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(principal.tenantId(), sectionId)
                 .ifPresent(current -> {
                     current.setEffectiveTo(today);
@@ -113,7 +122,7 @@ public class MentorAssignmentService {
         created.setUpdatedBy(principal.userAccountId());
         mentorAssignmentRepository.save(created);
 
-        return new MentorAssignResponse(sectionId, created.getMentorAssignmentId(), target.getStaffAssignmentId());
+        return new MentorAssignResponse(sectionId, created.getMentorAssignmentId(), target.getStaffAssignmentId(), expectedVersion + 1);
     }
 
     private void requireEffective(StaffAssignment target, LocalDate date) {
@@ -135,4 +144,21 @@ public class MentorAssignmentService {
                         "Program " + programYear.getProgramId() + " was not found."));
         return program.getDepartmentId();
     }
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the section ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replace(String.valueOf((char) 34), "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException();
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive section row version.");
+        }
+    }
+
+
 }
