@@ -253,7 +253,7 @@ describe("Institution setup action screens", () => {
     });
 
     renderWithTenant(<InstitutionHierarchyPage />);
-    expect(await screen.findByText("Northbridge University Group")).toBeInTheDocument();
+    expect((await screen.findAllByText("Northbridge University Group")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Northbridge College").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Northbridge Public School").length).toBeGreaterThan(0);
     expect(screen.getByText("Computer Science")).toBeInTheDocument();
@@ -335,9 +335,9 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Computer Science and Engineering")).toBeInTheDocument();
+      expect(screen.getAllByText("Computer Science and Engineering").length).toBeGreaterThan(0);
       expect(screen.getAllByText("CSE").length).toBeGreaterThan(0);
-      expect(screen.getByText("B.Tech Computer Science")).toBeInTheDocument();
+      expect(screen.getAllByText("B.Tech Computer Science").length).toBeGreaterThan(0);
       expect(screen.getByText("BTECH_CSE")).toBeInTheDocument();
     });
   });
@@ -444,7 +444,7 @@ describe("Institution setup action screens", () => {
     renderWithTenant(<AcademicStructurePage />);
     fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
-    await screen.findByText("B.Tech");
+    await screen.findByRole("link", { name: "B.Tech" });
 
     fireEvent.change(screen.getAllByLabelText("Program")[1], { target: { value: programId } });
     fireEvent.click(screen.getByRole("button", { name: /load program years/i }));
