@@ -50,6 +50,7 @@ public class SchoolClassController {
         }
 
         RbacPrincipal rbacPrincipal = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
-        return ResponseEntity.ok(studentLoginSwitchService.setStudentLogin(rbacPrincipal, classId, request));
+        var response = studentLoginSwitchService.setStudentLogin(rbacPrincipal, classId, ifMatch, request);
+        return ResponseEntity.ok().eTag(String.format("\"%d\"", response.rowVersion())).body(response);
     }
 }
