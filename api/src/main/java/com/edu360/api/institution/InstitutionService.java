@@ -78,6 +78,9 @@ public class InstitutionService {
     @Autowired(required = false)
     private com.edu360.api.platformops.TenantQuotaService tenantQuotaService;
 
+    @Autowired(required = false)
+    private DepartmentRepository departmentRepository;
+
     public InstitutionService(
             InstitutionRepository institutionRepository,
             LeaveApproverSettingRepository leaveApproverSettingRepository,
@@ -306,6 +309,34 @@ public class InstitutionService {
         auditLogService.record(AuditEventType.INSTITUTION_ACTIVATION_REQUESTED, null, principal.userAccountId().toString(), null,
                 "Activation requested for institution " + institution.getInstitutionName() + " (" + institutionId + ")");
         return InstitutionResponse.fromEntity(institution);
+    }
+
+    /** Tenant-rooted hierarchy: the tenant is the university-group root in the V4.0 schema. */
+    @Transactional(readOnly = true)
+    public com.edu360.api.institution.dto.InstitutionHierarchyResponse getHierarchy(RbacPrincipal principal) {
+        Objects.requireNonNull(principal, "principal is required");
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_CREATE_DRAFT", RbacScope.tenant(), RbacTarget.NONE);
+        Tenant tenant = tenantRepository.findById(principal.tenantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant " + principal.tenantId() + " was not found."));
+        List<com.edu360.api.institution.dto.InstitutionHierarchyNode> nodes = institutionRepository.findByIdTenantId(principal.tenantId())
+                .stream()
+                .map(institution -> {
+                    List<com.edu360.api.institution.dto.DepartmentResponse> departments = departmentRepository == null
+                            || !"COLLEGE".equalsIgnoreCase(institution.getInstitutionType())
+                            ? List.of()
+                            : departmentRepository.findByTenantIdAndInstitutionId(principal.tenantId(), institution.getInstitutionId())
+                                    .stream()
+                                    .map(department -> new com.edu360.api.institution.dto.DepartmentResponse(
+                                            department.getDepartmentId(), department.getInstitutionId(),
+                                            department.getDepartmentCode(), department.getDepartmentName(),
+                                            department.getHodStaffAssignmentId(), department.getStatus()))
+                                    .toList();
+                    return new com.edu360.api.institution.dto.InstitutionHierarchyNode(
+                            InstitutionResponse.fromEntity(institution), departments);
+                })
+                .toList();
+        return new com.edu360.api.institution.dto.InstitutionHierarchyResponse(
+                tenant.getTenantId(), tenant.getTenantName(), tenant.getTenantType(), nodes);
     }
 
     /**
