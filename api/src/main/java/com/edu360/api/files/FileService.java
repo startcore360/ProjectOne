@@ -85,6 +85,11 @@ public class FileService {
         catch (IllegalArgumentException ex) {
             throw new BusinessRuleViolationException("FILE_TYPE_NOT_ALLOWED", "File content does not match the permitted safe file types.");
         }
+        if (purpose == FilePurpose.ADMISSION_DOCUMENT
+                && !java.util.Set.of("application/pdf", "image/jpeg", "image/png").contains(contentType)) {
+            throw new BusinessRuleViolationException("FILE_TYPE_NOT_ALLOWED",
+                    "Admission documents must be PDF, JPG or PNG files.");
+        }
 
         FileScanner.ScanResult scan = scanner.scan(content);
         UUID fileId = UUID.randomUUID();
