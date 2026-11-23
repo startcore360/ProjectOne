@@ -5,7 +5,9 @@ import { getApiErrorMessage } from "../../../services/apiHelper";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 
-type Submission = { id: string; staff_id: string; self_score: number | null; hod_score: number | null; principal_score: number | null; final_rating: number | null; status: string; };\n\ntype Cycle = {
+type Submission = { id: string; staff_id: string; self_score: number | null; hod_score: number | null; principal_score: number | null; final_rating: number | null; status: string; };
+
+type Cycle = {
   id: string; institution_id: string; academic_year_id: string; name: string;
   start_date: string; end_date: string; status: string; row_version: number;
 };
@@ -20,7 +22,8 @@ export default function StaffAppraisalPage() {
   const [feedback, setFeedback] = useState("");
   const [draft, setDraft] = useState({ academicYearId: "", name: "", startDate: "", endDate: "" });
   const [selectedCycle, setSelectedCycle] = useState("");
-  const [selfScore, setSelfScore] = useState("");\n  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [selfScore, setSelfScore] = useState("");
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
 
 
   const load = useCallback(async () => {
@@ -34,7 +37,14 @@ export default function StaffAppraisalPage() {
     finally { setLoading(false); }
   }, [tenantId, institutionId]);
 
-  useEffect(() => { void load(); }, [load]);\n\n  useEffect(() => {\n    if (!tenantId || !selectedCycle) { setSubmissions([]); return; }\n    void api.get<Submission[]>(`/api/tenants/${tenantId}/appraisals/cycles/${selectedCycle}/submissions`)\n      .then((response) => setSubmissions(response.data ?? []))\n      .catch((e: unknown) => setError(getApiErrorMessage(e)));\n  }, [tenantId, selectedCycle]);
+  useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (!tenantId || !selectedCycle) { setSubmissions([]); return; }
+    void api.get<Submission[]>(`/api/tenants/${tenantId}/appraisals/cycles/${selectedCycle}/submissions`)
+      .then((response) => setSubmissions(response.data ?? []))
+      .catch((e: unknown) => setError(getApiErrorMessage(e)));
+  }, [tenantId, selectedCycle]);
 
   const createCycle = async (event: FormEvent) => {
     event.preventDefault();
@@ -51,7 +61,17 @@ export default function StaffAppraisalPage() {
     finally { setSaving(false); }
   };
 
-  const setCycleStatus = async (cycleId: string, status: "OPEN" | "CLOSED") => {\n    if (!tenantId) return;\n    setSaving(true); setError(""); setFeedback("");\n    try {\n      await api.patch(`/api/tenants/${tenantId}/appraisals/cycles/${cycleId}/status`, { status });\n      setFeedback(`Cycle ${status.toLowerCase()}.`); await load();\n    } catch (e) { setError(getApiErrorMessage(e)); }\n    finally { setSaving(false); }\n  };\n\n  const submitSelfEvaluation = async (event: FormEvent) => {
+  const setCycleStatus = async (cycleId: string, status: "OPEN" | "CLOSED") => {
+    if (!tenantId) return;
+    setSaving(true); setError(""); setFeedback("");
+    try {
+      await api.patch(`/api/tenants/${tenantId}/appraisals/cycles/${cycleId}/status`, { status });
+      setFeedback(`Cycle ${status.toLowerCase()}.`); await load();
+    } catch (e) { setError(getApiErrorMessage(e)); }
+    finally { setSaving(false); }
+  };
+
+  const submitSelfEvaluation = async (event: FormEvent) => {
     event.preventDefault();
     if (!tenantId || !selectedCycle) return;
     setSaving(true); setError(""); setFeedback("");
