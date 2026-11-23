@@ -508,7 +508,9 @@ public class ApprovalInboxService {
                 run.setUpdatedBy(actor);
                 promotionRunRepository.save(run);
             });
-        } else if (isAttendanceProcess(request)) {
+        } else if (isAttendanceProcess(request)
+                || ("STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
+                    && "STAFF_LEAVE".equalsIgnoreCase(request.getProcessCode()))) {
             ApprovalOutcomeHandler handler = outcomeHandlers.stream().filter(candidate -> candidate.supports(request))
                     .findFirst().orElseThrow(() -> new BusinessRuleViolationException(
                             "APPROVAL_HANDLER_NOT_REGISTERED",
