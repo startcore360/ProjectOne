@@ -125,6 +125,12 @@ public class StaffAppraisalService {
     }
 
     private void authorize(RbacPrincipal actor, String action, UUID institutionId, UUID staffId) {
+        if (("STAFF_APPRAISAL_HOD_SCORE".equals(action)
+                || "STAFF_APPRAISAL_PRINCIPAL_REVIEW".equals(action))
+                && staffId(actor).equals(staffId)) {
+            throw new BusinessRuleViolationException("SELF_APPRAISAL_REVIEW_FORBIDDEN",
+                    "A staff member cannot score or complete the principal review of their own appraisal.");
+        }
         UUID departmentId = jdbc.query("""
             SELECT department_id FROM app.staff_assignment
             WHERE tenant_id=? AND staff_profile_id=? AND institution_id=? AND status='ACTIVE'
