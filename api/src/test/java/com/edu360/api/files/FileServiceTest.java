@@ -85,6 +85,31 @@ class FileServiceTest {
     }
 
     @Test
+    void admissionUploadsRejectFilesAboveFiveMiB() {
+        MockMultipartFile upload = new MockMultipartFile("file", "large.pdf", "application/pdf",
+                new byte[5 * 1024 * 1024 + 1]);
+        assertThatThrownBy(() -> service.upload(principal, upload, "ADMISSION_DOCUMENT", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("5 MiB");
+        verify(permissions, never()).activeAssignment(any());
+    }
+
+    @Test
+    void admissionUploadsRejectOfficeDocumentsEvenWhenContentInspectorRecognizesThem() {
+        FileContentInspector inspector = mock(FileContentInspector.class);
+        service = new FileService(repository, storage, permissions, inspector, scanner, accessPolicy, auditLog, true);
+        allowPermission();
+        when(inspector.inspect(any(), any(), any())).thenReturn("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        MockMultipartFile upload = new MockMultipartFile("file", "supporting.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new byte[]{1,2,3});
+        assertThatThrownBy(() -> service.upload(principal, upload, "ADMISSION_DOCUMENT", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("PDF, JPG or PNG");
+        verify(storage, never()).store(any(), any(), any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void successfulUploadWritesOneStructuredAuditRecord() {
         allowUpload();
         MockMultipartFile upload = new MockMultipartFile("file", "lesson.pdf", "application/pdf",
