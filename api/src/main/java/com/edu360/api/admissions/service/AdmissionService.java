@@ -151,6 +151,18 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
 
     @Transactional(readOnly=true)
     public Map<String,Object> applicationForApplicant(TenantPrincipal actor,UUID applicationId) { return ownedApplication(actor,applicationId); }
+ 
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> myApplications(TenantPrincipal actor) {
+        return jdbc.queryForList("""
+          select a.id,a.application_number,a.applicant_name,a.status,a.verification_status,a.fee_status,
+                 a.admission_fee_status,a.defect_notes,a.student_profile_id,c.cycle_name,c.status as cycle_status
+          from app.admission_application a
+          join app.admission_cycle c on c.tenant_id=a.tenant_id and c.id=a.cycle_id
+          where a.tenant_id=? and a.created_by=?
+          order by a.submitted_at desc,a.id
+          """,actor.tenantId(),actor.userAccountId());
+    }
 
     @Transactional
     public Map<String,Object> resubmitCorrections(TenantPrincipal actor,UUID applicationId) {
@@ -189,6 +201,19 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
         Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),cycleId);
         authorize(actor,"MERIT_LIST_GENERATE",(UUID)cycle.get("institution_id"));
         return jdbc.queryForList("select * from app.merit_list where tenant_id=? and cycle_id=? order by round_number desc",actor.tenantId(),cycleId);
+    }
+ 
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> meritListItems(TenantPrincipal actor, UUID listId) {
+        Map<String,Object> list=one("select ml.*,c.institution_id from app.merit_list ml join app.admission_cycle c on c.tenant_id=ml.tenant_id and c.id=ml.cycle_id where ml.tenant_id=? and ml.id=?",actor.tenantId(),listId);
+        authorizeAny(actor,(UUID)list.get("institution_id"),"MERIT_LIST_GENERATE","MERIT_LIST_APPROVE","SEAT_ALLOCATE");
+        return jdbc.queryForList("""
+          select i.id,i.application_id,i.merit_rank,i.computed_score,i.allocated_quota,i.seat_status,
+                 a.application_number,a.applicant_name,a.status as application_status
+          from app.merit_list_item i
+          join app.admission_application a on a.tenant_id=i.tenant_id and a.id=i.application_id
+          where i.tenant_id=? and i.merit_list_id=? order by i.merit_rank
+          """,actor.tenantId(),listId);
     }
 
     @Transactional
@@ -244,19 +269,24 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
         Map<String,Object> list=one("select ml.*,c.institution_id,c.total_seats,c.quota_capacity,c.id as cycle_id from app.merit_list ml join app.admission_cycle c on c.tenant_id=ml.tenant_id and c.id=ml.cycle_id where ml.tenant_id=? and ml.id=?",actor.tenantId(),listId);
         authorize(actor,"SEAT_ALLOCATE",(UUID)list.get("institution_id"));
         if(!Set.of("APPROVED","PUBLISHED").contains(list.get("status"))) throw new BusinessRuleViolationException("MERIT_LIST_NOT_APPROVED","Merit list must be approved before allocation.");
-        List<Map<String,Object>> items=jdbc.queryForList("select i.* from app.merit_list_item i where i.tenant_id=? and i.merit_list_id=? and i.seat_status='OFFERED' and not exists (select 1 from app.seat_allotment s where s.tenant_id=i.tenant_id and s.merit_list_id=i.merit_list_id and s.application_id=i.application_id) order by i.merit_rank",actor.tenantId(),listId);
+        one("select id from app.admission_cycle where tenant_id=? and id=? for update",actor.tenantId(),list.get("cycle_id"));
+        List<Map<String,Object>> items=jdbc.queryForList("select i.* from app.merit_list_item i where i.tenant_id=? and i.merit_list_id=? and i.seat_status='OFFERED' and not exists (select 1 from app.seat_allotment s where s.tenant_id=i.tenant_id and s.cycle_id=? and s.application_id=i.application_id and s.status not in('DECLINED','EXPIRED')) order by i.merit_rank",actor.tenantId(),listId,list.get("cycle_id"));
         int max=((Number)list.get("total_seats")).intValue(),count=0;
         Map<String,Object> capacities=readJsonObject(list.get("quota_capacity"));
         Map<String,Integer> used=new HashMap<>();
+        for(Map<String,Object> reserved:jdbc.queryForList("select quota_code,count(*) as reserved from app.seat_allotment where tenant_id=? and cycle_id=? and status not in('DECLINED','EXPIRED') group by quota_code",actor.tenantId(),list.get("cycle_id"))) {
+            used.put(String.valueOf(reserved.get("quota_code")),((Number)reserved.get("reserved")).intValue());
+        }
+        int totalUsed=used.values().stream().mapToInt(Integer::intValue).sum();
         for(Map<String,Object> item:items){
-            if(count>=max) break;
+            if(totalUsed>=max) break;
             String quota=String.valueOf(item.get("allocated_quota"));
             int capacity=((Number)capacities.getOrDefault(quota,0)).intValue();
             if(used.getOrDefault(quota,0)>=capacity) continue;
             UUID allotment=UUID.randomUUID();
             jdbc.update("insert into app.seat_allotment(tenant_id,id,cycle_id,merit_list_id,merit_list_item_id,application_id,quota_code,created_by,updated_by) values(?,?,?,?,?,?,?,?,?)",
                     actor.tenantId(),allotment,list.get("cycle_id"),listId,item.get("id"),item.get("application_id"),quota,actor.userAccountId(),actor.userAccountId());
-            used.merge(quota,1,Integer::sum); count++;
+            used.merge(quota,1,Integer::sum); totalUsed++; count++;
         }
         return Map.of("meritListId",listId,"offeredSeats",count);
     }
@@ -297,12 +327,12 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
         }
         if(!Set.of("ACCEPTED","DECLINED").contains(decision)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Seat decision must be ACCEPTED or DECLINED.");
         if(!"OFFERED".equals(seat.get("status"))) throw new BusinessRuleViolationException("SEAT_ALREADY_DECIDED","Only an offered seat can be accepted or declined.");
-        jdbc.update("update app.seat_allotment set status=?,accepted_at=case when ?='ACCEPTED' then now() else null end,updated_by=? where tenant_id=? and id=?",
+        int changed=jdbc.update("update app.seat_allotment set status=?,accepted_at=case when ?='ACCEPTED' then now() else null end,updated_by=? where tenant_id=? and id=? and status='OFFERED'",
                 decision,decision,actor.userAccountId(),actor.tenantId(),allotmentId);
+        if(changed!=1) throw new BusinessRuleViolationException("SEAT_ALREADY_DECIDED","The seat offer was already decided by another request.");
         jdbc.update("update app.merit_list_item set seat_status=? where tenant_id=? and id=?",
                 decision,actor.tenantId(),seat.get("merit_list_item_id"));
-        if("ACCEPTED".equals(decision)) jdbc.update("update app.admission_application set status='ADMITTED',updated_by=? where tenant_id=? and id=?",
-                actor.userAccountId(),actor.tenantId(),seat.get("application_id"));
+        // The database trigger moves an accepted application to ADMITTED in this transaction.
         return one("select * from app.seat_allotment where tenant_id=? and id=?",actor.tenantId(),allotmentId);
     }
 
@@ -385,8 +415,9 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
         if(app.get("student_profile_id")!=null) throw new BusinessRuleViolationException("ALREADY_CONVERTED","Application already has a student profile.");
         StudentProfileResponse profile=students.createProfileOnly(actor,new StudentProfileOnlyRequest((UUID)app.get("institution_id"),
                 String.valueOf(app.get("applicant_name")),(LocalDate)app.get("date_of_birth"),LocalDate.now()));
-        jdbc.update("update app.admission_application set student_profile_id=?,updated_by=? where tenant_id=? and id=?",
+        int linked=jdbc.update("update app.admission_application set student_profile_id=?,updated_by=? where tenant_id=? and id=? and student_profile_id is null",
                 profile.id(),actor.userAccountId(),actor.tenantId(),applicationId);
+        if(linked!=1) throw new BusinessRuleViolationException("ALREADY_CONVERTED","Application already has a student profile.");
         return profile;
     }
 
