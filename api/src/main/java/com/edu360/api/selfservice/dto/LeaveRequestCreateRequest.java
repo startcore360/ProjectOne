@@ -10,4 +10,5 @@ public record LeaveRequestCreateRequest(
         String unit,
         String halfDayPart,
         String reason,
-        UUID documentFileId) {}
+        UUID documentFileId,
+        UUID designatedDelegateStaffProfileId) {}
