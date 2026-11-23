@@ -144,6 +144,86 @@ class AcademicControllerTest {
         assertThat(res.getBody().schemeName()).isEqualTo("Standard 10-Point Scale");
     }
 
+    @Test
+    @DisplayName("ACT-PROGRAM_RULES_SET-WORKFLOW: rule sets can be listed, retrieved and activated")
+    void programRules_listGetAndActivateWorkflow() {
+        doNothing().when(permissionEvaluatorService).authorize(any(), eq("PROGRAM_RULES_SET"), any(), any());
+        UUID ruleSetId = UUID.randomUUID();
+        ProgramRuleSet ruleSet = ProgramRuleSet.builder()
+                .id(new ProgramRuleSetId(tenantId, ruleSetId))
+                .institutionId(institutionId)
+                .rules("{\"minCredits\":160}")
+                .effectiveFrom(LocalDate.now())
+                .status("DRAFT")
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+        when(programRuleSetRepository.findByIdTenantId(tenantId)).thenReturn(List.of(ruleSet));
+        when(programRuleSetRepository.findByIdTenantIdAndIdProgramRuleSetId(tenantId, ruleSetId))
+                .thenReturn(Optional.of(ruleSet));
+        when(programRuleSetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<List<ProgramRuleSetResponse>> listed = programRuleController.listRuleSets(tenantId, auth);
+        ResponseEntity<ProgramRuleSetResponse> retrieved = programRuleController.getRuleSet(tenantId, ruleSetId, auth);
+        ResponseEntity<ProgramRuleSetResponse> activated = programRuleController.activateRuleSet(tenantId, ruleSetId, auth);
+
+        assertThat(listed.getBody()).hasSize(1);
+        assertThat(retrieved.getBody().programRuleSetId()).isEqualTo(ruleSetId);
+        assertThat(activated.getBody().status()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("ACT-PROGRAM_RULES_SET-GUARD: malformed rule JSON is rejected before persistence")
+    void programRules_rejectMalformedJson() {
+        doNothing().when(permissionEvaluatorService).authorize(any(), eq("PROGRAM_RULES_SET"), any(), any());
+        CreateProgramRuleSetRequest request = new CreateProgramRuleSetRequest(null, null, "{not-json", LocalDate.now());
+
+        assertThatThrownBy(() -> programRuleController.createRuleSet(tenantId, request, auth))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("valid JSON");
+    }
+
+    @Test
+    @DisplayName("ACT-GRADING_SCHEME_SET-WORKFLOW: grading schemes can be listed and activated")
+    void gradingSchemes_listAndActivateWorkflow() {
+        doNothing().when(permissionEvaluatorService).authorize(any(), eq("GRADING_SCHEME_SET"), any(), any());
+        UUID schemeId = UUID.randomUUID();
+        GradingSchemeVersion scheme = GradingSchemeVersion.builder()
+                .id(new GradingSchemeVersionId(tenantId, schemeId))
+                .institutionId(institutionId)
+                .schemeName("Standard 10-Point Scale")
+                .effectiveFrom(LocalDate.now())
+                .status("DRAFT")
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+        when(gradingSchemeVersionRepository.findByIdTenantId(tenantId)).thenReturn(List.of(scheme));
+        when(gradingSchemeVersionRepository.findByIdTenantIdAndIdGradingSchemeVersionId(tenantId, schemeId))
+                .thenReturn(Optional.of(scheme));
+        when(gradingSchemeVersionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<List<GradingSchemeResponse>> listed =
+                gradingSchemeController.listGradingSchemes(tenantId, institutionId, auth);
+        ResponseEntity<GradingSchemeResponse> activated =
+                gradingSchemeController.activateGradingScheme(tenantId, schemeId, auth);
+
+        assertThat(listed.getBody()).hasSize(1);
+        assertThat(listed.getBody().get(0).schemeName()).isEqualTo("Standard 10-Point Scale");
+        assertThat(activated.getBody().status()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("ACT-GRADING_SCHEME_SET-DENY: unauthorized role cannot create grading scheme")
+    void gradingSchemes_rejectUnauthorizedCreate() {
+        doThrow(new AccessDeniedException("ACTION_NOT_GRANTED"))
+                .when(permissionEvaluatorService).authorize(any(), eq("GRADING_SCHEME_SET"), any(), any());
+        CreateGradingSchemeRequest request =
+                new CreateGradingSchemeRequest(institutionId, "Standard 10-Point Scale", LocalDate.now());
+
+        assertThatThrownBy(() -> gradingSchemeController.createGradingScheme(tenantId, request, auth))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Story #36: SUBJECT_ALLOCATE
     // ---------------------------------------------------------------------------------------------
