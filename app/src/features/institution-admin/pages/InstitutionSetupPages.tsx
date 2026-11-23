@@ -194,6 +194,13 @@ export function InstitutionHierarchyPage() {
   const [hodStaffAssignmentId, setHodStaffAssignmentId] = useState("");
   const [hodLoading, setHodLoading] = useState(false);
   const [hodError, setHodError] = useState("");
+  const [editingRecord, setEditingRecord] = useState<EditableStructureRecord | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<{ kind: EditableStructureRecord["kind"]; id: string; name: string; rowVersion?: number } | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveError, setArchiveError] = useState("");
+
 
 
   const beginEdit = (node: InstitutionHierarchyResponse["institutions"][number]) => {
@@ -1052,6 +1059,28 @@ export function CalendarEventsPage() {
         </>
       )}
 
+      <EditStructureRecordModal
+        record={editingRecord}
+        departments={departments}
+        classes={schoolClasses}
+        sessions={schoolSessions}
+        submitting={editSubmitting}
+        error={editError}
+        onClose={() => { if (!editSubmitting) { setEditingRecord(null); setEditError(""); } }}
+        onSave={(record, draft) => void saveStructureRecord(record, draft)}
+      />
+      {archiveTarget && (
+        <Modal isOpen onClose={() => { if (!archiveBusy) { setArchiveTarget(null); setArchiveError(""); } }}
+          title={`Archive ${archiveTarget.kind}`} titleId="archive-structure-record-title"
+          description={`Archive “${archiveTarget.name}”? The record is retained for audit and cannot be used for new assignments.`} size="sm">
+          {archiveError && <Notice tone="danger">{archiveError}</Notice>}
+          <div className="app-inline-actions">
+            <Button type="button" variant="secondary" disabled={archiveBusy} onClick={() => setArchiveTarget(null)}>Cancel</Button>
+            <Button type="button" variant="danger" busy={archiveBusy} onClick={() => void archiveStructureRecord()}>Archive record</Button>
+          </div>
+        </Modal>
+      )}
+
       {/* Add Academic Session Modal */}
       <AddAcademicSessionModal
         isOpen={showAddSessionModal}
@@ -1374,6 +1403,128 @@ export function WeeklyOffRulesPage() {
 
 // --- 7. Academic structure management (STRUCTURE_MANAGE) -------------------------------------
 
+type EditableStructureRecord =
+  | { kind: "department"; item: DepartmentItem }
+  | { kind: "program"; item: ProgramItem }
+  | { kind: "class"; item: SchoolClassItem }
+  | { kind: "section"; item: SectionItem };
+
+type StructureEditDraft = {
+  code: string;
+  name: string;
+  departmentId: string;
+  durationYears: string;
+  semestersPerYear: string;
+  displayOrder: string;
+  classId: string;
+  academicSessionId: string;
+  capacity: string;
+};
+
+function EditStructureRecordModal({
+  record,
+  departments,
+  classes,
+  sessions,
+  submitting,
+  error,
+  onClose,
+  onSave,
+}: {
+  record: EditableStructureRecord | null;
+  departments: DepartmentItem[];
+  classes: SchoolClassItem[];
+  sessions: AcademicSessionItem[];
+  submitting: boolean;
+  error: string;
+  onClose: () => void;
+  onSave: (record: EditableStructureRecord, draft: StructureEditDraft) => void;
+}) {
+  const [draft, setDraft] = useState<StructureEditDraft>({
+    code: "", name: "", departmentId: "", durationYears: "4", semestersPerYear: "2",
+    displayOrder: "0", classId: "", academicSessionId: "", capacity: "",
+  });
+
+  useEffect(() => {
+    if (!record) return;
+    const item = record.item;
+    setDraft({
+      code: record.kind === "department" ? item.departmentCode : record.kind === "program" ? item.programCode : "",
+      name: record.kind === "department" ? item.departmentName
+        : record.kind === "program" ? item.programName
+        : record.kind === "class" ? item.className
+        : item.sectionName,
+      departmentId: record.kind === "program" ? item.departmentId : departments[0]?.departmentId ?? "",
+      durationYears: record.kind === "program" ? String(item.durationYears) : "4",
+      semestersPerYear: record.kind === "program" ? String(item.semestersPerYear) : "2",
+      displayOrder: record.kind === "class" ? String(item.displayOrder) : "0",
+      classId: record.kind === "section" ? item.classId ?? "" : classes[0]?.classId ?? "",
+      academicSessionId: record.kind === "section" ? item.academicSessionId : sessions.find((session) => session.status === "ACTIVE")?.academicSessionId ?? sessions[0]?.academicSessionId ?? "",
+      capacity: record.kind === "section" && item.capacity != null ? String(item.capacity) : "",
+    });
+  }, [record, departments, classes, sessions]);
+
+  if (!record) return null;
+  const title = record.kind === "department" ? "Edit department"
+    : record.kind === "program" ? "Edit program"
+    : record.kind === "class" ? "Edit class or grade" : "Edit section";
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    onSave(record, draft);
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={title} titleId="edit-structure-record-title"
+      description="Changes are saved with If-Match optimistic concurrency. A stale record must be reloaded before retrying." size="sm">
+      <form onSubmit={submit}>
+        {error && <Notice tone="danger">{error}</Notice>}
+        {record.kind === "department" && (
+          <>
+            <TextField id="edit-department-code" label="Department code" required value={draft.code} onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value }))} />
+            <TextField id="edit-department-name" label="Department name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+          </>
+        )}
+        {record.kind === "program" && (
+          <>
+            <SelectField id="edit-program-department" label="Department" required value={draft.departmentId} onChange={(event) => setDraft((current) => ({ ...current, departmentId: event.target.value }))}>
+              {departments.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.departmentName}</option>)}
+            </SelectField>
+            <TextField id="edit-program-code" label="Program code" required value={draft.code} onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value }))} />
+            <TextField id="edit-program-name" label="Program name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+            <div className="app-form-grid">
+              <TextField id="edit-program-duration" label="Duration (years)" type="number" min={1} max={10} required value={draft.durationYears} onChange={(event) => setDraft((current) => ({ ...current, durationYears: event.target.value }))} />
+              <TextField id="edit-program-semesters" label="Semesters per year" type="number" min={1} max={6} required value={draft.semestersPerYear} onChange={(event) => setDraft((current) => ({ ...current, semestersPerYear: event.target.value }))} />
+            </div>
+          </>
+        )}
+        {record.kind === "class" && (
+          <>
+            <TextField id="edit-class-name" label="Class or grade name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+            <TextField id="edit-class-order" label="Display order" type="number" min={0} step={1} required value={draft.displayOrder} onChange={(event) => setDraft((current) => ({ ...current, displayOrder: event.target.value }))} />
+          </>
+        )}
+        {record.kind === "section" && (
+          <>
+            <SelectField id="edit-section-class" label="Class or grade" required value={draft.classId} onChange={(event) => setDraft((current) => ({ ...current, classId: event.target.value }))}>
+              {classes.map((schoolClass) => <option key={schoolClass.classId} value={schoolClass.classId}>{schoolClass.className}</option>)}
+            </SelectField>
+            <SelectField id="edit-section-session" label="Academic session" required value={draft.academicSessionId} onChange={(event) => setDraft((current) => ({ ...current, academicSessionId: event.target.value }))}>
+              {sessions.map((session) => <option key={session.academicSessionId} value={session.academicSessionId}>{session.sessionLabel}</option>)}
+            </SelectField>
+            <TextField id="edit-section-name" label="Section name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+            <TextField id="edit-section-capacity" label="Section capacity" type="number" min={1} max={10000} value={draft.capacity} onChange={(event) => setDraft((current) => ({ ...current, capacity: event.target.value }))} />
+          </>
+        )}
+        <div className="app-inline-actions">
+          <Button type="button" variant="secondary" disabled={submitting} onClick={onClose}>Cancel</Button>
+          <Button type="submit" busy={submitting}>Save changes</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export function AcademicStructurePage() {
   const user = useAppSelector((state) => state.auth.user);
   const tenantId = user?.tenantId;
@@ -1689,6 +1840,79 @@ export function AcademicStructurePage() {
       setCatalogError(getApiErrorMessage(cause));
     } finally {
       setCatalogBusy(false);
+    }
+  };
+
+  const saveStructureRecord = async (record: EditableStructureRecord, draft: StructureEditDraft) => {
+    if (!isValidUuid(institutionId) || !record.item.rowVersion) {
+      setEditError("The current record version is unavailable. Reload the structure before editing.");
+      return;
+    }
+    setEditSubmitting(true);
+    setEditError("");
+    try {
+      if (record.kind === "department") {
+        if (!draft.code.trim() || !draft.name.trim()) throw new Error("Department code and name are required.");
+        await institutionService.updateDepartment(tenantId, institutionId, record.item.departmentId, record.item.rowVersion, {
+          departmentCode: draft.code.trim(), departmentName: draft.name.trim(),
+        });
+      } else if (record.kind === "program") {
+        const durationYears = Number(draft.durationYears);
+        const semestersPerYear = Number(draft.semestersPerYear);
+        if (!draft.departmentId || !draft.code.trim() || !draft.name.trim()
+            || !Number.isInteger(durationYears) || durationYears < 1 || durationYears > 10
+            || !Number.isInteger(semestersPerYear) || semestersPerYear < 1 || semestersPerYear > 6) {
+          throw new Error("Enter a department, program code and name, and valid duration/semester counts.");
+        }
+        await institutionService.updateProgram(tenantId, institutionId, record.item.programId, record.item.rowVersion, {
+          departmentId: draft.departmentId, programCode: draft.code.trim(), programName: draft.name.trim(),
+          durationYears, semestersPerYear,
+        });
+      } else if (record.kind === "class") {
+        const displayOrder = Number(draft.displayOrder);
+        if (!draft.name.trim() || !Number.isInteger(displayOrder) || displayOrder < 0) throw new Error("Enter a class name and non-negative whole-number display order.");
+        await institutionService.updateSchoolClass(tenantId, institutionId, record.item.classId, record.item.rowVersion, {
+          className: draft.name.trim(), displayOrder,
+        });
+      } else {
+        const capacity = draft.capacity.trim() ? Number(draft.capacity) : undefined;
+        if (!draft.name.trim() || !draft.classId || !draft.academicSessionId
+            || (capacity !== undefined && (!Number.isInteger(capacity) || capacity < 1 || capacity > 10000))) {
+          throw new Error("Enter a section name, class, academic session and valid optional capacity.");
+        }
+        await institutionService.updateSection(tenantId, institutionId, record.item.sectionId, record.item.rowVersion, {
+          sectionName: draft.name.trim(), classId: draft.classId, academicSessionId: draft.academicSessionId, capacity,
+          semesterId: record.item.semesterId,
+        });
+      }
+      setEditingRecord(null);
+      await loadStructureFor(institutionId);
+    } catch (cause) {
+      setEditError(getApiErrorMessage(cause));
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const archiveStructureRecord = async () => {
+    if (!archiveTarget || !isValidUuid(institutionId)) return;
+    if (!archiveTarget.rowVersion) {
+      setArchiveError("The current record version is unavailable. Reload the structure before archiving.");
+      return;
+    }
+    setArchiveBusy(true);
+    setArchiveError("");
+    try {
+      if (archiveTarget.kind === "department") await institutionService.archiveDepartment(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      else if (archiveTarget.kind === "program") await institutionService.archiveProgram(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      else if (archiveTarget.kind === "class") await institutionService.archiveSchoolClass(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      else await institutionService.archiveSection(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      setArchiveTarget(null);
+      await loadStructureFor(institutionId);
+    } catch (cause) {
+      setArchiveError(getApiErrorMessage(cause));
+    } finally {
+      setArchiveBusy(false);
     }
   };
 
