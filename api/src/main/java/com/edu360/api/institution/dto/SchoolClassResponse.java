@@ -8,5 +8,11 @@ public record SchoolClassResponse(
         String className,
         Short displayOrder,
         boolean studentLoginEnabled,
-        String status
-) {}
+        String status,
+        int rowVersion
+) {
+    public SchoolClassResponse(UUID classId, UUID institutionId, String className, Short displayOrder,
+            boolean studentLoginEnabled, String status) {
+        this(classId, institutionId, className, displayOrder, studentLoginEnabled, status, 1);
+    }
+}
