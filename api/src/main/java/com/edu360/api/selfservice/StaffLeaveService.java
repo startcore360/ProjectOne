@@ -87,7 +87,7 @@ public class StaffLeaveService {
                 || (request.tracksBalance() && request.isLossOfPay())) {
             throw new BusinessRuleViolationException("INVALID_LEAVE_TYPE", "Provide a valid uppercase leave code, a 1-60 character name, and a non-loss-of-pay balance setting.");
         }
-        if (!institutions.existsByIdTenantIdAndIdInstitutionId(tenantId, institutionId)) {
+        if (institutions.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId).isEmpty()) {
             throw new ResourceNotFoundException("Institution not found");
         }
         RbacPrincipal actor = new RbacPrincipal(tenantId, actorId);
