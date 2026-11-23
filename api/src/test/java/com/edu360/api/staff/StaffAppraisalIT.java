@@ -1,6 +1,6 @@
 package com.edu360.api.staff;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;\n\nimport com.fasterxml.jackson.databind.ObjectMapper;\nimport org.springframework.boot.test.context.TestConfiguration;\nimport org.springframework.context.annotation.Bean;\nimport org.springframework.context.annotation.Import;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @ActiveProfiles("test")
 class StaffAppraisalIT {
-    @Autowired JdbcTemplate jdbc;
+    @Autowired JdbcTemplate jdbc;\n\n    @TestConfiguration\n    static class TestBeans {\n        @Bean ObjectMapper objectMapper() { return new ObjectMapper(); }\n    }
 
     private boolean table(String name) {
         Integer count = jdbc.queryForObject(
