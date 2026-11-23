@@ -22,6 +22,7 @@ import com.edu360.api.institution.dto.CreateProgramRequest;
 import com.edu360.api.institution.dto.CreateProgramYearRequest;
 import com.edu360.api.institution.dto.CreateSchoolClassRequest;
 import com.edu360.api.institution.dto.CreateSectionRequest;
+import com.edu360.api.institution.dto.UpdateSectionRequest;
 import com.edu360.api.institution.dto.CreateSemesterRequest;
 import com.edu360.api.institution.dto.CreateSubjectRequest;
 import com.edu360.api.institution.dto.DepartmentResponse;
@@ -228,6 +229,224 @@ public class StructureService {
                 .stream()
                 .map(this::mapProgram)
                 .toList();
+    }
+
+    @Transactional
+    public DepartmentResponse updateDepartment(RbacPrincipal principal, UUID institutionId, UUID departmentId,
+            String ifMatch, CreateDepartmentRequest request) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Department current = departmentRepository.findByTenantIdAndDepartmentId(principal.tenantId(), departmentId)
+                .filter(d -> institutionId.equals(d.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Department " + departmentId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) throw new BusinessRuleViolationException("DEPARTMENT_ARCHIVED", "Archived departments cannot be edited.");
+        String code = request.departmentCode().trim().toUpperCase(java.util.Locale.ROOT);
+        if (departmentRepository.existsByTenantIdAndInstitutionIdAndDepartmentCodeAndDepartmentIdNot(
+                principal.tenantId(), institutionId, code, departmentId)) {
+            throw new BusinessRuleViolationException("DUPLICATE_DEPARTMENT_CODE", "Department code already exists in this institution.");
+        }
+        int updated = departmentRepository.updateProfile(principal.tenantId(), departmentId, version, code,
+                request.departmentName().trim(), principal.userAccountId());
+        if (updated != 1) throw versionConflict();
+        Department saved = departmentRepository.findByTenantIdAndDepartmentId(principal.tenantId(), departmentId).orElseThrow();
+        auditLogService.record(AuditEventType.DEPARTMENT_UPDATED, null, code, "0.0.0.0",
+                "Department " + departmentId + " updated; row version " + version + " -> " + saved.getRowVersion());
+        return mapDepartment(saved);
+    }
+
+    @Transactional
+    public void archiveDepartment(RbacPrincipal principal, UUID institutionId, UUID departmentId, String ifMatch) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Department current = departmentRepository.findByTenantIdAndDepartmentId(principal.tenantId(), departmentId)
+                .filter(d -> institutionId.equals(d.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Department " + departmentId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) return;
+        if (programRepository.existsByTenantIdAndDepartmentIdAndStatus(principal.tenantId(), departmentId, "ACTIVE")) {
+            throw new BusinessRuleViolationException("DEPARTMENT_HAS_ACTIVE_PROGRAMS", "Archive or move active programs before archiving this department.");
+        }
+        if (departmentRepository.archive(principal.tenantId(), departmentId, version, principal.userAccountId()) != 1) throw versionConflict();
+        auditLogService.record(AuditEventType.DEPARTMENT_ARCHIVED, null, departmentId.toString(), "0.0.0.0",
+                "Department " + departmentId + " archived.");
+    }
+
+    @Transactional
+    public ProgramResponse updateProgram(RbacPrincipal principal, UUID institutionId, UUID programId,
+            String ifMatch, CreateProgramRequest request) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Program current = programRepository.findByTenantIdAndProgramId(principal.tenantId(), programId)
+                .filter(p -> institutionId.equals(p.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Program " + programId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) throw new BusinessRuleViolationException("PROGRAM_ARCHIVED", "Archived programs cannot be edited.");
+        Department department = departmentRepository.findByTenantIdAndDepartmentId(principal.tenantId(), request.departmentId())
+                .filter(d -> institutionId.equals(d.getInstitutionId()) && "ACTIVE".equals(d.getStatus()))
+                .orElseThrow(() -> new ResourceNotFoundException("Active department " + request.departmentId() + " was not found in this institution."));
+        String code = request.programCode().trim().toUpperCase(java.util.Locale.ROOT);
+        if (programRepository.existsByTenantIdAndInstitutionIdAndProgramCodeAndProgramIdNot(
+                principal.tenantId(), institutionId, code, programId)) {
+            throw new BusinessRuleViolationException("DUPLICATE_PROGRAM_CODE", "Program code already exists in this institution.");
+        }
+        int updated = programRepository.updateProfile(principal.tenantId(), programId, version, department.getDepartmentId(),
+                code, request.programName().trim(), request.durationYears(), request.effectiveSemestersPerYear(),
+                request.degreeLevel(), request.totalCredits(), principal.userAccountId());
+        if (updated != 1) throw versionConflict();
+        Program saved = programRepository.findByTenantIdAndProgramId(principal.tenantId(), programId).orElseThrow();
+        auditLogService.record(AuditEventType.PROGRAM_UPDATED, null, code, "0.0.0.0",
+                "Program " + programId + " updated; row version " + version + " -> " + saved.getRowVersion());
+        return mapProgram(saved);
+    }
+
+    @Transactional
+    public void archiveProgram(RbacPrincipal principal, UUID institutionId, UUID programId, String ifMatch) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Program current = programRepository.findByTenantIdAndProgramId(principal.tenantId(), programId)
+                .filter(p -> institutionId.equals(p.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Program " + programId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) return;
+        if (programRepository.archive(principal.tenantId(), programId, version, principal.userAccountId()) != 1) throw versionConflict();
+        auditLogService.record(AuditEventType.PROGRAM_ARCHIVED, null, programId.toString(), "0.0.0.0",
+                "Program " + programId + " archived.");
+    }
+
+    @Transactional
+    public SchoolClassResponse updateSchoolClass(RbacPrincipal principal, UUID institutionId, UUID classId,
+            String ifMatch, CreateSchoolClassRequest request) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        SchoolClass current = schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), classId)
+                .filter(sc -> institutionId.equals(sc.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("School class " + classId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) throw new BusinessRuleViolationException("CLASS_ARCHIVED", "Archived classes cannot be edited.");
+        String name = request.className().trim();
+        if (schoolClassRepository.existsByTenantIdAndInstitutionIdAndClassNameAndClassIdNot(
+                principal.tenantId(), institutionId, name, classId)) {
+            throw new BusinessRuleViolationException("DUPLICATE_CLASS_NAME", "Class name already exists in this school.");
+        }
+        int updated = schoolClassRepository.updateProfile(principal.tenantId(), classId, version, name,
+                request.displayOrder(), current.isStudentLoginEnabled(), principal.userAccountId());
+        if (updated != 1) throw versionConflict();
+        SchoolClass saved = schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), classId).orElseThrow();
+        auditLogService.record(AuditEventType.SCHOOL_CLASS_UPDATED, null, name, "0.0.0.0",
+                "School class " + classId + " updated; row version " + version + " -> " + saved.getRowVersion());
+        return new SchoolClassResponse(saved.getClassId(), saved.getInstitutionId(), saved.getClassName(),
+                saved.getDisplayOrder(), saved.isStudentLoginEnabled(), saved.getStatus(), saved.getRowVersion() == null ? 1 : saved.getRowVersion());
+    }
+
+    @Transactional
+    public void archiveSchoolClass(RbacPrincipal principal, UUID institutionId, UUID classId, String ifMatch) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        SchoolClass current = schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), classId)
+                .filter(sc -> institutionId.equals(sc.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("School class " + classId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) return;
+        if (sectionRepository.existsByTenantIdAndClassIdAndStatus(principal.tenantId(), classId, "ACTIVE")) {
+            throw new BusinessRuleViolationException("CLASS_HAS_ACTIVE_SECTIONS", "Archive active sections before archiving this class.");
+        }
+        if (schoolClassRepository.archive(principal.tenantId(), classId, version, principal.userAccountId()) != 1) throw versionConflict();
+        auditLogService.record(AuditEventType.SCHOOL_CLASS_ARCHIVED, null, classId.toString(), "0.0.0.0",
+                "School class " + classId + " archived.");
+    }
+
+    @Transactional
+    public SectionResponse updateSection(RbacPrincipal principal, UUID institutionId, UUID sectionId,
+            String ifMatch, UpdateSectionRequest request) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Section current = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId)
+                .filter(s -> institutionId.equals(s.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) throw new BusinessRuleViolationException("SECTION_ARCHIVED", "Archived sections cannot be edited.");
+        boolean hasSemester = request.semesterId() != null;
+        boolean hasClass = request.classId() != null;
+        if (hasSemester == hasClass) throw new BusinessRuleViolationException("INVALID_SECTION_PARENT", "Section must belong to exactly one semester or school class.");
+        AcademicSession session = academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), request.academicSessionId())
+                .filter(s -> institutionId.equals(s.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Academic session was not found in this institution."));
+        if (hasSemester) {
+            Semester semester = semesterRepository.findByTenantIdAndSemesterId(principal.tenantId(), request.semesterId())
+                    .filter(s -> institutionId.equals(s.getInstitutionId()))
+                    .orElseThrow(() -> new ResourceNotFoundException("Semester was not found in this institution."));
+            if (!"COLLEGE".equalsIgnoreCase(currentInstitutionType(institutionId, principal.tenantId()))) {
+                throw new BusinessRuleViolationException("INVALID_SECTION_PARENT", "Only colleges can use semester sections.");
+            }
+            if (sectionRepository.existsByTenantIdAndAcademicSessionIdAndSemesterIdAndSectionNameAndSectionIdNot(
+                    principal.tenantId(), request.academicSessionId(), request.semesterId(), request.sectionName().trim(), sectionId)) {
+                throw new BusinessRuleViolationException("DUPLICATE_SECTION_NAME", "Section name already exists for this semester and session.");
+            }
+        } else {
+            schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), request.classId())
+                    .filter(sc -> institutionId.equals(sc.getInstitutionId()))
+                    .orElseThrow(() -> new ResourceNotFoundException("School class was not found in this institution."));
+            if (!"SCHOOL".equalsIgnoreCase(currentInstitutionType(institutionId, principal.tenantId()))) {
+                throw new BusinessRuleViolationException("INVALID_SECTION_PARENT", "Only schools can use class sections.");
+            }
+            if (sectionRepository.existsByTenantIdAndAcademicSessionIdAndClassIdAndSectionNameAndSectionIdNot(
+                    principal.tenantId(), request.academicSessionId(), request.classId(), request.sectionName().trim(), sectionId)) {
+                throw new BusinessRuleViolationException("DUPLICATE_SECTION_NAME", "Section name already exists for this class and session.");
+            }
+        }
+        if (request.endDateNotUsed()) { /* placeholder */ }
+        int updated = sectionRepository.updateProfile(principal.tenantId(), sectionId, version, request.academicSessionId(),
+                request.semesterId(), request.classId(), request.sectionName().trim(), request.capacity(), principal.userAccountId());
+        if (updated != 1) throw versionConflict();
+        Section saved = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId).orElseThrow();
+        auditLogService.record(AuditEventType.SECTION_UPDATED, null, saved.getSectionName(), "0.0.0.0",
+                "Section " + sectionId + " updated; row version " + version + " -> " + saved.getRowVersion());
+        return new SectionResponse(saved.getSectionId(), saved.getInstitutionId(), saved.getAcademicSessionId(),
+                saved.getSemesterId(), saved.getClassId(), saved.getSectionName(), saved.getStatus(),
+                saved.getCapacity(), saved.getClassTeacherUserId(), saved.getRowVersion() == null ? 1 : saved.getRowVersion());
+    }
+
+    @Transactional
+    public void archiveSection(RbacPrincipal principal, UUID institutionId, UUID sectionId, String ifMatch) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Section current = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId)
+                .filter(s -> institutionId.equals(s.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found"));
+        int version = parseIfMatchVersion(ifMatch);
+        checkVersion(version, current.getRowVersion());
+        if ("ARCHIVED".equals(current.getStatus())) return;
+        if (sectionRepository.archive(principal.tenantId(), sectionId, version, principal.userAccountId()) != 1) throw versionConflict();
+        auditLogService.record(AuditEventType.SECTION_ARCHIVED, null, sectionId.toString(), "0.0.0.0",
+                "Section " + sectionId + " archived.");
+    }
+
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header is required.");
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replace("\"", "");
+        try {
+            int parsed = Integer.parseInt(value);
+            if (parsed < 1) throw new NumberFormatException();
+            return parsed;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive row version.");
+        }
+    }
+
+    private void checkVersion(int expected, Integer actual) {
+        if (actual == null || expected != actual) throw versionConflict();
+    }
+
+    private BusinessRuleViolationException versionConflict() {
+        return new BusinessRuleViolationException("VERSION_CONFLICT", "Record was changed by another user. Reload and retry with the latest ETag.");
+    }
+
+    private String currentInstitutionType(UUID institutionId, UUID tenantId) {
+        return institutionRepository.findById(new InstitutionId(tenantId, institutionId))
+                .map(Institution::getInstitutionType)
+                .orElse("");
     }
 
     @Transactional
