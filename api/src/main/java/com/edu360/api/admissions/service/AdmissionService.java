@@ -22,7 +22,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Service
-public class AdmissionService {
+public class AdmissionService implements AdmissionPaymentEventHandler {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
     private final PermissionEvaluatorService permissions;
@@ -286,6 +286,45 @@ public class AdmissionService {
         jdbc.update("update app.admission_application set fee_status='CONFIRMED',application_fee_reference=?,updated_by=? where tenant_id=? and id=?",
                 reference,actor.userAccountId(),actor.tenantId(),applicationId);
         return application(actor,applicationId);
+    }
+
+    /**
+     * Callback contract for the payment domain. The caller must verify the gateway signature,
+     * establish the tenant database context, and pass the immutable provider event ID. This
+     * deliberately contains no gateway-specific HMAC or SDK code so T8 can own that integration.
+     */
+    @Override
+    @Transactional
+    public void handleVerifiedApplicationFeeEvent(UUID tenantId, UUID applicationId, String eventId,
+            String paymentReference, BigDecimal paidAmount) {
+        if (eventId == null || eventId.isBlank() || paymentReference == null || paymentReference.isBlank()
+                || paidAmount == null || paidAmount.signum() <= 0) {
+            throw new BusinessRuleViolationException("INVALID_PAYMENT_EVENT", "A verified event ID, reference and positive amount are required.");
+        }
+        Map<String,Object> app=one("select * from app.admission_application where tenant_id=? and id=?",tenantId,applicationId);
+        Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",tenantId,app.get("cycle_id"));
+        BigDecimal expected=(BigDecimal)cycle.get("application_fee");
+        if (expected.compareTo(paidAmount)!=0) {
+            throw new BusinessRuleViolationException("ADMISSION_FEE_AMOUNT_MISMATCH","The gateway amount does not match the published application fee.");
+        }
+        String status=String.valueOf(app.get("fee_status"));
+        String previousEvent=(String)app.get("application_fee_event_id");
+        if ("CONFIRMED".equals(status)) {
+            if (eventId.equals(previousEvent)) return;
+            throw new BusinessRuleViolationException("APPLICATION_FEE_ALREADY_CONFIRMED","A different payment event has already confirmed this application fee.");
+        }
+        if (!"PENDING".equals(status)) {
+            throw new BusinessRuleViolationException("APPLICATION_FEE_NOT_PAYABLE","Only a pending application fee can be confirmed by a payment event.");
+        }
+        int changed=jdbc.update("""
+          update app.admission_application set fee_status='CONFIRMED',application_fee_reference=?,application_fee_event_id=?
+          where tenant_id=? and id=? and fee_status='PENDING'
+          """,paymentReference,eventId,tenantId,applicationId);
+        if (changed==0) {
+            Map<String,Object> latest=one("select * from app.admission_application where tenant_id=? and id=?",tenantId,applicationId);
+            if ("CONFIRMED".equals(latest.get("fee_status")) && eventId.equals(latest.get("application_fee_event_id"))) return;
+            throw new BusinessRuleViolationException("APPLICATION_FEE_ALREADY_CONFIRMED","A different payment event has already confirmed this application fee.");
+        }
     }
 
     @Transactional

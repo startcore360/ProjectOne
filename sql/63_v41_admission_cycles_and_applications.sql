@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS app.admission_application (
  status text NOT NULL DEFAULT 'SUBMITTED', defect_notes text, correction_requested_at timestamptz,
  fee_status text NOT NULL DEFAULT 'PENDING', admission_fee_status text NOT NULL DEFAULT 'PENDING',
  student_profile_id uuid, application_fee_receipt_file_id uuid, admission_fee_receipt_file_id uuid,
- application_fee_reference text, admission_fee_reference text, submitted_at timestamptz NOT NULL DEFAULT now(), created_at timestamptz NOT NULL DEFAULT now(),
+ application_fee_reference text, admission_fee_reference text, application_fee_event_id text, admission_fee_event_id text,
+ submitted_at timestamptz NOT NULL DEFAULT now(), created_at timestamptz NOT NULL DEFAULT now(),
  created_by uuid NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), updated_by uuid NOT NULL, row_version integer NOT NULL DEFAULT 1,
  CONSTRAINT pk_admission_application PRIMARY KEY(tenant_id,id), CONSTRAINT uq_admission_application_tid UNIQUE(tenant_id,id),
  CONSTRAINT uq_admission_application_number UNIQUE(tenant_id,application_number),
@@ -51,6 +52,12 @@ ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK(purpose 
 ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_admission_document_size;
 ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_admission_document_size
  CHECK(purpose<>'ADMISSION_DOCUMENT' OR (content_type IN('application/pdf','image/jpeg','image/png') AND size_bytes<=5242880));
+ALTER TABLE app.admission_application ADD COLUMN IF NOT EXISTS application_fee_event_id text;
+ALTER TABLE app.admission_application ADD COLUMN IF NOT EXISTS admission_fee_event_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_admission_application_fee_event
+ ON app.admission_application(tenant_id,application_fee_event_id) WHERE application_fee_event_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_admission_admission_fee_event
+ ON app.admission_application(tenant_id,admission_fee_event_id) WHERE admission_fee_event_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_admission_cycle_institution_status ON app.admission_cycle(tenant_id,institution_id,status,start_date);
 CREATE INDEX IF NOT EXISTS ix_admission_application_cycle_status ON app.admission_application(tenant_id,cycle_id,status,submitted_at);
 CREATE INDEX IF NOT EXISTS ix_admission_application_scrutiny ON app.admission_application(tenant_id,institution_id,verification_status,status);
