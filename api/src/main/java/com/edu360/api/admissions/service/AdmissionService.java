@@ -205,7 +205,7 @@ public class AdmissionService {
     public Map<String,Object> approveMeritList(TenantPrincipal actor, UUID listId) {
         Map<String,Object> list=one("select ml.*,c.institution_id from app.merit_list ml join app.admission_cycle c on c.tenant_id=ml.tenant_id and c.id=ml.cycle_id where ml.tenant_id=? and ml.id=?",actor.tenantId(),listId);
         String role=TenantContext.currentActiveRoleCode();
-        if(!Set.of("PRINCIPAL","COLLEGE_PRINCIPAL","SCHOOL_PRINCIPAL","VICE_CHANCELLOR","PRODUCT_OWNER").contains(role))
+        if(!Set.of("PRINCIPAL_COLLEGE","SCHOOL_PRINCIPAL","VICE_CHANCELLOR","PRODUCT_OWNER").contains(role))
             throw new org.springframework.security.access.AccessDeniedException("MERIT_APPROVAL_NON_DELEGABLE");
         Integer delegated=jdbc.queryForObject("select count(*) from app.delegation where tenant_id=? and delegate_user_id=? and status='ACTIVE' and starts_at<=now() and ends_at>now() and (process_code is null or process_code in('ALL','MERIT_LIST_APPROVE'))",
                 Integer.class,actor.tenantId(),actor.userAccountId());
@@ -256,7 +256,9 @@ public class AdmissionService {
     @Transactional
     public Map<String,Object> confirmApplicationFee(TenantPrincipal actor,UUID applicationId,String reference) {
         Map<String,Object> app=application(actor,applicationId);
-        authorize(actor,"APPLICATION_FEE_VIEW",(UUID)app.get("institution_id"));
+        // Fee confirmation mutates the application; the read-only APPLICATION_FEE_VIEW
+        // permission must never authorize it. Gateway callbacks use the separate signed path.
+        authorize(actor,"APPLICATION_VERIFY",(UUID)app.get("institution_id"));
         requireCleanReceipt(actor,(UUID)app.get("application_fee_receipt_file_id"),(UUID)app.get("institution_id"));
         jdbc.update("update app.admission_application set fee_status='CONFIRMED',application_fee_reference=?,updated_by=? where tenant_id=? and id=?",
                 reference,actor.userAccountId(),actor.tenantId(),applicationId);
@@ -266,7 +268,7 @@ public class AdmissionService {
     @Transactional
     public Map<String,Object> confirmAdmissionFee(TenantPrincipal actor, UUID applicationId,String reference) {
         Map<String,Object> app=application(actor,applicationId);
-        authorize(actor,"APPLICATION_FEE_VIEW",(UUID)app.get("institution_id"));
+        authorize(actor,"APPLICATION_VERIFY",(UUID)app.get("institution_id"));
         requireCleanReceipt(actor,(UUID)app.get("admission_fee_receipt_file_id"),(UUID)app.get("institution_id"));
         Integer accepted=jdbc.queryForObject("select count(*) from app.seat_allotment where tenant_id=? and application_id=? and status='ACCEPTED'",
                 Integer.class,actor.tenantId(),applicationId);

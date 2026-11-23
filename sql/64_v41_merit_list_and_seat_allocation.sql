@@ -62,7 +62,7 @@ BEGIN
    ON rd.tenant_id=ura.tenant_id AND rd.role_definition_id=ura.role_definition_id
    WHERE ura.tenant_id=NEW.tenant_id AND ura.user_account_id=v_actor AND ura.status='ACTIVE'
     AND ura.effective_from<=now() AND (ura.effective_to IS NULL OR ura.effective_to>now())
-    AND rd.status='ACTIVE' AND rd.role_code IN('PRINCIPAL','COLLEGE_PRINCIPAL','SCHOOL_PRINCIPAL','VICE_CHANCELLOR','PRODUCT_OWNER') LIMIT 1;
+    AND rd.status='ACTIVE' AND rd.role_code IN('PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL','VICE_CHANCELLOR','PRODUCT_OWNER') LIMIT 1;
   IF v_role IS NULL OR EXISTS(SELECT 1 FROM app.delegation d WHERE d.tenant_id=NEW.tenant_id AND d.delegate_user_id=v_actor
     AND d.status='ACTIVE' AND d.starts_at<=now() AND d.ends_at>now()
     AND (d.process_code IS NULL OR d.process_code IN('ALL','MERIT_LIST_APPROVE')))

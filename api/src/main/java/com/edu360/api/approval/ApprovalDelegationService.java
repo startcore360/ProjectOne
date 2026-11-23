@@ -254,7 +254,12 @@ public class ApprovalDelegationService {
         if (request.decision() == null || !"APPROVED".equalsIgnoreCase(request.decision().trim())) {
             throw new BusinessRuleViolationException("NOT_BULK_ELIGIBLE", "Only approvals can be decided in bulk; rejections never are (D5 bulkApprove).");
         }
-        // Rule C12: Data Protection Officer approvals are never bulk-approved
+        // Rule C12: merit-list and Data Protection Officer approvals are never bulk-approved.
+        if ("MERIT_LIST".equalsIgnoreCase(request.processCategory())
+                || "MERIT_LIST_APPROVE".equalsIgnoreCase(request.processCategory())) {
+            throw new BusinessRuleViolationException("MERIT_LIST_BULK_APPROVAL_PROHIBITED",
+                    "Merit-list approval is an individual, non-delegable decision and can never be bulk-approved [Rule C12].");
+        }
         if ("DATA_PROTECTION".equalsIgnoreCase(request.processCategory())) {
             throw new BusinessRuleViolationException("DPO_BULK_APPROVAL_PROHIBITED",
                     "Data Protection Officer approvals (exports, deletions, retention) are never bulk-approved [Rule C12].");
@@ -271,6 +276,11 @@ public class ApprovalDelegationService {
                     .findByIdTenantIdAndIdApprovalRequestId(tenantId, requestId)
                     .filter(r -> ApprovalInboxService.inCallerScope(r.getInstitutionId()))
                     .orElseThrow(() -> new ResourceNotFoundException("Approval request not found: " + requestId));
+            if ("MERIT_LIST_APPROVE".equalsIgnoreCase(req.getProcessCode())
+                    || "MERIT_LIST".equalsIgnoreCase(req.getSubjectType())) {
+                throw new BusinessRuleViolationException("MERIT_LIST_BULK_APPROVAL_PROHIBITED",
+                        "Merit-list approval is an individual, non-delegable decision and can never be bulk-approved [Rule C12].");
+            }
             if ("DATA_PROTECTION".equalsIgnoreCase(req.getProcessCode()) || "DATA_PROTECTION".equalsIgnoreCase(req.getSubjectType())) {
                 throw new BusinessRuleViolationException("DPO_BULK_APPROVAL_PROHIBITED",
                         "Data Protection Officer approvals (exports, deletions, retention) are never bulk-approved [Rule C12].");

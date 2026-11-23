@@ -351,6 +351,12 @@ class ApprovalEngineB2Test {
         assertThat(ok.getStatus()).isEqualTo("PENDING");
         assertThat(dpo.getStatus()).isEqualTo("PENDING");
 
+        ApprovalRequest merit = t.request("MERIT_LIST_APPROVE", "MERIT_LIST", UUID.randomUUID(), instA, adminA, "PRINCIPAL_COLLEGE");
+        assertThatThrownBy(() -> t.delegation.bulkDecide(t.tenantId, p, new BulkApprovalRequest(
+                List.of(merit.getId().getApprovalRequestId()), "APPROVED", null)))
+                .isInstanceOf(BusinessRuleViolationException.class).hasMessageContaining("never be bulk-approved");
+        assertThat(merit.getStatus()).isEqualTo("PENDING");
+
         assertThatThrownBy(() -> t.delegation.bulkDecide(t.tenantId, p, new BulkApprovalRequest(
                 List.of(ok.getId().getApprovalRequestId(), UUID.randomUUID()), "APPROVED", null)))
                 .isInstanceOf(ResourceNotFoundException.class);
