@@ -72,7 +72,11 @@ BEGIN
     OR NEW.approved_by_user_id IS DISTINCT FROM v_actor THEN
    RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='MERIT_APPROVAL_NON_DELEGABLE';
   END IF;
-  NEW.approved_at:=COALESCE(NEW.approved_at,now());
+  NEW.approved_at:=now();
+ ELSIF OLD.status IN('APPROVED','PUBLISHED')
+   AND (NEW.approved_by_user_id IS DISTINCT FROM OLD.approved_by_user_id
+        OR NEW.approved_at IS DISTINCT FROM OLD.approved_at) THEN
+  RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='MERIT_APPROVAL_IMMUTABLE';
  END IF; RETURN NEW;
 END $$;
 DROP TRIGGER IF EXISTS trg_merit_approval_guard ON app.merit_list;
