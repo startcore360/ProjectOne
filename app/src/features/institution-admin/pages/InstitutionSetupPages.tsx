@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
@@ -576,7 +577,7 @@ export function CalendarEventsPage() {
                   <tbody>
                     {sessions.map((s) => (
                       <tr key={s.academicSessionId}>
-                        <td><strong>{s.institutionId ? <a href={`/university/setup/structure/${s.institutionId}/academic-sessions/${s.academicSessionId}`}><code>{s.sessionLabel}</code></a> : <code>{s.sessionLabel}</code>}</strong></td>
+                        <td><strong>{s.institutionId ? <Link to={`/university/setup/structure/${s.institutionId}/academic-sessions/${s.academicSessionId}`}><code>{s.sessionLabel}</code></Link> : <code>{s.sessionLabel}</code>}</strong></td>
                         <td>{s.academicYear}</td>
                         <td>{s.startDate}</td>
                         <td>{s.endDate}</td>
@@ -1419,7 +1420,7 @@ export function AcademicStructurePage() {
                   <tbody>
                     {schoolSections.map((section) => (
                       <tr key={section.sectionId}>
-                        <td><strong><a href={`/university/setup/structure/${institutionId}/sections/${section.sectionId}`}>Section {section.sectionName}</a></strong></td>
+                        <td><strong><Link to={`/university/setup/structure/${institutionId}/sections/${section.sectionId}`}>Section {section.sectionName}</Link></strong></td>
                         <td>{schoolClasses.find((item) => item.classId === section.classId)?.className ?? "Class unavailable"}</td>
                         <td>{schoolSessions.find((item) => item.academicSessionId === section.academicSessionId)?.sessionLabel ?? section.academicSessionId}</td>
                         <td><Badge tone={section.status === "ACTIVE" ? "success" : "neutral"}>{section.status === "ACTIVE" ? "Active" : section.status}</Badge></td>
@@ -1472,7 +1473,7 @@ export function AcademicStructurePage() {
                       {departments.map((d) => (
                         <tr key={d.departmentId}>
                           <td><strong><code>{d.departmentCode}</code></strong></td>
-                          <td><a href={`/university/setup/structure/${institutionId}/departments/${d.departmentId}`}>{d.departmentName}</a></td>
+                          <td><Link to={`/university/setup/structure/${institutionId}/departments/${d.departmentId}`}>{d.departmentName}</Link></td>
                           <td><Badge tone="success">{d.status}</Badge></td>
                           <td style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary, #64748b)" }}>
                             {d.hodStaffAssignmentId ?? "Unassigned"}
@@ -1521,7 +1522,7 @@ export function AcademicStructurePage() {
                       {programs.map((p) => (
                         <tr key={p.programId}>
                           <td><strong><code>{p.programCode}</code></strong></td>
-                          <td><a href={`/university/setup/structure/${institutionId}/programs/${p.programId}`}>{p.programName}</a></td>
+                          <td><Link to={`/university/setup/structure/${institutionId}/programs/${p.programId}`}>{p.programName}</Link></td>
                           <td>{p.durationYears} {p.durationYears === 1 ? "Year" : "Years"}</td>
                           <td>{p.semestersPerYear}</td>
                           <td><Badge tone="success">{p.status}</Badge></td>
