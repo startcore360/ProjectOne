@@ -380,7 +380,7 @@ describe("Institution setup action screens", () => {
       programCurriculumVersionId: "77777777-7777-7777-7777-777777777777",
       institutionId, programId, versionNumber: 1,
       curriculumJson: { courses: [{ code: "CS101", credits: 4 }] },
-      effectiveFrom: "2026-07-01", effectiveTo: null, createdAt: "2026-06-01T00:00:00Z", createdBy: USER_ID,
+      effectiveFrom: "2026-07-01", effectiveTo: null, createdAt: "2026-06-01T00:00:00Z", createdBy: "u-1",
     };
     (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.endsWith("/departments")) return Promise.resolve({ data: [] });
