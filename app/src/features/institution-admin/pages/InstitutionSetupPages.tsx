@@ -1093,7 +1093,7 @@ export function AcademicStructurePage() {
   const [classNameDraft, setClassNameDraft] = useState("");
   const [classOrderDraft, setClassOrderDraft] = useState("0");
   const [classSaving, setClassSaving] = useState(false);
-  const [sectionDraft, setSectionDraft] = useState({ classId: "", academicSessionId: "", sectionName: "" });
+  const [sectionDraft, setSectionDraft] = useState({ classId: "", academicSessionId: "", sectionName: "", capacity: "60" });
   const [sectionSaving, setSectionSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1210,6 +1210,11 @@ export function AcademicStructurePage() {
       setError("Choose a class and academic session, then enter a section name.");
       return;
     }
+    const capacity = Number(sectionDraft.capacity);
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 10000) {
+      setError("Section capacity must be a whole number between 1 and 10,000.");
+      return;
+    }
     setSectionSaving(true);
     setError(null);
     try {
@@ -1217,6 +1222,7 @@ export function AcademicStructurePage() {
         academicSessionId: sectionDraft.academicSessionId,
         classId: sectionDraft.classId,
         sectionName: sectionDraft.sectionName.trim(),
+        capacity,
       });
       setSectionDraft((current) => ({ ...current, sectionName: "" }));
       await loadStructureFor(institutionId);
@@ -1397,6 +1403,17 @@ export function AcademicStructurePage() {
                     ))}
                   </SelectField>
                   <TextField
+                    id="school-section-capacity"
+                    label="Section capacity"
+                    type="number"
+                    min={1}
+                    max={10000}
+                    step={1}
+                    required
+                    value={sectionDraft.capacity}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, capacity: event.target.value })}
+                  />
+                  <TextField
                     id="school-section-name"
                     label="Section name"
                     required
@@ -1416,13 +1433,14 @@ export function AcademicStructurePage() {
             ) : schoolSections.length > 0 ? (
               <div className="app-table-wrap">
                 <table className="app-table">
-                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Capacity</th><th>Status</th></tr></thead>
                   <tbody>
                     {schoolSections.map((section) => (
                       <tr key={section.sectionId}>
                         <td><strong><Link to={`/university/setup/structure/${institutionId}/sections/${section.sectionId}`}>Section {section.sectionName}</Link></strong></td>
                         <td>{schoolClasses.find((item) => item.classId === section.classId)?.className ?? "Class unavailable"}</td>
                         <td>{schoolSessions.find((item) => item.academicSessionId === section.academicSessionId)?.sessionLabel ?? section.academicSessionId}</td>
+                        <td>{section.capacity ?? "Not set"}</td>
                         <td><Badge tone={section.status === "ACTIVE" ? "success" : "neutral"}>{section.status === "ACTIVE" ? "Active" : section.status}</Badge></td>
                       </tr>
                     ))}
