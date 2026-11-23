@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -127,7 +126,7 @@ public class StaffAppraisalService {
 
     private void authorize(RbacPrincipal actor, String action, UUID institutionId, UUID staffId) {
         permissions.authorize(actor, action, permissions.targetScope(actor, institutionId, null),
-                new RbacTarget("STAFF_PROFILE", staffId));
+                RbacTarget.NONE);
     }
     private Map<String,Object> cycle(UUID tenant, UUID id) {
         try { return jdbc.queryForMap("SELECT id,institution_id,status FROM app.appraisal_cycle WHERE tenant_id=? AND id=?", tenant, id); }
