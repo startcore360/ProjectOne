@@ -306,13 +306,29 @@ public class StaffLeaveService {
         permissions.authorize(actor, "LOSS_OF_PAY_CONFIRM",
                 institutionId == null ? RbacScope.tenant() : permissions.targetScope(actor, institutionId, null),
                 RbacTarget.of((UUID) row.get("requested_by_user_id")));
-        if (!"PENDING".equals(row.get("status")) || ((BigDecimal) row.get("loss_of_pay_days")).signum() <= 0) {
-            throw new BusinessRuleViolationException("LOSS_OF_PAY_NOT_PENDING", "Only a pending request with loss-of-pay days can be confirmed.");
+        if (!"PENDING".equals(row.get("status"))) {
+            throw new BusinessRuleViolationException("LOSS_OF_PAY_NOT_PENDING", "Only a pending leave request can be confirmed.");
+        }
+        Map<String, Object> type = leaveType(tenantId, (UUID) row.get("leave_type_id"));
+        BigDecimal days = (BigDecimal) row.get("days_counted");
+        BigDecimal lossDays = Boolean.TRUE.equals(type.get("is_loss_of_pay")) ? days : BigDecimal.ZERO;
+        if (Boolean.TRUE.equals(type.get("tracks_balance")) && !Boolean.TRUE.equals(type.get("is_loss_of_pay"))) {
+            BigDecimal available = BigDecimal.ZERO;
+            List<BigDecimal> balances = jdbc.query("""
+                    SELECT credited_days-used_days FROM app.leave_balance
+                     WHERE tenant_id=? AND staff_profile_id=? AND leave_type_id=? AND leave_year=? FOR UPDATE
+                    """, (rs, rowNum) -> rs.getBigDecimal(1), tenantId, row.get("for_staff_profile_id"),
+                    row.get("leave_type_id"), ((java.sql.Date) row.get("start_date")).toLocalDate().getYear());
+            if (!balances.isEmpty()) available = balances.get(0);
+            lossDays = days.subtract(available).max(BigDecimal.ZERO);
+        }
+        if (lossDays.signum() <= 0) {
+            throw new BusinessRuleViolationException("LOSS_OF_PAY_NOT_REQUIRED", "This request has no loss-of-pay portion to confirm.");
         }
         jdbc.update("""
-                UPDATE app.leave_request SET loss_of_pay_confirmed_by=?,loss_of_pay_confirmed_at=now(),
+                UPDATE app.leave_request SET loss_of_pay_days=?,loss_of_pay_confirmed_by=?,loss_of_pay_confirmed_at=now(),
                        updated_by=? WHERE tenant_id=? AND leave_request_id=?
-                """, actorId, actorId, tenantId, leaveRequestId);
+                """, lossDays, actorId, actorId, tenantId, leaveRequestId);
     }
 
     @Transactional
