@@ -6,4 +6,5 @@ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='app' AND indexname='ix_leave_request_staff_status_start') THEN RAISE EXCEPTION 'T3-DB-59-04 leave request index missing'; END IF;
  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='app' AND indexname='ix_leave_balance_staff_year_type') THEN RAISE EXCEPTION 'T3-DB-59-05 leave balance index missing'; END IF;
  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='app' AND indexname='uq_leave_balance_staff_type_year' AND indexdef ILIKE '%UNIQUE%') THEN RAISE EXCEPTION 'T3-DB-59-06 yearly leave balance uniqueness missing'; END IF;
+ IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='app' AND indexname='uq_leave_type_institution_code' AND indexdef ILIKE '%UNIQUE%') THEN RAISE EXCEPTION 'T3-DB-59-07 leave type uniqueness missing'; END IF;
 END $$;
