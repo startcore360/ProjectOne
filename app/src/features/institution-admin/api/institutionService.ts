@@ -105,6 +105,35 @@ export type SectionItem = {
 export type CreateSchoolClassPayload = { className: string; displayOrder: number };
 export type CreateSectionPayload = { academicSessionId: string; classId: string; sectionName: string; capacity?: number };
 
+export type ProgramYearItem = {
+  programYearId: string;
+  institutionId: string;
+  programId: string;
+  yearNumber: number;
+  label: string;
+};
+
+export type CreateProgramYearPayload = { yearNumber: number; label: string };
+
+export type SemesterItem = {
+  semesterId: string;
+  institutionId: string;
+  programYearId: string;
+  semesterNumber: number;
+  label: string;
+  startDate: string | null;
+  endDate: string | null;
+};
+
+export type CreateSemesterPayload = {
+  semesterNumber: number;
+  label: string;
+  startDate: string;
+  endDate: string;
+};
+
+
+
 export type AcademicSessionItem = {
   academicSessionId: string;
   tenantId: string;
@@ -245,6 +274,36 @@ export const institutionService = {
   ): Promise<ProgramItem> {
     const res = await api.post<ProgramItem>(
       `/api/tenants/${tenantId}/institutions/${institutionId}/programs`,
+      payload
+    );
+    return res.data;
+  },
+
+  async listProgramYears(tenantId: string, institutionId: string, programId: string): Promise<ProgramYearItem[]> {
+    const res = await api.get<ProgramYearItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/programs/${programId}/years`
+    );
+    return res.data;
+  },
+
+  async createProgramYear(tenantId: string, institutionId: string, programId: string, payload: CreateProgramYearPayload): Promise<ProgramYearItem> {
+    const res = await api.post<ProgramYearItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/programs/${programId}/years`,
+      payload
+    );
+    return res.data;
+  },
+
+  async listSemesters(tenantId: string, institutionId: string, programYearId: string): Promise<SemesterItem[]> {
+    const res = await api.get<SemesterItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/program-years/${programYearId}/semesters`
+    );
+    return res.data;
+  },
+
+  async createSemester(tenantId: string, institutionId: string, programYearId: string, payload: CreateSemesterPayload): Promise<SemesterItem> {
+    const res = await api.post<SemesterItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/program-years/${programYearId}/semesters`,
       payload
     );
     return res.data;
