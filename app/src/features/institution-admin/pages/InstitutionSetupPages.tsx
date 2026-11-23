@@ -1287,6 +1287,12 @@ export function AcademicStructurePage() {
   const [showAddProg, setShowAddProg] = useState(false);
   const [progSubmitting, setProgSubmitting] = useState(false);
   const [progError, setProgError] = useState<string | null>(null);
+  const [hodDepartment, setHodDepartment] = useState<DepartmentItem | null>(null);
+  const [hodTeachers, setHodTeachers] = useState<TeacherLookupItem[]>([]);
+  const [hodStaffAssignmentId, setHodStaffAssignmentId] = useState("");
+  const [hodBusy, setHodBusy] = useState(false);
+  const [hodError, setHodError] = useState("");
+
 
   useEffect(() => {
     if (!tenantId || import.meta.env.MODE === "test") return;
@@ -1502,6 +1508,40 @@ export function AcademicStructurePage() {
       setCatalogError(getApiErrorMessage(cause));
     } finally {
       setCatalogBusy(false);
+    }
+  };
+
+  const openHodAssignment = async (department: DepartmentItem) => {
+    setHodDepartment(department);
+    setHodStaffAssignmentId("");
+    setHodTeachers([]);
+    setHodError("");
+    try {
+      const teachers = await staffService.teacherLookup(tenantId, institutionId, "HOD_ASSIGN", department.departmentId);
+      setHodTeachers(teachers);
+    } catch (cause) {
+      setHodError(getApiErrorMessage(cause));
+    }
+  };
+
+  const submitHodAssignment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!hodDepartment || !isValidUuid(hodStaffAssignmentId)) {
+      setHodError("Select an active faculty member for this department.");
+      return;
+    }
+    setHodBusy(true);
+    setHodError("");
+    try {
+      await api.put(`/tenants/${tenantId}/departments/${hodDepartment.departmentId}/hod`, {
+        staffAssignmentId: hodStaffAssignmentId,
+      });
+      setHodDepartment(null);
+      await loadStructureFor(institutionId);
+    } catch (cause) {
+      setHodError(getApiErrorMessage(cause));
+    } finally {
+      setHodBusy(false);
     }
   };
 
@@ -1755,8 +1795,11 @@ export function AcademicStructurePage() {
                       <tr>
                         <th>Code</th>
                         <th>Department Name</th>
+                        <th>Faculty</th>
+                        <th>Students</th>
                         <th>Status</th>
-                        <th>HOD Staff Assignment</th>
+                        <th>HOD</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1764,10 +1807,11 @@ export function AcademicStructurePage() {
                         <tr key={d.departmentId}>
                           <td><strong><code>{d.departmentCode}</code></strong></td>
                           <td><Link to={`/university/setup/structure/${institutionId}/departments/${d.departmentId}`}>{d.departmentName}</Link></td>
-                          <td><Badge tone="success">{d.status}</Badge></td>
-                          <td style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary, #64748b)" }}>
-                            {d.hodStaffAssignmentId ?? "Unassigned"}
-                          </td>
+                          <td>{d.facultyCount ?? 0}</td>
+                          <td>{d.studentCount ?? 0}</td>
+                          <td><Badge tone={d.status === "ACTIVE" ? "success" : "neutral"}>{d.status}</Badge></td>
+                          <td>{d.hodStaffAssignmentId ? "Assigned" : "Unassigned"}</td>
+                          <td><Button size="sm" variant="secondary" onClick={() => void openHodAssignment(d)}>Assign HOD</Button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1776,6 +1820,33 @@ export function AcademicStructurePage() {
               )}
             </div>
           </Panel>
+
+          {hodDepartment && (
+            <div className="app-modal-backdrop" role="presentation">
+              <div className="app-modal" role="dialog" aria-modal="true" aria-labelledby="assign-hod-title">
+                <Panel title={`Assign HOD — ${hodDepartment.departmentName}`} description="Choose an active faculty assignment in this department. The server validates institution and department scope.">
+                  <form onSubmit={submitHodAssignment}>
+                    <PersonPicker
+                      label="Faculty member"
+                      value={hodStaffAssignmentId}
+                      options={hodTeachers.map((teacher) => ({
+                        id: teacher.staffAssignmentId,
+                        name: teacher.fullName,
+                        designation: teacher.designation,
+                        department: teacher.departmentName ?? undefined,
+                      }))}
+                      onChange={setHodStaffAssignmentId}
+                    />
+                    {hodError && <Notice tone="danger">{hodError}</Notice>}
+                    <div className="app-inline-actions">
+                      <Button type="button" variant="secondary" disabled={hodBusy} onClick={() => setHodDepartment(null)}>Cancel</Button>
+                      <Button type="submit" busy={hodBusy} disabled={!hodStaffAssignmentId}>Save HOD assignment</Button>
+                    </div>
+                  </form>
+                </Panel>
+              </div>
+            </div>
+          )}
 
           {/* Programs Panel */}
           <Panel
