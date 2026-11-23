@@ -32,6 +32,16 @@ public class StudentLoginSwitchService {
     private final SchoolClassRepository schoolClassRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
 
+    @Transactional(readOnly = true)
+    public StudentLoginSwitchResponse getClassState(RbacPrincipal principal, UUID classId) {
+        SchoolClass schoolClass = schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class " + classId + " was not found."));
+        permissionEvaluatorService.authorize(principal, "STUDENT_LOGIN_SWITCH",
+                RbacScope.institution(schoolClass.getInstitutionId()), RbacTarget.NONE);
+        return new StudentLoginSwitchResponse(schoolClass.getClassId(), schoolClass.isStudentLoginEnabled(),
+                schoolClass.getRowVersion() == null ? 1 : schoolClass.getRowVersion());
+    }
+
     @Transactional
     public StudentLoginSwitchResponse setStudentLogin(
             RbacPrincipal principal, UUID classId, String ifMatch, StudentLoginSwitchRequest request) {
