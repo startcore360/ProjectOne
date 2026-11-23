@@ -536,15 +536,45 @@ export function StudentLoginSwitchPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [classId, setClassId] = useState("");
   const [enabled, setEnabled] = useState(false);
-  const { status, message, run } = useAction<{ classId: string; studentLoginEnabled: boolean }>();
+  const [rowVersion, setRowVersion] = useState<number | null>(null);
+  const [loadingClass, setLoadingClass] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const { status, message, run } = useAction<{ classId: string; studentLoginEnabled: boolean; rowVersion: number }>();
+
+  const loadClass = async () => {
+    if (!tenantId || !isValidUuid(classId)) {
+      setLoadError("Enter a valid class ID before loading its current version.");
+      return;
+    }
+    setLoadingClass(true);
+    setLoadError("");
+    try {
+      const response = await api.get<{ classId: string; studentLoginEnabled: boolean; rowVersion: number }>(
+        `/tenants/${tenantId}/classes/${classId.trim()}`
+      );
+      setEnabled(response.data.studentLoginEnabled);
+      setRowVersion(response.data.rowVersion);
+    } catch (cause) {
+      setRowVersion(null);
+      setLoadError(getApiErrorMessage(cause));
+    } finally {
+      setLoadingClass(false);
+    }
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const invalid = !isValidUuid(classId) ? "Class ID must be a valid ID." : null;
+    const invalid = !isValidUuid(classId) ? "Class ID must be a valid ID."
+      : rowVersion === null ? "Load the class first to obtain its current row version."
+      : null;
     void run(
       invalid,
-      () => api.put(`/tenants/${tenantId}/classes/${classId.trim()}/student-login`, { enabled }),
-      (data) => `Student view-only login for class ${data.classId} is now ${data.studentLoginEnabled ? "ON" : "OFF"}.`,
+      () => api.put(`/tenants/${tenantId}/classes/${classId.trim()}/student-login`, { enabled },
+        { headers: { "If-Match": `"${rowVersion}"` } }),
+      (data) => {
+        setRowVersion(data.rowVersion);
+        return `Student view-only login for class ${data.classId} is now ${data.studentLoginEnabled ? "ON" : "OFF"}.`;
+      },
     );
   };
 
@@ -552,25 +582,24 @@ export function StudentLoginSwitchPage() {
     <div className="app-page">
       <PageHeader
         title="Student login switch"
-        description="Enable or disable view-only student access for a school class."
+        description="Enable or disable view-only student access for a school class. Load the class first so updates use its current If-Match version."
       />
-      {!tenantId ? (
-        <NoTenantNotice />
-      ) : (
-        <Panel title="Class student-login" description="There is no class picker yet; paste the class ID.">
+      {!tenantId ? <NoTenantNotice /> : (
+        <Panel title="Class student-login" description="Load the class to read its current state and ETag before changing the switch.">
           <form onSubmit={submit} noValidate>
-            <IdField id="class-id" label="Class ID" value={classId} onChange={setClassId} />
+            <IdField id="class-id" label="Class ID" value={classId} onChange={(value) => { setClassId(value); setRowVersion(null); }} />
+            <div className="app-inline-actions">
+              <Button type="button" variant="secondary" busy={loadingClass} onClick={() => void loadClass()}>Load class</Button>
+            </div>
+            {rowVersion !== null && <Notice tone="success">Loaded current class version {rowVersion}.</Notice>}
+            {loadError && <Notice tone="danger">{loadError}</Notice>}
             <label className="app-form-field" style={{ marginTop: "var(--space-3)" }}>
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
-                style={{ marginRight: "var(--space-2)" }}
-              />
+              <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)}
+                style={{ marginRight: "var(--space-2)" }} />
               Enable view-only student login for this class
             </label>
             <ResultBanner status={status} message={message} />
-            <Button type="submit" busy={status === "busy"}>
+            <Button type="submit" busy={status === "busy"} disabled={rowVersion === null}>
               {status === "busy" ? "Saving…" : "Save"}
             </Button>
           </form>
