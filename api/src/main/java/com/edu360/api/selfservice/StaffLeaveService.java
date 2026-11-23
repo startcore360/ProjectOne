@@ -405,16 +405,16 @@ public class StaffLeaveService {
         if ("REGISTRAR".equalsIgnoreCase(role)) {
             return List.of(new StepSpec("UNIVERSITY_HR_MANAGER", null), new StepSpec("VICE_CHANCELLOR", null));
         }
-        if ("VICE_PRINCIPAL_COLLEGE".equalsIgnoreCase(role) || "VICE_PRINCIPAL_SCHOOL".equalsIgnoreCase(role)
-                || "HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) {
-            return List.of(new StepSpec("SCHOOL_PRINCIPAL".equalsIgnoreCase(role) ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE", null));
-        }
         Institution institution = institutions.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Institution not found"));
-        List<StepSpec> chain = new ArrayList<>();
-        boolean universityStaff = assignment.getInstitutionId() == null;
         boolean school = institution.getInstitutionType() != null
                 && institution.getInstitutionType().toUpperCase().contains("SCHOOL");
+        if ("VICE_PRINCIPAL_COLLEGE".equalsIgnoreCase(role) || "VICE_PRINCIPAL_SCHOOL".equalsIgnoreCase(role)
+                || "HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) {
+            return List.of(new StepSpec(school ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE", null));
+        }
+        List<StepSpec> chain = new ArrayList<>();
+        boolean universityStaff = assignment.getInstitutionId() == null;
         boolean teaching = isTeaching(assignment.getDesignation(), role);
         if (universityStaff) {
             chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
