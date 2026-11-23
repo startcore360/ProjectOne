@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ReactElement } from "react";
@@ -71,7 +72,7 @@ function renderWithTenant(
       "GRADING_SCHEME_SET", "SUBJECT_ALLOCATE", "PROMOTION_RUN", "PROMOTION_APPROVE",
     ],
   }));
-  return render(<Provider store={store}>{element}</Provider>);
+  return render(<MemoryRouter><Provider store={store}>{element}</Provider></MemoryRouter>);
 }
 
 describe("Institution setup action screens", () => {
