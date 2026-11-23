@@ -18,6 +18,16 @@ public interface SchoolClassRepository extends JpaRepository<SchoolClass, UUID> 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             UPDATE app.school_class
+               SET student_login_enabled=:enabled, updated_by=:updatedBy
+             WHERE tenant_id=:tenantId AND class_id=:classId AND row_version=:expectedVersion
+            """, nativeQuery = true)
+    int updateStudentLogin(@Param("tenantId") UUID tenantId, @Param("classId") UUID classId,
+            @Param("expectedVersion") int expectedVersion, @Param("enabled") boolean enabled,
+            @Param("updatedBy") UUID updatedBy);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE app.school_class
                SET class_name=:className, display_order=:displayOrder,
                    student_login_enabled=:studentLoginEnabled, updated_by=:updatedBy
              WHERE tenant_id=:tenantId AND class_id=:classId AND row_version=:expectedVersion
