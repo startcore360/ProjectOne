@@ -317,6 +317,8 @@ public class StructureService {
                 .programYearId(programYearId)
                 .semesterNumber(request.semesterNumber())
                 .label(request.label().trim())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
                 .build();
