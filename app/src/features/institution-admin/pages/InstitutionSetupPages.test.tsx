@@ -714,6 +714,7 @@ describe("Institution setup action screens", () => {
     await waitFor(() => {
       expect(screen.getByText(sessionId)).toBeInTheDocument();
     });
+    expect(screen.getByText("Term Locked: Records are immutable")).toBeInTheDocument();
 
     const unlockBtn = screen.getByRole("button", { name: /Unlock Term/i });
     fireEvent.click(unlockBtn);
