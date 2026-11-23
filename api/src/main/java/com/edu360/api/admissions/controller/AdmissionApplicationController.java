@@ -1,6 +1,7 @@
 package com.edu360.api.admissions.controller;
 
 import com.edu360.api.admissions.service.AdmissionService;
+import com.edu360.api.admissions.service.AdmissionEnrollmentService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.files.FileService;
 import com.edu360.api.files.FileUploadResponse;
@@ -18,8 +19,9 @@ import java.util.UUID;
 @RequestMapping({"/api/tenants/{tenantId}/admissions","/v1/tenants/{tenantId}/admissions"})
 public class AdmissionApplicationController {
     private final AdmissionService service;
+    private final AdmissionEnrollmentService enrollment;
     private final FileService files;
-    public AdmissionApplicationController(AdmissionService service,FileService files){this.service=service;this.files=files;}
+    public AdmissionApplicationController(AdmissionService service,AdmissionEnrollmentService enrollment,FileService files){this.service=service;this.enrollment=enrollment;this.files=files;}
     @PostMapping("/cycles/{cycleId}/applications")
     public ResponseEntity<Map<String,Object>> submit(@PathVariable UUID tenantId,@PathVariable UUID cycleId,@RequestBody Map<String,Object> body,Authentication auth){
         return ResponseEntity.status(HttpStatus.CREATED).body(service.submitApplication(AdmissionCycleController.actor(auth,tenantId),cycleId,body));
@@ -76,6 +78,6 @@ public class AdmissionApplicationController {
     }
     @PostMapping("/applications/{applicationId}/conversion")
     public Object convert(@PathVariable UUID tenantId,@PathVariable UUID applicationId,Authentication auth){
-        return service.convertToStudent(AdmissionCycleController.actor(auth,tenantId),applicationId);
+        return enrollment.convertToStudent(AdmissionCycleController.actor(auth,tenantId),applicationId);
     }
 }
