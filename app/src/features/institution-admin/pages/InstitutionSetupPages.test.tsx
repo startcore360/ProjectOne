@@ -254,6 +254,46 @@ describe("Institution setup action screens", () => {
     });
   });
 
+  it("creates a dated semester under a selected college program year", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const programId = "66666666-6666-6666-6666-666666666666";
+    const programYearId = "77777777-7777-7777-7777-777777777777";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/programs")) return Promise.resolve({ data: [{
+        programId, institutionId, departmentId: DEPT_ID, programCode: "BTECH",
+        programName: "B.Tech", durationYears: 4, semestersPerYear: 2, status: "ACTIVE",
+      }] });
+      if (url.endsWith("/years")) return Promise.resolve({ data: [{
+        programYearId, institutionId, programId, yearNumber: 1, label: "Year 1",
+      }] });
+      if (url.endsWith("/semesters")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { semesterId: "99999999-8888-7777-6666-555555555555", institutionId, programYearId,
+        semesterNumber: 1, label: "Semester 1", startDate: "2026-07-01", endDate: "2026-11-30" },
+    });
+
+    renderWithTenant(<AcademicStructurePage />);
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("B.Tech");
+
+    fireEvent.change(screen.getByLabelText("Program"), { target: { value: programId } });
+    fireEvent.click(screen.getByRole("button", { name: /load program years/i }));
+    await screen.findByLabelText("Program year");
+
+    fireEvent.change(screen.getByLabelText(/Start date/i), { target: { value: "2026-07-01" } });
+    fireEvent.change(screen.getByLabelText(/End date/i), { target: { value: "2026-11-30" } });
+    fireEvent.click(screen.getByRole("button", { name: /create dated semester/i }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}/program-years/${programYearId}/semesters`,
+      { semesterNumber: 1, label: "Semester 1", startDate: "2026-07-01", endDate: "2026-11-30" },
+    ));
+  });
+
   it("loads school classes and sections without showing college department/programme panels", async () => {
     const institutionId = "55555555-5555-5555-5555-555555555555";
     const classId = "77777777-7777-7777-7777-777777777777";
