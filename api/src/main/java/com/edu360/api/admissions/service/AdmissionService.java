@@ -168,6 +168,13 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
     public Map<String,Object> resubmitCorrections(TenantPrincipal actor,UUID applicationId) {
         Map<String,Object> app=ownedApplication(actor,applicationId);
         if(!"DEFECTIVE".equals(app.get("verification_status"))) throw new BusinessRuleViolationException("CORRECTION_NOT_REQUESTED","No correction request is outstanding.");
+        Integer correctedDocs=jdbc.queryForObject("""
+          select count(*) from jsonb_array_elements(?::jsonb) d
+          where nullif(d->>'uploadedAt','') is not null
+            and (d->>'uploadedAt')::timestamptz > ?
+          """,Integer.class,String.valueOf(app.get("documents_json")),app.get("correction_requested_at"));
+        if(correctedDocs==null||correctedDocs<1)
+            throw new BusinessRuleViolationException("CORRECTION_DOCUMENT_REQUIRED","Upload at least one corrected, virus-clean document before resubmitting.");
         jdbc.update("update app.admission_application set verification_status='PENDING',status='SUBMITTED',defect_notes=null,updated_by=? where tenant_id=? and id=?",
                 actor.userAccountId(),actor.tenantId(),applicationId);
         return ownedApplication(actor,applicationId);
