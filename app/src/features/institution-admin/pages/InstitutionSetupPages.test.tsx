@@ -1050,7 +1050,7 @@ describe("Institution setup action screens", () => {
     fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("B.Tech");
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
     fireEvent.change(screen.getByLabelText(/Program name/i), { target: { value: "B.Tech Computer Science" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -1105,7 +1105,7 @@ describe("Institution setup action screens", () => {
     fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("Section A");
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
     fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
     fireEvent.change(screen.getByLabelText(/Section capacity/i), { target: { value: "72" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
