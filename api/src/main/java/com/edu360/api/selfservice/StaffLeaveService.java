@@ -271,7 +271,7 @@ public class StaffLeaveService {
                    AND NOT (unit='HALF_DAY' AND ?='HALF_DAY' AND start_date=? AND end_date=?
                             AND half_day_part<>?)
                 """, Integer.class, tenantId, staffId, request.endDate(), request.startDate(),
-                unit, unit, request.startDate(), request.endDate(), request.halfDayPart());
+                unit, request.startDate(), request.endDate(), request.halfDayPart());
         if (overlaps != null && overlaps > 0) {
             throw new BusinessRuleViolationException("LEAVE_DATE_OVERLAP", "An existing pending or approved leave request overlaps these dates.");
         }
