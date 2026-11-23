@@ -61,7 +61,7 @@ public class ClassTeacherAssignmentService {
 
     @Transactional
     public ClassTeacherAssignResponse assignClassTeacher(
-            RbacPrincipal principal, UUID sectionId, ClassTeacherAssignRequest request) {
+            RbacPrincipal principal, UUID sectionId, String ifMatch, ClassTeacherAssignRequest request) {
         Section section = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found."));
 
@@ -72,6 +72,12 @@ public class ClassTeacherAssignmentService {
 
         permissionEvaluatorService.authorize(principal, "CLASS_TEACHER_ASSIGN",
                 RbacScope.institution(section.getInstitutionId()), RbacTarget.NONE);
+
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        if (section.getRowVersion() == null || section.getRowVersion() != expectedVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Section was changed by another user. Reload and retry with the latest ETag.");
+        }
 
         StaffAssignment target = staffAssignmentRepository
                 .findByTenantIdAndStaffAssignmentId(principal.tenantId(), request.staffAssignmentId())
@@ -89,6 +95,9 @@ public class ClassTeacherAssignmentService {
         }
         LocalDate today = today(principal.tenantId());
         requireEffective(target, today);
+        if (sectionRepository.bumpRowVersion(principal.tenantId(), sectionId, expectedVersion, principal.userAccountId()) != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT", "Section was changed by another user. Reload and retry with the latest ETag.");
+        }
         classTeacherAssignmentRepository
                 .findByTenantIdAndSectionIdAndEffectiveToIsNull(principal.tenantId(), sectionId)
                 .ifPresent(current -> {
@@ -108,6 +117,23 @@ public class ClassTeacherAssignmentService {
         created.setUpdatedBy(principal.userAccountId());
         classTeacherAssignmentRepository.save(created);
 
-        return new ClassTeacherAssignResponse(sectionId, created.getClassTeacherAssignmentId(), target.getStaffAssignmentId());
+        return new ClassTeacherAssignResponse(sectionId, created.getClassTeacherAssignmentId(), target.getStaffAssignmentId(), expectedVersion + 1);
     }
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the section ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replace(String.valueOf((char) 34), "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException();
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive section row version.");
+        }
+    }
+
+
 }
