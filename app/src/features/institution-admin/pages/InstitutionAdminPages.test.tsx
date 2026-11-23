@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
 import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
@@ -112,7 +113,7 @@ function renderWithStore(ui: React.ReactElement, tenantId: string = "tenant-1") 
     activeRoleName: "University Admin",
     allowedActions: ["ROLLDOWN_VIEW", "ROLLDOWN_OVERRIDE_SET"],
   }));
-  return render(<Provider store={store}>{ui}</Provider>);
+  return render(<MemoryRouter><Provider store={store}>{ui}</Provider></MemoryRouter>);
 }
 
 describe("Sprint 1 university administration screens (Stories #25 & #26)", () => {
