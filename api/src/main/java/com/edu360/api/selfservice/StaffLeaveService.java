@@ -526,7 +526,7 @@ public class StaffLeaveService {
             return List.of(new StepSpec(school ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE", null));
         }
         List<StepSpec> chain = new ArrayList<>();
-        boolean universityStaff = assignment.getInstitutionId() == null;
+        boolean universityStaff = assignment.getInstitutionId() == null || isUniversityStaffRole(role);
         boolean teaching = isTeaching(assignment.getDesignation(), role);
         if (universityStaff) {
             chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
@@ -560,7 +560,7 @@ public class StaffLeaveService {
         if ("REGISTRAR".equalsIgnoreCase(role)) return "REGISTRAR_LEAVE";
         if (role != null && role.toUpperCase().contains("VICE_PRINCIPAL")) return "VICE_PRINCIPAL_LEAVE";
         if ("HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) return "HOD_LEAVE";
-        if (assignment.getInstitutionId() == null) return "UNIVERSITY_STAFF_LEAVE";
+        if (assignment.getInstitutionId() == null || isUniversityStaffRole(role)) return "UNIVERSITY_STAFF_LEAVE";
         Institution institution = institutions.findByIdTenantIdAndIdInstitutionId(tenantId, assignment.getInstitutionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Institution not found"));
         boolean school = institution.getInstitutionType() != null
@@ -576,6 +576,13 @@ public class StaffLeaveService {
             return "ADMIN_ACCOUNTANT_LEAVE_COLLEGE";
         }
         return "NON_TEACHING_LEAVE_COLLEGE";
+    }
+
+    private static boolean isUniversityStaffRole(String role) {
+        if (role == null) return false;
+        String value = role.toUpperCase();
+        return value.equals("UNIVERSITY_HR_MANAGER") || value.equals("FINANCE_DIRECTOR")
+                || value.equals("CONTROLLER_OF_EXAMINATIONS");
     }
 
     private static boolean isTeaching(String designation, String activeRole) {
