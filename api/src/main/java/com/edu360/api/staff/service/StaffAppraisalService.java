@@ -125,8 +125,15 @@ public class StaffAppraisalService {
     }
 
     private void authorize(RbacPrincipal actor, String action, UUID institutionId, UUID staffId) {
-        permissions.authorize(actor, action, permissions.targetScope(actor, institutionId, null),
-                RbacTarget.NONE);
+        UUID departmentId = jdbc.query("""
+            SELECT department_id FROM app.staff_assignment
+            WHERE tenant_id=? AND staff_profile_id=? AND institution_id=? AND status='ACTIVE'
+              AND (effective_to IS NULL OR effective_to>=current_date)
+            ORDER BY effective_from DESC LIMIT 1
+            """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
+                actor.tenantId(), staffId, institutionId);
+        permissions.authorize(actor, action,
+                permissions.targetScope(actor, institutionId, departmentId), RbacTarget.NONE);
     }
     private Map<String,Object> cycle(UUID tenant, UUID id) {
         try { return jdbc.queryForMap("SELECT id,institution_id,status FROM app.appraisal_cycle WHERE tenant_id=? AND id=?", tenant, id); }
