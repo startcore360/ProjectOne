@@ -139,6 +139,7 @@ export default function AppRoutes() {
               <Route path="/university/setup/structure/:institutionId/sections/:sectionId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><SectionDetailPage /></ActionGate>} />
               <Route path="/university/setup/structure/:institutionId/academic-sessions/:academicSessionId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><AcademicSessionDetailPage /></ActionGate>} />
 
+              <Route path="/university/staff/:staffId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffRecordsPage /></ActionGate>} />
               <Route path="/university/staff" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.staffRecords}><StaffRecordsPage /></ActionGate>} />
               <Route path="/university/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
               <Route path="/university/roles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.roles}><RolesPermissionsPage /></ActionGate>} />
