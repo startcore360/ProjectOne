@@ -2,27 +2,21 @@ package com.edu360.api.staff;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
+@JdbcTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import(StaffAppraisalIT.TestBeans.class)
+@TestPropertySource(properties = "spring.sql.init.mode=never")
 class StaffAppraisalIT {
     @Autowired JdbcTemplate jdbc;
-
-    @TestConfiguration
-    static class TestBeans {
-        @Bean ObjectMapper objectMapper() { return new ObjectMapper(); }
-    }
 
     private boolean table(String name) {
         Integer count = jdbc.queryForObject(
