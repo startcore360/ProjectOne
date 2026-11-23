@@ -1,0 +1,52 @@
+name: M13 Staff Appraisal Verification
+
+on:
+  push:
+    branches: [sprint-3-development]
+    paths:
+      - "api/src/main/java/com/edu360/api/staff/**"
+      - "api/src/test/java/com/edu360/api/staff/StaffAppraisalIT.java"
+      - "app/src/features/staff/**"
+      - "sql/59_v41_staff_qualification_and_leave_indexes.sql"
+      - "sql/59_v41_staff_qualification_and_leave_rollback.sql"
+      - ".github/workflows/m13-appraisal.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m13-appraisal-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  appraisal:
+    name: M13 backend and frontend checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: api/pom.xml
+      - name: Run StaffAppraisalIT
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=StaffAppraisalIT
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+      - name: Run frontend lint
+        working-directory: app
+        run: npm run lint
+      - name: Build frontend
+        working-directory: app
+        run: npm run build
