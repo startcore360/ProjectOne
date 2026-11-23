@@ -306,11 +306,12 @@ describe("Institution setup action screens", () => {
     await screen.findAllByText("Grade 8");
 
     fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
+    fireEvent.change(screen.getByLabelText(/Section capacity/i), { target: { value: "45" } });
     fireEvent.click(screen.getByRole("button", { name: /create section/i }));
 
     await waitFor(() => expect(api.post).toHaveBeenCalledWith(
       `/api/tenants/${TENANT_ID}/institutions/${institutionId}/sections`,
-      { academicSessionId: sessionId, classId, sectionName: "B" },
+      { academicSessionId: sessionId, classId, sectionName: "B", capacity: 45 },
     ));
   });
 
