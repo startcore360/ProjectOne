@@ -25,6 +25,26 @@ describe("MeritListGenerationPage", () => {
     vi.mocked(api.get).mockResolvedValue({ data: [] } as never);
   });
 
+  it("loads and displays the ordered merit ranking", async () => {
+    vi.mocked(api.get).mockImplementation(async (url) => {
+      const path = String(url);
+      if (path.endsWith("/items")) {
+        return { data: [{ id: "item-1", application_id: "app-1", application_number: "ADM-001", applicant_name: "Asha Rao", merit_rank: 1, computed_score: 96.5, allocated_quota: "GENERAL", seat_status: "OFFERED" }] } as never;
+      }
+      if (path.endsWith("/merit-lists")) {
+        return { data: [{ id: "list-1", status: "PROVISIONAL", round_number: 1, generated_at: "2026-11-23T00:00:00Z" }] } as never;
+      }
+      return { data: [] } as never;
+    });
+    render(<MeritListGenerationPage />);
+    fireEvent.change(screen.getByLabelText(/Admission cycle ID/), { target: { value: "cycle-1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Load lists and seats" }));
+    expect(await screen.findByText(/Round 1/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View ranking" }));
+    expect(await screen.findByText(/#1 · Asha Rao/)).toBeInTheDocument();
+    expect(screen.getByText(/Score 96.5 · GENERAL · OFFERED/)).toBeInTheDocument();
+  });
+
   it("loads seat offers and converts an accepted, fee-confirmed applicant", async () => {
     vi.mocked(api.get).mockImplementation(async (url) => ({
       data: String(url).includes("seat-allotments")
