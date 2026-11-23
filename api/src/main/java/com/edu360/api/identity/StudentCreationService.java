@@ -177,8 +177,9 @@ public class StudentCreationService {
         String studentCode=idFormats.nextStudentCode(tenantId,institutionId,admissionDate.getYear());
         if(students.existsByTenantIdAndStudentCode(tenantId,studentCode))
             throw new DuplicateResourceException("Generated student code is already used in this tenant.");
+        CreateUserResponse account=accounts.createStudentAccount(principal,request.fullName(),studentCode,institutionId);
         UUID profileId=UUID.randomUUID();
-        StudentProfile profile=new StudentProfile(profileId,tenantId,institutionId,null,studentCode,"ACTIVE");
+        StudentProfile profile=new StudentProfile(profileId,tenantId,institutionId,account.userAccountId(),studentCode,"ACTIVE");
         profile.setFullName(request.fullName().trim());
         profile.setDateOfBirth(request.dateOfBirth());
         profile.setAdmissionDate(admissionDate);
@@ -187,8 +188,9 @@ public class StudentCreationService {
         StudentProfile saved=students.saveAndFlush(profile);
         entityManager.refresh(saved);
         audit.record(new AuditEntry(AuditEventType.STUDENT_PROFILE_CREATED,"USER_CREATE","STUDENT_PROFILE",
-                profileId,institutionId,null,Map.of("student_code",studentCode,"admission_source","ADMISSIONS"),1,"P","SUCCESS"));
-        return StudentProfileResponse.from(saved);
+                profileId,institutionId,null,Map.of("student_code",studentCode,"user_account_id",account.userAccountId().toString(),
+                        "admission_source","ADMISSIONS"),1,"P","SUCCESS"));
+        return StudentProfileResponse.from(saved,account.temporaryPassword());
     }
 
     private boolean resolveCreateLogin(Institution institution, Section section,

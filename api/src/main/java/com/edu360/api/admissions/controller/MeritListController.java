@@ -30,6 +30,10 @@ public class MeritListController {
     public Map<String,Object> allocate(@PathVariable UUID tenantId,@PathVariable UUID id,Authentication auth){
         return service.allocateSeats(AdmissionCycleController.actor(auth,tenantId),id);
     }
+    @GetMapping("/cycles/{cycleId}/seat-allotments")
+    public Object seatAllotments(@PathVariable UUID tenantId,@PathVariable UUID cycleId,Authentication auth){
+        return service.seatAllotmentsForCycle(AdmissionCycleController.actor(auth,tenantId),cycleId);
+    }
     @PostMapping("/seat-allotments/{id}/decision")
     public Map<String,Object> decide(@PathVariable UUID tenantId,@PathVariable UUID id,@RequestBody Map<String,String> body,Authentication auth){
         return service.decideSeat(AdmissionCycleController.actor(auth,tenantId),id,body.get("decision"));

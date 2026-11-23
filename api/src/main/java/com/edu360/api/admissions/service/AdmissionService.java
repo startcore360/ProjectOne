@@ -261,10 +261,40 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
         return Map.of("meritListId",listId,"offeredSeats",count);
     }
 
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> seatAllotmentsForCycle(TenantPrincipal actor, UUID cycleId) {
+        Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),cycleId);
+        authorize(actor,"SEAT_ALLOCATE",(UUID)cycle.get("institution_id"));
+        return jdbc.queryForList("""
+          select s.*,a.application_number,a.applicant_name,a.admission_fee_status,a.student_profile_id
+          from app.seat_allotment s
+          join app.admission_application a on a.tenant_id=s.tenant_id and a.id=s.application_id
+          where s.tenant_id=? and s.cycle_id=? order by s.offered_at desc,s.id
+          """,actor.tenantId(),cycleId);
+    }
+
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> seatAllotmentsForApplicant(TenantPrincipal actor, UUID applicationId) {
+        ownedApplication(actor,applicationId);
+        return jdbc.queryForList("""
+          select s.*,a.application_number,a.admission_fee_status,a.student_profile_id
+          from app.seat_allotment s
+          join app.admission_application a on a.tenant_id=s.tenant_id and a.id=s.application_id
+          where s.tenant_id=? and s.application_id=? order by s.offered_at desc,s.id
+          """,actor.tenantId(),applicationId);
+    }
+
     @Transactional
     public Map<String,Object> decideSeat(TenantPrincipal actor, UUID allotmentId, String decision) {
         Map<String,Object> seat=one("select s.*,c.institution_id from app.seat_allotment s join app.admission_cycle c on c.tenant_id=s.tenant_id and c.id=s.cycle_id where s.tenant_id=? and s.id=?",actor.tenantId(),allotmentId);
-        authorize(actor,"SEAT_ALLOCATE",(UUID)seat.get("institution_id"));
+        Map<String,Object> app=application(actor,(UUID)seat.get("application_id"));
+        RbacPrincipal caller=new RbacPrincipal(actor.tenantId(),actor.userAccountId());
+        RbacScope scope=RbacScope.institution((UUID)seat.get("institution_id"));
+        boolean canManage=permissions.can(caller,"SEAT_ALLOCATE",scope,RbacTarget.NONE).allowed();
+        if(!canManage) {
+            if(!actor.userAccountId().equals(app.get("created_by"))) throw new ResourceNotFoundException("Seat offer not found.");
+            authorize(actor,"APPLICATION_SUBMIT",(UUID)seat.get("institution_id"));
+        }
         if(!Set.of("ACCEPTED","DECLINED").contains(decision)) throw new BusinessRuleViolationException("VALIDATION_FAILED","Seat decision must be ACCEPTED or DECLINED.");
         if(!"OFFERED".equals(seat.get("status"))) throw new BusinessRuleViolationException("SEAT_ALREADY_DECIDED","Only an offered seat can be accepted or declined.");
         jdbc.update("update app.seat_allotment set status=?,accepted_at=case when ?='ACCEPTED' then now() else null end,updated_by=? where tenant_id=? and id=?",
@@ -344,7 +374,9 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
 
     @Transactional
     public StudentProfileResponse convertToStudent(TenantPrincipal actor, UUID applicationId) {
-        Map<String,Object> app=application(actor,applicationId);
+        // Serialize concurrent conversion attempts for the same application.
+        Map<String,Object> app=one("select * from app.admission_application where tenant_id=? and id=? for update",
+                actor.tenantId(),applicationId);
         authorize(actor,"SEAT_ALLOCATE",(UUID)app.get("institution_id"));
         Integer ready=jdbc.queryForObject("select count(*) from app.seat_allotment where tenant_id=? and application_id=? and status='ACCEPTED' and admission_fee_confirmed_at is not null",
                 Integer.class,actor.tenantId(),applicationId);

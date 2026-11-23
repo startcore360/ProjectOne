@@ -45,6 +45,10 @@ public class AdmissionApplicationController {
     public Map<String,Object> getApplication(@PathVariable UUID tenantId,@PathVariable UUID applicationId,Authentication auth){
         return service.applicationForApplicant(AdmissionCycleController.actor(auth,tenantId),applicationId);
     }
+    @GetMapping("/applications/{applicationId}/seat-allotments")
+    public List<Map<String,Object>> applicantSeatAllotments(@PathVariable UUID tenantId,@PathVariable UUID applicationId,Authentication auth){
+        return service.seatAllotmentsForApplicant(AdmissionCycleController.actor(auth,tenantId),applicationId);
+    }
     @PostMapping("/applications/{applicationId}/corrections/resubmit")
     public Map<String,Object> resubmitCorrections(@PathVariable UUID tenantId,@PathVariable UUID applicationId,Authentication auth){
         return service.resubmitCorrections(AdmissionCycleController.actor(auth,tenantId),applicationId);
