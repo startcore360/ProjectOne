@@ -1,7 +1,71 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-export function DetailFrame({title,backTo,backLabel,load,fields}:{title:string;backTo:string;backLabel:string;load:()=>Promise<Record<string,unknown>>;fields:string[]}) {
- const [data,setData]=useState<Record<string,unknown>|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(true);
- useEffect(()=>{let live=true;setBusy(true);load().then(v=>{if(live)setData(v)}).catch(e=>{if(live)setError(e instanceof Error?e.message:"Unable to load")}).finally(()=>{if(live)setBusy(false)});return()=>{live=false}},[load]);
- return <main className="academic-detail-page"><nav><Link to={backTo}>{backLabel}</Link> / {title}</nav><h1>{title}</h1>{busy&&<p role="status">Loading…</p>}{error&&<p role="alert">{error}</p>}{!busy&&!error&&data&&<dl>{fields.map(k=><React.Fragment key={k}><dt>{k.replace(/([A-Z])/g," $1")}</dt><dd>{data[k]==null||data[k]===""?"—":String(data[k])}</dd></React.Fragment>)}</dl>}</main>;
+
+type DetailRecord = Record<string, unknown>;
+
+type DetailFrameProps = {
+  title: string;
+  backTo: string;
+  backLabel: string;
+  load: () => Promise<DetailRecord>;
+  fields: string[];
+};
+
+function displayValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
+export function DetailFrame({ title, backTo, backLabel, load, fields }: DetailFrameProps) {
+  const [data, setData] = useState<DetailRecord | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setBusy(true);
+    setError("");
+    setData(null);
+
+    load()
+      .then((record) => {
+        if (active) setData(record);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setError(cause instanceof Error ? cause.message : "Unable to load this record.");
+      })
+      .finally(() => {
+        if (active) setBusy(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [load]);
+
+  return (
+    <main className="academic-detail-page">
+      <nav aria-label="Breadcrumb">
+        <Link to={backTo}>{backLabel}</Link>
+        <span aria-hidden="true"> / </span>
+        <span>{title}</span>
+      </nav>
+      <h1>{title}</h1>
+      {busy && <p role="status">Loading details…</p>}
+      {error && <p role="alert">{error}</p>}
+      {!busy && !error && data && (
+        <dl>
+          {fields.map((field) => (
+            <React.Fragment key={field}>
+              <dt>{field.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())}</dt>
+              <dd>{displayValue(data[field])}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      )}
+    </main>
+  );
 }
