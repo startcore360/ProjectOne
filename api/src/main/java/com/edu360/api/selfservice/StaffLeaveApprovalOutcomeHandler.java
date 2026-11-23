@@ -21,8 +21,12 @@ public class StaffLeaveApprovalOutcomeHandler implements ApprovalOutcomeHandler 
 
     @Override
     public boolean supports(ApprovalRequest request) {
-        return request != null && "STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
-;
+        return request != null && "LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
+                && java.util.Set.of("FACULTY_LEAVE_COLLEGE", "HOD_LEAVE", "VICE_PRINCIPAL_LEAVE",
+                    "ADMIN_ACCOUNTANT_LEAVE_COLLEGE", "NON_TEACHING_LEAVE_COLLEGE",
+                    "TEACHER_LEAVE_SCHOOL", "SCHOOL_STAFF_LEAVE", "UNIVERSITY_STAFF_LEAVE",
+                    "REGISTRAR_LEAVE", "VC_LEAVE", "DPC_LEAVE", "PRINCIPAL_LEAVE")
+                    .contains(request.getProcessCode());
     }
 
     @Override
