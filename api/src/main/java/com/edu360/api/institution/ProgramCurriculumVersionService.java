@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
-import com.edu360.api.config.RbacPrincipal;
+import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.institution.dto.CreateCurriculumVersionRequest;
