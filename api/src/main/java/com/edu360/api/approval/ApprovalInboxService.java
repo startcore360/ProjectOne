@@ -440,10 +440,12 @@ public class ApprovalInboxService {
                 || "SCHOOL_PRINCIPAL".equalsIgnoreCase(requesterRole)) {
             return "PRINCIPAL_LEAVE_APPROVE";
         }
-        if ("VICE_CHANCELLOR".equalsIgnoreCase(requesterRole)
-                || "REGISTRAR".equalsIgnoreCase(requesterRole)) {
-            return "SENIOR_LEAVE_APPROVE";
+        if ("VICE_CHANCELLOR".equalsIgnoreCase(requesterRole)) return "SENIOR_LEAVE_APPROVE";
+        if ("REGISTRAR".equalsIgnoreCase(requesterRole)
+                && ("HR_MANAGER".equalsIgnoreCase(role) || "UNIVERSITY_HR_MANAGER".equalsIgnoreCase(role))) {
+            return "STAFF_LEAVE_VERIFY_HR";
         }
+        if ("REGISTRAR".equalsIgnoreCase(requesterRole)) return "SENIOR_LEAVE_APPROVE";
         if ("HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) return "STAFF_LEAVE_RECOMMEND_HOD";
         if ("HR_MANAGER".equalsIgnoreCase(role) || "UNIVERSITY_HR_MANAGER".equalsIgnoreCase(role)) {
             return "STAFF_LEAVE_VERIFY_HR";
