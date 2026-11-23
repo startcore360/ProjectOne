@@ -94,6 +94,7 @@ class AdmissionPaymentEventHandlerTest {
         app.put("cycle_id", CYCLE);
         app.put("fee_status", "CONFIRMED");
         app.put("application_fee_event_id", "evt-123");
+        app.put("application_fee_reference", "pay-456");
         when(jdbc.queryForList(anyString(), any(Object[].class)))
                 .thenReturn(List.of(app), List.of(Map.of("application_fee", new BigDecimal("500.00"))));
 
