@@ -292,6 +292,10 @@ export default function AppLayout() {
   // Academic destinations appear only when the active role has the matching server grant.
   // Only real feature destinations are included; unfinished placeholders are intentionally omitted.
   const academicNavigation = tenantPermissionsLoading ? [] : [
+    { label: "Applicant portal", to: "/admissions/apply", icon: "file-text" as const, important: true, anyOf: ["APPLICATION_SUBMIT"] },
+    { label: "Admission cycles", to: "/admissions/cycles", icon: "calendar" as const, important: false, anyOf: ["ADMISSION_FORM_CREATE"] },
+    { label: "Application scrutiny", to: "/admissions/scrutiny", icon: "check-circle" as const, important: false, anyOf: ["APPLICATION_VERIFY"] },
+    { label: "Merit lists & seats", to: "/admissions/merit", icon: "grid" as const, important: false, anyOf: ["MERIT_LIST_GENERATE", "MERIT_LIST_APPROVE", "SEAT_ALLOCATE"] },
     { label: "Support", to: "/support", icon: "help" as const, important: false, anyOf: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"] },
     { label: "Staff records", to: "/university/staff", icon: "users" as const, important: false, anyOf: ["STAFF_RECORD_VIEW"] },
     { label: "Data protection", to: "/tenant/data-protection", icon: "shield" as const, important: false, anyOf: ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"] },
