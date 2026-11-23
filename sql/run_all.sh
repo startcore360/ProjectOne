@@ -43,6 +43,8 @@ run edu360_v4_test 57_v41_academic_hierarchy_constraints.sql > /dev/null
 run edu360_v4_test 58_v41_department_program_section_schema.sql > /dev/null
 run edu360_v4_test 61_v41_student_profile_and_guardians.sql > /dev/null
 run edu360_v4_test 62_v41_student_notes_and_legal_holds.sql > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/61t_tests_student_profile_guardians.sql" > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/62t_tests_student_notes_legal_holds.sql" > /dev/null
 run edu360_v4_test 63_v41_admission_cycles_and_applications.sql > /dev/null
 run edu360_v4_test 64_v41_merit_list_and_seat_allocation.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/57_58_migration_smoke_tests.sql" > /dev/null
@@ -100,6 +102,8 @@ run edu360_v4_ref 57_v41_academic_hierarchy_constraints.sql > /dev/null
 run edu360_v4_ref 58_v41_department_program_section_schema.sql > /dev/null
 run edu360_v4_ref 61_v41_student_profile_and_guardians.sql > /dev/null
 run edu360_v4_ref 62_v41_student_notes_and_legal_holds.sql > /dev/null
+$PSQL -q -d edu360_v4_ref -f "$D/61t_tests_student_profile_guardians.sql" > /dev/null
+$PSQL -q -d edu360_v4_ref -f "$D/62t_tests_student_notes_legal_holds.sql" > /dev/null
 run edu360_v4_ref 63_v41_admission_cycles_and_applications.sql > /dev/null
 run edu360_v4_ref 64_v41_merit_list_and_seat_allocation.sql > /dev/null
 run edu360_v4_ref 59_v41_staff_qualification_and_leave_indexes.sql > /dev/null
