@@ -447,6 +447,8 @@ public class StaffLeaveService {
                 }
             }
         }
+        jdbc.update("UPDATE app.leave_delegation SET status='CANCELLED',updated_by=? WHERE tenant_id=? AND leave_request_id=? AND status='ACTIVE'",
+                actorId, tenantId, leaveRequestId);
         jdbc.update("UPDATE app.leave_request SET status='CANCELLED',cancelled_at=now(),cancelled_by=?,updated_by=? WHERE tenant_id=? AND leave_request_id=?",
                 actorId, actorId, tenantId, leaveRequestId);
         jdbc.update("UPDATE app.approval_request SET status='CANCELLED',final_decided_at=now(),updated_by=? WHERE tenant_id=? AND approval_request_id=? AND status IN ('PENDING','BLOCKED','APPROVED')",
