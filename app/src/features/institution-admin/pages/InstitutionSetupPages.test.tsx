@@ -118,7 +118,7 @@ describe("Institution setup action screens", () => {
 
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`, {
       staffAssignmentId: STAFF_ASSIGNMENT_ID,
-    }));
+    }, { headers: { "If-Match": "\"1\"" } }));
     expect(await screen.findByText(/HOD assignment recorded/i)).toBeInTheDocument();
   });
 
@@ -370,6 +370,7 @@ describe("Institution setup action screens", () => {
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(
       `/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`,
       { staffAssignmentId },
+      { headers: { "If-Match": "\"2\"" } },
     ));
   });
 
