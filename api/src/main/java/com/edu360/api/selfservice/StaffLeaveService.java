@@ -405,6 +405,10 @@ public class StaffLeaveService {
         if ("REGISTRAR".equalsIgnoreCase(role)) {
             return List.of(new StepSpec("UNIVERSITY_HR_MANAGER", null), new StepSpec("VICE_CHANCELLOR", null));
         }
+        if ("VICE_PRINCIPAL_COLLEGE".equalsIgnoreCase(role) || "VICE_PRINCIPAL_SCHOOL".equalsIgnoreCase(role)
+                || "HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) {
+            return List.of(new StepSpec("SCHOOL_PRINCIPAL".equalsIgnoreCase(role) ? "SCHOOL_PRINCIPAL" : "PRINCIPAL_COLLEGE", null));
+        }
         Institution institution = institutions.findByIdTenantIdAndIdInstitutionId(tenantId, institutionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Institution not found"));
         List<StepSpec> chain = new ArrayList<>();
