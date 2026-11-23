@@ -126,6 +126,58 @@ class InstitutionControllerTest {
         return new UsernamePasswordAuthenticationToken(principal, "n/a", java.util.Collections.emptyList());
     }
 
+    @Test
+    @DisplayName("T2-S1: hierarchy returns tenant root, colleges/schools and nested departments")
+    void getHierarchy_returnsTenantRootedInstitutionTree() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        Tenant tenant = Tenant.builder()
+                .tenantId(TENANT_ID)
+                .tenantName("Northbridge University Group")
+                .tenantType("UNIVERSITY_GROUP")
+                .planId(PLAN_ID)
+                .build();
+        Institution college = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College")
+                .status("ACTIVE")
+                .build();
+        Institution school = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, UUID.randomUUID()))
+                .institutionType("SCHOOL")
+                .institutionCode("NPS-01")
+                .institutionName("Northbridge Public School")
+                .status("ACTIVE")
+                .build();
+        Department department = Department.builder()
+                .departmentId(UUID.randomUUID())
+                .tenantId(TENANT_ID)
+                .institutionId(INSTITUTION_ID)
+                .departmentCode("CSE")
+                .departmentName("Computer Science")
+                .status("ACTIVE")
+                .build();
+        DepartmentRepository departments = mock(DepartmentRepository.class);
+        ReflectionTestUtils.setField(institutionService, "departmentRepository", departments);
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        when(institutionRepository.findByIdTenantId(TENANT_ID)).thenReturn(java.util.List.of(college, school));
+        when(departments.findByTenantIdAndInstitutionId(TENANT_ID, INSTITUTION_ID))
+                .thenReturn(java.util.List.of(department));
+
+        var response = controller.getHierarchy(TENANT_ID, auth);
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().tenantName()).isEqualTo("Northbridge University Group");
+        assertThat(response.getBody().institutions()).hasSize(2);
+        assertThat(response.getBody().institutions().getFirst().departments()).hasSize(1);
+        assertThat(response.getBody().institutions().getFirst().departments().getFirst().departmentCode()).isEqualTo("CSE");
+        assertThat(response.getBody().institutions().get(1).departments()).isEmpty();
+        verify(permissionEvaluatorService).authorize(
+                eq(new RbacPrincipal(TENANT_ID, USER_ID)),
+                eq("INSTITUTION_CREATE_DRAFT"), eq(RbacScope.tenant()), eq(RbacTarget.NONE));
+    }
+
     // =========================================================================
     // INSTITUTION_CREATE_DRAFT (Story #25)
     // =========================================================================
