@@ -3,6 +3,8 @@ package com.edu360.api.selfservice;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.selfservice.dto.LeaveBalanceDto;
 import com.edu360.api.selfservice.dto.LeaveRequestDto;
+import com.edu360.api.selfservice.dto.LeaveRequestCreateRequest;
+import com.edu360.api.selfservice.dto.LeaveRequestResponse;
 import com.edu360.api.selfservice.dto.NoticeDto;
 import com.edu360.api.selfservice.dto.NotificationDto;
 import com.edu360.api.selfservice.dto.NotificationSummaryDto;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
@@ -26,6 +30,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class SelfServiceController {
 
     private final SelfServiceService selfService;
+    private StaffLeaveService staffLeaveService;
+
+    @Autowired(required = false)
+    public void setStaffLeaveService(StaffLeaveService staffLeaveService) {
+        this.staffLeaveService = staffLeaveService;
+    }
 
     @GetMapping({"/v1/tenants/{tenantId}/me/notifications", "/api/tenants/{tenantId}/me/notifications"})
     @Operation(summary = "Get current user notifications")
@@ -84,7 +94,39 @@ public class SelfServiceController {
             Authentication authentication
     ) {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        if (staffLeaveService != null && principal.userType() == com.edu360.api.identity.UserType.STAFF) {
+            return ResponseEntity.ok(staffLeaveService.ownBalances(tenantId, principal.userAccountId()).stream()
+                    .map(b -> new LeaveBalanceDto(b.leaveBalanceId(), b.leaveTypeId(), b.leaveYear(),
+                            b.creditedDays(), b.usedDays(), b.availableDays())).toList());
+        }
         return ResponseEntity.ok(selfService.getLeaveBalances(tenantId, principal.userAccountId()));
+    }
+
+    @PostMapping({"/v1/tenants/{tenantId}/me/leave-requests", "/api/tenants/{tenantId}/me/leave-requests"})
+    @Operation(summary = "Submit a staff leave request into the configured approval chain")
+    public ResponseEntity<LeaveRequestResponse> submitLeaveRequest(
+            @PathVariable UUID tenantId,
+            @RequestBody LeaveRequestCreateRequest request,
+            Authentication authentication
+    ) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        if (principal.userType() != com.edu360.api.identity.UserType.STAFF || staffLeaveService == null) {
+            throw new AccessDeniedException("Staff leave submission is available to authenticated staff users only");
+        }
+        return ResponseEntity.status(201).body(staffLeaveService.submit(tenantId, principal, request));
+    }
+
+    @PostMapping({"/v1/tenants/{tenantId}/me/leave-requests/{leaveRequestId}/cancel", "/api/tenants/{tenantId}/me/leave-requests/{leaveRequestId}/cancel"})
+    @Operation(summary = "Cancel own leave request before its start date")
+    public ResponseEntity<Void> cancelOwnLeaveRequest(
+            @PathVariable UUID tenantId,
+            @PathVariable UUID leaveRequestId,
+            Authentication authentication
+    ) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        if (staffLeaveService == null) throw new IllegalStateException("Staff leave service is unavailable");
+        staffLeaveService.cancelOwn(tenantId, principal.userAccountId(), leaveRequestId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping({"/v1/tenants/{tenantId}/me/leave-requests", "/api/tenants/{tenantId}/me/leave-requests"})
