@@ -66,6 +66,25 @@ public class StaffLeaveService {
     }
 
     @Transactional(readOnly = true)
+    public List<com.edu360.api.selfservice.dto.StaffLeaveTypeResponse> availableLeaveTypes(UUID tenantId, UUID userId) {
+        StaffProfile staff = staffProfiles.findByIdTenantIdAndUserAccountId(tenantId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
+        UUID institutionId = activeInstitution(tenantId, staff.getStaffProfileId());
+        if (institutionId == null) return List.of();
+        return jdbc.query("""
+                SELECT leave_type_id,institution_id,leave_code,leave_name,tracks_balance,is_loss_of_pay
+                  FROM app.leave_type
+                 WHERE tenant_id=? AND institution_id=? AND audience='STAFF' AND status='ACTIVE'
+                 ORDER BY is_default DESC,leave_name
+                """, (rs, row) -> new com.edu360.api.selfservice.dto.StaffLeaveTypeResponse(
+                    rs.getObject("leave_type_id", UUID.class),
+                    rs.getObject("institution_id", UUID.class),
+                    rs.getString("leave_code"), rs.getString("leave_name"),
+                    rs.getBoolean("tracks_balance"), rs.getBoolean("is_loss_of_pay")),
+                tenantId, institutionId);
+    }
+
+    @Transactional(readOnly = true)
     public List<StaffLeaveBalanceResponse> ownBalances(UUID tenantId, UUID userId) {
         StaffProfile staff = staffProfiles.findByIdTenantIdAndUserAccountId(tenantId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
