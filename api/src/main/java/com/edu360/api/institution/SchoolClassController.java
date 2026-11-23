@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,6 +33,21 @@ import lombok.RequiredArgsConstructor;
 public class SchoolClassController {
 
     private final StudentLoginSwitchService studentLoginSwitchService;
+
+    @GetMapping
+    @Operation(summary = "Read class student-login state and row-version ETag")
+    public ResponseEntity<StudentLoginSwitchResponse> getStudentLoginState(
+            @PathVariable UUID tenantId, @PathVariable UUID classId, Authentication authentication) {
+        if (!(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
+            throw new UnauthorizedException("STUDENT_LOGIN_SWITCH is a tenant-side action; no tenant principal on this request.");
+        }
+        if (!tenantId.equals(principal.tenantId())) {
+            throw new UnauthorizedException("tenantId in the URL does not match the authenticated tenant.");
+        }
+        var response = studentLoginSwitchService.getClassState(
+                new RbacPrincipal(principal.tenantId(), principal.userAccountId()), classId);
+        return ResponseEntity.ok().eTag(String.format("\"%d\"", response.rowVersion())).body(response);
+    }
 
     @PutMapping("/student-login")
     @Operation(summary = "Turn on/off view-only login for a school class (STUDENT_LOGIN_SWITCH)")
