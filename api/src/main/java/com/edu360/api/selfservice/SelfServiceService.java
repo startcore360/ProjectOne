@@ -133,7 +133,9 @@ public class SelfServiceService {
                         r.getDaysCounted(),
                         r.getProcessCode(),
                         r.getStatus(),
-                        r.getCreatedAt()
+                        r.getCreatedAt(),
+                        r.getApprovalRequestId(),
+                        r.getLossOfPayDays()
                 ))
                 .toList();
     }
