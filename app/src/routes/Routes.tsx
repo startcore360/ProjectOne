@@ -68,6 +68,7 @@ const RolesPermissionsPage = lazy(() => import("../features/institution-admin/pa
 // Lazy-loaded institution setup pages
 const AcademicGovernancePage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.AcademicGovernancePage })));
 const AcademicStructurePage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.AcademicStructurePage })));
+const InstitutionHierarchyPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.InstitutionHierarchyPage })));
 const CalendarEventsPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.CalendarEventsPage })));
 const DelegationsApprovalsPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.DelegationsApprovalsPage })));
 const ClassTeacherAssignmentPage = lazy(() => import("../features/institution-admin/pages/InstitutionSetupPages").then((m) => ({ default: m.ClassTeacherAssignmentPage })));
@@ -136,6 +137,7 @@ export default function AppRoutes() {
           <Route element={<AppLayout />}>
             <Route element={<LazyRouteView />}>
               <Route path="/university/institutions" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.institutions}><InstitutionsPage /></ActionGate>} />
+              <Route path="/university/setup/hierarchy" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.institutions}><InstitutionHierarchyPage /></ActionGate>} />
 
               <Route path="/university/institutions/:institutionId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.institutions}><InstitutionDetailPage /></ActionGate>} />
               <Route path="/university/setup/structure/:institutionId/departments/:departmentId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicStructure}><DepartmentDetailPage /></ActionGate>} />
