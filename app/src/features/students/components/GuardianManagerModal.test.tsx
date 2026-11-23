@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GuardianManagerModal } from "./GuardianManagerModal";
 import { studentApi, type GuardianLink } from "../api/studentApi";
@@ -25,8 +25,8 @@ describe("GuardianManagerModal", () => {
     const user = userEvent.setup();
     render(<GuardianManagerModal {...props} />);
 
-    await user.type(screen.getByLabelText("Full name"), "Meera Rao");
-    await user.type(screen.getByLabelText("Mobile (E.164)"), "+919876543210");
+    await user.type(screen.getByLabelText("Full name (Required)"), "Meera Rao");
+    await user.type(screen.getByLabelText("Mobile (E.164) (Required)"), "+919876543210");
     await user.type(screen.getByLabelText("Email"), "meera@example.com");
     await user.selectOptions(screen.getByLabelText("Relationship"), "MOTHER");
     await user.click(screen.getByLabelText("Authorized for contact"));
@@ -48,8 +48,8 @@ describe("GuardianManagerModal", () => {
     vi.mocked(studentApi.linkGuardian).mockRejectedValueOnce(new Error("GUARDIAN_ACCOUNT_NOT_FOUND"));
     render(<GuardianManagerModal {...props} />);
 
-    await user.type(screen.getByLabelText("Full name"), "Unknown Guardian");
-    await user.type(screen.getByLabelText("Mobile (E.164)"), "+919876543210");
+    await user.type(screen.getByLabelText("Full name (Required)"), "Unknown Guardian");
+    await user.type(screen.getByLabelText("Mobile (E.164) (Required)"), "+919876543210");
     await user.click(screen.getByRole("button", { name: "Save guardian" }));
 
     expect(await screen.findByText("GUARDIAN_ACCOUNT_NOT_FOUND")).toBeTruthy();
@@ -63,8 +63,8 @@ describe("GuardianManagerModal", () => {
     const user = userEvent.setup();
     vi.mocked(studentApi.guardianPreferences).mockRejectedValueOnce(new Error("preferences unavailable"));
     render(<GuardianManagerModal {...props} />);
-    await user.type(screen.getByLabelText("Full name"), "Meera Rao");
-    await user.type(screen.getByLabelText("Mobile (E.164)"), "+919876543210");
+    await user.type(screen.getByLabelText("Full name (Required)"), "Meera Rao");
+    await user.type(screen.getByLabelText("Mobile (E.164) (Required)"), "+919876543210");
     await user.click(screen.getByRole("button", { name: "Save guardian" }));
 
     expect(await screen.findByText("preferences unavailable")).toBeTruthy();
