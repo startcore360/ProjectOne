@@ -19,32 +19,38 @@ function displayValue(value: unknown): string {
 }
 
 export function DetailFrame({ title, backTo, backLabel, load, fields }: DetailFrameProps) {
-  const [data, setData] = useState<DetailRecord | null>(null);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(true);
+  const [state, setState] = useState<{
+    data: DetailRecord | null;
+    error: string;
+    busy: boolean;
+  }>({ data: null, error: "", busy: true });
 
   useEffect(() => {
     let active = true;
-    setBusy(true);
-    setError("");
-    setData(null);
 
-    load()
+    Promise.resolve()
+      .then(() => {
+        if (active) setState({ data: null, error: "", busy: true });
+        return load();
+      })
       .then((record) => {
-        if (active) setData(record);
+        if (active) setState({ data: record, error: "", busy: false });
       })
       .catch((cause: unknown) => {
         if (!active) return;
-        setError(cause instanceof Error ? cause.message : "Unable to load this record.");
-      })
-      .finally(() => {
-        if (active) setBusy(false);
+        setState({
+          data: null,
+          error: cause instanceof Error ? cause.message : "Unable to load this record.",
+          busy: false,
+        });
       });
 
     return () => {
       active = false;
     };
   }, [load]);
+
+  const { data, error, busy } = state;
 
   return (
     <main className="academic-detail-page">
