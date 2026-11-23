@@ -188,6 +188,12 @@ export function InstitutionHierarchyPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
+  const [hodDepartment, setHodDepartment] = useState<DepartmentItem | null>(null);
+  const [hodTeachers, setHodTeachers] = useState<TeacherLookupItem[]>([]);
+  const [hodStaffAssignmentId, setHodStaffAssignmentId] = useState("");
+  const [hodLoading, setHodLoading] = useState(false);
+  const [hodError, setHodError] = useState("");
+
 
   const beginEdit = (node: InstitutionHierarchyResponse["institutions"][number]) => {
     setEditing(node);
@@ -233,6 +239,47 @@ export function InstitutionHierarchyPage() {
       setEditError(getApiErrorMessage(cause));
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const beginHodAssignment = async (institutionId: string, department: DepartmentItem) => {
+    if (!tenantId) return;
+    setHodDepartment(department);
+    setHodStaffAssignmentId("");
+    setHodTeachers([]);
+    setHodError("");
+    setHodLoading(true);
+    try {
+      const teachers = await staffService.teacherLookup(tenantId, institutionId, "HOD_ASSIGN", department.departmentId);
+      setHodTeachers(teachers);
+    } catch (cause) {
+      setHodError(getApiErrorMessage(cause));
+    } finally {
+      setHodLoading(false);
+    }
+  };
+
+  const saveHodAssignment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !hodDepartment || !hodStaffAssignmentId) return;
+    if (!hodDepartment.rowVersion) {
+      setHodError("The department version is unavailable. Reload the hierarchy before assigning an HOD.");
+      return;
+    }
+    setHodLoading(true);
+    setHodError("");
+    try {
+      await api.put(
+        `/tenants/${tenantId}/departments/${hodDepartment.departmentId}/hod`,
+        { staffAssignmentId: hodStaffAssignmentId },
+        { headers: { "If-Match": `"${hodDepartment.rowVersion}"` } }
+      );
+      setHodDepartment(null);
+      await load();
+    } catch (cause) {
+      setHodError(getApiErrorMessage(cause));
+    } finally {
+      setHodLoading(false);
     }
   };
 
@@ -295,7 +342,11 @@ export function InstitutionHierarchyPage() {
                                 <div className="app-hierarchy-department">
                                   <span><strong>{department.departmentName}</strong> <code>{department.departmentCode}</code></span>
                                   <span>{department.hodStaffAssignmentId ? "HOD assigned" : "HOD not assigned"}</span>
+                                  <span>{department.facultyCount ?? 0} faculty · {department.studentCount ?? 0} students</span>
                                   <Link to={`/university/setup/structure/${institution.institutionId}/departments/${department.departmentId}`}>Open department</Link>
+                                  <Button size="sm" variant="secondary" onClick={() => void beginHodAssignment(institution.institutionId, department)}>
+                                    Assign HOD
+                                  </Button>
                                 </div>
                               </li>
                             ))}
@@ -306,6 +357,29 @@ export function InstitutionHierarchyPage() {
                   </ul>
                 )}
               </div>
+            </Panel>
+          )}
+          {hodDepartment && (
+            <Panel title={`Assign HOD · ${hodDepartment.departmentName}`} description="Select an active faculty member in this department. Assignment is guarded by the department row version.">
+              <form onSubmit={saveHodAssignment}>
+                <PersonPicker
+                  label="Head of Department"
+                  value={hodStaffAssignmentId}
+                  options={hodTeachers.map((teacher) => ({
+                    id: teacher.staffAssignmentId,
+                    name: teacher.fullName,
+                    designation: teacher.designation,
+                    department: teacher.departmentName ?? undefined,
+                  }))}
+                  onChange={setHodStaffAssignmentId}
+                  disabled={hodLoading}
+                />
+                {hodError && <Notice tone="danger">{hodError}</Notice>}
+                <div className="app-inline-actions">
+                  <Button type="button" variant="secondary" disabled={hodLoading} onClick={() => setHodDepartment(null)}>Cancel</Button>
+                  <Button type="submit" busy={hodLoading} disabled={hodLoading || !hodStaffAssignmentId}>Save HOD assignment</Button>
+                </div>
+              </form>
             </Panel>
           )}
           {editing && (
