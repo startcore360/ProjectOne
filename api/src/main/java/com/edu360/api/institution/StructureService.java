@@ -202,6 +202,9 @@ public class StructureService {
                 .programName(request.programName().trim())
                 .durationYears(request.durationYears())
                 .semestersPerYear(request.effectiveSemestersPerYear())
+                .degreeLevel(request.degreeLevel())
+                .totalCredits(request.totalCredits())
+                .curriculumVersion(1)
                 .status("ACTIVE")
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
@@ -414,6 +417,8 @@ public class StructureService {
                 .semesterId(request.semesterId())
                 .classId(request.classId())
                 .sectionName(name)
+                .capacity(request.capacity())
+                .classTeacherUserId(request.classTeacherUserId())
                 .status("ACTIVE")
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
@@ -430,7 +435,7 @@ public class StructureService {
                 "0.0.0.0",
                 "Section '" + name + "' (" + secId + ") created in institution " + institutionId);
 
-        return new SectionResponse(sec.getSectionId(), sec.getInstitutionId(), sec.getAcademicSessionId(), sec.getSemesterId(), sec.getClassId(), sec.getSectionName(), sec.getStatus());
+        return new SectionResponse(sec.getSectionId(), sec.getInstitutionId(), sec.getAcademicSessionId(), sec.getSemesterId(), sec.getClassId(), sec.getSectionName(), sec.getStatus(), sec.getCapacity(), sec.getClassTeacherUserId());
     }
 
     @Transactional(readOnly = true)
@@ -450,7 +455,7 @@ public class StructureService {
         }
 
         return list.stream()
-                .map(s -> new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(), s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus()))
+                .map(s -> new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(), s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId()))
                 .toList();
     }
 
@@ -577,8 +582,23 @@ public class StructureService {
                         s.getEndDate(),
                         s.getAcademicYear(),
                         s.getStatus(),
-                        s.getRowVersion()))
+                        s.getRowVersion(),
+                        s.isCurrent()))
                 .toList();
+    }
+
+    @Transactional
+    public AcademicSessionResponse setCurrentAcademicSession(RbacPrincipal principal, UUID institutionId, UUID sessionId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        AcademicSession session = academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), sessionId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Academic session " + sessionId + " was not found"));
+        academicSessionRepository.clearCurrentInScope(principal.tenantId(), sessionId, principal.userAccountId());
+        int updated = academicSessionRepository.setCurrentById(principal.tenantId(), sessionId, principal.userAccountId());
+        if (updated < 1) {
+            throw new BusinessRuleViolationException("ACADEMIC_SESSION_CURRENT_FAILED", "Academic session could not be made current.");
+        }
+        return getAcademicSession(principal, institutionId, session.getAcademicSessionId());
     }
 
     @Transactional(readOnly = true)
@@ -590,6 +610,44 @@ public class StructureService {
                 .stream()
                 .map(ProgramRuleSetResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public DepartmentResponse getDepartment(RbacPrincipal principal, UUID institutionId, UUID departmentId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Department d = departmentRepository.findByTenantIdAndDepartmentId(principal.tenantId(), departmentId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Department " + departmentId + " was not found"));
+        return mapDepartment(d);
+    }
+
+    @Transactional(readOnly = true)
+    public ProgramResponse getProgram(RbacPrincipal principal, UUID institutionId, UUID programId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Program p = programRepository.findByTenantIdAndProgramId(principal.tenantId(), programId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Program " + programId + " was not found"));
+        return mapProgram(p);
+    }
+
+    @Transactional(readOnly = true)
+    public SectionResponse getSection(RbacPrincipal principal, UUID institutionId, UUID sectionId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        Section s = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found"));
+        return new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(),
+                s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId());
+    }
+
+    @Transactional(readOnly = true)
+    public AcademicSessionResponse getAcademicSession(RbacPrincipal principal, UUID institutionId, UUID sessionId) {
+        permissionEvaluatorService.authorize(principal, "STRUCTURE_MANAGE", structureScope(principal, institutionId), RbacTarget.NONE);
+        AcademicSession s = academicSessionRepository.findByTenantIdAndAcademicSessionId(principal.tenantId(), sessionId)
+                .filter(value -> institutionId.equals(value.getInstitutionId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Academic session " + sessionId + " was not found"));
+        return new AcademicSessionResponse(s.getAcademicSessionId(), s.getTenantId(), s.getInstitutionId(),
+                s.getSessionLabel(), s.getStartDate(), s.getEndDate(), s.getAcademicYear(), s.getStatus(), s.getRowVersion(), s.isCurrent());
     }
 
     private DepartmentResponse mapDepartment(Department d) {
@@ -611,7 +669,10 @@ public class StructureService {
                 p.getProgramName(),
                 p.getDurationYears(),
                 p.getSemestersPerYear(),
-                p.getStatus());
+                p.getStatus(),
+                p.getDegreeLevel(),
+                p.getTotalCredits(),
+                p.getCurriculumVersion());
     }
 
     /**

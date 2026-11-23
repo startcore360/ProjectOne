@@ -43,7 +43,8 @@ public class StaffDocumentController {
             Authentication authentication) {
         TenantPrincipal principal = principal(authentication, tenantId);
         return ResponseEntity.status(201).body(service.attach(principal, staffProfileId,
-                request.documentType(), request.fileId()));
+                request.documentType(), request.fileId(), request.qualificationTitle(),
+                request.awardingInstitution(), request.qualificationLevel(), request.awardedOn()));
     }
 
     private static TenantPrincipal principal(Authentication authentication, UUID tenantId) {

@@ -1,0 +1,42 @@
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import api from "../../../services/axios";
+import { getApiErrorMessage } from "../../../services/apiHelper";
+import { useAppSelector } from "../../../store/hooks";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { Panel, Button, TextField, DateField, Notice } from "../../../design-system/components";
+
+type Application={id:string;application_number:string;status:string;verification_status:string;fee_status:string;defect_notes?:string};
+type Cycle={id:string;cycle_name:string;start_date:string;end_date:string;application_fee:number;status:string};
+export default function ApplicantPortalPage(){
+ const tenantId=useAppSelector(s=>s.auth.user?.tenantId);
+ const [institutionId,setInstitutionId]=useState("");const [cycleId,setCycleId]=useState("");const [cycles,setCycles]=useState<Cycle[]>([]);
+ const [name,setName]=useState("");const [email,setEmail]=useState("");const [phone,setPhone]=useState("");const [dob,setDob]=useState("");const [marks,setMarks]=useState("");
+ const [category,setCategory]=useState("GENERAL");const [application,setApplication]=useState<Application|null>(null);
+ const [files,setFiles]=useState<File[]>([]);const [photo,setPhoto]=useState<File|null>(null);const [feeReceipt,setFeeReceipt]=useState<File|null>(null);
+ const [error,setError]=useState("");const [message,setMessage]=useState("");const [busy,setBusy]=useState(false);
+ const chooseFiles=(e:ChangeEvent<HTMLInputElement>)=>setFiles(Array.from(e.target.files??[]));
+ const loadCycles=async()=>{setError("");try{const r=await api.get(`/tenants/${tenantId}/admissions/cycles`,{params:{institutionId}});setCycles(r.data.filter((x:Cycle)=>x.status==="OPEN"));}catch(e){setError(getApiErrorMessage(e));}};
+ const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError("");try{
+  const r=await api.post(`/tenants/${tenantId}/admissions/cycles/${cycleId}/applications`,{applicantName:name,email,phone,dateOfBirth:dob||null,qualifyingMarksPercent:Number(marks),category});
+  setApplication(r.data);setMessage("Application registered. Upload the required supporting documents and application-fee receipt."); 
+ }catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ const upload=async(file:File,type:string)=>{if(file.size>5*1024*1024)throw new Error("Each file must be 5 MB or smaller.");const ext=file.name.split(".").pop()?.toLowerCase();if(!["pdf","jpg","jpeg","png"].includes(ext??""))throw new Error("Only PDF, JPG and PNG files are accepted.");if(type==="PHOTO"&&!["jpg","jpeg","png"].includes(ext??""))throw new Error("Applicant photos must be JPG or PNG.");const body=new FormData();body.append("file",file);body.append("documentType",type);await api.post(`/tenants/${tenantId}/admissions/applications/${application?.id}/documents`,body,{headers:{"Content-Type":"multipart/form-data"}});};
+ const uploadAll=async()=>{if(!application)return;setBusy(true);setError("");try{if(photo)await upload(photo,"PHOTO");for(const f of files)await upload(f,"SUPPORTING_DOCUMENT");if(feeReceipt)await upload(feeReceipt,"APPLICATION_FEE_RECEIPT");setMessage("Documents uploaded. Files are held pending security scanning until clean.");}catch(e){setError(e instanceof Error?e.message:getApiErrorMessage(e));}finally{setBusy(false);}};
+ const refresh=async()=>{if(!application)return;setBusy(true);try{const r=await api.get(`/tenants/${tenantId}/admissions/applications/${application.id}`);setApplication(r.data);}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ const resubmit=async()=>{if(!application)return;setBusy(true);try{const r=await api.post(`/tenants/${tenantId}/admissions/applications/${application.id}/corrections/resubmit`);setApplication(r.data);setMessage("Corrected application resubmitted.");}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ return <div className="app-page"><PageHeader title="Applicant portal" description="Register an application, upload supporting documents and track scrutiny and fee status."/>
+ {error&&<Notice tone="danger">{error}</Notice>}{message&&<Notice tone="success">{message}</Notice>}
+ {!application?<Panel title="Application registration"><form onSubmit={submit} className="app-form-grid">
+ <TextField id="applicant-institution" label="Institution ID" required value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/>
+ <div className="app-inline-actions"><Button type="button" variant="secondary" onClick={()=>void loadCycles()} disabled={!institutionId}>Load open cycles</Button><select aria-label="Admission cycle" value={cycleId} onChange={e=>setCycleId(e.target.value)} required><option value="">Select an open admission cycle</option>{cycles.map(c=><option key={c.id} value={c.id}>{c.cycle_name} · {c.start_date} to {c.end_date} · Fee {c.application_fee}</option>)}</select></div>
+ <TextField id="applicant-name" label="Full name" required value={name} onChange={e=>setName(e.target.value)}/>
+ <TextField id="applicant-email" label="Email" required value={email} onChange={e=>setEmail(e.target.value)}/>
+ <TextField id="applicant-phone" label="Phone" required value={phone} onChange={e=>setPhone(e.target.value)}/>
+ <DateField id="applicant-dob" label="Date of birth" value={dob} onChange={e=>setDob(e.target.value)}/>
+ <TextField id="applicant-marks" label="Qualifying marks (%)" type="number" required value={marks} onChange={e=>setMarks(e.target.value)}/>
+ <label htmlFor="applicant-category">Quota category</label><select id="applicant-category" value={category} onChange={e=>setCategory(e.target.value)}><option>GENERAL</option><option>MERIT</option><option>SPORTS</option><option>MANAGEMENT</option></select>
+ <Button type="submit" busy={busy} disabled={!tenantId||!institutionId||!cycleId||!name||!email||!phone||!marks}>Register application</Button>
+ </form></Panel>:<><Panel title="Application status"><p><strong>{application.application_number}</strong> · {application.status}</p><p>Verification: {application.verification_status} · Application fee: {application.fee_status}</p>{application.defect_notes&&<Notice tone="warning">{application.defect_notes}</Notice>}<div className="app-inline-actions"><Button variant="secondary" onClick={()=>void refresh()} busy={busy}>Refresh status</Button>{application.verification_status==="DEFECTIVE"&&<Button onClick={()=>void resubmit()} busy={busy}>Resubmit corrections</Button>}</div></Panel>
+ <Panel title="Supporting documents"><p>PDF, JPG or PNG only. Maximum 5 MB per file. Files are virus-scanned before review.</p><label htmlFor="applicant-photo">Applicant photo (JPG or PNG)</label><input id="applicant-photo" type="file" accept=".jpg,.jpeg,.png" onChange={e=>setPhoto(e.target.files?.[0]??null)}/><label htmlFor="applicant-documents">Supporting documents</label><input id="applicant-documents" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onChange={chooseFiles}/><label htmlFor="applicant-fee-receipt">Application fee receipt</label><input id="applicant-fee-receipt" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>setFeeReceipt(e.target.files?.[0]??null)}/><Button onClick={()=>void uploadAll()} busy={busy} disabled={!photo&&!files.length&&!feeReceipt}>Upload documents</Button></Panel></>}
+ </div>;
+}

@@ -25,7 +25,7 @@ export default function LoginPage() {
   // I-01: "code" = password accepted, waiting for the authenticator app code.
   // MFA-ENROL: "enrol" = password accepted, no authenticator yet: set one up right here.
   // MFA-01: "backup" = signing in with a one-time backup code; "codes" = new backup codes, shown once.
-  const [step, setStep] = useState<"password" | "code" | "enrol" | "backup" | "codes">("password");
+  const [step, setStep] = useState<"password" | "code" | "enrol" | "backup" | "codes" | "locked" | "expired">("password");
   const [enrolment, setEnrolment] = useState<PendingEnrolment | null>(null);
   const [code, setCode] = useState("");
   const [backupCode, setBackupCode] = useState("");
@@ -70,6 +70,16 @@ export default function LoginPage() {
       }>(err)
         ? err.response?.data
         : undefined;
+      if (body?.code === "LOCKED" || body?.code === "ACCOUNT_LOCKED" || body?.code === "ACCOUNT_TEMPORARILY_LOCKED") {
+        setStep("locked");
+        setError(body.error ?? "This account is temporarily locked after repeated failed sign-in attempts. Try again after 30 minutes or contact your administrator.");
+        return;
+      }
+      if (body?.code === "PASSWORD_EXPIRED") {
+        setStep("expired");
+        setError(body.error ?? "Your password has expired. Use password recovery or contact your administrator.");
+        return;
+      }
       if (body?.code === "MFA_REQUIRED") {
         // Password was right; ask for the authenticator code (REG-I01-1).
         setStep("code");
@@ -189,8 +199,8 @@ export default function LoginPage() {
     setCode(value.replace(/\D/g, "").slice(0, 6));
   };
 
-  const kicker = step === "enrol" ? "ONE-TIME SET-UP" : step === "codes" ? "SAVE YOUR BACKUP CODES" : "WELCOME BACK";
-  const title = step === "enrol" ? "Set up two-step login." : step === "codes" ? "Save your backup codes." : "Welcome back.";
+  const kicker = step === "enrol" ? "ONE-TIME SET-UP" : step === "codes" ? "SAVE YOUR BACKUP CODES" : step === "locked" ? "ACCOUNT TEMPORARILY LOCKED" : step === "expired" ? "PASSWORD EXPIRED" : "WELCOME BACK";
+  const title = step === "enrol" ? "Set up two-step login." : step === "codes" ? "Save your backup codes." : step === "locked" ? "Please try again later." : step === "expired" ? "Update your password." : "Welcome back.";
 
   return (
     <main className="auth-screen">
@@ -237,6 +247,12 @@ export default function LoginPage() {
             onConfirm={(setupCode) => void confirmEnrolment(setupCode)}
             onCancel={cancelEnrolment}
           />
+        ) : step === "locked" || step === "expired" ? (
+          <div className="auth-options">
+            <Button type="button" block onClick={() => { setStep("password"); setPassword(""); setError(""); }}>
+              Back to sign in
+            </Button>
+          </div>
         ) : (
         <form onSubmit={submit} noValidate>
           <TextField

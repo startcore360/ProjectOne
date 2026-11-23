@@ -92,7 +92,7 @@ import lombok.RequiredArgsConstructor;
  *    without the second step for such an account is ended at once and refused.
  * 6. Printed student passwords (R2-35, I-05): refused 7 days after issue
  *    (app.user_account.credential_expires_at); the check runs before any token is issued.
- * 7. Rotation (R2-12, story 3): a password older than the policy's rotation period (120 days)
+ * 7. Rotation (R2-12, story 3): a password older than the policy's rotation period (90 days)
  *    sets must_change_password, so MustChangePasswordFilter sends the user to the change screen.
  */
 @Service
@@ -452,7 +452,7 @@ public class AuthService {
         } catch (RuntimeException ex) {
             log.warn("Could not read the lockout state from Keycloak for realm {}: {}", realm, ex.getMessage());
         }
-        auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress, locked ? "LOCKED" : null);
+        auditLogService.record(locked ? AuditEventType.ACCOUNT_LOCKED : AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress, locked ? "Keycloak brute-force protection locked the account" : null);
         if (locked) {
             return AuthChallengeException.locked(securityPolicyService.current().lockoutMinutes());
         }

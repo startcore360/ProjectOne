@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Icon, type IconName } from "../../components/ui/Icon";
 
 export interface MetricCardProps {

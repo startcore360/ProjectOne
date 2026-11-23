@@ -36,6 +36,8 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Run T1 term-lock modal tests
+        run: npm test -- TermLockModal
       - name: Run complete unit test suite
         run: npm test
       - name: Type-check and production build
@@ -61,6 +63,8 @@ jobs:
           java-version: "21"
           cache: maven
           cache-dependency-path: api/pom.xml
+      - name: Run T1 term-lock and roll-down tests
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=AcademicTermLockIT,RoleRolldownIT
       - name: Verify backend
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml verify
       - name: Upload backend package

@@ -61,6 +61,42 @@ public class StructureController {
 
     private final StructureService structureService;
 
+    @GetMapping("/departments/{departmentId}")
+    @Operation(summary = "Get department detail in the institution scope")
+    public ResponseEntity<DepartmentResponse> getDepartment(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID departmentId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getDepartment(principal, institutionId, departmentId));
+    }
+
+    @GetMapping("/programs/{programId}")
+    @Operation(summary = "Get program detail in the institution scope")
+    public ResponseEntity<ProgramResponse> getProgram(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID programId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getProgram(principal, institutionId, programId));
+    }
+
+    @GetMapping("/sections/{sectionId}")
+    @Operation(summary = "Get section detail in the institution scope")
+    public ResponseEntity<SectionResponse> getSection(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID sectionId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getSection(principal, institutionId, sectionId));
+    }
+
+    @GetMapping("/academic-sessions/{academicSessionId}")
+    @Operation(summary = "Get academic session detail in the institution scope")
+    public ResponseEntity<AcademicSessionResponse> getAcademicSession(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID academicSessionId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getAcademicSession(principal, institutionId, academicSessionId));
+    }
+
     @PostMapping("/departments")
     @Operation(summary = "Create an academic department (STRUCTURE_MANAGE, Colleges only per Rule HI-12)")
     public ResponseEntity<DepartmentResponse> createDepartment(
@@ -270,6 +306,15 @@ public class StructureController {
 
         RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
         return ResponseEntity.ok(structureService.listAcademicSessions(principal, institutionId));
+    }
+
+    @PostMapping("/academic-sessions/{academicSessionId}/current")
+    @Operation(summary = "Make an academic session current within its institution scope")
+    public ResponseEntity<AcademicSessionResponse> setCurrentAcademicSession(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID academicSessionId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.setCurrentAcademicSession(principal, institutionId, academicSessionId));
     }
 
     @GetMapping("/program-rule-sets")

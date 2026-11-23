@@ -60,11 +60,31 @@ public class StaffDocumentService {
     @Transactional
     public StaffDocumentResponse attach(TenantPrincipal actor, UUID staffProfileId,
             String documentTypeValue, UUID fileId) {
+        return attach(actor, staffProfileId, documentTypeValue, fileId, null, null, null, null);
+    }
+
+    @Transactional
+    public StaffDocumentResponse attach(TenantPrincipal actor, UUID staffProfileId,
+            String documentTypeValue, UUID fileId, String qualificationTitle,
+            String awardingInstitution, String qualificationLevel, java.time.LocalDate awardedOn) {
         String documentType = documentTypeValue == null ? ""
                 : documentTypeValue.trim().toUpperCase(Locale.ROOT);
         if (!DOCUMENT_TYPES.contains(documentType) || fileId == null) {
             throw new BusinessRuleViolationException("VALIDATION_FAILED",
                     "documentType must be DEGREE, ID_PROOF or OTHER and fileId is required.");
+        }
+        boolean hasQualificationMetadata = qualificationTitle != null || awardingInstitution != null || qualificationLevel != null || awardedOn != null;
+        if (hasQualificationMetadata && (!"DEGREE".equals(documentType)
+                || qualificationTitle == null || qualificationTitle.isBlank()
+                || awardingInstitution == null || awardingInstitution.isBlank()
+                || qualificationLevel == null || qualificationLevel.isBlank())) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED",
+                    "Qualification metadata requires a DEGREE document, qualification title, awarding institution and qualification level.");
+        }
+        if (qualificationTitle != null && qualificationTitle.length() > 150
+                || awardingInstitution != null && awardingInstitution.length() > 150
+                || qualificationLevel != null && !List.of("CERTIFICATE", "DIPLOMA", "UNDERGRADUATE", "POSTGRADUATE", "DOCTORATE", "OTHER").contains(qualificationLevel.trim().toUpperCase(Locale.ROOT))) {
+            throw new BusinessRuleViolationException("VALIDATION_FAILED", "Qualification metadata is invalid.");
         }
         RbacPrincipal caller = new RbacPrincipal(actor.tenantId(), actor.userAccountId());
         StaffProfile profile = staffProfiles.findByIdTenantIdAndIdStaffProfileId(actor.tenantId(), staffProfileId)
@@ -88,6 +108,10 @@ public class StaffDocumentService {
         document.setDocumentType(documentType);
         document.setFileId(fileId);
         document.setVerificationStatus("UPLOADED");
+        document.setQualificationTitle(qualificationTitle == null ? null : qualificationTitle.trim());
+        document.setAwardingInstitution(awardingInstitution == null ? null : awardingInstitution.trim());
+        document.setQualificationLevel(qualificationLevel == null ? null : qualificationLevel.trim().toUpperCase(Locale.ROOT));
+        document.setAwardedOn(awardedOn);
         document.setCreatedBy(actor.userAccountId());
         document.setUpdatedBy(actor.userAccountId());
         StaffDocument saved = documents.save(document);

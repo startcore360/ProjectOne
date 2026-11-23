@@ -1,6 +1,7 @@
 package com.edu360.api.institution;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -27,6 +28,14 @@ public class StaffDocument {
     private UUID fileId;
     @Column(name = "verification_status", nullable = false)
     private String verificationStatus = "UPLOADED";
+    @Column(name = "qualification_title")
+    private String qualificationTitle;
+    @Column(name = "awarding_institution")
+    private String awardingInstitution;
+    @Column(name = "qualification_level")
+    private String qualificationLevel;
+    @Column(name = "awarded_on")
+    private LocalDate awardedOn;
     @Column(name = "verified_by")
     private UUID verifiedBy;
     @Column(name = "verified_at")

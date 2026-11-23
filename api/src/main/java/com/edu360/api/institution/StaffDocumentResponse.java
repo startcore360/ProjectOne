@@ -1,6 +1,7 @@
 package com.edu360.api.institution;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record StaffDocumentResponse(
@@ -9,6 +10,10 @@ public record StaffDocumentResponse(
         String documentType,
         UUID fileId,
         String verificationStatus,
+        String qualificationTitle,
+        String awardingInstitution,
+        String qualificationLevel,
+        LocalDate awardedOn,
         UUID verifiedBy,
         Instant verifiedAt,
         Instant createdAt,
@@ -24,6 +29,10 @@ public record StaffDocumentResponse(
                 document.getDocumentType(),
                 document.getFileId(),
                 document.getVerificationStatus(),
+                document.getQualificationTitle(),
+                document.getAwardingInstitution(),
+                document.getQualificationLevel(),
+                document.getAwardedOn(),
                 document.getVerifiedBy(),
                 document.getVerifiedAt(),
                 document.getCreatedAt(),

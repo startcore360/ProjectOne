@@ -30,6 +30,7 @@ import com.edu360.api.rbac.UserRoleAssignment;
 @Service
 public class FileService {
     static final long MAX_BYTES = 10_485_760L;
+    static final long ADMISSION_MAX_BYTES = 5_242_880L;
     private final FileObjectRepository repository;
     private final LocalFileStorage storage;
     private final PermissionEvaluatorService permissions;
@@ -58,6 +59,8 @@ public class FileService {
         if (upload == null || upload.isEmpty()) throw new IllegalArgumentException("A non-empty file is required.");
         if (upload.getSize() > MAX_BYTES) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "Files may not exceed 10 MiB.");
         FilePurpose purpose = FilePurpose.parse(purposeValue);
+        long purposeLimit = purpose == FilePurpose.ADMISSION_DOCUMENT ? ADMISSION_MAX_BYTES : MAX_BYTES;
+        if (upload.getSize() > purposeLimit) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "Admission documents may not exceed 5 MiB.");
         RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
         UserRoleAssignment active = permissions.activeAssignment(caller)
                 .orElseThrow(() -> new UnauthorizedException("An active role is required to upload files."));
@@ -74,7 +77,7 @@ public class FileService {
         byte[] content;
         try { content = upload.getBytes(); }
         catch (java.io.IOException ex) { throw new IllegalArgumentException("Could not read uploaded file.", ex); }
-        if (content.length > MAX_BYTES) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "Files may not exceed 10 MiB.");
+        if (content.length > purposeLimit) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "File exceeds the permitted size limit.");
 
         String filename = sanitizeFilename(upload.getOriginalFilename());
         String contentType;
@@ -152,6 +155,7 @@ public class FileService {
                     throw new UnauthorizedException("The active role cannot view staff documents.");
                 }
             }
+            case ADMISSION_DOCUMENT -> { /* accessPolicy already checked applicant ownership or verifier authority */ }
             case ATTENDANCE_UPLOAD -> {
                 if (!permissions.can(caller, "ATTENDANCE_VIEW", scope, RbacTarget.NONE).allowed()
                         && !permissions.can(caller, "ATTENDANCE_BULK_UPLOAD", scope, RbacTarget.NONE).allowed()) {

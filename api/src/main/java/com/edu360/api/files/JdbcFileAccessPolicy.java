@@ -141,6 +141,13 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
               WHERE d.tenant_id = ? AND d.file_id = ?
             )
             """;
+    private static final String ADMISSION_DOCUMENT = """
+            SELECT EXISTS (
+              SELECT 1 FROM app.admission_application a
+              CROSS JOIN LATERAL jsonb_array_elements(a.documents_json) d
+              WHERE a.tenant_id = ? AND (d->>'fileId')::uuid = ? AND a.created_by = ?
+            )
+            """;
     private static final String ATTENDANCE_UPLOAD = """
             SELECT EXISTS (
               SELECT 1 FROM app.import_job j
@@ -170,6 +177,8 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
             case SYLLABUS -> exists(SYLLABUS, tenantId, fileId);
             case STAFF_DOCUMENT -> exists(STAFF_DOCUMENT, tenantId, fileId);
             case ATTENDANCE_UPLOAD -> exists(ATTENDANCE_UPLOAD, tenantId, fileId);
+            case ADMISSION_DOCUMENT -> exists(ADMISSION_DOCUMENT, tenantId, fileId, userId)
+                    || canVerifyAdmissionDocument(file, principal);
         };
     }
 
@@ -193,6 +202,12 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                     AND (?::uuid IS NULL OR a.institution_id = ?)
                 )
                 """, principal.tenantId(), recordId, file.getInstitutionId(), file.getInstitutionId());
+    }
+
+    private boolean canVerifyAdmissionDocument(FileObject file, TenantPrincipal principal) {
+        if (permissions == null || file.getInstitutionId() == null) return false;
+        return permissions.can(new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
+                "APPLICATION_VERIFY", RbacScope.institution(file.getInstitutionId()), RbacTarget.NONE).allowed();
     }
 
     private boolean canStaffViewStudyMaterial(FileObject file, TenantPrincipal principal) {

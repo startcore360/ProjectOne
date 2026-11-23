@@ -48,16 +48,24 @@ public class PasswordPolicyService {
 
     public void validate(String password) {
         SecurityPolicy policy = securityPolicyService.current();
-        int min = Math.max(8, policy.minPasswordLength());
+        int min = Math.max(12, policy.minPasswordLength());
         if (password == null || password.length() < min) {
             throw new BusinessRuleViolationException("PASSWORD_TOO_SHORT",
                     "Rule R2-12: Password must be at least " + min + " characters long.");
         }
-        if (policy.requireDigit() && password.chars().noneMatch(Character::isDigit)) {
+        if (password.chars().noneMatch(Character::isUpperCase)) {
+            throw new BusinessRuleViolationException("PASSWORD_NEEDS_UPPERCASE",
+                    "Rule R2-12: Password must contain at least one uppercase letter.");
+        }
+        if (password.chars().noneMatch(Character::isLowerCase)) {
+            throw new BusinessRuleViolationException("PASSWORD_NEEDS_LOWERCASE",
+                    "Rule R2-12: Password must contain at least one lowercase letter.");
+        }
+        if (password.chars().noneMatch(Character::isDigit)) {
             throw new BusinessRuleViolationException("PASSWORD_NEEDS_DIGIT",
                     "Rule R2-12: Password must contain at least one digit.");
         }
-        if (policy.requireSpecialChar() && password.chars().allMatch(Character::isLetterOrDigit)) {
+        if (password.chars().allMatch(Character::isLetterOrDigit)) {
             throw new BusinessRuleViolationException("PASSWORD_NEEDS_SPECIAL",
                     "Rule R2-12: Password must contain at least one special character.");
         }

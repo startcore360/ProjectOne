@@ -7,17 +7,17 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
 import com.edu360.api.identity.StudentEnrollmentRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import java.time.LocalDate;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 public class StudentStatusService {
-
     private final StudentProfileRepository repository;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
@@ -37,7 +36,7 @@ public class StudentStatusService {
     }
 
     private static final Set<String> VALID_STATUSES = Set.of(
-            "ACTIVE", "ON_HOLD", "WITHDRAWN", "TRANSFERRED", "DROPPED", "DETAINED", "GRADUATED"
+            "ACTIVE", "SUSPENDED", "WITHDRAWN", "ALUMNI", "ON_HOLD", "TRANSFERRED", "DROPPED", "DETAINED", "GRADUATED"
     );
 
     @Transactional
@@ -58,22 +57,22 @@ public class StudentStatusService {
             throw new BusinessRuleViolationException("INVALID_STATUS",
                     "Student status must be one of: " + VALID_STATUSES);
         }
-
         if (request.reason() == null || request.reason().isBlank()) {
             throw new BusinessRuleViolationException("REASON_REQUIRED",
                     "Mandatory statutory reason required for student status change");
         }
 
-        // Rule: hard delete prohibited. If deletion requested, it sets WITHDRAWN with statutory reason
+        // Physical deletion is prohibited. All lifecycle changes are soft status transitions.
         student.setStatus(upperStatus);
         student.setStatusReason(request.reason());
         student.setStatusChangedAt(Instant.now());
         student = repository.save(student);
 
-        if (enrollmentRepository != null && Set.of("WITHDRAWN", "TRANSFERRED", "DROPPED", "DETAINED", "GRADUATED").contains(upperStatus)) {
+        if (enrollmentRepository != null && Set.of("WITHDRAWN", "TRANSFERRED", "DROPPED", "DETAINED", "GRADUATED", "ALUMNI").contains(upperStatus)) {
+            String outcome = "ALUMNI".equals(upperStatus) ? "GRADUATED" : upperStatus;
             enrollmentRepository.findFirstByIdTenantIdAndStudentProfileIdAndOutcome(
                     tenantId, studentId, "IN_PROGRESS").ifPresent(enrollment -> {
-                enrollment.setOutcome(upperStatus);
+                enrollment.setOutcome(outcome);
                 enrollment.setEndedOn(LocalDate.now());
                 enrollment.setUpdatedBy(principal.userAccountId());
                 enrollmentRepository.save(enrollment);
@@ -87,18 +86,10 @@ public class StudentStatusService {
                 tenantId.toString(),
                 "Student " + studentId + " status transitioned to " + upperStatus + ": " + request.reason()
         );
-
         log.info("Student {} status changed to {} by {} in tenant {}",
                 studentId, upperStatus, principal.userAccountId(), tenantId);
-
-        return new StudentStatusResponse(
-                student.getStudentProfileId(),
-                student.getInstitutionId(),
-                student.getStudentCode(),
-                student.getStatus(),
-                student.getStatusReason(),
-                student.getStatusChangedAt()
-        );
+        return new StudentStatusResponse(student.getStudentProfileId(), student.getInstitutionId(),
+                student.getStudentCode(), student.getStatus(), student.getStatusReason(), student.getStatusChangedAt());
     }
 
     @Transactional(readOnly = true)
@@ -106,21 +97,13 @@ public class StudentStatusService {
         StudentProfile student = repository.findById(studentId)
                 .filter(s -> s.getTenantId().equals(tenantId))
                 .orElseThrow(() -> new BusinessRuleViolationException("STUDENT_NOT_FOUND", "Student record not found"));
-
         permissionEvaluatorService.authorize(
                 new RbacPrincipal(tenantId, principal.userAccountId()),
                 "STUDENT_STATUS_CHANGE",
                 student.getInstitutionId() != null ? RbacScope.institution(student.getInstitutionId()) : RbacScope.tenant(),
                 RbacTarget.NONE
         );
-
-        return new StudentStatusResponse(
-                student.getStudentProfileId(),
-                student.getInstitutionId(),
-                student.getStudentCode(),
-                student.getStatus(),
-                student.getStatusReason(),
-                student.getStatusChangedAt()
-        );
+        return new StudentStatusResponse(student.getStudentProfileId(), student.getInstitutionId(),
+                student.getStudentCode(), student.getStatus(), student.getStatusReason(), student.getStatusChangedAt());
     }
 }

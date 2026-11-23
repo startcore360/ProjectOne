@@ -1,0 +1,1 @@
+BEGIN; DROP TABLE IF EXISTS app.leave_delegation; DROP FUNCTION IF EXISTS app.fn_leave_delegation_guard(); COMMIT;

@@ -1,0 +1,13 @@
+BEGIN;
+ALTER TABLE app.academic_session DROP CONSTRAINT IF EXISTS ex_academic_session_nonoverlap;
+DROP INDEX IF EXISTS app.ux_academic_session_current_scope;
+DROP INDEX IF EXISTS app.ix_institution_tenant_status;
+DROP INDEX IF EXISTS app.ix_department_institution_status;
+DROP INDEX IF EXISTS app.ix_program_department_status;
+DROP INDEX IF EXISTS app.ix_program_year_program;
+DROP INDEX IF EXISTS app.ix_semester_program_year;
+DROP INDEX IF EXISTS app.ix_section_session_institution;
+ALTER TABLE app.academic_session DROP COLUMN IF EXISTS is_current;
+ALTER TABLE app.institution DROP CONSTRAINT IF EXISTS ck_institution_settings_object;
+ALTER TABLE app.institution DROP COLUMN IF EXISTS settings_json;
+COMMIT;
