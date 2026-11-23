@@ -32,6 +32,7 @@ import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.BlockDecisionRequest;
 import com.edu360.api.institution.dto.BlockInstitutionRequest;
 import com.edu360.api.institution.dto.CreateInstitutionRequest;
+import com.edu360.api.institution.dto.UpdateInstitutionRequest;
 import com.edu360.api.institution.dto.InstitutionBlockResponse;
 import com.edu360.api.institution.dto.InstitutionResponse;
 import com.edu360.api.platform.Plan;
@@ -233,6 +234,81 @@ class InstitutionControllerTest {
                     assertThat(bre.getErrorCode()).isEqualTo("PLAN_LIMIT_REACHED");
                     assertThat(bre.getMessage()).contains("WF-14");
                 });
+    }
+
+    @Test
+    @DisplayName("T2-S1: PUT institution updates profile atomically when If-Match matches")
+    void updateInstitution_withMatchingIfMatch_updatesProfileAndReturnsNewEtag() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        Institution current = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College")
+                .status("DRAFT")
+                .externalUniversityMode(false)
+                .rowVersion(4)
+                .build();
+        Institution updated = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College of Science")
+                .status("DRAFT")
+                .externalUniversityMode(true)
+                .rowVersion(5)
+                .build();
+        when(institutionRepository.findByIdTenantIdAndIdInstitutionId(TENANT_ID, INSTITUTION_ID))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(institutionRepository.existsByIdTenantIdAndInstitutionNameAndIdInstitutionIdNot(
+                TENANT_ID, "Northbridge College of Science", INSTITUTION_ID)).thenReturn(false);
+        when(institutionRepository.updateEditableFields(
+                TENANT_ID, INSTITUTION_ID, 4, "Northbridge College of Science",
+                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001",
+                "principal@northbridge.edu.in", true, USER_ID)).thenReturn(1);
+
+        UpdateInstitutionRequest request = new UpdateInstitutionRequest(
+                "Northbridge College of Science", "124 Knowledge Park", "Bengaluru",
+                "Karnataka", "560001", "principal@northbridge.edu.in", true);
+
+        ResponseEntity<InstitutionResponse> response =
+                controller.updateInstitution(TENANT_ID, INSTITUTION_ID, "\"4\"", request, auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"5\"");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().institutionName()).isEqualTo("Northbridge College of Science");
+        assertThat(response.getBody().rowVersion()).isEqualTo(5);
+        verify(permissionEvaluatorService).authorize(
+                eq(new RbacPrincipal(TENANT_ID, USER_ID)),
+                eq("INSTITUTION_CREATE_DRAFT"), eq(RbacScope.tenant()), eq(RbacTarget.NONE));
+        verify(auditLogService).record(eq(AuditEventType.INSTITUTION_UPDATED), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("T2-S1: PUT institution rejects stale If-Match before writing")
+    void updateInstitution_withStaleIfMatch_returnsVersionConflict() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        Institution current = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College")
+                .status("DRAFT")
+                .rowVersion(4)
+                .build();
+        when(institutionRepository.findByIdTenantIdAndIdInstitutionId(TENANT_ID, INSTITUTION_ID))
+                .thenReturn(Optional.of(current));
+
+        UpdateInstitutionRequest request = new UpdateInstitutionRequest(
+                "Renamed College", null, null, null, null, null, null);
+
+        assertThatThrownBy(() -> controller.updateInstitution(TENANT_ID, INSTITUTION_ID, "\"3\"", request, auth))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .satisfies(ex -> assertThat(((BusinessRuleViolationException) ex).getErrorCode()).isEqualTo("VERSION_CONFLICT"));
+        org.mockito.Mockito.verify(institutionRepository, org.mockito.Mockito.never())
+                .updateEditableFields(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any(),
+                        any(), any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any());
     }
 
     // =========================================================================
