@@ -104,6 +104,10 @@ jobs:
         id: t5
         continue-on-error: true
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=MeritListCalculationIT,MeritApprovalRuleC12IT,AdmissionPaymentEventHandlerTest
+      - name: Run M13 staff appraisal integration tests
+        id: m13
+        continue-on-error: true
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=StaffAppraisalIT
       - name: Verify backend
         id: verify
         continue-on-error: true
@@ -122,10 +126,11 @@ jobs:
           T1: ${{ steps.t1.outcome }}
           T4: ${{ steps.t4.outcome }}
           T5: ${{ steps.t5.outcome }}
+          M13: ${{ steps.m13.outcome }}
           VERIFY: ${{ steps.verify.outcome }}
         run: |
           failed=0
-          for check in T1 T4 T5 VERIFY; do
+          for check in T1 T4 T5 M13 VERIFY; do
             value="${!check}"
             echo "$check: $value"
             [ "$value" = "success" ] || failed=1
