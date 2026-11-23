@@ -345,12 +345,16 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
 
     @Transactional
     public Map<String,Object> confirmApplicationFee(TenantPrincipal actor,UUID applicationId,String reference) {
+        if(reference==null||reference.isBlank()) throw new BusinessRuleViolationException("PAYMENT_REFERENCE_REQUIRED","A verified payment reference is required.");
         Map<String,Object> app=application(actor,applicationId);
-        // Fee confirmation mutates the application; the read-only APPLICATION_FEE_VIEW
-        // permission must never authorize it. Gateway callbacks use the separate signed path.
         authorize(actor,"APPLICATION_VERIFY",(UUID)app.get("institution_id"));
         requireCleanReceipt(actor,(UUID)app.get("application_fee_receipt_file_id"),(UUID)app.get("institution_id"));
-        jdbc.update("update app.admission_application set fee_status='CONFIRMED',application_fee_reference=?,updated_by=? where tenant_id=? and id=?",
+        if("CONFIRMED".equals(app.get("fee_status"))) {
+            if(reference.equals(app.get("application_fee_reference"))) return app;
+            throw new BusinessRuleViolationException("APPLICATION_FEE_ALREADY_CONFIRMED","A different payment reference has already confirmed this fee.");
+        }
+        if(!"PENDING".equals(app.get("fee_status"))) throw new BusinessRuleViolationException("APPLICATION_FEE_NOT_PAYABLE","Only a pending application fee can be confirmed.");
+        jdbc.update("update app.admission_application set fee_status='CONFIRMED',application_fee_reference=?,updated_by=? where tenant_id=? and id=? and fee_status='PENDING'",
                 reference,actor.userAccountId(),actor.tenantId(),applicationId);
         return application(actor,applicationId);
     }
@@ -396,13 +400,19 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
 
     @Transactional
     public Map<String,Object> confirmAdmissionFee(TenantPrincipal actor, UUID applicationId,String reference) {
+        if(reference==null||reference.isBlank()) throw new BusinessRuleViolationException("PAYMENT_REFERENCE_REQUIRED","A verified admission-fee reference is required.");
         Map<String,Object> app=application(actor,applicationId);
         authorize(actor,"APPLICATION_VERIFY",(UUID)app.get("institution_id"));
         requireCleanReceipt(actor,(UUID)app.get("admission_fee_receipt_file_id"),(UUID)app.get("institution_id"));
         Integer accepted=jdbc.queryForObject("select count(*) from app.seat_allotment where tenant_id=? and application_id=? and status='ACCEPTED'",
                 Integer.class,actor.tenantId(),applicationId);
         if(accepted==null||accepted!=1) throw new BusinessRuleViolationException("SEAT_NOT_ACCEPTED","Admission fee can only be confirmed after seat acceptance.");
-        jdbc.update("update app.admission_application set admission_fee_status='CONFIRMED',admission_fee_reference=?,updated_by=? where tenant_id=? and id=?",
+        if("CONFIRMED".equals(app.get("admission_fee_status"))) {
+            if(reference.equals(app.get("admission_fee_reference"))) return app;
+            throw new BusinessRuleViolationException("ADMISSION_FEE_ALREADY_CONFIRMED","A different payment reference has already confirmed this fee.");
+        }
+        if(!"PENDING".equals(app.get("admission_fee_status"))) throw new BusinessRuleViolationException("ADMISSION_FEE_NOT_PAYABLE","Only a pending admission fee can be confirmed.");
+        jdbc.update("update app.admission_application set admission_fee_status='CONFIRMED',admission_fee_reference=?,updated_by=? where tenant_id=? and id=? and admission_fee_status='PENDING'",
                 reference,actor.userAccountId(),actor.tenantId(),applicationId);
         jdbc.update("update app.seat_allotment set admission_fee_confirmed_at=now(),updated_by=? where tenant_id=? and application_id=? and status='ACCEPTED'",
                 actor.userAccountId(),actor.tenantId(),applicationId);
