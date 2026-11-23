@@ -33,6 +33,16 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             UPDATE app.department
+               SET hod_staff_assignment_id=:staffAssignmentId, updated_by=:updatedBy
+             WHERE tenant_id=:tenantId AND department_id=:departmentId AND row_version=:expectedVersion
+            """, nativeQuery = true)
+    int updateHodAssignment(@Param("tenantId") UUID tenantId, @Param("departmentId") UUID departmentId,
+            @Param("expectedVersion") int expectedVersion, @Param("staffAssignmentId") UUID staffAssignmentId,
+            @Param("updatedBy") UUID updatedBy);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE app.department
                SET department_code=:departmentCode, department_name=:departmentName, updated_by=:updatedBy
              WHERE tenant_id=:tenantId AND department_id=:departmentId AND row_version=:expectedVersion
             """, nativeQuery = true)
