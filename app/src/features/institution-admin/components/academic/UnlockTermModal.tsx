@@ -15,14 +15,12 @@ export function UnlockTermModal({
   unlocking,
 }: UnlockTermModalProps) {
   const [reason, setReason] = useState("");
-  const [hours, setHours] = useState(72);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (reason.trim().length < 20) return;
     await onSubmit(reason.trim(), 72);
     setReason("");
-    setHours(72);
   };
 
   return (
@@ -30,7 +28,6 @@ export function UnlockTermModal({
       isOpen={isOpen}
       onClose={() => {
         setReason("");
-        setHours(72);
         onClose();
       }}
       kicker="TEMPORARY ACCESS"
@@ -96,7 +93,6 @@ export function UnlockTermModal({
             variant="secondary"
             onClick={() => {
               setReason("");
-              setHours(72);
               onClose();
             }}
             disabled={unlocking}
