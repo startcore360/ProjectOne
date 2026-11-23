@@ -36,6 +36,8 @@ import com.edu360.api.institution.dto.UpdateSectionRequest;
 import com.edu360.api.institution.dto.CreateSemesterRequest;
 import com.edu360.api.institution.dto.DepartmentResponse;
 import com.edu360.api.institution.dto.ProgramResponse;
+import com.edu360.api.institution.dto.SchoolClassResponse;
+import com.edu360.api.institution.dto.SectionResponse;
 import com.edu360.api.institution.dto.SemesterResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacScope;
