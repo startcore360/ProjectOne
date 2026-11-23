@@ -1,4 +1,5 @@
 BEGIN;
+DROP INDEX IF EXISTS app.uq_leave_type_institution_code;
 DROP INDEX IF EXISTS app.uq_leave_balance_staff_type_year;
 DROP INDEX IF EXISTS app.ix_leave_balance_staff_year_type;
 DROP INDEX IF EXISTS app.ix_leave_request_staff_status_start;
