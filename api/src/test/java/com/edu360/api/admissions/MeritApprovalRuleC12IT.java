@@ -36,7 +36,10 @@ class MeritApprovalRuleC12IT {
 
     @BeforeEach
     void installMigrationFunctionAndMinimalSchema() throws Exception {
-        String migration = Files.readString(Path.of("..", "sql", "64_v41_merit_list_and_seat_allocation.sql"));
+        Path migrationPath = Files.exists(Path.of("sql", "64_v41_merit_list_and_seat_allocation.sql"))
+                ? Path.of("sql", "64_v41_merit_list_and_seat_allocation.sql")
+                : Path.of("..", "sql", "64_v41_merit_list_and_seat_allocation.sql");
+        String migration = Files.readString(migrationPath);
         String marker = "CREATE OR REPLACE FUNCTION app.fn_validate_merit_approval()";
         int start = migration.indexOf(marker);
         int end = migration.indexOf("$$;", start);

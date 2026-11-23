@@ -92,7 +92,7 @@ class ClamAvFileScannerTest {
                     int length = input.readInt();
                     input.readNBytes(length);
                     input.readInt();
-                    output.write("stream: Eicar-Test-Signature FOUND\\0".getBytes(StandardCharsets.US_ASCII));
+                    output.write("stream: Eicar-Test-Signature FOUND\0".getBytes(StandardCharsets.US_ASCII));
                     output.flush();
                 }
                 return null;
