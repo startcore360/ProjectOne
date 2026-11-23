@@ -7,7 +7,7 @@ class StaffLeaveApprovalActionTest {
     @Test
     void mapsEachStaffLeaveApprovalStepToTheActionRegisterPermission() {
         ApprovalRequest request = ApprovalRequest.builder()
-                .processCode("FACULTY_LEAVE_COLLEGE").subjectType("STAFF_LEAVE_REQUEST")
+                .processCode("FACULTY_LEAVE_COLLEGE").subjectType("LEAVE_REQUEST")
                 .requesterActiveRole("PROFESSOR").build();
         assertThat(ApprovalInboxService.resolveApprovalAction(request, step("HEAD_OF_DEPARTMENT")))
                 .isEqualTo("STAFF_LEAVE_RECOMMEND_HOD");
