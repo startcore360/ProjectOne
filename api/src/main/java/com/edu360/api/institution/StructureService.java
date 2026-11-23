@@ -395,7 +395,6 @@ public class StructureService {
                 throw new BusinessRuleViolationException("DUPLICATE_SECTION_NAME", "Section name already exists for this class and session.");
             }
         }
-        if (request.endDateNotUsed()) { /* placeholder */ }
         int updated = sectionRepository.updateProfile(principal.tenantId(), sectionId, version, request.academicSessionId(),
                 request.semesterId(), request.classId(), request.sectionName().trim(), request.capacity(), principal.userAccountId());
         if (updated != 1) throw versionConflict();
