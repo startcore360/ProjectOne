@@ -13,7 +13,7 @@ export default function ApplicantPortalPage(){
  const [institutionId,setInstitutionId]=useState("");const [cycleId,setCycleId]=useState("");const [cycles,setCycles]=useState<Cycle[]>([]);
  const [name,setName]=useState("");const [email,setEmail]=useState("");const [phone,setPhone]=useState("");const [dob,setDob]=useState("");const [marks,setMarks]=useState("");
  const [category,setCategory]=useState("GENERAL");const [application,setApplication]=useState<Application|null>(null);const [seats,setSeats]=useState<Seat[]>([]);
- const [files,setFiles]=useState<File[]>([]);const [photo,setPhoto]=useState<File|null>(null);const [feeReceipt,setFeeReceipt]=useState<File|null>(null);const [admissionFeeReceipt,setAdmissionFeeReceipt]=useState<File|null>(null);
+ const [files,setFiles]=useState<File[]>([]);const [photo,setPhoto]=useState<File|null>(null);const [feeReceipt,setFeeReceipt]=useState<File|null>(null);const [admissionFeeReceipt,setAdmissionFeeReceipt]=useState<File|null>(null);const [admissionFeeReceipt,setAdmissionFeeReceipt]=useState<File|null>(null);
  const [error,setError]=useState("");const [message,setMessage]=useState("");const [busy,setBusy]=useState(false);
  const chooseFiles=(e:ChangeEvent<HTMLInputElement>)=>setFiles(Array.from(e.target.files??[]));
  const loadCycles=async()=>{setError("");try{const r=await api.get(`/tenants/${tenantId}/admissions/cycles`,{params:{institutionId}});setCycles(r.data.filter((x:Cycle)=>x.status==="OPEN"));}catch(e){setError(getApiErrorMessage(e));}};
