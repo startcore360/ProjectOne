@@ -180,6 +180,60 @@ export function InstitutionHierarchyPage() {
   const [hierarchy, setHierarchy] = useState<InstitutionHierarchyResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState<InstitutionHierarchyResponse["institutions"][number] | null>(null);
+  const [editDraft, setEditDraft] = useState({
+    institutionName: "", addressLine: "", city: "", stateName: "", postalCode: "",
+    principalInviteEmail: "", externalUniversityMode: false,
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  const beginEdit = (node: InstitutionHierarchyResponse["institutions"][number]) => {
+    setEditing(node);
+    setEditDraft({
+      institutionName: node.institution.institutionName,
+      addressLine: node.institution.addressLine ?? "",
+      city: node.institution.city ?? "",
+      stateName: node.institution.stateName ?? "",
+      postalCode: node.institution.postalCode ?? "",
+      principalInviteEmail: node.institution.principalInviteEmail ?? "",
+      externalUniversityMode: node.institution.externalUniversityMode,
+    });
+    setEditError("");
+  };
+
+  const saveEdit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !editing) return;
+    if (editDraft.institutionName.trim().length < 2) {
+      setEditError("Institution name must contain at least 2 characters.");
+      return;
+    }
+    setSavingEdit(true);
+    setEditError("");
+    try {
+      await institutionService.updateInstitution(
+        tenantId,
+        editing.institution.institutionId,
+        editing.institution.rowVersion,
+        {
+          institutionName: editDraft.institutionName.trim(),
+          addressLine: editDraft.addressLine || null,
+          city: editDraft.city || null,
+          stateName: editDraft.stateName || null,
+          postalCode: editDraft.postalCode || null,
+          principalInviteEmail: editDraft.principalInviteEmail || null,
+          externalUniversityMode: editDraft.externalUniversityMode,
+        }
+      );
+      setEditing(null);
+      await load();
+    } catch (cause) {
+      setEditError(getApiErrorMessage(cause));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -226,7 +280,10 @@ export function InstitutionHierarchyPage() {
                             <strong>{institution.institutionName}</strong>
                             <span>{institution.institutionType} · {institution.institutionCode} · {institution.status}</span>
                           </div>
-                          <Link to={`/university/institutions/${institution.institutionId}`}>View details</Link>
+                          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                            <Link to={`/university/institutions/${institution.institutionId}`}>View details</Link>
+                            <Button size="sm" variant="secondary" onClick={() => beginEdit({ institution, departments })}>Edit profile</Button>
+                          </div>
                         </div>
                         {institution.institutionType === "COLLEGE" && (
                           <ul className="app-hierarchy-departments" role="group">
@@ -248,6 +305,36 @@ export function InstitutionHierarchyPage() {
                   </ul>
                 )}
               </div>
+            </Panel>
+          )}
+          {editing && (
+            <Panel title={`Edit ${editing.institution.institutionName}`} description={`Update institution profile fields. Save uses row version ${editing.institution.rowVersion} as the If-Match precondition.`}>
+              <form onSubmit={saveEdit}>
+                <div className="app-form-grid">
+                  <TextField id="edit-institution-name" label="Institution name" required maxLength={200}
+                    value={editDraft.institutionName} onChange={(event) => setEditDraft({ ...editDraft, institutionName: event.target.value })} />
+                  <TextField id="edit-institution-address" label="Address" maxLength={300}
+                    value={editDraft.addressLine} onChange={(event) => setEditDraft({ ...editDraft, addressLine: event.target.value })} />
+                  <TextField id="edit-institution-city" label="City" maxLength={100}
+                    value={editDraft.city} onChange={(event) => setEditDraft({ ...editDraft, city: event.target.value })} />
+                  <TextField id="edit-institution-state" label="State" maxLength={100}
+                    value={editDraft.stateName} onChange={(event) => setEditDraft({ ...editDraft, stateName: event.target.value })} />
+                  <TextField id="edit-institution-postal" label="Postal code" minLength={3} maxLength={12}
+                    value={editDraft.postalCode} onChange={(event) => setEditDraft({ ...editDraft, postalCode: event.target.value })} />
+                  <TextField id="edit-institution-principal-email" label="Principal invite email" type="email" maxLength={254}
+                    value={editDraft.principalInviteEmail} onChange={(event) => setEditDraft({ ...editDraft, principalInviteEmail: event.target.value })} />
+                </div>
+                <label className="app-form-field">
+                  <input type="checkbox" checked={editDraft.externalUniversityMode}
+                    onChange={(event) => setEditDraft({ ...editDraft, externalUniversityMode: event.target.checked })} />
+                  College is affiliated with an external university
+                </label>
+                {editError && <Notice tone="danger">{editError}</Notice>}
+                <div className="app-inline-actions">
+                  <Button type="button" variant="secondary" disabled={savingEdit} onClick={() => setEditing(null)}>Cancel</Button>
+                  <Button type="submit" busy={savingEdit}>Save institution</Button>
+                </div>
+              </form>
             </Panel>
           )}
         </>
