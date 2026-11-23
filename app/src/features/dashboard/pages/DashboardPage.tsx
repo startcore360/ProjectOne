@@ -8,6 +8,7 @@ import {
 } from "../components";
 import { GuardianChildSwitcher } from "../../user-management/components/common/GuardianChildSwitcher";
 import { PageHeader } from "../../../components/layout/PageHeader";
+import ApplicantPortalPage from "../../admissions/pages/ApplicantPortalPage";
 
 export { StudentDashboard };
 
@@ -15,6 +16,10 @@ export default function DashboardPage() {
   const user = useAppSelector((s) => s.auth.user);
   const name = user?.displayName?.trim() || "there";
   const [selectedChildId, setSelectedChildId] = useState("");
+
+  if (user?.userType === "APPLICANT") {
+    return <ApplicantPortalPage />;
+  }
 
   if (user?.userType === "STUDENT") {
     return <StudentDashboard name={name} tenantId={user.tenantId ?? ""} />;
