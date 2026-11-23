@@ -57,6 +57,9 @@ DECLARE v_actor uuid; v_role text;
 BEGIN
  IF NEW.status IN('APPROVED','PUBLISHED') AND OLD.status='PROVISIONAL' THEN
   v_actor:=NULLIF(current_setting('app.user_id',true),'')::uuid;
+  IF NULLIF(current_setting('app.acting_for_role',true),'') IS NOT NULL THEN
+   RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='MERIT_APPROVAL_NON_DELEGABLE';
+  END IF;
   IF v_actor IS NULL THEN RAISE EXCEPTION USING ERRCODE='42501',MESSAGE='MERIT_APPROVAL_NON_DELEGABLE'; END IF;
   SELECT rd.role_code INTO v_role FROM app.user_role_assignment ura JOIN app.role_definition rd
    ON rd.tenant_id=ura.tenant_id AND rd.role_definition_id=ura.role_definition_id
@@ -79,8 +82,8 @@ DECLARE v_total integer; v_quota integer; v_used integer; v_quota_used integer;
 BEGIN
  SELECT total_seats,COALESCE((quota_capacity->>NEW.quota_code)::integer,0) INTO v_total,v_quota
  FROM app.admission_cycle WHERE tenant_id=NEW.tenant_id AND id=NEW.cycle_id FOR UPDATE;
- SELECT count(*) INTO v_used FROM app.seat_allotment WHERE tenant_id=NEW.tenant_id AND cycle_id=NEW.cycle_id AND status<>'DECLINED';
- SELECT count(*) INTO v_quota_used FROM app.seat_allotment WHERE tenant_id=NEW.tenant_id AND cycle_id=NEW.cycle_id AND quota_code=NEW.quota_code AND status<>'DECLINED';
+ SELECT count(*) INTO v_used FROM app.seat_allotment WHERE tenant_id=NEW.tenant_id AND cycle_id=NEW.cycle_id AND status NOT IN('DECLINED','EXPIRED');
+ SELECT count(*) INTO v_quota_used FROM app.seat_allotment WHERE tenant_id=NEW.tenant_id AND cycle_id=NEW.cycle_id AND quota_code=NEW.quota_code AND status NOT IN('DECLINED','EXPIRED');
  IF v_used>=v_total OR v_quota_used>=v_quota THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='ADMISSION_QUOTA_CAPACITY_EXCEEDED'; END IF;
  RETURN NEW;
 END $$;
