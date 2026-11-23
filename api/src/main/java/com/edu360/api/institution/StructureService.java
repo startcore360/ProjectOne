@@ -257,8 +257,6 @@ public class StructureService {
                 .programId(programId)
                 .yearNumber(request.yearNumber())
                 .label(request.label().trim())
-                .startDate(request.startDate())
-                .endDate(request.endDate())
                 .createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId())
                 .build();
