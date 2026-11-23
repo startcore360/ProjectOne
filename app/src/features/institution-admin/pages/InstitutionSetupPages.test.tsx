@@ -22,7 +22,7 @@ import {
 } from "./InstitutionSetupPages";
 
 vi.mock("../../../services/axios", () => ({
-  default: { put: vi.fn(), get: vi.fn(), post: vi.fn() },
+  default: { put: vi.fn(), get: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
 
 const TENANT_ID = "11111111-1111-1111-1111-111111111111";
@@ -82,6 +82,7 @@ describe("Institution setup action screens", () => {
     (api.get as ReturnType<typeof vi.fn>).mockReset();
     (api.post as ReturnType<typeof vi.fn>).mockReset();
     (api.put as ReturnType<typeof vi.fn>).mockReset();
+    (api.delete as ReturnType<typeof vi.fn>).mockReset();
   });
 
   it("shows the permission-denied state when there is no tenant identity", () => {
@@ -1007,4 +1008,113 @@ describe("Institution setup action screens", () => {
       expect(screen.getByText(/Promotion run approved by Principal/i)).toBeInTheDocument();
     });
   });
+  it("edits a department using the current row version", async () => {
+    const department = {
+      departmentId: DEPT_ID, institutionId: INST_ID, departmentCode: "CSE",
+      departmentName: "Computer Science", status: "ACTIVE", facultyCount: 8, studentCount: 120, rowVersion: 2,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/departments`)) return Promise.resolve({ data: [department] });
+      if (url.endsWith(`/institutions/${INST_ID}/programs`)) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...department, departmentName: "Computer Science and Engineering", rowVersion: 3 } });
+    renderWithTenant(<AcademicStructurePage />);
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Computer Science");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Department name/i), { target: { value: "Computer Science and Engineering" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/departments/${DEPT_ID}`,
+      { departmentCode: "CSE", departmentName: "Computer Science and Engineering" },
+      { headers: { "If-Match": "\"2\"" } },
+    ));
+  });
+
+  it("edits a program using If-Match and its department relationship", async () => {
+    const department = { departmentId: DEPT_ID, institutionId: INST_ID, departmentCode: "CSE", departmentName: "Computer Science", status: "ACTIVE", rowVersion: 1 };
+    const program = {
+      programId: SECTION_ID, institutionId: INST_ID, departmentId: DEPT_ID, programCode: "BTECH",
+      programName: "B.Tech", durationYears: 4, semestersPerYear: 2, status: "ACTIVE", rowVersion: 3,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/departments`)) return Promise.resolve({ data: [department] });
+      if (url.endsWith(`/institutions/${INST_ID}/programs`)) return Promise.resolve({ data: [program] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...program, programName: "B.Tech Computer Science", rowVersion: 4 } });
+    renderWithTenant(<AcademicStructurePage />);
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("B.Tech");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Program name/i), { target: { value: "B.Tech Computer Science" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/programs/${SECTION_ID}`,
+      { departmentId: DEPT_ID, programCode: "BTECH", programName: "B.Tech Computer Science", durationYears: 4, semestersPerYear: 2 },
+      { headers: { "If-Match": "\"3\"" } },
+    ));
+  });
+
+  it("edits a school class with optimistic concurrency", async () => {
+    const schoolClass = { classId: DEPT_ID, institutionId: INST_ID, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE", rowVersion: 4 };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [schoolClass] });
+      if (url.endsWith(`/institutions/${INST_ID}/sections`)) return Promise.resolve({ data: [] });
+      if (url.endsWith(`/institutions/${INST_ID}/academic-sessions`)) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...schoolClass, className: "Grade 9", rowVersion: 5 } });
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Grade 8");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Class or grade name/i), { target: { value: "Grade 9" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/classes/${DEPT_ID}`,
+      { className: "Grade 9", displayOrder: 8 },
+      { headers: { "If-Match": "\"4\"" } },
+    ));
+  });
+
+  it("edits a school section including capacity with optimistic concurrency", async () => {
+    const schoolClass = { classId: DEPT_ID, institutionId: INST_ID, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE", rowVersion: 1 };
+    const sessionId = "77777777-7777-7777-7777-777777777777";
+    const section = {
+      sectionId: SECTION_ID, institutionId: INST_ID, academicSessionId: sessionId, semesterId: null,
+      classId: DEPT_ID, sectionName: "A", status: "ACTIVE", capacity: 60, rowVersion: 6,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [schoolClass] });
+      if (url.endsWith(`/institutions/${INST_ID}/sections`)) return Promise.resolve({ data: [section] });
+      if (url.endsWith(`/institutions/${INST_ID}/academic-sessions`)) return Promise.resolve({ data: [{
+        academicSessionId: sessionId, sessionLabel: "2026-27", startDate: "2026-06-01", endDate: "2027-05-31", status: "ACTIVE",
+      }] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...section, sectionName: "B", capacity: 72, rowVersion: 7 } });
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Section A");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
+    fireEvent.change(screen.getByLabelText(/Section capacity/i), { target: { value: "72" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/sections/${SECTION_ID}`,
+      { sectionName: "B", classId: DEPT_ID, academicSessionId: sessionId, capacity: 72, semesterId: null },
+      { headers: { "If-Match": "\"6\"" } },
+    ));
+  });
+
 });
