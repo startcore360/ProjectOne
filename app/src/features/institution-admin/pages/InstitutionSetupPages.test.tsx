@@ -126,7 +126,7 @@ describe("Institution setup action screens", () => {
     (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.endsWith("/sections")) return Promise.resolve({ data: [{
         sectionId: SECTION_ID, sectionName: "CSE-A", institutionId: INST_ID, academicSessionId: "88888888-8888-8888-8888-888888888888",
-        semesterId: "99999999-9999-9999-9999-999999999999", classId: null, status: "ACTIVE",
+        semesterId: "99999999-9999-9999-9999-999999999999", classId: null, status: "ACTIVE", rowVersion: 1,
       }] });
       if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{
         staffProfileId: "77777777-7777-7777-7777-777777777777", staffAssignmentId: STAFF_ASSIGNMENT_ID,
@@ -156,19 +156,24 @@ describe("Institution setup action screens", () => {
     expect(screen.getByLabelText(/New Class Teacher/i)).toBeInTheDocument();
   });
 
-  it("sends the enabled flag for STUDENT_LOGIN_SWITCH", async () => {
+  it("sends the enabled flag with the loaded class ETag for STUDENT_LOGIN_SWITCH", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { classId: DEPT_ID, studentLoginEnabled: false, rowVersion: 4 },
+    });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: { classId: DEPT_ID, studentLoginEnabled: true },
+      data: { classId: DEPT_ID, studentLoginEnabled: true, rowVersion: 5 },
     });
     renderWithTenant(<StudentLoginSwitchPage />);
     fireEvent.change(screen.getByLabelText(/Class ID/i), { target: { value: DEPT_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load class/i }));
+    expect(await screen.findByText(/Loaded current class version 4/i)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText(/Enable view-only student login/i));
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/classes/${DEPT_ID}/student-login`, {
         enabled: true,
-      }),
+      }, { headers: { "If-Match": "\"4\"" } }),
     );
   });
 
@@ -249,8 +254,8 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<InstitutionHierarchyPage />);
     expect(await screen.findByText("Northbridge University Group")).toBeInTheDocument();
-    expect(screen.getByText("Northbridge College")).toBeInTheDocument();
-    expect(screen.getByText("Northbridge Public School")).toBeInTheDocument();
+    expect(screen.getAllByText("Northbridge College").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Northbridge Public School").length).toBeGreaterThan(0);
     expect(screen.getByText("Computer Science")).toBeInTheDocument();
     expect(screen.getByText("HOD not assigned")).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/hierarchy`);
@@ -331,7 +336,7 @@ describe("Institution setup action screens", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Computer Science and Engineering")).toBeInTheDocument();
-      expect(screen.getByText("CSE")).toBeInTheDocument();
+      expect(screen.getAllByText("CSE").length).toBeGreaterThan(0);
       expect(screen.getByText("B.Tech Computer Science")).toBeInTheDocument();
       expect(screen.getByText("BTECH_CSE")).toBeInTheDocument();
     });
@@ -397,7 +402,7 @@ describe("Institution setup action screens", () => {
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "COLLEGE_ADMIN");
     fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
-    await screen.findByText("B.Tech");
+    await screen.findByRole("link", { name: "B.Tech" });
 
     fireEvent.change(screen.getAllByLabelText("Program")[0], { target: { value: programId } });
     fireEvent.click(screen.getByRole("button", { name: /load curriculum history/i }));
