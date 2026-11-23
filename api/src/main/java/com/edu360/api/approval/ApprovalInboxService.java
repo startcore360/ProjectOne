@@ -145,6 +145,18 @@ public class ApprovalInboxService {
             if (!route.get().actingFor() && approvalRouting.handedOver(tenantId, userId, req)) {
                 continue;
             }
+            String action = resolveApprovalAction(req, step);
+            UUID checkedUser = route.get().via() == ApprovalRouting.Via.DELEGATION
+                    ? route.get().delegatorUserId() : userId;
+            if (action == null || checkedUser == null) {
+                continue;
+            }
+            RbacPrincipal rbac = new RbacPrincipal(tenantId, checkedUser);
+            if (!permissionEvaluatorService.can(rbac, action,
+                    permissionEvaluatorService.targetScope(rbac, req.getInstitutionId(), null),
+                    RbacTarget.of(req.getRequestedByUserId())).allowed()) {
+                continue;
+            }
             items.add(toStepDto(step));
         }
         return new ApprovalInboxResponseDto(items, new ApprovalInboxResponseDto.PageInfoDto(items.size(), 1, 1, items.size()));
@@ -263,7 +275,7 @@ public class ApprovalInboxService {
         if (activeRole == null) {
             throw new UnauthorizedException("No active role: choose an active role before deciding an approval.");
         }
-        String action = resolveApprovalAction(request);
+        String action = resolveApprovalAction(request, step);
         if (action == null) {
             throw new UnauthorizedException("Approval process " + request.getProcessCode() + " cannot be resolved to an action; denied.");
         }
@@ -412,6 +424,34 @@ public class ApprovalInboxService {
                 || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"))) {
             return "ATTENDANCE_BULK_UPLOAD_APPROVE";
         }
+        return null;
+    }
+
+    /** Resolves each staff-leave step to its own Action Register permission. */
+    public static String resolveApprovalAction(ApprovalRequest request, ApprovalStep step) {
+        if (request == null || step == null
+                || !"STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
+                || !"STAFF_LEAVE".equalsIgnoreCase(request.getProcessCode())) {
+            return resolveApprovalAction(request);
+        }
+        String role = step.getApproverRoleCode();
+        String requesterRole = request.getRequesterActiveRole();
+        if ("PRINCIPAL_COLLEGE".equalsIgnoreCase(requesterRole)
+                || "SCHOOL_PRINCIPAL".equalsIgnoreCase(requesterRole)) {
+            return "PRINCIPAL_LEAVE_APPROVE";
+        }
+        if ("VICE_CHANCELLOR".equalsIgnoreCase(requesterRole)
+                || "REGISTRAR".equalsIgnoreCase(requesterRole)) {
+            return "SENIOR_LEAVE_APPROVE";
+        }
+        if ("HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) return "STAFF_LEAVE_RECOMMEND_HOD";
+        if ("HR_MANAGER".equalsIgnoreCase(role) || "UNIVERSITY_HR_MANAGER".equalsIgnoreCase(role)) {
+            return "STAFF_LEAVE_VERIFY_HR";
+        }
+        if ("PRINCIPAL_COLLEGE".equalsIgnoreCase(role) || "SCHOOL_PRINCIPAL".equalsIgnoreCase(role)) {
+            return "STAFF_LEAVE_APPROVE_PRINCIPAL";
+        }
+        if ("REGISTRAR".equalsIgnoreCase(role)) return "STAFF_LEAVE_APPROVE_REGISTRAR";
         return null;
     }
 
