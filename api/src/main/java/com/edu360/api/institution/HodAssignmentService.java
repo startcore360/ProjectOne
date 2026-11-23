@@ -52,12 +52,18 @@ public class HodAssignmentService {
     private LocalDate today(UUID tenantId) { return tenantClock != null ? tenantClock.today(tenantId) : LocalDate.now(TenantClock.DEFAULT_ZONE); }
 
     @Transactional
-    public HodAssignResponse assignHod(RbacPrincipal principal, UUID departmentId, HodAssignRequest request) {
+    public HodAssignResponse assignHod(RbacPrincipal principal, UUID departmentId, String ifMatch, HodAssignRequest request) {
         Department department = departmentRepository.findByTenantIdAndDepartmentId(principal.tenantId(), departmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Department " + departmentId + " was not found."));
 
         permissionEvaluatorService.authorize(principal, "HOD_ASSIGN",
                 RbacScope.institution(department.getInstitutionId()), RbacTarget.NONE);
+
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        if (department.getRowVersion() == null || department.getRowVersion() != expectedVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Department was changed by another user. Reload and retry with the latest ETag.");
+        }
 
         StaffAssignment target = staffAssignmentRepository
                 .findByTenantIdAndStaffAssignmentId(principal.tenantId(), request.staffAssignmentId())
@@ -82,10 +88,28 @@ public class HodAssignmentService {
             throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_NOT_EFFECTIVE", "Staff assignment is not effective on the allocation date.");
         }
 
-        department.setHodStaffAssignmentId(target.getStaffAssignmentId());
-        department.setUpdatedBy(principal.userAccountId());
-        departmentRepository.save(department);
+        int updated = departmentRepository.updateHodAssignment(principal.tenantId(), departmentId,
+                expectedVersion, target.getStaffAssignmentId(), principal.userAccountId());
+        if (updated != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Department was changed by another user. Reload and retry with the latest ETag.");
+        }
+        return new HodAssignResponse(department.getDepartmentId(), target.getStaffAssignmentId(), expectedVersion + 1);
+    }
 
-        return new HodAssignResponse(department.getDepartmentId(), department.getHodStaffAssignmentId());
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the department ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replaceAll("\"", "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException();
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive department row version.");
+        }
     }
 }
