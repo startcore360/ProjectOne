@@ -59,7 +59,7 @@ BEGIN
     v_path := v_path || v_next; v_cur := v_next;
   END LOOP;
   effective_role := NULL; resolved_via := 'UNRESOLVED'; path := v_path; RETURN NEXT;
-END$;
+END $;
 
 CREATE OR REPLACE FUNCTION app.fn_rolldown_override_guard() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE v_type text; v_kind text;
