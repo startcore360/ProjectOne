@@ -5,7 +5,7 @@ import { getApiErrorMessage } from "../../../services/apiHelper";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 
-type Cycle = {
+type Submission = { id: string; staff_id: string; self_score: number | null; hod_score: number | null; principal_score: number | null; final_rating: number | null; status: string; };\n\ntype Cycle = {
   id: string; institution_id: string; academic_year_id: string; name: string;
   start_date: string; end_date: string; status: string; row_version: number;
 };
@@ -20,7 +20,7 @@ export default function StaffAppraisalPage() {
   const [feedback, setFeedback] = useState("");
   const [draft, setDraft] = useState({ academicYearId: "", name: "", startDate: "", endDate: "" });
   const [selectedCycle, setSelectedCycle] = useState("");
-  const [selfScore, setSelfScore] = useState("");
+  const [selfScore, setSelfScore] = useState("");\n  const [submissions, setSubmissions] = useState<Submission[]>([]);
 
 
   const load = useCallback(async () => {
@@ -34,7 +34,7 @@ export default function StaffAppraisalPage() {
     finally { setLoading(false); }
   }, [tenantId, institutionId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);\n\n  useEffect(() => {\n    if (!tenantId || !selectedCycle) { setSubmissions([]); return; }\n    void api.get<Submission[]>(`/api/tenants/${tenantId}/appraisals/cycles/${selectedCycle}/submissions`)\n      .then((response) => setSubmissions(response.data ?? []))\n      .catch((e: unknown) => setError(getApiErrorMessage(e)));\n  }, [tenantId, selectedCycle]);
 
   const createCycle = async (event: FormEvent) => {
     event.preventDefault();
@@ -51,7 +51,7 @@ export default function StaffAppraisalPage() {
     finally { setSaving(false); }
   };
 
-  const submitSelfEvaluation = async (event: FormEvent) => {
+  const setCycleStatus = async (cycleId: string, status: "OPEN" | "CLOSED") => {\n    if (!tenantId) return;\n    setSaving(true); setError(""); setFeedback("");\n    try {\n      await api.patch(`/api/tenants/${tenantId}/appraisals/cycles/${cycleId}/status`, { status });\n      setFeedback(`Cycle ${status.toLowerCase()}.`); await load();\n    } catch (e) { setError(getApiErrorMessage(e)); }\n    finally { setSaving(false); }\n  };\n\n  const submitSelfEvaluation = async (event: FormEvent) => {
     event.preventDefault();
     if (!tenantId || !selectedCycle) return;
     setSaving(true); setError(""); setFeedback("");
@@ -76,7 +76,7 @@ export default function StaffAppraisalPage() {
             <table><thead><tr><th>Cycle</th><th>Academic year</th><th>Dates</th><th>Status</th></tr></thead>
               <tbody>{cycles.map((cycle) => <tr key={cycle.id}>
                 <td>{cycle.name}</td><td>{cycle.academic_year_id}</td>
-                <td>{cycle.start_date} – {cycle.end_date}</td><td>{cycle.status}</td>
+                <td>{cycle.start_date} – {cycle.end_date}</td><td>{cycle.status} {cycle.status === "DRAFT" && <Button size="sm" disabled={saving} onClick={() => void setCycleStatus(cycle.id, "OPEN")}>Open</Button>} {cycle.status === "OPEN" && <Button size="sm" variant="secondary" disabled={saving} onClick={() => void setCycleStatus(cycle.id, "CLOSED")}>Close</Button>}</td>
               </tr>)}</tbody>
             </table>
           </div>
