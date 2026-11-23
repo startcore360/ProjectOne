@@ -124,14 +124,19 @@ COMMENT ON TABLE app.appraisal_cycle IS 'Annual staff appraisal cycle (M13).';
 COMMENT ON TABLE app.appraisal_submission IS 'Staff self-evaluation and HOD/Principal scores. Provisional final_rating = 20% self + 50% HOD + 30% Principal; policy decision pending.';
 COMMENT ON TABLE app.appraisal_review IS 'Qualitative peer feedback and review comments. Peer feedback does not affect final_rating under the provisional scoring default.';
 -- Appraisal action catalogue and baseline standard role grants.
-INSERT INTO ref.action_catalog VALUES
- ('STAFF_APPRAISAL_CYCLE_MANAGE',283,'Staff records',1,'Create and manage annual appraisal cycles',false,NULL,'M13'),
- ('STAFF_APPRAISAL_VIEW',284,'Staff records',1,'View staff appraisal submissions and reviews',false,NULL,'M13'),
- ('STAFF_APPRAISAL_SELF_SUBMIT',285,'Staff records',1,'Submit own staff self-evaluation',false,NULL,'M13'),
- ('STAFF_APPRAISAL_PEER_REVIEW',286,'Staff records',1,'Submit qualitative peer appraisal feedback',false,NULL,'M13'),
- ('STAFF_APPRAISAL_HOD_SCORE',287,'Staff records',1,'Score staff appraisals as HOD',false,NULL,'M13'),
- ('STAFF_APPRAISAL_PRINCIPAL_REVIEW',288,'Staff records',1,'Complete principal appraisal review and final rating',false,NULL,'M13')
-ON CONFLICT DO NOTHING;
+DO $$
+DECLARE next_action_no integer;
+BEGIN
+ SELECT COALESCE(MAX(action_no),0)+1 INTO next_action_no FROM ref.action_catalog;
+ INSERT INTO ref.action_catalog(action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in) VALUES
+  ('STAFF_APPRAISAL_CYCLE_MANAGE',next_action_no,'Staff records',1,'Create and manage annual appraisal cycles',false,NULL,'M13'),
+  ('STAFF_APPRAISAL_VIEW',next_action_no+1,'Staff records',1,'View staff appraisal submissions and reviews',false,NULL,'M13'),
+  ('STAFF_APPRAISAL_SELF_SUBMIT',next_action_no+2,'Staff records',1,'Submit own staff self-evaluation',false,NULL,'M13'),
+  ('STAFF_APPRAISAL_PEER_REVIEW',next_action_no+3,'Staff records',1,'Submit qualitative peer appraisal feedback',false,NULL,'M13'),
+  ('STAFF_APPRAISAL_HOD_SCORE',next_action_no+4,'Staff records',1,'Score staff appraisals as HOD',false,NULL,'M13'),
+  ('STAFF_APPRAISAL_PRINCIPAL_REVIEW',next_action_no+5,'Staff records',1,'Complete principal appraisal review and final rating',false,NULL,'M13')
+ ON CONFLICT DO NOTHING;
+END $$;
 DO $$
 DECLARE next_id integer;
 BEGIN
