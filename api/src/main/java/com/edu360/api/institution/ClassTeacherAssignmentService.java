@@ -73,12 +73,6 @@ public class ClassTeacherAssignmentService {
         permissionEvaluatorService.authorize(principal, "CLASS_TEACHER_ASSIGN",
                 RbacScope.institution(section.getInstitutionId()), RbacTarget.NONE);
 
-        int expectedVersion = parseIfMatchVersion(ifMatch);
-        if (section.getRowVersion() == null || section.getRowVersion() != expectedVersion) {
-            throw new BusinessRuleViolationException("VERSION_CONFLICT",
-                    "Section was changed by another user. Reload and retry with the latest ETag.");
-        }
-
         StaffAssignment target = staffAssignmentRepository
                 .findByTenantIdAndStaffAssignmentId(principal.tenantId(), request.staffAssignmentId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -95,6 +89,16 @@ public class ClassTeacherAssignmentService {
         }
         LocalDate today = today(principal.tenantId());
         requireEffective(target, today);
+
+        // Complete the caller's authorization and target-scope checks before exposing
+        // whether the supplied section ETag is stale. This preserves the action's
+        // unauthorized response for staff assigned to a different institution.
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        if (section.getRowVersion() == null || section.getRowVersion() != expectedVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Section was changed by another user. Reload and retry with the latest ETag.");
+        }
+
         if (sectionRepository.bumpRowVersion(principal.tenantId(), sectionId, expectedVersion, principal.userAccountId()) != 1) {
             throw new BusinessRuleViolationException("VERSION_CONFLICT", "Section was changed by another user. Reload and retry with the latest ETag.");
         }
