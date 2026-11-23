@@ -53,6 +53,7 @@ class ClassTeacherAssignmentServiceTest {
         s.setClassId(UUID.randomUUID());
         s.setSectionName("A");
         s.setStatus("ACTIVE");
+        s.setRowVersion(1);
         return s;
     }
 
@@ -74,9 +75,10 @@ class ClassTeacherAssignmentServiceTest {
                 .thenReturn(Optional.of(staffAssignment(INSTITUTION_ID, "ACTIVE")));
         when(classTeacherAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(TENANT_ID, SECTION_ID))
                 .thenReturn(Optional.empty());
+        when(sectionRepository.bumpRowVersion(TENANT_ID, SECTION_ID, 1, USER_ID)).thenReturn(1);
         when(classTeacherAssignmentRepository.save(any(ClassTeacherAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var response = service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID));
+        var response = service().assignClassTeacher(principal, SECTION_ID, "\"1\"", new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID));
 
         assertThat(response.sectionId()).isEqualTo(SECTION_ID);
         assertThat(response.staffAssignmentId()).isEqualTo(STAFF_ASSIGNMENT_ID);
@@ -92,7 +94,7 @@ class ClassTeacherAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(future));
 
-        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, "\"1\"", new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("not effective");
     }
@@ -111,9 +113,10 @@ class ClassTeacherAssignmentServiceTest {
         current.setEffectiveFrom(LocalDate.now(TenantClock.DEFAULT_ZONE).minusMonths(3));
         when(classTeacherAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(TENANT_ID, SECTION_ID))
                 .thenReturn(Optional.of(current));
+        when(sectionRepository.bumpRowVersion(TENANT_ID, SECTION_ID, 1, USER_ID)).thenReturn(1);
         when(classTeacherAssignmentRepository.save(any(ClassTeacherAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID));
+        service().assignClassTeacher(principal, SECTION_ID, "\"1\"", new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID));
 
         assertThat(current.getEffectiveTo()).isEqualTo(LocalDate.now(TenantClock.DEFAULT_ZONE));
     }
@@ -125,7 +128,7 @@ class ClassTeacherAssignmentServiceTest {
                 .when(permissionEvaluatorService)
                 .authorize(principal, "CLASS_TEACHER_ASSIGN", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
 
-        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, "\"1\"", new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class);
 
         org.mockito.Mockito.verifyNoInteractions(staffAssignmentRepository, classTeacherAssignmentRepository);
@@ -138,7 +141,7 @@ class ClassTeacherAssignmentServiceTest {
         collegeSection.setSemesterId(UUID.randomUUID());
         when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, SECTION_ID)).thenReturn(Optional.of(collegeSection));
 
-        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, "\"1\"", new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("college section");
 
@@ -152,7 +155,7 @@ class ClassTeacherAssignmentServiceTest {
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(TENANT_ID, STAFF_ASSIGNMENT_ID))
                 .thenReturn(Optional.of(staffAssignment(otherInstitution, "ACTIVE")));
 
-        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
+        assertThatThrownBy(() -> service().assignClassTeacher(principal, SECTION_ID, "\"1\"", new ClassTeacherAssignRequest(STAFF_ASSIGNMENT_ID)))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("does not belong to institution");
     }
