@@ -131,7 +131,7 @@ export type SectionItem = {
 };
 
 export type CreateSchoolClassPayload = { className: string; displayOrder: number };
-export type CreateSectionPayload = { academicSessionId: string; classId: string; sectionName: string; capacity?: number };
+export type CreateSectionPayload = { academicSessionId: string; classId?: string | null; semesterId?: string | null; sectionName: string; capacity?: number };
 
 export type ProgramYearItem = {
   programYearId: string;
