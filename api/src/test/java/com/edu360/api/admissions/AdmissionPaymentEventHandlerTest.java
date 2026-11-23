@@ -72,6 +72,23 @@ class AdmissionPaymentEventHandlerTest {
     }
 
     @Test
+    void sameEventIdWithDifferentPaymentReferenceIsRejected() {
+        Map<String,Object> app = new HashMap<>();
+        app.put("cycle_id", CYCLE);
+        app.put("fee_status", "CONFIRMED");
+        app.put("application_fee_event_id", "evt-123");
+        app.put("application_fee_reference", "pay-original");
+        when(jdbc.queryForList(anyString(), any(Object[].class)))
+                .thenReturn(List.of(app), List.of(Map.of("application_fee", new BigDecimal("500.00"))));
+
+        assertThatThrownBy(() -> service.handleVerifiedApplicationFeeEvent(
+                TENANT, APPLICATION, "evt-123", "pay-substituted", new BigDecimal("500.00")))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("different payment event");
+        verify(jdbc, never()).update(anyString(), any(Object[].class));
+    }
+
+    @Test
     void duplicateDeliveryOfTheSameVerifiedEventIsIdempotent() {
         Map<String,Object> app = new HashMap<>();
         app.put("cycle_id", CYCLE);
