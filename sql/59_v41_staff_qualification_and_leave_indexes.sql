@@ -10,6 +10,7 @@ END $$;
 CREATE INDEX IF NOT EXISTS ix_staff_document_profile_type_created ON app.staff_document (tenant_id,staff_profile_id,document_type,created_at DESC);
 CREATE INDEX IF NOT EXISTS ix_leave_request_staff_status_start ON app.leave_request (tenant_id,for_staff_profile_id,status,start_date) WHERE for_staff_profile_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_leave_balance_staff_year_type ON app.leave_balance (tenant_id,staff_profile_id,leave_year,leave_type_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_leave_balance_staff_type_year ON app.leave_balance (tenant_id,staff_profile_id,leave_type_id,leave_year);
 COMMENT ON COLUMN app.staff_document.qualification_title IS 'Qualification name for DEGREE evidence; stored on the existing scanned staff document record.';
 COMMENT ON COLUMN app.staff_document.awarding_institution IS 'Awarding institution for a staff qualification.';
 COMMENT ON COLUMN app.staff_document.qualification_level IS 'Qualification level: CERTIFICATE, DIPLOMA, UNDERGRADUATE, POSTGRADUATE, DOCTORATE or OTHER.';
