@@ -184,6 +184,8 @@ export function InstitutionsPage() {
         description="Register colleges and schools within this tenant. New institutions begin as drafts and require executive approval before going live."
         actions={
           canManageInstitutions ? (
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+              <Link className="app-link" to="/university/setup/hierarchy">View hierarchy</Link>
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
               <Button
                 variant="secondary"
@@ -196,6 +198,8 @@ export function InstitutionsPage() {
                 <span aria-hidden="true">+ </span>Register institution (Draft)
               </Button>
             </div>
+          ) : (
+            <Link className="app-link" to="/university/setup/hierarchy">View hierarchy</Link>
           ) : (
             <Badge tone="neutral">Scope: Read-only View</Badge>
           )
