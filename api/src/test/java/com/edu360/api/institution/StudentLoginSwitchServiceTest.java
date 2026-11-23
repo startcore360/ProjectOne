@@ -51,7 +51,7 @@ class StudentLoginSwitchServiceTest {
     @Test
     void setStudentLogin_enablesItWhenAuthorized() {
         when(schoolClassRepository.findByTenantIdAndClassId(TENANT_ID, CLASS_ID)).thenReturn(Optional.of(schoolClass()));
-        when(schoolClassRepository.save(any(SchoolClass.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(schoolClassRepository.updateStudentLogin(TENANT_ID, CLASS_ID, 1, true, USER_ID)).thenReturn(1);
 
         var response = service().setStudentLogin(principal, CLASS_ID, new StudentLoginSwitchRequest(true));
 
