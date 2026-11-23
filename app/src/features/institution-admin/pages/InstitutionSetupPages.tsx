@@ -48,6 +48,8 @@ import {
   type InstitutionItem,
   type SchoolClassItem,
   type SectionItem,
+  type ProgramYearItem,
+  type SemesterItem,
 } from "../api/institutionService";
 import { termLockService, type TermLockItem } from "../api/termLockService";
 import {
@@ -1087,6 +1089,15 @@ export function AcademicStructurePage() {
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [programs, setPrograms] = useState<ProgramItem[]>([]);
+  const [selectedProgramId, setSelectedProgramId] = useState("");
+  const [programYears, setProgramYears] = useState<ProgramYearItem[]>([]);
+  const [selectedProgramYearId, setSelectedProgramYearId] = useState("");
+  const [semesters, setSemesters] = useState<SemesterItem[]>([]);
+  const [programYearDraft, setProgramYearDraft] = useState({ yearNumber: "1", label: "Year 1" });
+  const [semesterDraft, setSemesterDraft] = useState({ semesterNumber: "1", label: "Semester 1", startDate: "", endDate: "" });
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
   const [schoolClasses, setSchoolClasses] = useState<SchoolClassItem[]>([]);
   const [schoolSections, setSchoolSections] = useState<SectionItem[]>([]);
   const [schoolSessions, setSchoolSessions] = useState<AcademicSessionItem[]>([]);
@@ -1230,6 +1241,97 @@ export function AcademicStructurePage() {
       setError(getApiErrorMessage(err));
     } finally {
       setSectionSaving(false);
+    }
+  };
+
+  const loadProgramYears = async () => {
+    if (!isValidUuid(institutionId) || !selectedProgramId) {
+      setCatalogError("Choose an institution and program before loading program years.");
+      return;
+    }
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      const items = await institutionService.listProgramYears(tenantId, institutionId, selectedProgramId);
+      setProgramYears(items);
+      setSelectedProgramYearId(items[0]?.programYearId ?? "");
+      setSemesters(items[0]
+        ? await institutionService.listSemesters(tenantId, institutionId, items[0].programYearId)
+        : []);
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+      setProgramYears([]);
+      setSemesters([]);
+    } finally {
+      setCatalogBusy(false);
+    }
+  };
+
+  const createProgramYear = async (event: FormEvent) => {
+    event.preventDefault();
+    const yearNumber = Number(programYearDraft.yearNumber);
+    if (!selectedProgramId || !Number.isInteger(yearNumber) || yearNumber < 1 || !programYearDraft.label.trim()) {
+      setCatalogError("Choose a program and enter a valid year number and label.");
+      return;
+    }
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      const created = await institutionService.createProgramYear(tenantId, institutionId, selectedProgramId, {
+        yearNumber,
+        label: programYearDraft.label.trim(),
+      });
+      const items = await institutionService.listProgramYears(tenantId, institutionId, selectedProgramId);
+      setProgramYears(items);
+      setSelectedProgramYearId(created.programYearId);
+      setSemesters(await institutionService.listSemesters(tenantId, institutionId, created.programYearId));
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+    } finally {
+      setCatalogBusy(false);
+    }
+  };
+
+  const selectProgramYear = async (programYearId: string) => {
+    setSelectedProgramYearId(programYearId);
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      setSemesters(await institutionService.listSemesters(tenantId, institutionId, programYearId));
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+      setSemesters([]);
+    } finally {
+      setCatalogBusy(false);
+    }
+  };
+
+  const createSemester = async (event: FormEvent) => {
+    event.preventDefault();
+    const semesterNumber = Number(semesterDraft.semesterNumber);
+    if (!selectedProgramYearId || !Number.isInteger(semesterNumber) || semesterNumber < 1
+        || !semesterDraft.label.trim() || !semesterDraft.startDate || !semesterDraft.endDate) {
+      setCatalogError("Choose a program year and provide a number, label, start date and end date.");
+      return;
+    }
+    if (semesterDraft.endDate < semesterDraft.startDate) {
+      setCatalogError("Semester end date must be on or after its start date.");
+      return;
+    }
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      await institutionService.createSemester(tenantId, institutionId, selectedProgramYearId, {
+        semesterNumber,
+        label: semesterDraft.label.trim(),
+        startDate: semesterDraft.startDate,
+        endDate: semesterDraft.endDate,
+      });
+      setSemesters(await institutionService.listSemesters(tenantId, institutionId, selectedProgramYearId));
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+    } finally {
+      setCatalogBusy(false);
     }
   };
 
@@ -1549,6 +1651,136 @@ export function AcademicStructurePage() {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Program years and semester calendar"
+            description="Configure program years and dated semesters. Term dates are checked for institution-wide overlap by the API and database constraint."
+          >
+            {catalogError && <Toast variant="error" description={catalogError} />}
+            <div className="app-form">
+              <div className="app-form-grid">
+                <SelectField
+                  id="catalog-program"
+                  label="Program"
+                  value={selectedProgramId}
+                  onChange={(event) => {
+                    setSelectedProgramId(event.target.value);
+                    setProgramYears([]);
+                    setSelectedProgramYearId("");
+                    setSemesters([]);
+                  }}
+                >
+                  <option value="">Choose a program</option>
+                  {programs.map((program) => (
+                    <option key={program.programId} value={program.programId}>{program.programName}</option>
+                  ))}
+                </SelectField>
+                <div className="app-inline-actions">
+                  <Button type="button" variant="secondary" busy={catalogBusy} disabled={!selectedProgramId} onClick={() => void loadProgramYears()}>
+                    Load program years
+                  </Button>
+                </div>
+              </div>
+              <form onSubmit={createProgramYear}>
+                <div className="app-form-grid">
+                  <TextField
+                    id="program-year-number"
+                    label="Year number"
+                    type="number"
+                    min={1}
+                    max={10}
+                    step={1}
+                    required
+                    value={programYearDraft.yearNumber}
+                    onChange={(event) => setProgramYearDraft({ ...programYearDraft, yearNumber: event.target.value })}
+                  />
+                  <TextField
+                    id="program-year-label"
+                    label="Year label"
+                    required
+                    maxLength={30}
+                    value={programYearDraft.label}
+                    onChange={(event) => setProgramYearDraft({ ...programYearDraft, label: event.target.value })}
+                  />
+                </div>
+                <div className="app-inline-actions">
+                  <Button type="submit" busy={catalogBusy} disabled={!selectedProgramId}>Create program year</Button>
+                </div>
+              </form>
+              {programYears.length > 0 && (
+                <>
+                  <SelectField
+                    id="program-year-select"
+                    label="Program year"
+                    value={selectedProgramYearId}
+                    onChange={(event) => void selectProgramYear(event.target.value)}
+                  >
+                    {programYears.map((year) => (
+                      <option key={year.programYearId} value={year.programYearId}>{year.label}</option>
+                    ))}
+                  </SelectField>
+                  <form onSubmit={createSemester}>
+                    <div className="app-form-grid">
+                      <TextField
+                        id="semester-number"
+                        label="Semester number"
+                        type="number"
+                        min={1}
+                        max={60}
+                        step={1}
+                        required
+                        value={semesterDraft.semesterNumber}
+                        onChange={(event) => setSemesterDraft({ ...semesterDraft, semesterNumber: event.target.value })}
+                      />
+                      <TextField
+                        id="semester-label"
+                        label="Semester label"
+                        required
+                        maxLength={30}
+                        value={semesterDraft.label}
+                        onChange={(event) => setSemesterDraft({ ...semesterDraft, label: event.target.value })}
+                      />
+                      <TextField
+                        id="semester-start-date"
+                        label="Start date"
+                        type="date"
+                        required
+                        value={semesterDraft.startDate}
+                        onChange={(event) => setSemesterDraft({ ...semesterDraft, startDate: event.target.value })}
+                      />
+                      <TextField
+                        id="semester-end-date"
+                        label="End date"
+                        type="date"
+                        required
+                        value={semesterDraft.endDate}
+                        onChange={(event) => setSemesterDraft({ ...semesterDraft, endDate: event.target.value })}
+                      />
+                    </div>
+                    <div className="app-inline-actions">
+                      <Button type="submit" busy={catalogBusy} disabled={!selectedProgramYearId}>Create dated semester</Button>
+                    </div>
+                  </form>
+                  {semesters.length > 0 ? (
+                    <div className="app-table-wrap">
+                      <table className="app-table">
+                        <thead><tr><th>Term</th><th>Start</th><th>End</th></tr></thead>
+                        <tbody>
+                          {semesters.map((semester) => (
+                            <tr key={semester.semesterId}>
+                              <td>{semester.label}</td>
+                              <td>{semester.startDate ?? "Not set"}</td>
+                              <td>{semester.endDate ?? "Not set"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : <EmptyState title="No semesters configured" description="Create the first dated semester for this program year." />}
+                </>
               )}
             </div>
           </Panel>
