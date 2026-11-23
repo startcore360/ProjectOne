@@ -604,7 +604,7 @@ public class StructureService {
                 "0.0.0.0",
                 "SchoolClass '" + name + "' (" + classId + ") created in school " + institutionId);
 
-        return new SchoolClassResponse(sc.getClassId(), sc.getInstitutionId(), sc.getClassName(), sc.getDisplayOrder(), sc.isStudentLoginEnabled(), sc.getStatus());
+        return new SchoolClassResponse(sc.getClassId(), sc.getInstitutionId(), sc.getClassName(), sc.getDisplayOrder(), sc.isStudentLoginEnabled(), sc.getStatus(), sc.getRowVersion() == null ? 1 : sc.getRowVersion());
     }
 
     @Transactional(readOnly = true)
@@ -613,7 +613,7 @@ public class StructureService {
         if (schoolClassRepository == null) return List.of();
         return schoolClassRepository.findByTenantIdAndInstitutionIdOrderByDisplayOrderAsc(principal.tenantId(), institutionId)
                 .stream()
-                .map(sc -> new SchoolClassResponse(sc.getClassId(), sc.getInstitutionId(), sc.getClassName(), sc.getDisplayOrder(), sc.isStudentLoginEnabled(), sc.getStatus()))
+                .map(sc -> new SchoolClassResponse(sc.getClassId(), sc.getInstitutionId(), sc.getClassName(), sc.getDisplayOrder(), sc.isStudentLoginEnabled(), sc.getStatus(), sc.getRowVersion() == null ? 1 : sc.getRowVersion()))
                 .toList();
     }
 
@@ -664,7 +664,7 @@ public class StructureService {
                 "0.0.0.0",
                 "Section '" + name + "' (" + secId + ") created in institution " + institutionId);
 
-        return new SectionResponse(sec.getSectionId(), sec.getInstitutionId(), sec.getAcademicSessionId(), sec.getSemesterId(), sec.getClassId(), sec.getSectionName(), sec.getStatus(), sec.getCapacity(), sec.getClassTeacherUserId());
+        return new SectionResponse(sec.getSectionId(), sec.getInstitutionId(), sec.getAcademicSessionId(), sec.getSemesterId(), sec.getClassId(), sec.getSectionName(), sec.getStatus(), sec.getCapacity(), sec.getClassTeacherUserId(), sec.getRowVersion() == null ? 1 : sec.getRowVersion());
     }
 
     @Transactional(readOnly = true)
@@ -684,7 +684,7 @@ public class StructureService {
         }
 
         return list.stream()
-                .map(s -> new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(), s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId()))
+                .map(s -> new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(), s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId(), s.getRowVersion() == null ? 1 : s.getRowVersion()))
                 .toList();
     }
 
@@ -866,7 +866,7 @@ public class StructureService {
                 .filter(value -> institutionId.equals(value.getInstitutionId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found"));
         return new SectionResponse(s.getSectionId(), s.getInstitutionId(), s.getAcademicSessionId(),
-                s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId());
+                s.getSemesterId(), s.getClassId(), s.getSectionName(), s.getStatus(), s.getCapacity(), s.getClassTeacherUserId(), s.getRowVersion() == null ? 1 : s.getRowVersion());
     }
 
     @Transactional(readOnly = true)
@@ -886,7 +886,10 @@ public class StructureService {
                 d.getDepartmentCode(),
                 d.getDepartmentName(),
                 d.getHodStaffAssignmentId(),
-                d.getStatus());
+                d.getStatus(),
+                departmentRepository.countActiveFaculty(d.getTenantId(), d.getDepartmentId()),
+                departmentRepository.countCurrentStudents(d.getTenantId(), d.getDepartmentId()),
+                d.getRowVersion() == null ? 1 : d.getRowVersion());
     }
 
     private ProgramResponse mapProgram(Program p) {
@@ -901,7 +904,8 @@ public class StructureService {
                 p.getStatus(),
                 p.getDegreeLevel(),
                 p.getTotalCredits(),
-                p.getCurriculumVersion());
+                p.getCurriculumVersion(),
+                p.getRowVersion() == null ? 1 : p.getRowVersion());
     }
 
     /**
