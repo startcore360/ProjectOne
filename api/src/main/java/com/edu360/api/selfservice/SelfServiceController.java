@@ -5,6 +5,7 @@ import com.edu360.api.selfservice.dto.LeaveBalanceDto;
 import com.edu360.api.selfservice.dto.LeaveRequestDto;
 import com.edu360.api.selfservice.dto.LeaveRequestCreateRequest;
 import com.edu360.api.selfservice.dto.LeaveRequestResponse;
+import com.edu360.api.selfservice.dto.StaffLeaveTypeResponse;
 import com.edu360.api.selfservice.dto.NoticeDto;
 import com.edu360.api.selfservice.dto.NotificationDto;
 import com.edu360.api.selfservice.dto.NotificationSummaryDto;
@@ -85,6 +86,19 @@ public class SelfServiceController {
         TenantPrincipal principal = extractPrincipal(authentication, tenantId);
         selfService.markAllNotificationsRead(tenantId, principal.userAccountId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping({"/v1/tenants/{tenantId}/me/leave-types", "/api/tenants/{tenantId}/me/leave-types"})
+    @Operation(summary = "List active leave types available to the current staff member")
+    public ResponseEntity<List<StaffLeaveTypeResponse>> getStaffLeaveTypes(
+            @PathVariable UUID tenantId,
+            Authentication authentication
+    ) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        if (principal.userType() != com.edu360.api.identity.UserType.STAFF || staffLeaveService == null) {
+            throw new AccessDeniedException("Staff leave types are available to authenticated staff users only");
+        }
+        return ResponseEntity.ok(staffLeaveService.availableLeaveTypes(tenantId, principal.userAccountId()));
     }
 
     @GetMapping({"/v1/tenants/{tenantId}/me/leave-balances", "/api/tenants/{tenantId}/me/leave-balances"})
