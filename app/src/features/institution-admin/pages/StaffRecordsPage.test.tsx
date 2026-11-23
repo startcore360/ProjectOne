@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
@@ -54,7 +55,7 @@ function renderWithActions(allowedActions: string[] = ["STAFF_RECORD_VIEW"]) {
     activeRoleName: "HR Manager",
     allowedActions,
   }));
-  return render(<Provider store={store}><StaffRecordsPage /></Provider>);
+  return render(<MemoryRouter initialEntries={["/university/staff"]}><Provider store={store}><StaffRecordsPage /></Provider></MemoryRouter>);
 }
 
 describe("StaffRecordsPage", () => {
@@ -114,7 +115,7 @@ describe("StaffRecordsPage", () => {
       tenantId: "tenant-1", userAccountId: "u-1", activeRoleCode: "HR_MANAGER",
       activeRoleName: "HR Manager", allowedActions: ["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"],
     }));
-    rerender(<Provider store={store}><StaffRecordsPage /></Provider>);
+    rerender(<MemoryRouter initialEntries={["/university/staff"]}><Provider store={store}><StaffRecordsPage /></Provider></MemoryRouter>);
     expect(screen.getAllByRole("button", { name: "Add staff member" }).length).toBeGreaterThan(0);
   });
   it("paginates a long staff directory and reports the visible page", async () => {
