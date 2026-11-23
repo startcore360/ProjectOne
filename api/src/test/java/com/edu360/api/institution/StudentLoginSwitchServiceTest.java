@@ -70,7 +70,7 @@ class StudentLoginSwitchServiceTest {
                 .when(permissionEvaluatorService)
                 .authorize(principal, "STUDENT_LOGIN_SWITCH", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
 
-        assertThatThrownBy(() -> service().setStudentLogin(principal, CLASS_ID, new StudentLoginSwitchRequest(true)))
+        assertThatThrownBy(() -> service().setStudentLogin(principal, CLASS_ID, "\"1\"", new StudentLoginSwitchRequest(true)))
                 .isInstanceOf(UnauthorizedException.class);
 
         org.mockito.Mockito.verify(schoolClassRepository, org.mockito.Mockito.never()).updateStudentLogin(any(), any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyBoolean(), any());
