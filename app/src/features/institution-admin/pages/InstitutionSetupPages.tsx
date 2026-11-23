@@ -51,6 +51,7 @@ import {
   type InstitutionHierarchyResponse,
   type ProgramYearItem,
   type SemesterItem,
+  type CurriculumVersionItem,
 } from "../api/institutionService";
 import { termLockService, type TermLockItem } from "../api/termLockService";
 import {
@@ -1267,6 +1268,13 @@ export function AcademicStructurePage() {
   const [semesterDraft, setSemesterDraft] = useState({ semesterNumber: "1", label: "Semester 1", startDate: "", endDate: "" });
   const [catalogBusy, setCatalogBusy] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [curriculumVersions, setCurriculumVersions] = useState<CurriculumVersionItem[]>([]);
+  const [curriculumJsonDraft, setCurriculumJsonDraft] = useState("{\n  \"courses\": []\n}");
+  const [curriculumEffectiveFrom, setCurriculumEffectiveFrom] = useState("");
+  const [curriculumEffectiveTo, setCurriculumEffectiveTo] = useState("");
+  const [curriculumBusy, setCurriculumBusy] = useState(false);
+  const [curriculumError, setCurriculumError] = useState("");
+
 
   const [schoolClasses, setSchoolClasses] = useState<SchoolClassItem[]>([]);
   const [schoolSections, setSchoolSections] = useState<SectionItem[]>([]);
@@ -1417,6 +1425,58 @@ export function AcademicStructurePage() {
       setError(getApiErrorMessage(err));
     } finally {
       setSectionSaving(false);
+    }
+  };
+
+  const loadCurriculumVersions = async () => {
+    if (!isValidUuid(institutionId) || !selectedProgramId) {
+      setCurriculumError("Choose an institution and program before loading curriculum history.");
+      return;
+    }
+    setCurriculumBusy(true);
+    setCurriculumError("");
+    try {
+      setCurriculumVersions(await institutionService.listCurriculumVersions(tenantId, institutionId, selectedProgramId));
+    } catch (cause) {
+      setCurriculumError(getApiErrorMessage(cause));
+      setCurriculumVersions([]);
+    } finally {
+      setCurriculumBusy(false);
+    }
+  };
+
+  const createCurriculumVersion = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedProgramId || !curriculumEffectiveFrom) {
+      setCurriculumError("Choose a program and effective-from date.");
+      return;
+    }
+    let curriculumJson: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(curriculumJsonDraft);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("JSON root must be an object");
+      curriculumJson = parsed as Record<string, unknown>;
+    } catch {
+      setCurriculumError("Curriculum must be valid JSON with an object at the root.");
+      return;
+    }
+    if (curriculumEffectiveTo && curriculumEffectiveTo < curriculumEffectiveFrom) {
+      setCurriculumError("Effective-to date must be on or after effective-from date.");
+      return;
+    }
+    setCurriculumBusy(true);
+    setCurriculumError("");
+    try {
+      await institutionService.createCurriculumVersion(tenantId, institutionId, selectedProgramId, {
+        curriculumJson,
+        effectiveFrom: curriculumEffectiveFrom,
+        effectiveTo: curriculumEffectiveTo || null,
+      });
+      setCurriculumVersions(await institutionService.listCurriculumVersions(tenantId, institutionId, selectedProgramId));
+    } catch (cause) {
+      setCurriculumError(getApiErrorMessage(cause));
+    } finally {
+      setCurriculumBusy(false);
     }
   };
 
@@ -1897,6 +1957,55 @@ export function AcademicStructurePage() {
           </Panel>
 
           <Panel
+            title="Curriculum version history"
+            description="Curriculum snapshots are append-only. Each change creates a new numbered version with an effective date range."
+          >
+            {curriculumError && <Notice tone="danger">{curriculumError}</Notice>}
+            <div className="app-form">
+              <SelectField id="curriculum-program" label="Program" value={selectedProgramId}
+                onChange={(event) => { setSelectedProgramId(event.target.value); setCurriculumVersions([]); setCurriculumError(""); }}>
+                <option value="">Choose a program</option>
+                {programs.map((program) => <option key={program.programId} value={program.programId}>{program.programName}</option>)}
+              </SelectField>
+              <div className="app-inline-actions">
+                <Button type="button" variant="secondary" busy={curriculumBusy} disabled={!selectedProgramId}
+                  onClick={() => void loadCurriculumVersions()}>Load curriculum history</Button>
+              </div>
+              <form onSubmit={createCurriculumVersion}>
+                <TextAreaField id="curriculum-json" label="Curriculum JSON" required rows={8}
+                  value={curriculumJsonDraft} onChange={(event) => setCurriculumJsonDraft(event.target.value)} />
+                <div className="app-form-grid">
+                  <TextField id="curriculum-effective-from" label="Effective from" type="date" required
+                    value={curriculumEffectiveFrom} onChange={(event) => setCurriculumEffectiveFrom(event.target.value)} />
+                  <TextField id="curriculum-effective-to" label="Effective to" type="date"
+                    value={curriculumEffectiveTo} onChange={(event) => setCurriculumEffectiveTo(event.target.value)} />
+                </div>
+                <div className="app-inline-actions">
+                  <Button type="submit" busy={curriculumBusy} disabled={!selectedProgramId}>Create immutable version</Button>
+                </div>
+              </form>
+              {curriculumVersions.length === 0 ? (
+                <EmptyState title="No curriculum versions" description="Load the program history or create the first curriculum snapshot." />
+              ) : (
+                <div className="app-stack">
+                  {curriculumVersions.map((version) => (
+                    <div key={version.programCurriculumVersionId} className="app-list-row">
+                      <div>
+                        <strong>Version {version.versionNumber}</strong>
+                        <div>{version.effectiveFrom} – {version.effectiveTo ?? "Open-ended"}</div>
+                      </div>
+                      <details>
+                        <summary>View snapshot</summary>
+                        <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(version.curriculumJson, null, 2)}</pre>
+                      </details>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Panel>
+
+          <Panel
             title="Program years and semester calendar"
             description="Configure program years and dated semesters. Term dates are checked for institution-wide overlap by the API and database constraint."
           >
@@ -1912,6 +2021,8 @@ export function AcademicStructurePage() {
                     setProgramYears([]);
                     setSelectedProgramYearId("");
                     setSemesters([]);
+                    setCurriculumVersions([]);
+                    setCurriculumError("");
                   }}
                 >
                   <option value="">Choose a program</option>
