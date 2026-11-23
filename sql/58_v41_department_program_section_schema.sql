@@ -45,18 +45,18 @@ DO $$ BEGIN
   END IF;
 END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='app.semester'::regclass AND conname='ex_semester_nonoverlap') THEN
-    ALTER TABLE app.semester
-      ADD CONSTRAINT ex_semester_nonoverlap
-      EXCLUDE USING gist (
-        tenant_id WITH =,
-        program_year_id WITH =,
-        daterange(start_date, end_date + 1, '[)') WITH &&
-      )
-      WHERE (start_date IS NOT NULL AND end_date IS NOT NULL);
-  END IF;
-END $$;
+-- Term dates must not overlap anywhere inside the same institution,
+-- including across different programs/program years. The GiST constraint is
+-- the final race-safe guard; the service also checks before insert for a clear 409.
+ALTER TABLE app.semester DROP CONSTRAINT IF EXISTS ex_semester_nonoverlap;
+ALTER TABLE app.semester
+  ADD CONSTRAINT ex_semester_nonoverlap
+  EXCLUDE USING gist (
+    tenant_id WITH =,
+    institution_id WITH =,
+    daterange(start_date, end_date + 1, '[)') WITH &&
+  )
+  WHERE (start_date IS NOT NULL AND end_date IS NOT NULL);
 
 ALTER TABLE app.section
   ADD COLUMN IF NOT EXISTS capacity integer,
