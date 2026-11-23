@@ -303,6 +303,42 @@ class StructureControllerTest {
     }
 
     @Test
+    void updateProgram_usesIfMatchAndValidatesDepartmentScope() {
+        mockPrincipal(TENANT_ID);
+        UUID programId = UUID.randomUUID();
+        Program current = Program.builder().programId(programId).tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID).departmentId(DEPT_ID).programCode("BTECH_CSE")
+                .programName("B.Tech CSE").durationYears((short) 4).semestersPerYear((short) 2)
+                .degreeLevel("UG").totalCredits(new java.math.BigDecimal("160"))
+                .curriculumVersion(1).status("ACTIVE").rowVersion(2).build();
+        Program updated = Program.builder().programId(programId).tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID).departmentId(DEPT_ID).programCode("BTECH_CSE")
+                .programName("B.Tech Computer Science").durationYears((short) 4).semestersPerYear((short) 2)
+                .degreeLevel("UG").totalCredits(new java.math.BigDecimal("160"))
+                .curriculumVersion(1).status("ACTIVE").rowVersion(3).build();
+        Department department = Department.builder().departmentId(DEPT_ID).tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID).departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").build();
+        when(programRepository.findByTenantIdAndProgramId(TENANT_ID, programId))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID)).thenReturn(Optional.of(department));
+        when(programRepository.existsByTenantIdAndInstitutionIdAndProgramCodeAndProgramIdNot(
+                TENANT_ID, COLLEGE_ID, "BTECH_CSE", programId)).thenReturn(false);
+        when(programRepository.updateProfile(TENANT_ID, programId, 2, DEPT_ID, "BTECH_CSE",
+                "B.Tech Computer Science", (short) 4, (short) 2, "UG",
+                new java.math.BigDecimal("160"), USER_ID)).thenReturn(1);
+
+        ResponseEntity<ProgramResponse> response = structureController.updateProgram(
+                TENANT_ID, COLLEGE_ID, programId, "\"2\"",
+                new CreateProgramRequest(DEPT_ID, "BTECH_CSE", "B.Tech Computer Science",
+                        (short) 4, (short) 2, "UG", new java.math.BigDecimal("160")), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().programName()).isEqualTo("B.Tech Computer Science");
+        assertThat(response.getBody().rowVersion()).isEqualTo(3);
+    }
+
+    @Test
     void listDepartments_and_listPrograms_returnExistingEntities() {
         mockPrincipal(TENANT_ID);
 
