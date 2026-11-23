@@ -19,6 +19,10 @@ const AdmissionCyclesPage = lazy(() => import("../features/admissions/pages/Admi
 const ApplicationScrutinyPage = lazy(() => import("../features/admissions/pages/ApplicationScrutinyPage"));
 const MeritListGenerationPage = lazy(() => import("../features/admissions/pages/MeritListGenerationPage"));
 
+const StudentDirectoryPage = lazy(() => import("../features/students/pages/StudentDirectoryPage").then((m) => ({ default: m.StudentDirectoryPage })));
+const StudentDetailPage = lazy(() => import("../features/students/pages/StudentDirectoryPage").then((m) => ({ default: m.StudentDetailPage })));
+const StudentSubrecordDetailPage = lazy(() => import("../features/students/pages/StudentDirectoryPage").then((m) => ({ default: m.StudentSubrecordDetailPage })));
+
 // Lazy-loaded feature pages
 const ChangePasswordPage = lazy(() => import("../features/auth/pages/ChangePasswordPage"));
 const DashboardPage = lazy(() => import("../features/dashboard/pages/DashboardPage"));
@@ -156,6 +160,11 @@ export default function AppRoutes() {
               <Route path="/university/setup/academic-governance" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicGovernance}><AcademicGovernancePage /></ActionGate>} />
               <Route path="/tenants/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
               <Route path="/tenants/users/:userId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserDetailPage /></ActionGate>} />
+              <Route path="/tenants/students" element={<ActionGate anyOf={["STUDENT_SEARCH"]}><StudentDirectoryPage /></ActionGate>} />
+              <Route path="/tenants/students/:studentId" element={<ActionGate anyOf={["STUDENT_SEARCH"]}><StudentDetailPage /></ActionGate>} />
+              <Route path="/tenants/students/:studentId/guardians/:recordId" element={<ActionGate anyOf={["STUDENT_SEARCH"]}><StudentSubrecordDetailPage /></ActionGate>} />
+              <Route path="/tenants/students/:studentId/notes/:recordId" element={<ActionGate anyOf={["STUDENT_SEARCH"]}><StudentSubrecordDetailPage /></ActionGate>} />
+              <Route path="/tenants/students/:studentId/legal-holds/:recordId" element={<ActionGate anyOf={["STUDENT_SEARCH"]}><StudentSubrecordDetailPage /></ActionGate>} />
               <Route path="/tenant/data-protection" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.dataProtection}><TenantDataProtectionPage /></ActionGate>} />
             </Route>
           </Route>
