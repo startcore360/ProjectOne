@@ -392,8 +392,8 @@ public class StaffLeaveService {
         if (!actorId.equals(row.get("requested_by_user_id"))) {
             throw new ResourceNotFoundException("Leave request not found");
         }
-        if (!"PENDING".equals(row.get("status")) && !"BLOCKED".equals(row.get("status"))) {
-            throw new BusinessRuleViolationException("LEAVE_NOT_CANCELLABLE", "Only a pending or blocked leave request can be cancelled.");
+        if (!List.of("PENDING", "BLOCKED", "APPROVED").contains(row.get("status"))) {
+            throw new BusinessRuleViolationException("LEAVE_NOT_CANCELLABLE", "Only a pending, blocked or approved leave request can be cancelled.");
         }
         LocalDate start = ((java.sql.Date) row.get("start_date")).toLocalDate();
         if (!start.isAfter(LocalDate.now())) {
@@ -407,8 +407,8 @@ public class StaffLeaveService {
     @Transactional
     public void cancelByFinalApprover(UUID tenantId, UUID actorId, UUID leaveRequestId) {
         Map<String, Object> row = leaveRequest(tenantId, leaveRequestId);
-        if (!"PENDING".equals(row.get("status"))) {
-            throw new BusinessRuleViolationException("LEAVE_NOT_CANCELLABLE", "Only pending leave can be cancelled by the final approver.");
+        if (!List.of("PENDING", "APPROVED").contains(row.get("status"))) {
+            throw new BusinessRuleViolationException("LEAVE_NOT_CANCELLABLE", "Only pending or approved leave can be cancelled by the final approver.");
         }
         UUID institutionId = (UUID) row.get("institution_id");
         UUID approvalId = (UUID) row.get("approval_request_id");
@@ -432,9 +432,24 @@ public class StaffLeaveService {
     }
 
     private void cancelRows(UUID tenantId, UUID leaveRequestId, UUID actorId, UUID approvalId) {
+        Map<String, Object> row = leaveRequest(tenantId, leaveRequestId);
+        if ("APPROVED".equals(row.get("status"))) {
+            Map<String, Object> type = leaveType(tenantId, (UUID) row.get("leave_type_id"));
+            if (Boolean.TRUE.equals(type.get("tracks_balance")) && !Boolean.TRUE.equals(type.get("is_loss_of_pay"))) {
+                BigDecimal debited = ((BigDecimal) row.get("days_counted"))
+                        .subtract((BigDecimal) row.get("loss_of_pay_days")).max(BigDecimal.ZERO);
+                if (debited.signum() > 0) {
+                    jdbc.update("""
+                            UPDATE app.leave_balance SET used_days=GREATEST(0,used_days-?),updated_by=?
+                             WHERE tenant_id=? AND staff_profile_id=? AND leave_type_id=? AND leave_year=?
+                            """, debited, actorId, tenantId, row.get("for_staff_profile_id"), row.get("leave_type_id"),
+                            ((java.sql.Date) row.get("start_date")).toLocalDate().getYear());
+                }
+            }
+        }
         jdbc.update("UPDATE app.leave_request SET status='CANCELLED',cancelled_at=now(),cancelled_by=?,updated_by=? WHERE tenant_id=? AND leave_request_id=?",
                 actorId, actorId, tenantId, leaveRequestId);
-        jdbc.update("UPDATE app.approval_request SET status='CANCELLED',final_decided_at=now(),updated_by=? WHERE tenant_id=? AND approval_request_id=? AND status IN ('PENDING','BLOCKED')",
+        jdbc.update("UPDATE app.approval_request SET status='CANCELLED',final_decided_at=now(),updated_by=? WHERE tenant_id=? AND approval_request_id=? AND status IN ('PENDING','BLOCKED','APPROVED')",
                 actorId, tenantId, approvalId);
         jdbc.update("""
                 UPDATE app.approval_step SET decision='SKIPPED',skip_reason='Leave request cancelled',
