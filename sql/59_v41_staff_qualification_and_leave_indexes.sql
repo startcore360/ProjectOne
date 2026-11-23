@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS app.appraisal_submission (
  tenant_id uuid NOT NULL,
  id uuid NOT NULL,
  cycle_id uuid NOT NULL,
+ institution_id uuid NOT NULL,
  staff_id uuid NOT NULL,
  self_score numeric(5,2),
  hod_score numeric(5,2),
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS app.appraisal_submission (
  CONSTRAINT pk_appraisal_submission PRIMARY KEY (tenant_id,id),
  CONSTRAINT uq_appraisal_submission_staff UNIQUE (tenant_id,cycle_id,staff_id),
  CONSTRAINT fk_appraisal_submission_cycle FOREIGN KEY (tenant_id,cycle_id) REFERENCES app.appraisal_cycle(tenant_id,id) ON DELETE RESTRICT,
+ CONSTRAINT fk_appraisal_submission_institution FOREIGN KEY (tenant_id,institution_id) REFERENCES app.institution(tenant_id,institution_id) ON DELETE RESTRICT,
  CONSTRAINT fk_appraisal_submission_staff FOREIGN KEY (tenant_id,staff_id) REFERENCES app.staff_profile(tenant_id,staff_profile_id) ON DELETE RESTRICT,
  CONSTRAINT ck_appraisal_submission_scores CHECK (
   (self_score IS NULL OR self_score BETWEEN 0 AND 100) AND
@@ -78,6 +80,7 @@ CREATE TABLE IF NOT EXISTS app.appraisal_review (
  tenant_id uuid NOT NULL,
  id uuid NOT NULL,
  cycle_id uuid NOT NULL,
+ institution_id uuid NOT NULL,
  submission_id uuid NOT NULL,
  reviewer_staff_id uuid NOT NULL,
  review_type text NOT NULL DEFAULT 'PEER',
@@ -90,6 +93,7 @@ CREATE TABLE IF NOT EXISTS app.appraisal_review (
  row_version integer NOT NULL DEFAULT 1,
  CONSTRAINT pk_appraisal_review PRIMARY KEY (tenant_id,id),
  CONSTRAINT fk_appraisal_review_cycle FOREIGN KEY (tenant_id,cycle_id) REFERENCES app.appraisal_cycle(tenant_id,id) ON DELETE RESTRICT,
+ CONSTRAINT fk_appraisal_review_institution FOREIGN KEY (tenant_id,institution_id) REFERENCES app.institution(tenant_id,institution_id) ON DELETE RESTRICT,
  CONSTRAINT fk_appraisal_review_submission FOREIGN KEY (tenant_id,submission_id) REFERENCES app.appraisal_submission(tenant_id,id) ON DELETE RESTRICT,
  CONSTRAINT fk_appraisal_review_reviewer FOREIGN KEY (tenant_id,reviewer_staff_id) REFERENCES app.staff_profile(tenant_id,staff_profile_id) ON DELETE RESTRICT,
  CONSTRAINT ck_appraisal_review_type CHECK (review_type IN ('PEER','HOD','PRINCIPAL')),
