@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,11 +40,13 @@ public class DepartmentController {
     public ResponseEntity<HodAssignResponse> assignHod(
             @PathVariable UUID tenantId,
             @PathVariable UUID departmentId,
+            @RequestHeader("If-Match") String ifMatch,
             @Valid @RequestBody HodAssignRequest request,
             Authentication authentication) {
 
         RbacPrincipal principal = tenantPrincipal(tenantId, authentication);
-        return ResponseEntity.ok(hodAssignmentService.assignHod(principal, departmentId, request));
+        var response = hodAssignmentService.assignHod(principal, departmentId, ifMatch, request);
+        return ResponseEntity.ok().eTag(String.format("\"%d\"", response.rowVersion())).body(response);
     }
 
     private RbacPrincipal tenantPrincipal(UUID tenantId, Authentication authentication) {
