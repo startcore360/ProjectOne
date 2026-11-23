@@ -14,6 +14,7 @@ public interface ProgramRepository extends JpaRepository<Program, UUID> {
     List<Program> findByTenantIdAndInstitutionId(UUID tenantId, UUID institutionId);
     boolean existsByTenantIdAndInstitutionIdAndProgramCode(UUID tenantId, UUID institutionId, String programCode);
     boolean existsByTenantIdAndInstitutionIdAndProgramCodeAndProgramIdNot(UUID tenantId, UUID institutionId, String programCode, UUID programId);
+    boolean existsByTenantIdAndDepartmentIdAndStatus(UUID tenantId, UUID departmentId, String status);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
