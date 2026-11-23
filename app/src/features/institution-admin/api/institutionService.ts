@@ -133,6 +133,24 @@ export type SectionItem = {
 export type CreateSchoolClassPayload = { className: string; displayOrder: number };
 export type CreateSectionPayload = { academicSessionId: string; classId?: string | null; semesterId?: string | null; sectionName: string; capacity?: number };
 
+export type CurriculumVersionItem = {
+  programCurriculumVersionId: string;
+  institutionId: string;
+  programId: string;
+  versionNumber: number;
+  curriculumJson: Record<string, unknown>;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  createdAt: string | null;
+  createdBy: string;
+};
+
+export type CreateCurriculumVersionPayload = {
+  curriculumJson: Record<string, unknown>;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+};
+
 export type ProgramYearItem = {
   programYearId: string;
   institutionId: string;
@@ -349,6 +367,21 @@ export const institutionService = {
   ): Promise<ProgramItem> {
     const res = await api.post<ProgramItem>(
       `/api/tenants/${tenantId}/institutions/${institutionId}/programs`,
+      payload
+    );
+    return res.data;
+  },
+
+  async listCurriculumVersions(tenantId: string, institutionId: string, programId: string): Promise<CurriculumVersionItem[]> {
+    const res = await api.get<CurriculumVersionItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/programs/${programId}/curriculum-versions`
+    );
+    return res.data;
+  },
+
+  async createCurriculumVersion(tenantId: string, institutionId: string, programId: string, payload: CreateCurriculumVersionPayload): Promise<CurriculumVersionItem> {
+    const res = await api.post<CurriculumVersionItem>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/programs/${programId}/curriculum-versions`,
       payload
     );
     return res.data;
