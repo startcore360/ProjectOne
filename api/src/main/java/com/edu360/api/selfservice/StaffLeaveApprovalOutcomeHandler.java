@@ -22,7 +22,7 @@ public class StaffLeaveApprovalOutcomeHandler implements ApprovalOutcomeHandler 
     @Override
     public boolean supports(ApprovalRequest request) {
         return request != null && "STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
-                && "STAFF_LEAVE".equalsIgnoreCase(request.getProcessCode());
+;
     }
 
     @Override
