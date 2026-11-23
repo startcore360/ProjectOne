@@ -19,6 +19,7 @@ import {
   DateField,
   DateTimeField,
   Panel,
+  Modal,
   EmptyState,
   Notice,
   SkeletonPage,
@@ -360,7 +361,14 @@ export function InstitutionHierarchyPage() {
             </Panel>
           )}
           {hodDepartment && (
-            <Panel title={`Assign HOD · ${hodDepartment.departmentName}`} description="Select an active faculty member in this department. Assignment is guarded by the department row version.">
+            <Modal
+              isOpen
+              onClose={() => { if (!hodLoading) setHodDepartment(null); }}
+              title={`Assign HOD · ${hodDepartment.departmentName}`}
+              titleId="hierarchy-hod-assignment-title"
+              description="Select an active faculty member in this department. Assignment is guarded by the department row version."
+              size="sm"
+            >
               <form onSubmit={saveHodAssignment}>
                 <PersonPicker
                   label="Head of Department"
@@ -374,13 +382,14 @@ export function InstitutionHierarchyPage() {
                   onChange={setHodStaffAssignmentId}
                   disabled={hodLoading}
                 />
+                {hodLoading && hodTeachers.length === 0 && !hodError && <p role="status">Loading eligible faculty…</p>}
                 {hodError && <Notice tone="danger">{hodError}</Notice>}
                 <div className="app-inline-actions">
                   <Button type="button" variant="secondary" disabled={hodLoading} onClick={() => setHodDepartment(null)}>Cancel</Button>
                   <Button type="submit" busy={hodLoading} disabled={hodLoading || !hodStaffAssignmentId}>Save HOD assignment</Button>
                 </div>
               </form>
-            </Panel>
+            </Modal>
           )}
           {editing && (
             <Panel title={`Edit ${editing.institution.institutionName}`} description={`Update institution profile fields. Save uses row version ${editing.institution.rowVersion} as the If-Match precondition.`}>
