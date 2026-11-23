@@ -40,10 +40,32 @@ public class StudentLoginSwitchService {
         permissionEvaluatorService.authorize(principal, "STUDENT_LOGIN_SWITCH",
                 RbacScope.institution(schoolClass.getInstitutionId()), RbacTarget.NONE);
 
-        schoolClass.setStudentLoginEnabled(request.enabled());
-        schoolClass.setUpdatedBy(principal.userAccountId());
-        schoolClassRepository.save(schoolClass);
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        if (schoolClass.getRowVersion() == null || schoolClass.getRowVersion() != expectedVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT", "School class was changed by another user. Reload and retry with the latest ETag.");
+        }
 
-        return new StudentLoginSwitchResponse(schoolClass.getClassId(), schoolClass.isStudentLoginEnabled());
+        int updated = schoolClassRepository.updateStudentLogin(principal.tenantId(), classId,
+                expectedVersion, request.enabled(), principal.userAccountId());
+        if (updated != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT", "School class was changed by another user. Reload and retry with the latest ETag.");
+        }
+        return new StudentLoginSwitchResponse(schoolClass.getClassId(), request.enabled(), expectedVersion + 1);
+    }
+
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the class ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replaceAll("\\\"", "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException();
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive class row version.");
+        }
     }
 }
