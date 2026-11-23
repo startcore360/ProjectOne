@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS app.program_curriculum_version;
 ALTER TABLE app.section DROP CONSTRAINT IF EXISTS ck_section_capacity;
 ALTER TABLE app.section DROP COLUMN IF EXISTS class_teacher_user_id, DROP COLUMN IF EXISTS capacity;
 ALTER TABLE app.semester DROP CONSTRAINT IF EXISTS ex_semester_nonoverlap;
+ALTER TABLE app.semester DROP CONSTRAINT IF EXISTS ex_semester_institution_nonoverlap;
 ALTER TABLE app.semester DROP CONSTRAINT IF EXISTS ck_semester_date_range;
 ALTER TABLE app.semester DROP COLUMN IF EXISTS is_locked, DROP COLUMN IF EXISTS end_date, DROP COLUMN IF EXISTS start_date;
 ALTER TABLE app.program DROP CONSTRAINT IF EXISTS ck_program_curriculum_version;
