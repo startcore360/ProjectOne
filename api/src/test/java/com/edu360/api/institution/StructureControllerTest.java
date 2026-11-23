@@ -243,6 +243,66 @@ class StructureControllerTest {
     }
 
     @Test
+    void updateDepartment_usesIfMatchAndReturnsFacultyStudentCounts() {
+        mockPrincipal(TENANT_ID);
+        Department current = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").rowVersion(2).build();
+        Department updated = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science and Engineering").status("ACTIVE").rowVersion(3).build();
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(departmentRepository.existsByTenantIdAndInstitutionIdAndDepartmentCodeAndDepartmentIdNot(
+                TENANT_ID, COLLEGE_ID, "CSE", DEPT_ID)).thenReturn(false);
+        when(departmentRepository.updateProfile(TENANT_ID, DEPT_ID, 2, "CSE",
+                "Computer Science and Engineering", USER_ID)).thenReturn(1);
+        when(departmentRepository.countActiveFaculty(TENANT_ID, DEPT_ID)).thenReturn(7L);
+        when(departmentRepository.countCurrentStudents(TENANT_ID, DEPT_ID)).thenReturn(420L);
+
+        ResponseEntity<DepartmentResponse> response = structureController.updateDepartment(
+                TENANT_ID, COLLEGE_ID, DEPT_ID, "\"2\"",
+                new CreateDepartmentRequest("CSE", "Computer Science and Engineering"), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().departmentName()).isEqualTo("Computer Science and Engineering");
+        assertThat(response.getBody().facultyCount()).isEqualTo(7);
+        assertThat(response.getBody().studentCount()).isEqualTo(420);
+        verify(permissionEvaluatorService).authorize(any(), eq("STRUCTURE_MANAGE"),
+                eq(RbacScope.institution(COLLEGE_ID)), eq(RbacTarget.NONE));
+    }
+
+    @Test
+    void updateDepartment_rejectsStaleIfMatchWithoutWriting() {
+        mockPrincipal(TENANT_ID);
+        Department current = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").rowVersion(2).build();
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID)).thenReturn(Optional.of(current));
+
+        assertThrows(BusinessRuleViolationException.class, () -> structureController.updateDepartment(
+                TENANT_ID, COLLEGE_ID, DEPT_ID, "\"1\"",
+                new CreateDepartmentRequest("CSE", "Changed name"), authentication));
+        verify(departmentRepository, never()).updateProfile(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                any(), any(), any());
+    }
+
+    @Test
+    void archiveDepartment_usesIfMatchAndRefusesActivePrograms() {
+        mockPrincipal(TENANT_ID);
+        Department current = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").rowVersion(2).build();
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID)).thenReturn(Optional.of(current));
+        when(programRepository.existsByTenantIdAndDepartmentIdAndStatus(TENANT_ID, DEPT_ID, "ACTIVE")).thenReturn(true);
+
+        assertThrows(BusinessRuleViolationException.class, () -> structureController.archiveDepartment(
+                TENANT_ID, COLLEGE_ID, DEPT_ID, "\"2\"", authentication));
+        verify(departmentRepository, never()).archive(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
+    }
+
+    @Test
     void listDepartments_and_listPrograms_returnExistingEntities() {
         mockPrincipal(TENANT_ID);
 
