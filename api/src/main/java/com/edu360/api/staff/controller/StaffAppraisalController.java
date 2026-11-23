@@ -53,7 +53,8 @@ public class StaffAppraisalController {
             @PathVariable UUID cycleId, Authentication authentication) {
         return ResponseEntity.ok(service.submissions(actor(authentication, tenantId), cycleId));
     }
-\n    @PostMapping({"/v1/tenants/{tenantId}/appraisals/cycles/{cycleId}/self-evaluation",
+
+    @PostMapping({"/v1/tenants/{tenantId}/appraisals/cycles/{cycleId}/self-evaluation",
                   "/api/tenants/{tenantId}/appraisals/cycles/{cycleId}/self-evaluation"})
     public ResponseEntity<Map<String,Object>> selfEvaluation(@PathVariable UUID tenantId,
             @PathVariable UUID cycleId, @Valid @RequestBody ScoreRequest request, Authentication authentication) {
@@ -92,7 +93,8 @@ public class StaffAppraisalController {
 
     public record CreateCycleRequest(@NotNull UUID academicYearId, @NotBlank @Size(max=160) String name,
             @NotNull LocalDate startDate, @NotNull LocalDate endDate) {}
-    public record ScoreRequest(@NotNull BigDecimal score, String commentsJson) {}\n    public record CycleStatusRequest(@NotBlank String status) {}
+    public record ScoreRequest(@NotNull BigDecimal score, String commentsJson) {}
+    public record CycleStatusRequest(@NotBlank String status) {}
     public record PeerReviewRequest(@NotBlank @Size(max=5000) String feedback) {}
     public record PrincipalReviewRequest(@NotNull BigDecimal score, String commentsJson,
             @NotBlank String promotionReadiness) {}
