@@ -512,7 +512,7 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findAllByText("Grade 8");
 
-    fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
+    fireEvent.change(screen.getByLabelText(/Section name/i, { selector: "#edit-section-name" }), { target: { value: "B" } });
     fireEvent.change(screen.getByLabelText(/Section capacity/i), { target: { value: "45" } });
     fireEvent.click(screen.getByRole("button", { name: /create section/i }));
 
@@ -1049,9 +1049,9 @@ describe("Institution setup action screens", () => {
     renderWithTenant(<AcademicStructurePage />);
     fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
-    await screen.findByText("B.Tech");
+    await screen.findByRole("link", { name: "B.Tech" });
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
-    fireEvent.change(screen.getByLabelText(/Program name/i), { target: { value: "B.Tech Computer Science" } });
+    fireEvent.change(screen.getByLabelText(/Program name/i, { selector: "#edit-program-name" }), { target: { value: "B.Tech Computer Science" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(
@@ -1075,7 +1075,7 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("Grade 8");
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    fireEvent.change(screen.getByLabelText(/Class or grade name/i), { target: { value: "Grade 9" } });
+    fireEvent.change(screen.getByLabelText(/Class or grade name/i, { selector: "#edit-class-name" }), { target: { value: "Grade 9" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(
@@ -1107,7 +1107,7 @@ describe("Institution setup action screens", () => {
     await screen.findByText("Section A");
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
     fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
-    fireEvent.change(screen.getByLabelText(/Section capacity/i), { target: { value: "72" } });
+    fireEvent.change(screen.getByLabelText(/Section capacity/i, { selector: "#edit-section-capacity" }), { target: { value: "72" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(
