@@ -512,7 +512,7 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findAllByText("Grade 8");
 
-    fireEvent.change(screen.getByLabelText(/Section name/i, { selector: "#edit-section-name" }), { target: { value: "B" } });
+    fireEvent.change(screen.getByLabelText(/Section name/i, { selector: "#school-section-name" }), { target: { value: "B" } });
     fireEvent.change(screen.getByLabelText(/Section capacity/i), { target: { value: "45" } });
     fireEvent.click(screen.getByRole("button", { name: /create section/i }));
 
@@ -1109,7 +1109,12 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
     fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
     fireEvent.change(screen.getByLabelText(/Section capacity/i, { selector: "#edit-section-capacity" }), { target: { value: "72" } });
-    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
+    const editForm = saveButton.closest("form");
+    expect(saveButton).toBeEnabled();
+    expect(editForm).not.toBeNull();
+    expect((editForm as HTMLFormElement).checkValidity()).toBe(true);
+    fireEvent.click(saveButton);
 
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(
       `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/sections/${SECTION_ID}`,
