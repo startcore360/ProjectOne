@@ -428,7 +428,8 @@ public class ApprovalInboxService {
     }
 
     private static boolean isStaffLeaveApproval(ApprovalRequest request) {
-        if (request == null || !"LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())) return false;
+        if (request == null || !("LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
+                || "STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType()))) return false;
         return java.util.Set.of("FACULTY_LEAVE_COLLEGE", "HOD_LEAVE", "VICE_PRINCIPAL_LEAVE",
                 "ADMIN_ACCOUNTANT_LEAVE_COLLEGE", "NON_TEACHING_LEAVE_COLLEGE",
                 "TEACHER_LEAVE_SCHOOL", "SCHOOL_STAFF_LEAVE", "UNIVERSITY_STAFF_LEAVE",
