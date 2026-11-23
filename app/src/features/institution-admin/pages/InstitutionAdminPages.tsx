@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Button,
   Notice,
@@ -320,7 +321,7 @@ export function InstitutionsPage() {
                       <code>{institution.institutionCode}</code>
                     </td>
                     <td>
-                      <strong><a href={`/university/institutions/${institution.institutionId}`}>{institution.institutionName}</a></strong>
+                      <strong><Link to={`/university/institutions/${institution.institutionId}`}>{institution.institutionName}</Link></strong>
                       {institution.externalUniversityMode && (
                         <span
                           style={{
