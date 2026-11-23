@@ -532,7 +532,8 @@ public class StaffLeaveService {
             chain.add(new StepSpec("UNIVERSITY_HR_MANAGER", null));
         } else if (!school && !teaching) {
             chain.add(new StepSpec("HR_MANAGER", null));
-        } else if (!school && assignment.getDepartmentId() != null) {
+        } else if (!school && teaching) {
+            if (assignment.getDepartmentId() == null) return List.of();
             UUID hodUser = jdbc.query("""
                     SELECT sp.user_account_id
                       FROM app.department d
