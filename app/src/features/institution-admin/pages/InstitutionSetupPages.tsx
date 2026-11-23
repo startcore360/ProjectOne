@@ -444,9 +444,12 @@ export function MentorAssignmentPage() {
     const invalid = !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
       ? "Select a college section and an active faculty member."
       : null;
-    void run(invalid, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/mentor`, {
+    const selectedSection = sections.find((section) => section.sectionId === sectionId);
+    const missingVersion = !selectedSection?.rowVersion ? "Reload the section list and select a section with a current row version." : null;
+    void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/mentor`, {
       staffAssignmentId,
-    }), (data) => `Mentor assigned to section ${data.sectionId}.`);
+    }, { headers: { "If-Match": `"${selectedSection?.rowVersion ?? 1}"` } }),
+    (data) => `Mentor assigned to section ${data.sectionId}.`);
   };
 
   return (
@@ -503,9 +506,12 @@ export function ClassTeacherAssignmentPage() {
     const invalid = !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
       ? "Select a school section and an active teaching staff member."
       : null;
-    void run(invalid, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/class-teacher`, {
+    const selectedSection = sections.find((section) => section.sectionId === sectionId);
+    const missingVersion = !selectedSection?.rowVersion ? "Reload the section list and select a section with a current row version." : null;
+    void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/class-teacher`, {
       staffAssignmentId,
-    }), (data) => `Class Teacher assigned to section ${data.sectionId}.`);
+    }, { headers: { "If-Match": `"${selectedSection?.rowVersion ?? 1}"` } }),
+    (data) => `Class Teacher assigned to section ${data.sectionId}.`);
   };
 
   return (
