@@ -48,6 +48,7 @@ import {
   type InstitutionItem,
   type SchoolClassItem,
   type SectionItem,
+  type InstitutionHierarchyResponse,
   type ProgramYearItem,
   type SemesterItem,
 } from "../api/institutionService";
@@ -171,6 +172,88 @@ function useAction<TResponse>() {
   };
 
   return { status, message, run };
+}
+
+// --- Institution hierarchy (T2-S1) ------------------------------------------------------------
+export function InstitutionHierarchyPage() {
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const [hierarchy, setHierarchy] = useState<InstitutionHierarchyResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    if (!tenantId) return;
+    setLoading(true);
+    setError("");
+    try {
+      setHierarchy(await institutionService.getHierarchy(tenantId));
+    } catch (cause) {
+      setHierarchy(null);
+      setError(getApiErrorMessage(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  return (
+    <div className="app-page">
+      <PageHeader
+        title="Institution hierarchy"
+        description="Tenant / university-group root, constituent colleges and schools, and each college's academic departments."
+        actions={<Link className="app-link" to="/university/institutions">Institution register</Link>}
+      />
+      {!tenantId ? <NoTenantNotice /> : (
+        <>
+          {error && <ErrorState title="Unable to load institution hierarchy" message={error} action={<Button variant="secondary" onClick={() => void load()}>Retry</Button>} />}
+          {loading && !hierarchy && <SkeletonPage />}
+          {hierarchy && (
+            <Panel title={hierarchy.tenantName} description={`University-group / tenant root · ${hierarchy.tenantType} · ${hierarchy.tenantId}`}>
+              <div className="app-hierarchy-tree" role="tree" aria-label="Institution hierarchy">
+                <div className="app-hierarchy-root" role="treeitem" aria-level={1}>
+                  <strong>{hierarchy.tenantName}</strong>
+                  <span>University group / tenant root</span>
+                </div>
+                {hierarchy.institutions.length === 0 ? (
+                  <EmptyState title="No colleges or schools registered" description="Register a college or school to build the institutional hierarchy." />
+                ) : (
+                  <ul className="app-hierarchy-institutions">
+                    {hierarchy.institutions.map(({ institution, departments }) => (
+                      <li key={institution.institutionId} role="treeitem" aria-level={2}>
+                        <div className="app-hierarchy-institution">
+                          <div>
+                            <strong>{institution.institutionName}</strong>
+                            <span>{institution.institutionType} · {institution.institutionCode} · {institution.status}</span>
+                          </div>
+                          <Link to={`/university/institutions/${institution.institutionId}`}>View details</Link>
+                        </div>
+                        {institution.institutionType === "COLLEGE" && (
+                          <ul className="app-hierarchy-departments" role="group">
+                            {departments.length === 0 ? (
+                              <li className="app-hierarchy-empty">No departments configured</li>
+                            ) : departments.map((department) => (
+                              <li key={department.departmentId} role="treeitem" aria-level={3}>
+                                <div className="app-hierarchy-department">
+                                  <span><strong>{department.departmentName}</strong> <code>{department.departmentCode}</code></span>
+                                  <span>{department.hodStaffAssignmentId ? "HOD assigned" : "HOD not assigned"}</span>
+                                  <Link to={`/university/setup/structure/${institution.institutionId}/departments/${department.departmentId}`}>Open department</Link>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Panel>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 // --- 1. HOD assignment (HOD_ASSIGN) -----------------------------------------------------------
