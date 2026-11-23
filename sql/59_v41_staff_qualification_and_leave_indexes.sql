@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS app.appraisal_review (
  CONSTRAINT ck_appraisal_review_version CHECK (row_version>=1)
 );
 CREATE INDEX IF NOT EXISTS ix_appraisal_review_submission ON app.appraisal_review(tenant_id,submission_id,review_type,created_at);
-DO $
+DO $$
 DECLARE t text;
 BEGIN
  FOREACH t IN ARRAY ARRAY['appraisal_cycle','appraisal_submission','appraisal_review'] LOOP
@@ -117,7 +117,7 @@ BEGIN
   EXECUTE format('DROP POLICY IF EXISTS p_institution ON app.%I',t);
   EXECUTE format('CREATE POLICY p_institution ON app.%I AS RESTRICTIVE USING (institution_id IS NULL OR current_setting(''app.institution_scope'',true)=''ALL'' OR institution_id=ANY(string_to_array(NULLIF(current_setting(''app.institution_ids'',true),''''),'','')::uuid[])) WITH CHECK (institution_id IS NULL OR current_setting(''app.institution_scope'',true)=''ALL'' OR institution_id=ANY(string_to_array(NULLIF(current_setting(''app.institution_ids'',true),''''),'','')::uuid[]))',t);
  END LOOP;
-END $;
+END $$;
 GRANT SELECT,INSERT,UPDATE,DELETE ON app.appraisal_cycle,app.appraisal_submission,app.appraisal_review TO edu_app;
 GRANT SELECT ON app.appraisal_cycle,app.appraisal_submission,app.appraisal_review TO edu_report;
 COMMENT ON TABLE app.appraisal_cycle IS 'Annual staff appraisal cycle (M13).';
@@ -132,7 +132,7 @@ INSERT INTO ref.action_catalog VALUES
  ('STAFF_APPRAISAL_HOD_SCORE',287,'Staff records',1,'Score staff appraisals as HOD',false,NULL,'M13'),
  ('STAFF_APPRAISAL_PRINCIPAL_REVIEW',288,'Staff records',1,'Complete principal appraisal review and final rating',false,NULL,'M13')
 ON CONFLICT DO NOTHING;
-DO $
+DO $$
 DECLARE next_id integer;
 BEGIN
  SELECT COALESCE(MAX(standard_role_action_id),0)+1 INTO next_id FROM ref.standard_role_action;
@@ -166,6 +166,6 @@ BEGIN
  ) AS v(n,role_code,action_code,limited_to)
  WHERE EXISTS (SELECT 1 FROM ref.standard_role_action a WHERE a.role_code=v.role_code)
  ON CONFLICT DO NOTHING;
-END $;
+END $$;
 
 COMMIT;
