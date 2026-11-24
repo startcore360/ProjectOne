@@ -44,16 +44,17 @@ public final class ExportManifest {
                 "saved_filter", "dashboard_preference"));
         groups.put("institutions", List.of("tenant_local", "institution"));
         groups.put("academic_structure", List.of("academic_session", "academic_calendar_event", "weekly_off_rule",
-                "department", "program", "program_rule_set", "program_year", "semester", "school_class", "section",
-                "subject", "syllabus", "course_offering", "subject_group", "subject_group_member", "subject_allocation",
-                "mentor_assignment", "class_teacher_assignment", "timetable_slot", "meeting_link",
-                "substitute_assignment"));
+                "department", "program", "program_rule_set", "program_year", "program_curriculum_version", "semester",
+                "school_class", "section", "subject", "syllabus", "course_offering", "subject_group",
+                "subject_group_member", "subject_allocation", "mentor_assignment", "class_teacher_assignment",
+                "timetable_slot", "meeting_link", "substitute_assignment"));
         groups.put("enrolments", List.of("student_profile", "student_code_sequence", "guardian_profile",
                 "student_guardian_link", "parent_consent", "student_enrollment", "promotion_run", "promotion_run_item",
-                "certificate_request"));
+                "certificate_request", "admission_cycle", "admission_application", "merit_list", "merit_list_item",
+                "seat_allotment"));
         groups.put("attendance", List.of("attendance_session", "attendance_sync_conflict", "attendance_entry",
                 "attendance_correction_request", "attendance_correction", "attendance_bulk_upload", "term_lock",
-                "term_lock_event", "risk_flag", "risk_remark"));
+                "term_lock_event", "term_unlock_log", "risk_flag", "risk_remark"));
         groups.put("exams", List.of("grading_scheme_version", "grade_band", "exam_rule", "exam_pattern",
                 "exam_pattern_component", "exam", "exam_schedule_item", "hall_ticket", "marks_submission",
                 "marks_entry", "backlog", "supplementary_registration"));
@@ -65,17 +66,19 @@ public final class ExportManifest {
                 "reconciliation_case", "receipt_sequence", "receipt", "scholarship_scheme", "scholarship_award_list",
                 "scholarship_award", "concession", "late_fee_rule", "late_fee_waiver", "financial_period_lock",
                 "financial_period_lock_event"));
-        groups.put("leave", List.of("leave_approver_setting", "leave_type", "leave_balance", "leave_request"));
+        groups.put("leave", List.of("leave_approver_setting", "leave_type", "leave_balance", "leave_request",
+                "leave_delegation"));
         groups.put("notices", List.of("notice", "notice_audience"));
         groups.put("complaints", List.of("complaint", "complaint_action"));
         groups.put("notes", List.of("student_note"));
         groups.put("staff", List.of("staff_profile", "staff_code_sequence", "staff_service_record",
-                "staff_assignment", "staff_document"));
+                "staff_assignment", "staff_document", "appraisal_cycle", "appraisal_submission", "appraisal_review"));
         groups.put("policies", List.of("role_definition", "role_action", "role_rolldown_override",
-                "tenant_role_template", "tenant_role_template_action", "tenant_step_in", "user_role_assignment",
-                "delegation", "policy", "policy_acceptance", "department_document", "compliance_report",
-                "accreditation_criterion", "accreditation_document", "accreditation_evidence_map", "governance_item",
-                "audit_finding", "data_request", "data_request_event", "legal_hold", "audit_outbox", "setting_value"));
+                "gba_rolldown_revocation", "tenant_role_template", "tenant_role_template_action", "tenant_step_in",
+                "user_role_assignment", "delegation", "policy", "policy_acceptance", "department_document",
+                "compliance_report", "accreditation_criterion", "accreditation_document",
+                "accreditation_evidence_map", "governance_item", "audit_finding", "data_request",
+                "data_request_event", "legal_hold", "audit_outbox", "setting_value"));
         // Tenant business data that fits none of the 14 Phase-1 headings.
         groups.put("approvals", List.of("approval_request", "approval_batch", "approval_step", "duplicate_review",
                 "bulk_correction_batch", "bulk_correction_item"));

@@ -6,6 +6,10 @@ import App from "./App";
 import { initTheme } from "./lib/theme";
 import { bootstrapAuth } from "./services/bootstrapAuth";
 import { setupAxiosInterceptors } from "./services/axiosInterceptor";
+import { getAccessToken } from "./services/tokenStorage";
+import { clearUser } from "./store/slices/authSlice";
+import { setPlatformPermissions } from "./store/slices/platformPermissionsSlice";
+import { clearTenantPermissions } from "./store/slices/tenantPermissionsSlice";
 import { store } from "./store";
 import "./main.css";
 
@@ -15,8 +19,9 @@ initTheme();
 // Without this, expired access tokens cannot use the refresh flow during the session.
 setupAxiosInterceptors();
 
-void bootstrapAuth().then(() => {
-  createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root")!;
+const renderApp = () => {
+  createRoot(rootElement).render(
     <StrictMode>
       <Provider store={store}>
         <BrowserRouter>
@@ -25,4 +30,13 @@ void bootstrapAuth().then(() => {
       </Provider>
     </StrictMode>,
   );
-});
+};
+
+if (!getAccessToken()) {
+  store.dispatch(clearUser());
+  store.dispatch(setPlatformPermissions(null));
+  store.dispatch(clearTenantPermissions());
+  renderApp();
+} else {
+  void bootstrapAuth().then(renderApp);
+}

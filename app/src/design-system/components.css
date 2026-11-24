@@ -983,7 +983,7 @@ a {
   padding: clamp(20px, 3vw, 28px) clamp(16px, 3vw, 32px) clamp(24px, 4vw, 48px);
 }
 /* Tablet & Medium Screens (641px - 1024px) */
-@media (max-width: 1024px) {
+@media (min-width: 641px) and (max-width: 1024px) {
   /* Floating elevated drawer when expanded on tablet */
   .app-sidebar:not(.app-sidebar--collapsed) {
     box-shadow: var(--elevation-modal);
@@ -1014,6 +1014,10 @@ a {
   }
   .app-content {
     padding: 24px 16px;
+  }
+  .app-main,
+  .app-main--collapsed {
+    margin-left: 0 !important;
   }
 }
 
@@ -1567,7 +1571,8 @@ a {
    edge-to-edge bar - an explicit, deliberate deviation from literal D10 fidelity, requested. */
 .app-mobile-nav { display: none; }
 @media (max-width: 640px) {
-  .app-sidebar { display: none; }
+  .app-sidebar,
+  .app-sidebar--collapsed { display: none !important; }
   .app-mobile-nav {
     display: grid; grid-auto-flow: column; grid-auto-columns: minmax(56px, 1fr);
     position: fixed; inset: auto var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom)) var(--space-3);
@@ -1589,7 +1594,12 @@ a {
   .app-mobile-nav .app-nav__link.is-active::before { content:none; }
   /* The role switcher moves into the Menu drawer on mobile (see .app-more-drawer__role). */
   .app-topbar__role { display: none; }
-  .app-main { margin-left: 0; padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .app-main,
+  .app-main--collapsed {
+    margin-left: 0 !important;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    transition: none;
+  }
   .app-content { padding-bottom: 28px; }
 }
 /* D10's ACT.openMore drawer: a bottom sheet, not the centered dialog used elsewhere - full
@@ -2635,8 +2645,10 @@ input[type="number"] {
 }
 .app-sidebar--collapsed .app-nav__more > span { display: none; }
 
-/* app-main offset when sidebar is collapsed */
-.app-main--collapsed { margin-left: calc(var(--sidebar-rail) + var(--space-8)); }
+/* app-main offset when sidebar is collapsed on desktop */
+@media (min-width: 1025px) {
+  .app-main--collapsed { margin-left: calc(var(--sidebar-rail) + var(--space-8)); }
+}
 
 /* ── Active nav item: left-border accent + icon brand color ───────────────── */
 .app-nav__link.is-active {

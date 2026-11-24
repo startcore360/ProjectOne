@@ -384,8 +384,9 @@ public class AuthActionTest {
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("Rule R2-12");
 
-        // Common dictionary password
-        assertThatThrownBy(() -> authService.changeTenantPassword(principal, "sub", "old", "password", "127.0.0.1"))
+        // Common dictionary password (structurally valid - 12+ chars, mixed case, digit, special -
+        // so it reaches the denylist check rather than failing on length/complexity first)
+        assertThatThrownBy(() -> authService.changeTenantPassword(principal, "sub", "old", "Password@123", "127.0.0.1"))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("dictionary passwords");
     }

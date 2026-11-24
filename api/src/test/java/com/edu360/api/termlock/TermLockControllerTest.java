@@ -65,6 +65,7 @@ class TermLockControllerTest {
                 permissionEvaluatorService,
                 auditLogService
         );
+        termLockService.setJdbcTemplate(mock(org.springframework.jdbc.core.JdbcTemplate.class));
 
         controller = new TermLockController(termLockService);
     }
@@ -121,7 +122,7 @@ class TermLockControllerTest {
         when(termLockRepository.save(any(TermLock.class))).thenAnswer(inv -> inv.getArgument(0));
         when(termLockEventRepository.save(any(TermLockEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        UnlockTermRequest request = new UnlockTermRequest("Grievance verification approved by Academic Council", 48);
+        UnlockTermRequest request = new UnlockTermRequest("Grievance verification approved by Academic Council", 72);
 
         ResponseEntity<TermLockResponse> response = controller.unlockTerm(
                 TENANT_ID, INSTITUTION_ID, TERM_LOCK_ID, null, request, authFor(TENANT_ID, USER_ID));
@@ -194,7 +195,7 @@ class TermLockControllerTest {
         when(termLockRepository.findByIdTenantIdAndIdTermLockId(TENANT_ID, TERM_LOCK_ID))
                 .thenReturn(Optional.of(termLock));
 
-        UnlockTermRequest request = new UnlockTermRequest("Extend unlock duration", 48);
+        UnlockTermRequest request = new UnlockTermRequest("Extend unlock duration", 72);
 
         BusinessRuleViolationException ex = assertThrows(BusinessRuleViolationException.class, () ->
                 controller.unlockTerm(TENANT_ID, INSTITUTION_ID, TERM_LOCK_ID, null, request, authFor(TENANT_ID, USER_ID)));
@@ -217,7 +218,7 @@ class TermLockControllerTest {
         when(termLockRepository.save(any(TermLock.class))).thenAnswer(inv -> inv.getArgument(0));
         when(termLockEventRepository.save(any(TermLockEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        UnlockTermRequest request = new UnlockTermRequest("Administrative audit", 24);
+        UnlockTermRequest request = new UnlockTermRequest("Administrative audit review", 72);
 
         ResponseEntity<TermLockResponse> response = controller.unlockTerm(
                 TENANT_ID, null, TERM_LOCK_ID, null, request, authFor(TENANT_ID, USER_ID));

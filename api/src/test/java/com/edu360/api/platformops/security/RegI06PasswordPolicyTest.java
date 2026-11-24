@@ -50,7 +50,9 @@ class RegI06PasswordPolicyTest {
         assertThatThrownBy(() -> passwords.validate("Abcdefg-1"))
                 .isInstanceOfSatisfying(BusinessRuleViolationException.class,
                         ex -> assertThat(ex.getErrorCode()).isEqualTo("PASSWORD_TOO_SHORT"));
-        passwords.validate("Abcdefgh-1x");
+        // The saved policy's min length (10) is below the 12-character floor current() enforces
+        // (see T1-DISC-03), so the accepted password must meet that 12-character floor.
+        passwords.validate("Abcdefgh-1xy");
     }
 
     @Test
@@ -64,7 +66,9 @@ class RegI06PasswordPolicyTest {
         sync.applyToRealm("new-tenant-realm");
 
         RealmSecuritySettings expected = RealmSecuritySyncService.settingsOf(policy.current());
-        assertThat(expected.minPasswordLength()).isEqualTo(10);
+        // SecurityPolicyService.current() clamps to a 12-character floor (see T1-DISC-03); the
+        // saved value of 10 above is below that floor, so the effective minimum is 12, not 10.
+        assertThat(expected.minPasswordLength()).isEqualTo(12);
         verify(realms).apply("new-tenant-realm", expected);
     }
 

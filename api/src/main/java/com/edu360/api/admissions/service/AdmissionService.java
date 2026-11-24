@@ -24,22 +24,25 @@ import java.util.*;
 @Service
 public class AdmissionService implements AdmissionPaymentEventHandler {
     private final JdbcTemplate jdbc;
-    private final ObjectMapper json;
+    private final ObjectMapper json = new ObjectMapper();
     private final PermissionEvaluatorService permissions;
     private final StudentCreationService students;
     private final MeritCalculationService meritCalculationService;
 
-    public AdmissionService(JdbcTemplate jdbc, ObjectMapper json, PermissionEvaluatorService permissions,
+    public AdmissionService(JdbcTemplate jdbc, PermissionEvaluatorService permissions,
             StudentCreationService students, MeritCalculationService meritCalculationService) {
-        this.jdbc=jdbc; this.json=json; this.permissions=permissions; this.students=students;
+        this.jdbc=jdbc; this.permissions=permissions; this.students=students;
         this.meritCalculationService=meritCalculationService;
     }
 
     @Transactional(readOnly=true)
     public List<Map<String,Object>> cycles(TenantPrincipal actor, UUID institutionId) {
         authorizeAny(actor,institutionId,"ADMISSION_FORM_CREATE","APPLICATION_SUBMIT","APPLICATION_VERIFY","MERIT_LIST_GENERATE","SEAT_ALLOCATE");
-        return jdbc.queryForList("select * from app.admission_cycle where tenant_id=? and (? is null or institution_id=?) order by start_date desc",
-                actor.tenantId(),institutionId,institutionId);
+        if (institutionId == null) {
+            return jdbc.queryForList("select * from app.admission_cycle where tenant_id=? order by start_date desc", actor.tenantId());
+        }
+        return jdbc.queryForList("select * from app.admission_cycle where tenant_id=? and institution_id=? order by start_date desc",
+                actor.tenantId(), institutionId);
     }
 
     @Transactional
@@ -111,8 +114,10 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
     public Map<String,Object> submitApplication(TenantPrincipal actor, UUID cycleId, Map<String,Object> in) {
         Map<String,Object> cycle=one("select * from app.admission_cycle where tenant_id=? and id=?",actor.tenantId(),cycleId);
         if(!"OPEN".equals(cycle.get("status"))) throw new BusinessRuleViolationException("ADMISSION_CYCLE_CLOSED","This admission cycle is not open.");
-        LocalDate today=LocalDate.now();
-        if(today.isBefore((LocalDate)cycle.get("start_date"))||today.isAfter((LocalDate)cycle.get("end_date")))
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = date(cycle.get("start_date"));
+        LocalDate endDate = date(cycle.get("end_date"));
+        if ((startDate != null && today.isBefore(startDate)) || (endDate != null && today.isAfter(endDate)))
             throw new BusinessRuleViolationException("APPLICATION_WINDOW_CLOSED","Applications are outside the published date window.");
         authorize(actor,"APPLICATION_SUBMIT",(UUID)cycle.get("institution_id"));
         String number="ADM-"+LocalDate.now().getYear()+"-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.ROOT);
@@ -433,7 +438,7 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
             throw new BusinessRuleViolationException("ADMISSION_CONVERSION_NOT_READY","Applicant must be admitted, have an accepted seat, and have confirmed admission fee.");
         if(app.get("student_profile_id")!=null) throw new BusinessRuleViolationException("ALREADY_CONVERTED","Application already has a student profile.");
         StudentProfileResponse profile=students.createProfileOnly(actor,new StudentProfileOnlyRequest((UUID)app.get("institution_id"),
-                String.valueOf(app.get("applicant_name")),(LocalDate)app.get("date_of_birth"),LocalDate.now()));
+                String.valueOf(app.get("applicant_name")),date(app.get("date_of_birth")),LocalDate.now()));
         int linked=jdbc.update("update app.admission_application set student_profile_id=?,updated_by=? where tenant_id=? and id=? and student_profile_id is null",
                 profile.id(),actor.userAccountId(),actor.tenantId(),applicationId);
         if(linked!=1) throw new BusinessRuleViolationException("ALREADY_CONVERTED","Application already has a student profile.");
@@ -482,6 +487,11 @@ public class AdmissionService implements AdmissionPaymentEventHandler {
     private static UUID uuid(Map<String,Object> m,String k){return UUID.fromString(required(m,k));}
     private static int integer(Map<String,Object> m,String k){return Integer.parseInt(required(m,k));}
     private static BigDecimal decimal(Object v){try{return new BigDecimal(String.valueOf(v));}catch(Exception e){throw new BusinessRuleViolationException("VALIDATION_FAILED","A valid numeric value is required.");}}
-    private static LocalDate date(Object v){return v==null||String.valueOf(v).isBlank()?null:LocalDate.parse(String.valueOf(v));}
+    private static LocalDate date(Object v){
+        if (v == null || String.valueOf(v).isBlank()) return null;
+        if (v instanceof java.sql.Date d) return d.toLocalDate();
+        if (v instanceof LocalDate ld) return ld;
+        return LocalDate.parse(String.valueOf(v));
+    }
     private static String serialize(Object v){try{return new ObjectMapper().writeValueAsString(v);}catch(Exception e){throw new IllegalArgumentException("Invalid JSON value.",e);}}
 }

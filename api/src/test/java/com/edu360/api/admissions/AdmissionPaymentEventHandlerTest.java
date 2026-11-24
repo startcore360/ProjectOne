@@ -38,7 +38,7 @@ class AdmissionPaymentEventHandlerTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdmissionService(jdbc, new ObjectMapper(), permissions, students, new MeritCalculationService());
+        service = new AdmissionService(jdbc, permissions, students, new MeritCalculationService());
     }
 
     @Test

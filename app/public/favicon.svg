@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="68 24 380 304">
+  <defs>
+    <linearGradient id="crescent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3e9b6f"/>
+      <stop offset="55%" stop-color="#2f7d62"/>
+      <stop offset="100%" stop-color="#63a57d"/>
+    </linearGradient>
+    <linearGradient id="panel-one" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3e9b6f"/>
+      <stop offset="100%" stop-color="#23543f"/>
+    </linearGradient>
+    <linearGradient id="panel-two" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2f7d62"/>
+      <stop offset="100%" stop-color="#3e9b6f"/>
+    </linearGradient>
+    <linearGradient id="panel-three" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#63a57d"/>
+      <stop offset="100%" stop-color="#2f7d62"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 10) scale(1 .78)">
+    <path fill="url(#crescent)" d="M359 42 C310 13 249 27 202 58 C142 98 105 159 104 218 C102 285 139 339 197 360 C246 378 307 366 359 337 C326 376 275 397 222 397 C137 397 75 335 75 247 C75 153 137 69 225 43 C276 28 325 29 359 42 Z"/>
+    <path fill="url(#panel-one)" d="M164 194 Q164 181 177 174 L214 153 Q229 145 229 161 L229 255 Q207 255 190 270 L164 291 Z"/>
+    <path fill="url(#panel-two)" d="M235 151 Q235 139 247 132 L284 113 Q299 106 299 122 L299 257 Q277 263 263 282 L235 261 Z"/>
+    <path fill="url(#panel-three)" d="M305 112 Q305 101 317 96 L351 81 Q366 75 366 91 L366 202 Q342 205 326 222 L305 239 Z"/>
+    <g fill="#fff">
+      <circle cx="187" cy="185" r="5.2"/>
+      <circle cx="201" cy="181" r="5.8"/>
+      <circle cx="215" cy="185" r="5.2"/>
+      <path d="M177 207 Q178 193 188 193 Q198 193 199 207 Z"/>
+      <path d="M190 211 Q191 192 202 192 Q214 192 215 211 Z"/>
+      <path d="M211 207 Q212 193 222 193 Q232 193 233 207 Z"/>
+    </g>
+    <g fill="#fff">
+      <path d="M243 174 L267 163 L291 174 L267 186 Z"/>
+      <path d="M250 180 L267 188 L284 180 L284 194 L267 202 L250 194 Z"/>
+      <path d="M289 176 L293 178 L293 194 L289 194 Z"/>
+    </g>
+    <g fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M319 158 L335 146 L345 150 L359 133"/>
+      <path d="M350 133 L360 132 L358 142"/>
+    </g>
+    <g fill="#fff">
+      <rect x="318" y="168" width="8" height="18"/>
+      <rect x="334" y="158" width="8" height="28"/>
+      <rect x="350" y="148" width="8" height="38"/>
+    </g>
+    <path fill="#63a57d" d="M151 292 C178 271 210 271 239 295 C249 303 257 314 263 324 C278 299 299 286 327 286 L397 286 C412 286 418 298 410 309 C405 316 396 320 385 320 L319 320 C294 320 276 331 263 349 C248 330 230 319 208 318 C187 317 168 323 150 333 C142 338 133 328 140 319 Z"/>
+    <path fill="#3e9b6f" d="M144 340 C182 320 218 323 263 351 C225 338 190 338 155 355 C145 360 137 347 144 340 Z"/>
+    <path fill="#23543f" d="M263 351 C301 322 343 320 394 324 C345 330 302 337 263 365 C226 337 190 335 148 354 C190 343 226 343 263 351 Z"/>
+    <rect fill="#23543f" x="374" y="81" width="25" height="25" rx="6"/>
+    <rect fill="#23543f" x="399" y="62" width="18" height="18" rx="5"/>
+    <rect fill="#2f7d62" x="417" y="87" width="22" height="22" rx="6"/>
+    <rect fill="#63a57d" x="395" y="111" width="22" height="22" rx="6"/>
+  </g>
+</svg>
