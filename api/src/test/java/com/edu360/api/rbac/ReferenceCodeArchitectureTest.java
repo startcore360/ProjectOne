@@ -42,9 +42,20 @@ class ReferenceCodeArchitectureTest {
 
     private static final Path MAIN = Path.of("src", "main", "java");
     private static final Path REF_DATA = Path.of("..", "sql", "05_ref_data.sql");
+    private static final Path SQL_DIR = Path.of("..", "sql");
 
+    // Baseline seed form: one "INSERT INTO ref.action_catalog VALUES ('CODE', ...);" per row.
     private static final Pattern REF_ROW = Pattern.compile(
             "INSERT INTO ref\\.(?:standard_role|action_catalog) VALUES \\('([A-Z][A-Z0-9_]*)'");
+
+    // V4.1 migration form: a single multi-row statement with an explicit column list, e.g.
+    // "INSERT INTO ref.action_catalog(action_code,...) VALUES ('CODE1',...), ('CODE2',...) ..."
+    // Matches the whole statement up to its closing ';', so the row scan below can pick out
+    // every row's leading code, not just the first.
+    private static final Pattern REF_INSERT_STATEMENT = Pattern.compile(
+            "INSERT INTO ref\\.(?:standard_role|action_catalog)\\s*\\([^)]*\\)\\s*VALUES\\s*(.*?);",
+            Pattern.DOTALL);
+    private static final Pattern REF_ROW_TUPLE = Pattern.compile("\\(\\s*'([A-Z][A-Z0-9_]*)'");
     private static final Pattern CODE_LITERAL = Pattern.compile("\"([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+|[A-Z]{3,})\"");
     private static final Pattern COLLECTION_START = Pattern.compile(
             "(?:(\\w+)\\s*=\\s*)?\\b(Set\\.of|Map\\.ofEntries|Map\\.of|Map\\.entry)\\s*\\(");
@@ -53,6 +64,12 @@ class ReferenceCodeArchitectureTest {
     private static final Pattern STRING_CONSTANT = Pattern.compile(
             "static\\s+final\\s+String\\s+([A-Z][A-Z0-9_]*)\\s*=\\s*\"([A-Z][A-Z0-9_]*)\"");
     private static final Pattern CODE_HOLDER_NAME = Pattern.compile("(?i).*(role|action).*");
+
+    // Admission quota-category keys ("GENERAL", "MERIT", "SPORTS", "MANAGEMENT") are business
+    // field values, not role/action codes. "MANAGEMENT" happens to collide with the real
+    // MANAGEMENT role code, which trips the collection heuristic below for its co-members. Same
+    // treatment as the status/event-type collections this test already leaves alone.
+    private static final Set<String> QUOTA_CATEGORY_FALSE_POSITIVES = Set.of("GENERAL", "MERIT", "SPORTS");
 
     @Test
     @DisplayName("REG-A01-1: every role and action code used in Java exists in sql/05_ref_data.sql")
@@ -80,11 +97,35 @@ class ReferenceCodeArchitectureTest {
 
     static Set<String> loadReferenceCodes() throws IOException {
         Set<String> codes = new HashSet<>();
-        Matcher m = REF_ROW.matcher(Files.readString(REF_DATA));
+        addBaselineRows(codes, Files.readString(REF_DATA));
+
+        // V4.1 migrations add role/action codes incrementally (e.g. sql/59_..._indexes.sql adds
+        // the M13 appraisal actions); the baseline seed file alone no longer lists every code a
+        // later migration's Java callers rely on, so those migrations must be scanned too.
+        try (Stream<Path> files = Files.walk(SQL_DIR)) {
+            for (Path file : files.filter(p -> p.toString().endsWith(".sql"))
+                    .filter(p -> p.getFileName().toString().matches("\\d+_v4\\d_.*\\.sql"))
+                    .filter(p -> !p.getFileName().toString().contains("rollback"))
+                    .toList()) {
+                String source = Files.readString(file);
+                addBaselineRows(codes, source);
+                Matcher stmt = REF_INSERT_STATEMENT.matcher(source);
+                while (stmt.find()) {
+                    Matcher row = REF_ROW_TUPLE.matcher(stmt.group(1));
+                    while (row.find()) {
+                        codes.add(row.group(1));
+                    }
+                }
+            }
+        }
+        return codes;
+    }
+
+    private static void addBaselineRows(Set<String> codes, String source) {
+        Matcher m = REF_ROW.matcher(source);
         while (m.find()) {
             codes.add(m.group(1));
         }
-        return codes;
     }
 
     static Set<String> codesUsedIn(String source, Set<String> known) {
@@ -115,7 +156,9 @@ class ReferenceCodeArchitectureTest {
             boolean holdsCodes = literals.stream().anyMatch(known::contains)
                     || (start.group(1) != null && CODE_HOLDER_NAME.matcher(start.group(1)).matches());
             if (holdsCodes) {
-                found.addAll(literals);
+                literals.stream()
+                        .filter(code -> !QUOTA_CATEGORY_FALSE_POSITIVES.contains(code))
+                        .forEach(found::add);
             }
         }
         return found;

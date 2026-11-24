@@ -25,6 +25,25 @@ export default defineConfig({
   // See docker/PRODUCTION_TENANT_ROUTING.txt.
   allowedHosts: [".edu360.localhost", ".edu360.local", ".duckdns.org"],
 },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("react") || id.includes("react-dom") || id.includes("react-router")) {
+              return "vendor-react";
+            }
+            if (id.includes("@reduxjs") || id.includes("react-redux")) {
+              return "vendor-redux";
+            }
+            if (id.includes("axios")) {
+              return "vendor-axios";
+            }
+          }
+        },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.tsx",

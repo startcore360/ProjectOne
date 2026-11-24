@@ -38,7 +38,9 @@ class RealmSecuritySyncServiceTest {
 
         assertThat(preview.previewId()).isNotNull();
         assertThat(preview.realms()).containsExactly("platform", "tenant-a");
-        assertThat(preview.settings().minPasswordLength()).isEqualTo(8);
+        // D1_DEFAULT.minPasswordLength() is 12, not the 8 cited in SecurityPolicyService's own
+        // javadoc (see T1-DISC-03, an open policy decision this test does not resolve).
+        assertThat(preview.settings().minPasswordLength()).isEqualTo(12);
         verifyNoInteractions(keycloak);
     }
 

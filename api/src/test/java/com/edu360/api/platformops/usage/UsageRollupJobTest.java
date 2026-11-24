@@ -61,7 +61,10 @@ class UsageRollupJobTest {
         new UsageRollupJob(tenants, monthly, platformDaily, tenantJdbc).rollup(LocalDate.of(2026, 11, 17));
 
         verify(tenantJdbc, never()).update(anyString(), any(Object[].class));
-        verify(monthly, times(6)).save(any(TenantUsageMonthly.class));
+        // UsageRollupJob.saveMonthly is called once per tracked metric (LOGINS, ATTENDANCE_MARKED,
+        // FEES_PAID_ONLINE, SMS_SENT, STORAGE_GB, ACTIVE_USERS, ACTIVE_STUDENTS, ACTIVE_STAFF,
+        // ACTIVE_COLLEGES, ACTIVE_SCHOOLS, BILLABLE_ACTIVE_STUDENTS) - 11 metrics, not 6.
+        verify(monthly, times(11)).save(any(TenantUsageMonthly.class));
         verify(platformDaily, times(3)).save(any(UsageMetricDaily.class));
         org.assertj.core.api.Assertions.assertThat(TenantContext.isSet()).isFalse();
     }
@@ -81,7 +84,7 @@ class UsageRollupJobTest {
 
         new UsageRollupJob(tenants, monthly, platformDaily, tenantJdbc).rollup(LocalDate.of(2026, 11, 17));
 
-        verify(monthly, times(6)).save(any(TenantUsageMonthly.class));
+        verify(monthly, times(11)).save(any(TenantUsageMonthly.class));
         verify(platformDaily, never()).save(any(UsageMetricDaily.class));
     }
 }

@@ -45,6 +45,9 @@ public class TermLockService {
     @Autowired(required = false)
     public void setDataSource(DataSource dataSource) { this.jdbcTemplate = new JdbcTemplate(dataSource); }
 
+    /** Test-only seam: lets unit tests supply a mock JdbcTemplate directly, without a real DataSource. */
+    public void setJdbcTemplate(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
+
     /** Shared date-based lock check; mirrors app.is_term_locked used by SQL guards. */
     @Transactional(readOnly = true)
     public boolean isLocked(UUID tenantId, UUID sectionId, LocalDate date) {
@@ -119,8 +122,8 @@ public class TermLockService {
             termLock.setRowVersion(termLock.getRowVersion() != null ? termLock.getRowVersion() + 1 : 1);
         }
 
-        if (jdbcTemplate == null) throw new IllegalStateException("Term unlock log JDBC store is unavailable.");
         if ("TEMP_UNLOCKED".equals(termLock.getLockState())) {
+            if (jdbcTemplate == null) throw new IllegalStateException("Term unlock log JDBC store is unavailable.");
             jdbcTemplate.update("""
                     UPDATE app.term_unlock_log
                        SET is_active = false, relocked_at = now(), updated_at = now(),

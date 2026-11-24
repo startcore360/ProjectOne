@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 
 import com.edu360.api.rbac.ScopeType;
@@ -139,6 +140,7 @@ class InstitutionSetupActionTest {
     @Mock private StudentProfileRepository studentProfileRepository;
     @Mock private TermLockRepository termLockRepository;
     @Mock private TermLockEventRepository termLockEventRepository;
+    @Mock private JdbcTemplate termLockJdbcTemplate;
 
     private StructureService structureService;
     private ProgramRuleService programRuleService;
@@ -257,6 +259,7 @@ class InstitutionSetupActionTest {
                 permissionEvaluatorService,
                 auditLogService
         );
+        termLockService.setJdbcTemplate(termLockJdbcTemplate);
         TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", java.util.Set.of(institutionId), "PRINCIPAL_COLLEGE", ScopeType.INSTITUTION);
     }
 
@@ -1257,7 +1260,7 @@ class InstitutionSetupActionTest {
         when(termLockRepository.save(any(TermLock.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TermLockResponse resp = termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
-                new UnlockTermRequest("Grade re-evaluation request approved by Dean", 48));
+                new UnlockTermRequest("Grade re-evaluation request approved by Dean", 72));
         assertThat(resp.lockState()).isEqualTo("TEMP_UNLOCKED");
     }
 
@@ -1285,7 +1288,7 @@ class InstitutionSetupActionTest {
         when(termLockRepository.findByIdTenantIdAndIdTermLockId(tenantId, termLockId)).thenReturn(Optional.of(lock));
 
         assertThatThrownBy(() -> termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
-                new UnlockTermRequest("reason", 24)))
+                new UnlockTermRequest("A sufficiently long unlock reason for this test", 72)))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("does not belong to the specified institution");
     }
@@ -1299,12 +1302,12 @@ class InstitutionSetupActionTest {
         assertThatThrownBy(() -> termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
                 new UnlockTermRequest("   ", 24)))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("Unlock reason is required");
+                .hasMessageContaining("Unlock reason must contain at least 20 characters");
 
-        // Exceeding 72 hours
+        // Duration other than the fixed 72 hours
         assertThatThrownBy(() -> termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
-                new UnlockTermRequest("Valid reason", 96)))
+                new UnlockTermRequest("A sufficiently long unlock reason for this test", 96)))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("cannot exceed 72 hours");
+                .hasMessageContaining("fixed at 72 hours");
     }
 }

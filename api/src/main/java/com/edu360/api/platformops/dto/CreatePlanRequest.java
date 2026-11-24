@@ -34,8 +34,6 @@ public record CreatePlanRequest(
 
         Boolean brandingColorsAllowed,
 
-        @Min(value = 1, message = "Billing cycle must be 1, 3, 6 or 12 months")
-        @Max(value = 12, message = "Billing cycle must be 1, 3, 6 or 12 months")
         Integer billingCycleMonths,
 
         @DecimalMin(value = "0.00", message = "SMS unit amount cannot be negative")
@@ -85,9 +83,11 @@ public record CreatePlanRequest(
                 null, null, null);
     }
 
-    @AssertTrue(message = "Billing cycle must be between 1 and 36 months")
+    @AssertTrue(message = "Billing cycle must be 1, 3, 6 or 12 months")
     public boolean isBillingCycleMonthsAllowed() {
-        return billingCycleMonths == null || (billingCycleMonths >= 1 && billingCycleMonths <= 36);
+        return billingCycleMonths == null
+                || billingCycleMonths == 1 || billingCycleMonths == 3
+                || billingCycleMonths == 6 || billingCycleMonths == 12;
     }
 
     @AssertTrue(message = "Discount type and value must be provided together")

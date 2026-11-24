@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
 import com.edu360.api.platform.PlanRepository;
+import com.edu360.api.rbac.PermissionDecision;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RoleAssignmentService;
@@ -41,6 +42,8 @@ class UserAccountStudentProvisioningTest {
         when(tenant.getPlanId()).thenReturn(null);
         when(tenants.findById(tenantId)).thenReturn(Optional.of(tenant));
         when(accounts.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED)).thenReturn(0L);
+        when(permissions.can(any(), eq("USER_CREATE"), any(), any())).thenReturn(PermissionDecision.allow());
+        when(permissions.can(any(), eq("SEAT_ALLOCATE"), any(), any())).thenReturn(PermissionDecision.deny("DENIED", "Not permitted."));
         when(accounts.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(keycloak.provisionStudentUser(eq("tenant-realm"), eq("Asha Rao"), eq("COL-2026-001"), anyString(), eq(true)))
                 .thenReturn("kc-student-1");

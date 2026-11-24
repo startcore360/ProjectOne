@@ -1,8 +1,8 @@
 {
   ".github/workflows/ci.yml": {
-    "mtime": 1795102559.2400782,
-    "seen": 1795175502.9867775,
-    "ast_hash": "9a770c74b21bcae131cfccb3cbb57a93",
+    "mtime": 1795454270.1503835,
+    "seen": 1795493362.2232206,
+    "ast_hash": "4cddac4fd22f2a1c202cd7ba8bbf61fc",
     "semantic_hash": ""
   },
   "api/mvnw": {
@@ -12,9 +12,9 @@
     "semantic_hash": ""
   },
   "api/pom.xml": {
-    "mtime": 1794549442.925375,
-    "seen": 1795175502.9867775,
-    "ast_hash": "bdf44e1284e8edde6fbe4a8653cd0858",
+    "mtime": 1795455003.1486917,
+    "seen": 1795493362.2243636,
+    "ast_hash": "fb99cf081782f479f84b0af9852a8b05",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/ApiApplication.java": {
@@ -180,9 +180,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/academic/StudentStatusService.java": {
-    "mtime": 1794549442.935983,
-    "seen": 1795175502.9867775,
-    "ast_hash": "d622df8026274979f31720406a390c7a",
+    "mtime": 1795454270.160462,
+    "seen": 1795493362.2530057,
+    "ast_hash": "bc16a504b32953df470f1a1287d7b4c7",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/academic/SubjectAllocation.java": {
@@ -252,9 +252,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/approval/ApprovalDelegationService.java": {
-    "mtime": 1794283804.7406995,
-    "seen": 1795175502.9867775,
-    "ast_hash": "fcc11ba2392da2fbc4ce33b3257f5c2d",
+    "mtime": 1795454270.1748369,
+    "seen": 1795493362.2607772,
+    "ast_hash": "01e6867ebb1ee57c158c23bd8978c5cc",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/approval/ApprovalInboxController.java": {
@@ -264,9 +264,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/approval/ApprovalInboxService.java": {
-    "mtime": 1795102559.2502022,
-    "seen": 1795175502.9867775,
-    "ast_hash": "95e3f1bb3d3ec9efa867baa90fc00747",
+    "mtime": 1795454270.1780627,
+    "seen": 1795493362.261305,
+    "ast_hash": "2d76296adc855ee3bde8cf5dc2a84556",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/approval/ApprovalOutcomeHandler.java": {
@@ -402,9 +402,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/audit/AuditEventType.java": {
-    "mtime": 1795016896.3174489,
-    "seen": 1795175502.9867775,
-    "ast_hash": "26d83cbad6a3023687539b8d1681fa68",
+    "mtime": 1795454270.1792343,
+    "seen": 1795493362.284855,
+    "ast_hash": "536292ae78544d624273df4ef50bbca2",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/audit/AuditFailureException.java": {
@@ -426,9 +426,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/audit/AuditLogService.java": {
-    "mtime": 1795101368.003199,
-    "seen": 1795175502.9867775,
-    "ast_hash": "864937fe3f2c8db09890180aba19df23",
+    "mtime": 1795454270.1803777,
+    "seen": 1795493362.2877517,
+    "ast_hash": "907b2a24a9981c76c3360477e90a7ff8",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/audit/JdbcTenantAuditStore.java": {
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/auth/AuthService.java": {
-    "mtime": 1795172681.46061,
-    "seen": 1795175502.9867775,
-    "ast_hash": "7a8156160c137ffb7a5e26167bfe6ff4",
+    "mtime": 1795454270.1821687,
+    "seen": 1795493362.2910428,
+    "ast_hash": "db4c2f9d9970a0fc29ff1afc7b23ff56",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/auth/IdentityEventTokenValidator.java": {
@@ -486,9 +486,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/auth/PasswordPolicyService.java": {
-    "mtime": 1794283820.4541297,
-    "seen": 1795175502.9867775,
-    "ast_hash": "6c69602fc24dbfa75a0a319c01923788",
+    "mtime": 1795454270.183169,
+    "seen": 1795493362.29568,
+    "ast_hash": "8339cd42f3bd8430728539c191ed00bd",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/auth/PrintedPasswordPolicy.java": {
@@ -594,9 +594,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/config/DevRoleAssignmentSeeder.java": {
-    "mtime": 1793875394.3927505,
-    "seen": 1795175502.9867775,
-    "ast_hash": "e16bc6665624be210609e2a5f874e827",
+    "mtime": 1795499803.4965372,
+    "seen": 1795500498.2972906,
+    "ast_hash": "f0b60f5a588bbffdfe7ace5d4c617b4a",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/config/JpaRepositoryConfig.java": {
@@ -684,9 +684,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/config/WebMvcConfig.java": {
-    "mtime": 1794227590.4804657,
-    "seen": 1795175502.9867775,
-    "ast_hash": "7edadbc29a62ffb98e5256b7d66e9ca7",
+    "mtime": 1795454270.1844788,
+    "seen": 1795493362.3222551,
+    "ast_hash": "4d2cab051938c4acc08d6d24b860d2fc",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/config/keycloak/KeycloakAdminClient.java": {
@@ -714,9 +714,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/config/keycloak/KeycloakRealmSecurityService.java": {
-    "mtime": 1794283820.4561422,
-    "seen": 1795175502.9867775,
-    "ast_hash": "e06d9435a9cf8009852f1572f894bd78",
+    "mtime": 1795454270.1856625,
+    "seen": 1795493362.3246067,
+    "ast_hash": "3fd4bcdc99b6dbb7406c1a6374b6adad",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/config/keycloak/RestClientConfig.java": {
@@ -762,9 +762,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/exception/GlobalExceptionHandler.java": {
-    "mtime": 1795102199.854041,
-    "seen": 1795175502.9867775,
-    "ast_hash": "0070abe3538e644fb3fc28ae9d7a62fd",
+    "mtime": 1795489331.4218035,
+    "seen": 1795493362.3276596,
+    "ast_hash": "62034ed6d4a03a6e6816486edf058d58",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/exception/InvalidCredentialsException.java": {
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/FilePurpose.java": {
-    "mtime": 1794461147.2502363,
-    "seen": 1795175502.9867775,
-    "ast_hash": "571ecb8d4e0b22c66fa0be41a9edbaa1",
+    "mtime": 1795454270.1862836,
+    "seen": 1795493362.3449361,
+    "ast_hash": "2185478de71759c738b0d700018cfc71",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/FileScanner.java": {
@@ -858,9 +858,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/FileService.java": {
-    "mtime": 1794549442.940112,
-    "seen": 1795175502.9867775,
-    "ast_hash": "f437312196314cf6fe04438fcb02248c",
+    "mtime": 1795454270.1874304,
+    "seen": 1795493362.345537,
+    "ast_hash": "aefd7874e5f262bb68c1de70e7672278",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/FileStorage.java": {
@@ -876,9 +876,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/JdbcFileAccessPolicy.java": {
-    "mtime": 1794591251.0120869,
-    "seen": 1795175502.9867775,
-    "ast_hash": "f2269c8c921163421b287d4655c8d76e",
+    "mtime": 1795454270.188619,
+    "seen": 1795493362.3466945,
+    "ast_hash": "196aba69849767f00108b378f8701054",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/LocalFileStorage.java": {
@@ -888,9 +888,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/PendingFileScanner.java": {
-    "mtime": 1794560143.425457,
-    "seen": 1795175502.9867775,
-    "ast_hash": "43eb2f74577bf72800405044c8e8ec5f",
+    "mtime": 1795454270.1891966,
+    "seen": 1795493362.347266,
+    "ast_hash": "7f418af76629298b6e2523627c14e7a6",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/files/StoredFile.java": {
@@ -1020,9 +1020,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/identity/StudentCreationService.java": {
-    "mtime": 1795175620.0873082,
-    "seen": 1795178228.7668827,
-    "ast_hash": "7d2afdb60ba5687ec23e357c79e15a35",
+    "mtime": 1795454270.1903439,
+    "seen": 1795493362.36399,
+    "ast_hash": "9009ab3ae695eb535307218a1a777b60",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/identity/StudentEnrollment.java": {
@@ -1080,9 +1080,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/identity/TenantUserLookup.java": {
-    "mtime": 1795016967.8649106,
-    "seen": 1795175502.987368,
-    "ast_hash": "8e31754079693396a2d065f8182d52e1",
+    "mtime": 1795499734.8632534,
+    "seen": 1795500498.3630958,
+    "ast_hash": "80174975d4d1a88adab11242808c8ccd",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/identity/TopUserController.java": {
@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/identity/UserAccountService.java": {
-    "mtime": 1795102559.2517443,
-    "seen": 1795175502.987368,
-    "ast_hash": "9d972cd1aab7575c9d71213d7b0dffa3",
+    "mtime": 1795454270.1941447,
+    "seen": 1795493362.377701,
+    "ast_hash": "8b0e25feef57e96d9a6654ec96beff5b",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/identity/UserAccountStatus.java": {
@@ -1266,15 +1266,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/AcademicSession.java": {
-    "mtime": 1793967758.5987716,
-    "seen": 1795175502.987368,
-    "ast_hash": "d20d745fca55bedcf1335e5f174c9750",
+    "mtime": 1795454270.1947453,
+    "seen": 1795493362.393758,
+    "ast_hash": "95eab870f0bf5a695b3c21212e7b40b2",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/AcademicSessionRepository.java": {
-    "mtime": 1794398597.8137236,
-    "seen": 1795175502.987368,
-    "ast_hash": "78a8133b0e37ffeeece9d80ea804a153",
+    "mtime": 1795454270.1959434,
+    "seen": 1795493362.393758,
+    "ast_hash": "9dad906989ed43f8c5419ea4460af25b",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/CalendarDayStatusService.java": {
@@ -1308,9 +1308,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/ClassTeacherAssignmentService.java": {
-    "mtime": 1794398597.8160992,
-    "seen": 1795175502.987368,
-    "ast_hash": "ee2cdf37d0bd1609390c1008d78a6a74",
+    "mtime": 1795454270.1965368,
+    "seen": 1795493362.3981566,
+    "ast_hash": "b3f7ddbe523fdae9b1a8fe5815c1071b",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/CourseOffering.java": {
@@ -1332,15 +1332,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/DepartmentController.java": {
-    "mtime": 1795102559.2517443,
-    "seen": 1795175502.987368,
-    "ast_hash": "1dd635b3837cf48bfeddd1c253bc4e9a",
+    "mtime": 1795454270.197691,
+    "seen": 1795493362.4017093,
+    "ast_hash": "68cb430f3b49c0a0ce88d22d108a6b96",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/DepartmentRepository.java": {
-    "mtime": 1793966389.3279555,
-    "seen": 1795175502.987368,
-    "ast_hash": "7b00ed9fd4ac83337c74a0709de59ca9",
+    "mtime": 1795454270.198872,
+    "seen": 1795493362.4017093,
+    "ast_hash": "ad1a4b647cfc047654e53a93c1f71b07",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/EndStaffAssignmentRequest.java": {
@@ -1350,9 +1350,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/HodAssignmentService.java": {
-    "mtime": 1794398597.8169098,
-    "seen": 1795175502.987368,
-    "ast_hash": "3594ccb94f497ed453d172643186ee43",
+    "mtime": 1795454270.199506,
+    "seen": 1795493362.403871,
+    "ast_hash": "33260821d93fb926f2552f0437011b86",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/Institution.java": {
@@ -1362,9 +1362,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/InstitutionController.java": {
-    "mtime": 1794283804.7564802,
-    "seen": 1795175502.987368,
-    "ast_hash": "4a98f30ba1e1988c8cb2245b39d385ba",
+    "mtime": 1795454270.20084,
+    "seen": 1795493362.4046068,
+    "ast_hash": "075149b184a60c59b253b6e21e9fd2e7",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/InstitutionId.java": {
@@ -1398,15 +1398,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/InstitutionRepository.java": {
-    "mtime": 1793991761.2091389,
-    "seen": 1795175502.987368,
-    "ast_hash": "2a8d8e2bee4f2473ff3d827d812ec183",
+    "mtime": 1795454270.201989,
+    "seen": 1795493362.412572,
+    "ast_hash": "bae8d9509c78b9018d9b7544d20170bf",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/InstitutionService.java": {
-    "mtime": 1795175620.032131,
-    "seen": 1795178228.830517,
-    "ast_hash": "a1227ee5f253a8d1500a48afbf43e4e0",
+    "mtime": 1795454270.203236,
+    "seen": 1795493362.412572,
+    "ast_hash": "41901bc648c7369e8e098173d5eb6a7c",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/LeaveApproverController.java": {
@@ -1464,9 +1464,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/MentorAssignmentService.java": {
-    "mtime": 1794398597.818591,
-    "seen": 1795175502.987368,
-    "ast_hash": "e42edf5142a9316ea23bccc1d99d97ff",
+    "mtime": 1795454270.2044075,
+    "seen": 1795493362.4241664,
+    "ast_hash": "bd1f365e5aedca624ee23ae6b44ddf44",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/OfferingDepartmentResolver.java": {
@@ -1476,15 +1476,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/Program.java": {
-    "mtime": 1793966405.2439265,
-    "seen": 1795175502.987368,
-    "ast_hash": "69ec7cbd51608f8d99929b522e95dd26",
+    "mtime": 1795454270.2057092,
+    "seen": 1795493362.4253073,
+    "ast_hash": "430896582bafee8ddd2dc67a9dc37f6f",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/ProgramRepository.java": {
-    "mtime": 1793966415.426623,
-    "seen": 1795175502.987368,
-    "ast_hash": "96b35e54e82fc08df3e1f2b41dccd181",
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4253073,
+    "ast_hash": "ba2134cd9717a57fc22f630610f1f94c",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/ProgramYear.java": {
@@ -1506,45 +1506,45 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/SchoolClassController.java": {
-    "mtime": 1795102559.2567728,
-    "seen": 1795175502.987368,
-    "ast_hash": "91d3ec87becdb3c791112d18e2f80fe2",
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4271915,
+    "ast_hash": "e58ba94eeecc023e988cfe47ba662984",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/SchoolClassRepository.java": {
-    "mtime": 1794045779.8795896,
-    "seen": 1795175502.987368,
-    "ast_hash": "3ee1a0f7a1055d1c2e3cccab580d8761",
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4271915,
+    "ast_hash": "c8162ca4351f7b7b49a471ae3707a72b",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/Section.java": {
-    "mtime": 1794045786.1642094,
-    "seen": 1795175502.987368,
-    "ast_hash": "284986a17df89a2a46b6d01746028709",
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4271915,
+    "ast_hash": "048eee55cad2492f01c6fbf2edfa2f0f",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/SectionController.java": {
-    "mtime": 1795102559.2567728,
-    "seen": 1795175502.987368,
-    "ast_hash": "a37381eaf380d9c647588a03f21c418b",
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4271915,
+    "ast_hash": "a6613ce3d63adfac3beca993ea55f3f8",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/SectionRepository.java": {
-    "mtime": 1794045792.321573,
-    "seen": 1795175502.987368,
-    "ast_hash": "eb880402e3d3d17467dacc3e7c3e8043",
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4271915,
+    "ast_hash": "37dfa94be137323411f265b318ea736f",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/Semester.java": {
-    "mtime": 1794045746.9454825,
-    "seen": 1795175502.987368,
-    "ast_hash": "786faf29fa85ae4b622f1fabd65a5195",
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4271915,
+    "ast_hash": "064c3d769c907144c2901faf6bf90711",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/SemesterRepository.java": {
-    "mtime": 1794045767.7122452,
-    "seen": 1795175502.987368,
-    "ast_hash": "f95c2ca5a7d47fd1183bfe605bda689f",
+    "mtime": 1795454270.2220316,
+    "seen": 1795493362.4271915,
+    "ast_hash": "7f0713d91740c24a4a21443cfde1f26f",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffAssignment.java": {
@@ -1584,15 +1584,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffDocument.java": {
-    "mtime": 1794549442.94303,
-    "seen": 1795175502.987368,
-    "ast_hash": "f7b951fda9f227232c33828d580c2004",
+    "mtime": 1795454270.2237508,
+    "seen": 1795493362.4438093,
+    "ast_hash": "9474adfc24f31e3e010d8b67bca8dc5c",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffDocumentController.java": {
-    "mtime": 1794560143.4263303,
-    "seen": 1795175502.987368,
-    "ast_hash": "fa43b1d96922f0b918fe11466468dd04",
+    "mtime": 1795454270.225093,
+    "seen": 1795493362.4438093,
+    "ast_hash": "fa8b3126898c190e5da56c0ab2971feb",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffDocumentId.java": {
@@ -1608,21 +1608,21 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffDocumentRequest.java": {
-    "mtime": 1794549442.94303,
-    "seen": 1795175502.987368,
-    "ast_hash": "d47aa44b4ef61ab8a63e5c1f4c76dd7f",
+    "mtime": 1795454270.2277205,
+    "seen": 1795493362.4465384,
+    "ast_hash": "720b45d7f8168f496d19e6e7d35073a4",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffDocumentResponse.java": {
-    "mtime": 1794549442.94303,
-    "seen": 1795175502.987368,
-    "ast_hash": "715ae08df80b5ca50bd6ad4734151b1f",
+    "mtime": 1795454270.2287915,
+    "seen": 1795493362.4465384,
+    "ast_hash": "bb8839f7aacc449cc51ed66686e6541c",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffDocumentService.java": {
-    "mtime": 1794591251.0282915,
-    "seen": 1795175502.987368,
-    "ast_hash": "9f80e6ad21f6b979ed38a779d9b3ffc0",
+    "mtime": 1795454270.230214,
+    "seen": 1795493362.4465384,
+    "ast_hash": "340b0da2b234d50090a0cd7e2aa08fa9",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StaffDocumentVerificationController.java": {
@@ -1722,21 +1722,21 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StructureController.java": {
-    "mtime": 1794046008.0417764,
-    "seen": 1795175502.987368,
-    "ast_hash": "9cbb840ec82f6c730d4c183b9727c3ae",
+    "mtime": 1795454270.230214,
+    "seen": 1795493362.463796,
+    "ast_hash": "7aac012cc234a40f8a35b3c6fddbfdcc",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StructureService.java": {
-    "mtime": 1794235933.1038306,
-    "seen": 1795175502.987368,
-    "ast_hash": "8aa7aaa2573aca7120ec4d8c68ca8740",
+    "mtime": 1795454270.2339313,
+    "seen": 1795493362.463796,
+    "ast_hash": "3e76c2b70aac3a1282805842084da74a",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/StudentLoginSwitchService.java": {
-    "mtime": 1793819134.0256493,
-    "seen": 1795175502.987368,
-    "ast_hash": "f0ea0010d6bb531342825beac78baf86",
+    "mtime": 1795454270.2339313,
+    "seen": 1795493362.463796,
+    "ast_hash": "2b18828f0d46c13386271d0387645295",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/Subject.java": {
@@ -1788,9 +1788,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/AcademicSessionResponse.java": {
-    "mtime": 1793967791.441409,
-    "seen": 1795175502.987368,
-    "ast_hash": "92d15a1b6ce3bb9688d7a16581223153",
+    "mtime": 1795454270.2377522,
+    "seen": 1795493362.4779766,
+    "ast_hash": "eb2182567dc4327a8ed613be0ed6f5e4",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/BlockDecisionRequest.java": {
@@ -1824,9 +1824,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/ClassTeacherAssignResponse.java": {
-    "mtime": 1793819042.8507473,
-    "seen": 1795175502.987368,
-    "ast_hash": "a66eca6c416d8ec09f7580b7f9e98577",
+    "mtime": 1795454270.241381,
+    "seen": 1795493362.4892893,
+    "ast_hash": "746a6defc5c59366a68597f04d2ce10e",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/CourseOfferingResponse.java": {
@@ -1866,9 +1866,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/CreateProgramRequest.java": {
-    "mtime": 1793966446.5618534,
-    "seen": 1795175502.987368,
-    "ast_hash": "5abccd0b6fd531b5696ab28de46916a8",
+    "mtime": 1795454270.2424884,
+    "seen": 1795493362.4935768,
+    "ast_hash": "e2a0fbe8969c7cb7aa7834c21c38fc64",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/CreateProgramYearRequest.java": {
@@ -1884,15 +1884,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/CreateSectionRequest.java": {
-    "mtime": 1794045857.2727776,
-    "seen": 1795175502.987368,
-    "ast_hash": "22dcf5b89d8edc3341caca807aa7bbd7",
+    "mtime": 1795454270.2445738,
+    "seen": 1795493362.4947236,
+    "ast_hash": "094a42268e8beb6238f93b1e5ea5cc17",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/CreateSemesterRequest.java": {
-    "mtime": 1794045836.2601533,
-    "seen": 1795175502.987368,
-    "ast_hash": "f820324fdc3523497978d127e919ad1a",
+    "mtime": 1795454270.2445738,
+    "seen": 1795493362.4947236,
+    "ast_hash": "34a0ff2ef70a51e07eb626a3093eeca1",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/CreateSubjectRequest.java": {
@@ -1902,9 +1902,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/DepartmentResponse.java": {
-    "mtime": 1793966435.9663143,
-    "seen": 1795175502.987368,
-    "ast_hash": "6bcfb009b95dcde6e2b02e892fe40c4a",
+    "mtime": 1795454270.2465982,
+    "seen": 1795493362.4952693,
+    "ast_hash": "da29559bc9827ffbbf06713db19ed741",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/GoLiveCheckResponse.java": {
@@ -1920,9 +1920,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/HodAssignResponse.java": {
-    "mtime": 1793819039.668437,
-    "seen": 1795175502.987368,
-    "ast_hash": "407b2291e118144340ac84b61a06f70f",
+    "mtime": 1795454270.2484689,
+    "seen": 1795493362.4980083,
+    "ast_hash": "eb70f166397baa05c20ab52c80b5fbc8",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/InstitutionBlockResponse.java": {
@@ -1968,15 +1968,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/MentorAssignResponse.java": {
-    "mtime": 1793819041.2593794,
-    "seen": 1795175502.987368,
-    "ast_hash": "cff7a22a82da24b60143d54228132be8",
+    "mtime": 1795454270.2519634,
+    "seen": 1795493362.510192,
+    "ast_hash": "a222fa616e397baa98dfd74e3394ec6a",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/ProgramResponse.java": {
-    "mtime": 1793966452.7749207,
-    "seen": 1795175502.987368,
-    "ast_hash": "1f3c60bd0f724ff0f213382371586841",
+    "mtime": 1795454270.2538118,
+    "seen": 1795493362.510192,
+    "ast_hash": "798e00245cd9058c96924824dc410d53",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/ProgramYearResponse.java": {
@@ -1986,21 +1986,21 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/SchoolClassResponse.java": {
-    "mtime": 1794045852.0063362,
-    "seen": 1795175502.987368,
-    "ast_hash": "13efaf3d5a3acccb5b2d0453caa26ad1",
+    "mtime": 1795454270.2567463,
+    "seen": 1795493362.5113685,
+    "ast_hash": "19a5907338e2bb0c9b3fa6e33c59c853",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/SectionResponse.java": {
-    "mtime": 1794045865.7793553,
-    "seen": 1795175502.987368,
-    "ast_hash": "53f66468be2255f1e3f1f12a6a79ee34",
+    "mtime": 1795454270.2587306,
+    "seen": 1795493362.5113685,
+    "ast_hash": "c121faeb5fd26a107888e0765c160e7d",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/SemesterResponse.java": {
-    "mtime": 1794045840.5349195,
-    "seen": 1795175502.987368,
-    "ast_hash": "862f1f3721a621db174e4813ec913dfa",
+    "mtime": 1795454270.260433,
+    "seen": 1795493362.5113685,
+    "ast_hash": "6c64a7f9d8a63cc05cda06430e333413",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/StudentLoginSwitchRequest.java": {
@@ -2010,9 +2010,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/StudentLoginSwitchResponse.java": {
-    "mtime": 1793819044.4521587,
-    "seen": 1795175502.987368,
-    "ast_hash": "a372e3daf274bc947d501d3d22ed59e1",
+    "mtime": 1795454270.2616224,
+    "seen": 1795493362.5119278,
+    "ast_hash": "a54ab62266ac2103e49b369b257ee77d",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/institution/dto/SubjectResponse.java": {
@@ -2550,9 +2550,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/dataprotection/ExportManifest.java": {
-    "mtime": 1795102186.496563,
-    "seen": 1795175502.987368,
-    "ast_hash": "a6b75104970c5f79405aa9975f50819f",
+    "mtime": 1795456655.4192512,
+    "seen": 1795493362.789683,
+    "ast_hash": "a95e07f3fd3f8c2ade8a2af5d6a6627b",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/dataprotection/ExportRequest.java": {
@@ -2718,9 +2718,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/dto/CreatePlanRequest.java": {
-    "mtime": 1795175590.8160405,
-    "seen": 1795178229.0644407,
-    "ast_hash": "e6ade2a22f844180cd308e8fd0c02523",
+    "mtime": 1795456726.4420598,
+    "seen": 1795493362.8752637,
+    "ast_hash": "e7bc4d3fa4248dd85142da281de8135d",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/dto/IntegrationTypeResponse.java": {
@@ -2838,9 +2838,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/dto/UpdatePlanRequest.java": {
-    "mtime": 1795175590.8635726,
-    "seen": 1795178229.0795574,
-    "ast_hash": "9bad3dc66f6e2885bc89fdd65198192d",
+    "mtime": 1795456736.1074662,
+    "seen": 1795493362.9082406,
+    "ast_hash": "575f7b2305de9556bab105be89db3d70",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/dto/UpdateTenantSettingsRequest.java": {
@@ -3252,9 +3252,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/security/SecurityPolicyService.java": {
-    "mtime": 1795102186.570441,
-    "seen": 1795175502.9879777,
-    "ast_hash": "4b40cd7df50034ac97e2bca89891e030",
+    "mtime": 1795454270.2633936,
+    "seen": 1795493363.0181143,
+    "ast_hash": "e21caac8c12c9c69dd452c6162590d71",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/platformops/session/PlatformUserDevice.java": {
@@ -3456,9 +3456,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/rbac/PermissionEvaluatorService.java": {
-    "mtime": 1794811534.791559,
-    "seen": 1795175502.9879777,
-    "ast_hash": "ac05812f1b05c7822e647880ca2f5e34",
+    "mtime": 1795499740.4811177,
+    "seen": 1795500498.724265,
+    "ast_hash": "58ea68e5f30529de9d1383ca10aa1e80",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/rbac/RbacPrincipal.java": {
@@ -3912,15 +3912,15 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/SelfServiceController.java": {
-    "mtime": 1794549442.9675803,
-    "seen": 1795175502.9879777,
-    "ast_hash": "53bedd673a0a3b172385503b5761d303",
+    "mtime": 1795454270.2633936,
+    "seen": 1795493363.1948879,
+    "ast_hash": "80c27b0dd2e38bf5ee48c1e0c95750ab",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/SelfServiceService.java": {
-    "mtime": 1794591251.0393958,
-    "seen": 1795175502.9879777,
-    "ast_hash": "b2240ac7dad6cbb152d045bb48cbb87e",
+    "mtime": 1795454270.2633936,
+    "seen": 1795493363.1948879,
+    "ast_hash": "018e4643f09897fb2ad41eeea1d20d87",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/SessionActivityInterceptor.java": {
@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/UserLeaveRequest.java": {
-    "mtime": 1793998719.3303976,
-    "seen": 1795175502.9879777,
-    "ast_hash": "12622a75edc0d427db018346b72fe279",
+    "mtime": 1795454270.2738333,
+    "seen": 1795493363.2086334,
+    "ast_hash": "2b9219963e10e87c814badb420bb7642",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/UserLeaveRequestId.java": {
@@ -4014,9 +4014,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/UserMeService.java": {
-    "mtime": 1795102186.582436,
-    "seen": 1795175502.9879777,
-    "ast_hash": "232c107d3434fff7e64526e4b2cf31d4",
+    "mtime": 1795499753.6572933,
+    "seen": 1795500498.7900672,
+    "ast_hash": "77fe280ec9e5fa7652906c88327d59e2",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/UserNotification.java": {
@@ -4050,9 +4050,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/dto/LeaveRequestDto.java": {
-    "mtime": 1793998750.0520766,
-    "seen": 1795175502.9879777,
-    "ast_hash": "88c1606b298ef31fda01fa1ca6625dd2",
+    "mtime": 1795454270.2778628,
+    "seen": 1795493363.2121966,
+    "ast_hash": "9d88e83d3420aa9a895be09b43a60c55",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/selfservice/dto/NoticeDto.java": {
@@ -4188,9 +4188,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/tenant/TenantRoutingDataSource.java": {
-    "mtime": 1794035627.390407,
-    "seen": 1795175502.9879777,
-    "ast_hash": "59eb909c5326d07dfcfabe74e4d80eb4",
+    "mtime": 1795454270.284765,
+    "seen": 1795493363.2471611,
+    "ast_hash": "78f2b17c9206b854e7a1a893ce70d268",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/tenant/TenantSecretsResolver.java": {
@@ -4212,9 +4212,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/termlock/TermLockController.java": {
-    "mtime": 1794207032.8467965,
-    "seen": 1795175502.9879777,
-    "ast_hash": "90ffa9d0981f83d5479475a3cf80c363",
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.250739,
+    "ast_hash": "b191cc486bc416645f0e6a4929c006b5",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/termlock/TermLockEvent.java": {
@@ -4248,9 +4248,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/termlock/TermLockService.java": {
-    "mtime": 1794398597.8197184,
-    "seen": 1795175502.9879777,
-    "ast_hash": "d01bab31312fe3342514b94f02b38444",
+    "mtime": 1795456089.7774825,
+    "seen": 1795493363.2586102,
+    "ast_hash": "042ee54d2ac16f0cb4b6c11dd0aee985",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/termlock/dto/LockTermRequest.java": {
@@ -4266,9 +4266,9 @@
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/termlock/dto/UnlockTermRequest.java": {
-    "mtime": 1793997578.5760815,
-    "seen": 1795175502.9879777,
-    "ast_hash": "7999bb75d6c3dca4c64afbda3c2e62d0",
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.2608247,
+    "ast_hash": "e2e734d6b13e496c3f012cb03395e6b6",
     "semantic_hash": ""
   },
   "api/src/main/java/com/edu360/api/time/TenantClock.java": {
@@ -4296,9 +4296,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/academic/AcademicControllerTest.java": {
-    "mtime": 1794398597.823505,
-    "seen": 1795175502.9879777,
-    "ast_hash": "0691d7dd829b8366c9a841dc84669a25",
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.262345,
+    "ast_hash": "5753ed7a16e3e6d6e28ac6ca690063f6",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/approval/ApprovalCountPublisherTest.java": {
@@ -4314,9 +4314,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/approval/ApprovalEngineB2Test.java": {
-    "mtime": 1794285252.019636,
-    "seen": 1795175502.9879777,
-    "ast_hash": "76efacf9fa63c881db67e123fbaeff17",
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.2668052,
+    "ast_hash": "d883ba0e4ffa41aa7dd668e9d3ce3c02",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/approval/ApprovalInboxControllerTest.java": {
@@ -4356,9 +4356,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/auth/AuthActionTest.java": {
-    "mtime": 1794284560.9514654,
-    "seen": 1795175502.9879777,
-    "ast_hash": "e5f3c7ea0b7ab2ab26a7d9dba3b7de80",
+    "mtime": 1795457117.1616688,
+    "seen": 1795493363.2751808,
+    "ast_hash": "f5773f288ea33df24a3ec4786476aaf9",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/auth/AuthControllerTest.java": {
@@ -4464,9 +4464,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/files/ClamAvFileScannerTest.java": {
-    "mtime": 1794560143.4263303,
-    "seen": 1795175502.9879777,
-    "ast_hash": "72972ec00329eb8424988bbd2b318cf1",
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.2926297,
+    "ast_hash": "478fba11fd84bdb44e722f09714a4b47",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/files/FileContentInspectorTest.java": {
@@ -4482,9 +4482,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/files/FileServiceTest.java": {
-    "mtime": 1794549442.9753294,
-    "seen": 1795175502.9879777,
-    "ast_hash": "0791eb829a9a245a62bcf8be34fda6db",
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.2952664,
+    "ast_hash": "6f7778c79a4ca7fa26876556fa0d4958",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/files/JdbcFileAccessPolicyTest.java": {
@@ -4572,9 +4572,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/identity/UserAccountStudentProvisioningTest.java": {
-    "mtime": 1794549442.9776962,
-    "seen": 1795175502.9879777,
-    "ast_hash": "efcddfa3b0a1325816d3f0c7545a2fc7",
+    "mtime": 1795456302.6782794,
+    "seen": 1795493363.3189554,
+    "ast_hash": "7350a3160159ad2afebd313d39888429",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/imports/UserBulkUploadControllerTest.java": {
@@ -4608,21 +4608,21 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/ClassTeacherAssignmentServiceTest.java": {
-    "mtime": 1794549442.9776962,
-    "seen": 1795175502.9879777,
-    "ast_hash": "1e986573c8cbc4e9d2c8533cd9ae65ee",
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.3244886,
+    "ast_hash": "074573bb5aa16d22ca25a74302b560fa",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/HodAssignmentServiceTest.java": {
-    "mtime": 1794549442.9776962,
-    "seen": 1795175502.9879777,
-    "ast_hash": "82fec94a87e05596f08e46c7227a71a1",
+    "mtime": 1795454270.3095438,
+    "seen": 1795493363.3244886,
+    "ast_hash": "413eb2e73e8dd9d63c94bfea151257bd",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/InstitutionControllerTest.java": {
-    "mtime": 1794935646.5165,
-    "seen": 1795175502.9879777,
-    "ast_hash": "6737ce76e51ae77fe7c763076e2d1fd7",
+    "mtime": 1795454270.3122394,
+    "seen": 1795493363.3244886,
+    "ast_hash": "7acb035ce3eebc666036a3d451573bfd",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/InstitutionIdFormatServiceTest.java": {
@@ -4632,9 +4632,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/InstitutionSetupActionTest.java": {
-    "mtime": 1794549442.9776962,
-    "seen": 1795175502.9879777,
-    "ast_hash": "2f60b2b60b3aad08909c49c259bb3d44",
+    "mtime": 1795456135.4511752,
+    "seen": 1795493363.3250425,
+    "ast_hash": "610e80085a83a9f7cb4e030955765231",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/LeaveApproverControllerTest.java": {
@@ -4650,9 +4650,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/MentorAssignmentServiceTest.java": {
-    "mtime": 1794549442.9776962,
-    "seen": 1795175502.9879777,
-    "ast_hash": "452a140a9d571cc681b1aa42a49fb70c",
+    "mtime": 1795454270.3151243,
+    "seen": 1795493363.3261611,
+    "ast_hash": "2687442d42ebe3b81757e2f4e48b3d17",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/StaffDirectoryAuthorizationAllowTest.java": {
@@ -4710,9 +4710,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/StaffDocumentVerificationControllerTest.java": {
-    "mtime": 1794549442.9776962,
-    "seen": 1795175502.9879777,
-    "ast_hash": "4d9d1eeb4ac0d5c82396d37ce0d1646c",
+    "mtime": 1795454270.318532,
+    "seen": 1795493363.3409815,
+    "ast_hash": "fa3636ff9bb0564a06ab03db9bca1f02",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/StaffOnboardingServiceTest.java": {
@@ -4728,15 +4728,15 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/StructureControllerTest.java": {
-    "mtime": 1793966577.1821365,
-    "seen": 1795175502.9879777,
-    "ast_hash": "9958366daae53c01c1596a828a2211e7",
+    "mtime": 1795454270.319665,
+    "seen": 1795493363.3421168,
+    "ast_hash": "23194b8fbf09820e3acc6e70d0e13669",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/StudentLoginSwitchServiceTest.java": {
-    "mtime": 1793819252.758988,
-    "seen": 1795175502.9879777,
-    "ast_hash": "a500239ca31b9646b633810027d9ed59",
+    "mtime": 1795454270.3207827,
+    "seen": 1795493363.3421168,
+    "ast_hash": "19b453355978a485750af174c1053df5",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/institution/WeeklyOffRuleServiceTest.java": {
@@ -5106,15 +5106,15 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/security/RealmSecuritySyncServiceTest.java": {
-    "mtime": 1795102186.6390216,
-    "seen": 1795175502.9879777,
-    "ast_hash": "a2924eb7704b3df96349083691eb057e",
+    "mtime": 1795456687.720198,
+    "seen": 1795493363.421004,
+    "ast_hash": "01812a2482d334c940dc7742cac46294",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/security/RegI06PasswordPolicyTest.java": {
-    "mtime": 1794284013.0313792,
-    "seen": 1795175502.9879777,
-    "ast_hash": "8b5bff690d9e58a8f5751e287949225c",
+    "mtime": 1795456617.8860579,
+    "seen": 1795493363.421004,
+    "ast_hash": "282de9bf76c4b52455ffee8b4a1d3442",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/support/PlatformSupportControllerTest.java": {
@@ -5166,9 +5166,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/platformops/usage/UsageRollupJobTest.java": {
-    "mtime": 1795102186.6430871,
-    "seen": 1795175502.9879777,
-    "ast_hash": "a0e1cfdd1324252f56a058819be059f9",
+    "mtime": 1795456768.837759,
+    "seen": 1795493363.4372644,
+    "ast_hash": "13b1bbead94dc92527046a41cc8aaf63",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/rbac/ActiveRoleA02Test.java": {
@@ -5208,9 +5208,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/rbac/ReferenceCodeArchitectureTest.java": {
-    "mtime": 1794235933.1162927,
-    "seen": 1795175502.9879777,
-    "ast_hash": "a25e525212b57e51ab6cb3687b70f257",
+    "mtime": 1795455351.5774658,
+    "seen": 1795493363.441828,
+    "ast_hash": "f70942b30e776b63fe51a9c2d4d262d7",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/rbac/RoleAssignmentControllerTest.java": {
@@ -5394,9 +5394,9 @@
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/termlock/TermLockControllerTest.java": {
-    "mtime": 1794207049.5497112,
-    "seen": 1795175502.9879777,
-    "ast_hash": "4130a4233325ecdbd1547673e48f178e",
+    "mtime": 1795456144.6024847,
+    "seen": 1795493363.4702706,
+    "ast_hash": "e1fd95829480f60e153782fa55d3e3d5",
     "semantic_hash": ""
   },
   "api/src/test/java/com/edu360/api/time/TenantClockTest.java": {
@@ -5730,9 +5730,9 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/MetricCard.tsx": {
-    "mtime": 1794025584.5249882,
-    "seen": 1795175502.988649,
-    "ast_hash": "2ef3513bce2126c9809ee9e422ca9d76",
+    "mtime": 1795454270.3360918,
+    "seen": 1795493363.5288146,
+    "ast_hash": "b533d02b6787ebee246929e89ae4dd91",
     "semantic_hash": ""
   },
   "app/src/design-system/components/Modal.test.tsx": {
@@ -5778,9 +5778,9 @@
     "semantic_hash": ""
   },
   "app/src/design-system/components/SearchBox.tsx": {
-    "mtime": 1794811534.831775,
-    "seen": 1795175502.988649,
-    "ast_hash": "26b5e0e92e9da870a330af5db8d7aef5",
+    "mtime": 1795236716.1389022,
+    "seen": 1795493363.5385025,
+    "ast_hash": "26649fe73d25c643b9ac1e6c106336da",
     "semantic_hash": ""
   },
   "app/src/design-system/components/SelectField.tsx": {
@@ -5934,15 +5934,15 @@
     "semantic_hash": ""
   },
   "app/src/features/auth/pages/LoginPage.test.tsx": {
-    "mtime": 1795102559.271837,
-    "seen": 1795175502.988649,
-    "ast_hash": "07bf76844beb3c51f02a9d679399f2d4",
+    "mtime": 1795454270.3472512,
+    "seen": 1795493363.5623977,
+    "ast_hash": "cd5db3e85d7330219b7c6e13107a0230",
     "semantic_hash": ""
   },
   "app/src/features/auth/pages/LoginPage.tsx": {
-    "mtime": 1795172681.526455,
-    "seen": 1795175502.988649,
-    "ast_hash": "0674f00e78f9571f7a7254c3f03d4620",
+    "mtime": 1795454270.3472512,
+    "seen": 1795493363.5623977,
+    "ast_hash": "cd95fbb2220c9a94549cb33c734b4bfc",
     "semantic_hash": ""
   },
   "app/src/features/auth/serverMessage.ts": {
@@ -5976,9 +5976,9 @@
     "semantic_hash": ""
   },
   "app/src/features/dashboard/components/GenericWorkspace.tsx": {
-    "mtime": 1794811534.8414183,
-    "seen": 1795175502.988649,
-    "ast_hash": "8257886302848aaa736c9569f00b3a1a",
+    "mtime": 1795454270.3472512,
+    "seen": 1795493363.5710416,
+    "ast_hash": "7fcdc13d9d32e5449963fe90aab696cc",
     "semantic_hash": ""
   },
   "app/src/features/dashboard/components/RoleWorkspace.tsx": {
@@ -6006,9 +6006,9 @@
     "semantic_hash": ""
   },
   "app/src/features/dashboard/pages/DashboardPage.tsx": {
-    "mtime": 1794811534.8478055,
-    "seen": 1795175502.988649,
-    "ast_hash": "3fa7b9cae00cda9573cbf230517941ca",
+    "mtime": 1795454270.3472512,
+    "seen": 1795493363.5744298,
+    "ast_hash": "aebc1e95b41321dc8e1dfd8a3ffc1e62",
     "semantic_hash": ""
   },
   "app/src/features/dataprotection/TenantDataProtectionPage.test.tsx": {
@@ -6042,9 +6042,9 @@
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/api/institutionService.ts": {
-    "mtime": 1794591251.086701,
-    "seen": 1795175502.988649,
-    "ast_hash": "0267016c29d71f921927c0ecb2976518",
+    "mtime": 1795454270.3543782,
+    "seen": 1795493363.5749755,
+    "ast_hash": "0a17671e7879b4438d74ac4bda3ad9c6",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/api/leaveApproverService.ts": {
@@ -6066,9 +6066,9 @@
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/api/staffService.ts": {
-    "mtime": 1794591251.086701,
-    "seen": 1795175502.988649,
-    "ast_hash": "b8ac7c2c321462fef1ddb7c20572a03e",
+    "mtime": 1795454270.3543782,
+    "seen": 1795493363.5749755,
+    "ast_hash": "0fbe717d01d41afe26d50bb2bc021231",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/api/termLockService.ts": {
@@ -6090,15 +6090,15 @@
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/components/academic/AddMasterEventModal.tsx": {
-    "mtime": 1794811534.853566,
-    "seen": 1795175502.988649,
-    "ast_hash": "9a189826a01304dce83194cb91ecd48b",
+    "mtime": 1795235860.4849393,
+    "seen": 1795493363.5838294,
+    "ast_hash": "b4888aa150a56941aa08cb31eddd645f",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/components/academic/AddProgramModal.tsx": {
-    "mtime": 1794811534.853566,
-    "seen": 1795175502.988649,
-    "ast_hash": "10aca22cdc31e38ffbce852c9d56d525",
+    "mtime": 1795235869.8159835,
+    "seen": 1795493363.5838294,
+    "ast_hash": "383ba15f5c5fe0c692379e1e75e3e759",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/components/academic/AllocateSubjectModal.tsx": {
@@ -6126,9 +6126,9 @@
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/components/academic/UnlockTermModal.tsx": {
-    "mtime": 1794560143.436617,
-    "seen": 1795175502.988649,
-    "ast_hash": "f60bd725b661f5d7913e61f3e45ccb8b",
+    "mtime": 1795454270.3583083,
+    "seen": 1795493363.5879185,
+    "ast_hash": "ea44ead83a6acd600a56ceea20bc9399",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/components/index.ts": {
@@ -6192,39 +6192,39 @@
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/InstitutionAdminPages.test.tsx": {
-    "mtime": 1794833987.3225036,
-    "seen": 1795175502.988649,
-    "ast_hash": "e98eafb749688e3e04205152f068ba9c",
+    "mtime": 1795454270.3633022,
+    "seen": 1795493363.599534,
+    "ast_hash": "97c599c852fed09bc1e662acf90bdbf5",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/InstitutionAdminPages.tsx": {
-    "mtime": 1795172681.5528886,
-    "seen": 1795175502.988649,
-    "ast_hash": "56b53fea28f4887fa8e9b474ad6c2f67",
+    "mtime": 1795454270.3633022,
+    "seen": 1795493363.599534,
+    "ast_hash": "f8152f1d2e7df0e249301bf99eced724",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/InstitutionSetupPages.test.tsx": {
-    "mtime": 1794592277.3654914,
-    "seen": 1795175502.988649,
-    "ast_hash": "e57a7b038c9937504baa02a2d9fc561b",
+    "mtime": 1795454270.3633022,
+    "seen": 1795493363.599534,
+    "ast_hash": "db583282a8683a9e4efecc0d903ed736",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/InstitutionSetupPages.tsx": {
-    "mtime": 1795172681.5538957,
-    "seen": 1795175502.988649,
-    "ast_hash": "2768128e1c5877a06246f21ebbdf2d67",
+    "mtime": 1795454270.369369,
+    "seen": 1795493363.599534,
+    "ast_hash": "bf6e0b6e8737a9740ad53e51896fc8b5",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/StaffRecordsPage.test.tsx": {
-    "mtime": 1794593197.785223,
-    "seen": 1795175502.988649,
-    "ast_hash": "34cd9b97c01b707e0ec4dbd18c4a7c3a",
+    "mtime": 1795454270.3756037,
+    "seen": 1795493363.599534,
+    "ast_hash": "8276b9b15080d8b3338b7bc15a50fd13",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/StaffRecordsPage.tsx": {
-    "mtime": 1795172681.558867,
-    "seen": 1795175502.988649,
-    "ast_hash": "b4e8f35e1d73dd9c959a899e460cd0e7",
+    "mtime": 1795454270.3777466,
+    "seen": 1795493363.599534,
+    "ast_hash": "6bd7cee2f0289ddc27a3286d788a759e",
     "semantic_hash": ""
   },
   "app/src/features/institution-admin/pages/TenantSupportPage.test.tsx": {
@@ -6354,9 +6354,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/dataprotection/DataProtectionWorkspaceView.tsx": {
-    "mtime": 1795172681.574093,
-    "seen": 1795175502.988649,
-    "ast_hash": "9b85b80c53df81567936b77f0a91bc22",
+    "mtime": 1795237166.8660297,
+    "seen": 1795493363.6161077,
+    "ast_hash": "ee28452714ec42ebdffb1f77508f2636",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/dataprotection/RbacMappingCheckView.tsx": {
@@ -6444,9 +6444,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/BillingManagerDashboard.tsx": {
-    "mtime": 1795177939.4721148,
-    "seen": 1795178229.7210112,
-    "ast_hash": "638dfa203596c5221e83c9f73303f77b",
+    "mtime": 1795233677.2050915,
+    "seen": 1795493363.6303828,
+    "ast_hash": "511e07741da4a817f871a28cce355359",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/PlatformAdminDashboard.test.tsx": {
@@ -6456,15 +6456,15 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/PlatformAdminDashboard.tsx": {
-    "mtime": 1795172681.5938437,
-    "seen": 1795175502.988649,
-    "ast_hash": "54af1c2fc3d382f6132b920bc7e93642",
+    "mtime": 1795233662.7804663,
+    "seen": 1795493363.6323986,
+    "ast_hash": "41d1c7ffe25edb8c62e126c852e3eab8",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/PlatformOverviewView.tsx": {
-    "mtime": 1795172681.5982575,
-    "seen": 1795175502.988649,
-    "ast_hash": "c5b81e939c4ca1e07ab95df090abdc1e",
+    "mtime": 1795235732.0938005,
+    "seen": 1795493363.6323986,
+    "ast_hash": "93e32029245ed70c375803f8a8a9467d",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/ProductOwnerDashboard.test.tsx": {
@@ -6474,15 +6474,15 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/overview/ProductOwnerDashboard.tsx": {
-    "mtime": 1795108128.7798908,
-    "seen": 1795175502.988649,
-    "ast_hash": "33fdaeafe7ecd88adb3864aed3c4b8e3",
+    "mtime": 1795233877.712041,
+    "seen": 1795493363.6356068,
+    "ast_hash": "b34b055fe738b7c7078990013027506a",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/plans/CreatePlanModal.tsx": {
-    "mtime": 1795197448.417542,
-    "seen": 1795197537.9204485,
-    "ast_hash": "54a9518060bc87d198c7326bd5e5062b",
+    "mtime": 1795454270.3793004,
+    "seen": 1795493363.6366282,
+    "ast_hash": "bb71ac6e725458e695b8b5548f1c06d6",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/plans/PlansView.tsx": {
@@ -6498,9 +6498,9 @@
     "semantic_hash": ""
   },
   "app/src/features/platform/components/reports/ReportsView.tsx": {
-    "mtime": 1795198437.4106712,
-    "seen": 1795198575.4747422,
-    "ast_hash": "b8db3bb2d473b74e3f953b893088bc24",
+    "mtime": 1795232427.5941942,
+    "seen": 1795493363.6382525,
+    "ast_hash": "0a7acf16c579c621540a062c3bce75aa",
     "semantic_hash": ""
   },
   "app/src/features/platform/components/roles/PermissionPicker.tsx": {
@@ -6972,9 +6972,9 @@
     "semantic_hash": ""
   },
   "app/src/features/user-management/components/users/BulkUploadModal.tsx": {
-    "mtime": 1794811534.9535909,
-    "seen": 1795175502.988649,
-    "ast_hash": "ac00c60ce5fb0949c372198e04257ea8",
+    "mtime": 1795231553.152948,
+    "seen": 1795493363.715875,
+    "ast_hash": "814c9eb60832f70c54df12e0e5d985c3",
     "semantic_hash": ""
   },
   "app/src/features/user-management/components/users/CreateStudentModal.test.tsx": {
@@ -7008,9 +7008,9 @@
     "semantic_hash": ""
   },
   "app/src/features/user-management/components/users/CreatedCredentialsModal.tsx": {
-    "mtime": 1794811534.9624631,
-    "seen": 1795175502.988649,
-    "ast_hash": "324ce16e659a019ec187a6b6d6456a90",
+    "mtime": 1795233697.4033344,
+    "seen": 1795493363.7195692,
+    "ast_hash": "3b67a75caee82ecac8edebe59279f3a6",
     "semantic_hash": ""
   },
   "app/src/features/user-management/components/users/UserLimitBanner.test.tsx": {
@@ -7032,9 +7032,9 @@
     "semantic_hash": ""
   },
   "app/src/features/user-management/pages/UserManagementPages.tsx": {
-    "mtime": 1795172681.6596735,
-    "seen": 1795175502.988649,
-    "ast_hash": "2fc4805ced232a92b4cd200dd34328e3",
+    "mtime": 1795231566.502627,
+    "seen": 1795493363.7195692,
+    "ast_hash": "79806681327ee74c050d620ee008dbfb",
     "semantic_hash": ""
   },
   "app/src/hooks/index.ts": {
@@ -7068,9 +7068,9 @@
     "semantic_hash": ""
   },
   "app/src/layout/AppLayout.tsx": {
-    "mtime": 1795172681.661924,
-    "seen": 1795175502.988649,
-    "ast_hash": "a8838429344503062a83adbc4bc2ddcd",
+    "mtime": 1795454270.3935933,
+    "seen": 1795493363.7283597,
+    "ast_hash": "9f51c4a4575827bc50e3b675a8966d0d",
     "semantic_hash": ""
   },
   "app/src/layout/AuthLayout.tsx": {
@@ -7092,9 +7092,9 @@
     "semantic_hash": ""
   },
   "app/src/main.tsx": {
-    "mtime": 1793861721.5077662,
-    "seen": 1795175502.988649,
-    "ast_hash": "0afdf989b02c70207e7e8b96be0a676b",
+    "mtime": 1795457680.243622,
+    "seen": 1795493363.729869,
+    "ast_hash": "2bb7fc0fd8d4b115dd4e2ce185fe37c4",
     "semantic_hash": ""
   },
   "app/src/routes/ActionGate.test.tsx": {
@@ -7152,9 +7152,9 @@
     "semantic_hash": ""
   },
   "app/src/routes/Routes.tsx": {
-    "mtime": 1795172681.6696246,
-    "seen": 1795175502.988649,
-    "ast_hash": "f2fa8020ff4b706c2e28975f2f6a8c8d",
+    "mtime": 1795457661.0701764,
+    "seen": 1795493363.7373762,
+    "ast_hash": "65edc3ff14f79853744a47f40e5da78f",
     "semantic_hash": ""
   },
   "app/src/routes/TenantUserRoute.test.tsx": {
@@ -7176,9 +7176,9 @@
     "semantic_hash": ""
   },
   "app/src/routes/tenantRouteActions.ts": {
-    "mtime": 1795102186.7090602,
-    "seen": 1795175502.988649,
-    "ast_hash": "17c1183121e3cc8568469125fc4e37ed",
+    "mtime": 1795454270.3965106,
+    "seen": 1795493363.7393937,
+    "ast_hash": "419d5af6241931e5955e2fe3ad9f77c9",
     "semantic_hash": ""
   },
   "app/src/services/activeRoleRequired.test.ts": {
@@ -7386,9 +7386,9 @@
     "semantic_hash": ""
   },
   "app/vite.config.ts": {
-    "mtime": 1795102559.2734253,
-    "seen": 1795175502.988649,
-    "ast_hash": "2759b2c5e0adf0e1aa417e4d00ab2508",
+    "mtime": 1795457755.0490618,
+    "seen": 1795493363.754553,
+    "ast_hash": "eef595e1326b56a9a3e03b2a0392db52",
     "semantic_hash": ""
   },
   "app/vite.tunnel.config.ts": {
@@ -7440,9 +7440,9 @@
     "semantic_hash": ""
   },
   "docker-compose.yml": {
-    "mtime": 1793775605.8926773,
-    "seen": 1795175502.988649,
-    "ast_hash": "3f21eb56e819ca5920ed552e9013df3f",
+    "mtime": 1795454270.3965106,
+    "seen": 1795493363.7654335,
+    "ast_hash": "8e83fe9d2a75de4505ab5e9ae35007ca",
     "semantic_hash": ""
   },
   "docker/backup/backup-agent.ps1": {
@@ -7512,15 +7512,15 @@
     "semantic_hash": ""
   },
   "docker/postgres/provision-edu-app.ps1": {
-    "mtime": 1795196069.6103108,
-    "seen": 1795196529.5376081,
-    "ast_hash": "496e7d1ca250987cffb6b924a8959c15",
+    "mtime": 1795458606.3388534,
+    "seen": 1795493363.7729807,
+    "ast_hash": "8d1121b42ac6b97071aebcc2932f44f0",
     "semantic_hash": ""
   },
   "docs/EDU360_Master_Collection.postman_collection.json": {
-    "mtime": 1795103994.938438,
-    "seen": 1795175502.988649,
-    "ast_hash": "68d9ba8779927ea9f5cc92f564d33f28",
+    "mtime": 1795488735.4761293,
+    "seen": 1795493363.7729807,
+    "ast_hash": "512edca3b65b98ed90a731857ba65416",
     "semantic_hash": ""
   },
   "docs/EDU360_V4.0_Final/04_Database_and_Technical_Architecture/sql/run_all.sh": {
@@ -7602,15 +7602,15 @@
     "semantic_hash": ""
   },
   "sql/run_all.sh": {
-    "mtime": 1795175342.659401,
-    "seen": 1795175502.9891653,
-    "ast_hash": "c1590728ed0e5103130b3589df441676",
+    "mtime": 1795454270.4719489,
+    "seen": 1795493363.7898526,
+    "ast_hash": "6b7f421c14147efdfcc4f25e5d05e681",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1795102559.2448895,
-    "seen": 1795175502.9891653,
-    "ast_hash": "2eabaee2c597141c1a69edfb32846e96",
+    "mtime": 1795454270.1540287,
+    "seen": 1795493363.7898526,
+    "ast_hash": "92007427aceeaaebe89ac03b50809b3a",
     "semantic_hash": ""
   },
   "LOCAL_DEV.md": {
@@ -7644,9 +7644,9 @@
     "semantic_hash": ""
   },
   "app/index.html": {
-    "mtime": 1793566777.8860588,
-    "seen": 1795175502.9891653,
-    "ast_hash": "8c48249fd19e5c75bd039f573b772f90",
+    "mtime": 1795493643.2387474,
+    "seen": 1795500499.3130245,
+    "ast_hash": "502da26e24359aff9ac733f7fb591cf7",
     "semantic_hash": ""
   },
   "app/playwright-report/edu360-audit/2026-11-19_23-43-52/report.md": {
@@ -7746,9 +7746,9 @@
     "semantic_hash": ""
   },
   "docs/LIVE_API_VERIFICATION_REPORT.md": {
-    "mtime": 1795172681.7033522,
-    "seen": 1795175502.9891653,
-    "ast_hash": "cfe3ebde68d55589b541804dd204fd13",
+    "mtime": 1795500353.7236385,
+    "seen": 1795500499.3252006,
+    "ast_hash": "55fc8e9e1ff0bf2ff27765bb2ad3f91f",
     "semantic_hash": ""
   },
   "docs/MFA_EMERGENCY_RESET_RUNBOOK.md": {
@@ -7770,9 +7770,9 @@
     "semantic_hash": ""
   },
   "docs/PLATFORM_COMPLETION_PLAN.md": {
-    "mtime": 1794812201.386953,
-    "seen": 1795175502.9891653,
-    "ast_hash": "7c0d83b417c3a7f2c0a59ca11fd134f9",
+    "mtime": 1795454270.4050143,
+    "seen": 1795493363.8071446,
+    "ast_hash": "79a7a7482fbb64ad60aac4e720155c3c",
     "semantic_hash": ""
   },
   "docs/PLATFORM_OWNER_USER_MANUAL.md": {
@@ -8793,6 +8793,600 @@
     "mtime": 1795177194.2759838,
     "seen": 1795178229.7272174,
     "ast_hash": "ef730000b306b664f4daf20603220a64",
+    "semantic_hash": ""
+  },
+  ".github/workflows/lighthouse.yml": {
+    "mtime": 1795455588.1499329,
+    "seen": 1795493362.2232206,
+    "ast_hash": "969363c67e9cd1cd50097175ea32f643",
+    "semantic_hash": ""
+  },
+  ".github/workflows/m13-appraisal.yml": {
+    "mtime": 1795454270.1520002,
+    "seen": 1795493362.2232206,
+    "ast_hash": "ad5b2ade0485ba721c56c298616194ec",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/admissions/controller/AdmissionApplicationController.java": {
+    "mtime": 1795454270.160462,
+    "seen": 1795493362.2568033,
+    "ast_hash": "ae1fb5088dbcebb998ff5b028b5747de",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/admissions/controller/AdmissionCycleController.java": {
+    "mtime": 1795454270.160462,
+    "seen": 1795493362.2568033,
+    "ast_hash": "763c506758e52c92423d5ab853a7478e",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/admissions/controller/MeritListController.java": {
+    "mtime": 1795454270.160462,
+    "seen": 1795493362.2568033,
+    "ast_hash": "62a39dc6c4eb9aace2dd79be86487190",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/admissions/service/AdmissionEnrollmentService.java": {
+    "mtime": 1795454270.1679752,
+    "seen": 1795493362.2568033,
+    "ast_hash": "9ca578780adaf95243dc23bc438a07c9",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/admissions/service/AdmissionPaymentEventHandler.java": {
+    "mtime": 1795454270.1679752,
+    "seen": 1795493362.2568033,
+    "ast_hash": "d88c0c9ebb0600be5dc125a3b4e9d596",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/admissions/service/AdmissionService.java": {
+    "mtime": 1795490908.4909358,
+    "seen": 1795493362.2568033,
+    "ast_hash": "a8926ca71db3f8f71cd5e60384f8ba21",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/admissions/service/MeritCalculationService.java": {
+    "mtime": 1795454270.1717162,
+    "seen": 1795493362.2568033,
+    "ast_hash": "707c666c87d93b5cc7568d725887c79e",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/identity/StudentProfileOnlyRequest.java": {
+    "mtime": 1795454270.1924965,
+    "seen": 1795493362.3717184,
+    "ast_hash": "a7cc3247e6b460f5bfa5208929af62da",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/ProgramCurriculumVersion.java": {
+    "mtime": 1795454270.206844,
+    "seen": 1795493362.4253073,
+    "ast_hash": "15126208897ecab7786d77e7c4d5a6db",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/ProgramCurriculumVersionController.java": {
+    "mtime": 1795454270.2082248,
+    "seen": 1795493362.4253073,
+    "ast_hash": "426e80ebef3eea8c632d97a9f50a7283",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/ProgramCurriculumVersionId.java": {
+    "mtime": 1795454270.2093477,
+    "seen": 1795493362.4253073,
+    "ast_hash": "0cd41073111d149f5a3fff5403a13d40",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/ProgramCurriculumVersionRepository.java": {
+    "mtime": 1795454270.2111602,
+    "seen": 1795493362.4253073,
+    "ast_hash": "7545b7a409d6d290e838b9fc8c489570",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/ProgramCurriculumVersionService.java": {
+    "mtime": 1795454270.2116797,
+    "seen": 1795493362.4253073,
+    "ast_hash": "f984ea32a81e93a865d3509fbd597530",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/StaffLeaveController.java": {
+    "mtime": 1795454270.230214,
+    "seen": 1795493362.454628,
+    "ast_hash": "9235c179a05ddb5fff539548fcf98cd1",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/dto/CreateCurriculumVersionRequest.java": {
+    "mtime": 1795488383.827007,
+    "seen": 1795493362.491367,
+    "ast_hash": "9aad919a630b5bad0db1a4043c0f42fc",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/dto/CurriculumVersionResponse.java": {
+    "mtime": 1795454270.2465982,
+    "seen": 1795493362.4952693,
+    "ast_hash": "88603eac72882a41779006727422b630",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/dto/InstitutionHierarchyNode.java": {
+    "mtime": 1795454270.2490504,
+    "seen": 1795493362.504891,
+    "ast_hash": "1a0a350fc2753e51b43d1bc6d8985f32",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/dto/InstitutionHierarchyResponse.java": {
+    "mtime": 1795454270.2508187,
+    "seen": 1795493362.504891,
+    "ast_hash": "65636cf15812ca92a04325a5107fba9e",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/dto/UpdateInstitutionRequest.java": {
+    "mtime": 1795454270.2633936,
+    "seen": 1795493362.5144699,
+    "ast_hash": "ecc33600a5672c2d6b059e9b3959e83e",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/institution/dto/UpdateSectionRequest.java": {
+    "mtime": 1795454270.2633936,
+    "seen": 1795493362.5144699,
+    "ast_hash": "d78606de4ef6c58c0ee4d6e0e66d2d27",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/StaffLeaveApprovalOutcomeHandler.java": {
+    "mtime": 1795454270.268995,
+    "seen": 1795493363.2001984,
+    "ast_hash": "a28143cc535bfce8e7dc279aa4621779",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/StaffLeaveService.java": {
+    "mtime": 1795454270.271902,
+    "seen": 1795493363.2001984,
+    "ast_hash": "e9b32820f05ef9c1ba8221df6d9df7b0",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/dto/LeaveBalanceCreditRequest.java": {
+    "mtime": 1795454270.2756317,
+    "seen": 1795493363.2121966,
+    "ast_hash": "288deb304e57be08190e7931cbab7703",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/dto/LeaveRequestCreateRequest.java": {
+    "mtime": 1795454270.2772715,
+    "seen": 1795493363.2121966,
+    "ast_hash": "4bb2c7c9243495fd5474a2a2fe47d359",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/dto/LeaveRequestResponse.java": {
+    "mtime": 1795454270.2784064,
+    "seen": 1795493363.21546,
+    "ast_hash": "3205f6d9f6d1fe3ad8fafedc17edc5fa",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/dto/StaffLeaveBalanceResponse.java": {
+    "mtime": 1795454270.2784064,
+    "seen": 1795493363.2231467,
+    "ast_hash": "c106e1ace65dc1182459fae37d67b232",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/dto/StaffLeaveTypeResponse.java": {
+    "mtime": 1795454270.2784064,
+    "seen": 1795493363.2231467,
+    "ast_hash": "1915a72ba690c4c542481adbb45f06d3",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/selfservice/dto/StaffLeaveTypeSetRequest.java": {
+    "mtime": 1795454270.2784064,
+    "seen": 1795493363.2231467,
+    "ast_hash": "233ee9371dc3c174cd984cbf8fc91104",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/staff/controller/StaffAppraisalController.java": {
+    "mtime": 1795454270.2784064,
+    "seen": 1795493363.2290468,
+    "ast_hash": "a90cbc4590b34ae0ccb0f44a94ff8134",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/staff/service/StaffAppraisalService.java": {
+    "mtime": 1795454270.2784064,
+    "seen": 1795493363.2290468,
+    "ast_hash": "1fcc75a1581077a4df3990e5fed234ef",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/student/StudentDirectoryController.java": {
+    "mtime": 1795454270.2784064,
+    "seen": 1795493363.2290468,
+    "ast_hash": "688745f52c1edec88889172fafb89676",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/student/StudentDirectoryResponse.java": {
+    "mtime": 1795454270.284765,
+    "seen": 1795493363.2290468,
+    "ast_hash": "0904e21cdb20f4914ccff95dc432909a",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/student/StudentDirectoryService.java": {
+    "mtime": 1795454270.284765,
+    "seen": 1795493363.2290468,
+    "ast_hash": "e668ad5ee28d27044d3db0c1fbf83057",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/student/StudentGuardianPreferencesController.java": {
+    "mtime": 1795454270.284765,
+    "seen": 1795493363.2290468,
+    "ast_hash": "fed9740906f5103de11c5f9b6034db47",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/student/StudentNoteRequest.java": {
+    "mtime": 1795454270.284765,
+    "seen": 1795493363.2290468,
+    "ast_hash": "59f575dc90f16beecb21b40ef4cb9682",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/student/StudentProfileUpdateRequest.java": {
+    "mtime": 1795454270.284765,
+    "seen": 1795493363.2290468,
+    "ast_hash": "34678e9c13849f156f5befe5a2e2b3bf",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/tenant/TenantSecurityInterceptor.java": {
+    "mtime": 1795454270.284765,
+    "seen": 1795493363.2471611,
+    "ast_hash": "8b0b1eb33f9d75ea45d1df0bc291f44b",
+    "semantic_hash": ""
+  },
+  "api/src/main/java/com/edu360/api/termlock/TermRelockScheduler.java": {
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.2586102,
+    "ast_hash": "d55c9fba2b93e9e74c9b57bb4263bebe",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/admissions/AdmissionPaymentEventHandlerTest.java": {
+    "mtime": 1795455019.935886,
+    "seen": 1795493363.262345,
+    "ast_hash": "fbeac44323467ed8fc1be3c5c6577dee",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/admissions/MeritApprovalRuleC12IT.java": {
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.262345,
+    "ast_hash": "5cb5314d205e324bbde4006ebc57dd32",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/admissions/MeritListCalculationIT.java": {
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.262345,
+    "ast_hash": "53cef5f374612646a430c814de87bef6",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/approval/StaffLeaveApprovalActionTest.java": {
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.2751808,
+    "ast_hash": "a8a9873f619a91df8ef61a365f3f9bfc",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/institution/AcademicHierarchyIT.java": {
+    "mtime": 1795454270.291451,
+    "seen": 1795493363.322815,
+    "ast_hash": "20824c94f300dc3292e1d27871c6d252",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/institution/ProgramCurriculumVersionServiceTest.java": {
+    "mtime": 1795454270.316269,
+    "seen": 1795493363.3261611,
+    "ast_hash": "c70b2ffc4e260c24814ace4d95179e77",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/institution/SemesterExclusionConstraintTest.java": {
+    "mtime": 1795454270.3168352,
+    "seen": 1795493363.3261611,
+    "ast_hash": "9672c11fc73682a31843a49cd519c712",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/institution/SemesterOverlapConcurrencyTest.java": {
+    "mtime": 1795454270.3179686,
+    "seen": 1795493363.3261611,
+    "ast_hash": "962ecdba6edb38ff7f5b0c0fd2c12d94",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/rolldown/RoleRolldownIT.java": {
+    "mtime": 1795454270.3213353,
+    "seen": 1795493363.4528627,
+    "ast_hash": "a3dd5cc81e40bc7d264197422a6e2542",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/staff/StaffAppraisalIT.java": {
+    "mtime": 1795454270.322422,
+    "seen": 1795493363.4660802,
+    "ast_hash": "a41c22be942196a1be5eba9efa045d0f",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/student/StudentDirectoryControllerTest.java": {
+    "mtime": 1795454270.324305,
+    "seen": 1795493363.4660802,
+    "ast_hash": "6b104a93a281d2069cb3768f8a0a16b6",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/student/StudentGuardianPreferencesControllerTest.java": {
+    "mtime": 1795454270.3266907,
+    "seen": 1795493363.4660802,
+    "ast_hash": "32c297a69633f180396a687266b93137",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/student/StudentNoteGuardIT.java": {
+    "mtime": 1795454270.3285744,
+    "seen": 1795493363.4660802,
+    "ast_hash": "82aaec336aacf40002ad533e61e97b1a",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/student/StudentServiceIT.java": {
+    "mtime": 1795454270.329718,
+    "seen": 1795493363.4660802,
+    "ast_hash": "42a561b9a883218ee007b624bbe2e5d3",
+    "semantic_hash": ""
+  },
+  "api/src/test/java/com/edu360/api/termlock/AcademicTermLockIT.java": {
+    "mtime": 1795454270.330893,
+    "seen": 1795493363.4702706,
+    "ast_hash": "4f17c760a9b05942ff3c7a5227c61549",
+    "semantic_hash": ""
+  },
+  "app/.lighthouserc.cjs": {
+    "mtime": 1795455588.2424777,
+    "seen": 1795493363.472395,
+    "ast_hash": "f78dacf5cd126c41773a5729fe70aee2",
+    "semantic_hash": ""
+  },
+  "app/src/features/admissions/__tests__/ApplicantPortalPage.test.tsx": {
+    "mtime": 1795454270.3377945,
+    "seen": 1795493363.556371,
+    "ast_hash": "55ed3016ed4243c0420527f832f343fb",
+    "semantic_hash": ""
+  },
+  "app/src/features/admissions/__tests__/MeritListGenerationPage.test.tsx": {
+    "mtime": 1795454270.338467,
+    "seen": 1795493363.556371,
+    "ast_hash": "34dc336de354bd8c86e16925edf42734",
+    "semantic_hash": ""
+  },
+  "app/src/features/admissions/components/MeritApprovalModal.tsx": {
+    "mtime": 1795454270.341352,
+    "seen": 1795493363.556371,
+    "ast_hash": "20d5a36256e087627de2d467993479d5",
+    "semantic_hash": ""
+  },
+  "app/src/features/admissions/pages/AdmissionCyclesPage.tsx": {
+    "mtime": 1795454270.3434525,
+    "seen": 1795493363.556371,
+    "ast_hash": "f7063776906f89ff3c1f5fc8436bab83",
+    "semantic_hash": ""
+  },
+  "app/src/features/admissions/pages/ApplicantPortalPage.tsx": {
+    "mtime": 1795454270.3446226,
+    "seen": 1795493363.556371,
+    "ast_hash": "59ec0dcb407a272654a16d7a6d0cfc79",
+    "semantic_hash": ""
+  },
+  "app/src/features/admissions/pages/ApplicationScrutinyPage.tsx": {
+    "mtime": 1795454270.3446226,
+    "seen": 1795493363.556371,
+    "ast_hash": "c8ce927da53a3f0fab19897d93f0083f",
+    "semantic_hash": ""
+  },
+  "app/src/features/admissions/pages/MeritListGenerationPage.tsx": {
+    "mtime": 1795454270.3472512,
+    "seen": 1795493363.556371,
+    "ast_hash": "f9a37c319d6a6987458a6c7674271a77",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/api/academicHierarchyApi.ts": {
+    "mtime": 1795454270.3472512,
+    "seen": 1795493363.5749755,
+    "ast_hash": "bb0175baf091115034558846b809c60f",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/components/academic/TermLockModal.test.tsx": {
+    "mtime": 1795454270.3583083,
+    "seen": 1795493363.5879185,
+    "ast_hash": "767a039f0f7f4d6d37a229a793666316",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/pages/AcademicSessionDetailPage.tsx": {
+    "mtime": 1795454270.3583083,
+    "seen": 1795493363.5982003,
+    "ast_hash": "2d1153a6c486d3885744ccd0a4ff2f34",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/pages/DepartmentDetailPage.tsx": {
+    "mtime": 1795454270.3583083,
+    "seen": 1795493363.5982003,
+    "ast_hash": "61e77819dcc992ca8bead4a90c372fb9",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/pages/DetailPageFrame.tsx": {
+    "mtime": 1795454270.3633022,
+    "seen": 1795493363.5982003,
+    "ast_hash": "e96be930772151fec8bba4eb0bd579d9",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/pages/InstitutionDetailPage.tsx": {
+    "mtime": 1795454270.3633022,
+    "seen": 1795493363.599534,
+    "ast_hash": "69bab3f5fc4046ff605050669f5b4a10",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/pages/ProgramDetailPage.tsx": {
+    "mtime": 1795454270.372056,
+    "seen": 1795493363.599534,
+    "ast_hash": "3eec01b7e7fdf557742fceb3fc482991",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/pages/SectionDetailPage.tsx": {
+    "mtime": 1795454270.374249,
+    "seen": 1795493363.599534,
+    "ast_hash": "e6a73876f27a47e408da0469af7a6930",
+    "semantic_hash": ""
+  },
+  "app/src/features/institution-admin/pages/__tests__/AcademicCalendarPage.test.tsx": {
+    "mtime": 1795454270.3777466,
+    "seen": 1795493363.6009924,
+    "ast_hash": "0ed5ece2e52ba6f63d8a5e3b247f6509",
+    "semantic_hash": ""
+  },
+  "app/src/features/platform/components/overview/DataProtectionOfficerDashboard.test.tsx": {
+    "mtime": 1795235947.7498288,
+    "seen": 1795493363.6303828,
+    "ast_hash": "e7db47daac7237442d07ba572b6f4e82",
+    "semantic_hash": ""
+  },
+  "app/src/features/platform/components/overview/DataProtectionOfficerDashboard.tsx": {
+    "mtime": 1795236100.787358,
+    "seen": 1795493363.6303828,
+    "ast_hash": "cd14270be0f1bacf04fc54b2b8b52d77",
+    "semantic_hash": ""
+  },
+  "app/src/features/platform/components/reports/reportExportUtils.ts": {
+    "mtime": 1795199585.5753956,
+    "seen": 1795493363.6382525,
+    "ast_hash": "d76cb4481681ac92ec82cb16367c8893",
+    "semantic_hash": ""
+  },
+  "app/src/features/staff/pages/StaffAppraisalPage.tsx": {
+    "mtime": 1795454270.3813236,
+    "seen": 1795493363.7044764,
+    "ast_hash": "2bcc378c53adaaace336c6dc57c245fe",
+    "semantic_hash": ""
+  },
+  "app/src/features/students/api/studentApi.ts": {
+    "mtime": 1795454270.3813236,
+    "seen": 1795493363.7044764,
+    "ast_hash": "b04c1a167cd1b56b96f8d9dac227ab15",
+    "semantic_hash": ""
+  },
+  "app/src/features/students/components/GuardianManagerModal.test.tsx": {
+    "mtime": 1795454270.3851602,
+    "seen": 1795493363.7044764,
+    "ast_hash": "ae91d3372d781d2f2e43ccb3b929d528",
+    "semantic_hash": ""
+  },
+  "app/src/features/students/components/GuardianManagerModal.tsx": {
+    "mtime": 1795454270.386551,
+    "seen": 1795493363.7044764,
+    "ast_hash": "8970268d35320857a298d1d00ed0636e",
+    "semantic_hash": ""
+  },
+  "app/src/features/students/pages/StudentDirectoryPage.test.tsx": {
+    "mtime": 1795454270.3877115,
+    "seen": 1795493363.7044764,
+    "ast_hash": "e8ffe69a345492c6ac80dccac3da42b6",
+    "semantic_hash": ""
+  },
+  "app/src/features/students/pages/StudentDirectoryPage.tsx": {
+    "mtime": 1795454270.391569,
+    "seen": 1795493363.7044764,
+    "ast_hash": "c3bb04948755da414fa92eec8bd9eab4",
+    "semantic_hash": ""
+  },
+  "app/src/routes/StudentFeatureRoutes.tsx": {
+    "mtime": 1795454270.3965106,
+    "seen": 1795493363.7373762,
+    "ast_hash": "1591d00ce3ecba870679515ece496d90",
+    "semantic_hash": ""
+  },
+  "docker/clamav/docker-compose.yml": {
+    "mtime": 1795454270.4010067,
+    "seen": 1795493363.76613,
+    "ast_hash": "441eb489aad8e0c405c8f684d0a3add1",
+    "semantic_hash": ""
+  },
+  "app/public/robots.txt": {
+    "mtime": 1795457602.327636,
+    "seen": 1795493363.7898526,
+    "ast_hash": "5e0bd1c281a62a380d7a948085bfe2d1",
+    "semantic_hash": ""
+  },
+  "docs/T2_IMPLEMENTATION_DELIVERY_README.md": {
+    "mtime": 1795454270.407163,
+    "seen": 1795493363.8082473,
+    "ast_hash": "be1183303e11410fcb32324da9596dab",
+    "semantic_hash": ""
+  },
+  "docs/TENANT_COMPLETION_PLAN.md": {
+    "mtime": 1795454270.411731,
+    "seen": 1795493363.8082473,
+    "ast_hash": "41458493a196c361ebcd61d9e10ce261",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/README.md": {
+    "mtime": 1795416303.7961576,
+    "seen": 1795493363.8237357,
+    "ast_hash": "318b702df0e9d0002f106b4a35edf3d0",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T1-foundation-term-lock-and-rolldown.md": {
+    "mtime": 1795279877.532489,
+    "seen": 1795493363.8237357,
+    "ast_hash": "73209bcc4708f67250add00aeb9a6b3d",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T10-communications-library-and-transport.md": {
+    "mtime": 1795279877.5335033,
+    "seen": 1795493363.8237357,
+    "ast_hash": "2e6b897215b467ca02bbbb80753c4abe",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T2-academic-hierarchy-and-departments.md": {
+    "mtime": 1795279877.5355363,
+    "seen": 1795493363.8237357,
+    "ast_hash": "6eb9e3e66a0d02eea77e82d3eee5a935",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T3-staff-hr-leaves-and-appraisals.md": {
+    "mtime": 1795279877.536503,
+    "seen": 1795493363.8237357,
+    "ast_hash": "c56e2f42b5d09bf38614c2fd7eb418a0",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T4-student-information-system-sis.md": {
+    "mtime": 1795279877.5391016,
+    "seen": 1795493363.8237357,
+    "ast_hash": "db6bcc26f23ebee6b4a8905c0d5768e6",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T5-admissions-merit-and-enrollment.md": {
+    "mtime": 1795279877.5401192,
+    "seen": 1795493363.8237357,
+    "ast_hash": "ae09731d8e93420a6579cb11d8602c9a",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T6-timetable-and-attendance-engine.md": {
+    "mtime": 1795279877.541123,
+    "seen": 1795493363.8237357,
+    "ast_hash": "23d74b7e57fdd8bba00f059b47ae14db",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T7-assignments-examinations-and-grading.md": {
+    "mtime": 1795279877.5421147,
+    "seen": 1795493363.8237357,
+    "ast_hash": "bb4b8011b7ceaafd0a6118c2b1828eaf",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T8-fee-structure-invoicing-and-payments.md": {
+    "mtime": 1795279877.543115,
+    "seen": 1795493363.8237357,
+    "ast_hash": "ec8806f2d2ac4fc94998a5d0b8b0c9ba",
+    "semantic_hash": ""
+  },
+  "docs/tenant-agent-prompts/T9-id-cards-certificates-and-grievances.md": {
+    "mtime": 1795279877.544117,
+    "seen": 1795493363.8237357,
+    "ast_hash": "cf440c161b3bca871470a779f7878a7c",
+    "semantic_hash": ""
+  },
+  "docs/validation/T4-verification-run.md": {
+    "mtime": 1795454270.4171493,
+    "seen": 1795493363.8237357,
+    "ast_hash": "dd27328317e6ab37872bbb19c017d0c7",
+    "semantic_hash": ""
+  },
+  "app/public/favicon.svg": {
+    "mtime": 1795493643.342422,
+    "seen": 1795500499.4205945,
+    "ast_hash": "995bf2340a3064ccda3bc23089a28b92",
     "semantic_hash": ""
   },
   "app/package-lock.json": {

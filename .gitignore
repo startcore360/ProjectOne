@@ -51,5 +51,6 @@ logs/dev-host.pids
 # Local Playwright UI audit output (app/edu360-playwright-audit.mjs)
 app/playwright-report/
 app/audit-output/
+app/.lighthouseci/
 # Local sign-in for app/edu360-playwright-audit.mjs (never commit)
 app/.audit-login.json

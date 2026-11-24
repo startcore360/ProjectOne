@@ -1,7 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
-import AppLayout from "../layout/AppLayout";
 import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
 import { SkeletonPage } from "../design-system/components";
@@ -13,6 +12,8 @@ import PublicRoute from "./PublicRoute";
 import ActionGate from "./ActionGate";
 import TenantUserRoute from "./TenantUserRoute";
 import { TENANT_ROUTE_ACTIONS } from "./tenantRouteActions";
+
+const AppLayout = lazy(() => import("../layout/AppLayout"));
 
 const ApplicantPortalPage = lazy(() => import("../features/admissions/pages/ApplicantPortalPage"));
 const AdmissionCyclesPage = lazy(() => import("../features/admissions/pages/AdmissionCyclesPage"));
