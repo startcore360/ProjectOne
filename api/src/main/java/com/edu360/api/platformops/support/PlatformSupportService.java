@@ -186,7 +186,7 @@ public class PlatformSupportService {
         String body = saved.getTicketNumber() + " was escalated to " + request.to() + ". " + request.note().trim();
         for (PlatformUser recipient : recipients) platformNotificationService.notify(recipient.getPlatformUserId(),
                 "SUPPORT_TICKET_ESCALATED", "Support ticket escalated", body, "SUPPORT_TICKET",
-                saved.getSupportTicketId(), "HIGH", principal.platformUserId());
+                saved.getSupportTicketId(), "NORMAL", principal.platformUserId());
         return SupportTicketResponse.fromEntity(saved);
     }
 
@@ -203,6 +203,27 @@ public class PlatformSupportService {
 
         Instant now = Instant.now();
         Instant expiresAt = now.plus(Duration.ofHours(req.durationHours()));
+
+        // Supersede / withdraw any existing active grants for this ticket to avoid duplicate active grants
+        try {
+            List<SupportAccessGrant> existingActive = grantRepository
+                    .findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNullOrderByGrantedAtDesc(req.ticketId(), now);
+            if (existingActive != null) {
+                for (SupportAccessGrant existing : existingActive) {
+                    if (existing != null) {
+                        existing.setWithdrawnAt(now);
+                        existing.setUpdatedAt(now);
+                        existing.setUpdatedBy(actorUserId);
+                        grantRepository.save(existing);
+                        if (supportSessionService != null) {
+                            supportSessionService.endForGrant(existing.getSupportAccessGrantId());
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            // best-effort withdrawal of existing grants
+        }
 
         SupportAccessGrant grant = SupportAccessGrant.builder()
                 .supportAccessGrantId(UUID.randomUUID())

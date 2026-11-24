@@ -64,11 +64,21 @@ export function AuthenticatorSetup({ enrolment, accountName, busy, onConfirm, on
       </ol>
 
       <div className="mfa-setup__open-app">
-        <a className="eds-button eds-button--primary eds-button--lg eds-button--block" href={authenticatorLink(enrolment.secret, accountName)}>
+        <a
+          className="eds-button eds-button--primary eds-button--lg eds-button--block"
+          href={authenticatorLink(enrolment.secret, accountName)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            void copySecret();
+          }}
+        >
           Open in authenticator app
         </a>
         <p className="mfa-setup__open-app-hint">
-          Adds EDU 360 to your authenticator app in one tap. Then come back here and enter the 6-digit code.
+          {copied
+            ? "Setup key copied to clipboard! If your app does not import the account automatically, tap '+' in your app, select 'Enter a setup key' and paste it."
+            : "Adds EDU 360 to your authenticator app in one tap. Then come back here and enter the 6-digit code."}
         </p>
       </div>
 

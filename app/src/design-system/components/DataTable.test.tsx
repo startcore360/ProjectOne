@@ -1,4 +1,4 @@
-﻿import { render, screen } from "@testing-library/react";
+﻿import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DataTable } from "./DataTable";
 
@@ -60,6 +60,44 @@ describe("DataTable", () => {
     expect(screen.getAllByRole("row").length).toBe(16); // 1 header + 15 body rows
     expect(screen.getByText("Row 1")).toBeInTheDocument();
     expect(screen.getByText("Row 15")).toBeInTheDocument();
+  });
+
+  it("renders consistent pagination controls and navigates between pages", () => {
+    const rows = Array.from({ length: 15 }, (_, i) => (
+      <tr key={i}>
+        <td>Row {i + 1}</td>
+        <td>Active</td>
+      </tr>
+    ));
+
+    render(
+      <DataTable headers={["Row", "Status"]} pagination={true} pageSize={5} pageSizeOptions={[5, 10]}>
+        {rows}
+      </DataTable>,
+    );
+
+    expect(screen.getByText("Showing 1–5 of 15")).toBeInTheDocument();
+    expect(screen.getByText("Rows per page")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+
+    // Click Next
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Showing 6–10 of 15")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+
+    // Change page size to 10
+    fireEvent.change(screen.getByRole("combobox", { name: /rows per page/i }), { target: { value: "10" } });
+    expect(screen.getByText("Showing 1–10 of 15")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+
+    // Click Next to page 2
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Showing 11–15 of 15")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 
   it("renders empty state and shows no card container outside mobile", () => {

@@ -285,7 +285,7 @@ export function ReportsView() {
             disabled={loading}
             style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", whiteSpace: "nowrap" }}
           >
-            <Icon name="refresh" size={14} />
+            <Icon name="refresh" size={14} spin={loading} />
             <span>Refresh</span>
           </Button>
         </div>

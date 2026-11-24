@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import "./StaffRecordsPage.css";
 import {
   Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
-  Panel, SearchBox, SelectField, SkeletonCard, SkeletonText, TextAreaField, TextField, DataTable,
+  Pagination, Panel, SearchBox, SelectField, SkeletonCard, SkeletonText, TextAreaField, TextField, DataTable,
 } from "../../../design-system/components";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
@@ -292,11 +292,6 @@ export default function StaffRecordsPage() {
             <>
               <div className="app-list-summary">
                 <span><strong>{staff.length}</strong> staff {staff.length === 1 ? "record" : "records"}</span>
-                <label className="app-pagination__size">Rows per page{" "}
-                  <select value={directoryPageSize} onChange={(event) => { setDirectoryPageSize(Number(event.target.value)); setDirectoryPage(1); }}>
-                    {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
-                  </select>
-                </label>
               </div>
               <div className="staff-record-list" role="list" aria-label="Staff directory">
                 {staff.slice((directoryPage - 1) * directoryPageSize, directoryPage * directoryPageSize).map((person) => (
@@ -311,13 +306,22 @@ export default function StaffRecordsPage() {
                   </div>
                 ))}
               </div>
-              {staff.length > directoryPageSize && <nav className="app-pagination" aria-label="Staff directory pagination">
-                <span>Page {directoryPage} of {Math.ceil(staff.length / directoryPageSize)}</span>
-                <div>
-                  <Button size="sm" variant="secondary" disabled={directoryPage <= 1} onClick={() => setDirectoryPage((page) => Math.max(1, page - 1))}>Previous</Button>
-                  <Button size="sm" variant="secondary" disabled={directoryPage >= Math.ceil(staff.length / directoryPageSize)} onClick={() => setDirectoryPage((page) => Math.min(Math.ceil(staff.length / directoryPageSize), page + 1))}>Next</Button>
-                </div>
-              </nav>}
+              {staff.length > directoryPageSize && (
+                <Pagination
+                  ariaLabel="Staff directory pagination"
+                  currentPage={directoryPage}
+                  totalPages={Math.ceil(staff.length / directoryPageSize)}
+                  totalItems={staff.length}
+                  pageSize={directoryPageSize}
+                  currentItemsCount={staff.slice((directoryPage - 1) * directoryPageSize, directoryPage * directoryPageSize).length}
+                  pageSizeOptions={[10, 25, 50]}
+                  onPageChange={setDirectoryPage}
+                  onPageSizeChange={(size) => {
+                    setDirectoryPageSize(size);
+                    setDirectoryPage(1);
+                  }}
+                />
+              )}
             </>
           )}
           <div className="app-inline-actions"><Button size="sm" variant="tertiary" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh directory</Button></div>

@@ -59,7 +59,7 @@ describe("DataProtectionOfficerDashboard", () => {
 
     renderDashboard();
 
-    expect(await screen.findByText("Welcome, Manoj DPO")).toBeInTheDocument();
+    expect(await screen.findByText(/Manoj DPO/)).toBeInTheDocument();
     expect(screen.getByText("All clear — no privacy requests waiting for action")).toBeInTheDocument();
     expect(screen.getByText("Pending Approvals")).toBeInTheDocument();
   });

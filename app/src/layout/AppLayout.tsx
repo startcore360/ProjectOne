@@ -177,6 +177,64 @@ export default function AppLayout() {
     setDrawerLocationKey(location.key);
     if (moreOpen) setMoreOpen(false);
   }
+
+  // Auto-hide mobile navigation on scroll down, auto-reveal on scroll up (smooth threshold-based)
+  const [mobileNavHidden, setMobileNavHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const accumulatedDeltaRef = useRef(0);
+
+  useEffect(() => {
+    let ticking = false;
+    const HIDE_THRESHOLD = 45; // Must scroll down 45px continuously to hide
+    const REVEAL_THRESHOLD = 20; // Must scroll up 20px continuously to reveal
+
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const currentScrollY = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0);
+        const diff = currentScrollY - lastScrollYRef.current;
+
+        // Reset accumulated delta if scroll direction reverses
+        if ((diff > 0 && accumulatedDeltaRef.current < 0) || (diff < 0 && accumulatedDeltaRef.current > 0)) {
+          accumulatedDeltaRef.current = 0;
+        }
+        accumulatedDeltaRef.current += diff;
+
+        // Near top of page: always reveal
+        if (currentScrollY <= 48) {
+          setMobileNavHidden(false);
+          accumulatedDeltaRef.current = 0;
+        }
+        // Near bottom of page: always reveal so bottom actions / footer are accessible
+        else if (window.innerHeight + currentScrollY >= document.documentElement.scrollHeight - 40) {
+          setMobileNavHidden(false);
+          accumulatedDeltaRef.current = 0;
+        }
+        // Downward continuous scroll exceeds threshold: smoothly hide
+        else if (accumulatedDeltaRef.current > HIDE_THRESHOLD) {
+          setMobileNavHidden(true);
+        }
+        // Upward continuous scroll exceeds threshold: smoothly reveal
+        else if (accumulatedDeltaRef.current < -REVEAL_THRESHOLD) {
+          setMobileNavHidden(false);
+        }
+
+        lastScrollYRef.current = currentScrollY;
+        ticking = false;
+      });
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Show mobile nav on route changes
+  useEffect(() => {
+    setMobileNavHidden(false);
+    lastScrollYRef.current = 0;
+    accumulatedDeltaRef.current = 0;
+  }, [location.pathname]);
   const name = user?.displayName?.trim() || "Account";
   const dispatch = useAppDispatch();
   const { serverActions, permissionsLoaded: platformPermissionsLoaded, permissionsFailed: platformPermissionsFailed, customRoleName } = usePlatformAccess();
@@ -371,10 +429,18 @@ export default function AppLayout() {
 
   const importantNav = navigation.filter((item) => item.important);
   const moreNav = navigation.filter((item) => !item.important);
+
+  const isImportantRouteActive = importantNav.some(
+    (item) => item.to === location.pathname || (item.to !== "/" && item.to !== "/dashboard" && item.to !== "/platform" && location.pathname.startsWith(item.to + "/"))
+  );
+  const isMoreActive = !isImportantRouteActive && moreNav.some(
+    (item) => item.to === location.pathname || (item.to !== "/" && item.to !== "/dashboard" && item.to !== "/platform" && location.pathname.startsWith(item.to + "/"))
+  );
+
   const navLink = (item: (typeof navigation)[number], size = 20) =>
     "disabled" in item && item.disabled
       ? <button key={item.label} type="button" disabled className="app-nav__link is-disabled" aria-label={`${item.label} — coming soon`}><Icon name={item.icon} size={size}/><span>{item.label} <small>Coming soon</small></span></button>
-      : <NavLink key={item.to} to={item.to} end title={item.label} onClick={() => setMoreOpen(false)} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={size}/><span>{item.label}</span></NavLink>;
+      : <NavLink key={item.to} to={item.to} end={item.to === "/" || item.to === "/dashboard" || item.to === "/platform"} title={item.label} onClick={() => setMoreOpen(false)} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={size}/><span>{item.label}</span></NavLink>;
 
   return <div className="app-shell">
     {/* Matches D10's .side-card: a grouped nav list with the signed-in identity and sign-out
@@ -455,9 +521,22 @@ export default function AppLayout() {
 
     {/* D10's .bottom-nav: curated important items + a "More" button. Only rendered/visible on
         mobile (CSS hides it above the 640px breakpoint; .app-sidebar is hidden below it). */}
-    <nav className="app-mobile-nav" aria-label="Mobile navigation">
+    <nav
+      className={`app-mobile-nav${mobileNavHidden && !moreOpen ? " app-mobile-nav--hidden" : ""}`}
+      aria-label="Mobile navigation"
+    >
       {importantNav.map((item) => navLink(item, 22))}
-      <button ref={moreTriggerRef} type="button" className="app-nav__link" aria-haspopup="dialog" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Icon name="more" size={22}/><span>More</span></button>
+      <button
+        ref={moreTriggerRef}
+        type="button"
+        className={`app-nav__link${isMoreActive ? " is-active" : ""}`}
+        aria-haspopup="dialog"
+        aria-expanded={moreOpen}
+        onClick={() => setMoreOpen(true)}
+      >
+        <Icon name="more" size={22}/>
+        <span>More</span>
+      </button>
     </nav>
     {moreOpen && <div className="app-modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) closeMoreDrawer(); }}>
       <section ref={drawerRef} tabIndex={-1} className="app-more-drawer" role="dialog" aria-modal="true" aria-label="Menu">

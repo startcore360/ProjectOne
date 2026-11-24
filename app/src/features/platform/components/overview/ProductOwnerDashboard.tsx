@@ -15,6 +15,7 @@ import {
 } from "../../api/platformOpsService";
 import { platformUserService, type PlatformUserItem } from "../../api/platformUserService";
 import { PLATFORM_PAGE_ACTIONS, usePlatformAccess } from "../../platformAccess";
+import { renderGreeting } from "../../../../utils/greeting";
 
 /**
  * Product Owner platform overview (E9-S1, D10 "Platform overview").
@@ -36,23 +37,25 @@ function useSource<T>(permitted: boolean, refreshKey: number, scope: string, fet
   useEffect(() => { fetcherRef.current = fetcher; });
   const [retryKey, setRetryKey] = useState(0);
   const [load, setLoad] = useState<Load<T>>(permitted ? { state: "loading" } : { state: "denied" });
+  const [fetching, setFetching] = useState(false);
   useEffect(() => {
     let active = true;
     if (!permitted) {
-      Promise.resolve().then(() => { if (active) setLoad({ state: "denied" }); });
+      Promise.resolve().then(() => { if (active) { setLoad({ state: "denied" }); setFetching(false); } });
       return () => { active = false; };
     }
+    setFetching(true);
     Promise.resolve()
       .then(() => { if (active) setLoad((old) => (old.state === "ok" ? old : { state: "loading" })); })
       .then(() => fetcherRef.current())
       .then(
-        (data) => { if (active) setLoad({ state: "ok", data }); },
-        () => { if (active) setLoad({ state: "error" }); },
+        (data) => { if (active) { setLoad({ state: "ok", data }); setFetching(false); } },
+        () => { if (active) { setLoad({ state: "error" }); setFetching(false); } },
       );
     return () => { active = false; };
   }, [permitted, refreshKey, retryKey, scope]);
   const retry = useCallback(() => setRetryKey((value) => value + 1), []);
-  return [load, retry] as const;
+  return [load, retry, fetching] as const;
 }
 
 const DAY_MS = 86_400_000;
@@ -80,9 +83,6 @@ function humanize(code: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function greeting(hour: number) {
-  return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-}
 
 function monthLabel(month: string) {
   const [year, monthIndex] = month.split("-").map(Number);
@@ -163,7 +163,7 @@ export function ProductOwnerDashboard() {
   const tenantView = canAny(PLATFORM_PAGE_ACTIONS.tenants);
   const setupView = canAny(["TENANT_CREATE", "TENANT_SETTINGS"]);
 
-  const [tenantData, retryTenants] = useSource<TenantOverview>(tenantView, refreshKey, "", async () => {
+  const [tenantData, retryTenants, fetchingTenants] = useSource<TenantOverview>(tenantView, refreshKey, "", async () => {
     const tenants = await getAllTenants();
     // Only a tenant whose setup never finished (still CREATED, E1-S2) can have a failed setup.
     const created = setupView ? tenants.filter((tenant) => tenant.state === "CREATED") : [];
@@ -173,22 +173,37 @@ export function ProductOwnerDashboard() {
     }));
     return { tenants, failedSetups: statuses.filter((tenant): tenant is TenantItem => tenant !== null) };
   });
-  const [revenue, retryRevenue] = useSource<PlatformReportItem>(can("PLATFORM_REPORTS_VIEW"), refreshKey, "", () => platformOpsService.getReport("REVENUE"));
-  const [users, retryUsers] = useSource<PlatformUserItem[]>(can("PLATFORM_USER_MANAGE"), refreshKey, "", async () => {
+  const [revenue, retryRevenue, fetchingRevenue] = useSource<PlatformReportItem>(can("PLATFORM_REPORTS_VIEW"), refreshKey, "", () => platformOpsService.getReport("REVENUE"));
+  const [users, retryUsers, fetchingUsers] = useSource<PlatformUserItem[]>(can("PLATFORM_USER_MANAGE"), refreshKey, "", async () => {
     const response = await platformUserService.getPlatformUsers();
     return Array.isArray(response.data) ? response.data : [];
   });
-  const [activity, retryActivity] = useSource<PlatformAuditLogItem[]>(can("PLATFORM_AUDIT_VIEW"), refreshKey, deniedOnly ? "DENIED" : "ALL",
+  const [activity, retryActivity, fetchingActivity] = useSource<PlatformAuditLogItem[]>(can("PLATFORM_AUDIT_VIEW"), refreshKey, deniedOnly ? "DENIED" : "ALL",
     async () => { const rows = await platformOpsService.listRecentAuditLogs(6, deniedOnly ? "DENIED" : undefined); return Array.isArray(rows) ? rows : []; });
-  const [tickets] = useSource<SupportTicketItem[]>(can("SUPPORT_TICKET_MANAGE"), refreshKey, "", async () => { const rows = await platformOpsService.listSupportTickets(); return Array.isArray(rows) ? rows : []; });
-  const [pendingDp] = useSource<{ count: number }>(canAny(["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"]), refreshKey, "", () => platformOpsService.getPendingDataProtectionCount());
-  const [backups] = useSource(can("BACKUP_STATUS_VIEW"), refreshKey, "", () => platformOpsService.getPlatformBackupStatus());
-  const [overdue] = useSource<InvoiceItem[]>(can("INVOICE_MANAGE"), refreshKey, "", async () => { const rows = await platformOpsService.listOverdueInvoices(); return Array.isArray(rows) ? rows : []; });
-  const [usage] = useSource(can("USAGE_COUNTS_VIEW"), refreshKey, "", () => platformOpsService.getUsageCounts());
+  const [tickets, , fetchingTickets] = useSource<SupportTicketItem[]>(can("SUPPORT_TICKET_MANAGE"), refreshKey, "", async () => { const rows = await platformOpsService.listSupportTickets(); return Array.isArray(rows) ? rows : []; });
+  const [pendingDp, , fetchingDp] = useSource<{ count: number }>(canAny(["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"]), refreshKey, "", () => platformOpsService.getPendingDataProtectionCount());
+  const [backups, , fetchingBackups] = useSource(can("BACKUP_STATUS_VIEW"), refreshKey, "", () => platformOpsService.getPlatformBackupStatus());
+  const [overdue, , fetchingOverdue] = useSource<InvoiceItem[]>(can("INVOICE_MANAGE"), refreshKey, "", async () => { const rows = await platformOpsService.listOverdueInvoices(); return Array.isArray(rows) ? rows : []; });
+  const [usage, , fetchingUsage] = useSource(can("USAGE_COUNTS_VIEW"), refreshKey, "", () => platformOpsService.getUsageCounts());
+
+  const [minSpinning, setMinSpinning] = useState(false);
+  const isRefreshing =
+    fetchingTenants ||
+    fetchingRevenue ||
+    fetchingUsers ||
+    fetchingActivity ||
+    fetchingTickets ||
+    fetchingDp ||
+    fetchingBackups ||
+    fetchingOverdue ||
+    fetchingUsage;
+  const isSpinning = isRefreshing || minSpinning;
 
   const refresh = useCallback(() => {
+    setMinSpinning(true);
     setRefreshKey((value) => value + 1);
     setUpdatedAt(Date.now());
+    setTimeout(() => setMinSpinning(false), 600);
   }, []);
 
   // Keep "Updated … ago" honest, and refresh when the person comes back after a few minutes away.
@@ -297,10 +312,6 @@ export function ProductOwnerDashboard() {
   }
   if (backups.state === "ok" && !backups.data.wiredToRealBackupSystem) notMeasured.push("tenant backups");
 
-  // D10 pattern: the greeting is the page title. Use the person's name only when it is a name; a
-  // display name that is an email address (common for platform accounts) would fill the title.
-  const name = displayName?.trim();
-  const personName = name && !name.includes("@") ? name : null;
   const roleLabel = role ? humanize(role).replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Platform";
   const today = new Date(now).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
   const statusTone = attentionLoading && attention.length === 0 ? "checking"
@@ -309,13 +320,21 @@ export function ProductOwnerDashboard() {
   return (
     <div className="app-page po-dash">
       <PageHeader
-        title={`${greeting(new Date(now).getHours())}${personName ? `, ${personName}` : ""}`}
+        title={renderGreeting(displayName, new Date(now))}
         description={`${roleLabel} · ${today}`}
         actions={
           <div className="po-dash__actions">
             <span className="po-dash__updated" aria-live="polite">Updated {relativeTime(updatedAt, now)}</span>
-            <Button variant="tertiary" size="sm" className="po-dash__refresh" onClick={refresh} aria-label="Refresh dashboard" title="Refresh">
-              <Icon name="refresh" size={16} />
+            <Button
+              variant="tertiary"
+              size="sm"
+              className="po-dash__refresh"
+              onClick={refresh}
+              disabled={isSpinning}
+              aria-label="Refresh dashboard"
+              title="Refresh"
+            >
+              <Icon name="refresh" size={16} spin={isSpinning} />
             </Button>
           </div>
         }

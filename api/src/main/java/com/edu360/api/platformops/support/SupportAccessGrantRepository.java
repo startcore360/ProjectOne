@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 public interface SupportAccessGrantRepository extends JpaRepository<SupportAccessGrant, UUID> {
     List<SupportAccessGrant> findByTenantId(UUID tenantId);
     List<SupportAccessGrant> findByTenantIdOrderByGrantedAtDesc(UUID tenantId);
+    Optional<SupportAccessGrant> findFirstByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNullOrderByGrantedAtDesc(UUID ticketId, Instant now);
     Optional<SupportAccessGrant> findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(UUID ticketId, Instant now);
+    List<SupportAccessGrant> findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNullOrderByGrantedAtDesc(UUID ticketId, Instant now);
     List<SupportAccessGrant> findByExpiresAtAfterAndWithdrawnAtIsNull(Instant now);
 }

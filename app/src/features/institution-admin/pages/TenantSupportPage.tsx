@@ -1,10 +1,18 @@
 ﻿import { useCallback, useEffect, useState, type FormEvent } from "react";
-import axios from "axios";
 import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
-import { Button, Panel, SkeletonTable, TextField, TextAreaField, SelectField } from "../../../design-system/components";
+import {
+  Button,
+  Notice,
+  Panel,
+  SelectField,
+  SkeletonTable,
+  TextAreaField,
+  TextField,
+  toast,
+} from "../../../design-system/components";
 import { ErrorState } from "../../../components/feedback/ErrorState";
 import { useSupportSession } from "../../support/useSupportSession";
 
@@ -25,7 +33,6 @@ export default function TenantSupportPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -36,7 +43,7 @@ export default function TenantSupportPage() {
 
   const load = useCallback(async () => {
     if (isSupportSession || !tenantId) { setLoading(false); return; }
-    setLoading(true); setError(""); setErrorStatus(null);
+    setLoading(true); setError("");
     try {
       const [ticketResponse, grantResponse] = await Promise.all([
         api.get<Ticket[]>(`/tenants/${tenantId}/support-tickets`),
@@ -47,7 +54,6 @@ export default function TenantSupportPage() {
       setTicketId((current) => current || ticketResponse.data[0]?.supportTicketId || "");
     } catch (err) {
       setError(getApiErrorMessage(err));
-      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
     } finally { setLoading(false); }
   }, [tenantId, isSupportSession]);
 
@@ -56,7 +62,10 @@ export default function TenantSupportPage() {
   const raiseTicket = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setMessage("");
     if (!subject.trim() || !description.trim()) {
-      setError("Subject and description are required."); return;
+      const err = "Subject and description are required.";
+      setError(err);
+      toast.error("Validation error", err);
+      return;
     }
     setSubmitting(true);
     try {
@@ -64,11 +73,14 @@ export default function TenantSupportPage() {
         subject: subject.trim(), description: description.trim(), priority,
       });
       setSubject(""); setDescription("");
-      setMessage(`Support ticket ${response.data.ticketNumber} was submitted.`);
+      const successMsg = `Support ticket ${response.data.ticketNumber} was submitted.`;
+      setMessage(successMsg);
+      toast.success("Support ticket submitted", successMsg);
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err));
-      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
+      const errMsg = getApiErrorMessage(err);
+      setError(errMsg);
+      toast.error("Could not submit ticket", errMsg);
     }
     finally { setSubmitting(false); }
   };
@@ -77,7 +89,10 @@ export default function TenantSupportPage() {
     event.preventDefault(); setError(""); setMessage("");
     const hours = Number(durationHours);
     if (!ticketId || !Number.isInteger(hours) || hours < 1 || hours > 24) {
-      setError("Choose one of your tickets and a duration from 1 to 24 hours."); return;
+      const err = "Choose one of your tickets and a duration from 1 to 24 hours.";
+      setError(err);
+      toast.error("Validation error", err);
+      return;
     }
     setSubmitting(true);
     try {
@@ -85,11 +100,14 @@ export default function TenantSupportPage() {
         ticketId, durationHours: hours, ...(institutionId.trim() ? { institutionId: institutionId.trim() } : {}),
       });
       setInstitutionId("");
-      setMessage(`Read-only support access was granted for ${hours} hour(s).`);
+      const successMsg = `Read-only support access was granted for ${hours} hour(s).`;
+      setMessage(successMsg);
+      toast.success("Support access granted", successMsg);
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err));
-      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
+      const errMsg = getApiErrorMessage(err);
+      setError(errMsg);
+      toast.error("Could not grant support access", errMsg);
     }
     finally { setSubmitting(false); }
   };
@@ -98,16 +116,18 @@ export default function TenantSupportPage() {
     setError(""); setMessage(""); setSubmitting(true);
     try {
       await api.post(`/tenants/${tenantId}/support-access-grants/${grantId}/withdrawal`);
-      setMessage("Support access was withdrawn immediately.");
+      const successMsg = "Support access was withdrawn immediately.";
+      setMessage(successMsg);
+      toast.success("Support access withdrawn", successMsg);
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err));
-      setErrorStatus(axios.isAxiosError(err) ? (err.response?.status ?? null) : null);
+      const errMsg = getApiErrorMessage(err);
+      setError(errMsg);
+      toast.error("Could not withdraw support access", errMsg);
     }
     finally { setSubmitting(false); }
   };
 
-  const forbidden = errorStatus === 403 || errorStatus === 404;
   if (isSupportSession) {
     return (
       <div className="app-page">
@@ -122,8 +142,8 @@ export default function TenantSupportPage() {
   return (
     <div className="app-page">
       <PageHeader title="Tenant support" description="Raise support tickets and control temporary, read-only access to your institution's data." />
-      {message && <div className="app-inline-notice" role="status">{message}</div>}
-      {error && <ErrorState title={forbidden ? "Access unavailable" : "Could not complete this request"} message={error} />}
+      {message && <Notice popup tone="success" onDismiss={() => setMessage("")}>{message}</Notice>}
+      {error && <Notice popup tone="danger" onDismiss={() => setError("")}>{error}</Notice>}
       {!tenantId ? <ErrorState title="Sign-in required" message="A tenant sign-in is required to use support." /> : (
         <>
           <Panel title="Raise a support ticket" description="Describe the issue. Do not include passwords, one-time codes or other secrets.">

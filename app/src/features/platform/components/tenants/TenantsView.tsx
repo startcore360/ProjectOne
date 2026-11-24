@@ -22,6 +22,7 @@ function trialDaysLeft(trialEndsAt?: string): number | null {
 
 function RowMenu({ tenantName, children }: { tenantName?: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [alignLeft, setAlignLeft] = useState(() => typeof window !== "undefined" && window.innerWidth <= 640);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +39,13 @@ function RowMenu({ tenantName, children }: { tenantName?: string; children: Reac
     };
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spaceOnRight = window.innerWidth - rect.left;
+    setAlignLeft(window.innerWidth <= 640 || spaceOnRight >= 180 || rect.left < 200);
   }, [open]);
 
   useEffect(() => {
@@ -110,10 +118,12 @@ function RowMenu({ tenantName, children }: { tenantName?: string; children: Reac
         <div
           ref={menuRef}
           role="menu"
+          className="app-row-menu__dropdown"
           aria-label={tenantName ? `Tenant actions for ${tenantName}` : "Tenant actions"}
           style={{
             position: "absolute",
-            right: 0,
+            left: alignLeft ? 0 : "auto",
+            right: alignLeft ? "auto" : 0,
             top: "calc(100% + 4px)",
             zIndex: 50,
             background: "var(--color-bg-surface)",
@@ -121,6 +131,7 @@ function RowMenu({ tenantName, children }: { tenantName?: string; children: Reac
             borderRadius: "var(--radius-md)",
             boxShadow: "var(--elevation-2)",
             minWidth: "140px",
+            maxWidth: "calc(100vw - 32px)",
             padding: "4px 0",
           }}
           onClick={closeMenu}
@@ -630,9 +641,9 @@ export function TenantsView() {
         />
       )}
       {message && (
-        <div className="app-inline-notice" role="status">
+        <Notice popup tone="success" onDismiss={() => setMessage("")}>
           {message}
-        </div>
+        </Notice>
       )}
       <div className="kpi-grid">
         <MetricCard label="All tenants" value={tenants.length} note="Live and trial directory" mark="book" />
@@ -653,9 +664,28 @@ export function TenantsView() {
         title="Tenant register"
         description="A app-level register. Tenant academic records are not shown here."
       >
+        <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center", marginBottom: "var(--space-4)" }}>
+          <div className="app-filter-tabs" role="tablist" aria-label="Filter tenants by status">
+            {(["All", "Active", "Trial", "Suspended", "Archived"] as const).map((st) => {
+              const count = st === "All" ? tenants.length : tenants.filter((t) => t.status === st).length;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  role="tab"
+                  aria-selected={status === st}
+                  className={`app-filter-tab ${status === st ? "app-filter-tab--active" : ""}`}
+                  onClick={() => setStatus(st)}
+                >
+                  {st} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search by institution or ID" />
-          <label className="app-select-label">
+          <label className="app-select-label" style={{ display: "none" }}>
             Status{" "}
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option>All</option>

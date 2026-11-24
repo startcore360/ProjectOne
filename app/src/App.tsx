@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import AppRoutes from "./routes/Routes";
 import ToastHost from "./design-system/components/ToastHost";
+import { LoadingScreen } from "./components/ui/LoadingScreen";
 
 // The top of the whole app. Each layout (AuthLayout for signed-out pages,
 // AppLayout for the signed-in shell) mounts its own ThemeToggle, since the
@@ -8,16 +9,10 @@ import ToastHost from "./design-system/components/ToastHost";
 export default function App() {
   return (
     <>
-      <Suspense
-        fallback={
-          <div className="flex min-h-screen items-center justify-center" role="status">
-            Loading...
-          </div>
-        }
-      >
+      <Suspense fallback={<LoadingScreen />}>
         <AppRoutes />
       </Suspense>
-      <ToastHost />
+      <ToastHost position="top" popup />
     </>
   );
 }

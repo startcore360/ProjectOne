@@ -6,6 +6,7 @@ import {
   Modal,
   Notice,
   Panel,
+  Pagination,
   StatusBadge,
   DataTable,
   SearchBox,
@@ -228,16 +229,18 @@ export function AuditLogView() {
               ))}
         </DataTable>
         {status !== "loading" && totalPages > 1 && (
-              <nav className="app-pagination" aria-label="Audit log pagination">
-                <span className="app-pagination__range">
-                  Showing {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + events.length} of {totalElements}
-                </span>
-                <div className="app-pagination__actions">
-                  <Button variant="secondary" size="sm" disabled={page === 0} onClick={() => { setStatus("loading"); setPage((p) => Math.max(0, p - 1)); }}>Previous</Button>
-                  <span aria-live="polite">Page {page + 1} of {totalPages}</span>
-                  <Button variant="secondary" size="sm" disabled={page + 1 >= totalPages} onClick={() => { setStatus("loading"); setPage((p) => p + 1); }}>Next</Button>
-                </div>
-              </nav>
+          <Pagination
+            ariaLabel="Audit log pagination"
+            currentPage={page + 1}
+            totalPages={totalPages}
+            totalItems={totalElements}
+            pageSize={PAGE_SIZE}
+            currentItemsCount={events.length}
+            onPageChange={(p) => {
+              setStatus("loading");
+              setPage(p - 1);
+            }}
+          />
         )}
       </Panel>
 

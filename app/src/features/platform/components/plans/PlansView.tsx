@@ -28,6 +28,8 @@ import { CreatePlanModal, type CreatePlanDraft } from "./CreatePlanModal";
 import { usePlatformAccess } from "../../platformAccess";
 import { EntitlementEditor } from "../entitlements/EntitlementEditor";
 import { CommercialCatalogModal } from "./CommercialCatalogModal";
+import { BillingEstimateShareModal } from "../billing/BillingEstimateShareModal";
+import type { EstimateData, EstimateLineItem } from "../billing/estimateExportUtils";
 import api from "../../../../services/axios";
 
 const formatPricingCadence = (type?: string, cycleMonths?: number) => {
@@ -233,6 +235,90 @@ export function PlansView() {
   const [quoteResult, setQuoteResult] = useState<CustomerQuoteResponse | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState("");
+
+  const [shareEstimate, setShareEstimate] = useState<EstimateData | null>(null);
+
+  const shareQuotePlan = (plan: CustomerQuoteResponse["plans"][number]) => {
+    if (!quoteResult) return;
+    const currencySym = quoteResult.currencyCode === "INR" ? "₹" : "$";
+    setShareEstimate({
+      title: `Plan Estimate · ${plan.planName}`,
+      referenceNumber: `QUO-${Date.now().toString(36).toUpperCase()}`,
+      institutionName: `${quoteNeeds.tenantType.replaceAll("_", " ")} Academic Institution`,
+      recipientName: `${quoteNeeds.tenantType.replaceAll("_", " ")} Academic Institution`,
+      date: new Date().toISOString().split("T")[0],
+      dueDate: "Valid for 30 days",
+      validUntil: "Valid for 30 days",
+      period: `${quoteResult.billingCycleMonths} months term`,
+      currencySymbol: currencySym,
+      currencyCode: quoteResult.currencyCode,
+      billingCycle: `${quoteResult.billingCycleMonths} Months`,
+      lines: plan.lines.map((l) => ({
+        description: l.description,
+        amount: l.amount,
+      })),
+      scope: {
+        planName: plan.planName,
+        universityType: quoteNeeds.tenantType.replaceAll("_", " "),
+        students: quoteNeeds.students,
+        colleges: quoteNeeds.colleges,
+        schools: quoteNeeds.schools,
+        staff: quoteNeeds.staff,
+        termMonths: quoteResult.billingCycleMonths,
+      },
+      subtotal: plan.total + plan.discount,
+      discount: plan.discount > 0 ? plan.discount : undefined,
+      total: plan.total,
+      statusBadge: plan.pricingType ? plan.pricingType.replaceAll("_", " ") : "COMMERCIAL QUOTE",
+      notes: `Institutional Scope: ${quoteNeeds.students} students, ${quoteNeeds.schools} schools, ${quoteNeeds.colleges} colleges, ${quoteNeeds.staff} staff members.`,
+      preparedBy: "Educational Cloud Solutions Desk",
+    });
+  };
+
+  const shareQuoteComparison = () => {
+    if (!quoteResult) return;
+    const currencySym = quoteResult.currencyCode === "INR" ? "₹" : "$";
+    const recommendedPlan =
+      quoteResult.plans.find((p) => p.planId === quoteResult.bestFitPlanId) ||
+      quoteResult.plans.find((p) => p.eligible) ||
+      quoteResult.plans[0];
+
+    const lines: EstimateLineItem[] = quoteResult.plans.map((p) => ({
+      description: `${p.planName} (${p.pricingType?.replaceAll("_", " ") || "Plan"})${p.recommendation ? ` · ${p.recommendation.replaceAll("_", " ")}` : ""}${p.eligible ? "" : " (Ineligible)"}`,
+      quantity: 1,
+      unitAmount: p.total,
+      amount: p.total,
+    }));
+
+    setShareEstimate({
+      title: "Commercial Quotation & Plan Comparison",
+      referenceNumber: `QUO-${Date.now().toString(36).toUpperCase()}`,
+      institutionName: `${quoteNeeds.tenantType.replaceAll("_", " ")} Academic Institution`,
+      recipientName: `${quoteNeeds.tenantType.replaceAll("_", " ")} Academic Institution`,
+      date: new Date().toISOString().split("T")[0],
+      dueDate: "Valid for 30 days",
+      validUntil: "Valid for 30 days",
+      period: `${quoteResult.billingCycleMonths} months term`,
+      currencySymbol: currencySym,
+      currencyCode: quoteResult.currencyCode,
+      lines,
+      scope: {
+        planName: `Comparison (${quoteResult.plans.map((p) => p.planName).join(" vs ")})`,
+        universityType: quoteNeeds.tenantType.replaceAll("_", " "),
+        students: quoteNeeds.students,
+        colleges: quoteNeeds.colleges,
+        schools: quoteNeeds.schools,
+        staff: quoteNeeds.staff,
+        termMonths: quoteResult.billingCycleMonths,
+      },
+      subtotal: recommendedPlan ? recommendedPlan.total + recommendedPlan.discount : 0,
+      discount: recommendedPlan && recommendedPlan.discount > 0 ? recommendedPlan.discount : undefined,
+      total: recommendedPlan ? recommendedPlan.total : 0,
+      statusBadge: "PLAN COMPARISON",
+      notes: `Scope: ${quoteNeeds.students} students, ${quoteNeeds.schools} schools, ${quoteNeeds.colleges} colleges, ${quoteNeeds.staff} staff members. Recommended: ${recommendedPlan?.planName || "Standard Tier"}.`,
+      preparedBy: "Educational Cloud Commercial Desk",
+    });
+  };
 
   const loadPlans = async () => {
     setLoading(true);
@@ -530,45 +616,71 @@ export function PlansView() {
     return Math.min(...active.map((p) => p.priceAmount));
   }, [plans]);
 
+  const scrollToCustomerQuote = () => {
+    const el = document.getElementById("customer-quotation");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  useEffect(() => {
+    if (window.location.hash === "#customer-quotation") {
+      const timer = setTimeout(() => {
+        scrollToCustomerQuote();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   return (
     <div className="app-page">
       <PageHeader
         title="Plans & billing"
         description="Review subscription plans, pricing types, capacity limits and commercial package items."
         actions={
-          <Button
-            onClick={() => {
-              setCreateDraft({
-                planName: "",
-                pricingType: "PER_STUDENT_YEAR",
-                priceAmount: 499,
-                currencyCode: "INR",
-                userLimit: 1000,
-                storageLimitGb: 50,
-                smsLimit: 5000,
-                apiLimit: 10000,
-                maxInstitutions: 1,
-                maxColleges: 0,
-                maxSchools: 0,
-                maxStudents: 0,
-                maxStaff: 0,
-                customDomainAllowed: false,
-                brandingColorsAllowed: false,
-                billingCycleMonths: 12,
-                smsUnitAmount: 0,
-                storageUnitAmountPerGb: 0,
-                setupFeeAmount: 0,
-                discountType: "NONE",
-                discountValue: 0,
-                contractDurationMonths: 12,
-                gracePeriodDays: 15,
-                renewalMode: "AUTOMATIC",
-              });
-              void openPlanBuilder();
-            }}
-          >
-            Add subscription plan
-          </Button>
+          <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+            {canBuildQuotes && (
+              <Button
+                variant="secondary"
+                onClick={scrollToCustomerQuote}
+              >
+                Customer quotation
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                setCreateDraft({
+                  planName: "",
+                  pricingType: "PER_STUDENT_YEAR",
+                  priceAmount: 499,
+                  currencyCode: "INR",
+                  userLimit: 1000,
+                  storageLimitGb: 50,
+                  smsLimit: 5000,
+                  apiLimit: 10000,
+                  maxInstitutions: 1,
+                  maxColleges: 0,
+                  maxSchools: 0,
+                  maxStudents: 0,
+                  maxStaff: 0,
+                  customDomainAllowed: false,
+                  brandingColorsAllowed: false,
+                  billingCycleMonths: 12,
+                  smsUnitAmount: 0,
+                  storageUnitAmountPerGb: 0,
+                  setupFeeAmount: 0,
+                  discountType: "NONE",
+                  discountValue: 0,
+                  contractDurationMonths: 12,
+                  gracePeriodDays: 15,
+                  renewalMode: "AUTOMATIC",
+                });
+                void openPlanBuilder();
+              }}
+            >
+              Add subscription plan
+            </Button>
+          </div>
         }
       />
 
@@ -854,7 +966,7 @@ export function PlansView() {
 
       {/* Customer Quote Sales Workspace */}
       {canBuildQuotes && (
-        <section className="app-panel app-customer-quote" style={{ marginTop: "var(--space-6)" }}>
+        <section id="customer-quotation" className="app-panel app-customer-quote" style={{ marginTop: "var(--space-6)" }}>
           <div className="app-panel__header">
             <div>
               <Kicker>SALES WORKSPACE</Kicker>
@@ -959,9 +1071,20 @@ export function PlansView() {
           {quoteError && <Notice tone="danger">{quoteError}</Notice>}
           {quoteResult && (
             <div className="app-customer-quote__results" aria-live="polite">
-              <div className="app-customer-quote__result-heading">
-                <h3>Quote comparison</h3>
-                <span>Prices shown before tax · {quoteResult.billingCycleMonths} months</span>
+              <div className="app-customer-quote__result-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--space-2)" }}>
+                <div>
+                  <h3>Quote comparison</h3>
+                  <span>Prices shown before tax · {quoteResult.billingCycleMonths} months</span>
+                </div>
+                {quoteResult.plans.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={shareQuoteComparison}
+                  >
+                    Share comparison
+                  </Button>
+                )}
               </div>
               {quoteResult.plans.length === 0 ? (
                 <p className="app-empty-inline">No active plans are available to compare.</p>
@@ -1015,6 +1138,15 @@ export function PlansView() {
                           ))}
                         </ul>
                       )}
+                      <div style={{ marginTop: "var(--space-3)", display: "flex", justifyContent: "flex-end" }}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => shareQuotePlan(plan)}
+                        >
+                          Share quote
+                        </Button>
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -1122,6 +1254,11 @@ export function PlansView() {
         item={editingCatalogItem}
         onClose={() => setCatalogModalOpen(false)}
         onSaved={() => void loadCatalog()}
+      />
+      <BillingEstimateShareModal
+        isOpen={Boolean(shareEstimate)}
+        onClose={() => setShareEstimate(null)}
+        estimate={shareEstimate}
       />
     </div>
   );

@@ -3,13 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi, Panel, SkeletonCard, SkeletonText } from "../../../design-system/components";
 import { DashboardPanel, QuietEmpty } from "./DashboardPanel";
 import { selfServiceApi, type NoticeItem, type LeaveBalanceItem } from "../../self-service/api/selfServiceApi";
-
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
+import { renderGreeting } from "../../../utils/greeting";
 
 export interface StudentDashboardProps {
   name: string;
@@ -47,7 +41,7 @@ export function StudentDashboard({ name, tenantId }: StudentDashboardProps) {
   return (
     <div className="app-dashboard app-page">
       <PageHeader
-        title={`${greeting()}, ${name}.`}
+        title={renderGreeting(name)}
         description="A little clarity for the day ahead."
       />
 

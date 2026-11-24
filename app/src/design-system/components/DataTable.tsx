@@ -1,5 +1,5 @@
 ﻿import { Children, isValidElement, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
-import Button from "./Button";
+import { Pagination } from "./Pagination";
 import { SkeletonText } from "./Skeleton";
 
 type TableCellElement = ReactElement<{ children?: ReactNode; colSpan?: number; rowSpan?: number }>;
@@ -20,6 +20,8 @@ export interface DataTableProps {
   /** Enable client-side pagination. Set false for server-paginated tables. */
   pagination?: boolean;
   pageSize?: number;
+  /** Whether to show the rows per page dropdown (defaults to false for clean consistent pagination) */
+  showPageSize?: boolean;
   pageSizeOptions?: number[];
 }
 
@@ -36,7 +38,7 @@ export function DataTable({
   headers, children, empty, emptyMessage = "No matching records.", className = "",
   tableClassName = "", ariaLabel, loading = false, loadingLabel = "Loading data", loadingRows = 5,
   mobileCards = true, pagination = true,
-  pageSize = 10, pageSizeOptions = [10, 25, 50],
+  pageSize = 10, showPageSize = true, pageSizeOptions = [10, 25, 50],
 }: DataTableProps) {
   const isMobile = useMobileQuery();
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,8 +113,6 @@ export function DataTable({
     ? rows.slice((safePage - 1) * selectedPageSize, safePage * selectedPageSize)
     : rows;
   const visibleCards = visibleRows.filter((row) => cardRows.includes(row));
-  const start = rows.length ? (safePage - 1) * selectedPageSize + 1 : 0;
-  const end = Math.min(safePage * selectedPageSize, rows.length);
   const paginated = pagination && rows.length > selectedPageSize;
 
   return (
@@ -146,27 +146,23 @@ export function DataTable({
           })}
         </div>
       )}
-      {paginated && <nav className="app-pagination" aria-label="Table pagination">
-        <span className="app-pagination__range">{isMobile ? `${start}–${end} of ${rows.length}` : `Showing ${start}–${end} of ${rows.length}`}</span>
-        <label className="app-pagination__size">{isMobile ? "Rows" : "Rows per page"}
-          <select aria-label="Rows per page" value={selectedPageSize} onChange={(event) => { setSelectedPageSize(Number(event.target.value)); setCurrentPage(1); }}>
-            {Array.from(new Set([...pageSizeOptions, selectedPageSize])).sort((a, b) => a - b).map((size) => <option key={size} value={size}>{size}</option>)}
-          </select>
-        </label>
-        {isMobile ? (
-          <div className="app-pagination__mobile-actions">
-            <Button size="sm" variant="tertiary" aria-label="Previous page" disabled={safePage <= 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>‹</Button>
-            <span className="app-pagination__page" aria-live="polite" aria-label={`Page ${safePage} of ${pageCount}`}>{safePage} / {pageCount}</span>
-            <Button size="sm" variant="tertiary" aria-label="Next page" disabled={safePage >= pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}>›</Button>
-          </div>
-        ) : (
-          <div className="app-pagination__actions">
-            <Button size="sm" variant="secondary" disabled={safePage <= 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>Previous</Button>
-            <span aria-live="polite">Page {safePage} of {pageCount}</span>
-            <Button size="sm" variant="secondary" disabled={safePage >= pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}>Next</Button>
-          </div>
-        )}
-      </nav>}
+      {paginated && (
+        <Pagination
+          ariaLabel="Table pagination"
+          currentPage={safePage}
+          totalPages={pageCount}
+          totalItems={rows.length}
+          pageSize={selectedPageSize}
+          currentItemsCount={visibleRows.length}
+          showPageSize={showPageSize}
+          pageSizeOptions={pageSizeOptions}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setSelectedPageSize(size);
+            setCurrentPage(1);
+          }}
+        />
+      )}
     </div>
   );
 }

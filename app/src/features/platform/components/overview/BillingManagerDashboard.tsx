@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { platformOpsService, type InvoiceItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
@@ -72,6 +72,8 @@ function MetricTile({ title, metric }: { title: string; metric: MetricState }) {
 
 export function BillingManagerDashboard() {
   const { can } = usePlatformAccess();
+  const [retryKey, setRetryKey] = useState(0);
+  const [minSpinning, setMinSpinning] = useState(false);
   const [metrics, setMetrics] = useState<Record<string, MetricState>>({
     invoicesDue: { status: "loading" },
     invoicesPaid: { status: "loading" },
@@ -79,6 +81,21 @@ export function BillingManagerDashboard() {
     revenue: { status: "loading" },
     renewals: { status: "loading" },
   });
+
+  const isRefreshing = Object.values(metrics).some((m) => m.status === "loading") || minSpinning;
+
+  const refresh = useCallback(() => {
+    setMinSpinning(true);
+    setMetrics({
+      invoicesDue: { status: "loading" },
+      invoicesPaid: { status: "loading" },
+      invoicesOverdue: { status: "loading" },
+      revenue: { status: "loading" },
+      renewals: { status: "loading" },
+    });
+    setRetryKey((k) => k + 1);
+    setTimeout(() => setMinSpinning(false), 600);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -138,7 +155,7 @@ export function BillingManagerDashboard() {
     return () => {
       active = false;
     };
-  }, [can]);
+  }, [can, retryKey]);
 
   const tiles = [
     ["Invoices due", metrics.invoicesDue],
@@ -156,7 +173,17 @@ export function BillingManagerDashboard() {
         title="Billing Manager dashboard"
         description="Invoice position, collections, upcoming tenant renewals and revenue performance."
         actions={
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <Button
+              variant="tertiary"
+              size="sm"
+              onClick={refresh}
+              disabled={isRefreshing}
+              aria-label="Refresh dashboard"
+              title="Refresh"
+            >
+              <Icon name="refresh" size={16} spin={isRefreshing} />
+            </Button>
             <a href="/platform/invoices" style={{ textDecoration: "none" }}>
               <Button>Invoices register</Button>
             </a>

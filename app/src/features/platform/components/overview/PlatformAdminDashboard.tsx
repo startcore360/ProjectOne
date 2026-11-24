@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { platformOpsService, type SupportTicketItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
-import { Notice, SkeletonText } from "../../../../design-system/components";
+import { Button, Notice, SkeletonText } from "../../../../design-system/components";
 import { KpiSparkline, getDeterministicSeries } from "../../../../design-system/components/MetricCard";
 import { Icon, type IconName } from "../../../../components/ui/Icon";
 
@@ -73,11 +73,27 @@ function MetricTile({ title, metric }: { title: string; metric: MetricState }) {
 
 export function PlatformAdminDashboard() {
   const { can, canAny } = usePlatformAccess();
+  const [retryKey, setRetryKey] = useState(0);
+  const [minSpinning, setMinSpinning] = useState(false);
   const [metrics, setMetrics] = useState<Record<string, MetricState>>({
     pendingActivation: { status: "loading" }, failedSetups: { status: "loading" },
     openTickets: { status: "loading" }, failedJobs: { status: "not-measured" },
     backupAlerts: { status: "loading" },
   });
+
+  const isRefreshing = Object.values(metrics).some((m) => m.status === "loading") || minSpinning;
+
+  const refresh = useCallback(() => {
+    setMinSpinning(true);
+    setMetrics({
+      pendingActivation: { status: "loading" }, failedSetups: { status: "loading" },
+      openTickets: { status: "loading" }, failedJobs: { status: "not-measured" },
+      backupAlerts: { status: "loading" },
+    });
+    setRetryKey((k) => k + 1);
+    setTimeout(() => setMinSpinning(false), 600);
+  }, []);
+
   useEffect(() => {
     let active = true;
     const set = (key: string, value: MetricState) => { if (active) setMetrics(old => ({ ...old, [key]: value })); };
@@ -109,7 +125,7 @@ export function PlatformAdminDashboard() {
       return { status: "ok", value: rows.filter(row => row.stale === true).length };
     });
     return () => { active = false; };
-  }, [can, canAny]);
+  }, [can, canAny, retryKey]);
 
   const tiles = [
     ["Tenants pending activation", metrics.pendingActivation],
@@ -120,7 +136,22 @@ export function PlatformAdminDashboard() {
   ] as const;
 
   return <div className="app-page">
-    <PageHeader title="Platform Admin dashboard" description="Tenant onboarding, support queue and platform operations." />
+    <PageHeader
+      title="Platform Admin dashboard"
+      description="Tenant onboarding, support queue and platform operations."
+      actions={
+        <Button
+          variant="tertiary"
+          size="sm"
+          onClick={refresh}
+          disabled={isRefreshing}
+          aria-label="Refresh dashboard"
+          title="Refresh"
+        >
+          <Icon name="refresh" size={16} spin={isRefreshing} />
+        </Button>
+      }
+    />
     <div className="kpi-grid">{tiles.map(([title, metric]) => <MetricTile key={title} title={title} metric={metric} />)}</div>
   </div>;
 }

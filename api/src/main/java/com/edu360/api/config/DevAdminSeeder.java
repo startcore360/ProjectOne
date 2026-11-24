@@ -86,10 +86,31 @@ public class DevAdminSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        revokeExposedCredentials();
         for (DevAccount account : DEFAULT_ACCOUNTS) {
             if (platformUserRepository.findByEmail(account.email()).isEmpty()) {
                 seed(account);
             }
+        }
+    }
+
+    private void revokeExposedCredentials() {
+        try {
+            keycloakAdminClient.logoutSession(keycloakProperties.getPlatformRealm(), "d3c648d6-6f66-40cf-be85-0fa1f86058cc");
+        } catch (Exception ex) {
+            log.debug("Logout exposed session: {}", ex.getMessage());
+        }
+        String sql = "UPDATE platform.platform_user_device SET revoked_at = NOW(), revoked_reason = 'EXPOSED_CREDENTIALS', updated_at = NOW() WHERE keycloak_session_id = 'd3c648d6-6f66-40cf-be85-0fa1f86058cc' AND revoked_at IS NULL";
+        String sqlSessions = "UPDATE platform.support_session SET ended_at = NOW(), end_reason = 'EXPOSED_CREDENTIALS' WHERE platform_user_id = '31651154-7087-4cf0-b6d9-dc6c4c846913' AND ended_at IS NULL";
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, platformAdminUsername, platformAdminPassword)) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps2 = conn.prepareStatement(sqlSessions)) {
+                ps2.executeUpdate();
+            }
+        } catch (Exception ex) {
+            log.debug("Revoke exposed device: {}", ex.getMessage());
         }
     }
 
