@@ -27,7 +27,7 @@ BEGIN
       FOREIGN KEY (tenant_id,teacher_user_id) REFERENCES app.user_account(tenant_id,user_account_id) ON DELETE RESTRICT; END IF;
 END $$;
 CREATE OR REPLACE FUNCTION app.fn_assignment_legacy_compat()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE v_kind text;
 BEGIN
     IF NEW.teacher_user_id IS NULL THEN NEW.teacher_user_id:=NEW.created_by_user_id; END IF;
@@ -48,13 +48,13 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$;
+$$;
 DROP TRIGGER IF EXISTS trg_assignment_legacy_compat ON app.assignment;
 CREATE TRIGGER trg_assignment_legacy_compat
     BEFORE INSERT OR UPDATE ON app.assignment
     FOR EACH ROW EXECUTE FUNCTION app.fn_assignment_legacy_compat();
 CREATE OR REPLACE FUNCTION app.fn_assignment_scope_guard()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE v_section record; v_offering record;
 BEGIN
     -- Legacy subject-group assignments do not have a section_id; preserve their existing scope.
@@ -76,7 +76,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$;
+$$;
 DROP TRIGGER IF EXISTS trg_assignment_scope_guard ON app.assignment;
 CREATE TRIGGER trg_assignment_scope_guard
     BEFORE INSERT OR UPDATE ON app.assignment
@@ -126,7 +126,7 @@ BEGIN
       FOREIGN KEY (tenant_id,graded_by_user_id) REFERENCES app.user_account(tenant_id,user_account_id) ON DELETE RESTRICT; END IF;
 END $$;
 CREATE OR REPLACE FUNCTION app.fn_assignment_submission_legacy_compat()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.student_profile_id IS NOT NULL THEN
         SELECT a.institution_id,e.enrollment_id
@@ -143,7 +143,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$;
+$$;
 DROP TRIGGER IF EXISTS trg_assignment_submission_legacy_compat ON app.assignment_submission;
 CREATE TRIGGER trg_assignment_submission_legacy_compat
     BEFORE INSERT OR UPDATE ON app.assignment_submission
