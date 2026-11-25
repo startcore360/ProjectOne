@@ -62,6 +62,17 @@ public class OfflinePaymentService {
             return replayOrReject(tenantId, request, installmentIds, existingInstitutionId, existing);
         }
 
+        String accountStatus = jdbc.query("""
+            SELECT status FROM app.student_fee_account
+             WHERE tenant_id=:tenantId AND student_fee_account_id=:accountId
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("accountId", request.studentFeeAccountId()),
+                rs -> rs.next() ? rs.getString(1) : null);
+        if (!"ACTIVE".equals(accountStatus)) {
+            throw new BusinessRuleViolationException("STUDENT_FEE_ACCOUNT_NOT_ACTIVE",
+                    "Only an active student fee account can receive an offline payment.");
+        }
+
         List<Installment> installments = jdbc.query("""
             SELECT si.student_installment_id, si.institution_id, si.student_fee_account_id,
                    fs.academic_session_id, nd.net_due, si.status
