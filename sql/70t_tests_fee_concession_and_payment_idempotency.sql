@@ -6,16 +6,17 @@ BEGIN
       FROM ref.standard_role_action
      WHERE (role_code, action_code) IN (
        ('MANAGEMENT','CONCESSION_APPROVE'),
+       ('GOVERNING_BODY_APPROVER','CONCESSION_APPROVE'),
        ('FINANCE_DIRECTOR','CONCESSION_APPROVE'),
        ('PRINCIPAL_COLLEGE','CONCESSION_APPROVE'),
        ('SCHOOL_PRINCIPAL','CONCESSION_APPROVE')
      );
-    IF v_count <> 4 THEN
+    IF v_count <> 5 THEN
         RAISE EXCEPTION 'T8-DB-08: PO-T04 approver roles are not fully mapped';
     END IF;
     IF EXISTS (
         SELECT 1 FROM app.role_definition rd
-         WHERE rd.role_origin='STANDARD' AND rd.role_code IN ('MANAGEMENT','FINANCE_DIRECTOR')
+         WHERE rd.role_origin='STANDARD' AND rd.role_code IN ('MANAGEMENT','GOVERNING_BODY_APPROVER','FINANCE_DIRECTOR')
            AND NOT EXISTS (
              SELECT 1 FROM app.role_action ra
               WHERE ra.tenant_id=rd.tenant_id
