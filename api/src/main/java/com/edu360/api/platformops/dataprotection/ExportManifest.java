@@ -68,7 +68,7 @@ public final class ExportManifest {
                 "financial_period_lock_event"));
         groups.put("leave", List.of("leave_approver_setting", "leave_type", "leave_balance", "leave_request",
                 "leave_delegation"));
-        groups.put("notices", List.of("notice", "notice_audience"));
+        groups.put("notices", List.of("notice", "notice_audience", "notice_bulletin", "notice_target", "notice_acknowledgment"));
         groups.put("complaints", List.of("complaint", "complaint_action"));
         groups.put("notes", List.of("student_note"));
         groups.put("staff", List.of("staff_profile", "staff_code_sequence", "staff_service_record",
@@ -84,12 +84,14 @@ public final class ExportManifest {
                 "bulk_correction_batch", "bulk_correction_item"));
         groups.put("communication", List.of("message_thread", "message_thread_participant", "message",
                 "message_attachment", "notification", "notification_delivery", "notification_delivery_attempt",
-                "push_subscription", "channel_config", "sms_template"));
+                "push_subscription", "channel_config", "sms_template", "communication_campaign", "message_template", "message_dispatch"));
         groups.put("community_events", List.of("community_post", "community_post_media", "post_comment",
                 "post_like", "event", "event_rsvp"));
         groups.put("learning_content", List.of("assignment", "assignment_submission", "assignment_submission_file",
                 "assignment_feedback", "homework_status", "study_material"));
-        groups.put("analytics", List.of("usage_metric_daily"));
+        groups.put("library", List.of("library_catalog", "book_copy", "book_circulation", "library_fine", "library_fine_policy", "library_reservation"));
+        groups.put("transport", List.of("vehicle", "transport_route", "route_stop", "transport_allocation"));
+        groups.put("analytics", List.of("usage_metric_daily", "report_definition", "report_execution"));
         return Collections.unmodifiableMap(groups);
     }
 
