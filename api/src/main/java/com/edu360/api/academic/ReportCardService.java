@@ -39,8 +39,12 @@ public class ReportCardService {
         } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
             throw new ResourceNotFoundException("Report card not found.");
         }
-        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()), "RESULT_VIEW",
-                RbacScope.institution((UUID) card.get("institution_id")), RbacTarget.NONE);
+        RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
+        RbacScope scope = RbacScope.institution((UUID) card.get("institution_id"));
+        if (!permissions.can(principal, "RESULT_VIEW", scope, RbacTarget.NONE).allowed()
+                && !permissions.can(principal, "RESULT_VIEW_OWN", scope, RbacTarget.NONE).allowed()) {
+            permissions.authorize(principal, "RESULT_VIEW", scope, RbacTarget.NONE);
+        }
         return card;
     }
 
