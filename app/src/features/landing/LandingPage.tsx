@@ -756,17 +756,40 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                     ))}
                   </ul>
                 </div>
-                <div className="landing-screenshot-frame">
-                  <div className="landing-screenshot-frame__bar" aria-hidden="true">
-                    <span className="landing-screenshot-frame__dot" />
-                    <span className="landing-screenshot-frame__dot" />
-                    <span className="landing-screenshot-frame__dot" />
-                    <span>EDU 360 · Portal Sign-in &amp; Access</span>
+                <div className={`landing-role-visual landing-role-visual--${activeRole.roleKey}`} aria-label={`${activeRole.label} illustrative dashboard preview`}>
+                  <div className="landing-role-visual__topbar">
+                    <span className="landing-role-visual__brand"><Edu360Logo className="landing-role-visual__logo" /> EDU 360</span>
+                    <span>ROLE WORKSPACE <i /> ILLUSTRATIVE PREVIEW</span>
                   </div>
-                  <img
-                    src={showcaseImageUrl}
-                    alt="EDU 360 real portal sign-in and workspace interface"
-                  />
+                  {activeRole.roleKey === "leadership" && (
+                    <div className="landing-role-ui">
+                      <div className="landing-role-ui__heading"><div><small>INSTITUTION OVERVIEW</small><strong>Leadership at a glance</strong></div><span className="landing-role-ui__period">This term⌄</span></div>
+                      <div className="landing-role-ui__stats"><div><small>Campus operations</small><b><Icon name="building" size={16}/> Overview</b><em>Connected view</em></div><div><small>Approvals</small><b><Icon name="clipboard-check" size={16}/> Review queue</b><em>Role-scoped</em></div><div><small>Governance</small><b><Icon name="shield-check" size={16}/> Audit &amp; policy</b><em>Traceable actions</em></div></div>
+                      <div className="landing-role-ui__columns"><div className="landing-role-ui__panel"><small>INSTITUTIONAL WORKSTREAMS</small><div className="landing-role-ui__line"><i/><span>Academic operations</span><b>Monitor</b></div><div className="landing-role-ui__line"><i/><span>Finance &amp; fees</span><b>Review</b></div><div className="landing-role-ui__line"><i/><span>People &amp; approvals</span><b>Oversee</b></div></div><div className="landing-role-ui__panel landing-role-ui__insight"><small>EXECUTIVE VIEW</small><Icon name="chart-no-axes-combined" size={28}/><b>One coordinated picture</b><span>Illustrative layout · no live figures</span></div></div>
+                    </div>
+                  )}
+                  {activeRole.roleKey === "faculty" && (
+                    <div className="landing-role-ui">
+                      <div className="landing-role-ui__heading"><div><small>FACULTY WORKSPACE</small><strong>Your teaching day</strong></div><span className="landing-role-ui__period">Today⌄</span></div>
+                      <div className="landing-role-ui__class"><span className="landing-role-ui__class-icon"><Icon name="book-open" size={20}/></span><div><small>CLASS SCHEDULE</small><b>Classes &amp; attendance</b><span>Timetable and class lists in one place</span></div><Icon name="arrow-up-right" size={17}/></div>
+                      <div className="landing-role-ui__columns"><div className="landing-role-ui__panel"><small>TEACHING WORKFLOW</small><div className="landing-role-ui__line"><i/><span>Mark attendance</span><b>01</b></div><div className="landing-role-ui__line"><i/><span>Assignments &amp; marks</span><b>02</b></div><div className="landing-role-ui__line"><i/><span>Department notices</span><b>03</b></div></div><div className="landing-role-ui__panel landing-role-ui__insight"><Icon name="graduation-cap" size={28}/><b>More time for teaching</b><span>Illustrative workflow</span></div></div>
+                    </div>
+                  )}
+                  {activeRole.roleKey === "students" && (
+                    <div className="landing-role-ui">
+                      <div className="landing-role-ui__heading"><div><small>STUDENT PORTAL</small><strong>Your learning rhythm</strong></div><span className="landing-role-ui__period">My week⌄</span></div>
+                      <div className="landing-role-ui__student-banner"><div><small>STAY ON TRACK</small><b>Small steps. Steady progress.</b><span>Timetable, attendance and academic updates together.</span></div><Icon name="graduation-cap" size={38}/></div>
+                      <div className="landing-role-ui__columns"><div className="landing-role-ui__panel"><small>YOUR ACADEMIC SPACE</small><div className="landing-role-ui__line"><i/><span>Timetable &amp; classes</span><b>Open</b></div><div className="landing-role-ui__line"><i/><span>Exams &amp; results</span><b>Review</b></div><div className="landing-role-ui__line"><i/><span>Campus notices</span><b>Read</b></div></div><div className="landing-role-ui__panel landing-role-ui__insight"><Icon name="calendar-check" size={28}/><b>Build a study routine</b><span>Streaks are a future concept, not a live feature</span></div></div>
+                    </div>
+                  )}
+                  {activeRole.roleKey === "parents" && (
+                    <div className="landing-role-ui">
+                      <div className="landing-role-ui__heading"><div><small>PARENT &amp; GUARDIAN SPACE</small><strong>Stay in the loop</strong></div><span className="landing-role-ui__period"><Icon name="bell" size={13}/> Updates</span></div>
+                      <div className="landing-role-ui__parent-notice"><span><Icon name="bell-ring" size={17}/></span><div><small>INSTITUTION NOTICE</small><b>Important campus updates</b><p>Official notices and attendance information, in one place.</p></div></div>
+                      <div className="landing-role-ui__columns"><div className="landing-role-ui__panel"><small>FAMILY SELF-SERVICE</small><div className="landing-role-ui__line"><i/><span>Attendance updates</span><b>View</b></div><div className="landing-role-ui__line"><i/><span>Fee schedules &amp; receipts</span><b>Review</b></div><div className="landing-role-ui__line"><i/><span>Guardian requests</span><b>Manage</b></div></div><div className="landing-role-ui__panel landing-role-ui__insight"><Icon name="wallet" size={28}/><b>Clearer fee follow-up</b><span>Availability depends on enabled parent &amp; finance workflows</span></div></div>
+                    </div>
+                  )}
+                  <div className="landing-role-visual__foot">EDU 360 · EDUCATION DRIVEN BY UNITY <span>Illustrative role experience</span></div>
                 </div>
               </div>
             )}
