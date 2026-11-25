@@ -72,6 +72,11 @@ const ROUTE_TITLES: Array<{ pattern: RegExp; title: string }> = [
   { pattern: /^\/role-previews?\/?/, title: "Role Preview" },
   { pattern: /^\/profile\/?$/, title: "Profile" },
   { pattern: /^\/self-service\/?$/, title: "Self-Service" },
+  { pattern: /^\/notices\/?$/, title: "Notice Board & Circulars" },
+  { pattern: /^\/communications\/?$/, title: "Communications & Dispatch" },
+  { pattern: /^\/library\/?$/, title: "Library Operations" },
+  { pattern: /^\/transport\/?$/, title: "Transport Tracking" },
+  { pattern: /^\/executive-dashboard\/?$/, title: "Executive Dashboard" },
   { pattern: /^\/sessions\/?$/, title: "Sessions" },
 ];
 
