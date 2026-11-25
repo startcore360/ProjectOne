@@ -95,6 +95,7 @@ const workspaceNavigation = [
 const studentNavigation = [
   { label: "Overview", to: "/dashboard", icon: "home" as const, important: true },
   { label: "Self-service", to: "/self-service", icon: "user" as const, important: true },
+  { label: "Medical exemption", to: "/student/medical-exemptions", icon: "file-text" as const, important: true },
   { label: "My sessions", to: "/sessions", icon: "lock" as const, important: true },
 ];
 
@@ -369,6 +370,8 @@ export default function AppLayout() {
     { label: "Admission cycles", to: "/admissions/cycles", icon: "calendar" as const, important: false, anyOf: ["ADMISSION_FORM_CREATE"] },
     { label: "Application scrutiny", to: "/admissions/scrutiny", icon: "check-circle" as const, important: false, anyOf: ["APPLICATION_VERIFY"] },
     { label: "Merit lists & seats", to: "/admissions/merit", icon: "grid" as const, important: false, anyOf: ["MERIT_LIST_GENERATE", "MERIT_LIST_APPROVE", "SEAT_ALLOCATE"] },
+    { label: "Timetable", to: "/academic/timetable", icon: "calendar" as const, important: true, anyOf: ["TIMETABLE_VIEW", "TIMETABLE_BUILD"] },
+    { label: "Attendance", to: "/academic/attendance", icon: "check-circle" as const, important: true, anyOf: ["ATTENDANCE_VIEW", "ATTENDANCE_MARK"] },
     { label: "Support", to: "/support", icon: "help" as const, important: false, anyOf: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"] },
     { label: "Staff records", to: "/university/staff", icon: "users" as const, important: false, anyOf: ["STAFF_RECORD_VIEW"] },
     { label: "Data protection", to: "/tenant/data-protection", icon: "shield" as const, important: false, anyOf: ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"] },

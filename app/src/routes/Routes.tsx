@@ -77,6 +77,9 @@ const SectionDetailPage = lazy(() => import("../features/institution-admin/pages
 const AcademicSessionDetailPage = lazy(() => import("../features/institution-admin/pages/AcademicSessionDetailPage"));
 const AssignmentManagementPage = lazy(() => import("../features/academic/pages/AssignmentManagementPage"));
 const ExamSchedulePage = lazy(() => import("../features/academic/pages/ExamSchedulePage"));
+const TimetableGridView = lazy(() => import("../features/academic/pages/TimetableGridView"));
+const AttendanceRegisterPage = lazy(() => import("../features/academic/pages/AttendanceRegisterPage"));
+const StudentMedicalExemptionPage = lazy(() => import("../features/academic/pages/StudentMedicalExemptionPage"));
 const MarksEntrySheetPage = lazy(() => import("../features/academic/pages/MarksEntrySheetPage"));
 const ReportCardViewerPage = lazy(() => import("../features/academic/pages/ReportCardViewerPage"));
 
@@ -205,6 +208,9 @@ export default function AppRoutes() {
               <Route path="/university/setup/academic-governance" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicGovernance}><AcademicGovernancePage /></ActionGate>} />
               <Route path="/academic/assignments" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.assignments}><AssignmentManagementPage /></ActionGate>} />
               <Route path="/academic/exams" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.exams}><ExamSchedulePage /></ActionGate>} />
+              <Route path="/academic/timetable" element={<ActionGate anyOf={["TIMETABLE_VIEW", "TIMETABLE_BUILD"]}><TimetableGridView /></ActionGate>} />
+              <Route path="/academic/attendance" element={<ActionGate anyOf={["ATTENDANCE_VIEW", "ATTENDANCE_MARK"]}><AttendanceRegisterPage /></ActionGate>} />
+              <Route path="/student/medical-exemptions" element={<ActionGate anyOf={["STUDENT_LEAVE_APPLY"]}><StudentMedicalExemptionPage /></ActionGate>} />
               <Route path="/academic/marks" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.marks}><MarksEntrySheetPage /></ActionGate>} />
               <Route path="/academic/report-cards" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.reportCards}><ReportCardViewerPage /></ActionGate>} />
               <Route path="/tenants/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />

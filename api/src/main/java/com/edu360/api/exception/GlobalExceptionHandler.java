@@ -222,6 +222,7 @@ public class GlobalExceptionHandler {
             case "TERM_LOCKED", "ATTENDANCE_ALREADY_SUBMITTED", "ASSIGNMENT_CLOSED",
                  "VERSION_CONFLICT", "FILE_NOT_AVAILABLE" -> HttpStatus.CONFLICT;
             case "PAYLOAD_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case "ONLINE_SESSION_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
             case "IF_MATCH_REQUIRED", "IDEMPOTENCY_KEY_REQUIRED", "INVALID_CURSOR",
                  "INVALID_QUERY" -> HttpStatus.BAD_REQUEST;
             default -> HttpStatus.UNPROCESSABLE_ENTITY;
@@ -237,6 +238,9 @@ public class GlobalExceptionHandler {
         if (msg.contains("self_approval")) return buildResponse(HttpStatus.FORBIDDEN,"SELF_APPROVAL","You cannot approve this request.",request);
         if (msg.contains("approval_immutable")) return buildResponse(HttpStatus.CONFLICT,"APPROVAL_IMMUTABLE","A decided approval step cannot be changed.",request);
         if (msg.contains("term_locked")) return buildResponse(HttpStatus.CONFLICT,"TERM_LOCKED","The term is locked for this date.",request);
+        if (msg.contains("ex_timetable_teacher_no_overlap")) return buildResponse(HttpStatus.CONFLICT,"TEACHER_DOUBLE_BOOKED","The teacher already has a timetable slot during this period.",request);
+        if (msg.contains("ex_timetable_room_no_overlap")) return buildResponse(HttpStatus.CONFLICT,"ROOM_OCCUPIED","The room is already booked during this period.",request);
+        if (msg.contains("attendance_already_submitted")) return buildResponse(HttpStatus.CONFLICT,"ATTENDANCE_ALREADY_SUBMITTED","Submitted attendance cannot be changed.",request);
         if (msg.contains("correction_locked")) return buildResponse(HttpStatus.CONFLICT,"CORRECTION_LOCKED","Attendance corrections are locked for this period.",request);
         if (msg.contains("not_held_mismatch")) return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"NOT_HELD_MISMATCH","Attendance status must match the session held status.",request);
         if (msg.contains("partition_year_mismatch") || msg.contains("no partition of relation") || msg.contains("partition of relation"))

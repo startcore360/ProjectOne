@@ -59,6 +59,7 @@ BEGIN
   JOIN app.course_offering o ON o.tenant_id=a.tenant_id AND o.academic_session_id=a.academic_session_id
    AND o.institution_id=NEW.institution_id AND o.course_offering_id=NEW.course_offering_id
   WHERE a.tenant_id=NEW.tenant_id AND a.academic_session_id=NEW.academic_session_id
+   AND (a.institution_id IS NULL OR a.institution_id=NEW.institution_id)
    AND o.semester_id IS NOT DISTINCT FROM s.semester_id AND o.class_id IS NOT DISTINCT FROM s.class_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'TIMETABLE_SECTION_COURSE_SESSION_MISMATCH' USING ERRCODE='23514'; END IF;
  SELECT employment_status INTO v_teacher_status FROM app.staff_profile
@@ -146,6 +147,7 @@ DROP TRIGGER IF EXISTS trg_touch ON app.timetable_slot;
 CREATE TRIGGER trg_touch BEFORE UPDATE ON app.timetable_slot FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
 DROP TRIGGER IF EXISTS trg_touch ON app.online_session;
 CREATE TRIGGER trg_touch BEFORE UPDATE ON app.online_session FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
+DROP TRIGGER IF EXISTS trg_online_session_access_append_only ON app.online_session_access_log;
 CREATE TRIGGER trg_online_session_access_append_only BEFORE UPDATE OR DELETE ON app.online_session_access_log
  FOR EACH ROW EXECUTE FUNCTION app.fn_append_only();
 GRANT SELECT,INSERT,UPDATE,DELETE ON app.room,app.timetable_slot,app.online_session TO edu_app;

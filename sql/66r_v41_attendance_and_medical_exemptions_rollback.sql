@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS app.attendance_medical_exemption CASCADE;
 DROP TABLE IF EXISTS app.attendance_entry CASCADE;
 DROP TABLE IF EXISTS app.attendance_session CASCADE;
 DROP TABLE IF EXISTS app.attendance_threshold_policy CASCADE;
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_medical_exemption_type;
 ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_purpose;
 ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK (purpose IN (
  'MESSAGE_ATTACHMENT','ASSIGNMENT_SUBMISSION','STUDY_MATERIAL','STAFF_DOCUMENT','POLICY','DEPARTMENT_DOCUMENT',

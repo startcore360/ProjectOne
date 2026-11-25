@@ -50,6 +50,10 @@ jobs:
         id: t7
         continue-on-error: true
         run: npm test -- MarksEntrySheetPage
+      - name: Run T6 attendance register tests
+        id: t6
+        continue-on-error: true
+        run: npm test -- AttendanceRegisterPage
       - name: Run complete unit test suite
         id: unit
         continue-on-error: true
@@ -73,11 +77,12 @@ jobs:
           T1: ${{ steps.t1.outcome }}
           T5: ${{ steps.t5.outcome }}
           T7: ${{ steps.t7.outcome }}
+          T6: ${{ steps.t6.outcome }}
           UNIT: ${{ steps.unit.outcome }}
           BUILD: ${{ steps.build.outcome }}
         run: |
           failed=0
-          for check in LINT T1 T5 T7 UNIT BUILD; do
+          for check in LINT T1 T5 T6 T7 UNIT BUILD; do
             value="${!check}"
             echo "$check: $value"
             [ "$value" = "success" ] || failed=1
@@ -117,6 +122,10 @@ jobs:
         id: t7
         continue-on-error: true
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=SGPACalculatorTest,ReportCardPublishGateIT
+      - name: Run T6 timetable and attendance tests
+        id: t6
+        continue-on-error: true
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=TimetableGiSTConflictIT,AttendanceCalculationIT
       - name: Verify backend
         id: verify
         continue-on-error: true
@@ -137,10 +146,11 @@ jobs:
           T5: ${{ steps.t5.outcome }}
           M13: ${{ steps.m13.outcome }}
           T7: ${{ steps.t7.outcome }}
+          T6: ${{ steps.t6.outcome }}
           VERIFY: ${{ steps.verify.outcome }}
         run: |
           failed=0
-          for check in T1 T4 T5 M13 T7 VERIFY; do
+          for check in T1 T4 T5 M13 T6 T7 VERIFY; do
             value="${!check}"
             echo "$check: $value"
             [ "$value" = "success" ] || failed=1

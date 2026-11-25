@@ -6,6 +6,14 @@ ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK (purpose
  'PROFILE_PHOTO','BRANDING','ATTENDANCE_UPLOAD','ATTENDANCE_MEDICAL_EXEMPTION','MARKS_SOURCE','SYLLABUS',
  'CERTIFICATE','CONSENT_FORM','SERVICE_RECORD'));
 
+DO $ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.file_object'::regclass AND conname='ck_file_object_medical_exemption_type') THEN
+  ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_medical_exemption_type
+   CHECK (purpose<>'ATTENDANCE_MEDICAL_EXEMPTION' OR
+    (content_type IN ('application/pdf','image/jpeg','image/png') AND size_bytes<=10485760));
+ END IF;
+END $;
+
 CREATE TABLE IF NOT EXISTS app.attendance_session (
  tenant_id uuid NOT NULL, attendance_session_id uuid NOT NULL, institution_id uuid NOT NULL,
  academic_session_id uuid NOT NULL, section_id uuid NOT NULL, timetable_slot_id uuid,
@@ -104,15 +112,22 @@ WHERE NOT EXISTS(SELECT 1 FROM app.attendance_threshold_policy p WHERE p.tenant_
 
 CREATE OR REPLACE FUNCTION app.fn_attendance_term_lock_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
-DECLARE v_tenant uuid; v_institution uuid; v_session uuid; v_section uuid; v_semester uuid; v_lock uuid; v_locked boolean;
+DECLARE v_tenant uuid; v_institution uuid; v_session uuid; v_section uuid; v_semester uuid; v_any_term_locked boolean; v_session_status text;
 BEGIN
  IF TG_TABLE_NAME='attendance_session' THEN
-  v_tenant:=NEW.tenant_id; v_institution:=NEW.institution_id; v_session:=NEW.academic_session_id; v_section:=NEW.section_id;
+  IF TG_OP='DELETE' THEN
+   IF OLD.session_status='SUBMITTED' THEN RAISE EXCEPTION 'ATTENDANCE_ALREADY_SUBMITTED' USING ERRCODE='P0001'; END IF;
+   v_tenant:=OLD.tenant_id; v_institution:=OLD.institution_id; v_session:=OLD.academic_session_id; v_section:=OLD.section_id;
+  ELSE
+   IF TG_OP='UPDATE' AND OLD.session_status='SUBMITTED' THEN RAISE EXCEPTION 'ATTENDANCE_ALREADY_SUBMITTED' USING ERRCODE='P0001'; END IF;
+   v_tenant:=NEW.tenant_id; v_institution:=NEW.institution_id; v_session:=NEW.academic_session_id; v_section:=NEW.section_id;
+  END IF;
  ELSIF TG_TABLE_NAME='attendance_entry' THEN
   IF TG_OP='DELETE' THEN v_tenant:=OLD.tenant_id; v_institution:=OLD.institution_id; v_session:=OLD.attendance_session_id;
   ELSE v_tenant:=NEW.tenant_id; v_institution:=NEW.institution_id; v_session:=NEW.attendance_session_id; END IF;
-  SELECT academic_session_id,section_id INTO v_session,v_section FROM app.attendance_session
+  SELECT academic_session_id,section_id,session_status INTO v_session,v_section,v_session_status FROM app.attendance_session
    WHERE tenant_id=v_tenant AND institution_id=v_institution AND attendance_session_id=v_session;
+  IF v_session_status='SUBMITTED' THEN RAISE EXCEPTION 'ATTENDANCE_ALREADY_SUBMITTED' USING ERRCODE='P0001'; END IF;
  ELSIF TG_TABLE_NAME='attendance_medical_exemption' THEN
   IF TG_OP='DELETE' THEN v_tenant:=OLD.tenant_id; v_institution:=OLD.institution_id; v_session:=OLD.enrollment_id;
   ELSE v_tenant:=NEW.tenant_id; v_institution:=NEW.institution_id; v_session:=NEW.enrollment_id; END IF;
@@ -120,18 +135,16 @@ BEGIN
    WHERE tenant_id=v_tenant AND institution_id=v_institution AND enrollment_id=v_session;
  END IF;
  SELECT semester_id INTO v_semester FROM app.section WHERE tenant_id=v_tenant AND institution_id=v_institution AND section_id=v_section;
- SELECT is_locked INTO v_locked FROM app.semester WHERE tenant_id=v_tenant AND semester_id=v_semester;
- IF COALESCE(v_locked,false) THEN RAISE EXCEPTION 'TERM_LOCKED: semester is locked' USING ERRCODE='P0001'; END IF;
- SELECT term_lock_id INTO v_lock FROM app.term_lock WHERE tenant_id=v_tenant AND institution_id=v_institution
-  AND academic_session_id=v_session AND (semester_id=v_semester OR semester_id IS NULL)
-  ORDER BY (semester_id IS NOT NULL) DESC LIMIT 1;
- IF app.is_term_locked(v_lock) THEN RAISE EXCEPTION 'TERM_LOCKED: academic term is locked' USING ERRCODE='P0001'; END IF;
+ SELECT COALESCE(bool_or(app.is_term_locked(term_lock_id)),true) INTO v_any_term_locked
+  FROM app.term_lock WHERE tenant_id=v_tenant AND institution_id=v_institution
+   AND academic_session_id=v_session AND (semester_id=v_semester OR semester_id IS NULL);
+ IF v_any_term_locked THEN RAISE EXCEPTION 'TERM_LOCKED: academic term is locked' USING ERRCODE='P0001'; END IF;
  IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
 END $$;
 
 CREATE OR REPLACE FUNCTION app.fn_attendance_session_scope_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
-DECLARE v_start date; v_end date; v_section_session uuid; v_slot_section uuid; v_slot_day integer;
+DECLARE v_start date; v_end date; v_section_session uuid; v_slot_section uuid; v_slot_day integer; v_slot_session uuid; v_teacher_assignment boolean;
 BEGIN
  SELECT academic_session_id INTO v_section_session FROM app.section WHERE tenant_id=NEW.tenant_id
   AND institution_id=NEW.institution_id AND section_id=NEW.section_id AND status='ACTIVE';
@@ -144,27 +157,34 @@ BEGIN
   RAISE EXCEPTION 'ATTENDANCE_PERIOD_REQUIRES_SLOT' USING ERRCODE='23514';
  END IF;
  IF NEW.timetable_slot_id IS NOT NULL THEN
-  SELECT section_id,day_of_week INTO v_slot_section,v_slot_day FROM app.timetable_slot WHERE tenant_id=NEW.tenant_id
-   AND institution_id=NEW.institution_id AND timetable_slot_id=NEW.timetable_slot_id AND status='ACTIVE';
-  IF v_slot_section IS DISTINCT FROM NEW.section_id OR v_slot_day IS DISTINCT FROM EXTRACT(ISODOW FROM NEW.session_date)::integer THEN
+  SELECT section_id,day_of_week,academic_session_id INTO v_slot_section,v_slot_day,v_slot_session
+   FROM app.timetable_slot WHERE tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id
+    AND timetable_slot_id=NEW.timetable_slot_id AND status='ACTIVE';
+  IF v_slot_section IS DISTINCT FROM NEW.section_id OR v_slot_day IS DISTINCT FROM EXTRACT(ISODOW FROM NEW.session_date)::integer
+    OR v_slot_session IS DISTINCT FROM NEW.academic_session_id THEN
    RAISE EXCEPTION 'ATTENDANCE_SLOT_MISMATCH' USING ERRCODE='23514';
   END IF;
  END IF;
+ SELECT EXISTS(SELECT 1 FROM app.staff_assignment x WHERE x.tenant_id=NEW.tenant_id
+  AND x.staff_profile_id=NEW.taken_by_teacher_id AND x.institution_id=NEW.institution_id
+  AND x.status='ACTIVE' AND x.effective_from<=NEW.session_date
+  AND (x.effective_to IS NULL OR x.effective_to>=NEW.session_date)) INTO v_teacher_assignment;
+ IF NOT v_teacher_assignment THEN RAISE EXCEPTION 'ATTENDANCE_TEACHER_NOT_ASSIGNED' USING ERRCODE='23514'; END IF;
  RETURN NEW;
 END $$;
 
 CREATE OR REPLACE FUNCTION app.fn_attendance_entry_scope_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
-DECLARE v_section uuid; v_status text; v_enrollment_section uuid; v_student_status text; v_enrollment_student uuid;
+DECLARE v_section uuid; v_status text; v_session_academic uuid; v_enrollment_section uuid; v_student_status text; v_enrollment_student uuid; v_enrollment_session uuid;
 BEGIN
- SELECT section_id,session_status INTO v_section,v_status FROM app.attendance_session
+ SELECT section_id,session_status,academic_session_id INTO v_section,v_status,v_session_academic FROM app.attendance_session
   WHERE tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id AND attendance_session_id=NEW.attendance_session_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'ATTENDANCE_SESSION_NOT_FOUND' USING ERRCODE='23503'; END IF;
  IF v_status='SUBMITTED' THEN RAISE EXCEPTION 'ATTENDANCE_ALREADY_SUBMITTED' USING ERRCODE='P0001'; END IF;
- SELECT section_id,student_profile_id INTO v_enrollment_section,v_enrollment_student FROM app.student_enrollment
+ SELECT section_id,student_profile_id,academic_session_id INTO v_enrollment_section,v_enrollment_student,v_enrollment_session FROM app.student_enrollment
   WHERE tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id AND enrollment_id=NEW.enrollment_id
    AND outcome='IN_PROGRESS' AND ended_on IS NULL;
- IF NOT FOUND OR v_enrollment_section<>v_section OR v_enrollment_student<>NEW.student_profile_id THEN
+ IF NOT FOUND OR v_enrollment_section<>v_section OR v_enrollment_student<>NEW.student_profile_id OR v_enrollment_session<>v_session_academic THEN
   RAISE EXCEPTION 'ATTENDANCE_ENROLLMENT_MISMATCH' USING ERRCODE='23514';
  END IF;
  SELECT status INTO v_student_status FROM app.student_profile WHERE tenant_id=NEW.tenant_id
@@ -178,15 +198,23 @@ END $$;
 
 CREATE OR REPLACE FUNCTION app.fn_medical_exemption_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
-DECLARE v_student uuid; v_section uuid; v_session uuid; v_purpose text; v_scan text; v_file_status text; v_institution uuid;
+DECLARE v_student uuid; v_started date; v_ended date; v_session_start date; v_session_end date; v_purpose text; v_scan text; v_file_status text; v_institution uuid; v_uploaded_by uuid;
 BEGIN
- SELECT student_profile_id,section_id,academic_session_id INTO v_student,v_section,v_session FROM app.student_enrollment
-  WHERE tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id AND enrollment_id=NEW.enrollment_id;
+ SELECT e.student_profile_id,e.started_on,e.ended_on,a.start_date,a.end_date
+  INTO v_student,v_started,v_ended,v_session_start,v_session_end
+  FROM app.student_enrollment e JOIN app.academic_session a
+   ON a.tenant_id=e.tenant_id AND a.academic_session_id=e.academic_session_id
+  WHERE e.tenant_id=NEW.tenant_id AND e.institution_id=NEW.institution_id AND e.enrollment_id=NEW.enrollment_id;
  IF v_student IS DISTINCT FROM NEW.student_profile_id THEN RAISE EXCEPTION 'MEDICAL_EXEMPTION_ENROLLMENT_MISMATCH' USING ERRCODE='23514'; END IF;
- SELECT purpose,scan_status,status,institution_id INTO v_purpose,v_scan,v_file_status,v_institution
+ IF NEW.start_date<v_started OR NEW.start_date<v_session_start OR NEW.end_date>v_session_end
+   OR (v_ended IS NOT NULL AND NEW.end_date>v_ended) THEN
+  RAISE EXCEPTION 'MEDICAL_EXEMPTION_DATE_OUTSIDE_ENROLLMENT' USING ERRCODE='23514';
+ END IF;
+ SELECT purpose,scan_status,status,institution_id,uploaded_by INTO v_purpose,v_scan,v_file_status,v_institution,v_uploaded_by
   FROM app.file_object WHERE tenant_id=NEW.tenant_id AND file_id=NEW.document_ref;
  IF v_purpose IS DISTINCT FROM 'ATTENDANCE_MEDICAL_EXEMPTION' OR v_scan IS DISTINCT FROM 'CLEAN'
-   OR v_file_status IS DISTINCT FROM 'ACTIVE' OR (v_institution IS NOT NULL AND v_institution<>NEW.institution_id) THEN
+   OR v_file_status IS DISTINCT FROM 'ACTIVE' OR v_uploaded_by IS DISTINCT FROM NEW.created_by
+   OR (v_institution IS NOT NULL AND v_institution<>NEW.institution_id) THEN
   RAISE EXCEPTION 'MEDICAL_EXEMPTION_DOCUMENT_NOT_AVAILABLE' USING ERRCODE='23514';
  END IF;
  IF TG_OP='UPDATE' AND OLD.status<>'PENDING' THEN
@@ -217,7 +245,7 @@ DO $$ BEGIN
 END $$;
 
 DROP TRIGGER IF EXISTS trg_check_term_lock_attendance ON app.attendance_session;
-CREATE TRIGGER trg_check_term_lock_attendance BEFORE INSERT OR UPDATE ON app.attendance_session
+CREATE TRIGGER trg_check_term_lock_attendance BEFORE INSERT OR UPDATE OR DELETE ON app.attendance_session
  FOR EACH ROW EXECUTE FUNCTION app.fn_attendance_term_lock_guard();
 DROP TRIGGER IF EXISTS trg_check_term_lock_attendance_entry ON app.attendance_entry;
 CREATE TRIGGER trg_check_term_lock_attendance_entry BEFORE INSERT OR UPDATE OR DELETE ON app.attendance_entry
@@ -304,6 +332,7 @@ DROP TRIGGER IF EXISTS trg_touch ON app.attendance_threshold_policy;
 CREATE TRIGGER trg_touch BEFORE UPDATE ON app.attendance_threshold_policy FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
 GRANT SELECT,INSERT,UPDATE,DELETE ON app.attendance_session,app.attendance_entry,app.attendance_medical_exemption,app.attendance_threshold_policy TO edu_app;
 GRANT SELECT ON app.attendance_session,app.attendance_entry,app.attendance_medical_exemption,app.attendance_threshold_policy,app.v_attendance_percentage TO edu_report;
+GRANT SELECT ON app.v_attendance_percentage TO edu_app;
 GRANT EXECUTE ON FUNCTION app.fn_attendance_exam_eligibility(uuid,uuid,uuid) TO edu_app,edu_report;
 COMMENT ON TABLE app.attendance_session IS 'Daily and period attendance; NOT_HELD sessions are excluded from valid totals.';
 COMMENT ON COLUMN app.attendance_entry.status IS 'Canonical V4.0 statuses: PRESENT, ABSENT, ON_APPROVED_LEAVE, NOT_HELD.';
