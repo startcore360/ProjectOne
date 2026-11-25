@@ -1736,3 +1736,93 @@ html[data-theme="dark"] .landing-page .landing-brand__tagline { color:#b7c9bd; }
  .landing-why-intro { position:static; }
  .landing-why-intro .landing-section__title { max-width:20ch; }
 }
+
+
+/* Final hero correction: the hero is intentionally a dark brand surface in BOTH themes. */
+.landing-page .landing-hero {
+  background:
+    radial-gradient(ellipse at 82% 12%,rgba(143,202,166,.19),transparent 34%),
+    radial-gradient(ellipse at 12% 100%,rgba(100,174,131,.14),transparent 42%),
+    linear-gradient(128deg,#153d31 0%,#1d5943 56%,#28664f 100%) !important;
+  color:#f5faf6 !important;
+}
+.landing-page .landing-hero__title,
+.landing-page .landing-hero__subtitle,
+.landing-page .landing-hero__note,
+.landing-page .landing-hero__proof span { color:#f5faf6 !important; }
+.landing-page .landing-hero__eyebrow { color:#ffd18a !important; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); border-radius:999px; padding:9px 13px; }
+.landing-page .landing-hero__ghost-btn { color:#f5faf6 !important; background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.42); }
+.landing-page .landing-hero .eds-btn { box-shadow:0 10px 24px rgba(0,0,0,.12); }
+.landing-page .landing-hero__proof i { background:rgba(178,220,190,.18); color:#d9f0df; }
+.landing-hero-section { padding-top:clamp(24px,4vw,54px); padding-bottom:clamp(28px,4vw,56px); }
+.landing-hero { min-height:clamp(570px,42vw,700px); grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr); gap:clamp(28px,4vw,64px); padding:clamp(34px,4.4vw,68px); }
+.landing-hero__title { max-width:11ch; font-size:clamp(3rem,5.1vw,5.35rem); line-height:.99; letter-spacing:-.065em; }
+.landing-hero__subtitle { max-width:53ch; font-size:clamp(1rem,1.2vw,1.15rem); line-height:1.7; }
+.landing-hero__visual { min-width:0; }
+.landing-screenshot-frame { width:100%; transform:perspective(1400px) rotateY(-2deg); box-shadow:0 32px 74px rgba(4,20,14,.3); }
+.landing-screenshot-frame img { display:block; width:100%; height:auto; object-fit:contain; }
+.landing-hero__badge { justify-self:end; max-width:92%; }
+.landing-brand__tagline { text-transform:uppercase; letter-spacing:.07em; font-size:8px; }
+
+/* Role-specific dashboard illustrations: intentionally labelled as illustrative, not live data. */
+.landing-role-panel { grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr); gap:clamp(24px,4vw,56px); }
+.landing-role-visual {
+  min-width:0; overflow:hidden; border:1px solid #3d5c4d; border-radius:20px;
+  background:linear-gradient(145deg,#172a22,#20382d); color:#edf7ef;
+  box-shadow:0 22px 55px rgba(7,26,17,.2);
+}
+.landing-role-visual__topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid rgba(224,245,230,.12); background:rgba(255,255,255,.035); color:#a9c2b2; font-size:9px; font-weight:800; letter-spacing:.08em; }
+.landing-role-visual__brand { display:flex; align-items:center; gap:7px; color:#e8f5eb; font-size:11px; letter-spacing:0; }
+.landing-role-visual__logo { width:24px; height:24px; object-fit:contain; }
+.landing-role-visual__topbar > span:last-child { display:flex; align-items:center; gap:7px; }
+.landing-role-visual__topbar i { width:6px; height:6px; border-radius:50%; background:#9bd3a9; box-shadow:0 0 0 4px rgba(155,211,169,.12); }
+.landing-role-ui { padding:clamp(16px,2vw,25px); display:grid; gap:16px; }
+.landing-role-ui__heading { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.landing-role-ui__heading > div { display:grid; gap:5px; }
+.landing-role-ui__heading small,.landing-role-ui__panel > small { color:#91b5a0; font-size:8px; font-weight:800; letter-spacing:.12em; }
+.landing-role-ui__heading strong { color:#f1f8f2; font-size:clamp(15px,1.5vw,19px); letter-spacing:-.03em; }
+.landing-role-ui__period { display:inline-flex; align-items:center; gap:5px; padding:7px 9px; border:1px solid rgba(220,244,226,.16); border-radius:9px; color:#c5ddcc; font-size:9px; white-space:nowrap; }
+.landing-role-ui__stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.landing-role-ui__stats > div { display:grid; gap:8px; min-width:0; padding:12px; border:1px solid rgba(222,245,229,.11); border-radius:12px; background:rgba(255,255,255,.045); }
+.landing-role-ui__stats small { color:#9eb9a7; font-size:8px; }
+.landing-role-ui__stats b { display:flex; align-items:center; gap:6px; color:#eaf5ec; font-size:10px; }
+.landing-role-ui__stats em { color:#9bd3a9; font-size:8px; font-style:normal; }
+.landing-role-ui__columns { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:10px; }
+.landing-role-ui__panel { min-width:0; padding:14px; border:1px solid rgba(222,245,229,.11); border-radius:12px; background:rgba(255,255,255,.035); }
+.landing-role-ui__line { display:grid; grid-template-columns:7px minmax(0,1fr) auto; align-items:center; gap:8px; padding:11px 0; border-bottom:1px solid rgba(222,245,229,.08); color:#dcebe0; font-size:9px; }
+.landing-role-ui__line:last-child { border-bottom:0; }
+.landing-role-ui__line i { width:6px; height:6px; border-radius:50%; background:#a7d8b1; }
+.landing-role-ui__line b { color:#9fc8aa; font-size:8px; font-weight:700; }
+.landing-role-ui__insight { display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:10px; color:#a9d9b5; }
+.landing-role-ui__insight b { color:#eff8f1; font-size:12px; line-height:1.4; }
+.landing-role-ui__insight span { color:#9eb8a6; font-size:8px; line-height:1.5; }
+.landing-role-ui__class,.landing-role-ui__parent-notice { display:flex; align-items:center; gap:13px; padding:15px; border:1px solid rgba(222,245,229,.13); border-radius:13px; background:linear-gradient(110deg,rgba(111,177,130,.16),rgba(255,255,255,.035)); }
+.landing-role-ui__class-icon,.landing-role-ui__parent-notice > span { display:grid; place-items:center; flex:none; width:38px; height:38px; border-radius:11px; background:rgba(160,215,174,.16); color:#bce7c5; }
+.landing-role-ui__class > div,.landing-role-ui__parent-notice > div { display:grid; gap:4px; min-width:0; flex:1; }
+.landing-role-ui__class small,.landing-role-ui__parent-notice small { color:#94b9a0; font-size:8px; font-weight:800; letter-spacing:.1em; }
+.landing-role-ui__class b,.landing-role-ui__parent-notice b { color:#eff8f1; font-size:11px; }
+.landing-role-ui__class > div > span,.landing-role-ui__parent-notice p { margin:0; color:#b1c9b8; font-size:9px; line-height:1.5; }
+.landing-role-ui__student-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:17px; border-radius:13px; background:linear-gradient(110deg,#315c43,#244634); color:#d2f0d9; }
+.landing-role-ui__student-banner > div { display:grid; gap:5px; }
+.landing-role-ui__student-banner small { color:#b3d8bc; font-size:8px; font-weight:800; letter-spacing:.12em; }
+.landing-role-ui__student-banner b { color:#f2faf3; font-size:14px; }
+.landing-role-ui__student-banner span { color:#c1dcc8; font-size:9px; line-height:1.5; }
+.landing-role-visual__foot { display:flex; justify-content:space-between; gap:12px; padding:11px 16px; border-top:1px solid rgba(224,245,230,.1); color:#91b5a0; font-size:8px; letter-spacing:.08em; }
+.landing-role-visual__foot span { color:#b4cbb9; letter-spacing:0; }
+@media(max-width:900px) {
+ .landing-hero { grid-template-columns:1fr; min-height:0; }
+ .landing-hero__title { max-width:13ch; }
+ .landing-hero__visual { max-width:760px; width:100%; margin-inline:auto; }
+ .landing-role-panel { grid-template-columns:1fr; }
+}
+@media(max-width:600px) {
+ .landing-hero { padding:25px 20px; border-radius:20px; }
+ .landing-hero__title { font-size:clamp(2.65rem,12vw,4rem); }
+ .landing-role-ui__stats { grid-template-columns:1fr; }
+ .landing-role-ui__columns { grid-template-columns:1fr; }
+ .landing-role-visual__topbar > span:last-child { font-size:7px; }
+ .landing-role-visual__foot { flex-direction:column; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .landing-screenshot-frame { transform:none; }
+}
