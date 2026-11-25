@@ -196,4 +196,15 @@ COMMENT ON TABLE platform.landing_page_config IS 'Platform-managed public market
 COMMENT ON TABLE platform.landing_testimonial IS 'Published text and video testimonials displayed on the public landing page marquee.';
 COMMENT ON TABLE platform.landing_enquiry IS 'Public quotation and demo requests submitted from the landing page with internal server-computed quote snapshot.';
 
+-- The landing CMS is a platform-scoped capability, restricted to Product Owner and Platform Admin.
+INSERT INTO ref.action_catalog VALUES (
+    'LANDING_CMS_MANAGE', 279, 'Platform', 1,
+    'Manage public landing page content, testimonials, media and inbound enquiries',
+    false, NULL, 'V4.1'
+) ON CONFLICT DO NOTHING;
+INSERT INTO ref.standard_role_action VALUES
+    (1852, 'PRODUCT_OWNER', 'LANDING_CMS_MANAGE', 'Platform'),
+    (1853, 'PLATFORM_ADMIN', 'LANDING_CMS_MANAGE', 'Platform')
+ON CONFLICT DO NOTHING;
+
 COMMIT;
