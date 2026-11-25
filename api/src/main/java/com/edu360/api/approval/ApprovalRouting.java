@@ -80,21 +80,40 @@ public class ApprovalRouting {
 
     /** The caller's route to this step, or empty when the caller is not an approver of it. */
     public Optional<Route> route(UUID tenantId, UUID userId, String activeRole, ApprovalRequest request, ApprovalStep step) {
-        String stepRole = step.getApproverRoleCode();
+        // PO-T04 overrides the legacy Principal-only template for both concessions and
+        // scholarship lists. Resolve the approver at decision time so a Management assignment
+        // added after request creation still takes precedence and a stale Principal step cannot
+        // bypass it. If neither Management nor Trustees are assigned, the Management step rolls
+        // down through V4-PD-01 to Principal or an explicitly designated financial approver.
+        String stepRole = effectiveApproverRole(tenantId, request, step);
         if (activeRole != null && stepRole != null && activeRole.equalsIgnoreCase(stepRole)) {
             return Optional.of(new Route(Via.ROLE, null, null, null));
         }
-        if (userId != null && userId.equals(step.getApproverUserId())) {
+        if (userId != null && userId.equals(step.getApproverUserId()) && stepRole.equalsIgnoreCase(step.getApproverRoleCode())) {
             return Optional.of(new Route(Via.USER, null, null, null));
         }
-        Optional<Route> delegated = delegationRoute(tenantId, userId, request, step);
+        Optional<Route> delegated = delegationRoute(tenantId, userId, request, step, stepRole);
         if (delegated.isPresent()) {
             return delegated;
         }
-        if (activeRole != null && stepRole != null && rolldownApplies(tenantId, activeRole, request, step)) {
+        if (activeRole != null && stepRole != null && rolldownApplies(tenantId, activeRole, request, step, stepRole)) {
             return Optional.of(new Route(Via.ROLLDOWN, stepRole, null, null));
         }
         return Optional.empty();
+    }
+
+    private String effectiveApproverRole(UUID tenantId, ApprovalRequest request, ApprovalStep step) {
+        String process = request.getProcessCode();
+        if (!"CONCESSION".equalsIgnoreCase(process) && !"SCHOLARSHIP_LIST".equalsIgnoreCase(process)) {
+            return step.getApproverRoleCode();
+        }
+        if (anyHolder(tenantId, "MANAGEMENT", request.getInstitutionId())) {
+            return "MANAGEMENT";
+        }
+        if (anyHolder(tenantId, "GOVERNING_BODY_APPROVER", request.getInstitutionId())) {
+            return "GOVERNING_BODY_APPROVER";
+        }
+        return "MANAGEMENT";
     }
 
     /** True while the user has handed this step's approvals to a delegate (items sit with the delegate). */
@@ -103,14 +122,14 @@ public class ApprovalRouting {
                 .anyMatch(d -> inWindow(d) && covers(d, request));
     }
 
-    private Optional<Route> delegationRoute(UUID tenantId, UUID userId, ApprovalRequest request, ApprovalStep step) {
+    private Optional<Route> delegationRoute(UUID tenantId, UUID userId, ApprovalRequest request, ApprovalStep step, String stepRole) {
         for (Delegation d : delegationRepository.findByIdTenantIdAndDelegateUserId(tenantId, userId)) {
             if (!inWindow(d) || !covers(d, request)) {
                 continue;
             }
             UUID delegator = d.getDelegatorUserId();
-            if (delegator.equals(step.getApproverUserId()) || holdsRole(tenantId, delegator, step.getApproverRoleCode())) {
-                return Optional.of(new Route(Via.DELEGATION, step.getApproverRoleCode(), delegator, d.getId().getDelegationId()));
+            if (delegator.equals(step.getApproverUserId()) || holdsRole(tenantId, delegator, stepRole)) {
+                return Optional.of(new Route(Via.DELEGATION, stepRole, delegator, d.getId().getDelegationId()));
             }
         }
         return Optional.empty();
@@ -145,11 +164,11 @@ public class ApprovalRouting {
 
     // --------------------------------------------------------------------- roll-down (P-09)
 
-    private boolean rolldownApplies(UUID tenantId, String activeRole, ApprovalRequest request, ApprovalStep step) {
-        if (anyHolder(tenantId, step.getApproverRoleCode(), request.getInstitutionId())) {
+    private boolean rolldownApplies(UUID tenantId, String activeRole, ApprovalRequest request, ApprovalStep step, String stepRole) {
+        if (anyHolder(tenantId, stepRole, request.getInstitutionId())) {
             return false;
         }
-        return standIn(tenantId, request, step.getApproverRoleCode())
+        return standIn(tenantId, request, stepRole)
                 .map(activeRole::equalsIgnoreCase).orElse(false);
     }
 
