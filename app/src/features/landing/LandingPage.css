@@ -1640,3 +1640,69 @@
 @media(max-width:950px) { .landing-capabilities-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { .landing-capabilities-grid { grid-template-columns:1fr; } .landing-capability-card { min-height:220px; padding:23px; } }
 @media(prefers-reduced-motion:reduce) { .landing-capability-card { transition:none; } }
+
+
+/* Brand signature and product-led visual storytelling. */
+.landing-brand { display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; align-items:center; column-gap:10px; }
+.landing-brand__logo { grid-column:1; grid-row:1 / span 2; }
+.landing-brand__descriptor { grid-column:2; grid-row:1; align-self:end; max-width:190px; font-size:11px; font-weight:700; color:var(--color-text); }
+.landing-brand__tagline { grid-column:2; grid-row:2; align-self:start; color:var(--color-text-muted); font-size:9px; line-height:1.4; letter-spacing:.075em; text-transform:uppercase; }
+.landing-product-tour { background:var(--color-bg-subtle); }
+.landing-product-showcase { display:grid; gap:20px; }
+.landing-product-shot { display:grid; grid-template-columns:minmax(260px,.72fr) minmax(0,1.28fr); gap:30px; align-items:center; padding:clamp(22px,3vw,38px); border:1px solid var(--color-border-divider); border-radius:24px; background:var(--color-bg-surface); box-shadow:0 16px 40px rgba(15,35,25,.06); }
+.landing-product-shot--wide { grid-template-columns:minmax(280px,.65fr) minmax(0,1.35fr); }
+.landing-product-shot__copy > span,.landing-experience-card__top > span:first-child { color:var(--color-text-brand); font-size:9px; font-weight:850; letter-spacing:.13em; }
+.landing-product-shot__copy h3 { margin:14px 0 10px; color:var(--color-text); font-size:clamp(1.5rem,2.7vw,2.25rem); line-height:1.12; letter-spacing:-.045em; }
+.landing-product-shot__copy p { max-width:43ch; color:var(--color-text-muted); font-size:13px; line-height:1.75; }
+.landing-product-shot__copy a { display:inline-flex; margin-top:12px; color:var(--color-text-brand); font-size:12px; font-weight:800; text-decoration:none; }
+.landing-product-shot__image { min-width:0; overflow:hidden; border:1px solid var(--color-border-divider); border-radius:17px; background:var(--color-bg-subtle); box-shadow:0 20px 45px rgba(10,30,20,.13); }
+.landing-product-shot__image img { display:block; width:100%; height:auto; max-height:440px; object-fit:contain; object-position:center; }
+.landing-product-shot__image--login img { max-height:360px; }
+.landing-product-shot__image small { display:block; padding:10px 13px; border-top:1px solid var(--color-border-divider); color:var(--color-text-muted); font-size:9px; letter-spacing:.06em; }
+.landing-experience-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:20px; }
+.landing-experience-card { min-width:0; padding:clamp(22px,3vw,32px); border:1px solid var(--color-border-divider); border-radius:22px; background:var(--color-bg-surface); }
+.landing-experience-card__top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.landing-concept-tag { padding:6px 9px; border-radius:99px; background:var(--color-bg-brand-soft); color:var(--color-text-brand); font-size:9px; font-weight:800; }
+.landing-experience-card h3 { margin:18px 0 9px; color:var(--color-text); font-size:clamp(1.2rem,2vw,1.55rem); letter-spacing:-.035em; }
+.landing-experience-card > p { color:var(--color-text-muted); font-size:12px; line-height:1.75; }
+.landing-student-concept { display:grid; gap:18px; margin-top:20px; padding:19px; border:1px solid var(--color-border-divider); border-radius:16px; background:var(--color-bg-subtle); }
+.landing-student-concept > div:first-child { display:grid; gap:5px; }
+.landing-student-concept small { color:var(--color-text-muted); font-size:9px; letter-spacing:.08em; }
+.landing-student-concept strong { color:var(--color-text); font-size:14px; }
+.landing-week-dots { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+.landing-week-dots i { display:grid; place-items:center; aspect-ratio:1; border-radius:50%; background:var(--color-bg-brand-soft); color:var(--color-text-brand); font-size:10px; font-style:normal; font-weight:800; }
+.landing-concept-caption { text-transform:none; letter-spacing:0; }
+.landing-parent-concept { display:grid; gap:10px; margin-top:20px; }
+.landing-parent-notice { display:grid; gap:5px; padding:14px 16px; border:1px solid var(--color-border-divider); border-radius:13px; background:var(--color-bg-subtle); }
+.landing-parent-notice span { color:var(--color-text-brand); font-size:8px; font-weight:850; letter-spacing:.1em; }
+.landing-parent-notice strong { color:var(--color-text); font-size:12px; }
+.landing-parent-notice small { color:var(--color-text-muted); font-size:10px; }
+.landing-product-disclaimer { margin:15px 0 0; color:var(--color-text-muted); font-size:10px; line-height:1.6; text-align:center; }
+@media(max-width:900px) {
+ .landing-product-shot,.landing-product-shot--wide { grid-template-columns:1fr; }
+ .landing-product-shot__image img { max-height:380px; }
+}
+@media(max-width:650px) {
+ .landing-brand__descriptor { font-size:9px; }
+ .landing-brand__tagline { font-size:7px; }
+ .landing-experience-grid { grid-template-columns:1fr; }
+ .landing-product-shot { padding:19px; gap:18px; border-radius:18px; }
+}
+@media(prefers-reduced-motion:no-preference) {
+ .landing-product-shot__image,.landing-experience-card { transition:transform .25s ease,box-shadow .25s ease; }
+ .landing-product-shot__image:hover { transform:translateY(-3px); box-shadow:0 24px 52px rgba(10,30,20,.18); }
+ .landing-experience-card:hover { transform:translateY(-3px); }
+}
+/* Strongly scoped dark-mode contrast: the hero headline must remain readable over its green surface. */
+html[data-theme="dark"] .landing-page .landing-hero__title,
+html[data-theme="dark"] .landing-page .landing-hero__subtitle,
+html[data-theme="dark"] .landing-page .landing-hero__note { color:#f4faf6; }
+html[data-theme="dark"] .landing-page .landing-hero__eyebrow { color:#f3d39b; }
+html[data-theme="dark"] .landing-page .landing-brand__descriptor { color:#eef6f0; }
+html[data-theme="dark"] .landing-page .landing-brand__tagline { color:#b7c9bd; }
+@media(prefers-color-scheme:dark) {
+ :root:not([data-theme="light"]) .landing-page .landing-hero__title,
+ :root:not([data-theme="light"]) .landing-page .landing-hero__subtitle,
+ :root:not([data-theme="light"]) .landing-page .landing-hero__note { color:#f4faf6; }
+ :root:not([data-theme="light"]) .landing-page .landing-hero__eyebrow { color:#f3d39b; }
+}
