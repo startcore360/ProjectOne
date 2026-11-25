@@ -50,6 +50,8 @@ run edu360_v4_test 64_v41_merit_list_and_seat_allocation.sql > /dev/null
 run edu360_v4_test 67_v41_assignment_and_submission_schema.sql > /dev/null
 run edu360_v4_test 68_v41_exam_cycle_marks_and_report_cards.sql > /dev/null
 run edu360_v4_test 69_v41_fee_read_models_and_dues.sql > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/67t_tests_assignment_and_submission_schema.sql" > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/68t_tests_exam_cycle_marks_and_report_cards.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/69t_tests_fee_read_models_and_dues.sql" > /dev/null
 run edu360_v4_test 71_v41_id_cards_and_certificates.sql > /dev/null
 $PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_test -f "$D/71t_tests_id_cards_and_certificates.sql" > /dev/null
