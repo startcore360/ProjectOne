@@ -82,6 +82,16 @@ public class PermissionEvaluatorService {
             "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE"
     );
 
+    /** PO-T05 confidential case actions can never be delegated through tenant custom roles. */
+    public static final Set<String> POT05_CONFIDENTIAL_ACTIONS = Set.of(
+            "GRIEVANCE_CASE_VIEW", "GRIEVANCE_CASE_ASSIGN", "GRIEVANCE_HEARING_MANAGE",
+            "GRIEVANCE_CASE_RESOLVE", "GRIEVANCE_EVIDENCE_VIEW"
+    );
+
+    private static final Set<String> POT05_AUTHORIZED_ROLE_CODES = Set.of(
+            "INTERNAL_COMPLAINTS_COMMITTEE", "PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL"
+    );
+
     /**
      * The 22 actions in group "Platform" of D2 (TOP_POST_AUTHORITY_RULES.md Appendix B). D2/D3
      * never-allowed: platform users never get tenant roles and platform work never enters a
@@ -102,7 +112,13 @@ public class PermissionEvaluatorService {
      * refused separately from ref.action_catalog.is_approval_action, so they are not copied here.
      */
     public static boolean isLockedForCustomRoles(String actionCode) {
-        return actionCode != null && (LOCKED_ACTIONS.contains(actionCode) || PLATFORM_ONLY_ACTIONS.contains(actionCode));
+        return actionCode != null && (LOCKED_ACTIONS.contains(actionCode)
+                || PLATFORM_ONLY_ACTIONS.contains(actionCode)
+                || POT05_CONFIDENTIAL_ACTIONS.contains(actionCode));
+    }
+
+    public static boolean isPot05AuthorizedRole(String roleCode) {
+        return roleCode != null && POT05_AUTHORIZED_ROLE_CODES.contains(roleCode);
     }
 
     private final ActionCatalogRepository actionCatalogRepository;
@@ -220,6 +236,14 @@ public class PermissionEvaluatorService {
         }
         if (activeRole != null && activeRole.getStatus() != RoleDefinitionStatus.ACTIVE) {
             return PermissionDecision.deny("ROLE_NOT_ACTIVE", "The assigned role definition is not in ACTIVE status.");
+        }
+
+        // PO-T05 is a role boundary, not merely a grant-list convention. Require a resolvable
+        // active standard role and reject all other roles before consulting their action rows.
+        if (POT05_CONFIDENTIAL_ACTIONS.contains(actionCode)
+                && (activeRole == null || !isPot05AuthorizedRole(activeRole.getRoleCode()))) {
+            return PermissionDecision.deny("POT05_ROLE_FORBIDDEN",
+                    "Confidential grievance actions are restricted to the ICC and institution Principal under PO-T05.");
         }
 
         if (!sameScope(active, scope)) {
