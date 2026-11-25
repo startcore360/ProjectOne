@@ -4423,3 +4423,6 @@ INSERT INTO ref.data_class VALUES ('BY_OWNER','Files','Follow the owning record'
 INSERT INTO ref.data_class VALUES ('TENANT_LIFETIME','Whole tenant','Only through the DPO-approved deletion chain [CL-07, CL-10]',true) ON CONFLICT DO NOTHING;
 INSERT INTO ref.data_class VALUES ('REFERENCE','Reference data','Retired, never deleted',false) ON CONFLICT DO NOTHING;
 INSERT INTO ref.safe_file_type VALUES (1,'MESSAGE_ATTACHMENT','pdf','application/pdf',10485760),(2,'MESSAGE_ATTACHMENT','jpg','image/jpeg',10485760),(3,'MESSAGE_ATTACHMENT','png','image/png',10485760) ON CONFLICT DO NOTHING;
+
+-- E7 landing CMS action referenced by the platform landing-page management service.
+INSERT INTO ref.action_catalog VALUES ('LANDING_CMS_MANAGE',283,'Landing page CMS',1,'Manage public landing-page content and enquiries',false,NULL,'4.1') ON CONFLICT DO NOTHING;
