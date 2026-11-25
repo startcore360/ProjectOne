@@ -126,6 +126,34 @@ CREATE TABLE app.exam_invigilator (
     CONSTRAINT uq_exam_invigilator UNIQUE (tenant_id, exam_schedule_id, staff_user_id)
 );
 
+CREATE OR REPLACE FUNCTION app.fn_exam_invigilator_conflict_guard()
+RETURNS trigger LANGUAGE plpgsql AS $
+BEGIN
+    IF EXISTS (
+        SELECT 1
+          FROM app.exam_invigilator other_i
+          JOIN app.exam_schedule other_s
+            ON other_s.tenant_id = other_i.tenant_id
+           AND other_s.exam_schedule_id = other_i.exam_schedule_id
+          JOIN app.exam_schedule new_s
+            ON new_s.tenant_id = NEW.tenant_id
+           AND new_s.exam_schedule_id = NEW.exam_schedule_id
+         WHERE other_i.tenant_id = NEW.tenant_id
+           AND other_i.staff_user_id = NEW.staff_user_id
+           AND other_i.exam_invigilator_id <> COALESCE(NEW.exam_invigilator_id, '00000000-0000-0000-0000-000000000000'::uuid)
+           AND other_s.exam_date = new_s.exam_date
+           AND tsrange(other_s.exam_date + other_s.start_time, other_s.exam_date + other_s.end_time, '[)')
+               && tsrange(new_s.exam_date + new_s.start_time, new_s.exam_date + new_s.end_time, '[)')
+    ) THEN
+        RAISE EXCEPTION 'INVIGILATOR_DOUBLE_BOOKED' USING ERRCODE = '23P01';
+    END IF;
+    RETURN NEW;
+END;
+$;
+CREATE TRIGGER trg_exam_invigilator_conflict
+    BEFORE INSERT OR UPDATE ON app.exam_invigilator
+    FOR EACH ROW EXECUTE FUNCTION app.fn_exam_invigilator_conflict_guard();
+
 CREATE TABLE app.hall_ticket (
     tenant_id uuid NOT NULL,
     hall_ticket_id uuid NOT NULL,
