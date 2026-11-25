@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -33,6 +34,8 @@ public class OnlinePaymentCheckoutService {
     private final PermissionEvaluatorService permissions;
     private final PaymentGatewayCredentialsResolver credentialsResolver;
     private final AuditLogService audit;
+    @Value("${app.payments.stripe-success-url:}") private String stripeSuccessUrl;
+    @Value("${app.payments.stripe-cancel-url:}") private String stripeCancelUrl;
 
     @Transactional
     public Map<String, Object> start(UUID tenantId, TenantPrincipal actor, CheckoutRequest request) {
@@ -253,10 +256,15 @@ public class OnlinePaymentCheckoutService {
 
     private JsonNode createStripeSession(PaymentGatewayCredentialsResolver.PaymentGatewayCredentials credentials,
             BigDecimal amount, UUID paymentId, UUID tenantId, UUID institutionId, String requestKey) {
+        if (stripeSuccessUrl == null || stripeSuccessUrl.isBlank()
+                || stripeCancelUrl == null || stripeCancelUrl.isBlank()) {
+            throw new BusinessRuleViolationException("STRIPE_RETURN_URL_NOT_CONFIGURED",
+                    "Stripe success and cancellation return URLs must be configured by the platform operator.");
+        }
         LinkedMultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("mode", "payment");
-        form.add("success_url", "https://app.edu360.in/finance/payments?checkout=success");
-        form.add("cancel_url", "https://app.edu360.in/finance/payments?checkout=cancelled");
+        form.add("success_url", stripeSuccessUrl);
+        form.add("cancel_url", stripeCancelUrl);
         form.add("line_items[0][price_data][currency]", "inr");
         form.add("line_items[0][price_data][unit_amount]", amount.movePointRight(2).intValueExact() + "");
         form.add("line_items[0][price_data][product_data][name]", "EDU 360 student fee");
