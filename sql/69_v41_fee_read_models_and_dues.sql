@@ -108,6 +108,47 @@ SELECT si.tenant_id,
         AS paid_amount
   ) pay ON true;
 
+-- The existing finance model specifies one account per student and one installment
+-- number per assignment/structure. Enforce those invariants before invoice assignment APIs.
+DO $
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM app.student_fee_account
+         GROUP BY tenant_id, student_profile_id HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'DUPLICATE_STUDENT_FEE_ACCOUNTS: reconcile existing accounts before T8 invoice assignment';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM app.fee_assignment
+         WHERE status='ACTIVE'
+         GROUP BY tenant_id, enrollment_id, fee_structure_id HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'DUPLICATE_ACTIVE_FEE_ASSIGNMENTS: reconcile existing assignments before T8 invoice assignment';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM app.student_installment
+         GROUP BY tenant_id, fee_assignment_id, installment_no HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'DUPLICATE_STUDENT_INSTALLMENTS: reconcile existing installment numbers before T8 invoice assignment';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM app.fee_structure_installment
+         GROUP BY tenant_id, fee_structure_id, installment_no HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'DUPLICATE_FEE_STRUCTURE_INSTALLMENTS: reconcile existing template numbers before T8 invoice assignment';
+    END IF;
+END $;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_student_fee_account_student
+    ON app.student_fee_account (tenant_id, student_profile_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fee_assignment_active_enrollment_structure
+    ON app.fee_assignment (tenant_id, enrollment_id, fee_structure_id)
+ WHERE status='ACTIVE';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_student_installment_assignment_no
+    ON app.student_installment (tenant_id, fee_assignment_id, installment_no);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fee_structure_installment_structure_no
+    ON app.fee_structure_installment (tenant_id, fee_structure_id, installment_no);
+
 CREATE INDEX IF NOT EXISTS ix_student_fee_account_student
     ON app.student_fee_account (tenant_id, student_profile_id);
 CREATE INDEX IF NOT EXISTS ix_student_installment_account_due
