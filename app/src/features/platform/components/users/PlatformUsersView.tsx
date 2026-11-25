@@ -122,6 +122,7 @@ export function PlatformUsersView() {
   const [statusBusy, setStatusBusy] = useState(false);
   const [unlockTarget, setUnlockTarget] = useState<PlatformUserItem | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
+  const [actionNotice, setActionNotice] = useState("");
   const [passwordTarget, setPasswordTarget] = useState<PlatformUserItem | null>(null);
   const [passwordBusy, setPasswordBusy] = useState(false);
   // MFA-01 / E8-S4: reset a staff member's two-step login (never your own).
@@ -221,6 +222,7 @@ export function PlatformUsersView() {
     setUnlockBusy(true);
     try {
       await platformUserService.unlockPlatformUser(unlockTarget.platformUserId);
+      setActionNotice(unlockTarget.fullName + "'s sign-in lockout was cleared.");
       toast.success(
         "Account unlocked",
         `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`
@@ -274,6 +276,7 @@ export function PlatformUsersView() {
           </Button>
         }
       />
+      {actionNotice && <Notice tone="success">{actionNotice}</Notice>}
       <CreatedCredentialsModal
         isOpen={!!createdUser}
         onClose={() => setCreatedUser(null)}
