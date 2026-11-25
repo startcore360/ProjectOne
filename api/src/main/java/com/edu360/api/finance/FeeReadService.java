@@ -115,6 +115,50 @@ public class FeeReadService {
     }
 
     @Transactional(readOnly = true)
+    public List<Map<String, Object>> listMyFeeAccounts(UUID tenantId, TenantPrincipal actor) {
+        List<Map<String, Object>> accounts = jdbc.queryForList("""
+            SELECT sfa.student_fee_account_id AS "accountId",
+                   sp.student_profile_id AS "studentProfileId",
+                   sp.institution_id AS "institutionId",
+                   sp.full_name AS "studentName",
+                   i.institution_name AS "institutionName"
+              FROM app.student_fee_account sfa
+              JOIN app.student_profile sp
+                ON sp.tenant_id=sfa.tenant_id AND sp.student_profile_id=sfa.student_profile_id
+              JOIN app.institution i
+                ON i.tenant_id=sp.tenant_id AND i.institution_id=sp.institution_id
+             WHERE sfa.tenant_id=:tenantId
+               AND sfa.status='ACTIVE'
+               AND (
+                   sp.user_account_id=:actorId
+                   OR EXISTS (
+                       SELECT 1
+                         FROM app.student_guardian_link sgl
+                         JOIN app.guardian_profile gp
+                           ON gp.tenant_id=sgl.tenant_id AND gp.guardian_profile_id=sgl.guardian_profile_id
+                        WHERE sgl.tenant_id=sfa.tenant_id
+                          AND sgl.student_profile_id=sp.student_profile_id
+                          AND sgl.status='ACTIVE' AND sgl.is_primary=true
+                          AND gp.user_account_id=:actorId
+                   )
+               )
+             ORDER BY sp.full_name
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("actorId", actor.userAccountId()));
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Map<String, Object> account : accounts) {
+            UUID institutionId = (UUID) account.get("institutionId");
+            permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
+                    "FEE_VIEW_OWN", RbacScope.institution(institutionId), RbacTarget.NONE);
+            Map<String, Object> safe = new java.util.HashMap<>(account);
+            safe.remove("studentProfileId");
+            safe.remove("institutionId");
+            result.add(safe);
+        }
+        return result;
+    }
+
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> listInvoices(UUID tenantId, TenantPrincipal actor, UUID accountId) {
         Map<String, Object> account = jdbc.query("""
             SELECT sp.institution_id, sp.student_profile_id
