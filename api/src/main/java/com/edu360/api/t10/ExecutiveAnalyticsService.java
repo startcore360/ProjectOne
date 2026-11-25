@@ -1,0 +1,60 @@
+package com.edu360.api.t10;
+
+import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.RbacPrincipal;
+import com.edu360.api.rbac.RbacScope;
+import com.edu360.api.rbac.RbacTarget;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.tenant.TenantContext;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class ExecutiveAnalyticsService {
+    private final ObjectProvider<JdbcTemplate> reportJdbc;
+    private final PermissionEvaluatorService permissions;
+    private final JdbcTemplate tenantJdbc;
+    public ExecutiveAnalyticsService(@Qualifier("eduReportJdbcTemplate") ObjectProvider<JdbcTemplate> reportJdbc,
+            PermissionEvaluatorService permissions, @Qualifier("jdbcTemplate") JdbcTemplate tenantJdbc) {
+        this.reportJdbc=reportJdbc; this.permissions=permissions; this.tenantJdbc=tenantJdbc;
+    }
+    public Map<String,Object> dashboard(UUID tenant,TenantPrincipal p,UUID institution,LocalDate from,LocalDate to) {
+        ScopeType active=TenantContext.currentActiveScopeType();
+        permissions.authorize(new RbacPrincipal(tenant,p.userAccountId()),"REPORTS_VIEW",
+                active==ScopeType.TENANT?RbacScope.tenant():RbacScope.institution(institution),RbacTarget.NONE);
+        JdbcTemplate db=reportJdbc.getIfAvailable();
+        if(db==null) throw new BusinessRuleViolationException("REPORTING_CONNECTION_UNAVAILABLE","The dedicated read-only edu_report connection is not configured.");
+        LocalDate end=to==null?LocalDate.now():to, start=from==null?end.minusDays(29):from;
+        if(start.isAfter(end)||start.isBefore(end.minusYears(2))) throw new BusinessRuleViolationException("INVALID_REPORT_RANGE","Report range must be ordered and no longer than two years.");
+        UUID reportDefinition=tenantJdbc.queryForObject("""
+            INSERT INTO app.report_definition(id,tenant_id,institution_id,report_code,report_name)
+            VALUES (?,?,?,'EXECUTIVE_DASHBOARD','Executive Dashboard')
+            ON CONFLICT(tenant_id,institution_id,report_code) DO UPDATE SET report_name=EXCLUDED.report_name
+            RETURNING id
+            """,UUID.class,UUID.randomUUID(),tenant,institution);
+        UUID execution=UUID.randomUUID();
+        tenantJdbc.update("INSERT INTO app.report_execution(id,tenant_id,institution_id,report_definition_id,requested_by,from_date,to_date,status) VALUES (?,?,?,?,?,?,?,'RUNNING')",
+            execution,tenant,institution,reportDefinition,p.userAccountId(),start,end);
+        Map<String,Object> out=new LinkedHashMap<>();
+        out.put("reportExecutionId",execution);
+        out.put("period",Map.of("from",start,"to",end));
+        out.put("activeStudents",scalar(db,"SELECT count(*) FROM app.student_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
+        out.put("activeStaff",scalar(db,"SELECT count(*) FROM app.staff_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
+        out.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(amount-amount_paid),0) FROM app.library_fine WHERE tenant_id=? AND institution_id=? AND status='OUTSTANDING'",tenant,institution));
+        out.put("openLibraryCirculations",scalar(db,"SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND returned_at IS NULL",tenant,institution));
+        out.put("transportAllocations",scalar(db,"SELECT count(*) FROM app.transport_allocation WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
+        out.put("smsSent",scalar(db,"SELECT count(*) FROM app.message_dispatch WHERE tenant_id=? AND institution_id=? AND channel='SMS' AND status IN ('SENT','DELIVERED') AND created_at>=? AND created_at<?",tenant,institution,start.atStartOfDay(),end.plusDays(1).atStartOfDay()));
+        tenantJdbc.update("UPDATE app.report_execution SET status='SUCCEEDED',completed_at=now() WHERE id=? AND tenant_id=?",execution,tenant);
+        return out;
+    }
+    private Object scalar(JdbcTemplate db,String sql,Object... args) { return db.queryForObject(sql,Object.class,args); }
+}
