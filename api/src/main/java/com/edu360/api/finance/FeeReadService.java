@@ -148,8 +148,8 @@ public class FeeReadService {
         List<Map<String, Object>> result = new java.util.ArrayList<>();
         for (Map<String, Object> account : accounts) {
             UUID institutionId = (UUID) account.get("institutionId");
-            permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
-                    "FEE_VIEW_OWN", RbacScope.institution(institutionId), RbacTarget.NONE);
+            RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
+            permissions.authorize(principal, "FEE_VIEW_OWN", permissions.ownScope(principal), RbacTarget.NONE);
             Map<String, Object> safe = new java.util.HashMap<>(account);
             safe.remove("studentProfileId");
             safe.remove("institutionId");
@@ -204,10 +204,14 @@ public class FeeReadService {
             """, new MapSqlParameterSource().addValue("tenantId", tenantId)
                     .addValue("studentProfileId", studentProfileId)
                     .addValue("actorId", actor.userAccountId()), Boolean.class);
-        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
-                Boolean.TRUE.equals(owner) ? "FEE_VIEW_OWN" : "LEDGER_VIEW",
-                institutionId == null ? RbacScope.tenant() : RbacScope.institution(institutionId),
-                RbacTarget.NONE);
+        RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
+        if (Boolean.TRUE.equals(owner)) {
+            permissions.authorize(principal, "FEE_VIEW_OWN", permissions.ownScope(principal), RbacTarget.NONE);
+        } else {
+            permissions.authorize(principal, "LEDGER_VIEW",
+                    institutionId == null ? RbacScope.tenant() : RbacScope.institution(institutionId),
+                    RbacTarget.NONE);
+        }
     }
 
     private void authorize(TenantPrincipal actor, UUID tenantId, UUID institutionId) {
