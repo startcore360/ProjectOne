@@ -99,17 +99,24 @@ public class T10DomainService {
         UUID campaign=UUID.randomUUID();
         jdbc.update("INSERT INTO app.communication_campaign(id,tenant_id,institution_id,name,target_roles_json,channels_json,status,created_by) VALUES (?,?,?,'Direct dispatch','[]'::jsonb,?::jsonb,'QUEUED',?)",
             campaign,tenant,r.institutionId(),json(r.channels()==null?List.of("IN_APP","PUSH","SMS","EMAIL"):r.channels()),p.userAccountId());
-        // Persist the fallback chain in priority order; provider workers can claim queued rows independently.
+        // First selected channel is claimable; later channels remain WAITING until a failure advances the chain.
         List<String> chain=List.of("IN_APP","PUSH","SMS","EMAIL");
         List<String> requested=r.channels()==null||r.channels().isEmpty()?chain:r.channels();
+        List<String> selected=chain.stream().filter(requested::contains).toList();
+        if(selected.isEmpty()) throw new BusinessRuleViolationException("CHANNEL_REQUIRED","Choose at least one supported channel.");
         UUID first=null;
-        for(String channel:chain) if(requested.contains(channel)) {
+        for(int i=0;i<selected.size();i++) {
+            String channel=selected.get(i);
             UUID id=UUID.randomUUID(); if(first==null) first=id;
-            jdbc.update("INSERT INTO app.message_dispatch(id,tenant_id,institution_id,campaign_id,channel,recipient_user_id,phone,email,message_body,status) VALUES (?,?,?,?,?,?,?,?,?,'QUEUED')",
-                id,tenant,r.institutionId(),campaign,channel,r.recipientUserId(),r.phone(),r.email(),r.body());
+            jdbc.update("""
+                INSERT INTO app.message_dispatch(id,tenant_id,institution_id,campaign_id,channel,attempt_order,
+                    recipient_user_id,phone,email,message_body,status)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                """,id,tenant,r.institutionId(),campaign,channel,i+1,r.recipientUserId(),r.phone(),r.email(),r.body(),
+                    i==0?"QUEUED":"WAITING");
         }
-        audit.record(AuditEventType.PLAN_CREATED,null,p.userAccountId().toString(),tenant.toString(),"Communication campaign "+campaign+" queued");
-        return Map.of("campaignId",campaign,"status","QUEUED","fallbackOrder",chain);
+        audit.record(AuditEventType.CREATE,null,null,null,"Communication campaign "+campaign+" queued");
+        return Map.of("campaignId",campaign,"firstDispatchId",first,"status","QUEUED","fallbackOrder",selected);
     }
     @Transactional
     public Map<String,Object> recordDispatchOutcome(UUID tenant,TenantPrincipal p,UUID institution,UUID dispatchId,String status,String failureReason,String carrierMessageId) {
