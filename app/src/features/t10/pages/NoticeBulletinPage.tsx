@@ -3,7 +3,7 @@ import { PageHeader,Button,EmptyState } from "../../../design-system/components"
 import { useAppSelector } from "../../../store/hooks";
 import { t10Api,type Notice } from "../api/t10Api";
 export default function NoticeBulletinPage(){
- const tenant=useAppSelector(s=>s.auth.user?.tenantId??""); const institution=useAppSelector(s=>(s.auth.user as any)?.institutionId??"");
+ const tenant=useAppSelector(s=>s.auth.user?.tenantId??""); const institution=useAppSelector(s=>s.tenantPermissions.current?.institutionId??"");
  const [items,setItems]=useState<Notice[]>([]); const [error,setError]=useState(""); const [title,setTitle]=useState(""); const [body,setBody]=useState("");
  const load=useCallback(()=>{if(tenant&&institution)t10Api.notices(tenant,institution).then(setItems).catch(()=>setError("Notices could not be loaded."));},[tenant,institution]);
  useEffect(()=>{load();},[load]);
