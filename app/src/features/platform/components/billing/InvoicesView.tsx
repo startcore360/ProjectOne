@@ -47,6 +47,8 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
     if (!open || !triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const spaceOnRight = window.innerWidth - rect.left;
+    // DOM geometry is only available after the menu opens; this measurement is intentionally effect-driven.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAlignLeft(window.innerWidth <= 640 || spaceOnRight >= 180 || rect.left < 200);
   }, [open]);
 
