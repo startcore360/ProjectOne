@@ -35,6 +35,33 @@ public class OfflinePaymentService {
         validateRequest(request);
         List<UUID> installmentIds = request.installmentIds().stream().sorted().toList();
 
+        Map<String, Object> existing = jdbc.query("""
+            SELECT payment_id, institution_id, student_fee_account_id, method, amount, status,
+                   cheque_number, cheque_date, cheque_bank
+              FROM app.payment
+             WHERE tenant_id=:tenantId AND request_key=:requestKey
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("requestKey", request.requestKey()), rs -> {
+                if (!rs.next()) return null;
+                Map<String, Object> row = new HashMap<>();
+                row.put("paymentId", rs.getObject("payment_id", UUID.class));
+                row.put("institutionId", rs.getObject("institution_id", UUID.class));
+                row.put("accountId", rs.getObject("student_fee_account_id", UUID.class));
+                row.put("method", rs.getString("method"));
+                row.put("amount", rs.getBigDecimal("amount"));
+                row.put("status", rs.getString("status"));
+                row.put("chequeNumber", rs.getString("cheque_number"));
+                row.put("chequeDate", rs.getDate("cheque_date") == null ? null : rs.getDate("cheque_date").toLocalDate());
+                row.put("chequeBank", rs.getString("cheque_bank"));
+                return row;
+            });
+        if (existing != null) {
+            UUID existingInstitutionId = (UUID) existing.get("institutionId");
+            permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
+                    "PAYMENT_OFFLINE_RECORD", RbacScope.institution(existingInstitutionId), RbacTarget.NONE);
+            return replayOrReject(tenantId, request, installmentIds, existingInstitutionId, existing);
+        }
+
         List<Installment> installments = jdbc.query("""
             SELECT si.student_installment_id, si.institution_id, si.student_fee_account_id,
                    fs.academic_session_id, nd.net_due, si.status
@@ -82,30 +109,6 @@ public class OfflinePaymentService {
 
         permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
                 "PAYMENT_OFFLINE_RECORD", RbacScope.institution(institutionId), RbacTarget.NONE);
-
-        Map<String, Object> existing = jdbc.query("""
-            SELECT payment_id, institution_id, student_fee_account_id, method, amount, status,
-                   cheque_number, cheque_date, cheque_bank
-              FROM app.payment
-             WHERE tenant_id=:tenantId AND request_key=:requestKey
-            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
-                    .addValue("requestKey", request.requestKey()), rs -> {
-                if (!rs.next()) return null;
-                Map<String, Object> row = new HashMap<>();
-                row.put("paymentId", rs.getObject("payment_id", UUID.class));
-                row.put("institutionId", rs.getObject("institution_id", UUID.class));
-                row.put("accountId", rs.getObject("student_fee_account_id", UUID.class));
-                row.put("method", rs.getString("method"));
-                row.put("amount", rs.getBigDecimal("amount"));
-                row.put("status", rs.getString("status"));
-                row.put("chequeNumber", rs.getString("cheque_number"));
-                row.put("chequeDate", rs.getDate("cheque_date") == null ? null : rs.getDate("cheque_date").toLocalDate());
-                row.put("chequeBank", rs.getString("cheque_bank"));
-                return row;
-            });
-        if (existing != null) {
-            return replayOrReject(tenantId, request, installmentIds, institutionId, existing);
-        }
 
         UUID paymentId = UUID.randomUUID();
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
