@@ -14,6 +14,8 @@ import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
+import javax.sql.DataSource;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.tenant.TenantContext;
 import org.springframework.stereotype.Service;
@@ -22,23 +24,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ExecutiveAnalyticsService {
-    private final ObjectProvider<JdbcTemplate> reportJdbc;
+    private final ObjectProvider<DataSource> reportDataSource;
     private final PermissionEvaluatorService permissions;
     private final JdbcTemplate tenantJdbc;
     private final TransactionTemplate reportTransaction;
-    public ExecutiveAnalyticsService(@Qualifier("eduReportJdbcTemplate") ObjectProvider<JdbcTemplate> reportJdbc,
-            PermissionEvaluatorService permissions, @Qualifier("jdbcTemplate") JdbcTemplate tenantJdbc,
-            @Qualifier("eduReportTransactionManager") ObjectProvider<org.springframework.transaction.PlatformTransactionManager> reportManager) {
-        this.reportJdbc=reportJdbc; this.permissions=permissions; this.tenantJdbc=tenantJdbc;
-        org.springframework.transaction.PlatformTransactionManager manager=reportManager.getIfAvailable();
-        this.reportTransaction=manager==null?null:new TransactionTemplate(manager);
+    public ExecutiveAnalyticsService(@Qualifier("eduReportDataSource") ObjectProvider<DataSource> reportDataSource,
+            PermissionEvaluatorService permissions, @Qualifier("jdbcTemplate") JdbcTemplate tenantJdbc) {
+        this.reportDataSource=reportDataSource; this.permissions=permissions; this.tenantJdbc=tenantJdbc;
+        DataSource reportDs=reportDataSource.getIfAvailable();
+        this.reportTransaction=reportDs==null?null:new TransactionTemplate(new DataSourceTransactionManager(reportDs));
         if(this.reportTransaction!=null) this.reportTransaction.setReadOnly(true);
     }
     public Map<String,Object> dashboard(UUID tenant,TenantPrincipal p,UUID institution,LocalDate from,LocalDate to) {
         ScopeType active=TenantContext.currentActiveScopeType();
         permissions.authorize(new RbacPrincipal(tenant,p.userAccountId()),"REPORTS_VIEW",
                 active==ScopeType.TENANT?RbacScope.tenant():RbacScope.institution(institution),RbacTarget.NONE);
-        JdbcTemplate db=reportJdbc.getIfAvailable();
+        DataSource reportDs=reportDataSource.getIfAvailable();
+        JdbcTemplate db=reportDs==null?null:new JdbcTemplate(reportDs);
         if(db==null || reportTransaction==null) throw new BusinessRuleViolationException("REPORTING_CONNECTION_UNAVAILABLE","The dedicated read-only edu_report connection is not configured.");
         LocalDate end=to==null?LocalDate.now():to, start=from==null?end.minusDays(29):from;
         if(start.isAfter(end)||start.isBefore(end.minusYears(2))) throw new BusinessRuleViolationException("INVALID_REPORT_RANGE","Report range must be ordered and no longer than two years.");
