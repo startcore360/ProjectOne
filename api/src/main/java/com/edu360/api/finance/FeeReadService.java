@@ -91,7 +91,7 @@ public class FeeReadService {
                     "studentProfileId", rs.getObject("student_profile_id", UUID.class));
             });
         if (account == null) throw new ResourceNotFoundException("Student fee account not found.");
-        authorize(actor, tenantId, (UUID) account.get("institutionId"));
+        authorizeFeeAccount(actor, tenantId, (UUID) account.get("institutionId"), (UUID) account.get("studentProfileId"));
 
         List<Map<String, Object>> entries = jdbc.queryForList("""
             SELECT ledger_entry_id AS "ledgerEntryId", posting_date AS "postingDate",
@@ -117,15 +117,16 @@ public class FeeReadService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listInvoices(UUID tenantId, TenantPrincipal actor, UUID accountId) {
         Map<String, Object> account = jdbc.query("""
-            SELECT sp.institution_id
+            SELECT sp.institution_id, sp.student_profile_id
               FROM app.student_fee_account sfa
               JOIN app.student_profile sp
                 ON sp.tenant_id=sfa.tenant_id AND sp.student_profile_id=sfa.student_profile_id
              WHERE sfa.tenant_id=:tenantId AND sfa.student_fee_account_id=:accountId
             """, Map.of("tenantId", tenantId, "accountId", accountId), rs ->
-                rs.next() ? Map.of("institutionId", rs.getObject(1, UUID.class)) : null);
+                rs.next() ? Map.of("institutionId", rs.getObject("institution_id", UUID.class),
+                        "studentProfileId", rs.getObject("student_profile_id", UUID.class)) : null);
         if (account == null) throw new ResourceNotFoundException("Student fee account not found.");
-        authorize(actor, tenantId, (UUID) account.get("institutionId"));
+        authorizeFeeAccount(actor, tenantId, (UUID) account.get("institutionId"), (UUID) account.get("studentProfileId"));
         return jdbc.queryForList("""
             SELECT invoice_id AS "invoiceId", student_profile_id AS "studentProfileId",
                    installment_no AS "installmentNumber", due_date AS "dueDate",
@@ -137,6 +138,32 @@ public class FeeReadService {
              WHERE tenant_id=:tenantId AND student_fee_account_id=:accountId
              ORDER BY due_date, installment_no
             """, Map.of("tenantId", tenantId, "accountId", accountId));
+    }
+
+    private void authorizeFeeAccount(TenantPrincipal actor, UUID tenantId,
+            UUID institutionId, UUID studentProfileId) {
+        Boolean owner = jdbc.queryForObject("""
+            SELECT EXISTS (
+                SELECT 1 FROM app.student_profile sp
+                 WHERE sp.tenant_id=:tenantId
+                   AND sp.student_profile_id=:studentProfileId
+                   AND sp.user_account_id=:actorId
+                UNION ALL
+                SELECT 1 FROM app.student_guardian_link sgl
+                JOIN app.guardian_profile gp
+                  ON gp.tenant_id=sgl.tenant_id AND gp.guardian_profile_id=sgl.guardian_profile_id
+                 WHERE sgl.tenant_id=:tenantId
+                   AND sgl.student_profile_id=:studentProfileId
+                   AND sgl.status='ACTIVE' AND sgl.is_primary=true
+                   AND gp.user_account_id=:actorId
+            )
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("studentProfileId", studentProfileId)
+                    .addValue("actorId", actor.userAccountId()), Boolean.class);
+        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
+                Boolean.TRUE.equals(owner) ? "FEE_VIEW_OWN" : "LEDGER_VIEW",
+                institutionId == null ? RbacScope.tenant() : RbacScope.institution(institutionId),
+                RbacTarget.NONE);
     }
 
     private void authorize(TenantPrincipal actor, UUID tenantId, UUID institutionId) {
