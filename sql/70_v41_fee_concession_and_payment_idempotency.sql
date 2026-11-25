@@ -134,6 +134,38 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_gateway_event_provider_event
 CREATE UNIQUE INDEX IF NOT EXISTS uq_gateway_order_provider_order
     ON app.gateway_order (tenant_id, provider, provider_order_id);
 
+-- Payment idempotency and single-settlement invariants.
+DO $
+BEGIN
+    IF EXISTS (SELECT 1 FROM app.payment GROUP BY tenant_id, request_key HAVING COUNT(*) > 1)
+       OR EXISTS (SELECT 1 FROM app.payment_intent_item
+                   GROUP BY tenant_id, payment_id, student_installment_id HAVING COUNT(*) > 1)
+       OR EXISTS (SELECT 1 FROM app.payment_allocation
+                   GROUP BY tenant_id, student_installment_id HAVING COUNT(*) > 1)
+       OR EXISTS (SELECT 1 FROM app.receipt GROUP BY tenant_id, payment_id HAVING COUNT(*) > 1)
+       OR EXISTS (SELECT 1 FROM app.gateway_transaction
+                   GROUP BY tenant_id, gateway_order_id, provider_payment_id HAVING COUNT(*) > 1)
+       OR EXISTS (SELECT 1 FROM app.ledger_entry
+                   WHERE entry_type='PAYMENT' AND payment_id IS NOT NULL
+                   GROUP BY tenant_id, payment_id, academic_session_id HAVING COUNT(*) > 1) THEN
+        RAISE EXCEPTION 'DUPLICATE_PAYMENT_RECORDS: reconcile existing payment/receipt allocations before T8 idempotency indexes';
+    END IF;
+END $;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_request_key
+    ON app.payment (tenant_id, request_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_intent_item_installment
+    ON app.payment_intent_item (tenant_id, payment_id, student_installment_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_allocation_installment
+    ON app.payment_allocation (tenant_id, student_installment_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_receipt_payment
+    ON app.receipt (tenant_id, payment_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gateway_transaction_provider_payment
+    ON app.gateway_transaction (tenant_id, gateway_order_id, provider_payment_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ledger_payment_session
+    ON app.ledger_entry (tenant_id, payment_id, academic_session_id)
+ WHERE entry_type='PAYMENT' AND payment_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS ix_payment_account_status_created
     ON app.payment (tenant_id, student_fee_account_id, status, created_at DESC);
 
