@@ -299,8 +299,11 @@ public class OnlinePaymentCheckoutService {
         }
         LinkedMultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("mode", "payment");
-        form.add("success_url", stripeSuccessUrl.replace("{tenantId}", tenantId.toString()));
+        String successUrl = stripeSuccessUrl.replace("{tenantId}", tenantId.toString());
+        successUrl += (successUrl.contains("?") ? "&" : "?") + "paymentId=" + paymentId;
+        form.add("success_url", successUrl);
         form.add("cancel_url", stripeCancelUrl.replace("{tenantId}", tenantId.toString()));
+        form.add("client_reference_id", paymentId.toString());
         form.add("line_items[0][price_data][currency]", "inr");
         form.add("line_items[0][price_data][unit_amount]", amount.movePointRight(2).intValueExact() + "");
         form.add("line_items[0][price_data][product_data][name]", "EDU 360 student fee");
