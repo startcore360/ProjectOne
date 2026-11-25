@@ -1868,3 +1868,26 @@ html[data-theme="dark"] .landing-page .landing-brand__tagline { color:#b7c9bd; }
 @media(prefers-reduced-motion:reduce) {
  .landing-page .landing-screenshot-frame { transform:none; }
 }
+
+
+/* Distinct non-image operations visual so the platform screenshot is not reused. */
+.landing-page .landing-ops-preview {
+  display:grid; align-content:center; gap:12px; padding:clamp(18px,3vw,30px);
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-divider);
+  border-radius:var(--radius-lg); color:var(--color-text);
+}
+.landing-page .landing-ops-preview__head { display:grid; gap:8px; padding-bottom:12px; border-bottom:1px solid var(--color-border-divider); }
+.landing-page .landing-ops-preview__head span { color:var(--color-text-muted); font-size:8px; font-weight:800; letter-spacing:.12em; }
+.landing-page .landing-ops-preview__head b { color:var(--color-text); font-size:18px; letter-spacing:-.03em; }
+.landing-page .landing-ops-preview__item { display:grid; grid-template-columns:30px minmax(0,1fr) auto; align-items:center; gap:11px; padding:12px; border:1px solid var(--color-border-divider); border-radius:11px; background:var(--color-bg-surface); }
+.landing-page .landing-ops-preview__item > i { display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:var(--color-bg-brand-soft); color:var(--color-text-brand); font-size:9px; font-style:normal; font-weight:800; }
+.landing-page .landing-ops-preview__item > span { display:grid; gap:4px; }
+.landing-page .landing-ops-preview__item b { color:var(--color-text); font-size:11px; }
+.landing-page .landing-ops-preview__item small { color:var(--color-text-muted); font-size:9px; }
+.landing-page .landing-ops-preview__item em { color:var(--color-text-brand); font-size:8px; font-style:normal; font-weight:700; }
+.landing-page .landing-ops-preview__caption { color:var(--color-text-muted); font-size:8px; line-height:1.5; }
+.landing-page .landing-role-ui__stats--four { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.landing-page .landing-video-thumb__fallback { display:grid; place-items:center; min-height:115px; width:100%; background:var(--color-bg-subtle); color:var(--color-text-brand); font-size:18px; font-weight:800; letter-spacing:.08em; }
+@media(max-width:680px) {
+ .landing-page .landing-role-ui__stats--four { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
