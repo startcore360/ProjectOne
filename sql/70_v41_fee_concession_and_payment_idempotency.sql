@@ -137,7 +137,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_gateway_order_provider_order
 CREATE INDEX IF NOT EXISTS ix_payment_account_status_created
     ON app.payment (tenant_id, student_fee_account_id, status, created_at DESC);
 
--- PO-T03 supersedes the earlier OD-28 draft modes.
+-- PO-T03 supersedes the earlier OD-28 draft modes. Do not silently reinterpret existing
+-- FLAT / PERCENT_OF_DUE / PER_DAY rules: require an explicit data migration if any exist.
+DO $
+BEGIN
+    IF EXISTS (SELECT 1 FROM app.late_fee_rule
+                WHERE calculation_mode NOT IN ('FLAT_DAILY','PERCENTAGE_MONTHLY','NONE')) THEN
+        RAISE EXCEPTION 'PO-T03_MODE_MIGRATION_REQUIRED: map existing OD-28 late-fee rules explicitly before applying migration 70';
+    END IF;
+END $;
 ALTER TABLE app.late_fee_rule DROP CONSTRAINT IF EXISTS ck_late_fee_rule_calculation_mode;
 ALTER TABLE app.late_fee_rule
     ADD CONSTRAINT ck_late_fee_rule_calculation_mode
@@ -205,6 +213,7 @@ CREATE TRIGGER trg_concession_guard
 
 GRANT EXECUTE ON FUNCTION app.fn_concession_guard() TO edu_app;
 
+COMMENT ON TABLE app.late_fee_rule IS 'PO-T03: configurable FLAT_DAILY, PERCENTAGE_MONTHLY or NONE late-fee rule with grace period and cap.';
 COMMENT ON FUNCTION app.fn_concession_guard() IS
     'T8 / PO-T04 / TPA-04: immutable concession request; exactly one matching ledger credit before APPLIED; no ledger movement on REJECTED.';
 COMMENT ON INDEX app.uq_ledger_entry_concession_once IS
