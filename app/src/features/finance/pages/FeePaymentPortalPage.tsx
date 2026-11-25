@@ -27,14 +27,10 @@ export default function FeePaymentPortalPage() {
   const [receipt, setReceipt] = useState<FeeReceiptDetails | null>(null);
   const [receiptPaymentId, setReceiptPaymentId] = useState(() => new URLSearchParams(window.location.search).get("paymentId") || "");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(() => new URLSearchParams(window.location.search).get("checkout") === "success"
+    ? "Stripe checkout returned. Payment status is pending until the signed provider webhook is reconciled."
+    : "");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("checkout") === "success") {
-      setNotice("Stripe checkout returned. Payment status is pending until the signed provider webhook is reconciled.");
-    }
-  }, []);
 
   const loadInvoices = useCallback(async () => {
     if (!tenantId || !accountId) return;
