@@ -143,6 +143,8 @@ public class PaymentReconciliationService {
         }
         if (!inserted) return new WebhookResult("IGNORED_DUPLICATE", paymentId, null);
         if (order == null || paymentId == null || providerPaymentId == null) {
+            createReconciliationCase(tenantId, institutionId, paymentId, eventRowId,
+                    "UNMATCHED_EVENT", systemActorId);
             finishEvent(tenantId, eventRowId, institutionId, null, null, "UNMATCHED", systemActorId);
             return new WebhookResult("UNMATCHED", paymentId, null);
         }
@@ -154,15 +156,31 @@ public class PaymentReconciliationService {
         if (successful) {
             BigDecimal capturedAmount = BigDecimal.valueOf(amountMinor, 2);
             if (!"INR".equalsIgnoreCase(currency) || capturedAmount.compareTo(orderAmount) != 0) {
+                createReconciliationCase(tenantId, institutionId, paymentId, eventRowId,
+                        "AMOUNT_MISMATCH", systemActorId);
                 outcome = "UNMATCHED";
             } else {
                 transactionId = settlePayment(tenantId, institutionId, paymentId, gatewayOrderId,
                         normalizedProvider, providerPaymentId, capturedAmount, systemActorId);
-                outcome = transactionId == null ? "NO_CHANGE" : "APPLIED";
+                if (transactionId == null) {
+                    String localStatus = findPaymentStatus(tenantId, paymentId);
+                    String caseType = "PAID".equals(localStatus) ? "DUPLICATE_CAPTURE"
+                            : "PENDING".equals(localStatus) ? "AMOUNT_MISMATCH" : "STATUS_DIFFERENCE";
+                    createReconciliationCase(tenantId, institutionId, paymentId, eventRowId,
+                            caseType, systemActorId);
+                    outcome = "UNMATCHED";
+                } else {
+                    outcome = "APPLIED";
+                }
             }
         } else if (failed) {
-            outcome = markPaymentFailed(tenantId, paymentId, gatewayOrderId, institutionId,
-                    normalizedProvider, providerPaymentId, orderAmount, systemActorId) ? "APPLIED" : "NO_CHANGE";
+            boolean changed = markPaymentFailed(tenantId, paymentId, gatewayOrderId, institutionId,
+                    normalizedProvider, providerPaymentId, orderAmount, systemActorId);
+            if (!changed) {
+                createReconciliationCase(tenantId, institutionId, paymentId, eventRowId,
+                        "STATUS_DIFFERENCE", systemActorId);
+            }
+            outcome = changed ? "APPLIED" : "NO_CHANGE";
         }
         finishEvent(tenantId, eventRowId, institutionId, gatewayOrderId, transactionId, outcome, systemActorId);
         return new WebhookResult(outcome, paymentId, transactionId);
@@ -387,6 +405,34 @@ public class PaymentReconciliationService {
         if (actor == null) throw new BusinessRuleViolationException("SYSTEM_ACTOR_MISSING",
                 "No active SYSTEM actor is provisioned for webhook processing.");
         return actor;
+    }
+
+    private String findPaymentStatus(UUID tenantId, UUID paymentId) {
+        return jdbc.query("""
+            SELECT status FROM app.payment
+             WHERE tenant_id=:tenantId AND payment_id=:paymentId
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId).addValue("paymentId", paymentId),
+                rs -> rs.next() ? rs.getString(1) : null);
+    }
+
+    private void createReconciliationCase(UUID tenantId, UUID institutionId, UUID paymentId,
+            UUID eventId, String caseType, UUID actorId) {
+        if (institutionId == null || eventId == null) return;
+        jdbc.update("""
+            INSERT INTO app.reconciliation_case
+              (tenant_id, reconciliation_case_id, institution_id, case_type, payment_id,
+               payment_gateway_event_id, status, created_by, updated_by)
+            SELECT :tenantId, :caseId, :institutionId, :caseType, :paymentId,
+                   :eventId, 'OPEN', :actorId, :actorId
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM app.reconciliation_case
+                  WHERE tenant_id=:tenantId AND payment_gateway_event_id=:eventId
+                    AND case_type=:caseType AND status IN ('OPEN', 'ESCALATED')
+             )
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("caseId", UUID.randomUUID()).addValue("institutionId", institutionId)
+                    .addValue("caseType", caseType).addValue("paymentId", paymentId)
+                    .addValue("eventId", eventId).addValue("actorId", actorId));
     }
 
     private String readInstallmentStatus(UUID tenantId, UUID installmentId) {
