@@ -106,15 +106,23 @@ public class FeeAssignmentService {
                         .addValue("accountId", UUID.randomUUID()).addValue("studentProfileId", studentProfileId)
                         .addValue("actorId", actor.userAccountId()));
 
-            UUID accountId = jdbc.query("""
-                SELECT student_fee_account_id
+            Map<String, Object> account = jdbc.query("""
+                SELECT student_fee_account_id, status
                   FROM app.student_fee_account
                  WHERE tenant_id=:tenantId AND student_profile_id=:studentProfileId
                  FOR UPDATE
                 """, new MapSqlParameterSource().addValue("tenantId", tenantId)
-                        .addValue("studentProfileId", studentProfileId),
-                    rs -> rs.next() ? rs.getObject(1, UUID.class) : null);
-            if (accountId == null) throw new IllegalStateException("Student fee account could not be created.");
+                        .addValue("studentProfileId", studentProfileId), rs -> {
+                    if (!rs.next()) return null;
+                    return Map.of("accountId", rs.getObject("student_fee_account_id", UUID.class),
+                            "status", rs.getString("status"));
+                });
+            if (account == null) throw new IllegalStateException("Student fee account could not be created.");
+            if (!"ACTIVE".equals(account.get("status"))) {
+                throw new BusinessRuleViolationException("STUDENT_FEE_ACCOUNT_CLOSED",
+                        "A closed student fee account cannot receive a new fee assignment.");
+            }
+            UUID accountId = (UUID) account.get("accountId");
 
             int assignmentInsert = jdbc.update("""
                 INSERT INTO app.fee_assignment
@@ -133,29 +141,35 @@ public class FeeAssignmentService {
                         .addValue("actorId", actor.userAccountId()));
             if (assignmentInsert == 1) assigned++;
 
-            UUID assignmentId = jdbc.query("""
-                SELECT fee_assignment_id
+            Map<String, Object> assignment = jdbc.query("""
+                SELECT fee_assignment_id, proration_factor
                   FROM app.fee_assignment
                  WHERE tenant_id=:tenantId AND enrollment_id=:enrollmentId
                    AND fee_structure_id=:structureId AND status='ACTIVE'
                 """, new MapSqlParameterSource().addValue("tenantId", tenantId)
-                        .addValue("enrollmentId", enrollmentId).addValue("structureId", feeStructureId),
-                    rs -> rs.next() ? rs.getObject(1, UUID.class) : null);
-            if (assignmentId == null) throw new IllegalStateException("Fee assignment could not be resolved.");
+                        .addValue("enrollmentId", enrollmentId).addValue("structureId", feeStructureId), rs -> {
+                    if (!rs.next()) return null;
+                    return Map.of("assignmentId", rs.getObject("fee_assignment_id", UUID.class),
+                            "prorationFactor", rs.getBigDecimal("proration_factor"));
+                });
+            if (assignment == null) throw new IllegalStateException("Fee assignment could not be resolved.");
+            UUID assignmentId = (UUID) assignment.get("assignmentId");
 
             invoices += jdbc.update("""
                 INSERT INTO app.student_installment
                     (tenant_id, student_installment_id, institution_id, student_fee_account_id,
                      fee_assignment_id, installment_no, due_date, billed_amount, status, created_by, updated_by)
                 SELECT :tenantId, gen_random_uuid(), :institutionId, :accountId,
-                       :assignmentId, t.installment_no, t.due_date, t.amount, 'UNPAID', :actorId, :actorId
+                       :assignmentId, t.installment_no, t.due_date,
+                       ROUND(t.amount * :prorationFactor, 2), 'UNPAID', :actorId, :actorId
                   FROM app.fee_structure_installment t
                  WHERE t.tenant_id=:tenantId AND t.fee_structure_id=:structureId
                 ON CONFLICT (tenant_id, fee_assignment_id, installment_no) DO NOTHING
                 """, new MapSqlParameterSource().addValue("tenantId", tenantId)
                         .addValue("institutionId", institutionId).addValue("accountId", accountId)
-                        .addValue("assignmentId", assignmentId).addValue("actorId", actor.userAccountId())
-                        .addValue("structureId", feeStructureId));
+                        .addValue("assignmentId", assignmentId)
+                        .addValue("prorationFactor", assignment.get("prorationFactor"))
+                        .addValue("actorId", actor.userAccountId()).addValue("structureId", feeStructureId));
         }
 
         audit.record(AuditEventType.CREATE, null, actor.userAccountId().toString(), tenantId.toString(),
