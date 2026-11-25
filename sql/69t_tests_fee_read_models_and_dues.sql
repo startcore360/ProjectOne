@@ -12,7 +12,7 @@ BEGIN
         RAISE EXCEPTION 'T8-DB-03: parallel invoice/payment source tables must not be created';
     END IF;
     SELECT pg_get_viewdef('app.v_student_dues_flag'::regclass, true) INTO v_def;
-    IF position('signed_balance' IN v_def) = 0 OR position('> 0' IN v_def) = 0 THEN
+    IF position('signed_balance' IN v_def) = 0 OR position('>' IN v_def) = 0 THEN
         RAISE EXCEPTION 'T8-DB-04: dues flag must reflect positive outstanding balance';
     END IF;
     SELECT pg_get_functiondef('app.fn_allocation_guard()'::regprocedure) INTO v_def;
