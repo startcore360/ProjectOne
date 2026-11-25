@@ -16,4 +16,5 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='app.grievance_action'::regclass AND tgname='trg_append_only' AND NOT tgisinternal) THEN RAISE EXCEPTION 'T9_DB_72 grievance action ledger is not append-only'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_evidence' AND policyname='p_grievance_confidentiality' AND permissive='RESTRICTIVE' AND cmd='SELECT') THEN RAISE EXCEPTION 'T9_DB_72 evidence confidentiality policy missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_action' AND policyname='p_grievance_confidentiality' AND permissive='RESTRICTIVE' AND cmd='SELECT') THEN RAISE EXCEPTION 'T9_DB_72 action confidentiality policy missing'; END IF;
+ IF app.fn_complaint_guard('00000000-0000-0000-0000-000000000001'::uuid,'00000000-0000-0000-0000-000000000002'::uuid,'00000000-0000-0000-0000-000000000003'::uuid) THEN RAISE EXCEPTION 'T9_DB_72 predicate must deny when tenant/user GUCs are absent'; END IF;
 END $$;
