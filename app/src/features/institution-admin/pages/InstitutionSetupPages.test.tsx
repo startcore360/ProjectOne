@@ -22,6 +22,10 @@ import {
 } from "./InstitutionSetupPages";
 
 vi.mock("../../../services/axios", () => ({
+  SUPPORT_SESSION_TOKEN_KEY: "test.support.token",
+  SUPPORT_SESSION_EXPIRY_KEY: "test.support.expiry",
+  SUPPORT_SESSION_TICKET_KEY: "test.support.ticket",
+  SUPPORT_SESSION_PLATFORM_ORIGIN_KEY: "test.support.origin",
   default: { put: vi.fn(), get: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
 
