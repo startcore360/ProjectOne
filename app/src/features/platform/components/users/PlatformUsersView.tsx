@@ -128,6 +128,7 @@ export function PlatformUsersView() {
   const [mfaTarget, setMfaTarget] = useState<PlatformUserItem | null>(null);
   const [mfaBusy, setMfaBusy] = useState(false);
   const [mfaError, setMfaError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const resetMfa = async (reason: string) => {
     if (!mfaTarget) return;
@@ -221,10 +222,9 @@ export function PlatformUsersView() {
     setUnlockBusy(true);
     try {
       await platformUserService.unlockPlatformUser(unlockTarget.platformUserId);
-      toast.success(
-        "Account unlocked",
-        `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`
-      );
+      const msg = `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`;
+      setNotice(msg);
+      toast.success("Account unlocked", msg);
       setUnlockTarget(null);
     } catch (err) {
       toast.error("Unlock failed", readErrorMessage(err, "Could not unlock this account."));
@@ -274,6 +274,11 @@ export function PlatformUsersView() {
           </Button>
         }
       />
+      {notice && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <Notice tone="success" onDismiss={() => setNotice("")}>{notice}</Notice>
+        </div>
+      )}
       <CreatedCredentialsModal
         isOpen={!!createdUser}
         onClose={() => setCreatedUser(null)}

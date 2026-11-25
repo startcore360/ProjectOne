@@ -53,7 +53,9 @@ function saveLoginDraft(draft: Partial<LoginDraft>) {
 function clearLoginDraft() {
   try {
     sessionStorage.removeItem(LOGIN_DRAFT_KEY);
-  } catch {}
+  } catch {
+    // ignore sessionStorage access errors
+  }
 }
 
 // The sign-in screen. Posts straight to this app's own /api/auth/login - Keycloak verifies

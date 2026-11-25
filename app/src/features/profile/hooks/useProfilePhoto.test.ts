@@ -1,7 +1,10 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { InternalAxiosRequestConfig } from "axios";
 import { useProfilePhoto, clearProfilePhotoCache } from "./useProfilePhoto";
 import { profileService } from "../api/profileService";
+
+const mockConfig = {} as unknown as InternalAxiosRequestConfig;
 
 vi.mock("../api/profileService");
 
@@ -18,7 +21,7 @@ describe("useProfilePhoto", () => {
       status: 200,
       statusText: "OK",
       headers: {},
-      config: {} as any,
+      config: mockConfig,
     });
 
     const { result, unmount } = renderHook(() => useProfilePhoto("/me/profile/photo", 0));
@@ -47,8 +50,8 @@ describe("useProfilePhoto", () => {
     const mockBlob2 = new Blob(["photo-v2"], { type: "image/jpeg" });
 
     vi.mocked(profileService.getPhoto)
-      .mockResolvedValueOnce({ data: mockBlob1, status: 200, statusText: "OK", headers: {}, config: {} as any })
-      .mockResolvedValueOnce({ data: mockBlob2, status: 200, statusText: "OK", headers: {}, config: {} as any });
+      .mockResolvedValueOnce({ data: mockBlob1, status: 200, statusText: "OK", headers: {}, config: mockConfig })
+      .mockResolvedValueOnce({ data: mockBlob2, status: 200, statusText: "OK", headers: {}, config: mockConfig });
 
     const { result, rerender } = renderHook(
       ({ rev }: { rev: number }) => useProfilePhoto("/me/profile/photo", rev),

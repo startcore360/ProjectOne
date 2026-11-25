@@ -108,7 +108,6 @@ function getPositionStyles(position: ToastPosition = "top"): CSSProperties {
 
 export default function ToastHost({
   position = "top",
-  popup: _popup = true,
   className = "",
   style,
 }: ToastHostProps = {}) {
