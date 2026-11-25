@@ -1706,3 +1706,33 @@ html[data-theme="dark"] .landing-page .landing-brand__tagline { color:#b7c9bd; }
  :root:not([data-theme="light"]) .landing-page .landing-hero__note { color:#f4faf6; }
  :root:not([data-theme="light"]) .landing-page .landing-hero__eyebrow { color:#f3d39b; }
 }
+
+
+/* Brand-led hero contrast: the hero is a dark green surface in both themes. */
+.landing-page .landing-hero .landing-hero__title { color:#f7fbf8 !important; }
+.landing-page .landing-hero .landing-hero__subtitle { color:rgba(247,251,248,.9) !important; }
+.landing-page .landing-hero .landing-hero__note { color:rgba(247,251,248,.82) !important; }
+.landing-page .landing-hero .landing-hero__proof span { color:#e4f1e8 !important; }
+.landing-brand { flex-wrap:wrap; }
+.landing-brand__tagline { display:block; flex-basis:100%; margin-top:-9px; color:var(--color-text-muted); font-size:9px; font-weight:700; letter-spacing:.04em; }
+.landing-footer .landing-brand__tagline { color:var(--color-text-muted); }
+.landing-why-section { background:var(--color-bg-canvas); }
+.landing-why-layout { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:clamp(36px,7vw,100px); align-items:start; }
+.landing-why-intro { position:sticky; top:110px; }
+.landing-why-intro .landing-section__title { max-width:13ch; }
+.landing-why-intro .landing-section__desc { max-width:48ch; }
+.landing-why-cta { display:inline-flex; align-items:center; margin-top:18px; padding:14px 19px; border-radius:12px; background:var(--color-action-primary); color:var(--color-text-on-brand); text-decoration:none; font-size:12px; font-weight:800; }
+.landing-why-points { display:grid; gap:0; }
+.landing-why-points article { display:grid; grid-template-columns:42px 1fr; gap:16px; padding:22px 0; border-bottom:1px solid var(--color-border-divider); }
+.landing-why-points article:first-child { border-top:1px solid var(--color-border-divider); }
+.landing-why-points article > span { display:grid; place-items:center; width:36px; height:36px; border-radius:11px; background:var(--color-bg-brand-soft); color:var(--color-text-brand); font-size:11px; font-weight:800; }
+.landing-why-points h3 { margin:2px 0 7px; color:var(--color-text); font-size:17px; letter-spacing:-.02em; }
+.landing-why-points p { max-width:58ch; margin:0; color:var(--color-text-muted); font-size:13px; line-height:1.75; }
+[data-theme="dark"] .landing-page .landing-why-points h3 { color:#eff7f1; }
+[data-theme="dark"] .landing-page .landing-why-points p { color:#b8cbbf; }
+[data-theme="dark"] .landing-page .landing-brand__tagline { color:#c5d7cc; }
+@media(max-width:850px) {
+ .landing-why-layout { grid-template-columns:1fr; gap:24px; }
+ .landing-why-intro { position:static; }
+ .landing-why-intro .landing-section__title { max-width:20ch; }
+}
