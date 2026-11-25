@@ -71,7 +71,7 @@ public class T10DomainService {
             jdbc.update("INSERT INTO app.notice_target(id,tenant_id,institution_id,notice_id,target_kind,role_code) VALUES (?,?,?,?,'ROLE',?)",
                 UUID.randomUUID(),tenant,r.institutionId(),id,role);
         }
-        audit.record(AuditEventType.PLAN_CREATED,null,p.userAccountId().toString(),tenant.toString(),"Notice bulletin "+id+" published");
+        audit.record(AuditEventType.CREATE,null,p.userAccountId().toString(),tenant.toString(),"Notice bulletin "+id+" published");
         return Map.of("noticeId",id,"status","PUBLISHED");
     }
     @Transactional
