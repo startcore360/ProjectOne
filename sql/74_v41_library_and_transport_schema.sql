@@ -1,16 +1,16 @@
 -- T10 / Actions 214-228. Configurable institution library policy and transport capacity.
 BEGIN;
-CREATE TABLE IF NOT EXISTS app.library_book (
+CREATE TABLE IF NOT EXISTS app.library_catalog (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
  isbn text, title text NOT NULL, author text, category text,
  total_copies integer NOT NULL DEFAULT 0, available_copies integer NOT NULL DEFAULT 0,
  created_at timestamptz NOT NULL DEFAULT now(),
  CHECK(total_copies>=0 AND available_copies>=0 AND available_copies<=total_copies)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uq_library_isbn ON app.library_book(tenant_id,institution_id,isbn) WHERE isbn IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_library_isbn ON app.library_catalog(tenant_id,institution_id,isbn) WHERE isbn IS NOT NULL;
 CREATE TABLE IF NOT EXISTS app.book_copy (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
- book_id uuid NOT NULL REFERENCES app.library_book(id) ON DELETE RESTRICT,
+ book_id uuid NOT NULL REFERENCES app.library_catalog(id) ON DELETE RESTRICT,
  accession_number text NOT NULL, status text NOT NULL DEFAULT 'AVAILABLE',
  UNIQUE(tenant_id,institution_id,accession_number),
  CHECK(status IN ('AVAILABLE','ISSUED','RESERVED','LOST','WITHDRAWN'))
@@ -57,7 +57,7 @@ END $;
 
 CREATE TABLE IF NOT EXISTS app.book_circulation (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
- book_id uuid NOT NULL REFERENCES app.library_book(id) ON DELETE RESTRICT,
+ book_id uuid NOT NULL REFERENCES app.library_catalog(id) ON DELETE RESTRICT,
  copy_id uuid REFERENCES app.book_copy(id) ON DELETE RESTRICT,
  borrower_user_id uuid NOT NULL, borrower_role text NOT NULL,
  issued_at timestamptz NOT NULL DEFAULT now(), due_date date NOT NULL, returned_at timestamptz,
@@ -74,16 +74,22 @@ CREATE TABLE IF NOT EXISTS app.library_fine (
 );
 CREATE TABLE IF NOT EXISTS app.library_reservation (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
- book_id uuid NOT NULL REFERENCES app.library_book(id) ON DELETE RESTRICT,
+ book_id uuid NOT NULL REFERENCES app.library_catalog(id) ON DELETE RESTRICT,
  borrower_user_id uuid NOT NULL, queue_position bigint NOT NULL,
  status text NOT NULL DEFAULT 'WAITING', created_at timestamptz NOT NULL DEFAULT now(),
  CHECK(status IN ('WAITING','FULFILLED','CANCELLED'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_library_reservation_queue
  ON app.library_reservation(tenant_id,institution_id,book_id,queue_position) WHERE status='WAITING';
+CREATE TABLE IF NOT EXISTS app.vehicle (
+ id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
+ registration_number text NOT NULL, vehicle_type text NOT NULL DEFAULT 'BUS',
+ capacity integer NOT NULL, active boolean NOT NULL DEFAULT true,
+ CHECK(capacity>0), UNIQUE(tenant_id,institution_id,registration_number)
+);
 CREATE TABLE IF NOT EXISTS app.transport_route (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
- route_name text NOT NULL, vehicle_number text NOT NULL, driver_name text NOT NULL,
+ route_name text NOT NULL, vehicle_id uuid REFERENCES app.vehicle(id) ON DELETE RESTRICT, vehicle_number text NOT NULL, driver_name text NOT NULL,
  driver_phone text, total_capacity integer NOT NULL, transport_fee_code text,
  active boolean NOT NULL DEFAULT true, CHECK(total_capacity>0)
 );
@@ -93,6 +99,20 @@ CREATE TABLE IF NOT EXISTS app.route_stop (
  stop_name text NOT NULL, pickup_time time, drop_time time, fee_amount numeric(12,2) NOT NULL DEFAULT 0,
  stop_order integer NOT NULL, CHECK(fee_amount>=0), CHECK(stop_order>=0),
  UNIQUE(tenant_id,route_id,stop_order)
+);
+CREATE TABLE IF NOT EXISTS app.report_definition (
+ id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
+ report_code text NOT NULL, report_name text NOT NULL, active boolean NOT NULL DEFAULT true,
+ UNIQUE(tenant_id,institution_id,report_code)
+);
+CREATE TABLE IF NOT EXISTS app.report_execution (
+ id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
+ report_definition_id uuid REFERENCES app.report_definition(id) ON DELETE RESTRICT,
+ requested_by uuid NOT NULL, from_date date NOT NULL, to_date date NOT NULL,
+ status text NOT NULL DEFAULT 'RUNNING', started_at timestamptz NOT NULL DEFAULT now(),
+ completed_at timestamptz, error_code text,
+ CHECK(status IN ('RUNNING','SUCCEEDED','FAILED')),
+ CHECK(from_date<=to_date)
 );
 CREATE TABLE IF NOT EXISTS app.transport_allocation (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
@@ -135,7 +155,7 @@ GRANT SELECT ON app.v_student_library_dues_flag TO edu_app,edu_report;
 DO $$
 DECLARE t text;
 BEGIN
- FOREACH t IN ARRAY ARRAY['library_book','book_copy','library_fine_policy','book_circulation','library_fine','library_reservation','transport_route','route_stop','transport_allocation'] LOOP
+ FOREACH t IN ARRAY ARRAY['library_catalog','book_copy','library_fine_policy','book_circulation','library_fine','library_reservation','vehicle','transport_route','route_stop','transport_allocation','report_definition','report_execution'] LOOP
   EXECUTE format('ALTER TABLE app.%I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('DROP POLICY IF EXISTS p_tenant ON app.%I',t);
   EXECUTE format('CREATE POLICY p_tenant ON app.%I USING (tenant_id=NULLIF(current_setting(''app.tenant_id'',true),'''')::uuid AND (institution_id IS NULL OR current_setting(''app.institution_scope'',true)=''ALL'' OR institution_id=ANY(string_to_array(NULLIF(current_setting(''app.institution_ids'',true),''''),'','')::uuid[]))) WITH CHECK (tenant_id=NULLIF(current_setting(''app.tenant_id'',true),'''')::uuid AND (institution_id IS NULL OR current_setting(''app.institution_scope'',true)=''ALL'' OR institution_id=ANY(string_to_array(NULLIF(current_setting(''app.institution_ids'',true),''''),'','')::uuid[])))',t);
