@@ -24,8 +24,9 @@ class DispatchProviderTest {
     void httpProviderUsesIdempotencyKeyAndReturnsGatewayMessageId() {
         RestClient.Builder builder=RestClient.builder();
         MockRestServiceServer server=MockRestServiceServer.bindTo(builder).build();
+        RestClient client=builder.build();
         HttpDispatchProvider provider=new HttpDispatchProvider(
-                "", "", "", "", "https://mail-gateway.test/send", "test-token", builder);
+                client,"", "", "", "", "https://mail-gateway.test/send", "test-token");
         UUID dispatch=UUID.randomUUID();
         server.expect(requestTo("https://mail-gateway.test/send"))
                 .andExpect(method(HttpMethod.POST))
