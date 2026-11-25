@@ -7,6 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 /** Dedicated reporting pool. Credentials must authenticate as the PostgreSQL edu_report role. */
 @Configuration
@@ -23,4 +25,8 @@ public class EduReportDataSourceConfig {
  }
  @Bean(name="eduReportJdbcTemplate")
  public JdbcTemplate jdbc(@Qualifier("eduReportDataSource") DataSource ds){return new JdbcTemplate(ds);}
+ @Bean(name="eduReportTransactionManager")
+ public PlatformTransactionManager transactionManager(@Qualifier("eduReportDataSource") DataSource ds) {
+  return new DataSourceTransactionManager(ds);
+ }
 }
