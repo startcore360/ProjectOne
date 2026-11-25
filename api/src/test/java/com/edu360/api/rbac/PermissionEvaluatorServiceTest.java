@@ -249,7 +249,7 @@ class PermissionEvaluatorServiceTest {
                 .roleCode("FINANCE_DIRECTOR")
                 .roleName("Finance Director")
                 .roleOrigin(RoleOrigin.STANDARD)
-                .roleLevel(RoleLevel.TENANT)
+                .roleLevel(RoleLevel.UNIVERSITY)
                 .status(RoleDefinitionStatus.ACTIVE)
                 .build();
         when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
@@ -276,7 +276,7 @@ class PermissionEvaluatorServiceTest {
                 .roleCode("FINANCE_DIRECTOR")
                 .roleName("Finance Director")
                 .roleOrigin(RoleOrigin.STANDARD)
-                .roleLevel(RoleLevel.TENANT)
+                .roleLevel(RoleLevel.UNIVERSITY)
                 .status(RoleDefinitionStatus.ACTIVE)
                 .build();
         when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
