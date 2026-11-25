@@ -104,6 +104,37 @@ public class T10DomainService {
         audit.record(AuditEventType.PLAN_CREATED,null,p.userAccountId().toString(),tenant.toString(),"Communication campaign "+campaign+" queued");
         return Map.of("campaignId",campaign,"status","QUEUED","fallbackOrder",chain);
     }
+    @Transactional
+    public Map<String,Object> recordDispatchOutcome(UUID tenant,TenantPrincipal p,UUID institution,UUID dispatchId,String status,String failureReason,String carrierMessageId) {
+        allow(tenant,p.userAccountId(),"MESSAGE_SEND",institution);
+        if(!Set.of("SENT","DELIVERED","FAILED").contains(Objects.toString(status,"")))
+            throw new BusinessRuleViolationException("INVALID_DISPATCH_STATUS","Outcome must be SENT, DELIVERED or FAILED.");
+        Map<String,Object> row=jdbc.queryForMap("SELECT campaign_id,attempt_order FROM app.message_dispatch WHERE id=? AND tenant_id=? AND institution_id=? AND status='QUEUED' FOR UPDATE",dispatchId,tenant,institution);
+        int changed=jdbc.update("""
+            UPDATE app.message_dispatch SET status=?,failure_reason=?,carrier_message_id=?,
+              sent_at=CASE WHEN ? IN ('SENT','DELIVERED') THEN now() ELSE sent_at END,
+              delivered_at=CASE WHEN ?='DELIVERED' THEN now() ELSE delivered_at END
+            WHERE id=? AND tenant_id=? AND institution_id=? AND status='QUEUED'
+            """,status,failureReason,carrierMessageId,status,status,dispatchId,tenant,institution);
+        if(changed!=1) throw new BusinessRuleViolationException("DISPATCH_NOT_QUEUED","Dispatch is no longer awaiting a delivery outcome.");
+        UUID campaign=(UUID)row.get("campaign_id");
+        UUID next=null;
+        if("FAILED".equals(status)) {
+            List<Map<String,Object>> pending=jdbc.queryForList("""
+                SELECT id FROM app.message_dispatch WHERE tenant_id=? AND campaign_id=? AND status='WAITING'
+                 ORDER BY attempt_order LIMIT 1 FOR UPDATE
+                """,tenant,campaign);
+            if(!pending.isEmpty()) {
+                next=(UUID)pending.get(0).get("id");
+                jdbc.update("UPDATE app.message_dispatch SET status='QUEUED' WHERE id=? AND tenant_id=?",next,tenant);
+            } else jdbc.update("UPDATE app.communication_campaign SET status='FAILED' WHERE id=? AND tenant_id=?",campaign,tenant);
+        } else {
+            jdbc.update("UPDATE app.message_dispatch SET status='CANCELLED' WHERE tenant_id=? AND campaign_id=? AND status='WAITING'",tenant,campaign);
+            jdbc.update("UPDATE app.communication_campaign SET status='SENT' WHERE id=? AND tenant_id=?",campaign,tenant);
+        }
+        return Map.of("campaignId",campaign,"status",status,"nextDispatchId",next==null?"":next.toString());
+    }
+
     @Transactional(readOnly=true)
     public List<Map<String,Object>> dispatchHistory(UUID tenant,TenantPrincipal p,UUID institution) {
         allow(tenant,p.userAccountId(),"DELIVERY_FAILURES_VIEW",institution);
