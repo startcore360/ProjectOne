@@ -158,9 +158,9 @@ public class AssignmentService {
 
     @Transactional
     public Map<String, Object> grade(UUID tenantId, TenantPrincipal teacher, UUID submissionId,
-            BigDecimal marks, String feedback) {
+            BigDecimal marks, String feedback, List<RubricMark> rubricMarks) {
         Map<String, Object> submission = jdbc.queryForMap("""
-                SELECT s.assignment_id, s.late_penalty_marks, a.max_marks, a.institution_id, a.rubric_json, a.teacher_user_id
+                SELECT s.assignment_id, s.late_penalty_marks, a.max_marks, a.institution_id, a.rubric_json::text AS rubric_json, a.teacher_user_id
                   FROM app.assignment_submission s JOIN app.assignment a
                     ON a.tenant_id = s.tenant_id AND a.assignment_id = s.assignment_id
                  WHERE s.tenant_id = ? AND s.submission_id = ?
@@ -174,6 +174,8 @@ public class AssignmentService {
             throw new BusinessRuleViolationException("INVALID_MARKS", "Marks must be between zero and the assignment maximum.");
         }
         BigDecimal finalMarks = marks.subtract((BigDecimal) submission.get("late_penalty_marks")).max(BigDecimal.ZERO);
+        validateAndPersistRubric(tenantId, submissionId, teacher, (String) submission.get("rubric_json"),
+                max, marks, rubricMarks);
         jdbc.update("""
                 UPDATE app.assignment_submission
                    SET marks_awarded = ?, final_marks = ?, feedback = ?, status = 'GRADED',
@@ -186,6 +188,48 @@ public class AssignmentService {
                   FROM app.assignment_submission WHERE tenant_id = ? AND submission_id = ?
                 """, tenantId, submissionId);
     }
+
+    private void validateAndPersistRubric(UUID tenantId, UUID submissionId, TenantPrincipal teacher,
+            String rubricJson, BigDecimal maxMarks, BigDecimal totalMarks, List<RubricMark> scores) {
+        if (scores == null || scores.isEmpty()) {
+            throw new BusinessRuleViolationException("RUBRIC_SCORES_REQUIRED", "Every weighted rubric criterion must be scored.");
+        }
+        try {
+            JsonNode rubric = objectMapper.readTree(rubricJson);
+            Map<String, BigDecimal> maximums = new java.util.LinkedHashMap<>();
+            for (JsonNode item : rubric) {
+                BigDecimal maximum = maxMarks.multiply(item.get("weight").decimalValue())
+                        .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                maximums.put(item.get("criterion").asText(), maximum);
+            }
+            BigDecimal awarded = BigDecimal.ZERO;
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (RubricMark score : scores) {
+                BigDecimal maximum = maximums.get(score.criterion());
+                if (maximum == null || !seen.add(score.criterion()) || score.marksAwarded() == null
+                        || score.marksAwarded().signum() < 0 || score.marksAwarded().compareTo(maximum) > 0) {
+                    throw new BusinessRuleViolationException("INVALID_RUBRIC_SCORE", "Rubric score is missing, duplicated or outside its weighted maximum.");
+                }
+                awarded = awarded.add(score.marksAwarded());
+            }
+            if (seen.size() != maximums.size() || awarded.compareTo(totalMarks) != 0) {
+                throw new BusinessRuleViolationException("RUBRIC_TOTAL_MISMATCH", "Rubric scores must cover every criterion and sum to the total marks awarded.");
+            }
+            for (RubricMark score : scores) {
+                jdbc.update("""
+                        INSERT INTO app.submission_grade
+                        (tenant_id, submission_grade_id, submission_id, rubric_item_key, marks_awarded,
+                         comments, graded_by_user_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, tenantId, UUID.randomUUID(), submissionId, score.criterion(),
+                        score.marksAwarded(), score.comments(), teacher.userAccountId());
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+            throw new BusinessRuleViolationException("INVALID_ASSIGNMENT_RUBRIC", "Stored assignment rubric is invalid.");
+        }
+    }
+
+    public record RubricMark(String criterion, BigDecimal marksAwarded, String comments) {}
 
     private void validateRubric(String rubric) {
         try {
