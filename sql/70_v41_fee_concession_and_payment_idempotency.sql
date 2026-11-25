@@ -62,7 +62,7 @@ SELECT rd.tenant_id, gen_random_uuid(), rd.role_definition_id, 'CONCESSION_APPRO
    );
 
 UPDATE ref.approval_chain_step
-   SET approver_rule = 'Management / Trustees first; if no Management assignment, Principal or designated financial approver through V4-PD-01 roll-down (PO-T04)',
+   SET approver_rule = 'Management first; if absent, active Governing Body Approver (Trustees); otherwise Principal or designated financial approver through V4-PD-01 roll-down (PO-T04)',
        skip_if_role_absent = false
  WHERE process_code='CONCESSION' AND step_no=1 AND action_code='CONCESSION_APPROVE';
 
