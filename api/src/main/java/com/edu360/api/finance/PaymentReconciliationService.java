@@ -132,7 +132,8 @@ public class PaymentReconciliationService {
                     .addValue("providerEventId", eventId).addValue("eventType", eventType)
                     .addValue("verified", signatureValid).addValue("payload", safePayload)
                     .addValue("outcome", signatureValid ? "NO_CHANGE" : "REJECTED_SIGNATURE")
-                    .addValue("actorId", systemActorId), rs -> rs.next());
+                    .addValue("actorId", systemActorId),
+                    (org.springframework.jdbc.core.ResultSetExtractor<Boolean>) rs -> rs.next());
         if (!signatureValid) {
             if (inserted) {
                 finishEvent(tenantId, eventRowId, institutionId, null, null, "REJECTED_SIGNATURE", systemActorId);
