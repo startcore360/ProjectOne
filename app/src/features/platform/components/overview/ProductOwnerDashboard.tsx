@@ -44,9 +44,8 @@ function useSource<T>(permitted: boolean, refreshKey: number, scope: string, fet
       Promise.resolve().then(() => { if (active) { setLoad({ state: "denied" }); setFetching(false); } });
       return () => { active = false; };
     }
-    setFetching(true);
     Promise.resolve()
-      .then(() => { if (active) setLoad((old) => (old.state === "ok" ? old : { state: "loading" })); })
+      .then(() => { if (active) { setFetching(true); setLoad((old) => (old.state === "ok" ? old : { state: "loading" })); } })
       .then(() => fetcherRef.current())
       .then(
         (data) => { if (active) { setLoad({ state: "ok", data }); setFetching(false); } },
