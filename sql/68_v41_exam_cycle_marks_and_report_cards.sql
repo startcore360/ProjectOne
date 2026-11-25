@@ -283,7 +283,8 @@ $$;
 CREATE OR REPLACE FUNCTION app.fn_report_card_publish_guard()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-    IF NEW.status = 'PUBLISHED' AND OLD.status IS DISTINCT FROM 'PUBLISHED' THEN
+    IF NEW.status = 'PUBLISHED'
+       AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'PUBLISHED') THEN
         PERFORM app.fn_publish_gate(NEW.tenant_id, NEW.report_card_id);
         NEW.published_at := now();
     ELSIF NEW.status <> 'PUBLISHED' THEN
@@ -293,7 +294,7 @@ BEGIN
 END;
 $$;
 CREATE TRIGGER trg_report_card_publish_gate
-    BEFORE UPDATE OF status ON app.report_card
+    BEFORE INSERT OR UPDATE OF status ON app.report_card
     FOR EACH ROW EXECUTE FUNCTION app.fn_report_card_publish_guard();
 
 DO $$
