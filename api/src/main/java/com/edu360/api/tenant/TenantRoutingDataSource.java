@@ -216,6 +216,8 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
     private void resetTenantGucs(Connection connection) throws SQLException {
         if (connection.isClosed()) return;
+        String dbProductName = connection.getMetaData().getDatabaseProductName();
+        if (dbProductName == null || !dbProductName.toLowerCase().contains("postgresql")) return;
         try (Statement statement = connection.createStatement()) {
             statement.execute("RESET app.tenant_id");
             statement.execute("RESET app.institution_id");
