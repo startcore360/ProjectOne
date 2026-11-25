@@ -188,7 +188,12 @@ const FALLBACK_MODULES: PublicCatalogModuleItem[] = [
   { moduleCode: "GOVERNANCE", itemName: "Reports & governance", description: null },
 ];
 
-const FALLBACK_TESTIMONIALS: LandingTestimonialItem[] = [];
+const FALLBACK_TESTIMONIALS: LandingTestimonialItem[] = [
+  { testimonialId: "workflow-academics", kind: "TEXT", authorName: "Academic operations", authorRole: "Workflow spotlight", institutionName: "EDU 360 capability", quoteText: "Bring academic administration, attendance, examinations and schedules into a coordinated institutional workflow.", videoUrl: null, videoMediaId: null, posterMediaId: null, displayOrder: 0, published: true, rowVersion: 1 },
+  { testimonialId: "workflow-governance", kind: "TEXT", authorName: "Institutional governance", authorRole: "Workflow spotlight", institutionName: "EDU 360 capability", quoteText: "Give leadership structured oversight with role-scoped access, approvals and institution-wide reporting.", videoUrl: null, videoMediaId: null, posterMediaId: null, displayOrder: 1, published: true, rowVersion: 1 },
+  { testimonialId: "workflow-finance", kind: "TEXT", authorName: "Finance & fees", authorRole: "Workflow spotlight", institutionName: "EDU 360 capability", quoteText: "Connect fee administration and finance workflows with the wider operational picture of your institution.", videoUrl: null, videoMediaId: null, posterMediaId: null, displayOrder: 2, published: true, rowVersion: 1 },
+  { testimonialId: "workflow-families", kind: "TEXT", authorName: "Family communication", authorRole: "Workflow spotlight", institutionName: "EDU 360 capability", quoteText: "Keep families and stakeholders informed with more coordinated communication and access to important updates.", videoUrl: null, videoMediaId: null, posterMediaId: null, displayOrder: 3, published: true, rowVersion: 1 },
+];
 
 const VALID_ICONS = new Set<IconName>([
   "grid",
@@ -734,15 +739,15 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
         </section>
 
         {/* Published testimonials only: never display invented social proof. */}
-        {testimonials.length > 0 && (
         <section className="landing-section" id="stories">
           <div className="landing-wrap">
             <div className="landing-section__head">
-              <Kicker>VOICES FROM THE COMMUNITY</Kicker>
-              <h2 className="landing-section__title">Real experiences. Shared in their own words.</h2>
+              <Kicker>{landingData?.testimonials?.length ? "VOICES FROM THE COMMUNITY" : "EXPLORE THE WORKFLOWS"}</Kicker>
+              <h2 className="landing-section__title">{landingData?.testimonials?.length ? "Real experiences. Shared in their own words." : "Connected workflows, from one institutional workspace."}</h2>
               <p className="landing-section__desc">
-                Hear from institution leaders, educators, and families. Platform administrators can
-                publish video stories and written feedback directly from the Platform Console.
+                {landingData?.testimonials?.length
+                  ? "Hear from institution leaders, educators, and families. Platform administrators can publish video stories and written feedback directly from the Platform Console."
+                  : "Explore how EDU 360 connects the everyday work across academics, governance, finance and family communication. Published community stories appear here when available."}
               </p>
             </div>
 
@@ -782,7 +787,7 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                             </button>
                           </div>
                         )}
-                        <p className="landing-quote-card__text">“{item.quoteText}”</p>
+                        <p className="landing-quote-card__text">{testimonials.length > 0 ? "“" + item.quoteText + "”" : item.quoteText}</p>
                       </div>
                       <div className="landing-quote-card__foot">
                         <div className="landing-quote-card__avatar" aria-hidden="true">
@@ -840,7 +845,6 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
             </div>
           </div>
         </section>
-        )}
 
         {/* Quotation Estimation Request */}
         <section className="landing-section landing-section--soft" id="quotation">
