@@ -58,19 +58,25 @@ public class T10DomainService {
                 ?"NOTICE_PUBLISH_CLASS_DEPT":"NOTICE_PUBLISH_INSTITUTION";
         allow(tenant,p.userAccountId(),action,r.institutionId());
         UUID id=UUID.randomUUID();
+        String targetRolesJson;
+        try {
+            targetRolesJson=new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(r.targetRoles()==null?List.of():r.targetRoles());
+        } catch(Exception e) {
+            throw new IllegalArgumentException(e);
+        }
         jdbc.update("""
           INSERT INTO app.notice_bulletin(id,tenant_id,institution_id,title,body,target_roles_json,is_urgent,requires_acknowledgment,
              published_at,status,created_by) VALUES (?,?,?,?,?,?::jsonb,?,?,now(),'PUBLISHED',?)
           """,id,tenant,r.institutionId(),r.title().trim(),r.body().trim(),
-          new org.postgresql.util.PGobject(){ {setType("jsonb"); try{setValue(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(r.targetRoles()==null?List.of():r.targetRoles()));}catch(Exception e){throw new IllegalArgumentException(e);} } },
+          targetRolesJson,
           r.urgent(),r.requiresAcknowledgment(),p.userAccountId());
         if(r.targetKind()!=null && !r.targetKind().equals("ROLE")) {
             jdbc.update("INSERT INTO app.notice_target(id,tenant_id,institution_id,notice_id,target_kind,target_id) VALUES (?,?,?,?,?,?)",
                 UUID.randomUUID(),tenant,r.institutionId(),id,r.targetKind(),r.targetId());
         }
-        if(r.targetRoles()!=null) for(String role:r.targetRoles()) {
+        if(r.targetRoles()!=null) for(String targetRole:r.targetRoles()) {
             jdbc.update("INSERT INTO app.notice_target(id,tenant_id,institution_id,notice_id,target_kind,role_code) VALUES (?,?,?,?,'ROLE',?)",
-                UUID.randomUUID(),tenant,r.institutionId(),id,role);
+                UUID.randomUUID(),tenant,r.institutionId(),id,targetRole);
         }
         audit.record(AuditEventType.CREATE,null,null,null,"Notice bulletin "+id+" published");
         return Map.of("noticeId",id,"status","PUBLISHED");
@@ -177,9 +183,11 @@ public class T10DomainService {
             Integer linked=jdbc.queryForObject("SELECT count(*) FROM app.student_profile WHERE tenant_id=? AND institution_id=? AND user_account_id=? AND status='ACTIVE'",Integer.class,tenant,r.institutionId(),r.borrowerUserId());
             if(linked==null||linked==0) throw new BusinessRuleViolationException("BORROWER_OUT_OF_SCOPE","Student is not active in this institution.");
         } else if("FACULTY".equals(actualRole)) {
-            Integer linked=jdbc.queryForObject("SELECT count(*) FROM app.staff_profile p JOIN app.staff_assignment a ON a.tenant_id=p.tenant_id AND a.staff_profile_id=p.staff_profile_id
+            Integer linked=jdbc.queryForObject("""
+                SELECT count(*) FROM app.staff_profile p JOIN app.staff_assignment a ON a.tenant_id=p.tenant_id AND a.staff_profile_id=p.staff_profile_id
                  WHERE p.tenant_id=? AND a.institution_id=? AND p.user_account_id=? AND p.employment_status='ACTIVE'
-                   AND a.status='ACTIVE' AND a.effective_from<=current_date AND (a.effective_to IS NULL OR a.effective_to>=current_date)",Integer.class,tenant,r.institutionId(),r.borrowerUserId());
+                   AND a.status='ACTIVE' AND a.effective_from<=current_date AND (a.effective_to IS NULL OR a.effective_to>=current_date)
+                """,Integer.class,tenant,r.institutionId(),r.borrowerUserId());
             if(linked==null||linked==0) throw new BusinessRuleViolationException("BORROWER_OUT_OF_SCOPE","Faculty member is not active in this institution.");
         }
         Integer limit=switch(actualRole){case "STUDENT"->3;case "FACULTY"->10;default->throw new BusinessRuleViolationException("BORROW_ROLE_UNSUPPORTED","Borrow limits are defined for Student (3) and Faculty (10).");};

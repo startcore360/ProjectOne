@@ -42,7 +42,7 @@ public class AssignmentService {
         authorize(tenantId, actor, "ASSIGNMENT_CREATE", request.institutionId());
         UUID id = UUID.randomUUID();
         String rubric = request.rubricJson() == null || request.rubricJson().isBlank()
-                ? "[{\\"criterion\\":\\"Overall\\",\\"weight\\":100}]" : request.rubricJson();
+                ? "[{\"criterion\":\"Overall\",\"weight\":100}]" : request.rubricJson();
         validateRubric(rubric);
         jdbc.update("""
                 INSERT INTO app.assignment
