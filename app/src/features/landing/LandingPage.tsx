@@ -472,6 +472,7 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
           <a href="#top" className="landing-brand" aria-label="EDU 360 Home">
             <Edu360Logo className="landing-brand__logo" />
             <span className="landing-brand__descriptor">Connected education, clearly managed</span>
+            <span className="landing-brand__tagline">Education Driven by Unity</span>
           </a>
           <nav className="landing-navlinks" aria-label="Primary navigation">
             <a href="#platform">Platform</a>
@@ -644,6 +645,68 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
               <article className="landing-capability-card"><span>05 / PEOPLE</span><h3>HR &amp; leave workflows</h3><p>Support staff administration and leave-related workflows with more consistent processes and visibility.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
               <article className="landing-capability-card"><span>06 / OVERSIGHT</span><h3>Reports &amp; governance</h3><p>Help institutional teams work with structured reporting, role-scoped access and clearer governance processes.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
             </div>
+          </div>
+        </section>
+
+        {/* Product experience: genuine app previews plus clearly labelled concepts */}
+        <section className="landing-section landing-product-tour" id="experience">
+          <div className="landing-wrap">
+            <div className="landing-section__head landing-section__head--center">
+              <Kicker>SEE EDU 360 IN ACTION</Kicker>
+              <h2 className="landing-section__title">A clearer day for every part of your institution.</h2>
+              <p className="landing-section__desc">
+                Explore real EDU 360 interface previews, then see how connected workflows can support
+                administrators, educators, students and families.
+              </p>
+            </div>
+            <div className="landing-product-showcase">
+              <article className="landing-product-shot landing-product-shot--wide">
+                <div className="landing-product-shot__copy">
+                  <span>01 · INSTITUTIONAL OPERATIONS</span>
+                  <h3>One workspace for the people running your institution.</h3>
+                  <p>Review platform administration, role templates and institutional controls in the actual EDU 360 interface.</p>
+                  <a href="#quotation">Explore an institutional walkthrough ↗</a>
+                </div>
+                <div className="landing-product-shot__image">
+                  <img src={heroImageUrl} alt="Actual EDU 360 platform preview showing the platform console and role templates" loading="lazy" />
+                  <small>Actual EDU 360 platform interface</small>
+                </div>
+              </article>
+              <article className="landing-product-shot">
+                <div className="landing-product-shot__image landing-product-shot__image--login">
+                  <img src={showcaseImageUrl} alt="EDU 360 institution access and sign-in interface preview" loading="lazy" />
+                  <small>Actual EDU 360 access interface</small>
+                </div>
+                <div className="landing-product-shot__copy">
+                  <span>02 · CONNECTED ACCESS</span>
+                  <h3>A clear entry point for your institution.</h3>
+                  <p>Give authorised users a consistent route into their institution workspace, with role-scoped access and tenant separation.</p>
+                  <a href="#quotation">See how access is structured ↗</a>
+                </div>
+              </article>
+            </div>
+            <div className="landing-experience-grid">
+              <article className="landing-experience-card">
+                <div className="landing-experience-card__top"><span>STUDENT EXPERIENCE</span><span className="landing-concept-tag">Concept preview</span></div>
+                <h3>Make progress visible. Build good learning habits.</h3>
+                <p>The student workspace is designed around a weekly learning rhythm, with space for timetable, notices and progress. Streak tracking is a product concept—not a live, verified feature yet.</p>
+                <div className="landing-student-concept">
+                  <div><small>YOUR LEARNING RHYTHM</small><strong>Build a steady study habit</strong></div>
+                  <div className="landing-week-dots" aria-label="Illustrative weekly activity"><i> M </i><i> T </i><i> W </i><i> T </i><i> F </i><i> S </i><i> S </i></div>
+                  <small className="landing-concept-caption">Illustrative design · no sample progress data</small>
+                </div>
+              </article>
+              <article className="landing-experience-card">
+                <div className="landing-experience-card__top"><span>PARENT &amp; FAMILY EXPERIENCE</span><span className="landing-concept-tag">Workflow preview</span></div>
+                <h3>Keep families closer to the school day.</h3>
+                <p>EDU 360 includes a tenant notification experience and self-service notices. Parent-specific fee alerts and payment visibility should be demonstrated against your enabled finance and parent workflows.</p>
+                <div className="landing-parent-concept">
+                  <div className="landing-parent-notice"><span>NOTICE</span><strong>Campus update</strong><small>Important information from your institution</small></div>
+                  <div className="landing-parent-notice"><span>FINANCE · CONCEPT</span><strong>Fee due reminder</strong><small>Illustrative reminder layout—not a live payment status</small></div>
+                </div>
+              </article>
+            </div>
+            <p className="landing-product-disclaimer">Product screenshots show existing EDU 360 interfaces. Concept panels are illustrative and are not connected to live student or parent account data.</p>
           </div>
         </section>
 
