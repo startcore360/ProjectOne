@@ -789,6 +789,26 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
           </div>
         </section>
 
+        {/* Why institutions choose EDU 360 */}
+        <section className="landing-section landing-why-section" id="why-edu360">
+          <div className="landing-wrap">
+            <div className="landing-why-layout">
+              <div className="landing-why-intro">
+                <Kicker>WHY EDU 360</Kicker>
+                <h2 className="landing-section__title">Technology should bring your institution together—not add another silo.</h2>
+                <p className="landing-section__desc">Choose a connected operating platform that helps teams spend less time chasing information and more time supporting education.</p>
+                <a className="landing-why-cta" href="#quotation">Plan your institution's rollout ↗</a>
+              </div>
+              <div className="landing-why-points">
+                <article><span>01</span><div><h3>One coordinated view</h3><p>Bring academic, administrative, finance and governance workflows into a shared institutional environment.</p></div></article>
+                <article><span>02</span><div><h3>Clear responsibility</h3><p>Role-scoped access and structured workflows help teams understand what they can see, manage and action.</p></div></article>
+                <article><span>03</span><div><h3>Better communication</h3><p>Keep institutional updates and notices easier to coordinate for staff, students and families through enabled communication workflows.</p></div></article>
+                <article><span>04</span><div><h3>Room to grow</h3><p>Shape the module mix and rollout around your institution's size, operating model and campus requirements.</p></div></article>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Institution Solutions & How it works */}
         <section className="landing-section landing-section--soft" id="solutions">
           <div className="landing-wrap landing-split">
@@ -1160,6 +1180,9 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                 <Edu360Logo className="landing-brand__logo" />
               </a>
               <p className="landing-card__desc" style={{ marginTop: "var(--space-3)" }}>
+                Education Driven by Unity
+              </p>
+              <p className="landing-card__desc" style={{ marginTop: "var(--space-2)" }}>
                 {footerTagline}
               </p>
             </div>
