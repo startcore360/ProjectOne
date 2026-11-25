@@ -36,4 +36,7 @@ export const TENANT_ROUTE_ACTIONS = {
   // PO-T05 confidential case actions; backend allowlisting and database RLS are authoritative.
   confidentialGrievances: ["GRIEVANCE_CASE_VIEW", "GRIEVANCE_CASE_ASSIGN", "GRIEVANCE_HEARING_MANAGE", "GRIEVANCE_CASE_RESOLVE", "GRIEVANCE_EVIDENCE_VIEW", "GRIEVANCE_EVIDENCE_UPLOAD"],
   meritLists: ["MERIT_LIST_GENERATE", "MERIT_LIST_APPROVE", "SEAT_ALLOCATE", "APPLICATION_VERIFY"],
+  financeConfiguration: ["FEE_STRUCTURE_CREATE", "FEE_STRUCTURE_APPROVE"],
+  feeInvoices: ["LEDGER_VIEW"],
+  feePayments: ["FEE_PAY_ONLINE"],
 } as const;
