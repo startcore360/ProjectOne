@@ -41,21 +41,21 @@ CREATE TABLE IF NOT EXISTS app.attendance_medical_exemption (
  CONSTRAINT ck_medical_exemption_version CHECK (row_version>=1),
  CONSTRAINT ck_medical_exemption_updated CHECK (updated_at>=created_at)
 );
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.attendance_entry'::regclass AND conname='uq_attendance_entry_session_enrollment') THEN
   ALTER TABLE app.attendance_entry ADD CONSTRAINT uq_attendance_entry_session_enrollment
    UNIQUE (tenant_id,institution_id,attendance_session_id,enrollment_id,academic_year);
  END IF;
-END $;
+END $$;
 CREATE INDEX IF NOT EXISTS ix_medical_exemption_student_dates
  ON app.attendance_medical_exemption(tenant_id,student_profile_id,start_date,end_date,status);
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.attendance_medical_exemption'::regclass AND conname='ex_medical_exemption_no_overlap') THEN
   ALTER TABLE app.attendance_medical_exemption ADD CONSTRAINT ex_medical_exemption_no_overlap
    EXCLUDE USING gist (tenant_id WITH =,student_profile_id WITH =,daterange(start_date,end_date,'[]') WITH &&)
    WHERE (status='APPROVED');
  END IF;
-END $;
+END $$;
 
 CREATE TABLE IF NOT EXISTS app.attendance_threshold_policy (
  tenant_id uuid NOT NULL, attendance_threshold_policy_id uuid NOT NULL, institution_id uuid NOT NULL,
