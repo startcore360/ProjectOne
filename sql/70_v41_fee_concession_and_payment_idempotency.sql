@@ -135,7 +135,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_gateway_order_provider_order
     ON app.gateway_order (tenant_id, provider, provider_order_id);
 
 -- Payment idempotency and single-settlement invariants.
-DO $
+DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM app.payment GROUP BY tenant_id, request_key HAVING COUNT(*) > 1)
        OR EXISTS (SELECT 1 FROM app.payment_intent_item
@@ -150,7 +150,7 @@ BEGIN
                    GROUP BY tenant_id, payment_id, academic_session_id HAVING COUNT(*) > 1) THEN
         RAISE EXCEPTION 'DUPLICATE_PAYMENT_RECORDS: reconcile existing payment/receipt allocations before T8 idempotency indexes';
     END IF;
-END $;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_request_key
     ON app.payment (tenant_id, request_key);
