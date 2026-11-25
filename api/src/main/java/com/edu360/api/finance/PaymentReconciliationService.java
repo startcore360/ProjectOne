@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +65,7 @@ public class PaymentReconciliationService {
             paymentText = text(event, "/payload/payment/entity/notes/payment_id");
             amountMinor = number(event, "/payload/payment/entity/amount");
             currency = text(event, "/payload/payment/entity/currency");
-            successful = "payment.captured".equals(eventType) || "order.paid".equals(eventType);
+            successful = "payment.captured".equals(eventType);
             failed = "payment.failed".equals(eventType);
         } else {
             JsonNode object = event.at("/data/object");
@@ -125,11 +124,13 @@ public class PaymentReconciliationService {
                     .addValue("verified", signatureValid).addValue("payload", safePayload)
                     .addValue("outcome", signatureValid ? "NO_CHANGE" : "REJECTED_SIGNATURE")
                     .addValue("actorId", systemActorId), rs -> rs.next());
-        if (!inserted) return new WebhookResult("IGNORED_DUPLICATE", paymentId, null);
         if (!signatureValid) {
-            finishEvent(tenantId, eventRowId, institutionId, null, null, "REJECTED_SIGNATURE", systemActorId);
+            if (inserted) {
+                finishEvent(tenantId, eventRowId, institutionId, null, null, "REJECTED_SIGNATURE", systemActorId);
+            }
             return new WebhookResult("REJECTED_SIGNATURE", paymentId, null);
         }
+        if (!inserted) return new WebhookResult("IGNORED_DUPLICATE", paymentId, null);
         if (order == null || paymentId == null || providerPaymentId == null) {
             finishEvent(tenantId, eventRowId, institutionId, null, null, "UNMATCHED", systemActorId);
             return new WebhookResult("UNMATCHED", paymentId, null);
