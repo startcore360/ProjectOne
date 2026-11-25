@@ -1508,3 +1508,135 @@
 @media(prefers-reduced-motion:reduce) {
  .landing-marquee-track { animation:none; }
 }
+
+
+/* Dark theme contrast pass — override legacy light-only landing declarations. */
+[data-theme="dark"] .landing-page {
+  background:#111b18;
+  color:#edf5ef;
+  --landing-panel:#1b2924;
+  --landing-panel-raised:#22342d;
+  --landing-border:#344a40;
+  --landing-muted:#b5c7bd;
+}
+[data-theme="dark"] .landing-page .landing-nav-bar {
+  background:rgba(24,38,32,.96);
+  border-color:#344a40;
+}
+[data-theme="dark"] .landing-page .landing-navlinks,
+[data-theme="dark"] .landing-page .landing-navlinks a { color:#e4eee7; }
+[data-theme="dark"] .landing-page .landing-hero {
+  background:radial-gradient(circle at 82% 15%,rgba(92,157,119,.22),transparent 35%),linear-gradient(130deg,#193d31,#245a45);
+  color:#f5faf6;
+}
+[data-theme="dark"] .landing-page .landing-hero__title,
+[data-theme="dark"] .landing-page .landing-hero__subtitle,
+[data-theme="dark"] .landing-page .landing-hero__note { color:#f3f8f4; }
+[data-theme="dark"] .landing-page .landing-hero__eyebrow {
+  color:#f3d39e; background:#29483b; border-color:#52735f;
+}
+[data-theme="dark"] .landing-page .landing-hero__proof span { color:#d5e5da; }
+[data-theme="dark"] .landing-page .landing-hero__proof i { color:#dff0e4; background:#365a47; }
+[data-theme="dark"] .landing-page .landing-hero__ghost-btn {
+  color:#eff8f1; background:#28483a; border-color:#668575;
+}
+[data-theme="dark"] .landing-page .landing-section__title,
+[data-theme="dark"] .landing-page .landing-feature-card h3,
+[data-theme="dark"] .landing-page .landing-connected-card h3,
+[data-theme="dark"] .landing-page .landing-capability-card h3,
+[data-theme="dark"] .landing-page .landing-form-heading h3 { color:#f0f6f1; }
+[data-theme="dark"] .landing-page .landing-section__desc,
+[data-theme="dark"] .landing-page .landing-feature-card p,
+[data-theme="dark"] .landing-page .landing-connected-card p,
+[data-theme="dark"] .landing-page .landing-capability-card p { color:#b5c7bd; }
+[data-theme="dark"] .landing-page .landing-section--soft,
+[data-theme="dark"] .landing-page .landing-connected-section,
+[data-theme="dark"] .landing-page .landing-capabilities-section { background:#15231e; border-color:#2d4238; }
+[data-theme="dark"] .landing-page .landing-feature-card,
+[data-theme="dark"] .landing-page .landing-connected-card,
+[data-theme="dark"] .landing-page .landing-capability-card,
+[data-theme="dark"] .landing-page .landing-role-panel,
+[data-theme="dark"] .landing-page .landing-step,
+[data-theme="dark"] .landing-page .landing-quote-form {
+  background:#1b2a24; border-color:#344a40; box-shadow:0 12px 32px rgba(0,0,0,.16);
+}
+[data-theme="dark"] .landing-page .landing-feature-card__icon,
+[data-theme="dark"] .landing-page .landing-connected-icon,
+[data-theme="dark"] .landing-page .landing-capability-card > span {
+  background:#2a4537; color:#bfe3c9;
+}
+[data-theme="dark"] .landing-page .landing-role-tab { background:#1b2a24; border-color:#465d51; color:#c4d3ca; }
+[data-theme="dark"] .landing-page .landing-role-tab--active { background:#a8d4b7; border-color:#a8d4b7; color:#14251d; }
+[data-theme="dark"] .landing-page .landing-quote-intro {
+  background:linear-gradient(155deg,#9bcdb0,#78b493); color:#12251c;
+}
+[data-theme="dark"] .landing-page .landing-quote-intro h3,
+[data-theme="dark"] .landing-page .landing-quote-benefits strong,
+[data-theme="dark"] .landing-page .landing-quote-next strong { color:#14251d; }
+[data-theme="dark"] .landing-page .landing-quote-benefits small,
+[data-theme="dark"] .landing-page .landing-quote-next p { color:#244635; }
+[data-theme="dark"] .landing-page .landing-quote-benefits > div > span { color:#244d37; border-color:#5b9472; }
+[data-theme="dark"] .landing-page .landing-quote-next { background:rgba(255,255,255,.24); border-color:rgba(20,55,34,.22); }
+[data-theme="dark"] .landing-page .landing-form-heading p,
+[data-theme="dark"] .landing-page .landing-form-section-heading small,
+[data-theme="dark"] .landing-page .landing-form-submit small,
+[data-theme="dark"] .landing-page .landing-form-progress span { color:#afc3b7; }
+[data-theme="dark"] .landing-page .landing-form-section-heading { border-color:#344a40; }
+[data-theme="dark"] .landing-page .landing-form-section-heading strong,
+[data-theme="dark"] .landing-page .landing-form-field-title { color:#e7f0e9; }
+[data-theme="dark"] .landing-page .landing-form-section-heading > span { background:#2a4537; color:#bfe3c9; }
+[data-theme="dark"] .landing-page .landing-module-item {
+  color:#e8f0ea; background:#22342d; border-color:#3b5548;
+}
+[data-theme="dark"] .landing-page .landing-module-item:hover,
+[data-theme="dark"] .landing-page .landing-module-item:has(input:checked) { background:#294b39; border-color:#83b695; }
+[data-theme="dark"] .landing-page .landing-module-item input { accent-color:#9fd2b0; }
+[data-theme="dark"] .landing-page .landing-summary-box { background:#263f32; border-color:#46644f; }
+[data-theme="dark"] .landing-page .landing-summary-box strong { color:#d7f0df; }
+[data-theme="dark"] .landing-page .landing-form-progress strong { color:#a8d4b7; }
+[data-theme="dark"] .landing-page .landing-progress-track { background:#33483d; }
+[data-theme="dark"] .landing-page .landing-progress-track span { background:#9fd2b0; }
+[data-theme="dark"] .landing-page .eds-field label { color:#e6efe8; }
+[data-theme="dark"] .landing-page .eds-field label span { color:#aebfb4; }
+[data-theme="dark"] .landing-page .eds-field input,
+[data-theme="dark"] .landing-page .eds-field select,
+[data-theme="dark"] .landing-page .eds-field textarea {
+  color:#edf5ef; background:#22342d; border-color:#60796a; color-scheme:dark;
+}
+[data-theme="dark"] .landing-page .eds-field input::placeholder,
+[data-theme="dark"] .landing-page .eds-field textarea::placeholder { color:#aebfb4; }
+[data-theme="dark"] .landing-page .landing-trust__row span { color:#c4d3ca; background:#1b2a24; border-color:#344a40; }
+[data-theme="dark"] .landing-page .landing-brand__descriptor,
+[data-theme="dark"] .landing-page .landing-connected-card small,
+[data-theme="dark"] .landing-page .landing-capability-card a { color:#a8d4b7; }
+[data-theme="dark"] .landing-page .landing-footer { background:#14221c; border-color:#344a40; color:#dce9e0; }
+[data-theme="dark"] .landing-page .landing-screenshot-frame { background:#1b2a24; border-color:#40584b; }
+[data-theme="dark"] .landing-page .landing-screenshot-frame__bar { color:#c3d2c9; background:#22342d; border-color:#40584b; }
+@media (prefers-color-scheme:dark) {
+ :root:not([data-theme="light"]) .landing-page .landing-hero__title { color:#f3f8f4; }
+ :root:not([data-theme="light"]) .landing-page .landing-hero__subtitle { color:#e0eee5; }
+ :root:not([data-theme="light"]) .landing-page .landing-section__title,
+ :root:not([data-theme="light"]) .landing-page .landing-feature-card h3,
+ :root:not([data-theme="light"]) .landing-page .landing-connected-card h3,
+ :root:not([data-theme="light"]) .landing-page .landing-capability-card h3,
+ :root:not([data-theme="light"]) .landing-page .landing-form-heading h3 { color:#f0f6f1; }
+ :root:not([data-theme="light"]) .landing-page .landing-feature-card,
+ :root:not([data-theme="light"]) .landing-page .landing-connected-card,
+ :root:not([data-theme="light"]) .landing-page .landing-capability-card,
+ :root:not([data-theme="light"]) .landing-page .landing-quote-form { background:#1b2a24; border-color:#344a40; }
+ :root:not([data-theme="light"]) .landing-page .landing-section--soft,
+ :root:not([data-theme="light"]) .landing-page .landing-connected-section,
+ :root:not([data-theme="light"]) .landing-page .landing-capabilities-section { background:#15231e; }
+}
+.landing-capabilities-section { background:var(--color-bg-subtle); }
+.landing-capabilities-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.landing-capability-card { display:flex; flex-direction:column; align-items:flex-start; min-height:250px; padding:27px; border:1px solid var(--color-border-divider); border-radius:20px; background:var(--color-bg-surface); transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
+.landing-capability-card:hover { transform:translateY(-4px); border-color:var(--color-action-primary); box-shadow:0 18px 38px rgba(20,55,34,.09); }
+.landing-capability-card > span { display:inline-flex; padding:7px 10px; border-radius:8px; background:var(--color-bg-brand-soft); color:var(--color-text-brand); font-size:9px; font-weight:800; letter-spacing:.1em; }
+.landing-capability-card h3 { margin:22px 0 9px; color:var(--color-text); font-size:18px; letter-spacing:-.025em; }
+.landing-capability-card p { flex:1; margin:0 0 22px; color:var(--color-text-muted); font-size:13px; line-height:1.7; }
+.landing-capability-card a { color:var(--color-text-brand); font-size:11px; font-weight:800; text-decoration:none; }
+.landing-capability-card a b { margin-left:5px; }
+@media(max-width:950px) { .landing-capabilities-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .landing-capabilities-grid { grid-template-columns:1fr; } .landing-capability-card { min-height:220px; padding:23px; } }
+@media(prefers-reduced-motion:reduce) { .landing-capability-card { transition:none; } }
