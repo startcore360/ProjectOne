@@ -1,5 +1,8 @@
 -- Destructive rollback for migration 72; use only when T9 grievance data may be discarded.
 BEGIN;
+DROP POLICY IF EXISTS p_grievance_action_insert ON app.grievance_action;
+DROP POLICY IF EXISTS p_grievance_evidence_insert ON app.grievance_evidence;
+DROP POLICY IF EXISTS p_grievance_confidentiality_update ON app.grievance_case;
 DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_action;
 DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_evidence;
 DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_case;
