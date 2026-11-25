@@ -47,7 +47,9 @@ public class LandingCmsService {
     private final PlatformSubscriptionService subscriptionService;
     private final PlatformConcurrency concurrency;
     private final PlatformAuditWriter auditWriter;
-    private final ObjectMapper objectMapper;
+    // Spring Boot 4 auto-configures Jackson 3 (tools.jackson), not this Jackson 2 type.
+    // Keep a local mapper for the JSON strings persisted by the landing CMS.
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public LandingCmsService(
             TenantRepository tenantRepository,
@@ -57,8 +59,7 @@ public class LandingCmsService {
             CommercialCatalogItemRepository catalogRepository,
             PlatformSubscriptionService subscriptionService,
             PlatformConcurrency concurrency,
-            PlatformAuditWriter auditWriter,
-            ObjectMapper objectMapper) {
+            PlatformAuditWriter auditWriter) {
         this.tenantRepository = tenantRepository;
         this.configRepository = configRepository;
         this.testimonialRepository = testimonialRepository;
@@ -67,7 +68,6 @@ public class LandingCmsService {
         this.subscriptionService = subscriptionService;
         this.concurrency = concurrency;
         this.auditWriter = auditWriter;
-        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true, transactionManager = "platformTransactionManager")
