@@ -13,6 +13,18 @@ BEGIN
     IF v_count <> 4 THEN
         RAISE EXCEPTION 'T8-DB-08: PO-T04 approver roles are not fully mapped';
     END IF;
+    IF EXISTS (
+        SELECT 1 FROM app.role_definition rd
+         WHERE rd.role_origin='STANDARD' AND rd.role_code IN ('MANAGEMENT','FINANCE_DIRECTOR')
+           AND NOT EXISTS (
+             SELECT 1 FROM app.role_action ra
+              WHERE ra.tenant_id=rd.tenant_id
+                AND ra.role_definition_id=rd.role_definition_id
+                AND ra.action_code='CONCESSION_APPROVE'
+           )
+    ) THEN
+        RAISE EXCEPTION 'T8-DB-14: existing tenant role permissions were not provisioned';
+    END IF;
 
     SELECT approver_rule INTO v_rule
       FROM ref.approval_chain_step
