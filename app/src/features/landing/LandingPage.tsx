@@ -403,8 +403,34 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
       setQPhone("");
       setQInstitution("");
       setQNotes("");
-    } catch {
-      setQError("Unable to submit quotation request right now. Please try again shortly.");
+    } catch (error: unknown) {
+      // The API returns a safe, structured error contract (code/message/fieldErrors).
+      // Surface that response instead of hiding validation, rate-limit, or database failures
+      // behind one generic message. Never render stack traces or raw exception details.
+      const response = (error as {
+        response?: {
+          status?: number;
+          data?: {
+            code?: string;
+            message?: string;
+            error?: string;
+            correlationId?: string;
+            fieldErrors?: Record<string, string>;
+          };
+        };
+      })?.response;
+      const body = response?.data;
+      const fieldMessages = body?.fieldErrors
+        ? Object.entries(body.fieldErrors).map(([field, message]) => `${field}: ${message}`)
+        : [];
+      const details = fieldMessages.length > 0
+        ? fieldMessages.join(" · ")
+        : body?.message || body?.error;
+      const reference = body?.correlationId ? ` Reference: ${body.correlationId}` : "";
+      const status = response?.status ? ` (HTTP ${response.status}${body?.code ? ` · ${body.code}` : ""})` : "";
+      setQError(details
+        ? `${details}${status}.${reference}`
+        : "Unable to reach the quotation service. Check your connection and try again.");
     } finally {
       setQBusy(false);
     }
