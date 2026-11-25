@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Applies PO-T03 late fees as append-only ledger debits; repeated runs are idempotent.
- * PERCENTAGE_MONTHLY accrues once per completed 30-day overdue period after grace.
+ * PERCENTAGE_MONTHLY accrues once per crossed calendar-month boundary after grace.
  */
 @Service
 @RequiredArgsConstructor
@@ -38,6 +38,12 @@ public class LateFeeCalculationService {
                        rule.amount_or_percent,
                        rule.cap_amount,
                        GREATEST(:asOfDate - si.due_date - rule.grace_days, 0)::numeric AS days_after_grace,
+                       GREATEST(
+                           (EXTRACT(YEAR FROM :asOfDate)::int - EXTRACT(YEAR FROM (si.due_date + rule.grace_days))::int) * 12
+                           + EXTRACT(MONTH FROM :asOfDate)::int
+                           - EXTRACT(MONTH FROM (si.due_date + rule.grace_days))::int,
+                           0
+                       )::numeric AS calendar_months_after_grace,
                        GREATEST(
                            si.billed_amount
                            - COALESCE(discounts.discount_total, 0),
@@ -85,14 +91,14 @@ public class LateFeeCalculationService {
                            CASE c.calculation_mode
                              WHEN 'FLAT_DAILY' THEN c.days_after_grace * c.amount_or_percent
                              WHEN 'PERCENTAGE_MONTHLY' THEN
-                               FLOOR(c.days_after_grace / 30) * c.base_due * c.amount_or_percent / 100
+                               c.calendar_months_after_grace * c.base_due * c.amount_or_percent / 100
                              ELSE 0
                            END,
                            COALESCE(c.cap_amount,
                                CASE c.calculation_mode
                                  WHEN 'FLAT_DAILY' THEN c.days_after_grace * c.amount_or_percent
                                  WHEN 'PERCENTAGE_MONTHLY' THEN
-                                   FLOOR(c.days_after_grace / 30) * c.base_due * c.amount_or_percent / 100
+                                   c.calendar_months_after_grace * c.base_due * c.amount_or_percent / 100
                                  ELSE 0
                                END)
                        ) AS target_fines
