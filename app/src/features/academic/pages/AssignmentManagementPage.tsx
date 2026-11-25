@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
@@ -19,7 +19,7 @@ export default function AssignmentManagementPage() {
   const [feedback, setFeedback] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!tenantId) return;
     try {
       const response = await api.get<Assignment[]>(`/api/tenants/${tenantId}/academic/assignments`);
@@ -40,7 +40,7 @@ export default function AssignmentManagementPage() {
         dueAt: new Date(dueAt).toISOString(), allowLateSubmission: allowLateSubmission,
         latePenaltyPercentPerDay: Number(penalty), rubricJson: JSON.stringify([{ criterion: "Overall", weight: 100 }]),
       });
-      setTitle(""); await load(); setFeedback("Assignment published.");
+      setTitle(""); await load(); setFeedback("Assignment saved as draft. Publish it when ready.");
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Unable to create assignment.");
     } finally { setBusy(false); }
@@ -57,12 +57,12 @@ export default function AssignmentManagementPage() {
       <label>Due date and time<input required type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></label>
       <label><input type="checkbox" checked={allowLate} onChange={(e) => setAllowLate(e.target.checked)} /> Allow late submissions</label>
       <label>Late penalty (% of maximum marks per day)<input type="number" min="0" max="100" step="0.01" value={penalty} onChange={(e) => setPenalty(e.target.value)} /></label>
-      <button type="submit" disabled={busy}>{busy ? "Publishing…" : "Publish assignment"}</button>
+      <button type="submit" disabled={busy}>{busy ? "Saving…" : "Save assignment draft"}</button>
     </form>
     {feedback && <p role="status">{feedback}</p>}
     <h2>Published assignments</h2>
-    <table><thead><tr><th>Title</th><th>Section</th><th>Maximum</th><th>Due</th><th>Status</th></tr></thead>
-      <tbody>{rows.map((row) => <tr key={row.assignment_id}><td>{row.title}</td><td>{row.section_id}</td><td>{row.max_marks}</td><td>{new Date(row.due_at).toLocaleString()}</td><td>{row.status}</td></tr>)}</tbody>
+    <table><thead><tr><th>Title</th><th>Section</th><th>Maximum</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>{rows.map((row) => <tr key={row.assignment_id}><td>{row.title}</td><td>{row.section_id}</td><td>{row.max_marks}</td><td>{new Date(row.due_at).toLocaleString()}</td><td>{row.status}</td><td>{row.status === "DRAFT" && <button type="button" onClick={async () => { if (!tenantId) return; try { await api.post(`/api/tenants/${tenantId}/academic/assignments/${row.assignment_id}/publication`); await load(); setFeedback("Assignment published."); } catch (error) { setFeedback(error instanceof Error ? error.message : "Unable to publish assignment."); } }}>Publish</button>}{row.status === "PUBLISHED" && <button type="button" onClick={async () => { if (!tenantId) return; try { await api.post(`/api/tenants/${tenantId}/academic/assignments/${row.assignment_id}/closure`); await load(); setFeedback("Assignment closed; submissions are no longer accepted."); } catch (error) { setFeedback(error instanceof Error ? error.message : "Unable to close assignment."); } }}>Close</button>}</td></tr>)}</tbody>
     </table>
   </main>;
 }
