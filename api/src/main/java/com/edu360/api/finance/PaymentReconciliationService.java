@@ -164,7 +164,8 @@ public class PaymentReconciliationService {
                         normalizedProvider, providerPaymentId, capturedAmount, systemActorId);
                 if (transactionId == null) {
                     String localStatus = findPaymentStatus(tenantId, paymentId);
-                    String caseType = "PAID".equals(localStatus) ? "DUPLICATE_CAPTURE"
+                    String caseType = localStatus == null ? "UNMATCHED_EVENT"
+                            : "PAID".equals(localStatus) ? "DUPLICATE_CAPTURE"
                             : "PENDING".equals(localStatus) ? "AMOUNT_MISMATCH" : "STATUS_DIFFERENCE";
                     createReconciliationCase(tenantId, institutionId, paymentId, eventRowId,
                             caseType, systemActorId);
