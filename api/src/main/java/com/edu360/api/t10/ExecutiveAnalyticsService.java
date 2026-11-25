@@ -7,6 +7,7 @@ import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -66,7 +67,7 @@ public class ExecutiveAnalyticsService {
                 values.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(amount-amount_paid),0) FROM app.library_fine WHERE tenant_id=? AND institution_id=? AND status='OUTSTANDING'",tenant,institution));
                 values.put("openLibraryCirculations",scalar(db,"SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND returned_at IS NULL",tenant,institution));
                 values.put("transportAllocations",scalar(db,"SELECT count(*) FROM app.transport_allocation WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
-                values.put("smsSent",scalar(db,"SELECT count(*) FROM app.message_dispatch WHERE tenant_id=? AND institution_id=? AND channel='SMS' AND status IN ('SENT','DELIVERED') AND created_at>=? AND created_at<?",tenant,institution,start.atStartOfDay(),end.plusDays(1).atStartOfDay()));
+                values.put("smsSent",scalar(db,"SELECT count(*) FROM app.message_dispatch WHERE tenant_id=? AND institution_id=? AND channel='SMS' AND status IN ('SENT','DELIVERED') AND created_at>=? AND created_at<?",tenant,institution,start.atStartOfDay().atOffset(ZoneOffset.UTC),end.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)));
                 return values;
             });
             if(metrics!=null) out.putAll(metrics);
