@@ -667,9 +667,12 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                   <p>Review platform administration, role templates and institutional controls in the actual EDU 360 interface.</p>
                   <a href="#quotation">Explore an institutional walkthrough ↗</a>
                 </div>
-                <div className="landing-product-shot__image">
-                  <img src={heroImageUrl} alt="Actual EDU 360 platform preview showing the platform console and role templates" loading="lazy" />
-                  <small>Actual EDU 360 platform interface</small>
+                <div className="landing-product-shot__image landing-ops-preview" aria-label="EDU 360 institutional operations areas">
+                  <div className="landing-ops-preview__head"><span>EDU 360 · INSTITUTIONAL WORKSPACE</span><b>Platform areas</b></div>
+                  <div className="landing-ops-preview__item"><i>01</i><span><b>Role templates</b><small>Configure role starting points</small></span><em>Access</em></div>
+                  <div className="landing-ops-preview__item"><i>02</i><span><b>Permissions</b><small>Scope actions to assigned roles</small></span><em>Controls</em></div>
+                  <div className="landing-ops-preview__item"><i>03</i><span><b>Tenant workspace</b><small>Keep institutional work separated</small></span><em>Manage</em></div>
+                  <small className="landing-ops-preview__caption">Illustrative navigation based on EDU 360 platform areas</small>
                 </div>
               </article>
               <article className="landing-product-shot">
@@ -953,8 +956,10 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                       <div>
                         {item.kind === "VIDEO" && (
                           <div className="landing-video-thumb">
-                            {posterSrc && (
+                            {posterSrc && index < testimonials.length ? (
                               <img src={posterSrc} alt={`Video thumbnail for ${item.authorName}`} />
+                            ) : (
+                              <span className="landing-video-thumb__fallback" aria-hidden="true">{initials || "EDU"}</span>
                             )}
                             <button
                               type="button"
