@@ -1470,3 +1470,41 @@
 .landing-quote-benefits > div > span { color:var(--color-accent); border-color:var(--color-hero-line); }
 .landing-quote-benefits small,.landing-quote-next p { color:var(--color-hero-muted); }
 .landing-screenshot-frame__dot { background:var(--color-border-control); }
+
+
+/* Desktop canvas: use the available viewport instead of constraining every section to 1180px. */
+.landing-wrap {
+  width: min(1480px, calc(100% - clamp(40px, 6vw, 112px)));
+  margin-inline:auto;
+}
+.landing-nav {
+  width:min(1480px,calc(100% - clamp(40px,6vw,112px)));
+  margin-inline:auto;
+}
+.landing-hero-section .landing-wrap { width:min(1480px,calc(100% - clamp(40px,6vw,112px))); }
+.landing-hero { width:100%; }
+.landing-section__head { max-width:860px; }
+.landing-section__head--center { margin-inline:auto; text-align:center; }
+.landing-marquee-viewport { width:100%; overflow:hidden; }
+.landing-marquee-track { width:max-content; display:flex; gap:18px; will-change:transform; animation:landing-feedback-scroll 42s linear infinite; }
+.landing-marquee-track--paused { animation-play-state:paused; }
+.landing-marquee-track--reverse { animation-direction:reverse; }
+.landing-quote-card { flex:0 0 clamp(290px,26vw,390px); }
+.landing-video-thumb { position:relative; min-height:170px; overflow:hidden; border-radius:14px; background:var(--color-bg-subtle); }
+.landing-video-thumb img { display:block; width:100%; height:190px; object-fit:cover; }
+.landing-video-thumb:not(:has(img)) { display:grid; place-items:center; background:linear-gradient(135deg,var(--color-bg-brand-soft),var(--color-bg-subtle)); }
+.landing-video-thumb:not(:has(img))::before { content:"EDU 360 · COMMUNITY STORY"; color:var(--color-text-muted); font-size:10px; font-weight:800; letter-spacing:.12em; }
+.landing-play-btn { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:grid; place-items:center; width:48px; height:48px; border:1px solid rgba(255,255,255,.55); border-radius:50%; background:rgba(23,55,43,.86); color:#fff; box-shadow:0 8px 24px rgba(0,0,0,.2); }
+@keyframes landing-feedback-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+@media(min-width:1600px) {
+ .landing-wrap,.landing-nav,.landing-hero-section .landing-wrap { width:min(1560px,calc(100% - 96px)); }
+ .landing-hero { gap:clamp(52px,5vw,92px); }
+}
+@media(max-width:760px) {
+ .landing-wrap,.landing-nav,.landing-hero-section .landing-wrap { width:calc(100% - 32px); }
+ .landing-quote-card { flex-basis:min(84vw,360px); }
+ .landing-marquee-track { animation-duration:54s; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .landing-marquee-track { animation:none; }
+}
