@@ -82,8 +82,8 @@ CREATE TRIGGER trg_assignment_scope_guard
     BEFORE INSERT OR UPDATE ON app.assignment
     FOR EACH ROW EXECUTE FUNCTION app.fn_assignment_scope_guard();
 
-CREATE INDEX ix_assignment_section_due ON app.assignment(tenant_id, section_id, due_at DESC);
-CREATE INDEX ix_assignment_teacher ON app.assignment(tenant_id, teacher_user_id, status);
+CREATE INDEX IF NOT EXISTS ix_assignment_section_due ON app.assignment(tenant_id, section_id, due_at DESC);
+CREATE INDEX IF NOT EXISTS ix_assignment_teacher ON app.assignment(tenant_id, teacher_user_id, status);
 
 -- Add T7 submission metadata to the V3.3 submission record. A compatibility trigger
 -- fills institution/enrollment keys required by the legacy submission and feedback tables.
@@ -148,8 +148,8 @@ DROP TRIGGER IF EXISTS trg_assignment_submission_legacy_compat ON app.assignment
 CREATE TRIGGER trg_assignment_submission_legacy_compat
     BEFORE INSERT OR UPDATE ON app.assignment_submission
     FOR EACH ROW EXECUTE FUNCTION app.fn_assignment_submission_legacy_compat();
-CREATE INDEX ix_assignment_submission_assignment ON app.assignment_submission(tenant_id, assignment_id, submitted_at DESC);
-CREATE INDEX ix_assignment_submission_student ON app.assignment_submission(tenant_id, student_profile_id, submitted_at DESC);
+CREATE INDEX IF NOT EXISTS ix_assignment_submission_assignment ON app.assignment_submission(tenant_id, assignment_id, submitted_at DESC);
+CREATE INDEX IF NOT EXISTS ix_assignment_submission_student ON app.assignment_submission(tenant_id, student_profile_id, submitted_at DESC);
 
 -- Rubric grades and plagiarism observations are separate records so an assignment's
 -- submission and grading history is auditable without rewriting the uploaded artifact.
@@ -168,7 +168,7 @@ CREATE TABLE app.submission_grade (
     CONSTRAINT ck_submission_grade_marks CHECK (marks_awarded >= 0),
     CONSTRAINT ck_submission_grade_key CHECK (char_length(btrim(rubric_item_key)) BETWEEN 1 AND 100)
 );
-CREATE INDEX ix_submission_grade_submission ON app.submission_grade(tenant_id, submission_id);
+CREATE INDEX IF NOT EXISTS ix_submission_grade_submission ON app.submission_grade(tenant_id, submission_id);
 
 CREATE TABLE app.plagiarism_log (
     tenant_id uuid NOT NULL,
@@ -184,7 +184,7 @@ CREATE TABLE app.plagiarism_log (
     CONSTRAINT ck_plagiarism_similarity CHECK (similarity_percent BETWEEN 0 AND 100),
     CONSTRAINT ck_plagiarism_result CHECK (jsonb_typeof(result_json) = 'object')
 );
-CREATE INDEX ix_plagiarism_log_submission ON app.plagiarism_log(tenant_id, submission_id, checked_at DESC);
+CREATE INDEX IF NOT EXISTS ix_plagiarism_log_submission ON app.plagiarism_log(tenant_id, submission_id, checked_at DESC);
 
 DO $$
 DECLARE t text;
