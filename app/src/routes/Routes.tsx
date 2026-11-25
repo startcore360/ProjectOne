@@ -39,6 +39,9 @@ const LibraryCatalogPage = lazy(() => import("../features/t10/pages/LibraryCatal
 const TransportRoutePage = lazy(() => import("../features/t10/pages/TransportRoutePage"));
 const ExecutiveDashboardPage = lazy(() => import("../features/t10/pages/ExecutiveDashboardPage"));
 const SessionsPage = lazy(() => import("../features/sessions/pages/SessionsPage"));
+const FeeStructureManagementPage = lazy(() => import("../features/finance/pages/FeeStructureManagementPage"));
+const StudentFeeInvoicesPage = lazy(() => import("../features/finance/pages/StudentFeeInvoicesPage"));
+const FeePaymentPortalPage = lazy(() => import("../features/finance/pages/FeePaymentPortalPage"));
 const TenantSupportPage = lazy(() => import("../features/institution-admin/pages/TenantSupportPage"));
 const StaffRecordsPage = lazy(() => import("../features/institution-admin/pages/StaffRecordsPage"));
 const StaffAppraisalPage = lazy(() => import("../features/staff/pages/StaffAppraisalPage"));
@@ -286,6 +289,9 @@ export default function AppRoutes() {
             <Route path="/transport" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.transport}><TransportRoutePage /></ActionGate>} />
             <Route path="/executive-dashboard" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.reports}><ExecutiveDashboardPage /></ActionGate>} />
             <Route path="/sessions" element={<SessionsPage />} />
+            <Route path="/finance/structures" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.financeConfiguration}><FeeStructureManagementPage /></ActionGate>} />
+            <Route path="/finance/invoices" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.feeInvoices}><StudentFeeInvoicesPage /></ActionGate>} />
+            <Route path="/finance/payments" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.feePayments}><FeePaymentPortalPage /></ActionGate>} />
           </Route>
         </Route>
       </Route>
