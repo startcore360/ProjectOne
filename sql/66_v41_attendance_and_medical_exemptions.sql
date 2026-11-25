@@ -83,7 +83,7 @@ CREATE OR REPLACE FUNCTION app.fn_attendance_session_scope_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
 DECLARE
  v_session uuid; v_year smallint; v_section uuid; v_group uuid; v_course_offering uuid;
- v_slot_section uuid; v_slot_group uuid; v_slot_allocation uuid; v_slot_status text;
+ v_slot_section uuid; v_slot_group uuid; v_slot_allocation uuid; v_slot_status text; v_slot_day smallint;
  v_allocation_staff uuid; v_expected_user uuid; v_section_teacher uuid;
  v_session_start date; v_session_end date; v_teacher_status text; v_date_start date; v_date_end date;
 BEGIN
@@ -110,13 +110,14 @@ BEGIN
   IF NEW.timetable_slot_id IS NULL OR NEW.subject_allocation_id IS NULL THEN
    RAISE EXCEPTION 'ATTENDANCE_PERIOD_REQUIRES_SLOT_AND_ALLOCATION' USING ERRCODE='23514';
   END IF;
-  SELECT section_id,subject_group_id,subject_allocation_id,status,valid_from,valid_to
-   INTO v_slot_section,v_slot_group,v_slot_allocation,v_slot_status,v_date_start,v_date_end
+  SELECT section_id,subject_group_id,subject_allocation_id,status,valid_from,valid_to,day_of_week
+   INTO v_slot_section,v_slot_group,v_slot_allocation,v_slot_status,v_date_start,v_date_end,v_slot_day
    FROM app.timetable_slot WHERE tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id
     AND timetable_slot_id=NEW.timetable_slot_id AND academic_session_id=v_session;
   IF NOT FOUND OR v_slot_status<>'PUBLISHED' OR v_slot_section IS DISTINCT FROM v_section
     OR v_slot_group IS DISTINCT FROM v_group OR v_slot_allocation IS DISTINCT FROM NEW.subject_allocation_id
-    OR NEW.attendance_date<v_date_start OR (v_date_end IS NOT NULL AND NEW.attendance_date>v_date_end) THEN
+    OR NEW.attendance_date<v_date_start OR (v_date_end IS NOT NULL AND NEW.attendance_date>v_date_end)
+    OR extract(isodow FROM NEW.attendance_date)::smallint<>v_slot_day THEN
    RAISE EXCEPTION 'ATTENDANCE_SLOT_MISMATCH' USING ERRCODE='23514';
   END IF;
   SELECT staff_assignment_id INTO v_allocation_staff FROM app.subject_allocation
@@ -145,11 +146,13 @@ BEGIN
    RAISE EXCEPTION 'ATTENDANCE_SCHOOL_HALF_SCOPE_INVALID' USING ERRCODE='23514';
   END IF;
  END IF;
- IF app.is_term_locked(NEW.tenant_id,COALESCE(v_section,
-   (SELECT min(m.section_id::text)::uuid FROM app.subject_group g
-     JOIN app.course_offering co ON co.tenant_id=g.tenant_id AND co.course_offering_id=g.course_offering_id
-     JOIN app.section m ON m.tenant_id=co.tenant_id AND m.academic_session_id=co.academic_session_id
-    WHERE g.tenant_id=NEW.tenant_id AND g.subject_group_id=v_group)),NEW.attendance_date) THEN
+ IF v_section IS NULL THEN
+  SELECT min(m.section_id::text)::uuid INTO v_section FROM app.subject_group g
+   JOIN app.course_offering co ON co.tenant_id=g.tenant_id AND co.course_offering_id=g.course_offering_id
+   JOIN app.section m ON m.tenant_id=co.tenant_id AND m.academic_session_id=co.academic_session_id
+   WHERE g.tenant_id=NEW.tenant_id AND g.subject_group_id=v_group;
+ END IF;
+ IF v_section IS NULL OR app.is_term_locked(NEW.tenant_id,v_section,NEW.attendance_date) THEN
   RAISE EXCEPTION 'TERM_LOCKED: attendance cannot change while the term is locked' USING ERRCODE='P0001';
  END IF;
  RETURN NEW;
@@ -217,7 +220,8 @@ BEGIN
  IF v_section IS NULL OR app.is_term_locked(v_tenant,v_section,v_date) THEN
   RAISE EXCEPTION 'TERM_LOCKED: attendance cannot change while the term is locked' USING ERRCODE='P0001';
  END IF;
- RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+ IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+ RETURN NEW;
 END $$;
 
 CREATE OR REPLACE FUNCTION app.fn_medical_exemption_guard()
