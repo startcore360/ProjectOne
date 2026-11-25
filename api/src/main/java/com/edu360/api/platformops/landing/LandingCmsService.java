@@ -128,8 +128,10 @@ public class LandingCmsService {
         boolean includeSetup = req.includeSetupFee() == null || req.includeSetupFee();
 
         String quoteSnapshotJson = null;
+        int studentsEstimate = req.studentsEstimate();
         if ("QUOTATION".equals(req.enquiryType())) {
-            int students = req.studentsEstimate() > 0 ? req.studentsEstimate() : estimateStudentsFromRange(req.studentRange());
+            int students = studentsEstimate > 0 ? studentsEstimate : estimateStudentsFromRange(req.studentRange());
+            studentsEstimate = students;
             String tenantType = mapInstitutionTypeToTenantType(req.institutionType());
             try {
                 CustomerQuoteResponse quote = subscriptionService.quote(new CustomerQuoteRequest(
@@ -158,7 +160,7 @@ public class LandingCmsService {
                 .studentRange(trimOrNull(req.studentRange()))
                 .collegesCount(req.collegesCount())
                 .schoolsCount(req.schoolsCount())
-                .studentsEstimate(req.studentsEstimate())
+                .studentsEstimate(studentsEstimate)
                 .staffEstimate(req.staffEstimate())
                 .billingCycleMonths(billingCycle)
                 .includeSetupFee(includeSetup)
