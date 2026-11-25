@@ -29,11 +29,19 @@ BEGIN
     IF EXISTS (
         SELECT 1 FROM app.role_definition rd
          WHERE rd.role_origin='STANDARD' AND rd.role_code IN ('MANAGEMENT','GOVERNING_BODY_APPROVER','FINANCE_DIRECTOR')
-           AND NOT EXISTS (
-             SELECT 1 FROM app.role_action ra
-              WHERE ra.tenant_id=rd.tenant_id
-                AND ra.role_definition_id=rd.role_definition_id
-                AND ra.action_code IN ('CONCESSION_APPROVE','SCHOLARSHIP_LIST_APPROVE')
+           AND (
+             NOT EXISTS (
+               SELECT 1 FROM app.role_action ra
+                WHERE ra.tenant_id=rd.tenant_id
+                  AND ra.role_definition_id=rd.role_definition_id
+                  AND ra.action_code='CONCESSION_APPROVE'
+             )
+             OR NOT EXISTS (
+               SELECT 1 FROM app.role_action ra
+                WHERE ra.tenant_id=rd.tenant_id
+                  AND ra.role_definition_id=rd.role_definition_id
+                  AND ra.action_code='SCHOLARSHIP_LIST_APPROVE'
+             )
            )
     ) THEN
         RAISE EXCEPTION 'T8-DB-14: existing tenant role permissions were not provisioned';
