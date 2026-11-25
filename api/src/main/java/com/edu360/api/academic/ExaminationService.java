@@ -27,7 +27,7 @@ public class ExaminationService {
 
     @Transactional
     public Map<String, Object> createCycle(UUID tenantId, TenantPrincipal actor, ExamCycleRequest request) {
-        authorize(tenantId, actor, "EXAM_SCHEDULE_MANAGE", request.institutionId());
+        authorize(tenantId, actor, "EXAM_SCHEDULE_INTERNAL", request.institutionId());
         UUID id = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO app.exam_cycle
@@ -46,7 +46,7 @@ public class ExaminationService {
                 SELECT institution_id FROM app.exam_cycle WHERE tenant_id = ? AND exam_cycle_id = ? AND status IN ('DRAFT','SCHEDULED')
                 """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null, tenantId, request.examCycleId());
         if (institutionId == null) throw new ResourceNotFoundException("Exam cycle not found or no longer editable.");
-        authorize(tenantId, actor, "EXAM_SCHEDULE_MANAGE", institutionId);
+        authorize(tenantId, actor, "EXAM_SCHEDULE_INTERNAL", institutionId);
         UUID id = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO app.exam_schedule
@@ -62,7 +62,7 @@ public class ExaminationService {
     @Transactional
     public void assignInvigilator(UUID tenantId, TenantPrincipal actor, UUID scheduleId, UUID staffUserId) {
         UUID institutionId = institutionForSchedule(tenantId, scheduleId);
-        authorize(tenantId, actor, "EXAM_SCHEDULE_MANAGE", institutionId);
+        authorize(tenantId, actor, "EXAM_SCHEDULE_INTERNAL", institutionId);
         jdbc.update("""
                 INSERT INTO app.exam_invigilator
                 (tenant_id, exam_invigilator_id, exam_schedule_id, staff_user_id, assigned_by)
@@ -76,7 +76,7 @@ public class ExaminationService {
                 SELECT institution_id FROM app.exam_cycle WHERE tenant_id = ? AND exam_cycle_id = ?
                 """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null, tenantId, cycleId);
         if (institutionId == null) throw new ResourceNotFoundException("Exam cycle not found.");
-        authorize(tenantId, actor, "EXAM_SCHEDULE_VIEW", institutionId);
+        authorize(tenantId, actor, "EXAM_SCHEDULE_INTERNAL", institutionId);
         return jdbc.queryForList("""
                 SELECT es.*, ec.cycle_name, ec.cycle_type
                   FROM app.exam_schedule es JOIN app.exam_cycle ec
@@ -110,7 +110,7 @@ public class ExaminationService {
                 ON CONFLICT (tenant_id, exam_schedule_id, student_profile_id)
                 DO UPDATE SET marks_obtained = EXCLUDED.marks_obtained, is_absent = EXCLUDED.is_absent,
                               status = 'ENTERED', course_teacher_decision = 'PENDING',
-                              external_examiner_decision = 'PENDING', moderated_marks = NULL,
+                              external_examiner_user_id = EXCLUDED.external_examiner_user_id, external_examiner_decision = 'PENDING', moderated_marks = NULL,
                               updated_at = now(), updated_by = EXCLUDED.updated_by,
                               row_version = app.exam_mark.row_version + 1
                 """, tenantId, id, request.examScheduleId(), request.studentProfileId(), request.marksObtained(),
@@ -127,7 +127,7 @@ public class ExaminationService {
         if (!actor.userAccountId().equals(mark.get("course_teacher_user_id"))) {
             throw new BusinessRuleViolationException("COURSE_TEACHER_REQUIRED", "Only the assigned course teacher may complete the first moderation tier.");
         }
-        authorize(tenantId, actor, "MARKS_MODERATE", institutionForSchedule(tenantId, (UUID) mark.get("exam_schedule_id")));
+        authorize(tenantId, actor, "MARKS_APPROVE_HOD", institutionForSchedule(tenantId, (UUID) mark.get("exam_schedule_id")));
         jdbc.update("""
                 UPDATE app.exam_mark SET course_teacher_decision = 'APPROVED', status = 'MODERATION_PENDING',
                        updated_at = now(), updated_by = ?, row_version = row_version + 1
@@ -153,7 +153,7 @@ public class ExaminationService {
         if (!List.of("APPROVED", "REJECTED").contains(decision)) {
             throw new BusinessRuleViolationException("INVALID_MODERATION_DECISION", "Decision must be APPROVED or REJECTED.");
         }
-        authorize(tenantId, actor, "MARKS_MODERATE_EXTERNAL", institutionForSchedule(tenantId, (UUID) mark.get("exam_schedule_id")));
+        authorize(tenantId, actor, "MARKS_EXTERNAL_UPLOAD", institutionForSchedule(tenantId, (UUID) mark.get("exam_schedule_id")));
         BigDecimal max = jdbc.queryForObject("SELECT max_marks FROM app.exam_schedule WHERE tenant_id = ? AND exam_schedule_id = ?",
                 BigDecimal.class, tenantId, mark.get("exam_schedule_id"));
         if ("APPROVED".equals(decision) && !Boolean.TRUE.equals(mark.get("is_absent"))
