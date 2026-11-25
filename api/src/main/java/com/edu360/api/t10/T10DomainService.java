@@ -48,14 +48,15 @@ public class T10DomainService {
     public Map<String,Object> publishNotice(UUID tenant,TenantPrincipal p,NoticeBulletinController.NoticeRequest r) {
         if(r.institutionId()==null || r.title()==null || r.title().isBlank() || r.title().length()>160 || r.body()==null || r.body().isBlank())
             throw new BusinessRuleViolationException("VALIDATION_FAILED","Institution, title and body are required.");
+        if(r.targetKind()!=null && !Set.of("ROLE","INSTITUTION").contains(r.targetKind()))
+            throw new BusinessRuleViolationException("UNSUPPORTED_NOTICE_TARGET","Notice targets are role- or institution-scoped in this release.");
+        if("INSTITUTION".equals(r.targetKind()) && !r.institutionId().equals(r.targetId()))
+            throw new BusinessRuleViolationException("INVALID_NOTICE_TARGET","Institution target must match the notice institution.");
         String role=Objects.toString(com.edu360.api.tenant.TenantContext.currentActiveRoleCode(),"");
         String action=role.equals("UNIVERSITY_ADMIN")?"NOTICE_PUBLISH_UNIVERSITY":
             Set.of("PROFESSOR","ASSOCIATE_PROFESSOR","ASSISTANT_PROFESSOR","HEAD_OF_DEPARTMENT","CLASS_TEACHER","SUBJECT_TEACHER","DEPARTMENT_COORDINATOR").contains(role)
                 ?"NOTICE_PUBLISH_CLASS_DEPT":"NOTICE_PUBLISH_INSTITUTION";
-        if("DEPARTMENT".equals(r.targetKind()) && r.targetId()!=null) {
-            permissions.authorize(new RbacPrincipal(tenant,p.userAccountId()),action,
-                RbacScope.department(r.institutionId(),r.targetId()),RbacTarget.NONE);
-        } else allow(tenant,p.userAccountId(),action,r.institutionId());
+        allow(tenant,p.userAccountId(),action,r.institutionId());
         UUID id=UUID.randomUUID();
         jdbc.update("""
           INSERT INTO app.notice_bulletin(id,tenant_id,institution_id,title,body,target_roles_json,is_urgent,requires_acknowledgment,
