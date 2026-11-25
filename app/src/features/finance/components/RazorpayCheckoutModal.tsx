@@ -37,9 +37,6 @@ export default function RazorpayCheckoutModal({ session, onClose, onSubmitted }:
     script.dataset.edu360Gateway = "razorpay";
     script.onerror = () => setError("The payment provider could not be loaded. Please try again.");
     document.body.appendChild(script);
-    return () => {
-      // Keep the provider SDK available for a later retry; do not remove a script while it loads.
-    };
   }, [session.provider]);
 
   async function openCheckout() {
