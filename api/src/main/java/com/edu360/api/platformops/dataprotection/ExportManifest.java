@@ -51,12 +51,12 @@ public final class ExportManifest {
         groups.put("enrolments", List.of("student_profile", "student_code_sequence", "guardian_profile",
                 "student_guardian_link", "parent_consent", "student_enrollment", "promotion_run", "promotion_run_item",
                 "certificate_request", "admission_cycle", "admission_application", "merit_list", "merit_list_item",
-                "seat_allotment"));
+                "seat_allotment", "certificate_template", "certificate_issuance", "id_card_template", "id_card_issuance", "id_card_replacement"));
         groups.put("attendance", List.of("attendance_session", "attendance_sync_conflict", "attendance_entry",
                 "attendance_correction_request", "attendance_correction", "attendance_bulk_upload", "term_lock",
                 "term_lock_event", "term_unlock_log", "risk_flag", "risk_remark"));
         groups.put("exams", List.of("grading_scheme_version", "grade_band", "exam_rule", "exam_pattern",
-                "exam_pattern_component", "exam", "exam_schedule_item", "hall_ticket", "marks_submission",
+                "exam_pattern_component", "exam", "exam_schedule_item", "exam_schedule", "exam_invigilator", "exam_cycle", "exam_mark", "grade_scale", "report_card", "hall_ticket", "marks_submission",
                 "marks_entry", "backlog", "supplementary_registration"));
         groups.put("results", List.of("result", "result_line", "result_publication", "result_withdrawal_request"));
         groups.put("fees", List.of("fee_head", "fee_policy", "fee_head_rule", "fee_structure", "fee_structure_line",
@@ -69,7 +69,7 @@ public final class ExportManifest {
         groups.put("leave", List.of("leave_approver_setting", "leave_type", "leave_balance", "leave_request",
                 "leave_delegation"));
         groups.put("notices", List.of("notice", "notice_audience", "notice_bulletin", "notice_target", "notice_acknowledgment"));
-        groups.put("complaints", List.of("complaint", "complaint_action"));
+        groups.put("complaints", List.of("complaint", "complaint_action", "disciplinary_incident", "grievance_case", "grievance_evidence", "grievance_action"));
         groups.put("notes", List.of("student_note"));
         groups.put("staff", List.of("staff_profile", "staff_code_sequence", "staff_service_record",
                 "staff_assignment", "staff_document", "appraisal_cycle", "appraisal_submission", "appraisal_review"));
@@ -88,7 +88,7 @@ public final class ExportManifest {
         groups.put("community_events", List.of("community_post", "community_post_media", "post_comment",
                 "post_like", "event", "event_rsvp"));
         groups.put("learning_content", List.of("assignment", "assignment_submission", "assignment_submission_file",
-                "assignment_feedback", "homework_status", "study_material"));
+                "assignment_feedback", "homework_status", "study_material", "submission_grade", "plagiarism_log"));
         groups.put("library", List.of("library_catalog", "book_copy", "book_circulation", "library_fine", "library_fine_policy", "library_reservation"));
         groups.put("transport", List.of("vehicle", "transport_route", "route_stop", "transport_allocation"));
         groups.put("analytics", List.of("usage_metric_daily", "report_definition", "report_execution"));
