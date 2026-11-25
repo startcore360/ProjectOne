@@ -46,6 +46,10 @@ jobs:
         id: t5
         continue-on-error: true
         run: npm test -- MeritListGenerationPage
+      - name: Run T7 marks-entry page tests
+        id: t7
+        continue-on-error: true
+        run: npm test -- MarksEntrySheetPage
       - name: Run complete unit test suite
         id: unit
         continue-on-error: true
@@ -72,7 +76,7 @@ jobs:
           BUILD: ${{ steps.build.outcome }}
         run: |
           failed=0
-          for check in LINT T1 T5 UNIT BUILD; do
+          for check in LINT T1 T5 T7 UNIT BUILD; do
             value="${!check}"
             echo "$check: $value"
             [ "$value" = "success" ] || failed=1
@@ -108,6 +112,10 @@ jobs:
         id: m13
         continue-on-error: true
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=StaffAppraisalIT
+      - name: Run T7 SGPA and report-card gate tests
+        id: t7
+        continue-on-error: true
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=SGPACalculatorTest,ReportCardPublishGateIT
       - name: Verify backend
         id: verify
         continue-on-error: true
@@ -130,7 +138,7 @@ jobs:
           VERIFY: ${{ steps.verify.outcome }}
         run: |
           failed=0
-          for check in T1 T4 T5 M13 VERIFY; do
+          for check in T1 T4 T5 M13 T7 VERIFY; do
             value="${!check}"
             echo "$check: $value"
             [ "$value" = "success" ] || failed=1
