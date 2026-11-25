@@ -67,6 +67,10 @@ const DepartmentDetailPage = lazy(() => import("../features/institution-admin/pa
 const ProgramDetailPage = lazy(() => import("../features/institution-admin/pages/ProgramDetailPage"));
 const SectionDetailPage = lazy(() => import("../features/institution-admin/pages/SectionDetailPage"));
 const AcademicSessionDetailPage = lazy(() => import("../features/institution-admin/pages/AcademicSessionDetailPage"));
+const AssignmentManagementPage = lazy(() => import("../features/academic/pages/AssignmentManagementPage"));
+const ExamSchedulePage = lazy(() => import("../features/academic/pages/ExamSchedulePage"));
+const MarksEntrySheetPage = lazy(() => import("../features/academic/pages/MarksEntrySheetPage"));
+const ReportCardViewerPage = lazy(() => import("../features/academic/pages/ReportCardViewerPage"));
 
 const MissingRolesPage = lazy(() => import("../features/institution-admin/pages/InstitutionAdminPages").then((m) => ({ default: m.MissingRolesPage })));
 const RolesPermissionsPage = lazy(() => import("../features/institution-admin/pages/InstitutionAdminPages").then((m) => ({ default: m.RolesPermissionsPage })));
@@ -191,6 +195,10 @@ export default function AppRoutes() {
               <Route path="/university/setup/term-lock" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.termLock}><TermLockPage /></ActionGate>} />
               <Route path="/university/setup/delegations" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.delegations}><DelegationsApprovalsPage /></ActionGate>} />
               <Route path="/university/setup/academic-governance" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.academicGovernance}><AcademicGovernancePage /></ActionGate>} />
+              <Route path="/academic/assignments" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.assignments}><AssignmentManagementPage /></ActionGate>} />
+              <Route path="/academic/exams" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.exams}><ExamSchedulePage /></ActionGate>} />
+              <Route path="/academic/marks" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.marks}><MarksEntrySheetPage /></ActionGate>} />
+              <Route path="/academic/report-cards" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.reportCards}><ReportCardViewerPage /></ActionGate>} />
               <Route path="/tenants/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />
               <Route path="/tenants/users/:userId" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserDetailPage /></ActionGate>} />
               <Route path="/tenants/students" element={<ActionGate anyOf={["STUDENT_SEARCH"]}><StudentDirectoryPage /></ActionGate>} />
