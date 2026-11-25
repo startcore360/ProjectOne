@@ -153,8 +153,11 @@ public class UsageRollupJob {
         saveMonthly(tenantId, month, "LOGINS", BigDecimal.valueOf(snapshot.events().logins()), true, false, finalMonth, now);
         saveMonthly(tenantId, month, "ATTENDANCE_MARKED", BigDecimal.valueOf(snapshot.events().attendanceMarked()), true, false, finalMonth, now);
         saveMonthly(tenantId, month, "FEES_PAID_ONLINE", BigDecimal.valueOf(snapshot.events().feesPaidOnline()), true, false, finalMonth, now);
-        // No SMS delivery source is integrated in this branch. Zero is explicitly unmeasured.
-        saveMonthly(tenantId, month, "SMS_SENT", BigDecimal.ZERO, false, false, finalMonth, now);
+        // Bill only carrier sends that reached SENT/DELIVERED; queued and failed attempts are excluded.
+        long smsSent = count("SELECT count(*) FROM app.message_dispatch WHERE channel='SMS' AND status IN ('SENT','DELIVERED') AND created_at >= ? AND created_at < ?",
+                Timestamp.from(month.atStartOfDay(ZoneOffset.UTC).toInstant()),
+                Timestamp.from(day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()));
+        saveMonthly(tenantId, month, "SMS_SENT", BigDecimal.valueOf(smsSent), true, false, finalMonth, now);
         saveMonthly(tenantId, month, "STORAGE_GB", snapshot.storageGb(), true, true, finalMonth, now);
         saveMonthly(tenantId, month, "ACTIVE_USERS", BigDecimal.valueOf(snapshot.activeUsers()), true, true, finalMonth, now);
         saveMonthly(tenantId, month, "ACTIVE_STUDENTS", BigDecimal.valueOf(snapshot.activeStudents()), true, true, finalMonth, now);
