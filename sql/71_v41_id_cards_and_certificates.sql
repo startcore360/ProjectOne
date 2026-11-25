@@ -34,6 +34,7 @@ CREATE TABLE app.id_card_replacement (
  updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL,row_version integer NOT NULL DEFAULT 1,
  PRIMARY KEY(tenant_id,id_card_replacement_id),
  FOREIGN KEY(tenant_id,original_issuance_id) REFERENCES app.id_card_issuance(tenant_id,id_card_issuance_id),
+ FOREIGN KEY(tenant_id,fee_receipt_file_id) REFERENCES app.file_object(tenant_id,file_id),
  FOREIGN KEY(tenant_id,replacement_issuance_id) REFERENCES app.id_card_issuance(tenant_id,id_card_issuance_id),
  CHECK(char_length(reason) BETWEEN 1 AND 1000),CHECK(status IN ('REQUESTED','APPROVED','REJECTED','COMPLETED')),
  CHECK((status IN ('APPROVED','REJECTED','COMPLETED'))=(reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)),
@@ -63,11 +64,12 @@ CREATE TABLE app.certificate_request (
 CREATE INDEX ix_certificate_request_student ON app.certificate_request(tenant_id,student_id,status);
 CREATE TABLE app.certificate_issuance (
  tenant_id uuid NOT NULL,certificate_issuance_id uuid NOT NULL,institution_id uuid NOT NULL,
- certificate_request_id uuid NOT NULL,certificate_number text NOT NULL,verification_code_hash char(64) NOT NULL,
+ certificate_request_id uuid NOT NULL,certificate_number text NOT NULL,verification_code_hash char(64) NOT NULL,certificate_file_id uuid, 
  issued_by_user_id uuid NOT NULL,issued_at timestamptz NOT NULL DEFAULT now(),revoked_at timestamptz,
  revoked_by_user_id uuid,revocation_reason text,created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
  PRIMARY KEY(tenant_id,certificate_issuance_id),
  FOREIGN KEY(tenant_id,certificate_request_id) REFERENCES app.certificate_request(tenant_id,certificate_request_id),
+ FOREIGN KEY(tenant_id,certificate_file_id) REFERENCES app.file_object(tenant_id,file_id),
  UNIQUE(tenant_id,certificate_number),UNIQUE(verification_code_hash),
  CHECK(verification_code_hash ~ '^[0-9a-f]{64}$'),
  CHECK((revoked_at IS NULL)=(revoked_by_user_id IS NULL)),
