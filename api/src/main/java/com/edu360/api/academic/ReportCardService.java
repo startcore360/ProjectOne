@@ -39,7 +39,7 @@ public class ReportCardService {
         } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
             throw new ResourceNotFoundException("Report card not found.");
         }
-        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()), "REPORT_CARD_VIEW",
+        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()), "RESULT_VIEW",
                 RbacScope.institution((UUID) card.get("institution_id")), RbacTarget.NONE);
         return card;
     }
@@ -53,7 +53,7 @@ public class ReportCardService {
         } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
             throw new ResourceNotFoundException("Report card not found.");
         }
-        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()), "REPORT_CARD_PUBLISH",
+        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()), "RESULT_PUBLISH",
                 RbacScope.institution((UUID) card.get("institution_id")), RbacTarget.NONE);
         if ("PUBLISHED".equals(card.get("status"))) return get(tenantId, actor, reportCardId);
         try {
