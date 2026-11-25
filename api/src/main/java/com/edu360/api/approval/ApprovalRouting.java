@@ -89,7 +89,8 @@ public class ApprovalRouting {
         if (activeRole != null && stepRole != null && activeRole.equalsIgnoreCase(stepRole)) {
             return Optional.of(new Route(Via.ROLE, null, null, null));
         }
-        if (userId != null && userId.equals(step.getApproverUserId()) && stepRole.equalsIgnoreCase(step.getApproverRoleCode())) {
+        if (userId != null && userId.equals(step.getApproverUserId()) && stepRole != null
+                && stepRole.equalsIgnoreCase(step.getApproverRoleCode())) {
             return Optional.of(new Route(Via.USER, null, null, null));
         }
         Optional<Route> delegated = delegationRoute(tenantId, userId, request, step, stepRole);
