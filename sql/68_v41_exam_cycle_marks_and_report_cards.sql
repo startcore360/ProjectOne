@@ -208,6 +208,10 @@ CREATE OR REPLACE FUNCTION app.fn_guard_exam_mark_term_lock()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE v_semester_id uuid;
 BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'EXAM_MARK_DELETE_FORBIDDEN: marks must be corrected through the moderation workflow'
+            USING ERRCODE = 'P0001';
+    END IF;
     SELECT ec.semester_id INTO v_semester_id
       FROM app.exam_schedule es
       JOIN app.exam_cycle ec ON ec.tenant_id = es.tenant_id AND ec.exam_cycle_id = es.exam_cycle_id
