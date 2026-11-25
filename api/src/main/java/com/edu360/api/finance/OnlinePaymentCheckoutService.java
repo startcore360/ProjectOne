@@ -74,8 +74,9 @@ public class OnlinePaymentCheckoutService {
             throw new BusinessRuleViolationException("PAYMENT_CROSS_INSTITUTION_NOT_ALLOWED",
                     "A single payment cannot combine installments from different institutions.");
         }
-        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
-                "FEE_PAY_ONLINE", RbacScope.institution(institutionId), RbacTarget.NONE);
+        RbacPrincipal rbacPrincipal = new RbacPrincipal(tenantId, actor.userAccountId());
+        permissions.authorize(rbacPrincipal, "FEE_PAY_ONLINE",
+                permissions.ownScope(rbacPrincipal), RbacTarget.NONE);
 
         BigDecimal total = installments.stream().map(Installment::netDue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, java.math.RoundingMode.UNNECESSARY);
