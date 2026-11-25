@@ -59,13 +59,18 @@ export default function FeePaymentPortalPage() {
     setError("");
     setNotice("");
     try {
-      const response = await api.post<CheckoutSession & { checkoutUrl?: string }>(`/tenants/${tenantId}/payments/checkout`, {
+      const response = await api.post<CheckoutSession & { checkoutUrl?: string; status?: string }>(`/tenants/${tenantId}/payments/checkout`, {
         studentFeeAccountId: accountId,
         installmentIds: payable.map((invoice) => invoice.studentInstallmentId || invoice.invoiceId),
         provider,
         requestKey: crypto.randomUUID(),
       });
-      setSession(response.data);
+      if (response.data.status && response.data.status !== "PENDING") {
+        setNotice(`This payment attempt is already ${response.data.status.toLowerCase()}.`);
+        void loadInvoices();
+      } else {
+        setSession(response.data);
+      }
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
       setError(message || "Unable to start checkout. Please refresh the invoices and retry.");
