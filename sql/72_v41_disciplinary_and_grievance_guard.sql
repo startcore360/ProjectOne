@@ -92,7 +92,7 @@ $$;
 DO $$
 DECLARE t text;
 BEGIN
- FOREACH t IN ARRAY ARRAY['disciplinary_incident','grievance_case','grievance_evidence','grievance_action'] LOOP
+ FOREACH t IN ARRAY ARRAY['disciplinary_incident','grievance_case','grievance_evidence'] LOOP
   EXECUTE format('CREATE TRIGGER trg_touch BEFORE UPDATE ON app.%I FOR EACH ROW EXECUTE FUNCTION app.fn_touch()',t);
   EXECUTE format('ALTER TABLE app.%I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('ALTER TABLE app.%I FORCE ROW LEVEL SECURITY',t);
@@ -100,6 +100,12 @@ BEGIN
   EXECUTE format('GRANT SELECT,INSERT,UPDATE ON app.%I TO edu_app',t);
   EXECUTE format('GRANT SELECT ON app.%I TO edu_report',t);
  END LOOP;
+ CREATE TRIGGER trg_append_only BEFORE UPDATE OR DELETE ON app.grievance_action FOR EACH ROW EXECUTE FUNCTION app.fn_append_only();
+ ALTER TABLE app.grievance_action ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE app.grievance_action FORCE ROW LEVEL SECURITY;
+ CREATE POLICY p_tenant ON app.grievance_action USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
+ GRANT SELECT,INSERT ON app.grievance_action TO edu_app;
+ GRANT SELECT ON app.grievance_action TO edu_report;
 END $$;
 CREATE POLICY p_grievance_confidentiality ON app.grievance_case AS RESTRICTIVE FOR SELECT
  USING(app.fn_complaint_guard(tenant_id,accused_user_id,institution_id));
