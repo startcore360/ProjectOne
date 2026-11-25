@@ -67,7 +67,7 @@ public class ExecutiveAnalyticsService {
                   JOIN app.staff_assignment a ON a.tenant_id=p.tenant_id AND a.staff_profile_id=p.staff_profile_id
                  WHERE p.tenant_id=? AND a.institution_id=? AND p.employment_status='ACTIVE'
                    AND a.status='ACTIVE' AND a.effective_from<=current_date AND (a.effective_to IS NULL OR a.effective_to>=current_date)",tenant,institution));
-                values.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(amount-amount_paid),0) FROM app.library_fine WHERE tenant_id=? AND institution_id=? AND status='OUTSTANDING'",tenant,institution));
+                values.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(outstanding_fine_balance),0) FROM app.v_student_library_dues_flag WHERE tenant_id=? AND institution_id=?",tenant,institution));
                 values.put("openLibraryCirculations",scalar(db,"SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND returned_at IS NULL",tenant,institution));
                 values.put("transportAllocations",scalar(db,"SELECT count(*) FROM app.transport_allocation WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
                 values.put("smsSent",scalar(db,"SELECT count(*) FROM app.message_dispatch WHERE tenant_id=? AND institution_id=? AND channel='SMS' AND status IN ('SENT','DELIVERED') AND created_at>=? AND created_at<?",tenant,institution,start.atStartOfDay().atOffset(ZoneOffset.UTC),end.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)));
