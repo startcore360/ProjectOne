@@ -17,6 +17,9 @@ public class CommunicationDispatchController {
     @PostMapping("/dispatch") public Map<String,Object> dispatch(@PathVariable UUID tenantId,@RequestBody DispatchRequest request,Authentication auth) {
         return service.dispatch(tenantId,principal(auth,tenantId),request);
     }
+    @PostMapping("/dispatch/{dispatchId}/outcome") public Map<String,Object> outcome(@PathVariable UUID tenantId,@PathVariable UUID dispatchId,@RequestBody OutcomeRequest request,Authentication auth) {
+        return service.recordDispatchOutcome(tenantId,principal(auth,tenantId),request.institutionId(),dispatchId,request.status(),request.failureReason(),request.carrierMessageId());
+    }
     @GetMapping("/dispatch") public List<Map<String,Object>> history(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
         return service.dispatchHistory(tenantId,principal(auth,tenantId),institutionId);
     }
@@ -26,4 +29,5 @@ public class CommunicationDispatchController {
         return p;
     }
     public record DispatchRequest(UUID institutionId,UUID recipientUserId,String phone,String email,String subject,String body,List<String> channels,boolean urgent) {}
+    public record OutcomeRequest(UUID institutionId,String status,String failureReason,String carrierMessageId) {}
 }
