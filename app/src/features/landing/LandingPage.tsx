@@ -188,68 +188,7 @@ const FALLBACK_MODULES: PublicCatalogModuleItem[] = [
   { moduleCode: "GOVERNANCE", itemName: "Reports & governance", description: null },
 ];
 
-const FALLBACK_TESTIMONIALS: LandingTestimonialItem[] = [
-  {
-    testimonialId: "sample-1",
-    kind: "VIDEO",
-    authorName: "Dr. Kavitha Rao",
-    authorRole: "Principal · Higher Education",
-    institutionName: "Partner Institution",
-    quoteText:
-      "Connecting our academic office, faculty approvals and parent updates in one workspace saved hours every week.",
-    videoUrl: null,
-    videoMediaId: null,
-    posterMediaId: null,
-    displayOrder: 0,
-    published: true,
-    rowVersion: 1,
-  },
-  {
-    testimonialId: "sample-2",
-    kind: "TEXT",
-    authorName: "Raghavendra M.",
-    authorRole: "Parent / Guardian",
-    institutionName: "Partner School",
-    quoteText:
-      "Attendance alerts, fee receipts and exam notices arrive reliably in one place without digging through chat groups.",
-    videoUrl: null,
-    videoMediaId: null,
-    posterMediaId: null,
-    displayOrder: 1,
-    published: true,
-    rowVersion: 1,
-  },
-  {
-    testimonialId: "sample-3",
-    kind: "VIDEO",
-    authorName: "Prof. Arvind Nair",
-    authorRole: "Head of Department",
-    institutionName: "Partner College",
-    quoteText:
-      "Daily attendance, class schedules and marks moderation are clear and auditable for our entire department.",
-    videoUrl: null,
-    videoMediaId: null,
-    posterMediaId: null,
-    displayOrder: 2,
-    published: true,
-    rowVersion: 1,
-  },
-  {
-    testimonialId: "sample-4",
-    kind: "TEXT",
-    authorName: "Meenakshi S.",
-    authorRole: "Registrar",
-    institutionName: "Partner University",
-    quoteText:
-      "Multi-campus governance and role-scoped reporting give leadership accurate visibility across every institution.",
-    videoUrl: null,
-    videoMediaId: null,
-    posterMediaId: null,
-    displayOrder: 3,
-    published: true,
-    rowVersion: 1,
-  },
-];
+const FALLBACK_TESTIMONIALS: LandingTestimonialItem[] = [];
 
 const VALID_ICONS = new Set<IconName>([
   "grid",
@@ -597,9 +536,6 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                 <a className="landing-hero__ghost-btn" href="#platform">
                   Explore the platform ↓
                 </a>
-                <Button variant="primary" size="lg" onClick={() => setSelectorOpen(true)}>
-                  Sign in to your institution
-                </Button>
               </div>
               <p className="landing-hero__note">{heroNote}</p>
             </div>
@@ -766,7 +702,8 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
           </div>
         </section>
 
-        {/* Moving Feedback & Video Testimonials Marquee */}
+        {/* Published testimonials only: never display invented social proof. */}
+        {testimonials.length > 0 && (
         <section className="landing-section" id="stories">
           <div className="landing-wrap">
             <div className="landing-section__head">
@@ -872,6 +809,7 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
             </div>
           </div>
         </section>
+        )}
 
         {/* Quotation Estimation Request */}
         <section className="landing-section landing-section--soft" id="quotation">
