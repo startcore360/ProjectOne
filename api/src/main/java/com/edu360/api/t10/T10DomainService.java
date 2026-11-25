@@ -129,7 +129,7 @@ public class T10DomainService {
     @Transactional
     public Map<String,Object> issueBook(UUID tenant,TenantPrincipal p,LibraryController.IssueRequest r) {
         allow(tenant,p.userAccountId(),"BOOK_ISSUE_RETURN",r.institutionId());
-        String borrowerType=jdbc.queryForObject("SELECT user_type FROM app.user_account WHERE tenant_id=? AND user_account_id=? FOR UPDATE",String.class,tenant,r.borrowerUserId());
+        String borrowerType=jdbc.queryForObject("SELECT user_type FROM app.user_account WHERE tenant_id=? AND user_account_id=? AND status='ACTIVE' FOR UPDATE",String.class,tenant,r.borrowerUserId());
         String actualRole;
         if("STUDENT".equalsIgnoreCase(borrowerType)) actualRole="STUDENT";
         else {
@@ -140,6 +140,13 @@ public class T10DomainService {
                    AND d.status='ACTIVE' AND d.role_code IN ('PROFESSOR','ASSOCIATE_PROFESSOR','ASSISTANT_PROFESSOR')
                 """,Integer.class,tenant,r.borrowerUserId());
             actualRole=faculty!=null&&faculty>0?"FACULTY":"OTHER";
+        }
+        if("STUDENT".equals(actualRole)) {
+            Integer linked=jdbc.queryForObject("SELECT count(*) FROM app.student_profile WHERE tenant_id=? AND institution_id=? AND user_account_id=? AND status='ACTIVE'",Integer.class,tenant,r.institutionId(),r.borrowerUserId());
+            if(linked==null||linked==0) throw new BusinessRuleViolationException("BORROWER_OUT_OF_SCOPE","Student is not active in this institution.");
+        } else if("FACULTY".equals(actualRole)) {
+            Integer linked=jdbc.queryForObject("SELECT count(*) FROM app.staff_profile WHERE tenant_id=? AND institution_id=? AND user_account_id=? AND employment_status='ACTIVE'",Integer.class,tenant,r.institutionId(),r.borrowerUserId());
+            if(linked==null||linked==0) throw new BusinessRuleViolationException("BORROWER_OUT_OF_SCOPE","Faculty member is not active in this institution.");
         }
         Integer limit=switch(actualRole){case "STUDENT"->3;case "FACULTY"->10;default->throw new BusinessRuleViolationException("BORROW_ROLE_UNSUPPORTED","Borrow limits are defined for Student (3) and Faculty (10).");};
         Integer active=jdbc.queryForObject("SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND borrower_user_id=? AND returned_at IS NULL",Integer.class,tenant,r.institutionId(),r.borrowerUserId());
