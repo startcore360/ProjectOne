@@ -9,6 +9,15 @@ CREATE TABLE IF NOT EXISTS app.notice_bulletin (
  CONSTRAINT ck_notice_status CHECK(status IN ('DRAFT','PUBLISHED','ARCHIVED')),
  CONSTRAINT ck_notice_expiry CHECK(expires_at IS NULL OR published_at IS NULL OR expires_at>published_at)
 );
+CREATE TABLE IF NOT EXISTS app.notice_target (
+ id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
+ notice_id uuid NOT NULL REFERENCES app.notice_bulletin(id) ON DELETE RESTRICT,
+ target_kind text NOT NULL, target_id uuid, role_code text,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ CHECK(target_kind IN ('ROLE','DEPARTMENT','CLASS','INSTITUTION')),
+ CHECK((target_kind='ROLE' AND role_code IS NOT NULL) OR (target_kind<>'ROLE' AND target_id IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS ix_notice_target_notice ON app.notice_target(tenant_id,notice_id,target_kind);
 CREATE TABLE IF NOT EXISTS app.notice_acknowledgment (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
  notice_id uuid NOT NULL REFERENCES app.notice_bulletin(id) ON DELETE RESTRICT,
@@ -44,7 +53,7 @@ CREATE INDEX IF NOT EXISTS ix_dispatch_campaign ON app.message_dispatch(tenant_i
 DO $$
 DECLARE t text;
 BEGIN
- FOREACH t IN ARRAY ARRAY['notice_bulletin','notice_acknowledgment','communication_campaign','message_template','message_dispatch'] LOOP
+ FOREACH t IN ARRAY ARRAY['notice_bulletin','notice_target','notice_acknowledgment','communication_campaign','message_template','message_dispatch'] LOOP
   EXECUTE format('ALTER TABLE app.%I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('DROP POLICY IF EXISTS p_tenant ON app.%I',t);
   EXECUTE format('CREATE POLICY p_tenant ON app.%I USING (tenant_id=NULLIF(current_setting(''app.tenant_id'',true),'''')::uuid AND (institution_id IS NULL OR current_setting(''app.institution_scope'',true)=''ALL'' OR institution_id=ANY(string_to_array(NULLIF(current_setting(''app.institution_ids'',true),''''),'','')::uuid[]))) WITH CHECK (tenant_id=NULLIF(current_setting(''app.tenant_id'',true),'''')::uuid AND (institution_id IS NULL OR current_setting(''app.institution_scope'',true)=''ALL'' OR institution_id=ANY(string_to_array(NULLIF(current_setting(''app.institution_ids'',true),''''),'','')::uuid[])))',t);
