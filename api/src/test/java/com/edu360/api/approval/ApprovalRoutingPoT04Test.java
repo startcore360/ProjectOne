@@ -98,9 +98,6 @@ class ApprovalRoutingPoT04Test {
         if (assigned) {
             when(assignments.findByIdTenantIdAndRoleDefinitionIdAndStatus(TENANT, roleId, AssignmentStatus.ACTIVE))
                     .thenReturn(List.of(assignment(roleId)));
-        } else {
-            when(assignments.findByIdTenantIdAndRoleDefinitionIdAndStatus(TENANT, roleId, AssignmentStatus.ACTIVE))
-                    .thenReturn(List.of());
         }
     }
 
