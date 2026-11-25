@@ -91,7 +91,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     // BS-27: Both /api/auth/** and /v1/auth/** permitted consistently, plus identity-events webhooks (M-03) and public landing APIs
-                    auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/api/public/**", "/v1/public/**", "/internal/identity-events", "/v1/internal/identity-events", "/v1/ws", "/api/ws").permitAll();
+                    auth.requestMatchers("/api/auth/**", "/v1/auth/**", "/api/public/**", "/v1/public/**", "/api/webhooks/payments/**", "/internal/identity-events", "/v1/internal/identity-events", "/v1/ws", "/api/ws").permitAll();
                     // BS-25: Swagger and H2 console only open in dev or test profiles
                     if (isDevOrTest) {
                         // The local backup-agent route has its own dev-only shared-secret check.
