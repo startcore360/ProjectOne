@@ -91,14 +91,17 @@ public class OfflinePaymentService {
             """, new MapSqlParameterSource().addValue("tenantId", tenantId)
                     .addValue("requestKey", request.requestKey()), rs -> {
                 if (!rs.next()) return null;
-                return Map.of("paymentId", rs.getObject("payment_id", UUID.class),
-                        "institutionId", rs.getObject("institution_id", UUID.class),
-                        "accountId", rs.getObject("student_fee_account_id", UUID.class),
-                        "method", rs.getString("method"), "amount", rs.getBigDecimal("amount"),
-                        "status", rs.getString("status"),
-                        "chequeNumber", rs.getString("cheque_number"),
-                        "chequeDate", rs.getDate("cheque_date") == null ? null : rs.getDate("cheque_date").toLocalDate(),
-                        "chequeBank", rs.getString("cheque_bank"));
+                Map<String, Object> row = new HashMap<>();
+                row.put("paymentId", rs.getObject("payment_id", UUID.class));
+                row.put("institutionId", rs.getObject("institution_id", UUID.class));
+                row.put("accountId", rs.getObject("student_fee_account_id", UUID.class));
+                row.put("method", rs.getString("method"));
+                row.put("amount", rs.getBigDecimal("amount"));
+                row.put("status", rs.getString("status"));
+                row.put("chequeNumber", rs.getString("cheque_number"));
+                row.put("chequeDate", rs.getDate("cheque_date") == null ? null : rs.getDate("cheque_date").toLocalDate());
+                row.put("chequeBank", rs.getString("cheque_bank"));
+                return row;
             });
         if (existing != null) {
             return replayOrReject(tenantId, request, installmentIds, institutionId, existing);
@@ -136,16 +139,23 @@ public class OfflinePaymentService {
         if (persistedPaymentId == null) throw new IllegalStateException("Payment idempotency row could not be resolved.");
         if (!persistedPaymentId.equals(paymentId)) {
             Map<String, Object> raced = jdbc.query("""
-                SELECT payment_id, institution_id, student_fee_account_id, method, amount, status
+                SELECT payment_id, institution_id, student_fee_account_id, method, amount, status,
+                       cheque_number, cheque_date, cheque_bank
                   FROM app.payment WHERE tenant_id=:tenantId AND request_key=:requestKey
                 """, new MapSqlParameterSource().addValue("tenantId", tenantId)
                         .addValue("requestKey", request.requestKey()), rs -> {
                     if (!rs.next()) return null;
-                    return Map.of("paymentId", rs.getObject("payment_id", UUID.class),
-                            "institutionId", rs.getObject("institution_id", UUID.class),
-                            "accountId", rs.getObject("student_fee_account_id", UUID.class),
-                            "method", rs.getString("method"), "amount", rs.getBigDecimal("amount"),
-                            "status", rs.getString("status"));
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("paymentId", rs.getObject("payment_id", UUID.class));
+                    row.put("institutionId", rs.getObject("institution_id", UUID.class));
+                    row.put("accountId", rs.getObject("student_fee_account_id", UUID.class));
+                    row.put("method", rs.getString("method"));
+                    row.put("amount", rs.getBigDecimal("amount"));
+                    row.put("status", rs.getString("status"));
+                    row.put("chequeNumber", rs.getString("cheque_number"));
+                    row.put("chequeDate", rs.getDate("cheque_date") == null ? null : rs.getDate("cheque_date").toLocalDate());
+                    row.put("chequeBank", rs.getString("cheque_bank"));
+                    return row;
                 });
             return replayOrReject(tenantId, request, installmentIds, institutionId, raced);
         }
