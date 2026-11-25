@@ -25,11 +25,12 @@ public class HttpDispatchProvider implements DispatchProvider {
             @Value("${app.dispatch.providers.sms.url:}") String smsUrl,
             @Value("${app.dispatch.providers.sms.token:}") String smsToken,
             @Value("${app.dispatch.providers.email.url:}") String emailUrl,
-            @Value("${app.dispatch.providers.email.token:}") String emailToken) {
+            @Value("${app.dispatch.providers.email.token:}") String emailToken,
+            RestClient.Builder builder) {
         SimpleClientHttpRequestFactory factory=new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(3));
         factory.setReadTimeout(Duration.ofSeconds(10));
-        this.client=RestClient.builder().requestFactory(factory).build();
+        this.client=builder.requestFactory(factory).build();
         gateways.put("PUSH",new Gateway(pushUrl,pushToken));
         gateways.put("SMS",new Gateway(smsUrl,smsToken));
         gateways.put("EMAIL",new Gateway(emailUrl,emailToken));
