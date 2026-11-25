@@ -61,7 +61,7 @@ public class ExecutiveAnalyticsService {
                 db.queryForObject("SELECT set_config('app.institution_ids', ?, true)",String.class,institution.toString());
                 Map<String,Object> values=new LinkedHashMap<>();
                 values.put("activeStudents",scalar(db,"SELECT count(*) FROM app.student_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
-                values.put("activeStaff",scalar(db,"SELECT count(*) FROM app.staff_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
+                values.put("activeStaff",scalar(db,"SELECT count(*) FROM app.staff_profile WHERE tenant_id=? AND institution_id=? AND employment_status='ACTIVE'",tenant,institution));
                 values.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(amount-amount_paid),0) FROM app.library_fine WHERE tenant_id=? AND institution_id=? AND status='OUTSTANDING'",tenant,institution));
                 values.put("openLibraryCirculations",scalar(db,"SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND returned_at IS NULL",tenant,institution));
                 values.put("transportAllocations",scalar(db,"SELECT count(*) FROM app.transport_allocation WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
