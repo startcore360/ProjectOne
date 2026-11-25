@@ -412,10 +412,11 @@ public class PermissionEvaluatorService {
         if (roleCode == null) {
             return false;
         }
-        // PO-T04: a Finance Director is a permitted designated concession approver only
-        // when the Management step has explicitly rolled down to that tenant-level role.
-        // This does not grant general top-post coverage or any other action.
-        if ("FINANCE_DIRECTOR".equals(roleCode) && "CONCESSION_APPROVE".equals(actionCode)) {
+        // PO-T04: Trustees (Governing Body Approver) may act as the primary authority when
+        // Management is absent; a Finance Director may act only when explicitly designated
+        // by the Management-step roll-down. Neither receives general top-post coverage.
+        if (("GOVERNING_BODY_APPROVER".equals(roleCode) || "FINANCE_DIRECTOR".equals(roleCode))
+                && "CONCESSION_APPROVE".equals(actionCode)) {
             return a.getScopeType() == ScopeType.TENANT;
         }
         return switch (roleCode) {
