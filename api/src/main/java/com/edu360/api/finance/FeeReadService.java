@@ -78,9 +78,11 @@ public class FeeReadService {
     @Transactional(readOnly = true)
     public Map<String, Object> getStudentLedger(UUID tenantId, TenantPrincipal actor, UUID accountId) {
         Map<String, Object> account = jdbc.query("""
-            SELECT student_fee_account_id, institution_id, student_profile_id
-              FROM app.student_fee_account
-             WHERE tenant_id=:tenantId AND student_fee_account_id=:accountId
+            SELECT sfa.student_fee_account_id, sp.institution_id, sfa.student_profile_id
+              FROM app.student_fee_account sfa
+              JOIN app.student_profile sp
+                ON sp.tenant_id=sfa.tenant_id AND sp.student_profile_id=sfa.student_profile_id
+             WHERE sfa.tenant_id=:tenantId AND sfa.student_fee_account_id=:accountId
             """, Map.of("tenantId", tenantId, "accountId", accountId), rs -> {
                 if (!rs.next()) return null;
                 return Map.of(
@@ -115,8 +117,11 @@ public class FeeReadService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listInvoices(UUID tenantId, TenantPrincipal actor, UUID accountId) {
         Map<String, Object> account = jdbc.query("""
-            SELECT institution_id FROM app.student_fee_account
-             WHERE tenant_id=:tenantId AND student_fee_account_id=:accountId
+            SELECT sp.institution_id
+              FROM app.student_fee_account sfa
+              JOIN app.student_profile sp
+                ON sp.tenant_id=sfa.tenant_id AND sp.student_profile_id=sfa.student_profile_id
+             WHERE sfa.tenant_id=:tenantId AND sfa.student_fee_account_id=:accountId
             """, Map.of("tenantId", tenantId, "accountId", accountId), rs ->
                 rs.next() ? Map.of("institutionId", rs.getObject(1, UUID.class)) : null);
         if (account == null) throw new ResourceNotFoundException("Student fee account not found.");
