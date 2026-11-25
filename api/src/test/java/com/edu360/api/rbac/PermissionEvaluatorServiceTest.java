@@ -253,6 +253,7 @@ class PermissionEvaluatorServiceTest {
         assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_HEARING_MANAGE")).isTrue();
         assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_CASE_RESOLVE")).isTrue();
         assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_EVIDENCE_VIEW")).isTrue();
+        assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_EVIDENCE_UPLOAD")).isTrue();
         assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_CASE_SUBMIT")).isFalse();
     }
 
