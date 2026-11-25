@@ -30,6 +30,7 @@ public class ExecutiveAnalyticsService {
             @Qualifier("eduReportTransactionManager") org.springframework.transaction.PlatformTransactionManager reportManager) {
         this.reportJdbc=reportJdbc; this.permissions=permissions; this.tenantJdbc=tenantJdbc;
         this.reportTransaction=new TransactionTemplate(reportManager);
+        this.reportTransaction.setReadOnly(true);
     }
     public Map<String,Object> dashboard(UUID tenant,TenantPrincipal p,UUID institution,LocalDate from,LocalDate to) {
         ScopeType active=TenantContext.currentActiveScopeType();
@@ -51,24 +52,29 @@ public class ExecutiveAnalyticsService {
         Map<String,Object> out=new LinkedHashMap<>();
         out.put("reportExecutionId",execution);
         out.put("period",Map.of("from",start,"to",end));
-        Map<String,Object> metrics=reportTransaction.execute(tx -> {
-            // Bind RLS scope locally to this read-only transaction; pooled reporting connections
-            // never retain one tenant's GUCs for the next request.
-            db.queryForObject("SELECT set_config('app.tenant_id', ?, true)",String.class,tenant.toString());
-            db.queryForObject("SELECT set_config('app.institution_scope', 'LIST', true)",String.class);
-            db.queryForObject("SELECT set_config('app.institution_ids', ?, true)",String.class,institution.toString());
-            Map<String,Object> values=new LinkedHashMap<>();
-            values.put("activeStudents",scalar(db,"SELECT count(*) FROM app.student_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
-            values.put("activeStaff",scalar(db,"SELECT count(*) FROM app.staff_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
-            values.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(amount-amount_paid),0) FROM app.library_fine WHERE tenant_id=? AND institution_id=? AND status='OUTSTANDING'",tenant,institution));
-            values.put("openLibraryCirculations",scalar(db,"SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND returned_at IS NULL",tenant,institution));
-            values.put("transportAllocations",scalar(db,"SELECT count(*) FROM app.transport_allocation WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
-            values.put("smsSent",scalar(db,"SELECT count(*) FROM app.message_dispatch WHERE tenant_id=? AND institution_id=? AND channel='SMS' AND status IN ('SENT','DELIVERED') AND created_at>=? AND created_at<?",tenant,institution,start.atStartOfDay(),end.plusDays(1).atStartOfDay()));
-            return values;
-        });
-        if(metrics!=null) out.putAll(metrics);
-        tenantJdbc.update("UPDATE app.report_execution SET status='SUCCEEDED',completed_at=now() WHERE id=? AND tenant_id=?",execution,tenant);
-        return out;
+        try {
+            Map<String,Object> metrics=reportTransaction.execute(tx -> {
+                // Bind RLS scope locally to this read-only transaction; pooled reporting connections
+                // never retain one tenant's GUCs for the next request.
+                db.queryForObject("SELECT set_config('app.tenant_id', ?, true)",String.class,tenant.toString());
+                db.queryForObject("SELECT set_config('app.institution_scope', 'LIST', true)",String.class);
+                db.queryForObject("SELECT set_config('app.institution_ids', ?, true)",String.class,institution.toString());
+                Map<String,Object> values=new LinkedHashMap<>();
+                values.put("activeStudents",scalar(db,"SELECT count(*) FROM app.student_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
+                values.put("activeStaff",scalar(db,"SELECT count(*) FROM app.staff_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
+                values.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(amount-amount_paid),0) FROM app.library_fine WHERE tenant_id=? AND institution_id=? AND status='OUTSTANDING'",tenant,institution));
+                values.put("openLibraryCirculations",scalar(db,"SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND returned_at IS NULL",tenant,institution));
+                values.put("transportAllocations",scalar(db,"SELECT count(*) FROM app.transport_allocation WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
+                values.put("smsSent",scalar(db,"SELECT count(*) FROM app.message_dispatch WHERE tenant_id=? AND institution_id=? AND channel='SMS' AND status IN ('SENT','DELIVERED') AND created_at>=? AND created_at<?",tenant,institution,start.atStartOfDay(),end.plusDays(1).atStartOfDay()));
+                return values;
+            });
+            if(metrics!=null) out.putAll(metrics);
+            tenantJdbc.update("UPDATE app.report_execution SET status='SUCCEEDED',completed_at=now() WHERE id=? AND tenant_id=?",execution,tenant);
+            return out;
+        } catch(RuntimeException ex) {
+            tenantJdbc.update("UPDATE app.report_execution SET status='FAILED',completed_at=now(),error_code='REPORT_QUERY_FAILED' WHERE id=? AND tenant_id=?",execution,tenant);
+            throw ex;
+        }
     }
     private Object scalar(JdbcTemplate db,String sql,Object... args) { return db.queryForObject(sql,Object.class,args); }
 }
