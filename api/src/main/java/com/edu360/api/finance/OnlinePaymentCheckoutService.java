@@ -240,6 +240,10 @@ public class OnlinePaymentCheckoutService {
             });
         if (order == null) throw new BusinessRuleViolationException("CHECKOUT_ORDER_MISSING",
                 "The existing payment has no gateway order; contact the institution.");
+        if (!request.provider().equalsIgnoreCase((String) order.get("provider"))) {
+            throw new BusinessRuleViolationException("IDEMPOTENCY_KEY_REUSED",
+                    "The checkout request key has already been used with a different payment provider.");
+        }
         PaymentGatewayCredentialsResolver.PaymentGatewayCredentials credentials =
                 credentialsResolver.resolve(tenantId, institutionId);
         String provider = (String) order.get("provider");
