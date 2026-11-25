@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 import RazorpayCheckoutModal, { type CheckoutSession } from "../components/RazorpayCheckoutModal";
+import PrintableFeeReceipt, { type FeeReceiptDetails } from "../components/PrintableFeeReceipt";
 
 type Invoice = {
   invoiceId: string;
@@ -23,6 +24,8 @@ export default function FeePaymentPortalPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [session, setSession] = useState<CheckoutSession | null>(null);
+  const [receipt, setReceipt] = useState<FeeReceiptDetails | null>(null);
+  const [receiptPaymentId, setReceiptPaymentId] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -72,10 +75,23 @@ export default function FeePaymentPortalPage() {
   }
 
   function paymentSubmitted() {
+    if (session) setReceiptPaymentId(session.paymentId);
     setSession(null);
     setNotice("Payment submitted. The account will update after the provider's signed server notification is verified.");
     setSelected([]);
     void loadInvoices();
+  }
+
+  async function loadReceipt() {
+    if (!tenantId || !receiptPaymentId.trim()) return;
+    setError("");
+    try {
+      const response = await api.get<FeeReceiptDetails>(`/tenants/${tenantId}/payments/${receiptPaymentId}/receipt`);
+      setReceipt(response.data);
+    } catch {
+      setReceipt(null);
+      setError("The issued receipt is not available yet. Wait for the signed payment confirmation and retry.");
+    }
   }
 
   return (
@@ -112,6 +128,14 @@ export default function FeePaymentPortalPage() {
         </div>
         <button type="button" disabled={busy || payable.length === 0} onClick={() => void startCheckout()} className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Creating secure checkout…" : `Continue to payment · ${money(total)}`}</button>
       </section>}
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="font-semibold text-slate-900">Retrieve an issued receipt</h2>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input className={inputClass} value={receiptPaymentId} onChange={(e) => setReceiptPaymentId(e.target.value)} placeholder="Payment ID" aria-label="Payment ID for receipt" />
+          <button type="button" onClick={() => void loadReceipt()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Load receipt</button>
+        </div>
+      </section>
+      {receipt && <PrintableFeeReceipt receipt={receipt} />}
       {session && <RazorpayCheckoutModal session={session} onClose={() => setSession(null)} onSubmitted={paymentSubmitted} />}
     </main>
   );
