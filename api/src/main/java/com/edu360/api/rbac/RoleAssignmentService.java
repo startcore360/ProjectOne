@@ -538,6 +538,7 @@ public class RoleAssignmentService {
                 || code.contains("PROFESSOR")
                 || code.contains("LECTURER")
                 || code.contains("DEAN")
-                || code.contains("IT_SUPPORT");
+                || code.contains("IT_SUPPORT")
+                || code.equals("INTERNAL_COMPLAINTS_COMMITTEE");
     }
 }
