@@ -67,7 +67,7 @@ export function useTenantBranding(tenantId: string | null | undefined): { logoUr
 
   useEffect(() => {
     if (!tenantId) {
-      setLogoUrl(null);
+      void Promise.resolve().then(() => setLogoUrl(null));
       return undefined;
     }
 
