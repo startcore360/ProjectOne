@@ -129,7 +129,7 @@ public class T10DomainService {
     @Transactional
     public Map<String,Object> issueBook(UUID tenant,TenantPrincipal p,LibraryController.IssueRequest r) {
         allow(tenant,p.userAccountId(),"BOOK_ISSUE_RETURN",r.institutionId());
-        String borrowerType=jdbc.queryForObject("SELECT user_type FROM app.user_account WHERE tenant_id=? AND user_account_id=?",String.class,tenant,r.borrowerUserId());
+        String borrowerType=jdbc.queryForObject("SELECT user_type FROM app.user_account WHERE tenant_id=? AND user_account_id=? FOR UPDATE",String.class,tenant,r.borrowerUserId());
         String actualRole;
         if("STUDENT".equalsIgnoreCase(borrowerType)) actualRole="STUDENT";
         else {
@@ -143,11 +143,13 @@ public class T10DomainService {
         }
         Integer limit=switch(actualRole){case "STUDENT"->3;case "FACULTY"->10;default->throw new BusinessRuleViolationException("BORROW_ROLE_UNSUPPORTED","Borrow limits are defined for Student (3) and Faculty (10).");};
         Integer active=jdbc.queryForObject("SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND borrower_user_id=? AND returned_at IS NULL",Integer.class,tenant,r.institutionId(),r.borrowerUserId());
-        if(active!=null&&active>=limit) throw new BusinessRuleViolationException("BORROW_LIMIT_REACHED","Borrow limit reached for role "+r.borrowerRole()+": "+limit);
+        if(active!=null&&active>=limit) throw new BusinessRuleViolationException("BORROW_LIMIT_REACHED","Borrow limit reached for role "+actualRole+": "+limit);
+        if(r.dueDate()==null || r.dueDate().isBefore(java.time.LocalDate.now())) throw new BusinessRuleViolationException("INVALID_DUE_DATE","Due date must be today or later.");
         UUID id=UUID.randomUUID();
-        int changed=jdbc.update("UPDATE app.book_copy SET status='ISSUED' WHERE id=? AND tenant_id=? AND institution_id=? AND status='AVAILABLE'",r.copyId(),tenant,r.institutionId());
+        int changed=jdbc.update("UPDATE app.book_copy SET status='ISSUED' WHERE id=? AND tenant_id=? AND institution_id=? AND book_id=? AND status='AVAILABLE'",r.copyId(),tenant,r.institutionId(),r.bookId());
         if(changed!=1) throw new BusinessRuleViolationException("COPY_UNAVAILABLE","Book copy is not available.");
-        jdbc.update("UPDATE app.library_catalog SET available_copies=available_copies-1 WHERE id=? AND tenant_id=? AND institution_id=? AND available_copies>0",r.bookId(),tenant,r.institutionId());
+        int availableChanged=jdbc.update("UPDATE app.library_catalog SET available_copies=available_copies-1 WHERE id=? AND tenant_id=? AND institution_id=? AND available_copies>0",r.bookId(),tenant,r.institutionId());
+        if(availableChanged!=1) throw new BusinessRuleViolationException("COPY_UNAVAILABLE","Catalog availability is exhausted.");
         jdbc.update("INSERT INTO app.book_circulation(id,tenant_id,institution_id,book_id,copy_id,borrower_user_id,borrower_role,due_date,status) VALUES (?,?,?,?,?,?,?,?, 'ISSUED')",
           id,tenant,r.institutionId(),r.bookId(),r.copyId(),r.borrowerUserId(),actualRole,r.dueDate());
         return Map.of("circulationId",id,"status","ISSUED","borrowLimit",limit);
@@ -172,6 +174,7 @@ public class T10DomainService {
     @Transactional
     public Map<String,Object> reserveBook(UUID tenant,TenantPrincipal p,LibraryController.ReservationRequest r) {
         allow(tenant,p.userAccountId(),"RESERVATION_MANAGE",r.institutionId());
+        jdbc.queryForObject("SELECT id FROM app.library_catalog WHERE id=? AND tenant_id=? AND institution_id=? FOR UPDATE",UUID.class,r.bookId(),tenant,r.institutionId());
         Long next=jdbc.queryForObject("SELECT COALESCE(max(queue_position),0)+1 FROM app.library_reservation WHERE tenant_id=? AND institution_id=? AND book_id=? AND status='WAITING'",Long.class,tenant,r.institutionId(),r.bookId());
         UUID id=UUID.randomUUID();
         jdbc.update("INSERT INTO app.library_reservation(id,tenant_id,institution_id,book_id,borrower_user_id,queue_position) VALUES (?,?,?,?,?,?)",id,tenant,r.institutionId(),r.bookId(),r.borrowerUserId(),next);
