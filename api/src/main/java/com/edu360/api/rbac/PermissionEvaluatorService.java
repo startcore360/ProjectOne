@@ -223,7 +223,7 @@ public class PermissionEvaluatorService {
         }
 
         if (!sameScope(active, scope)) {
-            if (activeRole == null || !topPostCovers(activeRole.getRoleCode(), active, scope)) {
+            if (activeRole == null || !topPostCovers(activeRole.getRoleCode(), active, scope, actionCode)) {
                 return PermissionDecision.deny("NO_ACTIVE_ROLE_IN_SCOPE",
                         "The active role does not apply to the requested scope (Addendum rules 8-10).");
             }
@@ -408,9 +408,15 @@ public class PermissionEvaluatorService {
     }
 
     /** Top-post coverage (TOP_POST_AUTHORITY_RULES.md, "Higher posts cover lower levels"). */
-    private static boolean topPostCovers(String roleCode, UserRoleAssignment a, RbacScope scope) {
+    private static boolean topPostCovers(String roleCode, UserRoleAssignment a, RbacScope scope, String actionCode) {
         if (roleCode == null) {
             return false;
+        }
+        // PO-T04: a Finance Director is a permitted designated concession approver only
+        // when the Management step has explicitly rolled down to that tenant-level role.
+        // This does not grant general top-post coverage or any other action.
+        if ("FINANCE_DIRECTOR".equals(roleCode) && "CONCESSION_APPROVE".equals(actionCode)) {
+            return a.getScopeType() == ScopeType.TENANT;
         }
         return switch (roleCode) {
             case "MANAGEMENT", "UNIVERSITY_ADMIN" -> a.getScopeType() == ScopeType.TENANT;
