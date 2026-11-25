@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import FeePaymentPortalPage from "../pages/FeePaymentPortalPage";
@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
   useAppSelector: vi.fn(),
 }));
 
-vi.mock("../../../../services/axios", () => ({ default: { get: mocks.get, post: mocks.post } }));
-vi.mock("../../../../store/hooks", () => ({ useAppSelector: mocks.useAppSelector }));
+vi.mock("../../../services/axios", () => ({ default: { get: mocks.get, post: mocks.post } }));
+vi.mock("../../../store/hooks", () => ({ useAppSelector: mocks.useAppSelector }));
 
 describe("FeePaymentPortalPage", () => {
   beforeEach(() => {
