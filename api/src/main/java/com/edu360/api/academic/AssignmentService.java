@@ -119,6 +119,15 @@ public class AssignmentService {
                                 WHERE tenant_id = ? AND student_profile_id = ? AND user_account_id = ? AND status = 'ACTIVE')
                 """, Boolean.class, tenantId, studentProfileId, student.userAccountId());
         if (!Boolean.TRUE.equals(ownsProfile)) throw new ResourceNotFoundException("Active student profile not found.");
+        Boolean enrolledInSection = jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM app.student_enrollment e
+                                JOIN app.assignment a ON a.tenant_id = e.tenant_id AND a.section_id = e.section_id
+                               WHERE e.tenant_id = ? AND e.student_profile_id = ?
+                                 AND a.assignment_id = ? AND e.outcome = 'IN_PROGRESS' AND e.ended_on IS NULL)
+                """, Boolean.class, tenantId, studentProfileId, assignmentId);
+        if (!Boolean.TRUE.equals(enrolledInSection)) {
+            throw new ResourceNotFoundException("Student is not enrolled in the assignment section.");
+        }
         FileUploadResponse file = files.upload(student, upload, "ASSIGNMENT_SUBMISSION", (UUID) assignment.get("institution_id"));
         if (!"CLEAN".equals(file.scanStatus()) || !"ACTIVE".equals(file.status())) {
             throw new BusinessRuleViolationException("SUBMISSION_FILE_NOT_CLEAN", "Submission was not accepted because the uploaded file did not pass malware scanning.");
