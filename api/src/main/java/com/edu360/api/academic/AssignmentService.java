@@ -30,10 +30,11 @@ public class AssignmentService {
     private final PermissionEvaluatorService permissions;
     private final ObjectMapper objectMapper;
 
-    public AssignmentService(JdbcTemplate jdbc, FileService files, PermissionEvaluatorService permissions) {
+    public AssignmentService(JdbcTemplate jdbc, FileService files, PermissionEvaluatorService permissions, ObjectMapper objectMapper) {
         this.jdbc = jdbc;
         this.files = files;
         this.permissions = permissions;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -159,12 +160,15 @@ public class AssignmentService {
     public Map<String, Object> grade(UUID tenantId, TenantPrincipal teacher, UUID submissionId,
             BigDecimal marks, String feedback) {
         Map<String, Object> submission = jdbc.queryForMap("""
-                SELECT s.assignment_id, s.late_penalty_marks, a.max_marks, a.institution_id, a.rubric_json
+                SELECT s.assignment_id, s.late_penalty_marks, a.max_marks, a.institution_id, a.rubric_json, a.teacher_user_id
                   FROM app.assignment_submission s JOIN app.assignment a
                     ON a.tenant_id = s.tenant_id AND a.assignment_id = s.assignment_id
                  WHERE s.tenant_id = ? AND s.submission_id = ?
                 """, tenantId, submissionId);
         authorize(tenantId, teacher, "ASSIGNMENT_EVALUATE", (UUID) submission.get("institution_id"));
+        if (!teacher.userAccountId().equals(submission.get("teacher_user_id"))) {
+            throw new BusinessRuleViolationException("ASSIGNMENT_OWNER_REQUIRED", "Only the assigned teacher may grade this submission.");
+        }
         BigDecimal max = (BigDecimal) submission.get("max_marks");
         if (marks == null || marks.signum() < 0 || marks.compareTo(max) > 0) {
             throw new BusinessRuleViolationException("INVALID_MARKS", "Marks must be between zero and the assignment maximum.");
