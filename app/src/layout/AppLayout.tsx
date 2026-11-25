@@ -372,6 +372,11 @@ export default function AppLayout() {
     { label: "Support", to: "/support", icon: "help" as const, important: false, anyOf: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"] },
     { label: "Staff records", to: "/university/staff", icon: "users" as const, important: false, anyOf: ["STAFF_RECORD_VIEW"] },
     { label: "Data protection", to: "/tenant/data-protection", icon: "shield" as const, important: false, anyOf: ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"] },
+    { label: "Notice board", to: "/notices", icon: "bell" as const, important: false, anyOf: ["NOTICE_PUBLISH_INSTITUTION", "NOTICE_PUBLISH_CLASS_DEPT", "NOTICE_PUBLISH_UNIVERSITY", "NOTICE_EMERGENCY", "SELF_SERVICE_VIEW"] },
+    { label: "Communications", to: "/communications", icon: "file-text" as const, important: false, anyOf: ["MESSAGE_SEND", "CLASS_BROADCAST"] },
+    { label: "Library", to: "/library", icon: "book" as const, important: false, anyOf: ["BOOK_SEARCH_RESERVE", "CATALOG_MANAGE", "BOOK_ISSUE_RETURN", "RESERVATION_MANAGE", "FINE_COLLECT", "LIBRARY_SETTINGS_SET"] },
+    { label: "Transport", to: "/transport", icon: "grid" as const, important: false, anyOf: ["TRANSPORT_MANAGE", "DRIVER_ROUTE_VIEW"] },
+    { label: "Executive dashboard", to: "/executive-dashboard", icon: "chart" as const, important: false, anyOf: ["REPORTS_VIEW"] },
   ].filter((item) => canTenantAny(item.anyOf));
   const navigation = isPlatformConsole ? baseNavigation : [...baseNavigation, ...academicNavigation];
 
