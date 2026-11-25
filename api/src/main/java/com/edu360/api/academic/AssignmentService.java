@@ -48,7 +48,7 @@ public class AssignmentService {
                 (tenant_id, assignment_id, institution_id, section_id, course_offering_id, teacher_user_id,
                  title, description, max_marks, due_at, allow_late_submission, late_penalty_percent_per_day,
                  rubric_json, status, created_by, updated_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, 'PUBLISHED', ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, 'DRAFT', ?, ?)
                 """, tenantId, id, request.institutionId(), request.sectionId(), request.courseOfferingId(),
                 actor.userAccountId(), request.title().trim(), request.description(), request.maxMarks(),
                 request.dueAt(), request.allowLateSubmission(),
