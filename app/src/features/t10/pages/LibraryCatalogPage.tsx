@@ -13,7 +13,7 @@ export default function LibraryCatalogPage() {
   const tenant = useAppSelector((s) => s.auth.user?.tenantId ?? "");
   const institution = useAppSelector((s) => s.tenantPermissions.current?.institutionId ?? "");
   const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? []);
-  const can = (action: string) => actions.includes(action);
+  const can = useCallback((action: string) => actions.includes(action), [actions]);
 
   const [query, setQuery] = useState("");
   const [books, setBooks] = useState<CatalogBook[]>([]);
@@ -69,7 +69,7 @@ export default function LibraryCatalogPage() {
     } catch {
       setError("Library data could not be loaded. Check your institution access and try again.");
     }
-  }, [tenant, institution, query, actions.join("|")]);
+  }, [tenant, institution, query, can]);
 
   useEffect(() => { void load(); }, [load]);
 
