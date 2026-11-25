@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Test;\nimport org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 
 import com.edu360.api.config.PlatformPrincipal;
@@ -105,6 +105,39 @@ class LandingCmsServiceTest {
         assertThat(resp.status()).isEqualTo("NEW");
         verify(subService).quote(any());
         verify(enquiryRepo).save(any());
+    }
+
+    @Test
+    void submitQuotationPersistsResolvedStudentEstimateFromSelectedRange() {
+        TenantRepository tenantRepo = mock(TenantRepository.class);
+        PlatformSubscriptionService subService = mock(PlatformSubscriptionService.class);
+        LandingEnquiryRepository enquiryRepo = mock(LandingEnquiryRepository.class);
+        when(enquiryRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subService.quote(any())).thenReturn(new CustomerQuoteResponse(
+                "INR", 12, List.of(), null, null));
+
+        LandingCmsService service = new LandingCmsService(
+                tenantRepo,
+                mock(LandingPageConfigRepository.class),
+                mock(LandingTestimonialRepository.class),
+                enquiryRepo,
+                mock(CommercialCatalogItemRepository.class),
+                subService,
+                new PlatformConcurrency(),
+                mock(PlatformAuditWriter.class),
+                new ObjectMapper()
+        );
+
+        service.submitPublicEnquiry(new PublicEnquiryRequest(
+                "QUOTATION", "University", "1,501–3,000",
+                0, 0, 0, 0, 12, true, List.of("ACADEMICS"),
+                "No / not sure", "Discuss with me",
+                "Asha", "asha@example.edu", null, "Example University", null
+        ));
+
+        ArgumentCaptor<LandingEnquiry> saved = ArgumentCaptor.forClass(LandingEnquiry.class);
+        verify(enquiryRepo).save(saved.capture());
+        assertThat(saved.getValue().getStudentsEstimate()).isEqualTo(2250);
     }
 
     @Test
