@@ -76,9 +76,12 @@ public class FeeReceiptService {
             """, new MapSqlParameterSource().addValue("tenantId", tenantId)
                     .addValue("studentProfileId", studentProfileId).addValue("actorId", actor.userAccountId()),
                 Boolean.class);
-        permissions.authorize(new RbacPrincipal(tenantId, actor.userAccountId()),
-                Boolean.TRUE.equals(owner) ? "FEE_VIEW_OWN" : "LEDGER_VIEW",
-                RbacScope.institution(institutionId), RbacTarget.NONE);
+        RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
+        if (Boolean.TRUE.equals(owner)) {
+            permissions.authorize(principal, "FEE_VIEW_OWN", permissions.ownScope(principal), RbacTarget.NONE);
+        } else {
+            permissions.authorize(principal, "LEDGER_VIEW", RbacScope.institution(institutionId), RbacTarget.NONE);
+        }
 
         List<Map<String, Object>> allocations = jdbc.queryForList("""
             SELECT si.installment_no AS "installmentNumber", si.due_date AS "dueDate",
