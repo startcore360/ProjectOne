@@ -193,6 +193,69 @@ class PermissionEvaluatorServiceTest {
         assertThat(decision.reasonCode()).isEqualTo("AMBIGUOUS_ROLE_ASSIGNMENT");
     }
 
+    @Test
+    void can_deniesConfidentialGrievanceActionsForGenericAdministratorEvenIfGranted() {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        when(actionCatalogRepository.findById("GRIEVANCE_CASE_VIEW"))
+                .thenReturn(Optional.of(action("GRIEVANCE_CASE_VIEW", false)));
+        UserRoleAssignment assignment = activeAssignment(INSTITUTION_ID);
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, ScopeType.INSTITUTION, INSTITUTION_ID, null, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(assignment));
+        RoleDefinition genericAdmin = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
+                .roleCode("COLLEGE_ADMIN").roleName("College Admin")
+                .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.COLLEGE)
+                .status(RoleDefinitionStatus.ACTIVE).build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(genericAdmin));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                TENANT_ID, ROLE_DEFINITION_ID, "GRIEVANCE_CASE_VIEW")).thenReturn(true);
+
+        PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "GRIEVANCE_CASE_VIEW", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.reasonCode()).isEqualTo("POT05_ROLE_FORBIDDEN");
+    }
+
+    @Test
+    void can_allowsConfidentialGrievanceActionForActiveIccRoleWhenGranted() {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        when(actionCatalogRepository.findById("GRIEVANCE_CASE_VIEW"))
+                .thenReturn(Optional.of(action("GRIEVANCE_CASE_VIEW", false)));
+        UserRoleAssignment assignment = activeAssignment(INSTITUTION_ID);
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, ScopeType.INSTITUTION, INSTITUTION_ID, null, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(assignment));
+        RoleDefinition icc = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
+                .roleCode("INTERNAL_COMPLAINTS_COMMITTEE").roleName("Internal Complaints Committee")
+                .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.COLLEGE)
+                .status(RoleDefinitionStatus.ACTIVE).build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(icc));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                TENANT_ID, ROLE_DEFINITION_ID, "GRIEVANCE_CASE_VIEW")).thenReturn(true);
+
+        PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "GRIEVANCE_CASE_VIEW", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isTrue();
+    }
+
+    @Test
+    void confidentialGrievanceActionsCannotBeAddedToCustomRoles() {
+        assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_CASE_VIEW")).isTrue();
+        assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_CASE_ASSIGN")).isTrue();
+        assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_HEARING_MANAGE")).isTrue();
+        assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_CASE_RESOLVE")).isTrue();
+        assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_EVIDENCE_VIEW")).isTrue();
+        assertThat(PermissionEvaluatorService.isLockedForCustomRoles("GRIEVANCE_CASE_SUBMIT")).isFalse();
+    }
+
     // ------------------------------------------------------------------------------- GUARD
 
     @Test
