@@ -625,6 +625,28 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
           </div>
         </section>
 
+        {/* Product capabilities overview */}
+        <section className="landing-section landing-capabilities-section" id="capabilities">
+          <div className="landing-wrap">
+            <div className="landing-section__head landing-section__head--center">
+              <Kicker>ONE PLATFORM · CONNECTED CAPABILITIES</Kicker>
+              <h2 className="landing-section__title">The tools your institution relies on, working as one.</h2>
+              <p className="landing-section__desc">
+                Explore the core workflows EDU 360 brings together. Start with the areas that matter
+                most and build a coordinated operating model across your institution.
+              </p>
+            </div>
+            <div className="landing-capabilities-grid">
+              <article className="landing-capability-card"><span>01 / ACADEMICS</span><h3>Academic management</h3><p>Organise the academic administration behind programmes, classes, schedules and day-to-day institutional delivery.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
+              <article className="landing-capability-card"><span>02 / STUDENT LIFE</span><h3>Attendance &amp; examinations</h3><p>Bring attendance activity and examination workflows into a clearer, more connected view for staff and academic teams.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
+              <article className="landing-capability-card"><span>03 / FINANCE</span><h3>Fees &amp; finance</h3><p>Coordinate fee administration and finance-related processes with the wider operational context of your institution.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
+              <article className="landing-capability-card"><span>04 / COMMUNITY</span><h3>Parent communication</h3><p>Make important institutional updates and communication easier to coordinate with families and guardians.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
+              <article className="landing-capability-card"><span>05 / PEOPLE</span><h3>HR &amp; leave workflows</h3><p>Support staff administration and leave-related workflows with more consistent processes and visibility.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
+              <article className="landing-capability-card"><span>06 / OVERSIGHT</span><h3>Reports &amp; governance</h3><p>Help institutional teams work with structured reporting, role-scoped access and clearer governance processes.</p><a href="#quotation">Explore this module <b>↗</b></a></article>
+            </div>
+          </div>
+        </section>
+
         {/* Interactive Role-Based Benefits */}
         <section className="landing-section" id="roles">
           <div className="landing-wrap">
