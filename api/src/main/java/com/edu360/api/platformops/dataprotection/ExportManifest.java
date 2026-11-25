@@ -91,7 +91,7 @@ public final class ExportManifest {
                 "assignment_feedback", "homework_status", "study_material", "submission_grade", "plagiarism_log"));
         groups.put("library", List.of("library_catalog", "book_copy", "book_circulation", "library_fine", "library_fine_policy", "library_reservation"));
         groups.put("transport", List.of("vehicle", "transport_route", "route_stop", "transport_allocation"));
-        groups.put("timetable_rooms", List.of("room", "online_session", "online_session_access_log", "attendance_threshold_policy", "attendance_medical_exemption"));
+        groups.put("timetable_rooms", List.of("room", "online_session_access_log", "attendance_threshold_policy", "attendance_medical_exemption"));
         groups.put("analytics", List.of("usage_metric_daily", "report_definition", "report_execution"));
         return Collections.unmodifiableMap(groups);
     }

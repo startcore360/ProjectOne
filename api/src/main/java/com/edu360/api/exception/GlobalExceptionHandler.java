@@ -219,7 +219,7 @@ public class GlobalExceptionHandler {
     private HttpStatus businessRuleStatus(String code) {
         if (code == null) return HttpStatus.UNPROCESSABLE_ENTITY;
         return switch (code) {
-            case "TERM_LOCKED", "ATTENDANCE_ALREADY_SUBMITTED", "ASSIGNMENT_CLOSED",
+            case "TERM_LOCKED", "ATTENDANCE_ALREADY_SUBMITTED", "PUBLISHED_SLOT_IMMUTABLE", "TIMETABLE_SLOT_NOT_AVAILABLE", "ASSIGNMENT_CLOSED",
                  "VERSION_CONFLICT", "FILE_NOT_AVAILABLE" -> HttpStatus.CONFLICT;
             case "PAYLOAD_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
             case "ONLINE_SESSION_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;

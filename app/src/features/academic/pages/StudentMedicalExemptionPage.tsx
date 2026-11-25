@@ -11,14 +11,13 @@ export default function StudentMedicalExemptionPage() {
   const tenantId = useAppSelector((s) => s.auth.user?.tenantId);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [selected, setSelected] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
-    setBusy(true);
     void api.get<Enrollment[]>("/api/tenants/" + tenantId + "/attendance/medical-exemptions/my-enrollments")
       .then((response) => {
         setEnrollments(response.data);
@@ -27,6 +26,8 @@ export default function StudentMedicalExemptionPage() {
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Unable to load your active enrolments."))
       .finally(() => setBusy(false));
   }, [tenantId]);
+
+  if (!tenantId) return <main className="page-container"><p>Loading account…</p></main>;
 
   const enrollment = enrollments.find((item) => item.enrollment_id === selected);
   return <main className="page-container">
