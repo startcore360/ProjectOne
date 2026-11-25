@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
+
+type FeeAccountOption = { accountId: string; studentName: string; institutionName: string };
 
 type Invoice = {
   invoiceId: string;
@@ -21,9 +23,17 @@ const inputClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2
 export default function StudentFeeInvoicesPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [accountId, setAccountId] = useState("");
+  const [accounts, setAccounts] = useState<FeeAccountOption[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!tenantId) return;
+    void api.get<FeeAccountOption[]>(`/tenants/${tenantId}/me/student-fee-accounts`)
+      .then((response) => setAccounts(response.data))
+      .catch(() => setAccounts([]));
+  }, [tenantId]);
 
   async function loadInvoices(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,7 +61,7 @@ export default function StudentFeeInvoicesPage() {
         <p className="mt-2 text-sm text-slate-600">Review installment invoices, concessions, scholarships, late fees, payments and outstanding balances.</p>
       </header>
       <form onSubmit={loadInvoices} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
-        <label className="flex-1"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><input className={inputClass} required value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="UUID" /></label>
+        <label className="flex-1"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><input className={inputClass} required list="fee-account-options" value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Choose an account or enter its UUID" /><datalist id="fee-account-options">{accounts.map((account) => <option key={account.accountId} value={account.accountId}>{account.studentName} · {account.institutionName}</option>)}</datalist></label>
         <button disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Loading…" : "Load invoices"}</button>
       </form>
       {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
