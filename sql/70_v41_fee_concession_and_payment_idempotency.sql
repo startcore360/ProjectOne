@@ -28,6 +28,30 @@ SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role
         WHERE role_code='FINANCE_DIRECTOR' AND action_code='CONCESSION_APPROVE'
  );
 
+-- PermissionEvaluatorService checks app.role_action at runtime, not the reference template.
+-- Provision the new standard action into already-provisioned tenants as well as future ones.
+INSERT INTO app.role_action
+    (tenant_id, role_action_id, role_definition_id, action_code, created_by, updated_by)
+SELECT rd.tenant_id, gen_random_uuid(), rd.role_definition_id, 'CONCESSION_APPROVE',
+       COALESCE(system_actor.user_account_id, rd.created_by),
+       COALESCE(system_actor.user_account_id, rd.updated_by)
+  FROM app.role_definition rd
+  LEFT JOIN LATERAL (
+      SELECT ua.user_account_id
+        FROM app.user_account ua
+       WHERE ua.tenant_id=rd.tenant_id AND ua.user_type='SYSTEM'
+       ORDER BY ua.created_at
+       LIMIT 1
+  ) system_actor ON true
+ WHERE rd.role_origin='STANDARD'
+   AND rd.role_code IN ('MANAGEMENT','FINANCE_DIRECTOR')
+   AND NOT EXISTS (
+       SELECT 1 FROM app.role_action ra
+        WHERE ra.tenant_id=rd.tenant_id
+          AND ra.role_definition_id=rd.role_definition_id
+          AND ra.action_code='CONCESSION_APPROVE'
+   );
+
 UPDATE ref.approval_chain_step
    SET approver_rule = 'Management / Trustees first; if no Management assignment, Principal or designated financial approver through V4-PD-01 roll-down (PO-T04)',
        skip_if_role_absent = false
