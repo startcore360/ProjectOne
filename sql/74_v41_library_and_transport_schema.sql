@@ -145,7 +145,10 @@ CREATE OR REPLACE VIEW app.v_student_library_dues_flag WITH (security_invoker=tr
  SELECT c.tenant_id,c.institution_id,c.borrower_user_id AS student_id,
         bool_or(c.returned_at IS NULL OR c.status IN ('ISSUED','OVERDUE','LOST')
           OR COALESCE(f.outstanding,0)>0) AS has_library_dues,
-        COALESCE(sum(f.outstanding),0)::numeric(12,2) AS outstanding_fine_balance
+        COALESCE(sum(COALESCE(f.outstanding,0) +
+          CASE WHEN c.returned_at IS NULL
+               THEN app.fn_library_fine_amount(c.tenant_id,c.institution_id,c.due_date)
+               ELSE 0 END),0)::numeric(12,2) AS outstanding_fine_balance
  FROM app.book_circulation c
  LEFT JOIN (SELECT circulation_id,sum(amount-amount_paid) AS outstanding
             FROM app.library_fine WHERE status='OUTSTANDING' GROUP BY circulation_id) f
