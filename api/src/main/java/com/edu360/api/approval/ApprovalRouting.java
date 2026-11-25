@@ -129,7 +129,10 @@ public class ApprovalRouting {
                 continue;
             }
             UUID delegator = d.getDelegatorUserId();
-            if (delegator.equals(step.getApproverUserId()) || holdsRole(tenantId, delegator, stepRole)) {
+            boolean namedApproverMatches = stepRole != null
+                    && stepRole.equalsIgnoreCase(step.getApproverRoleCode())
+                    && delegator.equals(step.getApproverUserId());
+            if (namedApproverMatches || holdsRole(tenantId, delegator, stepRole)) {
                 return Optional.of(new Route(Via.DELEGATION, stepRole, delegator, d.getId().getDelegationId()));
             }
         }
