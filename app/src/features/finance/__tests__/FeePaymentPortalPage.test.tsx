@@ -16,10 +16,15 @@ describe("FeePaymentPortalPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.useAppSelector.mockReturnValue("tenant-123");
-    mocks.get.mockResolvedValue({ data: [
-      { invoiceId: "installment-1", installmentNumber: 1, dueDate: "2026-12-01", outstandingAmount: 1200, status: "ISSUED" },
-      { invoiceId: "installment-2", installmentNumber: 2, dueDate: "2027-01-01", outstandingAmount: 0, status: "PAID" },
-    ] });
+    mocks.get.mockImplementation((url: string) => {
+      if (url.includes("/me/student-fee-accounts")) {
+        return Promise.resolve({ data: [{ accountId: "account-123", studentName: "Test Student", institutionName: "Test College" }] });
+      }
+      return Promise.resolve({ data: [
+        { invoiceId: "installment-1", installmentNumber: 1, dueDate: "2026-12-01", outstandingAmount: 1200, status: "ISSUED" },
+        { invoiceId: "installment-2", installmentNumber: 2, dueDate: "2027-01-01", outstandingAmount: 0, status: "PAID" },
+      ] });
+    });
     mocks.post.mockResolvedValue({ data: {
       paymentId: "payment-123", provider: "RAZORPAY", providerOrderId: "order-123",
       amount: 1200, currency: "INR", keyId: "rzp_test_public",
