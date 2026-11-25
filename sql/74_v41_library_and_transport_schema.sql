@@ -78,9 +78,10 @@ CREATE TABLE IF NOT EXISTS app.transport_allocation (
  route_id uuid NOT NULL REFERENCES app.transport_route(id) ON DELETE RESTRICT,
  stop_id uuid NOT NULL REFERENCES app.route_stop(id) ON DELETE RESTRICT,
  passenger_user_id uuid NOT NULL, status text NOT NULL DEFAULT 'ACTIVE',
- allocated_at timestamptz NOT NULL DEFAULT now(), CHECK(status IN ('ACTIVE','CANCELLED')),
- UNIQUE(tenant_id,institution_id,passenger_user_id) 
+ allocated_at timestamptz NOT NULL DEFAULT now(), CHECK(status IN ('ACTIVE','CANCELLED'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_transport_active_passenger
+ ON app.transport_allocation(tenant_id,institution_id,passenger_user_id) WHERE status='ACTIVE';
 CREATE OR REPLACE FUNCTION app.fn_transport_capacity_guard() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE cap integer; used integer;
 BEGIN
