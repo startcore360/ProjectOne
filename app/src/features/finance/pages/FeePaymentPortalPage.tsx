@@ -14,12 +14,14 @@ type Invoice = {
 };
 
 type Provider = "RAZORPAY" | "STRIPE";
+type FeeAccountOption = { accountId: string; studentName: string; institutionName: string };
 
 const inputClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100";
 
 export default function FeePaymentPortalPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [accountId, setAccountId] = useState("");
+  const [accounts, setAccounts] = useState<FeeAccountOption[]>([]);
   const [provider, setProvider] = useState<Provider>("RAZORPAY");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -31,6 +33,13 @@ export default function FeePaymentPortalPage() {
     ? "Stripe checkout returned. Payment status is pending until the signed provider webhook is reconciled."
     : "");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!tenantId) return;
+    void api.get<FeeAccountOption[]>(`/tenants/${tenantId}/me/student-fee-accounts`)
+      .then((response) => setAccounts(response.data))
+      .catch(() => setAccounts([]));
+  }, [tenantId]);
 
   const loadInvoices = useCallback(async () => {
     if (!tenantId || !accountId) return;
@@ -109,7 +118,7 @@ export default function FeePaymentPortalPage() {
         <p className="mt-2 text-sm text-slate-600">Select outstanding installments and pay the exact amount due through the configured secure gateway.</p>
       </header>
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <label className="block"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><div className="flex flex-col gap-2 sm:flex-row"><input className={inputClass} value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Fee account UUID" /><button type="button" onClick={() => void loadInvoices()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Refresh</button></div></label>
+        <label className="block"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><div className="flex flex-col gap-2 sm:flex-row"><input className={inputClass} list="payment-fee-account-options" value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Choose an account or enter its UUID" /><datalist id="payment-fee-account-options">{accounts.map((account) => <option key={account.accountId} value={account.accountId}>{account.studentName} · {account.institutionName}</option>)}</datalist><button type="button" onClick={() => void loadInvoices()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Refresh</button></div></label>
       </section>
       {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
       {notice && <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</div>}
