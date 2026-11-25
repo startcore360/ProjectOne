@@ -83,11 +83,28 @@ export function buildTargetLoginUrl(
   let targetHost: string;
   if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") {
     targetHost = `${slug}.edu360.localhost`;
-  } else if (host === "edu360.duckdns.org" || host === "www.edu360.duckdns.org") {
+  } else if (host.endsWith(".edu360.localhost")) {
+    targetHost = `${slug}.edu360.localhost`;
+  } else if (host.endsWith(".edu360.local")) {
+    targetHost = `${slug}.edu360.local`;
+  } else if (
+    host === "edu360.duckdns.org" ||
+    host === "www.edu360.duckdns.org" ||
+    host.endsWith("-edu360.duckdns.org")
+  ) {
     targetHost = `${slug}-edu360.duckdns.org`;
+  } else if (host.startsWith("platform.")) {
+    targetHost = `${slug}.${host.slice("platform.".length)}`;
+  } else if (host.startsWith("platform-")) {
+    targetHost = `${slug}-${host.slice("platform-".length)}`;
   } else {
     const baseHost = host.startsWith("www.") ? host.slice(4) : host;
-    targetHost = `${slug}.${baseHost}`;
+    const parts = baseHost.split(".");
+    if (parts.length >= 3) {
+      targetHost = `${slug}.${parts.slice(1).join(".")}`;
+    } else {
+      targetHost = `${slug}.${baseHost}`;
+    }
   }
 
   return `${location.protocol}//${targetHost}${port}/login`;

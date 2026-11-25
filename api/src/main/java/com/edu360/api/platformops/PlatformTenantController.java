@@ -250,6 +250,18 @@ public class PlatformTenantController {
         return ResponseEntity.ok().header("Cache-Control", "no-store").body(response);
     }
 
+    @PostMapping("/tenants/{tenantId}/first-admin/password-reset")
+    @Operation(summary = "Re-issue a temporary password for the tenant's first admin (TENANT_SETTINGS)")
+    public ResponseEntity<com.edu360.api.platformops.dto.TenantFirstAdminPasswordResetResponse> resetFirstAdminPassword(
+            @PathVariable UUID tenantId,
+            Authentication authentication) {
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "TENANT_SETTINGS");
+        com.edu360.api.platformops.dto.TenantFirstAdminPasswordResetResponse response =
+                tenantManagementService.resetFirstAdminPassword(tenantId, principal);
+        return ResponseEntity.ok().header("Cache-Control", "no-store").body(response);
+    }
+
     @GetMapping("/tenants")
     @Operation(summary = "List all tenants with pagination")
     public ResponseEntity<TenantPageResponse> listTenants(

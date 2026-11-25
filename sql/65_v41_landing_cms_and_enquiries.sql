@@ -198,13 +198,13 @@ COMMENT ON TABLE platform.landing_enquiry IS 'Public quotation and demo requests
 
 -- The landing CMS is a platform-scoped capability, restricted to Product Owner and Platform Admin.
 INSERT INTO ref.action_catalog VALUES (
-    'LANDING_CMS_MANAGE', 279, 'Platform', 1,
+    'LANDING_CMS_MANAGE', 290, 'Platform', 1,
     'Manage public landing page content, testimonials, media and inbound enquiries',
     false, NULL, 'V4.1'
-) ON CONFLICT DO NOTHING;
-INSERT INTO ref.standard_role_action VALUES
-    (1852, 'PRODUCT_OWNER', 'LANDING_CMS_MANAGE', 'Platform'),
-    (1853, 'PLATFORM_ADMIN', 'LANDING_CMS_MANAGE', 'Platform')
-ON CONFLICT DO NOTHING;
+) ON CONFLICT (action_code) DO NOTHING;
+INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code) VALUES
+    (9233, 'PRODUCT_OWNER', 'LANDING_CMS_MANAGE'),
+    (9234, 'PLATFORM_ADMIN', 'LANDING_CMS_MANAGE')
+ON CONFLICT (role_code, action_code) DO NOTHING;
 
 COMMIT;

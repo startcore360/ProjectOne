@@ -34,8 +34,6 @@ export function TicketsView() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [grantsError, setGrantsError] = useState("");
 
@@ -61,7 +59,6 @@ export function TicketsView() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setError("");
     setLoadError("");
     setGrantsError("");
     try {
@@ -92,8 +89,10 @@ export function TicketsView() {
       if (event.origin !== expectedOrigin || event.data?.type !== "EDU360_SUPPORT_SESSION_END") return;
       void platformOpsService.endCurrentSupportSession().then(() => {
         window.sessionStorage.removeItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
-        setMessage("The read-only support session has ended.");
-      }).catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not end support session."));
+        toast.info("Support session ended", "The read-only support session has ended.");
+      }).catch((err: unknown) =>
+        toast.error("Could not end support session", err instanceof Error ? err.message : undefined)
+      );
     };
     window.addEventListener("message", onSupportSessionEnd);
     return () => window.removeEventListener("message", onSupportSessionEnd);
@@ -115,12 +114,10 @@ export function TicketsView() {
     try {
       await platformOpsService.updateSupportTicket(ticket.supportTicketId, { status: newStatus });
       const msg = `Ticket ${ticket.ticketNumber} updated to ${newStatus}.`;
-      setMessage(msg);
       toast.success("Ticket updated", msg);
       void loadData();
     } catch (err: unknown) {
       const msg = readErrorMessage(err, "Failed to update ticket");
-      setError(msg);
       toast.error("Update failed", msg);
     }
   };
@@ -150,7 +147,6 @@ export function TicketsView() {
         category: triageCategory,
       });
       const msg = `Ticket ${triagingTicket.ticketNumber} triaged as ${triageCategory} / ${triagePriority}.`;
-      setMessage(msg);
       toast.success("Ticket triaged", msg);
       setTriagingTicket(null);
       void loadData();
@@ -183,7 +179,6 @@ export function TicketsView() {
         resolutionNote: note,
       });
       const msg = `Ticket ${resolvingTicket.ticketNumber} marked as ${resolveTargetStatus}.`;
-      setMessage(msg);
       toast.success("Ticket updated", msg);
       setResolvingTicket(null);
       void loadData();
@@ -212,7 +207,6 @@ export function TicketsView() {
     try {
       await platformOpsService.escalateSupportTicket(escalatingTicket.supportTicketId, { to: escalationTarget, note });
       const msg = `Ticket ${escalatingTicket.ticketNumber} escalated to ${escalationTarget.replace("_", " ")}.`;
-      setMessage(msg);
       toast.success("Ticket escalated", msg);
       setEscalatingTicket(null);
       setEscalationNote("");
@@ -232,7 +226,7 @@ export function TicketsView() {
   const handleAssumeSession = async (ticketId: string, ticketNumber: string) => {
     const opened = window.open("about:blank", "_blank");
     if (!opened) {
-      setError("The tenant tab was blocked by the browser. Allow pop-ups and try again.");
+      toast.error("Pop-up blocked", "The tenant tab was blocked by the browser. Allow pop-ups and try again.");
       return;
     }
     try {
@@ -246,10 +240,14 @@ export function TicketsView() {
         platform_origin: window.location.origin,
       });
       opened.location.replace(`${tenantOrigin}/support#${fragment.toString()}`);
-      setMessage(`Opened a read-only session for ticket ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`);
+      toast.success(
+        "Support session opened",
+        `Opened a read-only session for ticket ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`
+      );
     } catch (err: unknown) {
       opened.close();
-      setError(
+      toast.error(
+        "Support session failed",
         readErrorMessage(
           err,
           "Failed to assume support session. Ensure the tenant has granted active support access."
@@ -281,8 +279,6 @@ export function TicketsView() {
         description="Tenant problem tickets, resolution audit trails, and ticket-bound read-only diagnostic session assumption."
       />
 
-      {message && <Notice popup tone="success" onDismiss={() => setMessage("")}>{message}</Notice>}
-      {error && <Notice popup tone="danger" onDismiss={() => setError("")}>{error}</Notice>}
       {loadError && (
         <ErrorState
           message={loadError}
@@ -480,7 +476,7 @@ export function TicketsView() {
         <form id="resolve-ticket-form" onSubmit={handleConfirmResolve}>
           {resolveError && (
             <div style={{ marginBottom: "12px" }}>
-              <Notice popup tone="danger" onDismiss={() => setResolveError("")}>{resolveError}</Notice>
+              <Notice tone="danger" onDismiss={() => setResolveError("")}>{resolveError}</Notice>
             </div>
           )}
           <TextAreaField
@@ -521,7 +517,7 @@ export function TicketsView() {
         <form id="escalate-ticket-form" onSubmit={handleConfirmEscalation}>
           {escalateError && (
             <div style={{ marginBottom: "12px" }}>
-              <Notice popup tone="danger" onDismiss={() => setEscalateError("")}>{escalateError}</Notice>
+              <Notice tone="danger" onDismiss={() => setEscalateError("")}>{escalateError}</Notice>
             </div>
           )}
           <div style={{ display: "grid", gap: "12px" }}>
@@ -570,7 +566,7 @@ export function TicketsView() {
         <form id="triage-ticket-form" onSubmit={handleConfirmTriage}>
           {triageError && (
             <div style={{ marginBottom: "12px" }}>
-              <Notice popup tone="danger" onDismiss={() => setTriageError("")}>{triageError}</Notice>
+              <Notice tone="danger" onDismiss={() => setTriageError("")}>{triageError}</Notice>
             </div>
           )}
           <div style={{ display: "grid", gap: "12px" }}>

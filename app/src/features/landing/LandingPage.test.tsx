@@ -29,7 +29,22 @@ vi.mock("./api/landingApi", async (importOriginal) => {
         heroDarkMediaId: null,
         showcaseLightMediaId: null,
         showcaseDarkMediaId: null,
-        testimonials: [],
+        testimonials: [
+          {
+            testimonialId: "v-test-1",
+            kind: "VIDEO",
+            authorName: "Dr. Priya Nair",
+            authorRole: "Principal",
+            institutionName: "Demo College",
+            quoteText: "EDU 360 transformed our workflows.",
+            videoUrl: "https://example.com/video.mp4",
+            videoMediaId: null,
+            posterMediaId: null,
+            displayOrder: 0,
+            published: true,
+            rowVersion: 1,
+          },
+        ],
         catalogModules: [
           { moduleCode: "ACADEMICS", itemName: "Academic management", description: null },
           { moduleCode: "FEES", itemName: "Fees & finance", description: null },
@@ -74,10 +89,10 @@ describe("LandingPage", () => {
     expect(screen.getByText(/stay connected to your child's progress/i)).toBeInTheDocument();
 
     // Pause marquee and open a video testimonial modal
-    fireEvent.click(screen.getByRole("button", { name: /pause feedback carousel/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /pause feedback carousel/i }));
     expect(screen.getByRole("button", { name: /resume feedback carousel/i })).toBeInTheDocument();
 
-    const playBtns = screen.getAllByRole("button", { name: /play video testimonial/i });
+    const playBtns = await screen.findAllByRole("button", { name: /play video testimonial/i });
     fireEvent.click(playBtns[0]);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
@@ -162,7 +177,7 @@ describe("LandingPage", () => {
     fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "rao@univ.edu" } });
     fireEvent.change(screen.getByLabelText(/institution name/i), { target: { value: "Apex Univ" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /request my quotation/i }));
+    fireEvent.click(screen.getByRole("button", { name: /send my project brief/i }));
 
     await waitFor(() => {
       expect(landingApi.submitPublicEnquiry).toHaveBeenCalledWith(

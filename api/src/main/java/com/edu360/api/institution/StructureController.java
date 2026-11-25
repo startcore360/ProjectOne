@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.academic.ProgramRuleSetResponse;
+import com.edu360.api.config.PrincipalExtractor;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.AcademicSessionResponse;
@@ -409,12 +410,6 @@ public class StructureController {
     }
 
     private RbacPrincipal requireTenantPrincipal(UUID tenantId, Authentication authentication) {
-        if (!(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
-            throw new UnauthorizedException("STRUCTURE_MANAGE is a tenant-side action; no tenant principal on this request.");
-        }
-        if (!tenantId.equals(principal.tenantId())) {
-            throw new UnauthorizedException("tenantId in the URL does not match the authenticated tenant.");
-        }
-        return new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        return PrincipalExtractor.extractTenantOrSupportPrincipal(tenantId, authentication, "STRUCTURE_MANAGE");
     }
 }

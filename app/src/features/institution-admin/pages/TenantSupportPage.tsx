@@ -5,7 +5,6 @@ import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import {
   Button,
-  Notice,
   Panel,
   SelectField,
   SkeletonTable,
@@ -32,8 +31,6 @@ export default function TenantSupportPage() {
   const [grants, setGrants] = useState<Grant[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
@@ -43,7 +40,7 @@ export default function TenantSupportPage() {
 
   const load = useCallback(async () => {
     if (isSupportSession || !tenantId) { setLoading(false); return; }
-    setLoading(true); setError("");
+    setLoading(true);
     try {
       const [ticketResponse, grantResponse] = await Promise.all([
         api.get<Ticket[]>(`/tenants/${tenantId}/support-tickets`),
@@ -53,18 +50,16 @@ export default function TenantSupportPage() {
       setGrants(grantResponse.data);
       setTicketId((current) => current || ticketResponse.data[0]?.supportTicketId || "");
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      toast.error("Could not load support data", getApiErrorMessage(err));
     } finally { setLoading(false); }
   }, [tenantId, isSupportSession]);
 
   useEffect(() => { void load(); }, [load]);
 
   const raiseTicket = async (event: FormEvent) => {
-    event.preventDefault(); setError(""); setMessage("");
+    event.preventDefault();
     if (!subject.trim() || !description.trim()) {
-      const err = "Subject and description are required.";
-      setError(err);
-      toast.error("Validation error", err);
+      toast.error("Validation error", "Subject and description are required.");
       return;
     }
     setSubmitting(true);
@@ -73,25 +68,19 @@ export default function TenantSupportPage() {
         subject: subject.trim(), description: description.trim(), priority,
       });
       setSubject(""); setDescription("");
-      const successMsg = `Support ticket ${response.data.ticketNumber} was submitted.`;
-      setMessage(successMsg);
-      toast.success("Support ticket submitted", successMsg);
+      toast.success("Support ticket submitted", `Support ticket ${response.data.ticketNumber} was submitted.`);
       await load();
     } catch (err) {
-      const errMsg = getApiErrorMessage(err);
-      setError(errMsg);
-      toast.error("Could not submit ticket", errMsg);
+      toast.error("Could not submit ticket", getApiErrorMessage(err));
     }
     finally { setSubmitting(false); }
   };
 
   const grantAccess = async (event: FormEvent) => {
-    event.preventDefault(); setError(""); setMessage("");
+    event.preventDefault();
     const hours = Number(durationHours);
     if (!ticketId || !Number.isInteger(hours) || hours < 1 || hours > 24) {
-      const err = "Choose one of your tickets and a duration from 1 to 24 hours.";
-      setError(err);
-      toast.error("Validation error", err);
+      toast.error("Validation error", "Choose one of your tickets and a duration from 1 to 24 hours.");
       return;
     }
     setSubmitting(true);
@@ -100,30 +89,22 @@ export default function TenantSupportPage() {
         ticketId, durationHours: hours, ...(institutionId.trim() ? { institutionId: institutionId.trim() } : {}),
       });
       setInstitutionId("");
-      const successMsg = `Read-only support access was granted for ${hours} hour(s).`;
-      setMessage(successMsg);
-      toast.success("Support access granted", successMsg);
+      toast.success("Support access granted", `Read-only support access was granted for ${hours} hour(s).`);
       await load();
     } catch (err) {
-      const errMsg = getApiErrorMessage(err);
-      setError(errMsg);
-      toast.error("Could not grant support access", errMsg);
+      toast.error("Could not grant support access", getApiErrorMessage(err));
     }
     finally { setSubmitting(false); }
   };
 
   const withdraw = async (grantId: string) => {
-    setError(""); setMessage(""); setSubmitting(true);
+    setSubmitting(true);
     try {
       await api.post(`/tenants/${tenantId}/support-access-grants/${grantId}/withdrawal`);
-      const successMsg = "Support access was withdrawn immediately.";
-      setMessage(successMsg);
-      toast.success("Support access withdrawn", successMsg);
+      toast.success("Support access withdrawn", "Support access was withdrawn immediately.");
       await load();
     } catch (err) {
-      const errMsg = getApiErrorMessage(err);
-      setError(errMsg);
-      toast.error("Could not withdraw support access", errMsg);
+      toast.error("Could not withdraw support access", getApiErrorMessage(err));
     }
     finally { setSubmitting(false); }
   };
@@ -142,8 +123,6 @@ export default function TenantSupportPage() {
   return (
     <div className="app-page">
       <PageHeader title="Tenant support" description="Raise support tickets and control temporary, read-only access to your institution's data." />
-      {message && <Notice popup tone="success" onDismiss={() => setMessage("")}>{message}</Notice>}
-      {error && <Notice popup tone="danger" onDismiss={() => setError("")}>{error}</Notice>}
       {!tenantId ? <ErrorState title="Sign-in required" message="A tenant sign-in is required to use support." /> : (
         <>
           <Panel title="Raise a support ticket" description="Describe the issue. Do not include passwords, one-time codes or other secrets.">

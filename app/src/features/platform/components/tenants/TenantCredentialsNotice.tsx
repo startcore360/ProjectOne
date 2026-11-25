@@ -28,7 +28,7 @@ export function TenantCredentialsNotice({ credentials, onDismiss }: TenantCreden
   };
 
   return (
-    <Notice tone="success">
+    <Notice tone="success" inline>
       <div style={{ display: "grid", gap: "var(--space-2)" }}>
         <strong>{credentials.tenantName} is ready. Save this password now: it won't be shown again.</strong>
         <div>

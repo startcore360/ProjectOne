@@ -448,6 +448,11 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
     try {
       const receipt = await landingApi.submitPublicEnquiry({
         enquiryType: "DEMO",
+        collegesCount: 0,
+        schoolsCount: 0,
+        studentsEstimate: 0,
+        staffEstimate: 0,
+        selectedModules: [],
         contactName: demoName.trim(),
         contactEmail: demoEmail.trim(),
         contactPhone: demoPhone.trim() || undefined,
@@ -843,7 +848,7 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                           ))}
                         </div>
                         <div className="landing-role-ui__panel landing-role-ui__insight">
-                          <Icon name="calendar-check" size={28}/>
+                          <Icon name="calendar" size={28}/>
                           <b>Your learning rhythm</b>
                           <span>Study streaks are not a live feature in the current student dashboard.</span>
                         </div>

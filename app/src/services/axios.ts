@@ -81,7 +81,7 @@ api.interceptors.request.use((config) => {
   const supportSessionActive = !!supportToken
     && (!supportExpiry || new Date(supportExpiry).getTime() > Date.now());
   if (supportToken && supportSessionActive) {
-    if (/^\/api\/tenants\/[^/]+(?:\/|$)/.test(requestUrl.pathname)) {
+    if (/^\/(?:api\/|v1\/)?tenants\/[^/]+(?:\/|$)/.test(requestUrl.pathname)) {
       config.headers.Authorization = `Bearer ${supportToken}`;
     } else {
       delete config.headers.Authorization;

@@ -69,10 +69,19 @@ describe("tenantHost", () => {
       ).toBe("https://greenwood.edu360.com/login");
     });
 
-    it("builds duckdns login URLs", () => {
+    it("builds correct tenant login URLs when navigating from platform or other subdomains", () => {
       expect(
-        buildTargetLoginUrl("abc", { protocol: "https:", hostname: "edu360.duckdns.org", port: "" }),
-      ).toBe("https://abc-edu360.duckdns.org/login");
+        buildTargetLoginUrl("abc", { protocol: "http:", hostname: "platform.edu360.localhost", port: "5173" }),
+      ).toBe("http://abc.edu360.localhost:5173/login");
+      expect(
+        buildTargetLoginUrl("greenwood", { protocol: "https:", hostname: "platform.edu360.com", port: "" }),
+      ).toBe("https://greenwood.edu360.com/login");
+      expect(
+        buildTargetLoginUrl("xyz", { protocol: "https:", hostname: "platform-edu360.duckdns.org", port: "" }),
+      ).toBe("https://xyz-edu360.duckdns.org/login");
+      expect(
+        buildTargetLoginUrl("target", { protocol: "https:", hostname: "existing.edu360.com", port: "" }),
+      ).toBe("https://target.edu360.com/login");
     });
 
     it("builds /__tenant/<slug> login URLs on Cloudflare quick tunnels", () => {

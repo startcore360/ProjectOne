@@ -70,7 +70,7 @@ export function Notice({
   autoDismiss = true,
   duration = 4000,
 }: NoticeProps) {
-  const isPopup = !inline && (alert || (popup !== undefined ? popup : (asToast || tone === "success")));
+  const isPopup = !inline && Boolean(alert || popup || asToast);
 
   if (isPopup) {
     return (

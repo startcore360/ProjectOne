@@ -100,7 +100,7 @@ const studentNavigation = [
 
 export default function AppLayout() {
   const user = useAppSelector((s) => s.auth.user);
-  const { isSupportSession } = useSupportSession();
+  const { isSupportSession, session } = useSupportSession();
   // E1-S4: tenant users see their tenant's logo and colours; the platform console never does.
   const { logoUrl: tenantLogoUrl } = useTenantBranding(user?.platformRole ? null : user?.tenantId);
   useLiveSocket(user?.tenantId ?? null, Boolean(user?.platformRole));
@@ -250,12 +250,13 @@ export default function AppLayout() {
   const roleProfile = effectiveRoleCode ? roleDashboardByCode(effectiveRoleCode) : undefined;
   const roleLevel = roleProfile?.level;
 
-  const role =
-    customRoleName ??
-    user?.roleName ??
-    (roleProfile ? roleProfile.name : null) ??
-    (user?.roleCode ? user.roleCode.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()) : null) ??
-    ((user?.platformRole ?? user?.userType)?.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Member");
+  const role = isSupportSession
+    ? (session?.ticketNumber ? `Support (${session.ticketNumber})` : "Support Operator")
+    : (customRoleName ??
+       user?.roleName ??
+       (roleProfile ? roleProfile.name : null) ??
+       (user?.roleCode ? user.roleCode.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()) : null) ??
+       ((user?.platformRole ?? user?.userType)?.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Member"));
 
   const isPlatformConsole = canOpenPlatformConsole(user?.platformRole);
   const isStudent = user?.userType === "STUDENT";
@@ -281,10 +282,13 @@ export default function AppLayout() {
   // I-06: the idle limit is the platform security policy value; 30 minutes until it is read.
   const [idleLimitMs, setIdleLimitMs] = useState(SESSION_IDLE_LIMIT_MS);
   useEffect(() => {
+    // A support-session token only carries authority for /tenants/{id}/... paths; this
+    // endpoint is unrelated to the support session's own fixed, ticket-bound expiry.
+    if (isSupportSession) return;
     api.get<{ idleTimeoutMinutes?: number }>("/auth/session-settings")
       .then(({ data }) => { if (data.idleTimeoutMinutes && data.idleTimeoutMinutes > 0) setIdleLimitMs(data.idleTimeoutMinutes * 60_000); })
       .catch(() => { /* keep the default limit */ });
-  }, []);
+  }, [isSupportSession]);
   useEffect(() => startInactivityTracker(() => { void idleLogout(); }, idleLimitMs), [idleLimitMs]);
   const signOut = async () => {
     try { await logout(); } catch { /* Always clear the local signed-in view. */ }
@@ -304,7 +308,9 @@ export default function AppLayout() {
     }
   }, [user?.tenantId, user?.id, user?.platformRole, tenantPermissionsLoading, tenantPermissionsError, tenantPermissions?.tenantId, tenantPermissions?.userAccountId]);
 
-  const scopeLabel = isPlatformConsole
+  const scopeLabel = isSupportSession
+    ? "SUPPORT SESSION"
+    : isPlatformConsole
     ? "PLATFORM"
     : isStudent
       ? "STUDENT SPACE"
@@ -318,7 +324,9 @@ export default function AppLayout() {
               ? "UNIVERSITY"
               : "WORKSPACE";
 
-  const contextLabel = isPlatformConsole
+  const contextLabel = isSupportSession
+    ? (session?.ticketNumber ? `Ticket ${session.ticketNumber}` : "Support diagnostic")
+    : isPlatformConsole
     ? "Platform console"
     : isStudent
       ? "Student space"
@@ -333,7 +341,13 @@ export default function AppLayout() {
               : "Workspace";
 
   const baseNavigation = isSupportSession
-    ? [{ label: "Dashboard", to: "/dashboard", icon: "home" as const, important: true }, { label: "Support", to: "/support", icon: "help" as const, important: true }]
+    ? [
+        { label: "Overview", to: "/dashboard", icon: "home" as const, important: true },
+        { label: "Academic Structure", to: "/university/setup/structure", icon: "grid" as const, important: true },
+        { label: "Calendar & Sessions", to: "/university/setup/calendar-events", icon: "calendar" as const, important: true },
+        { label: "Role Previews", to: "/role-previews", icon: "shield" as const, important: false },
+        { label: "Support Status", to: "/support", icon: "help" as const, important: true },
+      ]
     : isPlatformConsole
     ? filterPlatformNavigation(platformNavigation, platformPermissionsLoaded ? serverActions : [])
     : isStudent || user?.userType === "GUARDIAN"
@@ -480,7 +494,11 @@ export default function AppLayout() {
           aria-label="Main navigation"
         >
           {navigation.map((item) => navLink(item))}
-          {import.meta.env.DEV && <NavLink to="/role-previews" end title="Role dashboard previews" className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name="help" size={20}/><span>Role previews</span></NavLink>}
+          {!navigation.some((i) => i.to === "/role-previews") && import.meta.env.DEV && (
+            <NavLink to="/role-previews" end title="Role dashboard previews" className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}>
+              <Icon name="help" size={20}/><span>Role previews</span>
+            </NavLink>
+          )}
         </nav>
         {/* Mouse affordance only: keyboard and screen-reader users already reach every link by
             tabbing, which scrolls the list itself, so these buttons stay out of the tab order. */}

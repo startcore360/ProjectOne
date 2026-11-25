@@ -1,6 +1,50 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import Toast from "./Toast";
 import { toastRegistry, type ToastItem, type ToastPosition } from "./toastRegistry";
+
+type ToastHostItemProps = {
+  item: ToastItem;
+  position: ToastPosition;
+};
+
+/**
+ * A toast item's own `onDismiss` reference must stay stable across re-renders
+ * of ToastHost (e.g. a new toast arriving elsewhere), otherwise every
+ * already-visible toast's auto-dismiss timer in Toast.tsx would be reset
+ * every time ToastHost re-renders, and toasts would never time out on their
+ * own. Isolating each item in its own component lets useCallback key off the
+ * `item` object itself, which the registry keeps referentially stable for as
+ * long as that toast exists.
+ */
+function ToastHostItem({ item, position }: ToastHostItemProps) {
+  const handleDismiss = useCallback(() => {
+    item.onDismiss?.();
+    toastRegistry.hide(item.id);
+  }, [item]);
+
+  return (
+    <div style={{ pointerEvents: "auto", width: "100%", display: "flex", justifyContent: "center" }}>
+      <Toast
+        variant={item.variant}
+        title={item.title}
+        description={item.description}
+        content={item.content}
+        action={item.action}
+        showAction={item.showAction}
+        alert={false}
+        popup={false}
+        autoDismiss
+        className="w-full shadow-lg"
+        style={{
+          boxShadow: "0 12px 32px -4px rgba(0, 0, 0, 0.18), 0 4px 12px -2px rgba(0, 0, 0, 0.08)",
+        }}
+        position={item.position ?? position}
+        alertDuration={item.alertDuration ?? 4000}
+        onDismiss={handleDismiss}
+      />
+    </div>
+  );
+}
 
 export type ToastHostProps = {
   /**
@@ -99,28 +143,7 @@ export default function ToastHost({
       }}
     >
       {toasts.map((item) => (
-        <div key={item.id} style={{ pointerEvents: "auto", width: "100%", display: "flex", justifyContent: "center" }}>
-          <Toast
-            variant={item.variant}
-            title={item.title}
-            description={item.description}
-            content={item.content}
-            action={item.action}
-            showAction={item.showAction}
-            alert={false}
-            popup={false}
-            className="w-full shadow-lg"
-            style={{
-              boxShadow: "0 12px 32px -4px rgba(0, 0, 0, 0.18), 0 4px 12px -2px rgba(0, 0, 0, 0.08)",
-            }}
-            position={item.position ?? position}
-            alertDuration={item.alertDuration ?? 4000}
-            onDismiss={() => {
-              item.onDismiss?.();
-              toastRegistry.hide(item.id);
-            }}
-          />
-        </div>
+        <ToastHostItem key={item.id} item={item} position={position} />
       ))}
     </aside>
   );

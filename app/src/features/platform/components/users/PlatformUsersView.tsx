@@ -95,7 +95,7 @@ function ChangeRoleModal({
           <RoleOptions customRoles={customRoles} />
         </select>
       </label>
-      {error && <Notice popup tone="danger">{error}</Notice>}
+      {error && <Notice tone="danger">{error}</Notice>}
     </Modal>
   );
 }
@@ -117,8 +117,6 @@ export function PlatformUsersView() {
   const [createError, setCreateError] = useState("");
   const [createdUser, setCreatedUser] = useState<PlatformUserItem | null>(null);
   const [draft, setDraft] = useState<CreatePlatformUserDraft>(EMPTY_DRAFT);
-  const [notice, setNotice] = useState("");
-  const [actionError, setActionError] = useState("");
   const [changingRole, setChangingRole] = useState<PlatformUserItem | null>(null);
   const [statusTarget, setStatusTarget] = useState<PlatformUserItem | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
@@ -137,7 +135,10 @@ export function PlatformUsersView() {
     setMfaError("");
     try {
       await platformUserService.resetMfa(mfaTarget.platformUserId, reason);
-      setNotice(`${mfaTarget.fullName}'s two-step login was reset. They set up a new authenticator at their next sign-in.`);
+      toast.success(
+        "Two-step login reset",
+        `${mfaTarget.fullName}'s two-step login was reset. They set up a new authenticator at their next sign-in.`
+      );
       setMfaTarget(null);
     } catch (err) {
       setMfaError(readErrorMessage(err, "Could not reset two-step login."));
@@ -200,19 +201,15 @@ export function PlatformUsersView() {
     if (!statusTarget) return;
     const reactivate = statusTarget.status !== "ACTIVE";
     setStatusBusy(true);
-    setActionError("");
     try {
       await platformUserService.updatePlatformUser(statusTarget.platformUserId, {
         status: reactivate ? "ACTIVE" : "INACTIVE",
       });
       const msg = `${statusTarget.fullName} is ${reactivate ? "active again" : "deactivated and signed out"}.`;
-      setNotice(msg);
       toast.success("Account status updated", msg);
       loadUsers();
     } catch (err) {
-      const msg = readErrorMessage(err, "Could not change this account.");
-      setActionError(msg);
-      toast.error("Status update failed", msg);
+      toast.error("Status update failed", readErrorMessage(err, "Could not change this account."));
     } finally {
       setStatusBusy(false);
       setStatusTarget(null);
@@ -222,17 +219,15 @@ export function PlatformUsersView() {
   const unlockAccount = async () => {
     if (!unlockTarget) return;
     setUnlockBusy(true);
-    setActionError("");
     try {
       await platformUserService.unlockPlatformUser(unlockTarget.platformUserId);
-      const msg = `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`;
-      setNotice(msg);
-      toast.success("Account unlocked", msg);
+      toast.success(
+        "Account unlocked",
+        `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`
+      );
       setUnlockTarget(null);
     } catch (err) {
-      const msg = readErrorMessage(err, "Could not unlock this account.");
-      setActionError(msg);
-      toast.error("Unlock failed", msg);
+      toast.error("Unlock failed", readErrorMessage(err, "Could not unlock this account."));
     } finally {
       setUnlockBusy(false);
     }
@@ -241,16 +236,13 @@ export function PlatformUsersView() {
   const resetPassword = async () => {
     if (!passwordTarget) return;
     setPasswordBusy(true);
-    setActionError("");
     try {
       const { data } = await platformUserService.resetPassword(passwordTarget.platformUserId);
       setCreatedUser(data);
       toast.success("Password reset", `A new temporary password was generated for ${passwordTarget.fullName}.`);
       setPasswordTarget(null);
     } catch (err) {
-      const msg = readErrorMessage(err, "Could not reset this platform user's password.");
-      setActionError(msg);
-      toast.error("Password reset failed", msg);
+      toast.error("Password reset failed", readErrorMessage(err, "Could not reset this platform user's password."));
       setPasswordTarget(null);
     } finally {
       setPasswordBusy(false);
@@ -275,7 +267,6 @@ export function PlatformUsersView() {
             onClick={() => {
               setCreateError("");
               setCreatedUser(null);
-              setNotice("");
               setShowCreate(true);
             }}
           >
@@ -295,8 +286,6 @@ export function PlatformUsersView() {
           temporaryPassword: createdUser?.tempPassword,
         }}
       />
-      {notice && <Notice popup tone="success" onDismiss={() => setNotice("")}>{notice}</Notice>}
-      {actionError && <Notice popup tone="danger" onDismiss={() => setActionError("")}>{actionError}</Notice>}
       {rolesError && (
         <ErrorState
           message={rolesError}
@@ -361,21 +350,21 @@ export function PlatformUsersView() {
                 <td>
                   {canManage && u.platformUserId !== myId ? (
                     <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-                      <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setChangingRole(u); }}>
+                      <Button variant="secondary" size="sm" onClick={() => setChangingRole(u)}>
                         Change role
                       </Button>
-                      <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setStatusTarget(u); }}>
+                      <Button variant="secondary" size="sm" onClick={() => setStatusTarget(u)}>
                         {u.status === "ACTIVE" ? "Deactivate" : "Reactivate"}
                       </Button>
                       {u.status === "ACTIVE" && (
                         <>
-                          <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setActionError(""); setPasswordTarget(u); }}>
+                          <Button variant="secondary" size="sm" onClick={() => setPasswordTarget(u)}>
                             Reset password
                           </Button>
-                          <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setMfaError(""); setMfaTarget(u); }}>
+                          <Button variant="secondary" size="sm" onClick={() => { setMfaError(""); setMfaTarget(u); }}>
                             Reset two-step login
                           </Button>
-                          <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setActionError(""); setUnlockTarget(u); }}>
+                          <Button variant="secondary" size="sm" onClick={() => setUnlockTarget(u)}>
                             Unlock sign-in
                           </Button>
                         </>
@@ -436,7 +425,6 @@ export function PlatformUsersView() {
           onClose={() => setChangingRole(null)}
           onSaved={(message) => {
             setChangingRole(null);
-            setNotice(message);
             toast.success("Role updated", message);
             loadUsers();
           }}

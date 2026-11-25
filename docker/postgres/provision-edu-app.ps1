@@ -124,7 +124,8 @@ foreach ($f in @("12d_v41_platform_role_templates.sql", "14_v41_audit_foundation
                  "57_v41_academic_hierarchy_constraints.sql", "58_v41_department_program_section_schema.sql",
                  "59_v41_staff_qualification_and_leave_indexes.sql", "60_v41_leave_delegation.sql",
                  "61_v41_student_profile_and_guardians.sql", "62_v41_student_notes_and_legal_holds.sql",
-                 "63_v41_admission_cycles_and_applications.sql", "64_v41_merit_list_and_seat_allocation.sql")) {
+                 "63_v41_admission_cycles_and_applications.sql", "64_v41_merit_list_and_seat_allocation.sql",
+                 "65_v41_landing_cms_and_enquiries.sql")) {
     Run-Sql $f
 }
 Write-Host "V4.1 migrations applied (including the term lock and permanent roll-down revocation engines)."

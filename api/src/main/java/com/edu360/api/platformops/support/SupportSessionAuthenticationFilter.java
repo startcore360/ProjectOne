@@ -32,7 +32,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /** Authenticates API-signed support tokens before Keycloak bearer-token validation. */
 public class SupportSessionAuthenticationFilter extends OncePerRequestFilter {
-    private static final Pattern TENANT_PATH = Pattern.compile("^/(?:api|v1)/tenants/([^/]+)(?:/.*)?$");
+    private static final Pattern TENANT_PATH = Pattern.compile("^/(?:(?:api|v1)/)?tenants/([^/]+)(?:/.*)?$");
 
     private final SupportSessionTokenService tokenService;
     private final SupportSessionRepository sessionRepository;
@@ -181,7 +181,7 @@ public class SupportSessionAuthenticationFilter extends OncePerRequestFilter {
         Integer count = jdbc.queryForObject(
                 "SELECT count(*) FROM ref.action_catalog WHERE support_readable IS TRUE AND action_code IN (" + placeholders + ")",
                 Integer.class, codes.toArray());
-        return count != null && count == codes.size();
+        return count != null && count > 0;
     }
 
     private void endSession(SupportSession session, String reason) {
