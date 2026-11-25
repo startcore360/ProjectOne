@@ -148,6 +148,9 @@ export default function SelfServicePage() {
                   </div>
                 </div>
                 <p className="app-card__body">{n.body}</p>
+                {n.requiresAcknowledgment && !n.acknowledged && n.institutionId && (
+                  <Button variant="secondary" onClick={async () => { try { await selfServiceApi.acknowledgeNotice(tenantId, n.institutionId!, n.noticeId); await loadNotices(); } catch { setNoticesError("Notice acknowledgment could not be saved. Please try again."); } }}>Acknowledge</Button>
+                )}
                 <div className="app-card__meta">
                   Authored by: {n.authoredActiveRole} • {n.publishedAt ? new Date(n.publishedAt).toLocaleDateString() : "Just now"}
                 </div>
