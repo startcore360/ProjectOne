@@ -117,6 +117,6 @@ CREATE POLICY p_grievance_confidentiality ON app.grievance_evidence AS RESTRICTI
 CREATE POLICY p_grievance_confidentiality ON app.grievance_action AS RESTRICTIVE FOR SELECT
  USING(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_action.tenant_id AND gc.grievance_case_id=grievance_action.grievance_case_id));
 GRANT EXECUTE ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) TO edu_app;
-COMMENT ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) IS 'PO-T05: ICC and Principal only, using the one active role; accused and immediate HOD always excluded. Missing context denies. Tenant DPO is not authorized.';
+COMMENT ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) IS 'PO-T05: ICC and Principal only, using the one active role; accused and immediate HOD always excluded. Missing context denies. Tenant DPO is not authorized. ICC must be configured as an institution-scoped custom role with role_code INTERNAL_COMPLAINTS_COMMITTEE; unconfigured roles fail closed.';
 COMMENT ON TABLE app.grievance_case IS 'Confidential grievance cases protected by PO-T05 restrictive RLS; only ICC and Principal may SELECT.';
 COMMIT;
