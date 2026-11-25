@@ -27,17 +27,18 @@ public class ExecutiveAnalyticsService {
     private final TransactionTemplate reportTransaction;
     public ExecutiveAnalyticsService(@Qualifier("eduReportJdbcTemplate") ObjectProvider<JdbcTemplate> reportJdbc,
             PermissionEvaluatorService permissions, @Qualifier("jdbcTemplate") JdbcTemplate tenantJdbc,
-            @Qualifier("eduReportTransactionManager") org.springframework.transaction.PlatformTransactionManager reportManager) {
+            @Qualifier("eduReportTransactionManager") ObjectProvider<org.springframework.transaction.PlatformTransactionManager> reportManager) {
         this.reportJdbc=reportJdbc; this.permissions=permissions; this.tenantJdbc=tenantJdbc;
-        this.reportTransaction=new TransactionTemplate(reportManager);
-        this.reportTransaction.setReadOnly(true);
+        org.springframework.transaction.PlatformTransactionManager manager=reportManager.getIfAvailable();
+        this.reportTransaction=manager==null?null:new TransactionTemplate(manager);
+        if(this.reportTransaction!=null) this.reportTransaction.setReadOnly(true);
     }
     public Map<String,Object> dashboard(UUID tenant,TenantPrincipal p,UUID institution,LocalDate from,LocalDate to) {
         ScopeType active=TenantContext.currentActiveScopeType();
         permissions.authorize(new RbacPrincipal(tenant,p.userAccountId()),"REPORTS_VIEW",
                 active==ScopeType.TENANT?RbacScope.tenant():RbacScope.institution(institution),RbacTarget.NONE);
         JdbcTemplate db=reportJdbc.getIfAvailable();
-        if(db==null) throw new BusinessRuleViolationException("REPORTING_CONNECTION_UNAVAILABLE","The dedicated read-only edu_report connection is not configured.");
+        if(db==null || reportTransaction==null) throw new BusinessRuleViolationException("REPORTING_CONNECTION_UNAVAILABLE","The dedicated read-only edu_report connection is not configured.");
         LocalDate end=to==null?LocalDate.now():to, start=from==null?end.minusDays(29):from;
         if(start.isAfter(end)||start.isBefore(end.minusYears(2))) throw new BusinessRuleViolationException("INVALID_REPORT_RANGE","Report range must be ordered and no longer than two years.");
         UUID reportDefinition=tenantJdbc.queryForObject("""
