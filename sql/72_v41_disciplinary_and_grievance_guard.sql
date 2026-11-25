@@ -25,7 +25,8 @@ VALUES
  ('GRIEVANCE_CASE_ASSIGN',293,'Confidential grievances',1,'Assign a confidential grievance case to an investigator',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
  ('GRIEVANCE_HEARING_MANAGE',294,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
  ('GRIEVANCE_CASE_RESOLVE',295,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_EVIDENCE_VIEW',296,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9')
+ ('GRIEVANCE_EVIDENCE_VIEW',296,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
+ ('GRIEVANCE_EVIDENCE_UPLOAD',297,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9')
 ON CONFLICT (action_code) DO NOTHING;
 
 -- Only the ICC and the two Principal roles receive confidential case access or case-management
@@ -78,7 +79,10 @@ WITH pairs(role_code,action_code,limited_to) AS (
  ('SCHOOL_PRINCIPAL','GRIEVANCE_CASE_RESOLVE','Own institution; PO-T05'),
  ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05'),
  ('PRINCIPAL_COLLEGE','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05'),
- ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05')
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05'),
+ ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
+ ('PRINCIPAL_COLLEGE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05')
 ), submitters AS (
  SELECT role_code,'GRIEVANCE_CASE_SUBMIT'::text AS action_code,
         'Submit own named or anonymous grievance only; no case-list or case-detail access'::text AS limited_to
@@ -239,6 +243,17 @@ CREATE POLICY p_grievance_confidentiality ON app.grievance_evidence AS RESTRICTI
  USING(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_evidence.tenant_id AND gc.grievance_case_id=grievance_evidence.grievance_case_id));
 CREATE POLICY p_grievance_confidentiality ON app.grievance_action AS RESTRICTIVE FOR SELECT
  USING(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_action.tenant_id AND gc.grievance_case_id=grievance_action.grievance_case_id));
+CREATE POLICY p_grievance_confidentiality_update ON app.grievance_case AS RESTRICTIVE FOR UPDATE
+ USING(app.fn_complaint_guard(tenant_id,accused_user_id,institution_id))
+ WITH CHECK(app.fn_complaint_guard(tenant_id,accused_user_id,institution_id));
+CREATE POLICY p_grievance_evidence_insert ON app.grievance_evidence AS RESTRICTIVE FOR INSERT
+ WITH CHECK(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_evidence.tenant_id
+  AND gc.grievance_case_id=grievance_evidence.grievance_case_id
+  AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)));
+CREATE POLICY p_grievance_action_insert ON app.grievance_action AS RESTRICTIVE FOR INSERT
+ WITH CHECK(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_action.tenant_id
+  AND gc.grievance_case_id=grievance_action.grievance_case_id
+  AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)));
 GRANT EXECUTE ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) TO edu_app;
 COMMENT ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) IS 'PO-T05: ICC and Principal only, using the one active role; accused and immediate HOD always excluded. Missing context denies. Tenant DPO is not authorized. ICC must be configured as an institution-scoped custom role with role_code INTERNAL_COMPLAINTS_COMMITTEE; unconfigured roles fail closed.';
 COMMENT ON TABLE app.grievance_case IS 'Confidential grievance cases protected by PO-T05 restrictive RLS; only ICC and Principal may SELECT.';
