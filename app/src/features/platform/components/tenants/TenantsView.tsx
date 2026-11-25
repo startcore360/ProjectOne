@@ -44,8 +44,10 @@ function RowMenu({ tenantName, children }: { tenantName?: string; children: Reac
   useEffect(() => {
     if (!open || !triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    const spaceOnRight = window.innerWidth - rect.left;
-    setAlignLeft(window.innerWidth <= 640 || spaceOnRight >= 180 || rect.left < 200);
+    const spaceOnRight = window.innerWidth - rect.right;
+    // Default to right-aligned (opening inwards to the left into the table).
+    // Only align left if the button is close to the viewport's left edge and there is enough room on the right.
+    setAlignLeft(rect.left < 180 && spaceOnRight >= 180);
   }, [open]);
 
   useEffect(() => {
@@ -245,6 +247,9 @@ export function TenantsView() {
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState("");
+  const [passwordResetTenant, setPasswordResetTenant] = useState<Tenant | null>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState("");
 
   const planChangeCurrentPlan = plans.find((plan) => plan.planId === selectedTenant?.planId);
   const planChangeTargetPlan = plans.find((plan) => plan.planId === planChangePlanId);
@@ -598,6 +603,29 @@ export function TenantsView() {
     }
   };
 
+  const handleConfirmResetPassword = async () => {
+    if (!passwordResetTenant) return;
+    setResettingPassword(true);
+    setResetPasswordError("");
+    try {
+      const res = await platformTenantService.resetFirstAdminPassword(passwordResetTenant.id);
+      const target = passwordResetTenant;
+      setPasswordResetTenant(null);
+      setMessage(`New temporary password generated for ${target.name}.`);
+      setCreatedCredentials({
+        tenantName: target.name,
+        adminEmail: res.data.adminEmail,
+        loginAddress: tenantLoginAddress(target.subdomain || "", window.location),
+        temporaryPassword: res.data.temporaryPassword,
+      });
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
+      setResetPasswordError(e.response?.data?.message || e.response?.data?.error || e.message || "Failed to reset administrator password.");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   const filtered = useMemo(
     () =>
       tenants.filter(
@@ -762,6 +790,11 @@ export function TenantsView() {
                       )}
                       {canViewUsage && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowUsage(true); }}>Usage</MenuAction>}
                       {canViewCompliance && <MenuAction onClick={() => { setSelectedTenant(tenant); setShowDataProtection(true); }}>Compliance</MenuAction>}
+                      {canEditSettings && tenant.status !== "Archived" && (
+                        <MenuAction onClick={() => { setPasswordResetTenant(tenant); setResetPasswordError(""); }}>
+                          Reset admin password
+                        </MenuAction>
+                      )}
                     </RowMenu>
                   </div>
                 </td>
@@ -968,6 +1001,46 @@ export function TenantsView() {
         onClose={() => setShowUsage(false)}
         tenant={selectedTenant}
       />
+
+      {passwordResetTenant && (
+        <Modal
+          isOpen
+          onClose={() => { setPasswordResetTenant(null); setResetPasswordError(""); }}
+          kicker="CREDENTIAL RE-ISSUE"
+          title={`Reset Admin Password — ${passwordResetTenant.name}`}
+          size="sm"
+          footer={
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", width: "100%" }}>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => { setPasswordResetTenant(null); setResetPasswordError(""); }}
+                disabled={resettingPassword}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="button"
+                busy={resettingPassword}
+                onClick={() => void handleConfirmResetPassword()}
+              >
+                {resettingPassword ? "Generating…" : "Generate new password"}
+              </Button>
+            </div>
+          }
+        >
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+            <p style={{ margin: 0 }}>
+              This will generate a new temporary password for <strong>{passwordResetTenant.name}</strong>’s administrator.
+            </p>
+            <Notice tone="warning" inline>
+              Any previous temporary password will become invalid immediately. The administrator must set a permanent password upon first signing in.
+            </Notice>
+            {resetPasswordError && <Notice tone="danger" inline>{resetPasswordError}</Notice>}
+          </div>
+        </Modal>
+      )}
 
       <ConfirmDialog
         isOpen={!!reactivateTarget}

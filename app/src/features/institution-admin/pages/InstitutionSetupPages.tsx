@@ -5,6 +5,7 @@ import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { useSupportSession } from "../../support/useSupportSession";
 import { PersonPicker } from "../../../components/common/PersonPicker";
 import { SectionPicker } from "../../../components/common/SectionPicker";
 import { staffService, type TeacherLookupItem } from "../api/staffService";
@@ -713,7 +714,9 @@ type CalendarEvent = {
 };
 
 export function CalendarEventsPage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const authTenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { isSupportSession, tenantId: supportTenantId, session } = useSupportSession();
+  const tenantId = authTenantId || supportTenantId || "";
   const [institutionId, setInstitutionId] = useState("");
   const [academicSessionId, setAcademicSessionId] = useState("");
   const [eventType, setEventType] = useState("LOCAL_HOLIDAY");
@@ -742,6 +745,13 @@ export function CalendarEventsPage() {
   const [targetSessionId, setTargetSessionId] = useState("");
   const [masterEventSubmitting, setMasterEventSubmitting] = useState(false);
   const [masterEventModalError, setMasterEventModalError] = useState("");
+
+  useEffect(() => {
+    if (tenantId && import.meta.env.MODE !== "test") {
+      void loadSessions();
+      void loadMasterEvents();
+    }
+  }, [tenantId]);
 
   const loadSessions = async () => {
     if (!tenantId) return;
@@ -840,6 +850,13 @@ export function CalendarEventsPage() {
         <NoTenantNotice />
       ) : (
         <>
+          {isSupportSession && (
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <Notice tone="info" inline>
+                <strong>Support Inspection Mode:</strong> Viewing read-only academic calendar and sessions under ticket {session?.ticketNumber || ""}. Creating or editing sessions and events is disabled.
+              </Notice>
+            </div>
+          )}
           {/* Master Academic Sessions */}
           <Panel
             title="Master Academic Sessions"
@@ -849,9 +866,11 @@ export function CalendarEventsPage() {
               <Button type="button" variant="secondary" onClick={() => void loadSessions()} busy={sessionsLoading}>
                 {sessionsLoading ? "Loading…" : "Load Sessions"}
               </Button>
-              <Button type="button" variant="primary" onClick={() => setShowAddSessionModal(true)}>
-                + New Academic Session
-              </Button>
+              {!isSupportSession && (
+                <Button type="button" variant="primary" onClick={() => setShowAddSessionModal(true)}>
+                  + New Academic Session
+                </Button>
+              )}
             </div>
             {sessionsError && <div className="app-inline-error">{sessionsError}</div>}
             {sessions !== null && sessions.length === 0 && (
@@ -894,9 +913,11 @@ export function CalendarEventsPage() {
               <Button type="button" variant="secondary" onClick={() => void loadMasterEvents()} busy={masterEventsLoading}>
                 {masterEventsLoading ? "Loading…" : "Load Master Calendar"}
               </Button>
-              <Button type="button" variant="primary" onClick={() => setShowAddMasterEventModal(true)}>
-                + Add Master Event
-              </Button>
+              {!isSupportSession && (
+                <Button type="button" variant="primary" onClick={() => setShowAddMasterEventModal(true)}>
+                  + Add Master Event
+                </Button>
+              )}
             </div>
             {masterEventsError && <div className="app-inline-error">{masterEventsError}</div>}
             {masterEvents !== null && masterEvents.length === 0 && (
@@ -1001,55 +1022,57 @@ export function CalendarEventsPage() {
             )}
           </Panel>
 
-          <Panel title="Add a local event" description="Academic session ID has no picker yet; paste it directly.">
-            <form onSubmit={submit} noValidate>
-              <IdField
-                id="cal-session-id"
-                label="Academic session ID"
-                value={academicSessionId}
-                onChange={setAcademicSessionId}
-              />
-              <SelectField
-                id="cal-event-type"
-                label="Event type"
-                value={eventType}
-                onChange={(e) => setEventType(e.target.value)}
-                options={[
-                  { value: "LOCAL_HOLIDAY", label: "Local holiday" },
-                  { value: "LOCAL_EVENT", label: "Local event" },
-                  { value: "EXAM_DAY", label: "Exam day" },
-                ]}
-              />
-              <TextField
-                id="cal-title"
-                label="Title"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Founder's Day"
-              />
-              <div className="app-form-grid">
-                <DateField
-                  id="cal-start-date"
-                  label="Start date"
-                  required
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+          {!isSupportSession && (
+            <Panel title="Add a local event" description="Academic session ID has no picker yet; paste it directly.">
+              <form onSubmit={submit} noValidate>
+                <IdField
+                  id="cal-session-id"
+                  label="Academic session ID"
+                  value={academicSessionId}
+                  onChange={setAcademicSessionId}
                 />
-                <DateField
-                  id="cal-end-date"
-                  label="End date"
-                  required
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                <SelectField
+                  id="cal-event-type"
+                  label="Event type"
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                  options={[
+                    { value: "LOCAL_HOLIDAY", label: "Local holiday" },
+                    { value: "LOCAL_EVENT", label: "Local event" },
+                    { value: "EXAM_DAY", label: "Exam day" },
+                  ]}
                 />
-              </div>
-              <ResultBanner status={status} message={message} />
-              <Button type="submit" busy={status === "busy"}>
-                {status === "busy" ? "Adding…" : "Add event"}
-              </Button>
-            </form>
-          </Panel>
+                <TextField
+                  id="cal-title"
+                  label="Title"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Founder's Day"
+                />
+                <div className="app-form-grid">
+                  <DateField
+                    id="cal-start-date"
+                    label="Start date"
+                    required
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                  <DateField
+                    id="cal-end-date"
+                    label="End date"
+                    required
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <ResultBanner status={status} message={message} />
+                <Button type="submit" busy={status === "busy"}>
+                  {status === "busy" ? "Adding…" : "Add event"}
+                </Button>
+              </form>
+            </Panel>
+          )}
         </>
       )}
 
@@ -1499,8 +1522,10 @@ function EditStructureRecordModal({
 }
 
 export function AcademicStructurePage() {
-  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const authTenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
+  const { isSupportSession, tenantId: supportTenantId, session } = useSupportSession();
+  const tenantId = authTenantId || supportTenantId || "";
   const [institutionId, setInstitutionId] = useState("");
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
@@ -1559,6 +1584,11 @@ export function AcademicStructurePage() {
       .then((res) => {
         if (res?.items?.length) {
           setInstitutions(res.items);
+          if (!institutionId) {
+            const firstId = res.items[0].institutionId;
+            setInstitutionId(firstId);
+            void loadStructureFor(firstId);
+          }
         }
       })
       .catch((err) => setError(getApiErrorMessage(err)));
@@ -1938,6 +1968,14 @@ export function AcademicStructurePage() {
         description={isSchool ? "Manage school classes, sections and academic sessions." : "Create and manage academic departments and degree programmes."}
       />
 
+      {isSupportSession && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <Notice tone="info" inline>
+            <strong>Support Inspection Mode:</strong> Viewing read-only academic structure under ticket {session?.ticketNumber || ""}. Form creation and edits are disabled.
+          </Notice>
+        </div>
+      )}
+
       <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
         <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
           {institutions.length > 0 && (
@@ -2009,41 +2047,43 @@ export function AcademicStructurePage() {
             title="School classes"
             description="Create the year groups or grades used by this school. Display order controls how classes are presented."
           >
-            <div className="app-form">
-              <form onSubmit={createSchoolClass}>
-                <div className="app-form-grid">
-                  <TextField
-                    id="school-class-name"
-                    label="Class or grade name"
-                    required
-                    maxLength={30}
-                    value={classNameDraft}
-                    onChange={(event) => setClassNameDraft(event.target.value)}
-                    placeholder="For example, Grade 8"
-                  />
-                  <TextField
-                    id="school-class-order"
-                    label="Display order"
-                    type="number"
-                    min={0}
-                    step={1}
-                    required
-                    value={classOrderDraft}
-                    onChange={(event) => setClassOrderDraft(event.target.value)}
-                  />
-                </div>
-                <div className="app-inline-actions">
-                  <Button type="submit" busy={classSaving}>Create class</Button>
-                </div>
-              </form>
-            </div>
+            {!isSupportSession && (
+              <div className="app-form">
+                <form onSubmit={createSchoolClass}>
+                  <div className="app-form-grid">
+                    <TextField
+                      id="school-class-name"
+                      label="Class or grade name"
+                      required
+                      maxLength={30}
+                      value={classNameDraft}
+                      onChange={(event) => setClassNameDraft(event.target.value)}
+                      placeholder="For example, Grade 8"
+                    />
+                    <TextField
+                      id="school-class-order"
+                      label="Display order"
+                      type="number"
+                      min={0}
+                      step={1}
+                      required
+                      value={classOrderDraft}
+                      onChange={(event) => setClassOrderDraft(event.target.value)}
+                    />
+                  </div>
+                  <div className="app-inline-actions">
+                    <Button type="submit" busy={classSaving}>Create class</Button>
+                  </div>
+                </form>
+              </div>
+            )}
             {loading && schoolClasses.length === 0 ? <SkeletonTable rows={4} columns={4} /> : null}
             {!loading && !error && schoolClasses.length === 0 ? (
               <EmptyState title="No classes configured" description="Create the first class or grade for this school." />
             ) : schoolClasses.length > 0 ? (
               <div className="app-table-wrap">
                 <table className="app-table">
-                  <thead><tr><th>Class or grade</th><th>Display order</th><th>Student access</th><th>Status</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Class or grade</th><th>Display order</th><th>Student access</th><th>Status</th>{!isSupportSession && <th>Actions</th>}</tr></thead>
                   <tbody>
                     {schoolClasses.map((schoolClass) => (
                       <tr key={schoolClass.classId}>
@@ -2051,10 +2091,12 @@ export function AcademicStructurePage() {
                         <td>{schoolClass.displayOrder}</td>
                         <td>{schoolClass.studentLoginEnabled ? "Enabled" : "Disabled"}</td>
                         <td><Badge tone={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>{schoolClass.status === "ACTIVE" ? "Active" : schoolClass.status}</Badge></td>
-                        <td><div className="app-inline-actions">
-                          <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "class", item: schoolClass }); }}>Edit</Button>
-                          <Button size="sm" variant="danger" disabled={!schoolClass.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "class", id: schoolClass.classId, name: schoolClass.className, rowVersion: schoolClass.rowVersion }); }}>Archive</Button>
-                        </div></td>
+                        {!isSupportSession && (
+                          <td><div className="app-inline-actions">
+                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "class", item: schoolClass }); }}>Edit</Button>
+                            <Button size="sm" variant="danger" disabled={!schoolClass.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "class", id: schoolClass.classId, name: schoolClass.className, rowVersion: schoolClass.rowVersion }); }}>Archive</Button>
+                          </div></td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -2076,7 +2118,7 @@ export function AcademicStructurePage() {
               </Notice>
             ) : schoolClasses.length === 0 ? (
               <EmptyState title="Create a class first" description="Sections belong to a school class. Create at least one class before adding sections." />
-            ) : (
+            ) : !isSupportSession ? (
               <form onSubmit={createSchoolSection} className="app-form">
                 <div className="app-form-grid">
                   <SelectField
@@ -2126,13 +2168,13 @@ export function AcademicStructurePage() {
                   <Button type="submit" busy={sectionSaving}>Create section</Button>
                 </div>
               </form>
-            )}
+            ) : null}
             {!loading && !error && schoolSections.length === 0 && schoolClasses.length > 0 && schoolSessions.length > 0 ? (
               <EmptyState title="No sections configured" description="Create the first section for a class and academic session." />
             ) : schoolSections.length > 0 ? (
               <div className="app-table-wrap">
                 <table className="app-table">
-                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Capacity</th><th>Status</th>{!isSupportSession && <th>Actions</th>}</tr></thead>
                   <tbody>
                     {schoolSections.map((section) => (
                       <tr key={section.sectionId}>
@@ -2141,10 +2183,12 @@ export function AcademicStructurePage() {
                         <td>{schoolSessions.find((item) => item.academicSessionId === section.academicSessionId)?.sessionLabel ?? section.academicSessionId}</td>
                         <td>{section.capacity ?? "Not set"}</td>
                         <td><Badge tone={section.status === "ACTIVE" ? "success" : "neutral"}>{section.status === "ACTIVE" ? "Active" : section.status}</Badge></td>
-                        <td><div className="app-inline-actions">
-                          <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "section", item: section }); }}>Edit</Button>
-                          <Button size="sm" variant="danger" disabled={!section.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "section", id: section.sectionId, name: `Section ${section.sectionName}`, rowVersion: section.rowVersion }); }}>Archive</Button>
-                        </div></td>
+                        {!isSupportSession && (
+                          <td><div className="app-inline-actions">
+                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "section", item: section }); }}>Edit</Button>
+                            <Button size="sm" variant="danger" disabled={!section.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "section", id: section.sectionId, name: `Section ${section.sectionName}`, rowVersion: section.rowVersion }); }}>Archive</Button>
+                          </div></td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -2171,11 +2215,13 @@ export function AcademicStructurePage() {
             description="Academic departments are available for colleges; school structures use classes and sections."
           >
             <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-                <Button type="button" onClick={() => setShowAddDept(true)}>
-                  Add Department
-                </Button>
-              </div>
+              {!isSupportSession && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+                  <Button type="button" onClick={() => setShowAddDept(true)}>
+                    Add Department
+                  </Button>
+                </div>
+              )}
 
               {departments.length === 0 ? (
                 <p className="app-sample-note">No departments found for this institution.</p>
@@ -2190,7 +2236,7 @@ export function AcademicStructurePage() {
                         <th>Students</th>
                         <th>Status</th>
                         <th>HOD</th>
-                        <th>Actions</th>
+                        {!isSupportSession && <th>Actions</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -2202,11 +2248,13 @@ export function AcademicStructurePage() {
                           <td>{d.studentCount ?? 0}</td>
                           <td><Badge tone={d.status === "ACTIVE" ? "success" : "neutral"}>{d.status}</Badge></td>
                           <td>{d.hodStaffAssignmentId ? "Assigned" : "Unassigned"}</td>
-                          <td><div className="app-inline-actions">
-                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "department", item: d }); }}>Edit</Button>
-                            <Button size="sm" variant="secondary" onClick={() => void openHodAssignment(d)}>Assign HOD</Button>
-                            <Button size="sm" variant="danger" disabled={!d.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "department", id: d.departmentId, name: d.departmentName, rowVersion: d.rowVersion }); }}>Archive</Button>
-                          </div></td>
+                          {!isSupportSession && (
+                            <td><div className="app-inline-actions">
+                              <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "department", item: d }); }}>Edit</Button>
+                              <Button size="sm" variant="secondary" onClick={() => void openHodAssignment(d)}>Assign HOD</Button>
+                              <Button size="sm" variant="danger" disabled={!d.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "department", id: d.departmentId, name: d.departmentName, rowVersion: d.rowVersion }); }}>Archive</Button>
+                            </div></td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -2249,16 +2297,18 @@ export function AcademicStructurePage() {
             description="Degree and certification programs under departments (e.g. B.Tech, M.Sc)."
           >
             <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-                <Button
-                  type="button"
-                  disabled={departments.length === 0}
-                  onClick={() => setShowAddProg(true)}
-                  title={departments.length === 0 ? "Create a department first" : ""}
-                >
-                  Add Program
-                </Button>
-              </div>
+              {!isSupportSession && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+                  <Button
+                    type="button"
+                    disabled={departments.length === 0}
+                    onClick={() => setShowAddProg(true)}
+                    title={departments.length === 0 ? "Create a department first" : ""}
+                  >
+                    Add Program
+                  </Button>
+                </div>
+              )}
 
               {programs.length === 0 ? (
                 <p className="app-sample-note">No degree programs found for this institution.</p>
@@ -2272,7 +2322,7 @@ export function AcademicStructurePage() {
                         <th>Duration</th>
                         <th>Semesters / Year</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        {!isSupportSession && <th>Actions</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -2283,10 +2333,12 @@ export function AcademicStructurePage() {
                           <td>{p.durationYears} {p.durationYears === 1 ? "Year" : "Years"}</td>
                           <td>{p.semestersPerYear}</td>
                           <td><Badge tone={p.status === "ACTIVE" ? "success" : "neutral"}>{p.status}</Badge></td>
-                          <td><div className="app-inline-actions">
-                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "program", item: p }); }}>Edit</Button>
-                            <Button size="sm" variant="danger" disabled={!p.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "program", id: p.programId, name: p.programName, rowVersion: p.rowVersion }); }}>Archive</Button>
-                          </div></td>
+                          {!isSupportSession && (
+                            <td><div className="app-inline-actions">
+                              <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "program", item: p }); }}>Edit</Button>
+                              <Button size="sm" variant="danger" disabled={!p.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "program", id: p.programId, name: p.programName, rowVersion: p.rowVersion }); }}>Archive</Button>
+                            </div></td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -2311,19 +2363,21 @@ export function AcademicStructurePage() {
                 <Button type="button" variant="secondary" busy={curriculumBusy} disabled={!selectedProgramId}
                   onClick={() => void loadCurriculumVersions()}>Load curriculum history</Button>
               </div>
-              <form onSubmit={createCurriculumVersion}>
-                <TextAreaField id="curriculum-json" label="Curriculum JSON" required rows={8}
-                  value={curriculumJsonDraft} onChange={(event) => setCurriculumJsonDraft(event.target.value)} />
-                <div className="app-form-grid">
-                  <TextField id="curriculum-effective-from" label="Effective from" type="date" required
-                    value={curriculumEffectiveFrom} onChange={(event) => setCurriculumEffectiveFrom(event.target.value)} />
-                  <TextField id="curriculum-effective-to" label="Effective to" type="date"
-                    value={curriculumEffectiveTo} onChange={(event) => setCurriculumEffectiveTo(event.target.value)} />
-                </div>
-                <div className="app-inline-actions">
-                  <Button type="submit" busy={curriculumBusy} disabled={!selectedProgramId}>Create immutable version</Button>
-                </div>
-              </form>
+              {!isSupportSession && (
+                <form onSubmit={createCurriculumVersion}>
+                  <TextAreaField id="curriculum-json" label="Curriculum JSON" required rows={8}
+                    value={curriculumJsonDraft} onChange={(event) => setCurriculumJsonDraft(event.target.value)} />
+                  <div className="app-form-grid">
+                    <TextField id="curriculum-effective-from" label="Effective from" type="date" required
+                      value={curriculumEffectiveFrom} onChange={(event) => setCurriculumEffectiveFrom(event.target.value)} />
+                    <TextField id="curriculum-effective-to" label="Effective to" type="date"
+                      value={curriculumEffectiveTo} onChange={(event) => setCurriculumEffectiveTo(event.target.value)} />
+                  </div>
+                  <div className="app-inline-actions">
+                    <Button type="submit" busy={curriculumBusy} disabled={!selectedProgramId}>Create immutable version</Button>
+                  </div>
+                </form>
+              )}
               {curriculumVersions.length === 0 ? (
                 <EmptyState title="No curriculum versions" description="Load the program history or create the first curriculum snapshot." />
               ) : (
@@ -2376,32 +2430,34 @@ export function AcademicStructurePage() {
                   </Button>
                 </div>
               </div>
-              <form onSubmit={createProgramYear}>
-                <div className="app-form-grid">
-                  <TextField
-                    id="program-year-number"
-                    label="Year number"
-                    type="number"
-                    min={1}
-                    max={10}
-                    step={1}
-                    required
-                    value={programYearDraft.yearNumber}
-                    onChange={(event) => setProgramYearDraft({ ...programYearDraft, yearNumber: event.target.value })}
-                  />
-                  <TextField
-                    id="program-year-label"
-                    label="Year label"
-                    required
-                    maxLength={30}
-                    value={programYearDraft.label}
-                    onChange={(event) => setProgramYearDraft({ ...programYearDraft, label: event.target.value })}
-                  />
-                </div>
-                <div className="app-inline-actions">
-                  <Button type="submit" busy={catalogBusy} disabled={!selectedProgramId}>Create program year</Button>
-                </div>
-              </form>
+              {!isSupportSession && (
+                <form onSubmit={createProgramYear}>
+                  <div className="app-form-grid">
+                    <TextField
+                      id="program-year-number"
+                      label="Year number"
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={1}
+                      required
+                      value={programYearDraft.yearNumber}
+                      onChange={(event) => setProgramYearDraft({ ...programYearDraft, yearNumber: event.target.value })}
+                    />
+                    <TextField
+                      id="program-year-label"
+                      label="Year label"
+                      required
+                      maxLength={30}
+                      value={programYearDraft.label}
+                      onChange={(event) => setProgramYearDraft({ ...programYearDraft, label: event.target.value })}
+                    />
+                  </div>
+                  <div className="app-inline-actions">
+                    <Button type="submit" busy={catalogBusy} disabled={!selectedProgramId}>Create program year</Button>
+                  </div>
+                </form>
+              )}
               {programYears.length > 0 && (
                 <>
                   <SelectField
@@ -2414,48 +2470,50 @@ export function AcademicStructurePage() {
                       <option key={year.programYearId} value={year.programYearId}>{year.label}</option>
                     ))}
                   </SelectField>
-                  <form onSubmit={createSemester}>
-                    <div className="app-form-grid">
-                      <TextField
-                        id="semester-number"
-                        label="Semester number"
-                        type="number"
-                        min={1}
-                        max={60}
-                        step={1}
-                        required
-                        value={semesterDraft.semesterNumber}
-                        onChange={(event) => setSemesterDraft({ ...semesterDraft, semesterNumber: event.target.value })}
-                      />
-                      <TextField
-                        id="semester-label"
-                        label="Semester label"
-                        required
-                        maxLength={30}
-                        value={semesterDraft.label}
-                        onChange={(event) => setSemesterDraft({ ...semesterDraft, label: event.target.value })}
-                      />
-                      <TextField
-                        id="semester-start-date"
-                        label="Start date"
-                        type="date"
-                        required
-                        value={semesterDraft.startDate}
-                        onChange={(event) => setSemesterDraft({ ...semesterDraft, startDate: event.target.value })}
-                      />
-                      <TextField
-                        id="semester-end-date"
-                        label="End date"
-                        type="date"
-                        required
-                        value={semesterDraft.endDate}
-                        onChange={(event) => setSemesterDraft({ ...semesterDraft, endDate: event.target.value })}
-                      />
-                    </div>
-                    <div className="app-inline-actions">
-                      <Button type="submit" busy={catalogBusy} disabled={!selectedProgramYearId}>Create dated semester</Button>
-                    </div>
-                  </form>
+                  {!isSupportSession && (
+                    <form onSubmit={createSemester}>
+                      <div className="app-form-grid">
+                        <TextField
+                          id="semester-number"
+                          label="Semester number"
+                          type="number"
+                          min={1}
+                          max={60}
+                          step={1}
+                          required
+                          value={semesterDraft.semesterNumber}
+                          onChange={(event) => setSemesterDraft({ ...semesterDraft, semesterNumber: event.target.value })}
+                        />
+                        <TextField
+                          id="semester-label"
+                          label="Semester label"
+                          required
+                          maxLength={30}
+                          value={semesterDraft.label}
+                          onChange={(event) => setSemesterDraft({ ...semesterDraft, label: event.target.value })}
+                        />
+                        <TextField
+                          id="semester-start-date"
+                          label="Start date"
+                          type="date"
+                          required
+                          value={semesterDraft.startDate}
+                          onChange={(event) => setSemesterDraft({ ...semesterDraft, startDate: event.target.value })}
+                        />
+                        <TextField
+                          id="semester-end-date"
+                          label="End date"
+                          type="date"
+                          required
+                          value={semesterDraft.endDate}
+                          onChange={(event) => setSemesterDraft({ ...semesterDraft, endDate: event.target.value })}
+                        />
+                      </div>
+                      <div className="app-inline-actions">
+                        <Button type="submit" busy={catalogBusy} disabled={!selectedProgramYearId}>Create dated semester</Button>
+                      </div>
+                    </form>
+                  )}
                   {semesters.length > 0 ? (
                     <div className="app-table-wrap">
                       <table className="app-table">

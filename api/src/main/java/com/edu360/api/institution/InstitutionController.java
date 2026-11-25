@@ -153,12 +153,7 @@ public class InstitutionController {
     }
 
     private RbacPrincipal extractTenantPrincipal(UUID tenantId, Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
-            throw new UnauthorizedException("Institution operations require authenticated tenant principal.");
-        }
-        if (!tenantId.equals(principal.tenantId())) {
-            throw new UnauthorizedException("tenantId in the path does not match the authenticated tenant.");
-        }
-        return new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        return com.edu360.api.config.PrincipalExtractor.extractTenantOrSupportPrincipal(
+                tenantId, authentication, "Institution operations");
     }
 }

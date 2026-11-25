@@ -427,6 +427,13 @@ export const platformTenantService = {
     api.get<RetentionPolicyDto[]>(`/platform/tenants/${tenantId}/retention`),
   requestRetentionChange: (tenantId: string, data: { dataClassCode: string; requestedMonths: number; reason: string }) =>
     api.post<{ status: string }>(`/platform/tenants/${tenantId}/retention-change-requests`, data),
+  resetFirstAdminPassword: (tenantId: string) =>
+    api.post<{
+      tenantId: string;
+      tenantName: string;
+      adminEmail: string;
+      temporaryPassword: string;
+    }>(`/platform/tenants/${tenantId}/first-admin/password-reset`),
   getTenantUsage: (tenantId: string) =>
     api.get<TenantUsageMonthlyDto[]>(`/platform/tenants/${tenantId}/usage`),
 };

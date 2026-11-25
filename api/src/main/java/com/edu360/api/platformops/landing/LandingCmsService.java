@@ -128,7 +128,10 @@ public class LandingCmsService {
         boolean includeSetup = req.includeSetupFee() == null || req.includeSetupFee();
 
         String quoteSnapshotJson = null;
-        int studentsEstimate = req.studentsEstimate();
+        int collegesCount = req.collegesCount() == null ? 0 : req.collegesCount();
+        int schoolsCount = req.schoolsCount() == null ? 0 : req.schoolsCount();
+        int studentsEstimate = req.studentsEstimate() == null ? 0 : req.studentsEstimate();
+        int staffEstimate = req.staffEstimate() == null ? 0 : req.staffEstimate();
         if ("QUOTATION".equals(req.enquiryType())) {
             int students = studentsEstimate > 0 ? studentsEstimate : estimateStudentsFromRange(req.studentRange());
             studentsEstimate = students;
@@ -136,10 +139,10 @@ public class LandingCmsService {
             try {
                 CustomerQuoteResponse quote = subscriptionService.quote(new CustomerQuoteRequest(
                         tenantType,
-                        req.collegesCount(),
-                        req.schoolsCount(),
+                        collegesCount,
+                        schoolsCount,
                         students,
-                        req.staffEstimate(),
+                        staffEstimate,
                         modules,
                         billingCycle,
                         includeSetup
@@ -158,10 +161,10 @@ public class LandingCmsService {
                 .enquiryType(req.enquiryType())
                 .institutionType(trimOrNull(req.institutionType()))
                 .studentRange(trimOrNull(req.studentRange()))
-                .collegesCount(req.collegesCount())
-                .schoolsCount(req.schoolsCount())
+                .collegesCount(collegesCount)
+                .schoolsCount(schoolsCount)
                 .studentsEstimate(studentsEstimate)
-                .staffEstimate(req.staffEstimate())
+                .staffEstimate(staffEstimate)
                 .billingCycleMonths(billingCycle)
                 .includeSetupFee(includeSetup)
                 .selectedModules(modulesJson)

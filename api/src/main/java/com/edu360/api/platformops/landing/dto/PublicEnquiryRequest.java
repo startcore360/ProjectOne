@@ -13,10 +13,10 @@ public record PublicEnquiryRequest(
         @NotBlank @Pattern(regexp = "QUOTATION|DEMO") String enquiryType,
         @Size(max = 80) String institutionType,
         @Size(max = 80) String studentRange,
-        @Min(0) @Max(500) int collegesCount,
-        @Min(0) @Max(500) int schoolsCount,
-        @Min(0) @Max(1000000) int studentsEstimate,
-        @Min(0) @Max(100000) int staffEstimate,
+        @Min(0) @Max(500) Integer collegesCount,
+        @Min(0) @Max(500) Integer schoolsCount,
+        @Min(0) @Max(1000000) Integer studentsEstimate,
+        @Min(0) @Max(100000) Integer staffEstimate,
         @Min(1) @Max(36) Integer billingCycleMonths,
         Boolean includeSetupFee,
         List<@Size(max = 80) String> selectedModules,
@@ -27,4 +27,14 @@ public record PublicEnquiryRequest(
         @Size(max = 40) String contactPhone,
         @NotBlank @Size(max = 180) String institutionName,
         @Size(max = 2000) String notes
-) { }
+) {
+    public PublicEnquiryRequest {
+        collegesCount = collegesCount == null ? 0 : collegesCount;
+        schoolsCount = schoolsCount == null ? 0 : schoolsCount;
+        studentsEstimate = studentsEstimate == null ? 0 : studentsEstimate;
+        staffEstimate = staffEstimate == null ? 0 : staffEstimate;
+        billingCycleMonths = billingCycleMonths == null ? 12 : billingCycleMonths;
+        includeSetupFee = includeSetupFee != null && includeSetupFee;
+        selectedModules = selectedModules == null ? List.of() : selectedModules;
+    }
+}

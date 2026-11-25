@@ -18,6 +18,15 @@ export type ToastProps = {
 
   alert?: boolean;
   popup?: boolean;
+  /**
+   * Controls only the auto-dismiss timer, independent of whether this toast
+   * renders its own fixed-position wrapper (`alert`/`popup`). Defaults to
+   * whatever `alert`/`popup` resolve to, so existing callers are unaffected.
+   * A host component that provides its own fixed-position container (e.g.
+   * ToastHost) should pass `autoDismiss={true}` while keeping
+   * `alert={false} popup={false}` to avoid a nested fixed wrapper.
+   */
+  autoDismiss?: boolean;
   alertDuration?: number;
   onDismiss?: () => void;
   position?: ToastPosition;
@@ -104,12 +113,14 @@ const Toast = ({
   showAction = true,
   alert = false,
   popup = false,
+  autoDismiss,
   alertDuration = 4000,
   onDismiss,
   className,
   style,
 }: ToastProps) => {
   const isAlert = alert || popup;
+  const shouldAutoDismiss = autoDismiss ?? isAlert;
   const [visible, setVisible] = useState(true);
   const [animateIn, setAnimateIn] = useState(!isAlert);
 
@@ -122,29 +133,29 @@ const Toast = ({
   };
 
   useEffect(() => {
-    if (!isAlert) return;
+    if (!shouldAutoDismiss) return;
 
     // Trigger enter transition
     const enterTimer = setTimeout(() => setAnimateIn(true), 10);
 
+    let exitTimer: ReturnType<typeof setTimeout> | undefined;
     const timer = setTimeout(() => {
       setAnimateIn(false);
 
-      const exitTimer = setTimeout(() => {
+      exitTimer = setTimeout(() => {
         setVisible(false);
         onDismiss?.();
       }, 200);
-
-      return () => clearTimeout(exitTimer);
     }, alertDuration);
 
     return () => {
       clearTimeout(enterTimer);
       clearTimeout(timer);
+      if (exitTimer) clearTimeout(exitTimer);
     };
-  }, [isAlert, alertDuration, onDismiss]);
+  }, [shouldAutoDismiss, alertDuration, onDismiss]);
 
-  if (isAlert && !visible) return null;
+  if (shouldAutoDismiss && !visible) return null;
 
   const v = VARIANT[variant] ?? VARIANT.info;
 

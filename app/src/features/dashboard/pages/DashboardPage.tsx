@@ -10,13 +10,20 @@ import { GuardianChildSwitcher } from "../../user-management/components/common/G
 import { PageHeader } from "../../../components/layout/PageHeader";
 import ApplicantPortalPage from "../../admissions/pages/ApplicantPortalPage";
 import { renderGreeting, formatGreetingName } from "../../../utils/greeting";
+import { useSupportSession } from "../../support/useSupportSession";
+import { SupportSessionDashboard } from "../../support/SupportSessionDashboard";
 
 export { StudentDashboard };
 
 export default function DashboardPage() {
+  const { isSupportSession, session, endSupportSession } = useSupportSession();
   const user = useAppSelector((s) => s.auth.user);
   const name = formatGreetingName(user?.displayName) || "there";
   const [selectedChildId, setSelectedChildId] = useState("");
+
+  if (isSupportSession) {
+    return <SupportSessionDashboard session={session} onEndSession={endSupportSession} />;
+  }
 
   if (user?.userType === "APPLICANT") {
     return <ApplicantPortalPage />;

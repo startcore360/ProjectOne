@@ -13,6 +13,30 @@ public final class SupportReadableOperationRegistry {
     private static final PathPatternParser PARSER = new PathPatternParser();
     private record Entry(PathPattern path, Set<String> actionCodes) {}
     private static final List<Entry> ENTRIES = List.of(
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{id}"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/hierarchy"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/departments"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/departments/{id}"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/programs"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/programs/{id}"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/programs/{id}/years"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/programs/{id}/curriculum-versions"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/program-years/{id}/semesters"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/classes"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/classes/{id}"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/classes/{id}/sections"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/sections"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/sections/{id}"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/subjects"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/subjects/{id}"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/course-offerings"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/course-offerings/{id}"), Set.of("STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/academic-sessions"), Set.of("CALENDAR_MASTER_SET", "CALENDAR_LOCAL_SET", "STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/academic-sessions/{id}"), Set.of("CALENDAR_MASTER_SET", "CALENDAR_LOCAL_SET", "STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/program-rule-sets"), Set.of("PROGRAM_RULES_SET", "STRUCTURE_MANAGE", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/weekly-off-rules"), Set.of("WEEKLY_OFF_SET", "TIMETABLE_VIEW", "TENANT_OVERSIGHT_VIEW")),
+        new Entry(PARSER.parse("/v1/tenants/{tenantId}/institutions/{institutionId}/calendar-events"), Set.of("CALENDAR_MASTER_SET", "CALENDAR_LOCAL_SET", "TIMETABLE_VIEW", "TENANT_OVERSIGHT_VIEW")),
         new Entry(PARSER.parse("/v1/tenants/{tenantId}/users/{id}/role-assignments"), Set.of("ROLE_ASSIGN", "ROLE_ASSIGN_NON_SENSITIVE", "USER_VIEW", "TENANT_OVERSIGHT_VIEW")),
         new Entry(PARSER.parse("/v1/tenants/{tenantId}/roles"), Set.of("ROLE_CUSTOM_MANAGE", "ROLE_ASSIGN", "ROLE_ASSIGN_NON_SENSITIVE", "RBAC_MAPPING_CHECK", "TENANT_OVERSIGHT_VIEW")),
         new Entry(PARSER.parse("/v1/tenants/{tenantId}/roles/{id}"), Set.of("ROLE_CUSTOM_MANAGE", "ROLE_ASSIGN", "ROLE_ASSIGN_NON_SENSITIVE", "RBAC_MAPPING_CHECK", "TENANT_OVERSIGHT_VIEW")),
@@ -96,8 +120,14 @@ public final class SupportReadableOperationRegistry {
 
     public static Optional<Set<String>> actionCodes(String method, String requestPath) {
         if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)) return Optional.empty();
-        String openApiPath = requestPath != null && requestPath.startsWith("/api/")
-                ? "/v1/" + requestPath.substring(5) : requestPath;
+        String openApiPath = requestPath;
+        if (openApiPath != null) {
+            if (openApiPath.startsWith("/api/")) {
+                openApiPath = "/v1/" + openApiPath.substring(5);
+            } else if (openApiPath.startsWith("/tenants/")) {
+                openApiPath = "/v1" + openApiPath;
+            }
+        }
         if (openApiPath == null) return Optional.empty();
         PathContainer path = PathContainer.parsePath(openApiPath);
         return ENTRIES.stream().filter(entry -> entry.path().matches(path))

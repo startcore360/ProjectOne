@@ -65,7 +65,7 @@ export function CreatePlatformUserModal({
       size="sm"
     >
       <form onSubmit={onSubmit}>
-        {createError && <Notice popup tone="danger">{createError}</Notice>}
+        {createError && <Notice tone="danger">{createError}</Notice>}
         <TextField
           id="app-user-name"
           label="Full name"

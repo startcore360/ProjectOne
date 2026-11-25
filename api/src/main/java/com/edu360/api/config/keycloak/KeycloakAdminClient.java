@@ -3,6 +3,7 @@ package com.edu360.api.config.keycloak;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -269,6 +270,24 @@ public class KeycloakAdminClient {
                 throw new DuplicateResourceException("A user with username '" + username + "' already exists in identity provider (BS-22).");
             }
             throw ex;
+        }
+    }
+
+    public Optional<String> findUserIdByEmail(String realm, String email) {
+        String adminToken = fetchMasterAdminAccessToken();
+        try {
+            List<Map<String, Object>> matches = restClient.get()
+                    .uri(properties.getBaseUrl() + "/admin/realms/{realm}/users?username={username}&exact=true", realm, email)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(List.class);
+            if (matches == null || matches.isEmpty()) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(matches.get(0).get("id")).map(Object::toString);
+        } catch (Exception ex) {
+            log.warn("Failed to find Keycloak user id for {} in realm {}: {}", email, realm, ex.getMessage());
+            return Optional.empty();
         }
     }
 

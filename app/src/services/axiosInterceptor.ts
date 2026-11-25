@@ -1,4 +1,4 @@
-import api from "./axios";
+import api, { SUPPORT_SESSION_EXPIRY_KEY, SUPPORT_SESSION_TOKEN_KEY } from "./axios";
 import { store } from "../store";
 import { clearAllSessionState } from "./sessionCleanup";
 import { authService } from "./modules/authService";
@@ -11,6 +11,19 @@ type RetriableRequest = {
   _retried?: boolean;
   url?: string;
 };
+
+// A support-session tab was never logged in and has no refresh token: it carries only a
+// short-lived support token that the request interceptor attaches exclusively to
+// /tenants/{id}/... paths. Any other endpoint (session-settings, notifications, branding,
+// profile, etc.) will correctly 401 for that token by design. That is an authorization
+// boundary, not an expired login - it must never trigger the normal refresh/forced-logout
+// flow below, which would otherwise redirect the whole read-only diagnostic tab to /login.
+function isActiveSupportSession(): boolean {
+  const token = window.sessionStorage.getItem(SUPPORT_SESSION_TOKEN_KEY);
+  if (!token) return false;
+  const expiry = window.sessionStorage.getItem(SUPPORT_SESSION_EXPIRY_KEY);
+  return !expiry || new Date(expiry).getTime() > Date.now();
+}
 
 export const setupAxiosInterceptors = () => {
   let refreshInFlight: Promise<string | null> | null = null;
@@ -58,7 +71,8 @@ export const setupAxiosInterceptors = () => {
         !original._retried &&
         !isRefreshRequest &&
         !isLoginRequest &&
-        !isPublicRequest
+        !isPublicRequest &&
+        !isActiveSupportSession()
       ) {
         original._retried = true;
         const newToken = await refreshAccessToken();

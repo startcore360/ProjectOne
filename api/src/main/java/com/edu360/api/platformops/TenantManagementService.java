@@ -418,6 +418,65 @@ public class TenantManagementService {
                 temporaryPassword, admin.getId().getUserAccountId());
     }
 
+    /**
+     * Resets / re-issues a temporary password for the tenant's first administrator.
+     * Can be invoked by Platform Admins anytime from the Platform Console.
+     */
+    public com.edu360.api.platformops.dto.TenantFirstAdminPasswordResetResponse resetFirstAdminPassword(
+            UUID tenantId, PlatformPrincipal principal) {
+        if (keycloakAdminClient == null) {
+            throw new IllegalStateException("Keycloak client is not available.");
+        }
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found"));
+
+        if (tenant.getState() == TenantState.ARCHIVED) {
+            throw new ApiException(HttpStatus.CONFLICT, "TENANT_ARCHIVED", "Cannot reset password for an archived tenant.");
+        }
+
+        UserAccount adminAccount;
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), null, null);
+        try {
+            adminAccount = (userAccountRepository != null
+                    ? userAccountRepository.findByIdTenantIdAndStatus(tenantId, UserAccountStatus.ACTIVE).stream().findFirst()
+                            .or(() -> userAccountRepository.findByIdTenantIdAndStatus(tenantId, UserAccountStatus.PENDING_ACTIVATION).stream().findFirst())
+                    : java.util.Optional.<UserAccount>empty())
+                    .orElseThrow(() -> new ResourceNotFoundException("No administrator account found for tenant " + tenantId));
+        } finally {
+            TenantContext.clear();
+        }
+
+        String keycloakUserId = null;
+        if (userIdentityLinkRepository != null) {
+            keycloakUserId = userIdentityLinkRepository.findFirstByIdTenantIdAndUserAccountIdAndStatus(
+                    tenantId, adminAccount.getId().getUserAccountId(), IdentityLinkStatus.ACTIVE)
+                    .map(UserIdentityLink::getIdentitySubject)
+                    .orElse(null);
+        }
+
+        if (keycloakUserId == null || keycloakUserId.isBlank()) {
+            keycloakUserId = keycloakAdminClient.findUserIdByEmail(tenant.getKeycloakRealm(), adminAccount.getEmail())
+                    .orElse(null);
+        }
+
+        if (keycloakUserId == null || keycloakUserId.isBlank()) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "ADMIN_IDENTITY_NOT_FOUND",
+                    "Could not find the administrator identity in realm " + tenant.getKeycloakRealm());
+        }
+
+        String temporaryPassword = TemporaryPasswordGenerator.generate();
+        keycloakAdminClient.resetPassword(tenant.getKeycloakRealm(), keycloakUserId, temporaryPassword, true);
+
+        platformAuditWriter.record(principal, tenantId, "FIRST_ADMIN_PASSWORD_RESET", "TENANT_SETTINGS", "TENANT", tenantId);
+
+        return new com.edu360.api.platformops.dto.TenantFirstAdminPasswordResetResponse(
+                tenantId,
+                tenant.getTenantName(),
+                adminAccount.getEmail(),
+                temporaryPassword
+        );
+    }
+
     /** The seven ordered, idempotent setup steps (E1-S2). Built fresh for a create and for each retry. */
     private Map<String, TenantProvisioningService.StepAction> provisioningSteps(
             Tenant tenant, Plan plan, ProvisioningInputs in, PlatformPrincipal principal) {

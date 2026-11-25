@@ -13,8 +13,11 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.edu360.api.config.SupportPrincipal;
 import com.edu360.api.exception.ActiveRoleRequiredException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.selfservice.UserActiveRole;
@@ -151,6 +154,22 @@ public class PermissionEvaluatorService {
         ActionCatalog action = actionCatalogRepository.findById(actionCode).orElse(null);
         if (action == null) {
             return PermissionDecision.deny("UNKNOWN_ACTION", "Action " + actionCode + " is not in the approved Action List.");
+        }
+
+        // Delegated read-only support session: granted by validated support token grant.
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof SupportPrincipal support) {
+            if (!support.tenantId().equals(principal.tenantId())) {
+                return PermissionDecision.deny("SUPPORT_TENANT_MISMATCH", "Support session tenant mismatch.");
+            }
+            if (support.institutionId() != null && scope.institutionId() != null
+                    && !support.institutionId().equals(scope.institutionId())) {
+                return PermissionDecision.deny("SUPPORT_INSTITUTION_MISMATCH", "Support session is scoped to a specific institution.");
+            }
+            if (action.isSupportReadable()) {
+                return PermissionDecision.allow();
+            }
+            return PermissionDecision.deny("SUPPORT_READ_ONLY", "Action " + actionCode + " is not permitted in a read-only support session.");
         }
 
         // Deny by default (Addendum rule 15): a check with no caller can never pass.
