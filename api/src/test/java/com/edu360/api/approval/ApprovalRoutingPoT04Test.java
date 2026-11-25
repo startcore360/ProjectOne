@@ -51,7 +51,6 @@ class ApprovalRoutingPoT04Test {
         routing = new ApprovalRouting(delegations, permissions, roleDefinitions, assignments,
                 overrides, defaults, institutions);
         when(delegations.findByIdTenantIdAndDelegateUserId(TENANT, USER)).thenReturn(List.of());
-        when(overrides.findByIdTenantIdAndStatus(TENANT, "ACTIVE")).thenReturn(List.of());
     }
 
     @Test
@@ -79,6 +78,7 @@ class ApprovalRoutingPoT04Test {
 
     @Test
     void principalIsOnlyTheRollDownWhenNeitherManagementNorTrusteesAreAssigned() {
+        when(overrides.findByIdTenantIdAndStatus(TENANT, "ACTIVE")).thenReturn(List.of());
         stubHolder("MANAGEMENT", MANAGEMENT_ROLE_ID, false);
         stubHolder("GOVERNING_BODY_APPROVER", TRUSTEE_ROLE_ID, false);
         when(defaults.findByContextOrderByMissingRoleCodeAscPreferenceAsc("UNIVERSITY_WIDE"))
