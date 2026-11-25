@@ -37,6 +37,33 @@ SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role
         WHERE role_code='FINANCE_DIRECTOR' AND action_code='CONCESSION_APPROVE'
  );
 
+INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
+SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
+       'MANAGEMENT', 'SCHOLARSHIP_LIST_APPROVE',
+       'Own tenant; primary scholarship approval authority under PO-T04'
+ WHERE NOT EXISTS (
+       SELECT 1 FROM ref.standard_role_action
+        WHERE role_code='MANAGEMENT' AND action_code='SCHOLARSHIP_LIST_APPROVE'
+ );
+
+INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
+SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
+       'GOVERNING_BODY_APPROVER', 'SCHOLARSHIP_LIST_APPROVE',
+       'Own tenant; Trustee authority when no active Management assignment exists (PO-T04 / TPA-04)'
+ WHERE NOT EXISTS (
+       SELECT 1 FROM ref.standard_role_action
+        WHERE role_code='GOVERNING_BODY_APPROVER' AND action_code='SCHOLARSHIP_LIST_APPROVE'
+ );
+
+INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
+SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
+       'FINANCE_DIRECTOR', 'SCHOLARSHIP_LIST_APPROVE',
+       'Own university scope; only when designated by the Management approval roll-down'
+ WHERE NOT EXISTS (
+       SELECT 1 FROM ref.standard_role_action
+        WHERE role_code='FINANCE_DIRECTOR' AND action_code='SCHOLARSHIP_LIST_APPROVE'
+ );
+
 -- PermissionEvaluatorService checks app.role_action at runtime, not the reference template.
 -- Provision the new standard action into already-provisioned tenants as well as future ones.
 INSERT INTO app.role_action
@@ -61,10 +88,37 @@ SELECT rd.tenant_id, gen_random_uuid(), rd.role_definition_id, 'CONCESSION_APPRO
           AND ra.action_code='CONCESSION_APPROVE'
    );
 
+INSERT INTO app.role_action
+    (tenant_id, role_action_id, role_definition_id, action_code, created_by, updated_by)
+SELECT rd.tenant_id, gen_random_uuid(), rd.role_definition_id, 'SCHOLARSHIP_LIST_APPROVE',
+       COALESCE(system_actor.user_account_id, rd.created_by),
+       COALESCE(system_actor.user_account_id, rd.updated_by)
+  FROM app.role_definition rd
+  LEFT JOIN LATERAL (
+      SELECT ua.user_account_id
+        FROM app.user_account ua
+       WHERE ua.tenant_id=rd.tenant_id AND ua.user_type='SYSTEM'
+       ORDER BY ua.created_at
+       LIMIT 1
+  ) system_actor ON true
+ WHERE rd.role_origin='STANDARD'
+   AND rd.role_code IN ('MANAGEMENT','GOVERNING_BODY_APPROVER','FINANCE_DIRECTOR')
+   AND NOT EXISTS (
+       SELECT 1 FROM app.role_action ra
+        WHERE ra.tenant_id=rd.tenant_id
+          AND ra.role_definition_id=rd.role_definition_id
+          AND ra.action_code='SCHOLARSHIP_LIST_APPROVE'
+   );
+
 UPDATE ref.approval_chain_step
    SET approver_rule = 'Management first; if absent, active Governing Body Approver (Trustees); otherwise Principal or designated financial approver through V4-PD-01 roll-down (PO-T04)',
        skip_if_role_absent = false
  WHERE process_code='CONCESSION' AND step_no=1 AND action_code='CONCESSION_APPROVE';
+
+UPDATE ref.approval_chain_step
+   SET approver_rule = 'Management first; if absent, active Governing Body Approver (Trustees); otherwise Principal or designated financial approver through V4-PD-01 roll-down (PO-T04)',
+       skip_if_role_absent = false
+ WHERE process_code='SCHOLARSHIP_LIST' AND step_no=1 AND action_code='SCHOLARSHIP_LIST_APPROVE';
 
 -- The service creates the current approval step with role MANAGEMENT. ApprovalRouting applies
 -- the default Management -> Principal mapping or a tenant override. Never skip this step.
