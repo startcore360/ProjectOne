@@ -160,6 +160,55 @@ public class T10DomainService {
         String term=q==null?"":q.trim();
         return jdbc.queryForList("SELECT id,isbn,title,author,category,total_copies,available_copies FROM app.library_catalog WHERE tenant_id=? AND institution_id=? AND (?='' OR title ILIKE '%'||?||'%' OR isbn ILIKE '%'||?||'%') ORDER BY title LIMIT 200",tenant,institution,term,term,term);
     }
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> libraryCopies(UUID tenant,TenantPrincipal p,UUID institution,UUID bookId) {
+        allow(tenant,p.userAccountId(),"BOOK_SEARCH_RESERVE",institution);
+        return jdbc.queryForList("""
+            SELECT id,accession_number,status FROM app.book_copy
+             WHERE tenant_id=? AND institution_id=? AND book_id=? ORDER BY accession_number
+            """,tenant,institution,bookId);
+    }
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> libraryCirculations(UUID tenant,TenantPrincipal p,UUID institution) {
+        allow(tenant,p.userAccountId(),"BOOK_ISSUE_RETURN",institution);
+        return jdbc.queryForList("""
+            SELECT c.id,c.book_id,b.title,c.copy_id,cp.accession_number,c.borrower_user_id,
+                   c.borrower_role,c.issued_at,c.due_date,c.returned_at,c.status,
+                   CASE WHEN c.returned_at IS NULL THEN app.fn_library_fine_amount(c.tenant_id,c.institution_id,c.due_date)
+                        ELSE c.accrued_fine END AS current_fine
+              FROM app.book_circulation c
+              JOIN app.library_catalog b ON b.id=c.book_id AND b.tenant_id=c.tenant_id
+              LEFT JOIN app.book_copy cp ON cp.id=c.copy_id AND cp.tenant_id=c.tenant_id
+             WHERE c.tenant_id=? AND c.institution_id=?
+             ORDER BY c.returned_at NULLS FIRST,c.due_date
+             LIMIT 500
+            """,tenant,institution);
+    }
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> libraryFines(UUID tenant,TenantPrincipal p,UUID institution) {
+        allow(tenant,p.userAccountId(),"FINE_COLLECT",institution);
+        return jdbc.queryForList("""
+            SELECT f.id,f.circulation_id,f.amount,f.amount_paid,(f.amount-f.amount_paid) AS outstanding,
+                   f.status,f.assessed_at,c.borrower_user_id,b.title
+              FROM app.library_fine f
+              JOIN app.book_circulation c ON c.id=f.circulation_id AND c.tenant_id=f.tenant_id
+              JOIN app.library_catalog b ON b.id=c.book_id AND b.tenant_id=c.tenant_id
+             WHERE f.tenant_id=? AND f.institution_id=? AND f.status='OUTSTANDING'
+             ORDER BY f.assessed_at DESC
+             LIMIT 200
+            """,tenant,institution);
+    }
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> libraryReservations(UUID tenant,TenantPrincipal p,UUID institution) {
+        allow(tenant,p.userAccountId(),"RESERVATION_MANAGE",institution);
+        return jdbc.queryForList("""
+            SELECT r.id,r.book_id,b.title,r.borrower_user_id,r.queue_position,r.status,r.created_at
+              FROM app.library_reservation r JOIN app.library_catalog b
+                ON b.id=r.book_id AND b.tenant_id=r.tenant_id
+             WHERE r.tenant_id=? AND r.institution_id=? AND r.status='WAITING'
+             ORDER BY b.title,r.queue_position
+            """,tenant,institution);
+    }
     @Transactional
     public Map<String,Object> addBook(UUID tenant,TenantPrincipal p,LibraryController.BookRequest r) {
         allow(tenant,p.userAccountId(),"CATALOG_MANAGE",r.institutionId());
@@ -236,7 +285,7 @@ public class T10DomainService {
         jdbc.update("INSERT INTO app.library_reservation(id,tenant_id,institution_id,book_id,borrower_user_id,queue_position) VALUES (?,?,?,?,?,?)",id,tenant,r.institutionId(),r.bookId(),r.borrowerUserId(),next);
         return Map.of("reservationId",id,"queuePosition",next);
     }
-    @Transactional(readOnly=true)
+    @Transactional
     public Map<String,Object> finePolicy(UUID tenant,TenantPrincipal p,UUID institution) {
         allow(tenant,p.userAccountId(),"LIBRARY_SETTINGS_SET",institution);
         jdbc.update("INSERT INTO app.library_fine_policy(id,tenant_id,institution_id) VALUES (?,?,?) ON CONFLICT(tenant_id,institution_id) DO NOTHING",
@@ -271,10 +320,52 @@ public class T10DomainService {
           WHERE r.tenant_id=? AND r.institution_id=? GROUP BY r.id ORDER BY r.route_name
           """,tenant,institution);
     }
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> transportStops(UUID tenant,TenantPrincipal p,UUID institution,UUID routeId) {
+        allow(tenant,p.userAccountId(),"DRIVER_ROUTE_VIEW",institution);
+        return jdbc.queryForList("""
+            SELECT id,route_id,stop_name,pickup_time,drop_time,fee_amount,stop_order
+              FROM app.route_stop WHERE tenant_id=? AND institution_id=? AND route_id=?
+             ORDER BY stop_order
+            """,tenant,institution,routeId);
+    }
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> transportAllocations(UUID tenant,TenantPrincipal p,UUID institution) {
+        allow(tenant,p.userAccountId(),"TRANSPORT_MANAGE",institution);
+        return jdbc.queryForList("""
+            SELECT a.id,a.route_id,r.route_name,a.stop_id,s.stop_name,a.passenger_user_id,
+                   a.status,a.allocated_at,s.fee_amount,r.transport_fee_code
+              FROM app.transport_allocation a
+              JOIN app.transport_route r ON r.id=a.route_id AND r.tenant_id=a.tenant_id
+              JOIN app.route_stop s ON s.id=a.stop_id AND s.tenant_id=a.tenant_id
+             WHERE a.tenant_id=? AND a.institution_id=?
+             ORDER BY a.allocated_at DESC LIMIT 500
+            """,tenant,institution);
+    }
+    @Transactional
+    public Map<String,Object> cancelTransportAllocation(UUID tenant,TenantPrincipal p,UUID institution,UUID allocationId) {
+        allow(tenant,p.userAccountId(),"TRANSPORT_MANAGE",institution);
+        int changed=jdbc.update("""
+            UPDATE app.transport_allocation SET status='CANCELLED'
+             WHERE id=? AND tenant_id=? AND institution_id=? AND status='ACTIVE'
+            """,allocationId,tenant,institution);
+        if(changed!=1) throw new BusinessRuleViolationException("ALLOCATION_NOT_ACTIVE","Active transport allocation not found.");
+        return Map.of("allocationId",allocationId,"status","CANCELLED");
+    }
     @Transactional
     public Map<String,Object> createRoute(UUID tenant,TenantPrincipal p,TransportController.RouteRequest r) {
         allow(tenant,p.userAccountId(),"TRANSPORT_MANAGE",r.institutionId());
-        if(r.capacity()<1||r.stops()==null||r.stops().isEmpty()) throw new BusinessRuleViolationException("INVALID_ROUTE","Capacity and at least one stop are required.");
+        if(r.capacity()<1||r.stops()==null||r.stops().isEmpty()||r.routeName()==null||r.routeName().isBlank()
+            ||r.vehicleNumber()==null||r.vehicleNumber().isBlank()||r.driverName()==null||r.driverName().isBlank())
+            throw new BusinessRuleViolationException("INVALID_ROUTE","Route, vehicle, driver, capacity and at least one stop are required.");
+        if(r.stops().stream().anyMatch(s->s.name()==null||s.name().isBlank()||s.order()<0||s.feeAmount()==null||s.feeAmount().signum()<0)
+            ||r.stops().stream().map(TransportController.StopRequest::order).distinct().count()!=r.stops().size())
+            throw new BusinessRuleViolationException("INVALID_ROUTE_STOPS","Stops require unique non-negative order, name and non-negative fee.");
+        if(r.transportFeeCode()!=null&&!r.transportFeeCode().isBlank()) {
+            Integer feeHead=jdbc.queryForObject("SELECT count(*) FROM app.fee_head WHERE tenant_id=? AND fee_head_code=? AND category='TRANSPORT' AND status='ACTIVE'",
+                Integer.class,tenant,r.transportFeeCode());
+            if(feeHead==null||feeHead==0) throw new BusinessRuleViolationException("TRANSPORT_FEE_HEAD_NOT_FOUND","Choose an active TRANSPORT fee head code.");
+        }
         UUID vehicleId=UUID.randomUUID();
         jdbc.update("INSERT INTO app.vehicle(id,tenant_id,institution_id,registration_number,vehicle_type,capacity) VALUES (?,?,?,?,'BUS',?)",
           vehicleId,tenant,r.institutionId(),r.vehicleNumber(),r.capacity());
@@ -288,6 +379,11 @@ public class T10DomainService {
     @Transactional
     public Map<String,Object> allocateTransport(UUID tenant,TenantPrincipal p,TransportController.AllocationRequest r) {
         allow(tenant,p.userAccountId(),"TRANSPORT_MANAGE",r.institutionId());
+        if(r.passengerUserId()==null||r.routeId()==null||r.stopId()==null)
+            throw new BusinessRuleViolationException("INVALID_ALLOCATION","Route, stop and passenger are required.");
+        Integer activeUser=jdbc.queryForObject("SELECT count(*) FROM app.user_account WHERE tenant_id=? AND user_account_id=? AND status='ACTIVE'",
+            Integer.class,tenant,r.passengerUserId());
+        if(activeUser==null||activeUser==0) throw new BusinessRuleViolationException("PASSENGER_NOT_ACTIVE","Passenger must be an active tenant user.");
         UUID id=UUID.randomUUID();
         jdbc.update("INSERT INTO app.transport_allocation(id,tenant_id,institution_id,route_id,stop_id,passenger_user_id) VALUES (?,?,?,?,?,?)",
           id,tenant,r.institutionId(),r.routeId(),r.stopId(),r.passengerUserId());
