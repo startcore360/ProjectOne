@@ -19,6 +19,9 @@ public class EduReportDataSourceConfig {
  public DataSourceProperties properties(){return new DataSourceProperties();}
  @Bean(name="eduReportDataSource")
  public HikariDataSource dataSource(@Qualifier("eduReportDataSourceProperties") DataSourceProperties p){
+  if (!"edu_report".equals(p.getUsername())) {
+   throw new IllegalStateException("The edu_report datasource must authenticate as PostgreSQL role edu_report.");
+  }
   HikariDataSource ds=p.initializeDataSourceBuilder().type(HikariDataSource.class).build();
   ds.setPoolName("edu-report-readonly"); ds.setReadOnly(true);
   ds.setConnectionInitSql("SET default_transaction_read_only = on"); return ds;
