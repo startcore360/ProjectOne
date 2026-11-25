@@ -8,9 +8,9 @@ BEGIN;
 -- institution-specific designated financial approver may be configured by an authorized
 -- roll-down override). This step is not optional and is never skipped.
 INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
-SELECT COALESCE(MAX(standard_role_action_id), 0) + 1, 'MANAGEMENT', 'CONCESSION_APPROVE',
+SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
+       'MANAGEMENT', 'CONCESSION_APPROVE',
        'Own tenant; primary fee concession authority under PO-T04'
-  FROM ref.standard_role_action
  WHERE NOT EXISTS (
        SELECT 1 FROM ref.standard_role_action
         WHERE role_code='MANAGEMENT' AND action_code='CONCESSION_APPROVE'
@@ -20,9 +20,9 @@ SELECT COALESCE(MAX(standard_role_action_id), 0) + 1, 'MANAGEMENT', 'CONCESSION_
 -- the existing role roll-down override mechanism. The approval router still requires that
 -- the current step resolves to this role; this grant alone does not create an approval step.
 INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
-SELECT COALESCE(MAX(standard_role_action_id), 0) + 1, 'FINANCE_DIRECTOR', 'CONCESSION_APPROVE',
+SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
+       'FINANCE_DIRECTOR', 'CONCESSION_APPROVE',
        'Own university scope; only when designated by the Management approval roll-down'
-  FROM ref.standard_role_action
  WHERE NOT EXISTS (
        SELECT 1 FROM ref.standard_role_action
         WHERE role_code='FINANCE_DIRECTOR' AND action_code='CONCESSION_APPROVE'
