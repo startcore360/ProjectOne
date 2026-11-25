@@ -32,7 +32,8 @@ CREATE TABLE app.grievance_evidence (
  file_id uuid NOT NULL,uploaded_by_user_id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),
  created_by uuid NOT NULL,updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL,row_version integer NOT NULL DEFAULT 1,
  PRIMARY KEY(tenant_id,grievance_evidence_id),
- FOREIGN KEY(tenant_id,grievance_case_id) REFERENCES app.grievance_case(tenant_id,grievance_case_id),CHECK(row_version>=1)
+ FOREIGN KEY(tenant_id,grievance_case_id) REFERENCES app.grievance_case(tenant_id,grievance_case_id),
+ FOREIGN KEY(tenant_id,file_id) REFERENCES app.file_object(tenant_id,file_id),CHECK(row_version>=1)
 );
 CREATE TABLE app.grievance_action (
  tenant_id uuid NOT NULL,grievance_action_id uuid NOT NULL,grievance_case_id uuid NOT NULL,
@@ -41,6 +42,8 @@ CREATE TABLE app.grievance_action (
  created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
  PRIMARY KEY(tenant_id,grievance_action_id),
  FOREIGN KEY(tenant_id,grievance_case_id) REFERENCES app.grievance_case(tenant_id,grievance_case_id),
+ FOREIGN KEY(tenant_id,notice_file_id) REFERENCES app.file_object(tenant_id,file_id),
+ FOREIGN KEY(tenant_id,minutes_file_id) REFERENCES app.file_object(tenant_id,file_id),
  CHECK(action_type IN ('ASSIGNED','INVESTIGATION_STARTED','HEARING_SCHEDULED','NOTICE_ISSUED','MINUTES_RECORDED','PENALTY_ISSUED','RESOLVED','DISMISSED')),
  CHECK(char_length(action_notes) BETWEEN 1 AND 5000),CHECK(penalty IS NULL OR char_length(penalty)<=2000)
 );
