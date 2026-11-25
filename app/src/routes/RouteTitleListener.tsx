@@ -75,6 +75,7 @@ const ROUTE_TITLES: Array<{ pattern: RegExp; title: string }> = [
   { pattern: /^\/sessions\/?$/, title: "Sessions" },
 ];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getTitleForPath(pathname: string): string {
   for (const route of ROUTE_TITLES) {
     if (route.pattern.test(pathname)) {
