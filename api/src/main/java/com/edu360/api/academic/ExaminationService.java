@@ -101,6 +101,13 @@ public class ExaminationService {
         if (request.marksObtained() != null && (request.marksObtained().signum() < 0 || request.marksObtained().compareTo(max) > 0)) {
             throw new BusinessRuleViolationException("INVALID_MARKS", "Marks must be within the exam's maximum marks.");
         }
+        String existingStatus = jdbc.query("""
+                SELECT status FROM app.exam_mark
+                 WHERE tenant_id = ? AND exam_schedule_id = ? AND student_profile_id = ?
+                """, rs -> rs.next() ? rs.getString(1) : null, tenantId, request.examScheduleId(), request.studentProfileId());
+        if (existingStatus != null && !List.of("ENTERED", "REJECTED").contains(existingStatus)) {
+            throw new BusinessRuleViolationException("MARKS_ALREADY_SUBMITTED", "Marks cannot be edited after course-teacher submission or moderation has started.");
+        }
         UUID id = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO app.exam_mark
