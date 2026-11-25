@@ -110,7 +110,7 @@ SELECT si.tenant_id,
 
 -- The existing finance model specifies one account per student and one installment
 -- number per assignment/structure. Enforce those invariants before invoice assignment APIs.
-DO $
+DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM app.student_fee_account
@@ -137,7 +137,7 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'DUPLICATE_FEE_STRUCTURE_INSTALLMENTS: reconcile existing template numbers before T8 invoice assignment';
     END IF;
-END $;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_student_fee_account_student
     ON app.student_fee_account (tenant_id, student_profile_id);
