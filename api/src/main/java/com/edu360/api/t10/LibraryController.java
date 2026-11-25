@@ -22,11 +22,23 @@ public class LibraryController {
     @PostMapping("/catalog") public Map<String,Object> addBook(@PathVariable UUID tenantId,@RequestBody BookRequest r,Authentication auth) {
         return service.addBook(tenantId,principal(auth,tenantId),r);
     }
+    @GetMapping("/catalog/{bookId}/copies") public List<Map<String,Object>> copies(@PathVariable UUID tenantId,@PathVariable UUID bookId,@RequestParam UUID institutionId,Authentication auth) {
+        return service.libraryCopies(tenantId,principal(auth,tenantId),institutionId,bookId);
+    }
+    @GetMapping("/circulations") public List<Map<String,Object>> circulations(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
+        return service.libraryCirculations(tenantId,principal(auth,tenantId),institutionId);
+    }
     @PostMapping("/circulations") public Map<String,Object> issue(@PathVariable UUID tenantId,@RequestBody IssueRequest r,Authentication auth) {
         return service.issueBook(tenantId,principal(auth,tenantId),r);
     }
     @PostMapping("/circulations/{id}/return") public Map<String,Object> returnBook(@PathVariable UUID tenantId,@PathVariable UUID id,@RequestParam UUID institutionId,Authentication auth) {
         return service.returnBook(tenantId,principal(auth,tenantId),institutionId,id);
+    }
+    @GetMapping("/reservations") public List<Map<String,Object>> reservations(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
+        return service.libraryReservations(tenantId,principal(auth,tenantId),institutionId);
+    }
+    @GetMapping("/fines") public List<Map<String,Object>> fines(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
+        return service.libraryFines(tenantId,principal(auth,tenantId),institutionId);
     }
     @PostMapping("/reservations") public Map<String,Object> reserve(@PathVariable UUID tenantId,@RequestBody ReservationRequest r,Authentication auth) {
         return service.reserveBook(tenantId,principal(auth,tenantId),r);
