@@ -290,7 +290,7 @@ public class T10DomainService {
         allow(tenant,p.userAccountId(),"LIBRARY_SETTINGS_SET",institution);
         jdbc.update("INSERT INTO app.library_fine_policy(id,tenant_id,institution_id) VALUES (?,?,?) ON CONFLICT(tenant_id,institution_id) DO NOTHING",
                 UUID.randomUUID(),tenant,institution);
-        return jdbc.queryForMap("SELECT grace_period_days,calculation_mode,daily_amount,day_basis,fine_cap,working_days,is_placeholder_default FROM app.library_fine_policy WHERE tenant_id=? AND institution_id=?",tenant,institution);
+        return jdbc.queryForMap("SELECT grace_period_days,calculation_mode,daily_amount,day_basis,fine_cap,working_days::text AS working_days,is_placeholder_default FROM app.library_fine_policy WHERE tenant_id=? AND institution_id=?",tenant,institution);
     }
     @Transactional
     public Map<String,Object> updateFinePolicy(UUID tenant,TenantPrincipal p,LibraryController.FinePolicyRequest r) {
