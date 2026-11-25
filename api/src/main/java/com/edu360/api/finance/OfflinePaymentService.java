@@ -10,14 +10,13 @@ import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Locale;
+import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -85,7 +84,8 @@ public class OfflinePaymentService {
                 "PAYMENT_OFFLINE_RECORD", RbacScope.institution(institutionId), RbacTarget.NONE);
 
         Map<String, Object> existing = jdbc.query("""
-            SELECT payment_id, institution_id, student_fee_account_id, method, amount, status
+            SELECT payment_id, institution_id, student_fee_account_id, method, amount, status,
+                   cheque_number, cheque_date, cheque_bank
               FROM app.payment
              WHERE tenant_id=:tenantId AND request_key=:requestKey
             """, new MapSqlParameterSource().addValue("tenantId", tenantId)
@@ -95,14 +95,17 @@ public class OfflinePaymentService {
                         "institutionId", rs.getObject("institution_id", UUID.class),
                         "accountId", rs.getObject("student_fee_account_id", UUID.class),
                         "method", rs.getString("method"), "amount", rs.getBigDecimal("amount"),
-                        "status", rs.getString("status"));
+                        "status", rs.getString("status"),
+                        "chequeNumber", rs.getString("cheque_number"),
+                        "chequeDate", rs.getDate("cheque_date") == null ? null : rs.getDate("cheque_date").toLocalDate(),
+                        "chequeBank", rs.getString("cheque_bank"));
             });
         if (existing != null) {
-            return replayOrReject(tenantId, request, installmentIds, existing);
+            return replayOrReject(tenantId, request, installmentIds, institutionId, existing);
         }
 
         UUID paymentId = UUID.randomUUID();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         short financialYear = (short) (today.getMonthValue() >= 4 ? today.getYear() : today.getYear() - 1);
         jdbc.update("""
             INSERT INTO app.payment
@@ -144,7 +147,7 @@ public class OfflinePaymentService {
                             "method", rs.getString("method"), "amount", rs.getBigDecimal("amount"),
                             "status", rs.getString("status"));
                 });
-            return replayOrReject(tenantId, request, installmentIds, raced);
+            return replayOrReject(tenantId, request, installmentIds, institutionId, raced);
         }
 
         for (Installment installment : installments) {
@@ -217,7 +220,7 @@ public class OfflinePaymentService {
                         .addValue("institutionId", institutionId).addValue("financialYear", financialYear),
                 Integer.class);
         UUID receiptId = UUID.randomUUID();
-        String receiptLabel = prefix + "-" + financialYear + "-" + String.format("%06d", receiptNumber);
+        String receiptLabel = prefix + "-" + financialYear + "-" + String.format(Locale.ROOT, "%06d", receiptNumber);
         jdbc.update("""
             INSERT INTO app.receipt
               (tenant_id, receipt_id, institution_id, payment_id, financial_year,
@@ -238,11 +241,15 @@ public class OfflinePaymentService {
     }
 
     private Map<String, Object> replayOrReject(UUID tenantId, OfflinePaymentRequest request,
-            List<UUID> installmentIds, Map<String, Object> existing) {
+            List<UUID> installmentIds, UUID institutionId, Map<String, Object> existing) {
         boolean same = "PAID".equals(existing.get("status"))
+                && institutionId.equals(existing.get("institutionId"))
                 && request.studentFeeAccountId().equals(existing.get("accountId"))
                 && request.method().equals(existing.get("method"))
-                && request.amount().compareTo((BigDecimal) existing.get("amount")) == 0;
+                && request.amount().compareTo((BigDecimal) existing.get("amount")) == 0
+                && java.util.Objects.equals(request.chequeNumber(), existing.get("chequeNumber"))
+                && java.util.Objects.equals(request.chequeDate(), existing.get("chequeDate"))
+                && java.util.Objects.equals(request.chequeBank(), existing.get("chequeBank"));
         List<UUID> existingItems = jdbc.query("""
             SELECT student_installment_id FROM app.payment_intent_item
              WHERE tenant_id=:tenantId AND payment_id=:paymentId
