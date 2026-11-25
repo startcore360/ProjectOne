@@ -75,6 +75,18 @@ BEGIN
        OR to_regclass('app.uq_gateway_order_provider_order') IS NULL THEN
         RAISE EXCEPTION 'T8-DB-12: finance idempotency indexes are missing';
     END IF;
+    IF to_regclass('app.uq_late_fee_entry_installment_day') IS NULL THEN
+        RAISE EXCEPTION 'T8-DB-18: daily late-fee idempotency index is missing';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+         WHERE conname='ck_late_fee_rule_calculation_mode'
+           AND pg_get_constraintdef(oid) LIKE '%FLAT_DAILY%'
+           AND pg_get_constraintdef(oid) LIKE '%PERCENTAGE_MONTHLY%'
+           AND pg_get_constraintdef(oid) LIKE '%NONE%'
+    ) THEN
+        RAISE EXCEPTION 'T8-DB-19: PO-T03 late fee modes are not enforced';
+    END IF;
     IF to_regprocedure('app.fn_allocation_guard()') IS NULL THEN
         RAISE EXCEPTION 'T8-DB-13: existing full-installment allocation guard is missing';
     END IF;
