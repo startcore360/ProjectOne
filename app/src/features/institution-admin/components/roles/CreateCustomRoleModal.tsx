@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   roleAssignmentService,
@@ -111,46 +111,26 @@ export function CreateCustomRoleModal({
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-          <div>
-            <label htmlFor="custom-role-level" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-              Role Level
-            </label>
-            <select
-              id="custom-role-level"
-              value={roleLevel}
-              onChange={(e) => setRoleLevel(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md, 4px)",
-                border: "1px solid var(--color-border, #ccc)",
-              }}
-            >
-              <option value="UNIVERSITY">University</option>
-              <option value="COLLEGE">College</option>
-              <option value="SCHOOL">School</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="custom-role-scope" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-              Scope
-            </label>
-            <select
-              id="custom-role-scope"
-              value={customScope}
-              onChange={(e) => setCustomScope(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md, 4px)",
-                border: "1px solid var(--color-border, #ccc)",
-              }}
-            >
-              <option value="TENANT">Tenant wide</option>
-              <option value="INSTITUTION">Institution</option>
-              <option value="DEPARTMENT">Department</option>
-            </select>
-          </div>
+          <SelectField
+            id="custom-role-level"
+            label="Role Level"
+            value={roleLevel}
+            onChange={(e) => setRoleLevel(e.target.value)}
+          >
+            <option value="UNIVERSITY">University</option>
+            <option value="COLLEGE">College</option>
+            <option value="SCHOOL">School</option>
+          </SelectField>
+          <SelectField
+            id="custom-role-scope"
+            label="Scope"
+            value={customScope}
+            onChange={(e) => setCustomScope(e.target.value)}
+          >
+            <option value="TENANT">Tenant wide</option>
+            <option value="INSTITUTION">Institution</option>
+            <option value="DEPARTMENT">Department</option>
+          </SelectField>
         </div>
 
         <div style={{ marginBottom: "var(--space-4)" }}>

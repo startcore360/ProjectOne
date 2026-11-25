@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextAreaField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   rolldownService,
@@ -119,44 +119,26 @@ export function RolldownOverrideModal({
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-          <div>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-              Work type
-            </label>
-            <select
-              value={permissionKind}
-              onChange={(e) => setPermissionKind(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md, 4px)",
-                border: "1px solid var(--color-border, #ccc)",
-              }}
-            >
-              <option value="APPROVE">Approval</option>
-              <option value="OTHER">Operational work</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}>
-              Handling mode
-            </label>
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "var(--space-2)",
-                borderRadius: "var(--radius-md, 4px)",
-                border: "1px solid var(--color-border, #ccc)",
-              }}
-            >
-              <option value="ASSIGN">Assign to a stand-in role</option>
-              <option value="WITHHOLD" disabled={permissionKind === "APPROVE"}>
-                Withhold operational work
-              </option>
-            </select>
-          </div>
+          <SelectField
+            id="override-work-type"
+            label="Work type"
+            value={permissionKind}
+            onChange={(e) => setPermissionKind(e.target.value)}
+          >
+            <option value="APPROVE">Approval</option>
+            <option value="OTHER">Operational work</option>
+          </SelectField>
+          <SelectField
+            id="override-handling-mode"
+            label="Handling mode"
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+          >
+            <option value="ASSIGN">Assign to a stand-in role</option>
+            <option value="WITHHOLD" disabled={permissionKind === "APPROVE"}>
+              Withhold operational work
+            </option>
+          </SelectField>
         </div>
 
         {mode === "ASSIGN" && (
@@ -172,26 +154,15 @@ export function RolldownOverrideModal({
         )}
 
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label
-            htmlFor="override-statutory-reason"
-            style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-          >
-            Reason for this change (5–500 characters)
-          </label>
-          <textarea
+          <TextAreaField
             id="override-statutory-reason"
+            label="Reason for this change (5–500 characters)"
+            required
             rows={3}
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Explain why this temporary role coverage change is necessary."
-            style={{
-              width: "100%",
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-md, 4px)",
-              border: "1px solid var(--color-border, #ccc)",
-            }}
-            required
           />
         </div>
 

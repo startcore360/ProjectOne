@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, type FormEvent } from "react";
-import { Button, Modal, Notice, Panel, SkeletonText, StatusBadge } from "../../../../design-system/components";
+import { Button, Modal, Notice, Panel, SelectField, SkeletonText, StatusBadge, TextAreaField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { academicService } from "../../../institution-admin/api/academicService";
 
@@ -101,37 +101,31 @@ export function StudentStatusPanel({
         size="sm"
       >
         <form className="app-form" onSubmit={handleSubmit}>
-          <div className="app-form__field">
-            <label className="app-form__label">New Academic Status *</label>
-            <select
-              className="app-form__select"
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-            >
-              <option value="ACTIVE">Active (normal standing)</option>
-              <option value="LEAVE_OF_ABSENCE">Leave of absence (authorized break)</option>
-              <option value="SUSPENDED">Suspended (disciplinary)</option>
-              <option value="EXPELLED">Expelled (permanent exclusion)</option>
-              <option value="WITHDRAWN">Withdrawn (voluntary discontinuation)</option>
-              <option value="TRANSFERRED">Transferred (to another institution)</option>
-              <option value="GRADUATED">Graduated (programme completed)</option>
-            </select>
-          </div>
+          <SelectField
+            id="new-student-status"
+            label="New Academic Status *"
+            required
+            value={newStatus}
+            onChange={(e) => setNewStatus(e.target.value)}
+          >
+            <option value="ACTIVE">Active (normal standing)</option>
+            <option value="LEAVE_OF_ABSENCE">Leave of absence (authorized break)</option>
+            <option value="SUSPENDED">Suspended (disciplinary)</option>
+            <option value="EXPELLED">Expelled (permanent exclusion)</option>
+            <option value="WITHDRAWN">Withdrawn (voluntary discontinuation)</option>
+            <option value="TRANSFERRED">Transferred (to another institution)</option>
+            <option value="GRADUATED">Graduated (programme completed)</option>
+          </SelectField>
 
-          <div className="app-form__field">
-            <label htmlFor="status-reason" className="app-form__label">
-              Statutory Justification / Reason *
-            </label>
-            <textarea
-              id="status-reason"
-              required
-              rows={3}
-              className="app-form__textarea"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Medical leave granted by Academic Council per UGC regulations."
-            />
-          </div>
+          <TextAreaField
+            id="status-reason"
+            label="Statutory Justification / Reason *"
+            required
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. Medical leave granted by Academic Council per UGC regulations."
+          />
 
           <div className="app-form__actions">
             <Button variant="secondary" onClick={() => setShowModal(false)} disabled={saving}>

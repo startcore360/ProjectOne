@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi, Panel } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
-import { useNotifications } from "../../notifications/hooks/useNotifications";
+import { selectPendingApprovalCount } from "../../notifications/hooks/useNotifications";
 import {
   roleDashboardByCode,
   roleOverrides,
@@ -19,8 +19,7 @@ export interface RoleWorkspaceProps {
 }
 
 export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
-  const tenantId = useAppSelector((s) => s.auth.user?.tenantId ?? null);
-  const { pendingApprovalCount } = useNotifications(tenantId);
+  const pendingApprovalCount = useAppSelector(selectPendingApprovalCount);
 
   const role = roleDashboardByCode(roleCode);
   if (!role) return null;

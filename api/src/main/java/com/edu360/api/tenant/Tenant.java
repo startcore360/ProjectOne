@@ -138,6 +138,10 @@ public class Tenant {
     @Builder.Default
     private boolean analyticsOptOut = false;
 
+    @Column(name = "listed_in_directory", nullable = false)
+    @Builder.Default
+    private boolean listedInDirectory = false;
+
     @Column(name = "activated_at")
     private Instant activatedAt;
 

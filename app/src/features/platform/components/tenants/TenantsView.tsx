@@ -103,17 +103,18 @@ function RowMenu({ tenantName, children }: { tenantName?: string; children: Reac
 
   return (
     <div onKeyDown={handleKeyDown} style={{ position: "relative", display: "inline-block" }}>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
-        className="eds-button eds-button--secondary eds-button--sm"
+        variant="secondary"
+        size="sm"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={tenantName ? `Tenant actions for ${tenantName}` : "Tenant actions"}
       >
         ⋯
-      </button>
+      </Button>
       {open && (
         <div
           ref={menuRef}
@@ -181,7 +182,7 @@ import { EntitlementEditor } from "../entitlements/EntitlementEditor";
 import { tenantLoginAddress } from "./tenantAddress";
 
 export function TenantsView() {
-  const { can } = usePlatformAccess();
+  const { can, role: platformRole } = usePlatformAccess();
   const canViewUsage = can("USAGE_COUNTS_VIEW");
   const canViewCompliance = can("TENANT_EXPORT_REQUEST") || can("TENANT_SETTINGS");
   const canActivate = can("TENANT_ACTIVATE");
@@ -189,7 +190,6 @@ export function TenantsView() {
   const canEditSettings = can("TENANT_SETTINGS");
   const canCreate = can("TENANT_CREATE");
   // E1-S3: going above the plan's limits is the Product Owner's decision only.
-  const { role: platformRole } = usePlatformAccess();
   const [settingsPlan, setSettingsPlan] = useState<TenantPlanLimits | null>(null);
   // E1-S2: the tenant whose setup steps are open.
   const [setupTarget, setSetupTarget] = useState<Tenant | null>(null);

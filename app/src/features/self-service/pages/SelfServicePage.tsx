@@ -15,17 +15,16 @@ import {
 } from "../../../design-system/components";
 import { ErrorState } from "../../../components/feedback/ErrorState";
 import { useAppSelector } from "../../../store/hooks";
+import { useNotifications } from "../../notifications/hooks/useNotifications";
 import {
   selfServiceApi,
-  type NotificationItem,
   type LeaveBalanceItem,
   type LeaveRequestItem,
   type NoticeItem,
 } from "../api/selfServiceApi";
 
 export default function SelfServicePage() {
-  const authUser = useAppSelector((state) => state.auth.user);
-  const tenantId = authUser?.tenantId ?? "";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId ?? "");
 
   const [activeTab, setActiveTab] = useState<"notices" | "leaves" | "notifications">("notices");
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(["notices"]));
@@ -41,9 +40,13 @@ export default function SelfServicePage() {
   const [leavesLoading, setLeavesLoading] = useState(true);
   const [leavesError, setLeavesError] = useState<string | null>(null);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(true);
-  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const {
+    items: notifications,
+    loading: notificationsLoading,
+    error: notificationsError,
+    refresh: refreshNotifications,
+    markRead,
+  } = useNotifications(tenantId);
 
   const MISSING_CTX = "Your account is not linked to an institution. Contact your administrator.";
 
@@ -78,23 +81,9 @@ export default function SelfServicePage() {
     }
   }, [tenantId]);
 
-  const loadNotifications = useCallback(async () => {
-    if (!tenantId) { setNotificationsError(MISSING_CTX); setNotificationsLoading(false); return; }
-    setNotificationsLoading(true);
-    setNotificationsError(null);
-    try {
-      setNotifications(await selfServiceApi.getNotifications(tenantId));
-    } catch {
-      setNotificationsError("Notifications could not be loaded. Please try again.");
-    } finally {
-      setNotificationsLoading(false);
-    }
-  }, [tenantId]);
-
   // Load notices on mount (default tab). Load other tabs only on first activation.
   useEffect(() => { void loadNotices(); }, [loadNotices]);
   useEffect(() => { if (loadedTabs.has("leaves")) void loadLeaves(); }, [loadLeaves, loadedTabs]);
-  useEffect(() => { if (loadedTabs.has("notifications")) void loadNotifications(); }, [loadNotifications, loadedTabs]);
 
   const tabItems = [
     { id: "notices", label: `Campus Notices (${notices.length})` },
@@ -256,7 +245,7 @@ export default function SelfServicePage() {
         {notificationsError && !notificationsLoading && (
           <ErrorState
             message={notificationsError}
-            action={<Button variant="secondary" onClick={() => void loadNotifications()}>Retry</Button>}
+            action={<Button variant="secondary" onClick={() => void refreshNotifications()}>Retry</Button>}
           />
         )}
         {(!notificationsLoading || notifications.length > 0) && !notificationsError && (
@@ -266,20 +255,49 @@ export default function SelfServicePage() {
               description="You are all caught up."
             />
           ) : (
-            notifications.map((n) => (
-              <div key={n.notificationId} className="app-card app-card--notification">
-                <div className="app-card__content">
-                  <div className="app-card__title">{n.title}</div>
-                  {n.body && <div className="app-card__body">{n.body}</div>}
-                  <div className="app-card__meta">
-                    {new Date(n.createdAt).toLocaleString()}
+            notifications.map((n) => {
+              const unread = n.readAt === null || n.readAt === undefined;
+              return (
+                <div
+                  key={n.notificationId}
+                  className={"app-card app-card--notification" + (unread ? " is-unread" : "")}
+                >
+                  <div className="app-card__content">
+                    <div className="app-card__title">
+                      {n.title}
+                      {unread && (
+                        <span
+                          style={{
+                            marginLeft: "var(--space-2)",
+                            fontSize: "var(--text-xs)",
+                            color: "var(--color-primary-600)",
+                          }}
+                        >
+                          • Unread
+                        </span>
+                      )}
+                    </div>
+                    {n.body && <div className="app-card__body">{n.body}</div>}
+                    <div className="app-card__meta">
+                      {new Date(n.createdAt).toLocaleString()}
+                      {unread && (
+                        <button
+                          type="button"
+                          className="notif-bell__link"
+                          style={{ marginLeft: "var(--space-2)" }}
+                          onClick={() => void markRead(n.notificationId)}
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  <Badge tone={n.priorityClass === "EMERGENCY" ? "danger" : "neutral"}>
+                    {n.priorityClass.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </Badge>
                 </div>
-                <Badge tone={n.priorityClass === "EMERGENCY" ? "danger" : "neutral"}>
-                  {n.priorityClass.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-                </Badge>
-              </div>
-            ))
+              );
+            })
           )
         )}
       </div>

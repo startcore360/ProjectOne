@@ -8,14 +8,15 @@ import { useSupportSession } from "../features/support/useSupportSession";
 // /change-password itself redirects there - the backend's MustChangePasswordFilter enforces
 // the same rule server-side, so this is a UX convenience, not the real security boundary.
 export default function PrivateRoute() {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const mustChangePassword = useAppSelector((state) => state.auth.user?.mustChangePassword);
   const location = useLocation();
   const { isSupportSession } = useSupportSession();
 
   if (!isAuthenticated && !isSupportSession) {
     return <Navigate to="/login" replace />;
   }
-  if (!isSupportSession && user?.mustChangePassword && location.pathname !== "/change-password") {
+  if (!isSupportSession && mustChangePassword && location.pathname !== "/change-password") {
     return <Navigate to="/change-password" replace />;
   }
   return <Outlet />;

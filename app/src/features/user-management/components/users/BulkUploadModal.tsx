@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Badge, Button, DataTable, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Badge, Button, DataTable, Modal, Notice, TextAreaField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   userManagementService,
@@ -172,28 +172,14 @@ export function BulkUploadModal({
           </div>
 
           <div style={{ marginBottom: "1rem" }}>
-            <label
-              htmlFor="csv-textarea"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.25rem" }}
-            >
-              Or paste CSV text directly:
-            </label>
-            <textarea
+            <TextAreaField
               id="csv-textarea"
+              label="Or paste CSV text directly:"
               rows={4}
               value={csvContent}
               onChange={(e) => setCsvContent(e.target.value)}
               placeholder="email,fullName,userType,mobile,nationalIdLast4,roleCode&#10;john.doe@northbridge.edu.in,John Doe,STAFF,+919876543210,4821,OFFICE_STAFF"
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                fontFamily: "monospace",
-                fontSize: "0.85rem",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid var(--color-border-divider)",
-                backgroundColor: "var(--color-bg-surface)",
-                color: "var(--color-text)",
-              }}
+              className="font-mono text-xs"
             />
           </div>
 

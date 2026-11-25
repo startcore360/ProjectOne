@@ -31,6 +31,7 @@ const PLATFORM_ADMIN_ACTIONS = [
   "BACKUP_STATUS_VIEW",
   "SUPPORT_TICKET_MANAGE",
   "RELEASE_MANAGE",
+  "LANDING_CMS_MANAGE",
 ];
 const STANDARD_ACTIONS: Record<string, string[]> = {
   PRODUCT_OWNER: [
@@ -95,13 +96,15 @@ export const PLATFORM_PAGE_ACTIONS = {
   security: ["SECURITY_POLICY_SET"],
   tickets: ["SUPPORT_TICKET_MANAGE", "SUPPORT_ACCESS_USE"],
   dataProtection: ["TENANT_EXPORT_APPROVE", "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE"],
+  landing: ["LANDING_CMS_MANAGE"],
 };
 
 export function usePlatformAccess() {
-  const user = useAppSelector((state) => state.auth.user);
+  const userId = useAppSelector((state) => state.auth.user?.id);
+  const platformRole = useAppSelector((state) => state.auth.user?.platformRole);
   const stored = useAppSelector((state) => state.platformPermissions?.current);
-  const current = stored && stored.userId === user?.id ? stored : null;
-  const actions = current?.actions ?? STANDARD_ACTIONS[user?.platformRole ?? ""] ?? null;
+  const current = stored && stored.userId === userId ? stored : null;
+  const actions = current?.actions ?? STANDARD_ACTIONS[platformRole ?? ""] ?? null;
   // Sorted so the same set of rights gives the same key: when the server list arrives with the same
   // actions in a different order, screens that depend on can/canAny do not reload everything.
   const actionsKey = actions ? [...actions].sort().join(",") : "";
@@ -114,7 +117,7 @@ export function usePlatformAccess() {
   );
 
   return {
-    role: user?.platformRole ?? null,
+    role: platformRole ?? null,
     can,
     canAny,
     serverActions,

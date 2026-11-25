@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { memo } from "react";
 import { Icon, type IconName } from "../../components/ui/Icon";
 
 export interface MetricCardProps {
@@ -53,7 +54,7 @@ function getSplinePath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-export function KpiSparkline({
+export const KpiSparkline = memo(function KpiSparkline({
   data,
   color = "var(--color-action-primary, #10b981)",
   height = 48,
@@ -129,9 +130,9 @@ export function KpiSparkline({
       </svg>
     </div>
   );
-}
+});
 
-export function MetricCard({
+export const MetricCard = memo(function MetricCard({
   label,
   value,
   unit,
@@ -216,7 +217,7 @@ export function MetricCard({
       {contextText && <p className="kpi__context">{contextText}</p>}
     </div>
   );
-}
+});
 
 export const Metric = MetricCard;
 export const Kpi = MetricCard;

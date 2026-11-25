@@ -166,9 +166,8 @@ function computeLocalCustomerQuote(
 }
 
 export function PlansView() {
-  const { role } = usePlatformAccess();
+  const { role, can: canDo } = usePlatformAccess();
   const canConfigurePricing = role === "PRODUCT_OWNER";
-  const { can: canDo } = usePlatformAccess();
   const canToggleFeatures = canDo("FEATURE_TOGGLE");
   const canBuildQuotes = canDo("PLAN_MANAGE") || canDo("TENANT_CREATE");
 
@@ -217,6 +216,7 @@ export function PlansView() {
   const [createError, setCreateError] = useState("");
   const [message, setMessage] = useState("");
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof platformTenantService.getCommercialCatalog>>["data"]>([]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState("");
   const [catalogModalOpen, setCatalogModalOpen] = useState(false);
@@ -343,12 +343,14 @@ export function PlansView() {
     try {
       const response = await platformTenantService.getCommercialCatalog();
       setCatalog(Array.isArray(response.data) ? response.data : []);
+      setCatalogLoaded(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       const is404 = msg.includes("404") || (err as { response?: { status?: number } })?.response?.status === 404;
       if (is404) {
         setCatalog([]);
         setCatalogError("");
+        setCatalogLoaded(true);
       } else {
         setCatalogError(msg || "Unable to load commercial catalog items.");
       }
@@ -369,21 +371,27 @@ export function PlansView() {
     setPlanBuilderKey((key) => key + 1);
     setMessage("");
     setCreateError("");
-    setCatalogError("");
-    setCatalog([]);
     setPlanComponents([]);
     setEditingPlan(plan ?? null);
     setShowCreate(true);
-    setCatalogLoading(true);
+
+    const needsCatalogFetch = !catalogLoaded || Boolean(catalogError);
+    if (needsCatalogFetch) {
+      setCatalogLoading(true);
+      setCatalogError("");
+    }
+
     try {
       const [catalogResponse, componentResponse] = await Promise.all([
-        platformTenantService.getCommercialCatalog().catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : "";
-          if (msg.includes("404") || (err as { response?: { status?: number } })?.response?.status === 404) {
-            return { data: [] };
-          }
-          throw err;
-        }),
+        needsCatalogFetch
+          ? platformTenantService.getCommercialCatalog().catch((err: unknown) => {
+              const msg = err instanceof Error ? err.message : "";
+              if (msg.includes("404") || (err as { response?: { status?: number } })?.response?.status === 404) {
+                return { data: [] };
+              }
+              throw err;
+            })
+          : Promise.resolve({ data: catalog }),
         plan
           ? platformTenantService.getPlanComponents(plan.planId).catch((err: unknown) => {
               const msg = err instanceof Error ? err.message : "";
@@ -394,7 +402,10 @@ export function PlansView() {
             })
           : Promise.resolve({ data: [] }),
       ]);
-      setCatalog(Array.isArray(catalogResponse.data) ? catalogResponse.data : []);
+      if (needsCatalogFetch) {
+        setCatalog(Array.isArray(catalogResponse.data) ? catalogResponse.data : []);
+        setCatalogLoaded(true);
+      }
       setPlanComponents(
         Array.isArray(componentResponse.data)
           ? componentResponse.data.map((component) => ({
@@ -426,7 +437,9 @@ export function PlansView() {
         setCatalogError(msg || "Unable to load subscription package items.");
       }
     } finally {
-      setCatalogLoading(false);
+      if (needsCatalogFetch) {
+        setCatalogLoading(false);
+      }
     }
   };
 

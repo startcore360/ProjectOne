@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import AppRoutes from "./routes/Routes";
+import { RouteTitleListener } from "./routes/RouteTitleListener";
 import ToastHost from "./design-system/components/ToastHost";
 import { LoadingScreen } from "./components/ui/LoadingScreen";
 
@@ -10,6 +11,7 @@ export default function App() {
   return (
     <>
       <Suspense fallback={<LoadingScreen />}>
+        <RouteTitleListener />
         <AppRoutes />
       </Suspense>
       <ToastHost position="top" popup />

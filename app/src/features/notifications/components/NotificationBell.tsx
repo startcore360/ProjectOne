@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useId, useRef, useState } from "react";
+﻿import { memo, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
@@ -19,9 +19,8 @@ const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), [tabindex]:not([tab
  * bottom sheet over a dimmed backdrop; on larger screens it is a panel under the top bar with
  * a transparent backdrop that closes it. It is rendered in a portal so no parent can clip it.
  */
-export function NotificationBell() {
-  const user = useAppSelector((s) => s.auth.user);
-  const tenantId = user?.tenantId ?? null;
+export const NotificationBell = memo(function NotificationBell() {
+  const tenantId = useAppSelector((s) => s.auth.user?.tenantId ?? null);
   const { items, loading, error, hasReadState, unreadCount, pendingApprovalCount, markRead, markAllRead, refresh } = useNotifications(tenantId);
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -151,4 +150,4 @@ export function NotificationBell() {
       )}
     </>
   );
-}
+});

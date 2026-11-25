@@ -1,5 +1,6 @@
 package com.edu360.api.tenant;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,4 +26,8 @@ public interface TenantRepository extends JpaRepository<Tenant, java.util.UUID> 
     long countByState(TenantState state);
 
     long countByAnalyticsOptOut(boolean analyticsOptOut);
+
+    List<Tenant> findByStateInAndListedInDirectoryTrueOrderByTenantNameAsc(Collection<TenantState> states);
+
+    List<Tenant> findAllByOrderByTenantNameAsc();
 }

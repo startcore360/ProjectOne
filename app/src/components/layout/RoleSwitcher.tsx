@@ -19,7 +19,12 @@ type RoleSwitcherProps = {
 export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const user = useAppSelector((state) => state.auth.user);
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const platformRole = useAppSelector((state) => state.auth.user?.platformRole);
+  const hasUser = useAppSelector((state) => !!state.auth.user);
+  const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
+  const roleName = useAppSelector((state) => state.auth.user?.roleName);
+  const userType = useAppSelector((state) => state.auth.user?.userType);
   // After any successful role switch, land on the dashboard: the page the user was on may not
   // exist (or not be permitted) for the new role, and the dashboard is that role's home.
   const goToDashboard = () => navigate("/dashboard", { replace: false });
@@ -36,7 +41,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
   }, []);
 
   useEffect(() => {
-    if (!user?.tenantId) return;
+    if (!tenantId) return;
     let mounted = true;
     meService
       .getMe()
@@ -54,7 +59,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
     return () => {
       mounted = false;
     };
-  }, [user?.tenantId]);
+  }, [tenantId]);
 
   const handleChange = async (newAssignmentId: string) => {
     if (newAssignmentId === currentId || switching) return;
@@ -77,7 +82,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
     }
   };
 
-  if (!user || user.platformRole) {
+  if (!hasUser || platformRole) {
     return null;
   }
 
@@ -118,7 +123,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
       { code: "COLLEGE_ADMIN", name: "College Admin" },
       { code: "SCHOOL_ADMIN", name: "School Admin" },
     ];
-    const currentCode = user.roleCode || "UNIVERSITY_ADMIN";
+    const currentCode = roleCode || "UNIVERSITY_ADMIN";
 
     return (
       <label className={className}>
@@ -145,7 +150,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
     );
   }
 
-  const roleLabel = user.roleName || user.roleCode || user.userType || "Member";
+  const roleLabel = roleName || roleCode || userType || "Member";
   if (layout === "stacked") {
     return (
       <div className={className}>

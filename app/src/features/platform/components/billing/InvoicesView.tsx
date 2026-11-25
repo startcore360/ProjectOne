@@ -82,10 +82,11 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
 
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
-        className="eds-button eds-button--secondary eds-button--sm"
+        variant="secondary"
+        size="sm"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -93,7 +94,7 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
         style={{ minWidth: "32px", padding: "4px 8px" }}
       >
         ⋯
-      </button>
+      </Button>
       {open && (
         <div
           ref={menuRef}
@@ -220,11 +221,15 @@ export function InvoicesView() {
 
   // Share & Export Estimate Modal
   const [shareEstimate, setShareEstimate] = useState<EstimateData | null>(null);
+  const latestShareInvoiceIdRef = useRef<string | null>(null);
+  const loadDataReqIdRef = useRef(0);
 
   const openInvoiceShare = async (inv: InvoiceItem) => {
+    latestShareInvoiceIdRef.current = inv.invoiceId;
     let lines: EstimateLineItem[] = [];
     try {
       const resp = await platformOpsService.listInvoiceLines(inv.invoiceId);
+      if (latestShareInvoiceIdRef.current !== inv.invoiceId) return;
       if (resp && resp.length > 0) {
         lines = resp.map((l) => ({
           description: l.description,
@@ -236,6 +241,7 @@ export function InvoicesView() {
     } catch {
       // fallback if lines query fails
     }
+    if (latestShareInvoiceIdRef.current !== inv.invoiceId) return;
     if (!lines.length) {
       lines = [
         {
@@ -277,6 +283,7 @@ export function InvoicesView() {
   };
 
   const loadData = useCallback(async () => {
+    const reqId = ++loadDataReqIdRef.current;
     setLoading(true);
     setLoadError("");
     setActionError("");
@@ -285,18 +292,24 @@ export function InvoicesView() {
         platformOpsService.listInvoices(),
         platformTenantService.getTenants(),
       ]);
+      if (loadDataReqIdRef.current !== reqId) return;
       setInvoices(invs);
       setTenants(tenantRes.data?.items ?? []);
-      if (tenantRes.data?.items?.length && !createDraft.tenantId) {
-        setCreateDraft((prev) => ({ ...prev, tenantId: tenantRes.data.items[0].tenantId }));
+      if (tenantRes.data?.items?.length) {
+        setCreateDraft((prev) =>
+          prev.tenantId ? prev : { ...prev, tenantId: tenantRes.data.items[0].tenantId }
+        );
       }
     } catch (err: unknown) {
+      if (loadDataReqIdRef.current !== reqId) return;
       const msg = err instanceof Error ? err.message : "Failed to load invoices";
       setLoadError(msg);
     } finally {
-      setLoading(false);
+      if (loadDataReqIdRef.current === reqId) {
+        setLoading(false);
+      }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     void loadData();

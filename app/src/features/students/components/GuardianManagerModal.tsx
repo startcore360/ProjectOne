@@ -1,16 +1,132 @@
-import { useState } from "react";
-import { Button, Notice, TextField } from "../../../design-system/components";
+import { useState, type FormEvent } from "react";
+import { Button, CheckboxField, Modal, Notice, SelectField, TextField } from "../../../design-system/components";
 import { studentApi, type GuardianLink } from "../api/studentApi";
 
-export function GuardianManagerModal({tenantId,studentId,guardians,onClose,onSaved}:{tenantId:string;studentId:string;guardians:GuardianLink[];onClose:()=>void;onSaved:()=>void}){
-  const activeGuardianCount=guardians.filter(g=>g.status!=="BLOCKED").length;
-  const [fullName,setFullName]=useState("");const [mobile,setMobile]=useState("");const [email,setEmail]=useState("");const [relationship,setRelationship]=useState("FATHER");const [primary,setPrimary]=useState(activeGuardianCount===0);const [contactAuthorized,setContactAuthorized]=useState(true);const [emergencyContact,setEmergencyContact]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
-  return <div role="dialog" aria-modal="true" aria-labelledby="guardian-modal-title" className="app-modal-backdrop"><section className="app-modal"><header><h2 id="guardian-modal-title">Manage student guardian</h2><p>Up to three non-blocked guardians. Exactly one must be primary.</p></header>
-    {error&&<Notice tone="danger">{error}</Notice>}
-    <form className="app-form-grid" onSubmit={async e=>{e.preventDefault();setBusy(true);setError("");try{const {data}=await studentApi.linkGuardian(tenantId,studentId,{fullName,mobile,email,relationship,isPrimary:primary});await studentApi.guardianPreferences(tenantId,studentId,data.studentGuardianLinkId,{contactAuthorized,emergencyContact,primary});onSaved();onClose();}catch(x){setError(x instanceof Error?x.message:"Could not save guardian link");}finally{setBusy(false);}}}>
-      <TextField id="guardian-name" label="Full name" required value={fullName} onChange={e=>setFullName(e.target.value)}/><TextField id="guardian-mobile" label="Mobile (E.164)" required value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="+919876543210"/><TextField id="guardian-email" label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)}/>
-      <label className="eds-field"><span>Relationship</span><select value={relationship} onChange={e=>setRelationship(e.target.value)}>{["FATHER","MOTHER","LEGAL_GUARDIAN","LOCAL_SPONSOR"].map(x=><option key={x}>{x}</option>)}</select></label>
-      <label className="eds-field"><span><input type="checkbox" checked={primary} onChange={e=>setPrimary(e.target.checked)}/> Primary guardian</span></label><label className="eds-field"><span><input type="checkbox" checked={contactAuthorized} onChange={e=>setContactAuthorized(e.target.checked)}/> Authorized for contact</span></label><label className="eds-field"><span><input type="checkbox" checked={emergencyContact} onChange={e=>setEmergencyContact(e.target.checked)}/> Emergency contact</span></label>
-      <div className="app-toolbar"><Button type="submit" busy={busy} disabled={!fullName.trim()||!mobile.trim()||activeGuardianCount>=3}>Save guardian</Button><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button></div>
-    </form></section></div>;
+export function GuardianManagerModal({
+  tenantId,
+  studentId,
+  guardians,
+  onClose,
+  onSaved,
+}: {
+  tenantId: string;
+  studentId: string;
+  guardians: GuardianLink[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const activeGuardianCount = guardians.filter((g) => g.status !== "BLOCKED").length;
+  const [fullName, setFullName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
+  const [relationship, setRelationship] = useState("FATHER");
+  const [primary, setPrimary] = useState(activeGuardianCount === 0);
+  const [contactAuthorized, setContactAuthorized] = useState(true);
+  const [emergencyContact, setEmergencyContact] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const { data } = await studentApi.linkGuardian(tenantId, studentId, {
+        fullName,
+        mobile,
+        email,
+        relationship,
+        isPrimary: primary,
+      });
+      await studentApi.guardianPreferences(tenantId, studentId, data.studentGuardianLinkId, {
+        contactAuthorized,
+        emergencyContact,
+        primary,
+      });
+      onSaved();
+      onClose();
+    } catch (x) {
+      setError(x instanceof Error ? x.message : "Could not save guardian link");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Manage student guardian"
+      description="Up to three non-blocked guardians. Exactly one must be primary."
+      size="md"
+    >
+      {error && <Notice tone="danger">{error}</Notice>}
+      <form className="app-form-grid" onSubmit={handleSubmit}>
+        <TextField
+          id="guardian-name"
+          label="Full name"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+        <TextField
+          id="guardian-mobile"
+          label="Mobile (E.164)"
+          required
+          value={mobile}
+          onChange={(e) => setMobile(e.target.value)}
+          placeholder="+919876543210"
+        />
+        <TextField
+          id="guardian-email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <SelectField
+          id="guardian-relationship"
+          label="Relationship"
+          value={relationship}
+          onChange={(e) => setRelationship(e.target.value)}
+        >
+          {["FATHER", "MOTHER", "LEGAL_GUARDIAN", "LOCAL_SPONSOR"].map((x) => (
+            <option key={x} value={x}>
+              {x}
+            </option>
+          ))}
+        </SelectField>
+        <CheckboxField
+          id="guardian-primary"
+          label="Primary guardian"
+          checked={primary}
+          onChange={(e) => setPrimary(e.target.checked)}
+        />
+        <CheckboxField
+          id="guardian-contact-auth"
+          label="Authorized for contact"
+          checked={contactAuthorized}
+          onChange={(e) => setContactAuthorized(e.target.checked)}
+        />
+        <CheckboxField
+          id="guardian-emergency"
+          label="Emergency contact"
+          checked={emergencyContact}
+          onChange={(e) => setEmergencyContact(e.target.checked)}
+        />
+        <div className="app-toolbar" style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+          <Button
+            type="submit"
+            busy={busy}
+            disabled={!fullName.trim() || !mobile.trim() || activeGuardianCount >= 3}
+          >
+            Save guardian
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
 }

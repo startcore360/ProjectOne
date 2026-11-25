@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 // The one place that renders the .eds-button classes from components.css. Every button in
 // the app should go through this component instead of writing className="eds-button ..." by
 // hand on a raw <button>, so a change to button styling only ever has to happen here.
@@ -10,6 +10,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: ButtonSize;
   block?: boolean;
   busy?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 };
 
 // Written out in full on purpose. components.css is loaded inside Tailwind's `components`
@@ -31,6 +32,7 @@ export default function Button({
   className,
   disabled,
   type = "button",
+  ref,
   ...rest
 }: ButtonProps) {
   const classes = [
@@ -46,6 +48,7 @@ export default function Button({
 
   return (
     <button
+      ref={ref}
       type={type}
       className={classes}
       disabled={disabled || busy}

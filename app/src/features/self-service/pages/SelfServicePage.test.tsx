@@ -4,7 +4,18 @@ import { Provider } from "react-redux";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
 import { selfServiceApi } from "../api/selfServiceApi";
+import { notificationsApi } from "../../notifications/api/notificationsApi";
 import SelfServicePage from "./SelfServicePage";
+
+vi.mock("../../notifications/api/notificationsApi", () => ({
+  notificationsApi: {
+    list: vi.fn(),
+    summary: vi.fn(),
+    pendingApprovalCount: vi.fn(),
+    markRead: vi.fn(),
+    markAllRead: vi.fn(),
+  },
+}));
 
 vi.mock("../api/selfServiceApi", () => ({
   selfServiceApi: {
@@ -84,6 +95,19 @@ describe("SelfServicePage (Story #7: SELF_SERVICE_VIEW)", () => {
         readAt: null,
       },
     ]);
+    vi.mocked(notificationsApi.list).mockResolvedValue([
+      {
+        notificationId: "notif-1",
+        triggerCode: "LEAVE_APPROVED",
+        title: "Leave approved",
+        body: "Your symposium leave was approved.",
+        priorityClass: "NORMAL",
+        createdAt: "2026-11-06T00:00:00Z",
+        readAt: null,
+      },
+    ]);
+    vi.mocked(notificationsApi.summary).mockResolvedValue({ unreadCount: 1 });
+    vi.mocked(notificationsApi.pendingApprovalCount).mockResolvedValue(0);
   });
 
   it("loads and displays published campus notices on initial view", async () => {

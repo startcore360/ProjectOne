@@ -535,17 +535,21 @@ export function UserDetailPage() {
   const [actionBanner, setActionBanner] = useState<ActionBanner>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState("");
+  const latestUserIdRef = useRef<string | undefined>(userId);
+  latestUserIdRef.current = userId;
 
-  const load = async (scopeToUse: ActingScope) => {
-    if (!tenantId || !userId) return;
+  const load = async (scopeToUse: ActingScope, targetUserId = userId) => {
+    if (!tenantId || !targetUserId) return;
     setState("loading");
     setErrorMessage("");
     try {
-      const { data } = await userManagementService.getUser(tenantId, userId, scopeToUse);
+      const { data } = await userManagementService.getUser(tenantId, targetUserId, scopeToUse);
+      if (latestUserIdRef.current !== targetUserId) return;
       setUser(data);
       setFields({ displayName: data.displayName, email: data.email, mobile: data.mobile });
       setState("loaded");
     } catch (error) {
+      if (latestUserIdRef.current !== targetUserId) return;
       setUser(null);
       setState(isForbidden(error) ? "denied" : "error");
       setErrorMessage(getApiErrorMessage(error));
@@ -553,9 +557,15 @@ export function UserDetailPage() {
   };
 
   useEffect(() => {
-    if (initialScopeType) void load(scope);
+    setSaveBanner(null);
+    setActionBanner(null);
+    setTemporaryPassword(null);
+    setCopyNotice("");
+    if ((initialScopeType || !needsScope) && userId) {
+      void load(scope, userId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId, initialScopeType, needsScope]);
 
   if (!tenantId || !userId) {
     return (

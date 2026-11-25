@@ -265,10 +265,6 @@ a {
   border-radius: 50%;
   animation: eds-spin 0.8s linear infinite;
 }
-.eds-spinner--on-brand {
-  border-color: var(--color-spinner-track-on-brand);
-  border-right-color: transparent;
-}
 @keyframes eds-spin {
   to {
     transform: rotate(360deg);
@@ -449,16 +445,6 @@ a {
     display: none;
   }
 }
-.auth-brand__mark {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--color-action-primary);
-  color: var(--color-text-on-brand);
-  font: 800 23px var(--font-display);
-}
 .auth-card {
   width: min(100%, 480px);
   padding: clamp(24px, 5vw, 40px);
@@ -626,18 +612,6 @@ a {
   justify-content: space-between;
   gap: 12px;
   margin: 16px 0 20px;
-}
-.eds-check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-text-muted);
-  font-size: var(--fs-body-sm);
-}
-.eds-check input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--color-action-primary);
 }
 /* Underlined so a text-styled button reads as clickable without relying on colour alone. */
 .eds-link-button {
@@ -866,18 +840,6 @@ a {
   color: var(--color-text-brand-strong);
   font-weight: var(--fw-bold);
 }
-/* D10's .nav-count: a pending-item badge on a nav link, e.g. approvals awaiting the signed-in role. */
-.app-nav__count {
-  margin-left: auto;
-  font-size: var(--fs-caption);
-  font-weight: var(--fw-bold);
-  background: var(--color-bg-accent-soft);
-  color: var(--color-text);
-  padding: 1px var(--space-2);
-  border-radius: var(--radius-sm);
-  min-width: 24px;
-  text-align: center;
-}
 /* D10's .side-card__user + .side-card__foot: identity and sign-out live at the BOTTOM of the
    sidebar, not in a separate top bar - previously the user card and sign-out button were in
    .app-topbar instead, the opposite of the prototype's layout. */
@@ -949,15 +911,6 @@ a {
   color: var(--color-text-muted);
   font-size: var(--fs-caption);
 }
-.app-logout {
-  min-height: 38px;
-  padding: 0 var(--space-3);
-  border: var(--border-width) solid var(--color-border-divider);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
 .app-main {
   display: flex;
   min-width: 0;
@@ -1020,21 +973,6 @@ a {
   border-color: var(--color-border-disabled);
   cursor: progress;
   opacity: 0.7;
-}
-.role-switcher--stacked {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-1);
-}
-.role-switcher--stacked .role-switcher__label {
-  font: var(--fw-extrabold) 12px/1.3 var(--font-body);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.role-switcher--stacked .role-switcher__select {
-  width: 100%;
-  min-height: var(--target-min);
-  font-size: var(--fs-body);
 }
 .app-topbar__context {
   display: flex;
@@ -1222,14 +1160,12 @@ a {
 .app-section-title { margin: 0 0 var(--space-3); color: var(--color-text); font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
 .app-stack { display: grid; gap: var(--space-5); }
 .app-stack--sm { display: grid; gap: var(--space-3); }
-.app-spinner-center { display: flex; justify-content: center; padding: var(--space-12) var(--space-5); }
 .app-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
 .app-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); }
 .app-form-grid .eds-field,
 .app-form .eds-field:first-child { margin-top: 0; }
 .app-form,
 .app-panel > form { padding: 0 var(--space-5) var(--space-5); }
-.app-panel > .app-empty-state { margin: 0 var(--space-5) var(--space-5); }
 .app-form-field { display: grid; gap: var(--space-2); margin-top: var(--space-5); color: var(--color-text); font-size: var(--fs-label); font-weight: var(--fw-semibold); }
 .app-form-field select { width: 100%; }
 .app-field-hint { margin: 0; color: var(--color-text-muted); font-size: var(--fs-caption); font-weight: var(--fw-regular); }
@@ -1305,14 +1241,6 @@ a {
   font-size: var(--fs-body-sm);
   color: var(--color-text-muted);
   font-weight: var(--fw-medium);
-}
-.app-plan-card__price-details {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  font-size: var(--fs-body-xs);
-  color: var(--color-text-muted);
 }
 .app-plan-card__tags {
   display: flex;
@@ -1481,27 +1409,7 @@ a {
   border-bottom-color: var(--color-action-primary);
   font-weight: var(--fw-semibold);
 }
-.app-form-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  animation: fadeInSection 0.15s ease-out;
-}
-@keyframes fadeInSection {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.app-plan-estimate, .app-plan-components {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: var(--border-width) solid var(--color-border-divider);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
-  box-shadow: var(--elevation-card);
-}
-.app-plan-estimate__heading, .app-plan-components__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
-.app-plan-estimate__heading p, .app-plan-components__heading p, .app-plan-estimate__note { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--fs-body-sm); }
+.app-plan-estimate__heading p, .app-plan-components__heading p { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--fs-body-sm); }
 .app-plan-estimate__total { color: var(--color-text); font: var(--fw-bold) var(--fs-h2)/var(--lh-h2) var(--font-display); white-space: nowrap; }
 .app-plan-estimate__breakdown { display: grid; gap: var(--space-2); margin: 0; }
 .app-plan-estimate__breakdown > div { display: flex; justify-content: space-between; gap: var(--space-4); color: var(--color-text-muted); font-size: var(--fs-body-sm); }
@@ -1705,9 +1613,6 @@ a {
     pointer-events: none;
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .app-mobile-nav__indicator {
-    display: none !important;
-  }
   .app-mobile-nav .app-nav__link {
     position: relative;
     z-index: 1;
@@ -1844,32 +1749,13 @@ a {
 
 /* Student dashboard — Stillwater, restrained iconography and data-honest states */
 .app-dashboard{width:100%;max-width:none;min-width:0;color:var(--color-text)}
-.app-breadcrumb{display:flex;align-items:center;gap:10px;margin:0 0 22px;color:var(--color-text-muted);font-size:var(--fs-body-sm)}
-.app-breadcrumb strong{color:var(--color-text);font-weight:600}
 .app-welcome{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.75fr);gap:28px;align-items:center;min-height:230px;padding:clamp(24px,4vw,42px);border:1px solid var(--color-border-divider);border-radius:var(--radius-xl);background:linear-gradient(115deg,var(--color-bg-surface),var(--color-bg-brand-soft));}
-.app-welcome__copy h1,.app-welcome-section h1{font-size:clamp(30px,4vw,44px);line-height:1.12;letter-spacing:-.035em}
-.app-welcome__copy>p:not(.app-eyebrow){max-width:48ch;margin:12px 0 18px;color:var(--color-text-muted)}
 .app-eyebrow{margin:0 0 9px;color:var(--color-text-muted);font-size:var(--fs-overline);font-weight:700;letter-spacing:.12em}
 .app-text-link{display:inline-flex;align-items:center;gap:7px;color:var(--color-text-brand);font-size:var(--fs-body-sm);font-weight:650;text-decoration:none}
 .app-text-link:hover{text-decoration:underline;text-underline-offset:3px}
-.app-welcome__aside{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px 14px;padding:20px;border:1px solid var(--color-border-divider);border-radius:var(--radius-lg);background:var(--color-bg-surface)}
-.app-streak__icon,.app-metric__icon,.app-empty__mark{display:grid;place-items:center;color:var(--color-text-muted);background:var(--color-bg-subtle);border:1px solid var(--color-border-divider);border-radius:12px}
-.app-streak__icon{width:44px;height:44px}
-.app-welcome__aside strong{display:block;font-size:var(--fs-body-lg);font-weight:700}
-.app-welcome__aside span{display:block;margin-top:3px;color:var(--color-text-muted);font-size:var(--fs-caption);line-height:1.45}
-.app-streak__days{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-top:5px}
-.app-streak__days i{height:7px;border-radius:99px;background:var(--color-bg-subtle-strong)}
-.app-welcome__aside>small{grid-column:1/-1;color:var(--color-text-muted);font-size:11px}
+.app-empty__mark{display:grid;place-items:center;color:var(--color-text-muted);background:var(--color-bg-subtle);border:1px solid var(--color-border-divider);border-radius:12px}
 .app-section{margin-top:32px}
-.app-section__heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}
-.app-section__heading h2,.app-dash-card__header h2{font-size:21px;letter-spacing:-.02em}
-.app-muted{color:var(--color-text-muted);font-size:var(--fs-caption)}
-.app-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-.app-metric{display:flex;align-items:flex-start;gap:14px;min-height:112px;padding:18px;border:1px solid var(--color-border-divider);border-radius:var(--radius-lg);background:var(--color-bg-surface)}
-.app-metric__icon{width:38px;height:38px;flex:none}
-.app-metric p{margin:1px 0 5px;color:var(--color-text-muted);font-size:var(--fs-body-sm)}
-.app-metric strong{display:block;font-size:25px;line-height:1.15;font-weight:700}
-.app-metric small{display:block;margin-top:5px;color:var(--color-text-muted);font-size:var(--fs-caption)}
+.app-dash-card__header h2{font-size:21px;letter-spacing:-.02em}
 .app-content-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}
 .app-dash-card{min-width:0;padding:20px;border:1px solid var(--color-border-divider);border-radius:var(--radius-lg);background:var(--color-bg-surface)}
 .app-dash-card__header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
@@ -1880,14 +1766,11 @@ a {
 .app-empty p{margin:4px 0 0;color:var(--color-text-muted);font-size:var(--fs-caption);line-height:1.5}
 .app-data-note{display:flex;align-items:flex-start;gap:10px;margin:18px 0 0;padding:13px 15px;border:1px solid var(--color-border-divider);border-radius:var(--radius-md);color:var(--color-text-muted);font-size:var(--fs-caption);line-height:1.5}
 .app-data-note>span{display:grid;width:18px;height:18px;flex:none;place-items:center;border:1px solid var(--color-border-control);border-radius:50%;font-size:11px;font-weight:700}
-.app-welcome-section{padding:28px 0 30px;border-bottom:1px solid var(--color-border-divider)}
-.app-welcome-section h2{margin-top:22px;font-size:clamp(24px,3vw,32px);letter-spacing:-.03em}
-.app-welcome-section>p:last-child{max-width:58ch;margin:10px 0 0;color:var(--color-text-muted)}
 .app-welcome-state{max-width:700px;margin-top:24px;padding:28px}
 .app-welcome-state h2{margin-top:16px;font-size:20px}
 .app-welcome-state p{margin:8px 0 0;color:var(--color-text-muted);line-height:1.6}
-@media(max-width:800px){.app-welcome{grid-template-columns:1fr}.app-welcome__aside{max-width:none}.app-content-grid{grid-template-columns:1fr}}
-@media(max-width:560px){.app-metrics{grid-template-columns:1fr}.app-section__heading{align-items:flex-start;flex-direction:column;gap:5px}.app-metric{min-height:92px}.app-dash-card{padding:16px}.app-welcome{padding:22px}.app-welcome__copy h1{font-size:32px}}
+@media(max-width:800px){.app-welcome{grid-template-columns:1fr}.app-content-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.app-dash-card{padding:16px}.app-welcome{padding:22px}}
 
 .role-preview-page{max-width:var(--content-max);margin:0 auto}
 .role-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:12px 0 26px}
@@ -1928,21 +1811,12 @@ a {
 @media(max-width:620px){.role-directory-grid,.role-preview-panels{grid-template-columns:1fr}.role-preview-metrics{grid-template-columns:1fr}.role-directory-tools{flex-direction:column}.role-directory-tools select{min-height:44px}.role-preview-heading{align-items:flex-start}.role-preview-count{width:65px;height:65px;font-size:22px}.role-preview-banner{flex-direction:column}.role-preview-intro{align-items:flex-start;flex-direction:column}}
 
 /* Prototype-aligned student dashboard refinements */
-.app-welcome__copy h2.app-welcome__headline{margin:18px 0 0;font-size:clamp(27px,3.4vw,36px);line-height:1.14;letter-spacing:-.035em}
-.app-welcome__copy h1{font-size:clamp(18px,2vw,21px);letter-spacing:-.02em}
-.app-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
-.app-streak__days{display:flex;align-items:center;justify-content:space-between;gap:9px}
-.app-streak__days i{width:18px;height:18px;flex:1;border:1px solid var(--color-border-control);border-radius:50%;background:var(--color-bg-surface)}
-.app-week-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 12px;padding:10px 0;border-bottom:1px solid var(--color-border-divider)}
-.app-week-strip span{padding:7px 4px;border:1px solid var(--color-border-divider);border-radius:var(--radius-sm);color:var(--color-text-muted);font-size:10px;font-weight:700;letter-spacing:.08em;text-align:center}
 .app-content-grid--lower{margin-top:14px}
 .app-attendance-summary{display:flex;align-items:center;gap:16px;min-height:112px;border-top:1px solid var(--color-border-divider);padding-top:14px}
 .app-attendance-ring{display:grid;width:74px;height:74px;flex:none;place-items:center;border:5px solid var(--color-bg-subtle-strong);border-radius:50%;color:var(--color-text-muted);font-size:23px;font-weight:700}
 .app-attendance-summary strong{font-size:var(--fs-body-sm)}
 .app-attendance-summary p{margin:5px 0 0;color:var(--color-text-muted);font-size:var(--fs-caption);line-height:1.5}
-@media(max-width:980px){.app-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:800px){.app-content-grid--lower{grid-template-columns:1fr}}
-@media(max-width:560px){.app-metrics{grid-template-columns:1fr}.app-welcome__copy h2.app-welcome__headline{font-size:29px}}
 
 /* Neutral icon treatment across shell and dashboard metrics */
 .app-nav__link>svg{color:var(--color-text-muted)}
@@ -2231,12 +2105,6 @@ progress.progress--thin { height: 6px; }
 
 /* Shared layout and feedback refinements — Stillwater tokens remain the source of truth. */
 #root, .app-shell, .app-content, main { min-width: 0; }
-/* .app-content already centres, caps and pads the page. .app-page must not repeat that (it added a
-   second 1280px cap and up to 32px of extra side padding, leaving wide empty gutters on large screens). */
-.page-content, .app-main__content {
-  width: min(100%, var(--content-max)); min-width: 0; margin-inline: auto;
-  padding: clamp(var(--space-4), 2.2vw, var(--space-8));
-}
 .app-page { width: 100%; min-width: 0; }
 .app-page > * + *, .app-page form > * + * { margin-top: var(--space-5); }
 .eds-page-header { min-width: 0; gap: var(--space-4); margin-bottom: var(--space-6); }
@@ -2299,11 +2167,11 @@ progress.progress--thin { height: 6px; }
 .app-table { min-width:720px; }
 .app-table th, .app-table td { overflow-wrap:anywhere; }
 .app-list-copy, .app-list-copy strong, .app-list-copy small { min-width:0; overflow-wrap:anywhere; }
-.app-inline-notice, .app-error-state { min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.app-inline-notice { min-width:0; max-width:100%; overflow-wrap:anywhere; }
 .app-form-grid, .app-two-col, .app-callout { min-width:0; }
 .app-form-grid > *, .app-two-col > *, .app-callout > * { min-width:0; }
 @media(max-width:640px) {
-  .app-page, .page-content, .app-main__content { padding:var(--space-4); }
+  .app-page { padding:var(--space-4); }
   .app-page { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:var(--space-4); }
   .app-page > * { flex:0 0 auto; }
   .eds-page-header { flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-4); }
@@ -3026,7 +2894,6 @@ input[type="number"] {
 
 /* Panel body — consistent interior padding, used in Panels and Modals */
 .app-panel__body { padding: 0 var(--space-5) var(--space-5); }
-.app-panel__body--top { padding: var(--space-4) var(--space-5) var(--space-5); }
 
 /* Inline status row — label + badge/value side by side */
 .app-panel__status {
@@ -3052,7 +2919,6 @@ input[type="number"] {
   font-weight: var(--fw-semibold);
   color: var(--color-text);
 }
-.app-form__input,
 .app-form__select,
 .app-form__textarea {
   width: 100%;
@@ -3064,7 +2930,6 @@ input[type="number"] {
   font: inherit;
   font-size: var(--fs-body-sm);
 }
-.app-form__input:focus-visible,
 .app-form__select:focus-visible,
 .app-form__textarea:focus-visible {
   outline: 2px solid var(--color-focus);
@@ -3205,8 +3070,6 @@ input[type="number"] {
 .po-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .po-kpi .kpi__value--text { font-size: var(--fs-h2); }
 .po-kpi .progress { margin-top: var(--space-1); }
-.po-kpi__trend { display: grid; gap: var(--space-1); }
-.po-sparkline { width: 100%; height: 32px; color: var(--color-action-primary); }
 .po-change { font-weight: var(--fw-semibold); }
 .po-change--up { color: var(--color-status-success-fg); }
 .po-change--down { color: var(--color-status-danger-fg); }

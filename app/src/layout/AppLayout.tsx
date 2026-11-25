@@ -82,6 +82,7 @@ const platformNavigation = [
   { label: "Integrations", to: "/platform/integration-types", icon: "cpu" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.integrations },
   { label: "Releases", to: "/platform/releases", icon: "package" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.releases },
   { label: "Data protection", to: "/platform/data-protection", icon: "shield" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.dataProtection },
+  { label: "Landing & leads", to: "/platform/landing", icon: "layers" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.landing },
 ];
 
 const workspaceNavigation = [
@@ -275,7 +276,7 @@ export default function AppLayout() {
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "A";
   const photoObjectUrl = useProfilePhoto(user?.photoUrl, user?.photoRevision);
   const avatar = photoObjectUrl
-    ? <img className="app-user__avatar app-user__avatar--photo" src={photoObjectUrl} alt="" />
+    ? <img className="app-user__avatar app-user__avatar--photo" src={photoObjectUrl} alt="" loading="lazy" decoding="async" />
     : <span className="app-user__avatar">{initials}</span>;
   // I-06: the idle limit is the platform security policy value; 30 minutes until it is read.
   const [idleLimitMs, setIdleLimitMs] = useState(SESSION_IDLE_LIMIT_MS);
@@ -465,6 +466,7 @@ export default function AppLayout() {
           <img
             src={tenantLogoUrl}
             alt="Institution logo"
+            decoding="async"
             style={{ maxHeight: "var(--space-6)", maxWidth: "96px", objectFit: "contain", marginLeft: "auto" }}
           />
         )}

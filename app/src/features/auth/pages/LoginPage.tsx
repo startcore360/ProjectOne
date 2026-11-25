@@ -8,6 +8,7 @@ import { clearLogoutReason, getLogoutReason } from "../../../services/logoutNoti
 import { authService } from "../../../services/modules/authService";
 import { AuthenticatorSetup, type PendingEnrolment } from "../components/AuthenticatorSetup";
 import { BackupCodes } from "../components/BackupCodes";
+import { buildSharedLandingUrl, isSharedLandingHost, isTunnelHost } from "../../../lib/tenantHost";
 
 const LOGIN_DRAFT_KEY = "edu360_login_draft";
 
@@ -411,6 +412,14 @@ export default function LoginPage() {
           <span aria-hidden="true">◆</span>Your access follows your institution’s roles and
           permissions. Never share your password.
         </p>
+        {typeof window !== "undefined" &&
+          (isTunnelHost(window.location.hostname) || !isSharedLandingHost(window.location.hostname)) && (
+          <div className="auth-options" style={{ justifyContent: "center", marginTop: "var(--space-3)" }}>
+            <a href={buildSharedLandingUrl(window.location)} className="app-text-link">
+              Not your institution? Switch institution
+            </a>
+          </div>
+        )}
       </section>
       <footer className="auth-footer">
         EDU 360 <span>·</span> One Platform. Every Institution. One Connected Ecosystem.

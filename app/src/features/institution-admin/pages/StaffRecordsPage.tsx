@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "./StaffRecordsPage.css";
 import {
@@ -31,6 +31,37 @@ function humanize(value: string) {
 }
 const today = () => getLocalDateString();
 
+interface StaffRecordListItemProps {
+  person: StaffProfile;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+}
+
+const StaffRecordListItem = memo(function StaffRecordListItem({
+  person,
+  isSelected,
+  onSelect,
+}: StaffRecordListItemProps) {
+  return (
+    <div role="listitem">
+      <button
+        type="button"
+        aria-pressed={isSelected}
+        className={`app-record-item ${isSelected ? "is-selected" : ""}`}
+        onClick={() => onSelect(person.id)}
+      >
+        <span className="staff-record-list__copy">
+          <strong>{person.fullName}</strong>
+          <small>{person.staffCode} · {humanize(person.employmentStatus)}</small>
+        </span>
+        <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>
+          {humanize(person.employmentStatus)}
+        </Badge>
+      </button>
+    </div>
+  );
+});
+
 export default function StaffRecordsPage() {
   const navigate = useNavigate();
   const { staffId } = useParams<{ staffId: string }>();
@@ -46,6 +77,10 @@ export default function StaffRecordsPage() {
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [listError, setListError] = useState("");
   const [selected, setSelected] = useState<StaffProfile | null>(null);
+
+  const handleSelectStaff = useCallback((id: string) => {
+    navigate(`/university/staff/${id}`);
+  }, [navigate]);
   const [etag, setEtag] = useState("");
   const [assignments, setAssignments] = useState<StaffAssignment[]>([]);
   const [documents, setDocuments] = useState<StaffDocument[]>([]);
@@ -73,6 +108,7 @@ export default function StaffRecordsPage() {
   });
   const [savingService, setSavingService] = useState(false);
   const [newStaffCreds, setNewStaffCreds] = useState<ProvisionedUserCredentials | null>(null);
+  const latestStaffIdRef = useRef<string | null>(staffId ?? null);
 
   const loadDirectory = useCallback(async (search: string) => {
     if (!tenantId) return;
@@ -92,6 +128,7 @@ export default function StaffRecordsPage() {
 
   const loadProfile = useCallback(async (id: string) => {
     if (!tenantId) return;
+    latestStaffIdRef.current = id;
     setDetailLoading(true);
     setDetailError("");
     try {
@@ -101,6 +138,7 @@ export default function StaffRecordsPage() {
         staffService.listDocuments(tenantId, id),
         staffService.listServiceRecords(tenantId, id),
       ]);
+      if (latestStaffIdRef.current !== id) return;
       setSelected(profile.data);
       setEtag(profile.etag || `"${profile.data.version}"`);
       setProfileDraft({
@@ -114,9 +152,12 @@ export default function StaffRecordsPage() {
       setDocuments(documentRows);
       setRecords(serviceRows);
     } catch (error) {
+      if (latestStaffIdRef.current !== id) return;
       setDetailError(getApiErrorMessage(error));
     } finally {
-      setDetailLoading(false);
+      if (latestStaffIdRef.current === id) {
+        setDetailLoading(false);
+      }
     }
   }, [tenantId]);
 
@@ -125,9 +166,14 @@ export default function StaffRecordsPage() {
   }, [tenantId, staffId, loadDirectory]);
 
   useEffect(() => {
+    latestStaffIdRef.current = staffId ?? null;
     if (staffId) {
       setSelected(null);
       void loadProfile(staffId);
+    } else {
+      setSelected(null);
+      setDetailError("");
+      setDetailLoading(false);
     }
   }, [staffId, loadProfile]);
 
@@ -295,15 +341,12 @@ export default function StaffRecordsPage() {
               </div>
               <div className="staff-record-list" role="list" aria-label="Staff directory">
                 {staff.slice((directoryPage - 1) * directoryPageSize, directoryPage * directoryPageSize).map((person) => (
-                  <div key={person.id} role="listitem">
-                    <button type="button"
-                      aria-pressed={selected?.id === person.id}
-                      className={`app-record-item ${selected?.id === person.id ? "is-selected" : ""}`}
-                      onClick={() => navigate(`/university/staff/${person.id}`)}>
-                      <span className="staff-record-list__copy"><strong>{person.fullName}</strong><small>{person.staffCode} · {humanize(person.employmentStatus)}</small></span>
-                      <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>{humanize(person.employmentStatus)}</Badge>
-                    </button>
-                  </div>
+                  <StaffRecordListItem
+                    key={person.id}
+                    person={person}
+                    isSelected={selected?.id === person.id}
+                    onSelect={handleSelectStaff}
+                  />
                 ))}
               </div>
               {staff.length > directoryPageSize && (

@@ -1,6 +1,6 @@
 import api from "./axios";
 import { store } from "../store";
-import { clearUser } from "../store/slices/authSlice";
+import { clearAllSessionState } from "./sessionCleanup";
 import { authService } from "./modules/authService";
 import { getLogoutReason, setLogoutReason } from "./logoutNotice";
 import { clearTokens, getRefreshToken, setTokens } from "./tokenStorage";
@@ -18,7 +18,7 @@ export const setupAxiosInterceptors = () => {
   const signOutLocally = () => {
     if (!getLogoutReason()) setLogoutReason("Your session has ended. Please sign in again.");
     clearTokens();
-    store.dispatch(clearUser());
+    clearAllSessionState(store.dispatch);
     if (window.location.pathname !== "/login") window.location.replace("/login");
   };
 
@@ -48,15 +48,17 @@ export const setupAxiosInterceptors = () => {
       const requestPath = (original?.url ?? "").split("?")[0].replace(/\/+$/, "");
       const isRefreshRequest = requestPath.endsWith("/auth/refresh");
       const isLoginRequest = requestPath.endsWith("/auth/login");
+      const isPublicRequest = requestPath.startsWith("/public/") || requestPath === "/public" || requestPath.includes("/api/public/");
 
       // A rejected refresh request must never trigger another refresh attempt.
-      // Login failures are credential errors, not expired-session events.
+      // Login failures and public landing requests are not expired-session events.
       if (
         error?.response?.status === 401 &&
         original &&
         !original._retried &&
         !isRefreshRequest &&
-        !isLoginRequest
+        !isLoginRequest &&
+        !isPublicRequest
       ) {
         original._retried = true;
         const newToken = await refreshAccessToken();

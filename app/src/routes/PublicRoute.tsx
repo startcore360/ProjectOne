@@ -5,7 +5,7 @@ import { useAppSelector } from "../store/hooks";
 // visitors, like the login page. If someone is already signed in and tries
 // to visit one of these pages, it redirects them to the dashboard instead.
 export default function PublicRoute() {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   return !isAuthenticated ? <Outlet /> : <Navigate to="/" replace />;
 }
