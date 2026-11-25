@@ -24,7 +24,7 @@ CREATE TABLE app.exam_cycle (
     CONSTRAINT fk_exam_cycle_tenant FOREIGN KEY (tenant_id) REFERENCES app.tenant_local(tenant_id) ON DELETE RESTRICT,
     CONSTRAINT fk_exam_cycle_institution FOREIGN KEY (tenant_id, institution_id) REFERENCES app.institution(tenant_id, institution_id) ON DELETE RESTRICT,
     CONSTRAINT fk_exam_cycle_session FOREIGN KEY (tenant_id, academic_session_id) REFERENCES app.academic_session(tenant_id, academic_session_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_exam_cycle_semester FOREIGN KEY (tenant_id, semester_id) REFERENCES app.semester(tenant_id, semester_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_exam_cycle_semester FOREIGN KEY (tenant_id, institution_id, semester_id) REFERENCES app.semester(tenant_id, institution_id, semester_id) ON DELETE RESTRICT,
     CONSTRAINT fk_exam_cycle_creator FOREIGN KEY (tenant_id, created_by) REFERENCES app.user_account(tenant_id, user_account_id) ON DELETE RESTRICT,
     CONSTRAINT ck_exam_cycle_name CHECK (char_length(btrim(cycle_name)) BETWEEN 1 AND 120),
     CONSTRAINT ck_exam_cycle_type CHECK (cycle_type IN ('INTERNAL','MID_TERM','FINAL_SEMESTER')),
@@ -60,6 +60,36 @@ CREATE TABLE app.exam_schedule (
     CONSTRAINT uq_exam_schedule_course UNIQUE (tenant_id, exam_cycle_id, course_offering_id)
 );
 CREATE INDEX ix_exam_schedule_date ON app.exam_schedule(tenant_id, exam_cycle_id, exam_date, start_time);
+
+CREATE OR REPLACE FUNCTION app.fn_exam_schedule_scope_guard()
+RETURNS trigger LANGUAGE plpgsql AS $
+DECLARE v_institution_id uuid; v_semester_id uuid; v_start date; v_end date;
+BEGIN
+    SELECT institution_id, semester_id, start_date, end_date
+      INTO v_institution_id, v_semester_id, v_start, v_end
+      FROM app.exam_cycle
+     WHERE tenant_id = NEW.tenant_id AND exam_cycle_id = NEW.exam_cycle_id;
+    IF v_institution_id IS NULL THEN
+        RAISE EXCEPTION 'EXAM_CYCLE_NOT_FOUND' USING ERRCODE = '23503';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM app.course_offering co
+         WHERE co.tenant_id = NEW.tenant_id
+           AND co.course_offering_id = NEW.course_offering_id
+           AND co.institution_id = v_institution_id
+           AND co.semester_id = v_semester_id
+    ) THEN
+        RAISE EXCEPTION 'EXAM_COURSE_SCOPE_MISMATCH' USING ERRCODE = '23514';
+    END IF;
+    IF NEW.exam_date < v_start OR NEW.exam_date > v_end THEN
+        RAISE EXCEPTION 'EXAM_DATE_OUTSIDE_CYCLE' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$;
+CREATE TRIGGER trg_exam_schedule_scope_guard
+    BEFORE INSERT OR UPDATE ON app.exam_schedule
+    FOR EACH ROW EXECUTE FUNCTION app.fn_exam_schedule_scope_guard();
 
 -- Room collisions are rejected transactionally, independently of UI validation.
 DO $
@@ -203,9 +233,9 @@ CREATE TABLE app.report_card (
     row_version integer NOT NULL DEFAULT 1,
     CONSTRAINT pk_report_card PRIMARY KEY (tenant_id, report_card_id),
     CONSTRAINT fk_report_card_institution FOREIGN KEY (tenant_id, institution_id) REFERENCES app.institution(tenant_id, institution_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_report_card_student FOREIGN KEY (tenant_id, student_profile_id) REFERENCES app.student_profile(tenant_id, student_profile_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_report_card_student FOREIGN KEY (tenant_id, institution_id, student_profile_id) REFERENCES app.student_profile(tenant_id, institution_id, student_profile_id) ON DELETE RESTRICT,
     CONSTRAINT fk_report_card_session FOREIGN KEY (tenant_id, academic_session_id) REFERENCES app.academic_session(tenant_id, academic_session_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_report_card_semester FOREIGN KEY (tenant_id, semester_id) REFERENCES app.semester(tenant_id, semester_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_report_card_semester FOREIGN KEY (tenant_id, institution_id, semester_id) REFERENCES app.semester(tenant_id, institution_id, semester_id) ON DELETE RESTRICT,
     CONSTRAINT fk_report_card_creator FOREIGN KEY (tenant_id, created_by) REFERENCES app.user_account(tenant_id, user_account_id) ON DELETE RESTRICT,
     CONSTRAINT uq_report_card_student_term UNIQUE (tenant_id, student_profile_id, semester_id),
     CONSTRAINT ck_report_card_status CHECK (status IN ('DRAFT','MODERATED','PUBLISHED')),
