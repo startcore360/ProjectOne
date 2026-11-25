@@ -1,6 +1,129 @@
 -- T9 / M16. PO-T05: ICC and Principal only; accused and immediate HOD always denied.
 -- The zero-argument fn_complaint_guard() trigger from 02_rules.sql is intentionally preserved.
 BEGIN;
+
+-- T9 action catalogue extension. Action numbers continue after the authoritative seeded
+-- sql/05_ref_data.sql catalogue (highest seeded action_no: 282). Generic COMPLAINT_* actions
+-- and their grants are intentionally untouched.
+INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_version,requires_two_step_login,is_staff)
+VALUES ('INTERNAL_COMPLAINTS_COMMITTEE','Internal Complaints Committee','COLLEGE','4.1-T9',true,true)
+ON CONFLICT (role_code) DO NOTHING;
+
+INSERT INTO ref.action_catalog
+ (action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in)
+VALUES
+ ('ID_CARD_ISSUE',283,'Identity cards',1,'Issue a student or staff identity card',false,'Personal – Create / edit','4.1-T9'),
+ ('ID_CARD_REPLACE',284,'Identity cards',1,'Review and process a lost or damaged identity card replacement',false,'Personal – Correct','4.1-T9'),
+ ('ID_CARD_TEMPLATE_MANAGE',285,'Identity cards',1,'Create and maintain institution identity card templates',false,'Personal – Create / edit','4.1-T9'),
+ ('ID_CARD_REVOKE',286,'Identity cards',1,'Revoke an identity card issuance',true,'Personal – Correct','4.1-T9'),
+ ('CERTIFICATE_TEMPLATE_MANAGE',287,'Certificates',1,'Create and maintain official certificate templates',false,'Personal – Create / edit','4.1-T9'),
+ ('CERTIFICATE_REVOKE',288,'Certificates',1,'Revoke an issued official certificate',true,'Personal – Correct','4.1-T9'),
+ ('DISCIPLINARY_INCIDENT_VIEW',289,'Disciplinary',1,'View institution disciplinary incident records',false,'Personal – View','4.1-T9'),
+ ('DISCIPLINARY_INCIDENT_MANAGE',290,'Disciplinary',1,'Record and update institution disciplinary incidents',false,'Personal – Create / edit','4.1-T9'),
+ ('GRIEVANCE_CASE_SUBMIT',291,'Confidential grievances',1,'Submit a named or anonymous grievance without access to case records',false,'Personal – Create (confidential submission)','4.1-T9'),
+ ('GRIEVANCE_CASE_VIEW',292,'Confidential grievances',1,'View confidential ICC grievance cases under PO-T05',false,'Personal – View (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_CASE_ASSIGN',293,'Confidential grievances',1,'Assign a confidential grievance case to an investigator',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_HEARING_MANAGE',294,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_CASE_RESOLVE',295,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_EVIDENCE_VIEW',296,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9')
+ON CONFLICT (action_code) DO NOTHING;
+
+-- Only the ICC and the two Principal roles receive confidential case access or case-management
+-- actions. Ordinary grievance submission is a separate action available to tenant-side roles.
+WITH pairs(role_code,action_code,limited_to) AS (
+ VALUES
+ ('RECORDS_OFFICER','ID_CARD_ISSUE','Own institution'),
+ ('COLLEGE_ADMIN','ID_CARD_ISSUE','Own institution'),
+ ('SCHOOL_ADMIN','ID_CARD_ISSUE','Own institution'),
+ ('PRINCIPAL_COLLEGE','ID_CARD_ISSUE','Own institution'),
+ ('SCHOOL_PRINCIPAL','ID_CARD_ISSUE','Own institution'),
+ ('RECORDS_OFFICER','ID_CARD_REPLACE','Own institution'),
+ ('COLLEGE_ADMIN','ID_CARD_REPLACE','Own institution'),
+ ('SCHOOL_ADMIN','ID_CARD_REPLACE','Own institution'),
+ ('PRINCIPAL_COLLEGE','ID_CARD_REPLACE','Own institution'),
+ ('SCHOOL_PRINCIPAL','ID_CARD_REPLACE','Own institution'),
+ ('COLLEGE_ADMIN','ID_CARD_TEMPLATE_MANAGE','Own institution'),
+ ('SCHOOL_ADMIN','ID_CARD_TEMPLATE_MANAGE','Own institution'),
+ ('PRINCIPAL_COLLEGE','ID_CARD_TEMPLATE_MANAGE','Own institution'),
+ ('SCHOOL_PRINCIPAL','ID_CARD_TEMPLATE_MANAGE','Own institution'),
+ ('PRINCIPAL_COLLEGE','ID_CARD_REVOKE','Own institution'),
+ ('SCHOOL_PRINCIPAL','ID_CARD_REVOKE','Own institution'),
+ ('COLLEGE_ADMIN','CERTIFICATE_TEMPLATE_MANAGE','Own institution'),
+ ('SCHOOL_ADMIN','CERTIFICATE_TEMPLATE_MANAGE','Own institution'),
+ ('PRINCIPAL_COLLEGE','CERTIFICATE_TEMPLATE_MANAGE','Own institution'),
+ ('SCHOOL_PRINCIPAL','CERTIFICATE_TEMPLATE_MANAGE','Own institution'),
+ ('PRINCIPAL_COLLEGE','CERTIFICATE_REVOKE','Own institution'),
+ ('SCHOOL_PRINCIPAL','CERTIFICATE_REVOKE','Own institution'),
+ ('PRINCIPAL_COLLEGE','DISCIPLINARY_INCIDENT_VIEW','Own institution'),
+ ('SCHOOL_PRINCIPAL','DISCIPLINARY_INCIDENT_VIEW','Own institution'),
+ ('COLLEGE_ADMIN','DISCIPLINARY_INCIDENT_VIEW','Own institution'),
+ ('SCHOOL_ADMIN','DISCIPLINARY_INCIDENT_VIEW','Own institution'),
+ ('HEAD_OF_DEPARTMENT','DISCIPLINARY_INCIDENT_VIEW','Own department'),
+ ('PRINCIPAL_COLLEGE','DISCIPLINARY_INCIDENT_MANAGE','Own institution'),
+ ('SCHOOL_PRINCIPAL','DISCIPLINARY_INCIDENT_MANAGE','Own institution'),
+ ('COLLEGE_ADMIN','DISCIPLINARY_INCIDENT_MANAGE','Own institution'),
+ ('SCHOOL_ADMIN','DISCIPLINARY_INCIDENT_MANAGE','Own institution'),
+ ('HEAD_OF_DEPARTMENT','DISCIPLINARY_INCIDENT_MANAGE','Own department'),
+ ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_CASE_VIEW','Own institution; PO-T05; accused and immediate HOD excluded'),
+ ('PRINCIPAL_COLLEGE','GRIEVANCE_CASE_VIEW','Own institution; PO-T05; accused and immediate HOD excluded'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_CASE_VIEW','Own institution; PO-T05; accused and immediate HOD excluded'),
+ ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_CASE_ASSIGN','Own institution; PO-T05'),
+ ('PRINCIPAL_COLLEGE','GRIEVANCE_CASE_ASSIGN','Own institution; PO-T05'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_CASE_ASSIGN','Own institution; PO-T05'),
+ ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_HEARING_MANAGE','Own institution; PO-T05'),
+ ('PRINCIPAL_COLLEGE','GRIEVANCE_HEARING_MANAGE','Own institution; PO-T05'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_HEARING_MANAGE','Own institution; PO-T05'),
+ ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_CASE_RESOLVE','Own institution; PO-T05'),
+ ('PRINCIPAL_COLLEGE','GRIEVANCE_CASE_RESOLVE','Own institution; PO-T05'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_CASE_RESOLVE','Own institution; PO-T05'),
+ ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05'),
+ ('PRINCIPAL_COLLEGE','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05')
+), submitters AS (
+ SELECT role_code,'GRIEVANCE_CASE_SUBMIT'::text AS action_code,
+        'Submit own named or anonymous grievance only; no case-list or case-detail access'::text AS limited_to
+ FROM ref.standard_role
+ WHERE role_level IN ('TENANT','UNIVERSITY','COLLEGE','SCHOOL','EXTERNAL')
+), all_pairs AS (
+ SELECT * FROM pairs UNION ALL SELECT * FROM submitters
+), missing AS (
+ SELECT p.* FROM all_pairs p
+ WHERE NOT EXISTS (
+  SELECT 1 FROM ref.standard_role_action x
+  WHERE x.role_code=p.role_code AND x.action_code=p.action_code
+)
+), numbered AS (
+ SELECT COALESCE((SELECT max(standard_role_action_id) FROM ref.standard_role_action),0)
+        + row_number() OVER (ORDER BY role_code,action_code) AS id,
+        role_code,action_code,limited_to
+ FROM missing
+)
+INSERT INTO ref.standard_role_action(standard_role_action_id,role_code,action_code,limited_to)
+SELECT id,role_code,action_code,limited_to FROM numbered
+ON CONFLICT (standard_role_action_id) DO NOTHING;
+
+-- Bring already-provisioned standard Principal/admin/records/HOD role definitions up to date.
+-- Newly assigned ICC roles copy the same standard-role template through RoleAssignmentService.
+INSERT INTO app.role_action
+ (tenant_id,role_action_id,role_definition_id,action_code,created_by,updated_by)
+SELECT rd.tenant_id,gen_random_uuid(),rd.role_definition_id,sra.action_code,rd.created_by,rd.created_by
+FROM app.role_definition rd
+JOIN ref.standard_role_action sra ON sra.role_code=rd.base_standard_role
+WHERE rd.role_origin='STANDARD'
+ AND sra.action_code IN (
+  'ID_CARD_ISSUE','ID_CARD_REPLACE','ID_CARD_TEMPLATE_MANAGE','ID_CARD_REVOKE',
+  'CERTIFICATE_TEMPLATE_MANAGE','CERTIFICATE_REVOKE',
+  'DISCIPLINARY_INCIDENT_VIEW','DISCIPLINARY_INCIDENT_MANAGE',
+  'GRIEVANCE_CASE_SUBMIT','GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN',
+  'GRIEVANCE_HEARING_MANAGE','GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW'
+ )
+ AND NOT EXISTS (
+  SELECT 1 FROM app.role_action existing
+  WHERE existing.tenant_id=rd.tenant_id
+   AND existing.role_definition_id=rd.role_definition_id
+   AND existing.action_code=sra.action_code
+ );
+
 CREATE TABLE app.disciplinary_incident (
  tenant_id uuid NOT NULL,disciplinary_incident_id uuid NOT NULL,institution_id uuid NOT NULL,
  student_id uuid NOT NULL,reported_by_user_id uuid NOT NULL,incident_date date NOT NULL,
