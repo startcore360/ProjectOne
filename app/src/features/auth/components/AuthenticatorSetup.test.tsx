@@ -8,7 +8,7 @@ const enrolment = { enrolmentId: "e1", qrCode: "iVBORw0KGgo=", secret: "gezd gnb
 describe("authenticatorLink", () => {
   it("builds the standard otpauth link with the realm's code settings", () => {
     const link = authenticatorLink("gezd gnbv gy3t qojq", "owner@edu360-platform.local");
-    expect(link.startsWith("otpauth://totp/EDU%20360%3Aowner%40edu360-platform.local?")).toBe(true);
+    expect(link.startsWith("otpauth://totp/EDU%20360:owner%40edu360-platform.local?")).toBe(true);
     const params = new URL(link.replace("otpauth://", "https://")).searchParams;
     expect(params.get("secret")).toBe("GEZDGNBVGY3TQOJQ");
     expect(params.get("issuer")).toBe("EDU 360");

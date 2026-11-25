@@ -1,12 +1,14 @@
 import { store } from "../store";
 import { clearUser, setUser, type AuthUser } from "../store/slices/authSlice";
 import { setPlatformPermissions } from "../store/slices/platformPermissionsSlice";
+import { clearAllSessionState } from "./sessionCleanup";
 import { clearTenantPermissions } from "../store/slices/tenantPermissionsSlice";
 import { tenantPermissionsService } from "../features/profile/api/tenantPermissionsService";
 import { authService, type AuthUserResponse } from "./modules/authService";
 import { setLogoutReason } from "./logoutNotice";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./tokenStorage";
 import { clearTrialExpired } from "./trialNotice";
+import { rememberInstitutionOnLoginSuccess } from "../lib/tenantHost";
 
 const toAuthUser = (data: AuthUserResponse): AuthUser => ({
   id: data.id, displayName: data.displayName, tenantId: data.tenantId,
@@ -22,6 +24,9 @@ export const login = async (email: string, password: string, totp?: string) => {
   store.dispatch(setUser(user));
   store.dispatch(clearTenantPermissions());
   if (user.tenantId && !user.platformRole) await tenantPermissionsService.reload();
+  if (typeof window !== "undefined") {
+    rememberInstitutionOnLoginSuccess(window.location, typeof document !== "undefined" ? document.cookie : "");
+  }
   return user;
 };
 
@@ -33,9 +38,7 @@ export const logout = async () => {
   finally {
     clearTokens();
     clearTrialExpired();
-    store.dispatch(clearUser());
-    store.dispatch(setPlatformPermissions(null));
-    store.dispatch(clearTenantPermissions());
+    clearAllSessionState(store.dispatch);
     window.location.replace("/login");
   }
 };
@@ -83,5 +86,8 @@ export const changePassword = async (currentPassword: string, newPassword: strin
   store.dispatch(setUser(user));
   store.dispatch(clearTenantPermissions());
   if (user.tenantId && !user.platformRole) await tenantPermissionsService.reload();
+  if (typeof window !== "undefined") {
+    rememberInstitutionOnLoginSuccess(window.location, typeof document !== "undefined" ? document.cookie : "");
+  }
   return user;
 };

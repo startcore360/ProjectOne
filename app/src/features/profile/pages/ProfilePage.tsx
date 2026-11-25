@@ -52,9 +52,8 @@ function friendlyError(err: unknown, fallback: string): string {
 }
 
 export default function ProfilePage() {
-  const authUser = useAppSelector((state) => state.auth.user);
+  const isPlatform = useAppSelector((state) => !!state.auth.user?.platformRole);
   const dispatch = useAppDispatch();
-  const isPlatform = !!authUser?.platformRole;
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();

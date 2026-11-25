@@ -66,4 +66,10 @@ describe("TenantUsageModal", () => {
     expect(screen.getByText("Monthly Historical Records")).toBeInTheDocument();
     expect(screen.queryByText("API_CALLS")).not.toBeInTheDocument();
   });
+
+  it("fetches tenant usage only once per modal open", async () => {
+    service.getTenantUsage.mockResolvedValue({ data: [] } as never);
+    render(<TenantUsageModal isOpen onClose={vi.fn()} tenant={tenant} />);
+    await waitFor(() => expect(service.getTenantUsage).toHaveBeenCalledTimes(1));
+  });
 });

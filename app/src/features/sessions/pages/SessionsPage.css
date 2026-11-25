@@ -7,6 +7,14 @@
   gap: var(--space-6);
   min-width: 0;
 }
+.sessions-page .eds-page-header {
+  margin-bottom: 0;
+}
+@media (max-width: 640px) {
+  .sessions-page {
+    gap: var(--space-4);
+  }
+}
 .sessions-panel {
   padding: var(--space-6);
   border: 1px solid var(--color-border-divider);

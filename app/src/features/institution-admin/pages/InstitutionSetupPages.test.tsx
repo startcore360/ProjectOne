@@ -1096,7 +1096,7 @@ describe("Institution setup action screens", () => {
     (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [schoolClass] });
       if (url.endsWith(`/institutions/${INST_ID}/sections`)) return Promise.resolve({ data: [section] });
-      if (url.endsWith(`/institutions/${INST_ID}/academic-sessions`)) return Promise.resolve({ data: [{
+      if (url.includes(`/academic-sessions`)) return Promise.resolve({ data: [{
         academicSessionId: sessionId, sessionLabel: "2026-27", startDate: "2026-06-01", endDate: "2027-05-31", status: "ACTIVE",
       }] });
       return Promise.resolve({ data: [] });
@@ -1107,7 +1107,7 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("Section A");
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
-    fireEvent.change(screen.getByLabelText(/Section name/i), { target: { value: "B" } });
+    fireEvent.change(screen.getByLabelText(/Section name/i, { selector: "#edit-section-name" }), { target: { value: "B" } });
     fireEvent.change(screen.getByLabelText(/Section capacity/i, { selector: "#edit-section-capacity" }), { target: { value: "72" } });
     const saveButton = screen.getByRole("button", { name: /save changes/i });
     const editForm = saveButton.closest("form");

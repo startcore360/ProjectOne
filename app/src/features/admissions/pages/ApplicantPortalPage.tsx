@@ -3,7 +3,7 @@ import api from "../../../services/axios";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { useAppSelector } from "../../../store/hooks";
 import { PageHeader } from "../../../components/layout/PageHeader";
-import { Panel, Button, TextField, DateField, Notice } from "../../../design-system/components";
+import { Panel, Button, TextField, DateField, Notice, SelectField } from "../../../design-system/components";
 
 type Application={id:string;application_number:string;status:string;verification_status:string;fee_status:string;admission_fee_status?:string;defect_notes?:string};
 type Seat={id:string;status:string;quota_code:string;offered_at:string;admission_fee_status?:string};
@@ -32,13 +32,13 @@ export default function ApplicantPortalPage(){
  {error&&<Notice tone="danger">{error}</Notice>}{message&&<Notice tone="success">{message}</Notice>}
  {!application?<Panel title="Application registration"><form onSubmit={submit} className="app-form-grid">
  <TextField id="applicant-institution" label="Institution ID" required value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/>
- <div className="app-inline-actions"><Button type="button" variant="secondary" onClick={()=>void loadCycles()} disabled={!institutionId}>Load open cycles</Button><select aria-label="Admission cycle" value={cycleId} onChange={e=>setCycleId(e.target.value)} required><option value="">Select an open admission cycle</option>{cycles.map(c=><option key={c.id} value={c.id}>{c.cycle_name} · {c.start_date} to {c.end_date} · Fee {c.application_fee}</option>)}</select></div>
+ <div className="app-inline-actions" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}><Button type="button" variant="secondary" onClick={()=>void loadCycles()} disabled={!institutionId}>Load open cycles</Button><SelectField id="applicant-admission-cycle" label="Admission cycle" value={cycleId} onChange={e=>setCycleId(e.target.value)} required><option value="">Select an open admission cycle</option>{cycles.map(c=><option key={c.id} value={c.id}>{c.cycle_name} · {c.start_date} to {c.end_date} · Fee {c.application_fee}</option>)}</SelectField></div>
  <TextField id="applicant-name" label="Full name" required value={name} onChange={e=>setName(e.target.value)}/>
  <TextField id="applicant-email" label="Email" required value={email} onChange={e=>setEmail(e.target.value)}/>
  <TextField id="applicant-phone" label="Phone" required value={phone} onChange={e=>setPhone(e.target.value)}/>
  <DateField id="applicant-dob" label="Date of birth" value={dob} onChange={e=>setDob(e.target.value)}/>
  <TextField id="applicant-marks" label="Qualifying marks (%)" type="number" required value={marks} onChange={e=>setMarks(e.target.value)}/>
- <label htmlFor="applicant-category">Quota category</label><select id="applicant-category" value={category} onChange={e=>setCategory(e.target.value)}><option>GENERAL</option><option>MERIT</option><option>SPORTS</option><option>MANAGEMENT</option></select>
+ <SelectField id="applicant-category" label="Quota category" value={category} onChange={e=>setCategory(e.target.value)}><option>GENERAL</option><option>MERIT</option><option>SPORTS</option><option>MANAGEMENT</option></SelectField>
  <Button type="submit" busy={busy} disabled={!tenantId||!institutionId||!cycleId||!name||!email||!phone||!marks}>Register application</Button>
  </form></Panel>:<><Panel title="Application status"><p><strong>{application.application_number}</strong> · {application.status}</p><p>Verification: {application.verification_status} · Application fee: {application.fee_status} · Admission fee: {application.admission_fee_status??"PENDING"}</p>{application.defect_notes&&<Notice tone="warning">{application.defect_notes}</Notice>}<div className="app-inline-actions"><Button variant="secondary" onClick={()=>void refresh()} busy={busy}>Refresh status</Button>{application.verification_status==="DEFECTIVE"&&<Button onClick={()=>void resubmit()} busy={busy}>Resubmit corrections</Button>}</div></Panel>
  <Panel title="Seat offers">{seats.length===0?<p>No seat offer is available yet.</p>:seats.map(seat=><article key={seat.id} className="app-list-row"><div><strong>{seat.quota_code} quota</strong><p>{seat.status} · {seat.admission_fee_status??"Admission fee pending"}</p></div>{seat.status==="OFFERED"&&<div className="app-inline-actions"><Button size="sm" onClick={()=>void decideSeat(seat.id,"ACCEPTED")} busy={busy}>Accept seat</Button><Button size="sm" variant="secondary" onClick={()=>void decideSeat(seat.id,"DECLINED")} busy={busy}>Decline</Button></div>}</article>)}</Panel>

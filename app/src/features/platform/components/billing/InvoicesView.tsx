@@ -24,9 +24,12 @@ import {
 import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
 import { getLocalDateString, getLocalMonthStart } from "../../../../utils/dateUtils";
+import { BillingEstimateShareModal } from "./BillingEstimateShareModal";
+import type { EstimateData, EstimateLineItem } from "./estimateExportUtils";
 
 function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoiceNumber?: string }) {
   const [open, setOpen] = useState(false);
+  const [alignLeft, setAlignLeft] = useState(() => typeof window !== "undefined" && window.innerWidth <= 640);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -38,6 +41,13 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spaceOnRight = window.innerWidth - rect.left;
+    setAlignLeft(window.innerWidth <= 640 || spaceOnRight >= 180 || rect.left < 200);
   }, [open]);
 
   useEffect(() => {
@@ -72,10 +82,11 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
 
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
-        className="eds-button eds-button--secondary eds-button--sm"
+        variant="secondary"
+        size="sm"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -83,17 +94,19 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
         style={{ minWidth: "32px", padding: "4px 8px" }}
       >
         ⋯
-      </button>
+      </Button>
       {open && (
         <div
           ref={menuRef}
           role="menu"
+          className="app-row-menu__dropdown"
           aria-label={invoiceNumber ? `Actions for invoice ${invoiceNumber}` : "Row actions"}
           tabIndex={-1}
           onKeyDown={handleKeyDown}
           style={{
             position: "absolute",
-            right: 0,
+            left: alignLeft ? 0 : "auto",
+            right: alignLeft ? "auto" : 0,
             top: "calc(100% + 4px)",
             zIndex: 50,
             background: "var(--color-bg-surface)",
@@ -101,6 +114,7 @@ function RowMenu({ children, invoiceNumber }: { children: React.ReactNode; invoi
             borderRadius: "var(--radius-md)",
             boxShadow: "var(--elevation-2)",
             minWidth: "160px",
+            maxWidth: "calc(100vw - 32px)",
             padding: "4px 0",
           }}
           onClick={() => {
@@ -205,7 +219,71 @@ export function InvoicesView() {
   const [applyingDiscount, setApplyingDiscount] = useState(false);
   const [discountError, setDiscountError] = useState("");
 
+  // Share & Export Estimate Modal
+  const [shareEstimate, setShareEstimate] = useState<EstimateData | null>(null);
+  const latestShareInvoiceIdRef = useRef<string | null>(null);
+  const loadDataReqIdRef = useRef(0);
+
+  const openInvoiceShare = async (inv: InvoiceItem) => {
+    latestShareInvoiceIdRef.current = inv.invoiceId;
+    let lines: EstimateLineItem[] = [];
+    try {
+      const resp = await platformOpsService.listInvoiceLines(inv.invoiceId);
+      if (latestShareInvoiceIdRef.current !== inv.invoiceId) return;
+      if (resp && resp.length > 0) {
+        lines = resp.map((l) => ({
+          description: l.description,
+          quantity: Number(l.quantity) || 1,
+          unitAmount: Number(l.unitAmount) || 0,
+          amount: Number(l.lineAmount) || 0,
+        }));
+      }
+    } catch {
+      // fallback if lines query fails
+    }
+    if (latestShareInvoiceIdRef.current !== inv.invoiceId) return;
+    if (!lines.length) {
+      lines = [
+        {
+          description: "Platform academic cloud subscription charge",
+          quantity: 1,
+          unitAmount: Number(inv.subtotalAmount) || Number(inv.totalAmount) || 0,
+          amount: Number(inv.subtotalAmount) || Number(inv.totalAmount) || 0,
+        },
+      ];
+    }
+    const tenant = tenants.find((t) => t.tenantId === inv.tenantId);
+    setShareEstimate({
+      title: `Tax Invoice · ${inv.invoiceNumber}`,
+      referenceNumber: inv.invoiceNumber,
+      institutionName: tenant ? tenant.tenantName : inv.tenantId,
+      recipientName: tenant ? `${tenant.tenantName} (${tenant.subdomain})` : inv.tenantId,
+      date: inv.periodEnd || new Date().toISOString().split("T")[0],
+      dueDate: inv.dueAt ? inv.dueAt.split("T")[0] : "Net 30 Days",
+      validUntil: inv.dueAt ? inv.dueAt.split("T")[0] : "Net 30 Days",
+      period: `${inv.periodStart} to ${inv.periodEnd}`,
+      currencySymbol: "₹",
+      currencyCode: "INR",
+      lines,
+      scope: {
+        planName: tenant?.planName || "Enterprise Academic Cloud Tier",
+        universityType: tenant?.tenantType ? String(tenant.tenantType).replaceAll("_", " ") : "Higher Education Institution",
+        students: tenant?.userLimit || 1000,
+        colleges: 1,
+        schools: 1,
+        staff: Math.round((tenant?.userLimit || 1000) * 0.1),
+        termMonths: 12,
+      },
+      subtotal: Number(inv.subtotalAmount) || Number(inv.totalAmount),
+      discount: inv.discountAmount && Number(inv.discountAmount) > 0 ? Number(inv.discountAmount) : undefined,
+      total: Number(inv.totalAmount),
+      statusBadge: inv.status,
+      preparedBy: "Accounts & Billing Desk",
+    });
+  };
+
   const loadData = useCallback(async () => {
+    const reqId = ++loadDataReqIdRef.current;
     setLoading(true);
     setLoadError("");
     setActionError("");
@@ -214,18 +292,24 @@ export function InvoicesView() {
         platformOpsService.listInvoices(),
         platformTenantService.getTenants(),
       ]);
+      if (loadDataReqIdRef.current !== reqId) return;
       setInvoices(invs);
       setTenants(tenantRes.data?.items ?? []);
-      if (tenantRes.data?.items?.length && !createDraft.tenantId) {
-        setCreateDraft((prev) => ({ ...prev, tenantId: tenantRes.data.items[0].tenantId }));
+      if (tenantRes.data?.items?.length) {
+        setCreateDraft((prev) =>
+          prev.tenantId ? prev : { ...prev, tenantId: tenantRes.data.items[0].tenantId }
+        );
       }
     } catch (err: unknown) {
+      if (loadDataReqIdRef.current !== reqId) return;
       const msg = err instanceof Error ? err.message : "Failed to load invoices";
       setLoadError(msg);
     } finally {
-      setLoading(false);
+      if (loadDataReqIdRef.current === reqId) {
+        setLoading(false);
+      }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -440,7 +524,7 @@ export function InvoicesView() {
     <div className="app-page">
       <PageHeader
         title="Invoices & Billing"
-        description="Tenant subscription invoicing, payment recording, overdue flagging and Product Owner discounts."
+        description="Education Driven by Unity · Tenant subscription invoicing, payment recording, overdue flagging and Product Owner discounts."
         actions={
           canManageInvoice && (
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
@@ -503,70 +587,59 @@ export function InvoicesView() {
       </div>
 
       <Panel title="Platform Invoices" description="Manage invoices across all tenants">
-        <div
-          className="app-toolbar"
-          style={{
-            display: "flex",
-            gap: "var(--space-3)",
-            marginBottom: "var(--space-4)",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center", flex: "1 1 320px" }}>
-            <SearchBox
-              value={query}
-              onChange={(val) => setQuery(val)}
-              placeholder="Search invoice number or tenant..."
-            />
-            {/* Filter Tabs */}
-            <div className="app-filter-tabs" role="group" aria-label="Filter invoices by status">
-              <button
-                type="button"
-                className={`app-filter-tab ${statusFilter === "All" ? "app-filter-tab--active" : ""}`}
-                onClick={() => setStatusFilter("All")}
-              >
-                All ({statusCounts.all})
-              </button>
-              <button
-                type="button"
-                className={`app-filter-tab ${statusFilter === "DRAFT" ? "app-filter-tab--active" : ""}`}
-                onClick={() => setStatusFilter("DRAFT")}
-              >
-                Draft ({statusCounts.draft})
-              </button>
-              <button
-                type="button"
-                className={`app-filter-tab ${statusFilter === "APPROVED" ? "app-filter-tab--active" : ""}`}
-                onClick={() => setStatusFilter("APPROVED")}
-              >
-                Approved ({statusCounts.approved})
-              </button>
-              <button
-                type="button"
-                className={`app-filter-tab ${statusFilter === "SENT" ? "app-filter-tab--active" : ""}`}
-                onClick={() => setStatusFilter("SENT")}
-              >
-                Sent ({statusCounts.sent})
-              </button>
-              <button
-                type="button"
-                className={`app-filter-tab ${statusFilter === "OVERDUE" ? "app-filter-tab--active" : ""}`}
-                onClick={() => setStatusFilter("OVERDUE")}
-              >
-                Overdue ({statusCounts.overdue})
-              </button>
-              <button
-                type="button"
-                className={`app-filter-tab ${statusFilter === "PAID" ? "app-filter-tab--active" : ""}`}
-                onClick={() => setStatusFilter("PAID")}
-              >
-                Paid ({statusCounts.paid})
-              </button>
-            </div>
+        <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center", padding: "0 var(--space-5) var(--space-3)", maxWidth: "100%", minWidth: 0, boxSizing: "border-box" }}>
+          <div className="app-filter-tabs" role="group" aria-label="Filter invoices by status" style={{ maxWidth: "100%", minWidth: 0 }}>
+            <button
+              type="button"
+              className={`app-filter-tab ${statusFilter === "All" ? "app-filter-tab--active" : ""}`}
+              onClick={() => setStatusFilter("All")}
+            >
+              All ({statusCounts.all})
+            </button>
+            <button
+              type="button"
+              className={`app-filter-tab ${statusFilter === "DRAFT" ? "app-filter-tab--active" : ""}`}
+              onClick={() => setStatusFilter("DRAFT")}
+            >
+              Draft ({statusCounts.draft})
+            </button>
+            <button
+              type="button"
+              className={`app-filter-tab ${statusFilter === "APPROVED" ? "app-filter-tab--active" : ""}`}
+              onClick={() => setStatusFilter("APPROVED")}
+            >
+              Approved ({statusCounts.approved})
+            </button>
+            <button
+              type="button"
+              className={`app-filter-tab ${statusFilter === "SENT" ? "app-filter-tab--active" : ""}`}
+              onClick={() => setStatusFilter("SENT")}
+            >
+              Sent ({statusCounts.sent})
+            </button>
+            <button
+              type="button"
+              className={`app-filter-tab ${statusFilter === "OVERDUE" ? "app-filter-tab--active" : ""}`}
+              onClick={() => setStatusFilter("OVERDUE")}
+            >
+              Overdue ({statusCounts.overdue})
+            </button>
+            <button
+              type="button"
+              className={`app-filter-tab ${statusFilter === "PAID" ? "app-filter-tab--active" : ""}`}
+              onClick={() => setStatusFilter("PAID")}
+            >
+              Paid ({statusCounts.paid})
+            </button>
           </div>
+        </div>
 
+        <div className="app-toolbar" style={{ maxWidth: "100%", minWidth: 0 }}>
+          <SearchBox
+            value={query}
+            onChange={(val) => setQuery(val)}
+            placeholder="Search invoice number or tenant..."
+          />
           {/* Hidden/accessible fallback for automated tests */}
           <label className="app-select-label" style={{ display: "none" }}>
             Status{" "}
@@ -634,6 +707,7 @@ export function InvoicesView() {
                 <td>
                   <RowMenu invoiceNumber={inv.invoiceNumber}>
                     <MenuAction onClick={() => void openInvoiceLines(inv)}>View lines</MenuAction>
+                    <MenuAction onClick={() => void openInvoiceShare(inv)}>Share Bill</MenuAction>
                     {inv.status === "DRAFT" && isProductOwner && canManageInvoice && (
                       <MenuAction onClick={() => handleApprove(inv)}>Approve</MenuAction>
                     )}
@@ -887,6 +961,20 @@ export function InvoicesView() {
         {lineInvoice && lineInvoice.status !== "DRAFT" && (
           <Notice tone="info">This invoice is read-only. Lines can only be changed while the invoice is DRAFT.</Notice>
         )}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--color-border-divider)" }}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              if (lineInvoice) void openInvoiceShare(lineInvoice);
+            }}
+          >
+            Share Bill
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setLineInvoice(null)}>
+            Close
+          </Button>
+        </div>
       </Modal>
 
       {/* Record Payment Modal */}
@@ -983,6 +1071,12 @@ export function InvoicesView() {
           </div>
         </form>
       </Modal>
+
+      <BillingEstimateShareModal
+        isOpen={!!shareEstimate}
+        onClose={() => setShareEstimate(null)}
+        estimate={shareEstimate}
+      />
     </div>
   );
 }

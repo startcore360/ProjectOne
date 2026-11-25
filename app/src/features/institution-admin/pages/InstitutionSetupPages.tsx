@@ -1499,8 +1499,8 @@ function EditStructureRecordModal({
 }
 
 export function AcademicStructurePage() {
-  const user = useAppSelector((state) => state.auth.user);
-  const tenantId = user?.tenantId;
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
   const [institutionId, setInstitutionId] = useState("");
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
@@ -1572,7 +1572,7 @@ export function AcademicStructurePage() {
       return;
     }
     const target = institutions.find((institution) => institution.institutionId === id);
-    const schoolContext = target?.institutionType === "SCHOOL" || user?.roleCode === "SCHOOL_ADMIN";
+    const schoolContext = target?.institutionType === "SCHOOL" || roleCode === "SCHOOL_ADMIN";
     setLoading(true);
     setError(null);
     try {
@@ -1929,7 +1929,7 @@ export function AcademicStructurePage() {
   };
 
   const selectedInst = institutions.find((i) => i.institutionId === institutionId);
-  const isSchool = selectedInst?.institutionType === "SCHOOL" || user?.roleCode === "SCHOOL_ADMIN";
+  const isSchool = selectedInst?.institutionType === "SCHOOL" || roleCode === "SCHOOL_ADMIN";
 
   return (
     <div className="app-page">

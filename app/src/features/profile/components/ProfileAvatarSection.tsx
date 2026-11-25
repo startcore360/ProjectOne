@@ -33,7 +33,7 @@ export function ProfileAvatarSection({
       {photoLoading ? (
         <span className="app-avatar app-avatar--loading" aria-hidden="true" />
       ) : photoObjectUrl ? (
-        <img className="app-avatar" src={photoObjectUrl} alt="" />
+        <img className="app-avatar" src={photoObjectUrl} alt="" loading="lazy" decoding="async" />
       ) : (
         <span className="app-avatar app-avatar--placeholder" aria-hidden="true">
           {initialsFor(displayName)}

@@ -64,9 +64,27 @@ public class SupportSessionService {
         var ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
         Instant now = Instant.now();
-        SupportAccessGrant grant = grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(ticketId, now)
+        SupportAccessGrant grant = grantRepository.findFirstByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNullOrderByGrantedAtDesc(ticketId, now)
+                .or(() -> grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(ticketId, now))
                 .filter(g -> ticket.getTenantId().equals(g.getTenantId()))
                 .orElseThrow(() -> new AccessDeniedException("SUPPORT_GRANT_REQUIRED"));
+
+        // Deduplicate: self-heal and withdraw older duplicate active grants for this ticket
+        try {
+            java.util.List<SupportAccessGrant> duplicateGrants = grantRepository
+                    .findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNullOrderByGrantedAtDesc(ticketId, now);
+            if (duplicateGrants != null) {
+                for (SupportAccessGrant oldGrant : duplicateGrants) {
+                    if (oldGrant != null && !grant.getSupportAccessGrantId().equals(oldGrant.getSupportAccessGrantId())) {
+                        oldGrant.setWithdrawnAt(now);
+                        oldGrant.setUpdatedAt(now);
+                        grantRepository.save(oldGrant);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            // best-effort cleanup
+        }
 
         Instant expiresAt = grant.getExpiresAt().isBefore(now.plusSeconds(3600))
                 ? grant.getExpiresAt() : now.plusSeconds(3600);

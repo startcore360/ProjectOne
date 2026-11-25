@@ -15,24 +15,330 @@
     <link
       rel="preload"
       as="style"
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap"
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap"
       rel="stylesheet"
       media="print"
       onload="this.media='all'"
     />
     <noscript>
       <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap"
         rel="stylesheet"
       />
     </noscript>
     <title>EDU 360</title>
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('edu360-theme');
+          var isDark = stored === 'dark' || (!stored && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var theme = isDark ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.style.backgroundColor = isDark ? '#141d1b' : '#f3f6f3';
+          document.documentElement.style.colorScheme = theme;
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', isDark ? '#141D1B' : '#F3F6F3');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      :root {
+        --initial-bg: #f3f6f3;
+        --initial-text: #1c302d;
+        --initial-brand: #2d6154;
+        --initial-spinner-track: rgba(45, 97, 84, 0.15);
+        --initial-spinner-ring: #2d6154;
+      }
+      [data-theme="dark"] {
+        --initial-bg: #141d1b;
+        --initial-text: #edf4ef;
+        --initial-brand: #a7d0ba;
+        --initial-spinner-track: rgba(167, 208, 186, 0.15);
+        --initial-spinner-ring: #a7d0ba;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --initial-bg: #141d1b;
+          --initial-text: #edf4ef;
+          --initial-brand: #a7d0ba;
+          --initial-spinner-track: rgba(167, 208, 186, 0.15);
+          --initial-spinner-ring: #a7d0ba;
+        }
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100%;
+        background-color: var(--initial-bg);
+        color: var(--initial-text);
+        font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      #root {
+        min-height: 100vh;
+        background-color: var(--initial-bg);
+      }
+      .initial-loader-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        width: 100%;
+        background: color-mix(in srgb, var(--initial-bg) 82%, transparent);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        box-sizing: border-box;
+        padding: 24px;
+      }
+      .initial-loader-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 16px;
+        min-width: 260px;
+        max-width: calc(100vw - 32px);
+        padding: 20px 24px;
+        border: 1px solid rgba(45, 97, 84, 0.14);
+        border-radius: 18px;
+        background: #ffffff;
+        box-shadow: 0 16px 48px rgba(28, 48, 45, 0.18);
+        box-sizing: border-box;
+      }
+      .edu360-initial-logo {
+        display: block;
+        width: clamp(96px, 28vw, 120px);
+        max-width: 100%;
+        height: auto;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.05));
+      }
+      .edu360-initial-logo .crescent { fill: url(#init-greenCrescent); }
+      .edu360-initial-logo .word-main { fill: url(#init-wordGreen); }
+      .edu360-initial-logo .tagline { fill: var(--initial-text); }
+      .edu360-initial-logo .accent-line { stroke: #63a57d; }
+      .edu360-initial-logo .pixel-dark { fill: #2d6154; }
+      .edu360-initial-logo .pixel-mid { fill: #23543f; }
+      .edu360-initial-logo .pixel-light { fill: #63a57d; }
+      .edu360-initial-logo .book-page-base { fill: url(#init-greenCrescent); }
+      .edu360-initial-logo .book-page-left { fill: #276953; }
+      .edu360-initial-logo .book-page-right { fill: #1c302d; }
+      .edu360-initial-logo .brand-type {
+        font-family: 'Manrope', Inter, Montserrat, -apple-system, sans-serif;
+        font-weight: 800;
+        letter-spacing: -2.4px;
+      }
+      .edu360-initial-logo .tag-type {
+        font-family: 'DM Sans', Inter, Montserrat, -apple-system, sans-serif;
+        font-size: 27px;
+        font-weight: 500;
+        letter-spacing: -0.45px;
+      }
+      [data-theme="dark"] .edu360-initial-logo .crescent { fill: #a7d0ba; }
+      [data-theme="dark"] .edu360-initial-logo .tagline { fill: #b8c8c2; }
+      [data-theme="dark"] .edu360-initial-logo .word-main { fill: #edf4ef; }
+      [data-theme="dark"] .edu360-initial-logo .accent-line { stroke: #a7d0ba; }
+      [data-theme="dark"] .edu360-initial-logo .panel-one-start { stop-color: #141d1b; }
+      [data-theme="dark"] .edu360-initial-logo .panel-one-end { stop-color: #63a57d; }
+      [data-theme="dark"] .edu360-initial-logo .word-gradient-start { stop-color: #edf4ef; }
+      [data-theme="dark"] .edu360-initial-logo .word-gradient-mid { stop-color: #a7d0ba; }
+      [data-theme="dark"] .edu360-initial-logo .word-gradient-end { stop-color: #63a57d; }
+      [data-theme="dark"] .initial-loader-content {
+        border-color: rgba(167, 208, 186, 0.16);
+        background: #1a2522;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .initial-loader-content {
+          border-color: rgba(167, 208, 186, 0.16);
+          background: #1a2522;
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+        }
+      }
+
+      .initial-loader-spinner-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .initial-loader-spinner {
+        width: 22px;
+        height: 22px;
+        border: 2.5px solid var(--initial-spinner-track);
+        border-top-color: var(--initial-spinner-ring);
+        border-radius: 50%;
+        animation: initial-spin 0.8s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+      }
+      .initial-loader-label {
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: var(--initial-text);
+        opacity: 0.85;
+      }
+      @keyframes initial-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .initial-loader-spinner {
+          animation-duration: 1.8s;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="initial-loader-wrapper" role="status" aria-label="Loading EDU 360">
+        <div class="initial-loader-content">
+          <svg class="edu360-logo edu360-initial-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 536 465" role="img" aria-label="EDU 360">
+            <defs>
+              <linearGradient id="init-greenCrescent" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#2f7d62" />
+                <stop offset="55%" stop-color="#23543f" />
+                <stop offset="100%" stop-color="#63a57d" />
+              </linearGradient>
+              <linearGradient id="init-panelOne" x1="0" y1="0" x2="1" y2="1">
+                <stop class="panel-one-start" offset="0%" stop-color="#2f7d62" />
+                <stop class="panel-one-end" offset="100%" stop-color="#1c302d" />
+              </linearGradient>
+              <linearGradient id="init-panelTwo" x1="0" y1="0" x2="1" y2="1">
+                <stop class="panel-two-start" offset="0%" stop-color="#23543f" />
+                <stop class="panel-two-end" offset="100%" stop-color="#2f7d62" />
+              </linearGradient>
+              <linearGradient id="init-panelThree" x1="0" y1="0" x2="1" y2="1">
+                <stop class="panel-three-start" offset="0%" stop-color="#63a57d" />
+                <stop class="panel-three-end" offset="100%" stop-color="#23543f" />
+              </linearGradient>
+              <linearGradient id="init-wordGreen" x1="0" y1="0" x2="1" y2="0">
+                <stop class="word-gradient-start" offset="0%" stop-color="#1c302d" />
+                <stop class="word-gradient-mid" offset="62%" stop-color="#23543f" />
+                <stop class="word-gradient-end" offset="100%" stop-color="#63a57d" />
+              </linearGradient>
+              <clipPath id="init-people-panel-clip" clipPathUnits="userSpaceOnUse">
+                <path d="M164 194 Q164 181 177 174 L214 153 Q229 145 229 161 L229 255 Q207 255 190 270 L164 291 Z" />
+              </clipPath>
+              <clipPath id="init-cap-panel-clip" clipPathUnits="userSpaceOnUse">
+                <path d="M235 151 Q235 139 247 132 L284 113 Q299 106 299 122 L299 257 Q277 263 263 282 L235 261 Z" />
+              </clipPath>
+              <clipPath id="init-analytics-panel-clip" clipPathUnits="userSpaceOnUse">
+                <path d="M305 112 Q305 101 317 96 L351 81 Q366 75 366 91 L366 202 Q342 205 326 222 L305 239 Z" />
+              </clipPath>
+            </defs>
+            <g class="emblem" transform="translate(0 10) scale(1 .78)">
+              <path
+                class="crescent"
+                d="M359 42 C310 13 249 27 202 58 C142 98 105 159 104 218 C102 285 139 339 197 360 C246 378 307 366 359 337 C326 376 275 397 222 397 C137 397 75 335 75 247 C75 153 137 69 225 43 C276 28 325 29 359 42 Z"
+              />
+              <path
+                d="M164 194 Q164 181 177 174 L214 153 Q229 145 229 161 L229 255 Q207 255 190 270 L164 291 Z"
+                fill="url(#init-panelOne)"
+              />
+              <path
+                d="M235 151 Q235 139 247 132 L284 113 Q299 106 299 122 L299 257 Q277 263 263 282 L235 261 Z"
+                fill="url(#init-panelTwo)"
+              />
+              <path
+                d="M305 112 Q305 101 317 96 L351 81 Q366 75 366 91 L366 202 Q342 205 326 222 L305 239 Z"
+                fill="url(#init-panelThree)"
+              />
+              <g
+                class="people-icon"
+                fill="#FFFFFF"
+                clip-path="url(#init-people-panel-clip)"
+              >
+                <circle cx="187" cy="185" r="5.2" />
+                <circle cx="201" cy="181" r="5.8" />
+                <circle cx="215" cy="185" r="5.2" />
+                <path d="M177 207 Q178 193 188 193 Q198 193 199 207 Z" />
+                <path d="M190 211 Q191 192 202 192 Q214 192 215 211 Z" />
+                <path d="M211 207 Q212 193 222 193 Q232 193 233 207 Z" />
+              </g>
+              <g
+                class="cap-icon"
+                fill="#FFFFFF"
+                clip-path="url(#init-cap-panel-clip)"
+              >
+                <path d="M243 174 L267 163 L291 174 L267 186 Z" />
+                <path d="M250 180 L267 188 L284 180 L284 194 L267 202 L250 194 Z" />
+                <path d="M289 176 L293 178 L293 194 L289 194 Z" />
+              </g>
+              <g
+                class="analytics-line"
+                fill="none"
+                stroke="#FFFFFF"
+                stroke-width="4.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                clip-path="url(#init-analytics-panel-clip)"
+              >
+                <path d="M319 158 L335 146 L345 150 L359 133" />
+                <path d="M350 133 L360 132 L358 142" />
+              </g>
+              <g
+                class="analytics-bars"
+                fill="#FFFFFF"
+                clip-path="url(#init-analytics-panel-clip)"
+              >
+                <rect x="318" y="168" width="8" height="18" />
+                <rect x="334" y="158" width="8" height="28" />
+                <rect x="350" y="148" width="8" height="38" />
+              </g>
+              <path
+                class="book-page book-page-base"
+                d="M151 292 C178 271 210 271 239 295 C249 303 257 314 263 324 C278 299 299 286 327 286 L397 286 C412 286 418 298 410 309 C405 316 396 320 385 320 L319 320 C294 320 276 331 263 349 C248 330 230 319 208 318 C187 317 168 323 150 333 C142 338 133 328 140 319 Z"
+              />
+              <path
+                class="book-page book-page-left"
+                d="M144 340 C182 320 218 323 263 351 C225 338 190 338 155 355 C145 360 137 347 144 340 Z"
+              />
+              <path
+                class="book-page book-page-right"
+                d="M263 351 C301 322 343 320 394 324 C345 330 302 337 263 365 C226 337 190 335 148 354 C190 343 226 343 263 351 Z"
+              />
+              <rect class="pixel-dark" x="374" y="81" width="25" height="25" rx="6" />
+              <rect class="pixel-dark" x="399" y="62" width="18" height="18" rx="5" />
+              <rect class="pixel-mid" x="417" y="87" width="22" height="22" rx="6" />
+              <rect class="pixel-light" x="395" y="111" width="22" height="22" rx="6" />
+            </g>
+            <text
+              class="brand-type word-main"
+              x="268"
+              y="407"
+              text-anchor="middle"
+              font-size="92"
+            >
+              EDU 360
+            </text>
+            <g class="tagline-group">
+              <path
+                class="accent-line"
+                d="M21 438 H57 M479 438 H515"
+                fill="none"
+                stroke-width="4"
+                stroke-linecap="round"
+              />
+              <text
+                class="tag-type tagline"
+                x="268"
+                y="447"
+                text-anchor="middle"
+              >
+                Education Driven by Unity
+              </text>
+            </g>
+          </svg>
+          <div class="initial-loader-spinner-bar">
+            <div class="initial-loader-spinner" aria-hidden="true"></div>
+            <div class="initial-loader-label">Loading EDU 360...</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

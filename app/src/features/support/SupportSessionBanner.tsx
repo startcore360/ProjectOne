@@ -1,4 +1,5 @@
 import { useSupportSession } from "./useSupportSession";
+import { Button } from "../../design-system/components";
 
 export function SupportSessionBanner() {
   const { session, isSupportSession, endSupportSession } = useSupportSession();
@@ -11,35 +12,32 @@ export function SupportSessionBanner() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: "16px",
-        padding: "12px 16px",
-        background: "#991b1b",
-        color: "#ffffff",
-        borderRadius: "8px",
-        margin: "12px 0",
+        gap: "var(--space-4)",
+        padding: "var(--space-3) var(--space-4)",
+        background: "var(--color-status-danger-fg)",
+        color: "var(--color-text-on-danger, #ffffff)",
+        borderRadius: "var(--radius-sm)",
+        margin: "var(--space-3) 0",
       }}
     >
       <div>
         <strong>READ-ONLY SUPPORT SESSION</strong>
-        <div style={{ fontSize: "13px" }}>
+        <div style={{ fontSize: "var(--fs-body-sm)" }}>
           Ticket {session.ticketNumber ?? "support"} · Ends {session.expiresAt ? new Date(session.expiresAt).toLocaleString() : "within one hour"}
         </div>
       </div>
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={endSupportSession}
         style={{
-          border: "1px solid #ffffff",
-          borderRadius: "6px",
-          padding: "7px 12px",
+          border: "1px solid var(--color-text-on-danger, #ffffff)",
+          color: "var(--color-text-on-danger, #ffffff)",
           background: "transparent",
-          color: "#ffffff",
-          fontWeight: 600,
-          cursor: "pointer",
         }}
       >
         End session
-      </button>
+      </Button>
     </div>
   );
 }

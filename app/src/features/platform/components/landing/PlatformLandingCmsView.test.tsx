@@ -1,0 +1,75 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { PlatformLandingCmsPage } from "./PlatformLandingCmsView";
+import { landingApi } from "../../../landing/api/landingApi";
+
+vi.mock("../../../landing/api/landingApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../landing/api/landingApi")>();
+  return {
+    ...actual,
+    landingApi: {
+      ...actual.landingApi,
+      getCmsOverview: vi.fn().mockResolvedValue({
+        config: {
+          configId: "cfg-1",
+          heroEyebrow: "Eyebrow",
+          heroTitle: "Title",
+          heroSubtitle: "Subtitle",
+          heroNote: "Note",
+          trustLabel: "Trust",
+          whyChooseJson: "[]",
+          roleBenefitsJson: "[]",
+          solutionsJson: "[]",
+          stepsJson: "[]",
+          contactEmail: "hello@edu360.example",
+          footerTagline: "Tagline",
+          heroLightMediaId: null,
+          heroDarkMediaId: null,
+          showcaseLightMediaId: null,
+          showcaseDarkMediaId: null,
+          rowVersion: 1,
+        },
+        testimonials: [],
+        directoryTenants: [
+          {
+            tenantId: "t-1",
+            tenantName: "Greenwood University",
+            subdomain: "greenwood",
+            tenantType: "UNIVERSITY",
+            state: "ACTIVE",
+            listedInDirectory: false,
+          },
+        ],
+      }),
+      listEnquiries: vi.fn().mockResolvedValue([]),
+      toggleDirectory: vi.fn().mockResolvedValue({
+        tenantId: "t-1",
+        tenantName: "Greenwood University",
+        subdomain: "greenwood",
+        tenantType: "UNIVERSITY",
+        state: "ACTIVE",
+        listedInDirectory: true,
+      }),
+    },
+  };
+});
+
+describe("PlatformLandingCmsPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("loads CMS overview and allows toggling tenant directory visibility", async () => {
+    render(<PlatformLandingCmsPage />);
+
+    expect(await screen.findByLabelText(/hero headline/i)).toHaveValue("Title");
+
+    fireEvent.click(screen.getByRole("tab", { name: /sign-in directory/i }));
+    expect(await screen.findByText("Greenwood University")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /show in dropdown/i }));
+    await waitFor(() => {
+      expect(landingApi.toggleDirectory).toHaveBeenCalledWith("t-1", true);
+    });
+  });
+});

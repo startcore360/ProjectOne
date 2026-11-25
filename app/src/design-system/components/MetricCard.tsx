@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { memo } from "react";
 import { Icon, type IconName } from "../../components/ui/Icon";
 
 export interface MetricCardProps {
@@ -17,13 +18,16 @@ export interface MetricCardProps {
 }
 
 export function getDeterministicSeries(label: string, finalVal: number): number[] {
+  if (!Number.isFinite(finalVal) || finalVal <= 0) {
+    return [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  }
   // Stable pseudo-random seed from label string
   let seed = label.split("").reduce((acc, c) => acc + c.charCodeAt(0), 23);
   const random = () => {
     seed = (seed * 9301 + 49297) % 233280;
     return seed / 233280;
   };
-  const val = Number.isFinite(finalVal) && finalVal > 0 ? finalVal : 12;
+  const val = finalVal;
   // Natural SaaS momentum factors: early dip, strong rally, brief pullback, surge to peak
   const factors = [0.62, 0.76, 0.70, 0.84, 0.79, 0.92, 0.88, 0.97, 1.0];
   return factors.map((factor) => {
@@ -50,7 +54,7 @@ function getSplinePath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-export function KpiSparkline({
+export const KpiSparkline = memo(function KpiSparkline({
   data,
   color = "var(--color-action-primary, #10b981)",
   height = 48,
@@ -70,7 +74,7 @@ export function KpiSparkline({
 
   const step = width / (values.length - 1);
   const points = values.map((val, idx) => {
-    const t = spread > 0 ? (val - rawMin) / spread : 0.5 + Math.sin(idx * 0.8) * 0.15;
+    const t = spread > 0 ? (val - rawMin) / spread : (rawMax > 0 ? 0.5 : 0);
     // Map t in [0, 1] to y in [height - 8, 8]
     const y = (height - 8) - t * (height - 18);
     return {
@@ -126,9 +130,9 @@ export function KpiSparkline({
       </svg>
     </div>
   );
-}
+});
 
-export function MetricCard({
+export const MetricCard = memo(function MetricCard({
   label,
   value,
   unit,
@@ -156,7 +160,7 @@ export function MetricCard({
   const sparklineData = sparkline ?? (showSparkline ? getDeterministicSeries(label, numericVal) : null);
 
   let autoTrendPct: number | null = null;
-  if (!trend && sparklineData && sparklineData.length >= 2) {
+  if (!trend && numericVal > 0 && sparklineData && sparklineData.length >= 2) {
     const first = sparklineData[0];
     const last = sparklineData[sparklineData.length - 1];
     if (first > 0 && last > 0 && first !== last) {
@@ -213,7 +217,7 @@ export function MetricCard({
       {contextText && <p className="kpi__context">{contextText}</p>}
     </div>
   );
-}
+});
 
 export const Metric = MetricCard;
 export const Kpi = MetricCard;

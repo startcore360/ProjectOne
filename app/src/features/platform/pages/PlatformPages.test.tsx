@@ -658,6 +658,38 @@ describe("Sprint 1 platform screens", () => {
     });
   });
 
+  it("lets a Product Owner reset another platform user's password and shows it once", async () => {
+    mockedApi.get.mockResolvedValue({
+      data: [
+        { platformUserId: "plt-1", fullName: "Me Myself", email: "me@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" },
+        { platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" },
+      ],
+    });
+    mockedApi.post.mockResolvedValue({
+      data: {
+        platformUserId: "plt-2",
+        fullName: "Priya Nair",
+        email: "priya@edu360.com",
+        platformRole: "PRODUCT_OWNER",
+        status: "ACTIVE",
+        mfaRequired: true,
+        createdAt: "2026-01-01T00:00:00Z",
+        tempPassword: "Reset-Temp-123!",
+      },
+    });
+    renderWithStore(<PlatformUsersPage />);
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset password" }));
+    expect(screen.getByText(/current password stops working immediately/i)).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset password" }).at(-1)!);
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith("/platform/platform-users/plt-2/password-reset");
+      expect(screen.getByDisplayValue("Reset-Temp-123!")).toBeInTheDocument();
+    });
+  });
+
   it("shows the plan catalogue", async () => {
     mockedApi.get.mockResolvedValue({
       data: [

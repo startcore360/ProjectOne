@@ -195,6 +195,40 @@ public class PlatformUserManagementService {
                 "PLATFORM_USER", platformUserId, PlatformAuditWriter.SUCCESS);
     }
 
+    @Transactional(transactionManager = "platformTransactionManager")
+    public PlatformUserResponse resetPlatformUserPassword(UUID platformUserId, PlatformPrincipal principal) {
+        if (platformUserId.equals(principal.platformUserId())) {
+            throw new UnauthorizedException("You can't reset your own platform password.");
+        }
+
+        PlatformUser user = platformUserRepository.findById(platformUserId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Platform user " + platformUserId + " was not found."));
+        if (user.getStatus() != PlatformUserStatus.ACTIVE) {
+            throw new BusinessRuleViolationException(
+                    "PLATFORM_USER_INACTIVE",
+                    "Reactivate this platform account before resetting its password.");
+        }
+        if (user.getIdentitySubject() == null || user.getIdentitySubject().isBlank()) {
+            throw new BusinessRuleViolationException(
+                    "PLATFORM_USER_NO_IDENTITY",
+                    "This platform account has no active Keycloak identity.");
+        }
+
+        String realm = keycloakProperties.getPlatformRealm();
+        String temporaryPassword = generateTemporaryPassword();
+        keycloakAdminClient.resetPassword(realm, user.getIdentitySubject(), temporaryPassword, true);
+        keycloakAdminClient.logoutUser(realm, user.getIdentitySubject());
+
+        auditWriter.record(principal, null, "PLATFORM_USER_PASSWORD_RESET", "UPDATE",
+                "PLATFORM_USER_MANAGE", "PLATFORM_USER", platformUserId, PlatformAuditWriter.SUCCESS);
+
+        return PlatformUserResponse.from(
+                user,
+                customRoleName(user.getPlatformRoleId()),
+                temporaryPassword);
+    }
+
     private static Map<String, Object> change(Object oldValue, Object newValue) {
         return Map.of("old", oldValue == null ? "" : oldValue, "new", newValue == null ? "" : newValue);
     }

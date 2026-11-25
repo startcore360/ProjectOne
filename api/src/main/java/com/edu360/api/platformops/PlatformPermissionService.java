@@ -41,6 +41,7 @@ public class PlatformPermissionService {
             Map.entry("BACKUP_STATUS_VIEW", OWNER_AND_ADMIN),
             Map.entry("PLATFORM_USER_MANAGE", OWNER),
             Map.entry("SECURITY_POLICY_SET", OWNER),
+            Map.entry("LANDING_CMS_MANAGE", OWNER_AND_ADMIN),
             Map.entry("DISCOUNT_APPLY", OWNER), // Rule [F-4]: Billing Manager denied
             Map.entry("INVOICE_MANAGE", Set.of(PlatformRole.BILLING_MANAGER, PlatformRole.PRODUCT_OWNER)),
             Map.entry("OVERDUE_FLAG", Set.of(PlatformRole.BILLING_MANAGER, PlatformRole.PRODUCT_OWNER)),

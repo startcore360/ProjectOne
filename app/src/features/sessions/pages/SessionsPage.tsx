@@ -12,9 +12,10 @@ import {
 } from "../../../design-system/components";
 import { clearTokens } from "../../../services/tokenStorage";
 import { useAppDispatch } from "../../../store/hooks";
-import { clearUser } from "../../../store/slices/authSlice";
+import { clearAllSessionState } from "../../../services/sessionCleanup";
 import { sessionsService, type SessionResponse } from "../api/sessionsService";
 import { SessionDeviceCard, activityStatus, deviceTitle } from "../components";
+import { Icon } from "../../../components/ui/Icon";
 import "./SessionsPage.css";
 
 // AUTH_DEVICES_MANAGE (Sign-in epic, Scope: Self): "see own active devices and log them out."
@@ -101,7 +102,7 @@ export default function SessionsPage() {
       return;
     }
     clearTokens();
-    dispatch(clearUser());
+    clearAllSessionState(dispatch);
     window.location.replace("/login");
   };
 
@@ -173,8 +174,9 @@ export default function SessionsPage() {
         description="Devices where you're signed in. Signing in again on the same browser replaces that browser's old session; your other devices stay signed in."
         actions={
           ready && sessions.length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={retry}>
-              Refresh
+            <Button variant="secondary" size="sm" onClick={retry} busy={loading}>
+              <Icon name="refresh" size={14} spin={loading} />
+              <span>Refresh</span>
             </Button>
           ) : undefined
         }

@@ -1,5 +1,45 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { profileService } from "../api/profileService";
+
+interface PhotoCacheEntry {
+  key: string;
+  objectUrl: string;
+}
+
+let cachedPhoto: PhotoCacheEntry | null = null;
+let pendingPhotoFetch: Promise<string | null> | null = null;
+
+export function clearProfilePhotoCache() {
+  if (cachedPhoto) {
+    try {
+      URL.revokeObjectURL(cachedPhoto.objectUrl);
+    } catch {
+      /* ignore */
+    }
+    cachedPhoto = null;
+  }
+  pendingPhotoFetch = null;
+}
+
+async function fetchPhoto(cacheKey: string): Promise<string | null> {
+  try {
+    const { data } = await profileService.getPhoto();
+    const url = URL.createObjectURL(data);
+    if (cachedPhoto && cachedPhoto.key !== cacheKey) {
+      try {
+        URL.revokeObjectURL(cachedPhoto.objectUrl);
+      } catch {
+        /* ignore */
+      }
+    }
+    cachedPhoto = { key: cacheKey, objectUrl: url };
+    return url;
+  } catch {
+    return null;
+  } finally {
+    pendingPhotoFetch = null;
+  }
+}
 
 // Read-only version of the blob-fetch pattern ProfilePage.tsx uses for its own (editable) photo
 // section - this app authenticates with a bearer header (services/axios.ts), not cookies, so a
@@ -13,40 +53,42 @@ import { profileService } from "../api/profileService";
 //
 // revision: bumped by the profile page after each upload (AuthUser.photoRevision). The path
 // stays identical when a photo is replaced, so without it the avatar kept the old picture.
+//
+// Cached per session keyed by `${photoUrl}:${revision}` so remounting does not refetch.
 export function useProfilePhoto(photoUrl: string | null | undefined, revision = 0): string | null {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const liveUrlRef = useRef<string | null>(null);
+  const cacheKey = photoUrl ? `${photoUrl}:${revision}` : null;
 
-  // No branch here ever calls setState synchronously in the effect body itself (only inside
-  // the async .then()/.catch() callbacks, or inside the returned cleanup). When photoUrl goes
-  // from a value to null/undefined, this run's body does nothing - the PREVIOUS run's cleanup
-  // (captured with the old photoUrl) is what revokes the old blob: URL and clears objectUrl,
-  // since React always runs the old effect's cleanup before the new effect's body.
+  const [objectUrl, setObjectUrl] = useState<string | null>(() => {
+    if (!cacheKey) return null;
+    return cachedPhoto?.key === cacheKey ? cachedPhoto.objectUrl : null;
+  });
+
   useEffect(() => {
-    if (!photoUrl) {
+    if (!cacheKey) {
+      setObjectUrl(null);
       return;
     }
+
     let active = true;
-    profileService
-      .getPhoto()
-      .then(({ data }) => {
-        if (!active) return;
-        const url = URL.createObjectURL(data);
-        liveUrlRef.current = url;
-        setObjectUrl(url);
-      })
-      .catch(() => {
-        if (active) setObjectUrl(null);
-      });
+
+    if (cachedPhoto?.key === cacheKey) {
+      setObjectUrl(cachedPhoto.objectUrl);
+      return;
+    }
+
+    if (!pendingPhotoFetch) {
+      pendingPhotoFetch = fetchPhoto(cacheKey);
+    }
+
+    pendingPhotoFetch.then((url) => {
+      if (!active) return;
+      setObjectUrl(url);
+    });
+
     return () => {
       active = false;
-      if (liveUrlRef.current) {
-        URL.revokeObjectURL(liveUrlRef.current);
-        liveUrlRef.current = null;
-        setObjectUrl(null);
-      }
     };
-  }, [photoUrl, revision]);
+  }, [cacheKey]);
 
   return objectUrl;
 }

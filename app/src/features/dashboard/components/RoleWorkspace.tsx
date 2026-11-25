@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi, Panel } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
-import { useNotifications } from "../../notifications/hooks/useNotifications";
+import { selectPendingApprovalCount } from "../../notifications/hooks/useNotifications";
 import {
   roleDashboardByCode,
   roleOverrides,
@@ -11,13 +11,7 @@ import {
   familyQuickActions,
   NO_HERO_ROLES,
 } from "../../role-previews/roleDashboardCatalog";
-
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
+import { greeting, renderGreeting } from "../../../utils/greeting";
 
 export interface RoleWorkspaceProps {
   name: string;
@@ -25,8 +19,7 @@ export interface RoleWorkspaceProps {
 }
 
 export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
-  const tenantId = useAppSelector((s) => s.auth.user?.tenantId ?? null);
-  const { pendingApprovalCount } = useNotifications(tenantId);
+  const pendingApprovalCount = useAppSelector(selectPendingApprovalCount);
 
   const role = roleDashboardByCode(roleCode);
   if (!role) return null;
@@ -46,7 +39,8 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
           <div>
             <p className="kicker">{role.name}</p>
             <h2 className="hero__title" id="workspace-hero-title">
-              {greeting()}, {name}.
+              {greeting()},{" "}
+              <span className="app-greeting__name">{name}</span>.
             </h2>
             <p>{content.focus}</p>
             <a className="hero__cta" href="#workspace-actions">
@@ -61,7 +55,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
           </div>
         </section>
       ) : (
-        <PageHeader title={`${greeting()}, ${name}.`} description={role.name} />
+        <PageHeader title={renderGreeting(name)} description={role.name} />
       )}
 
       <Panel

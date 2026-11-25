@@ -104,7 +104,7 @@ class PlatformSupportTriageTest {
         assertThat(response.status()).isEqualTo("ESCALATED"); assertThat(response.escalatedAt()).isNotNull();
         verify(platformNotifications).notify(eq(ownerId), eq("SUPPORT_TICKET_ESCALATED"), eq("Support ticket escalated"),
                 eq("SUP-2026-ABCDE was escalated to ENGINEERING. Requires engineering investigation"),
-                eq("SUPPORT_TICKET"), eq(ticketId), eq("HIGH"), eq(actor.platformUserId()));
+                eq("SUPPORT_TICKET"), eq(ticketId), eq("NORMAL"), eq(actor.platformUserId()));
     }
 
     @Test
@@ -117,8 +117,8 @@ class PlatformSupportTriageTest {
         when(platformUsers.findAllByPlatformRoleAndStatus(PlatformRole.PRODUCT_OWNER, PlatformUserStatus.ACTIVE)).thenReturn(List.of(owner));
         when(platformUsers.findAllByPlatformRoleAndStatus(PlatformRole.RELEASE_MANAGER, PlatformUserStatus.ACTIVE)).thenReturn(List.of(releaseManager));
         service.escalateTicket(ticketId, new EscalateSupportTicketRequest("RELEASE_MANAGER", "Release regression requires triage"), actor);
-        verify(platformNotifications).notify(eq(ownerId), eq("SUPPORT_TICKET_ESCALATED"), any(), any(), eq("SUPPORT_TICKET"), eq(ticketId), eq("HIGH"), eq(actor.platformUserId()));
-        verify(platformNotifications).notify(eq(rmId), eq("SUPPORT_TICKET_ESCALATED"), any(), any(), eq("SUPPORT_TICKET"), eq(ticketId), eq("HIGH"), eq(actor.platformUserId()));
+        verify(platformNotifications).notify(eq(ownerId), eq("SUPPORT_TICKET_ESCALATED"), any(), any(), eq("SUPPORT_TICKET"), eq(ticketId), eq("NORMAL"), eq(actor.platformUserId()));
+        verify(platformNotifications).notify(eq(rmId), eq("SUPPORT_TICKET_ESCALATED"), any(), any(), eq("SUPPORT_TICKET"), eq(ticketId), eq("NORMAL"), eq(actor.platformUserId()));
     }
 
     @Test

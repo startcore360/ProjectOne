@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Modal, Button, DataTable, Notice } from "../../../../design-system/components";
 import { platformTenantService, type TenantUsageMonthlyDto } from "../../api/platformTenantService";
 import type { Tenant } from "../common/types";
@@ -12,31 +12,36 @@ interface TenantUsageModalProps {
 export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalProps) {
   const [usageList, setUsageList] = useState<TenantUsageMonthlyDto[]>([]);
   const [error, setError] = useState("");
-  const [loadedTenantId, setLoadedTenantId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const requestedTenantIdRef = useRef<string | null>(null);
 
   const tenantId = tenant?.id;
-  const loading = Boolean(isOpen && tenantId && loadedTenantId !== tenantId);
 
-  useEffect(() => {
-    if (!isOpen || !tenantId) return;
-    let active = true;
+  const fetchUsage = useCallback((id: string) => {
+    setLoading(true);
     platformTenantService
-      .getTenantUsage(tenantId)
+      .getTenantUsage(id)
       .then((res) => {
-        if (!active) return;
         setUsageList(res.data || []);
         setError("");
-        setLoadedTenantId(tenantId);
       })
       .catch((err: unknown) => {
-        if (!active) return;
         setError(err instanceof Error ? err.message : "Failed to load tenant monthly usage data.");
-        setLoadedTenantId(tenantId);
+      })
+      .finally(() => {
+        setLoading(false);
       });
-    return () => {
-      active = false;
-    };
-  }, [isOpen, tenantId, loadedTenantId]);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || !tenantId) {
+      requestedTenantIdRef.current = null;
+      return;
+    }
+    if (requestedTenantIdRef.current === tenantId) return;
+    requestedTenantIdRef.current = tenantId;
+    fetchUsage(tenantId);
+  }, [isOpen, tenantId, fetchUsage]);
 
   if (!tenant) return null;
 
@@ -61,7 +66,7 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
           <Notice tone="danger">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
               <span>{error}</span>
-              <Button size="sm" variant="secondary" onClick={() => setLoadedTenantId(null)}>
+              <Button size="sm" variant="secondary" onClick={() => { if (tenantId) fetchUsage(tenantId); }}>
                 Retry
               </Button>
             </div>

@@ -6,6 +6,8 @@ import { platformTenantService, type TenantItem } from "../../api/platformTenant
 import { platformUserService, type PlatformUserItem } from "../../api/platformUserService";
 import { platformOpsService, type PlatformAuditLogItem } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
+import { useAppSelector } from "../../../../store/hooks";
+import { renderGreeting } from "../../../../utils/greeting";
 import { ProductOwnerDashboard } from "./ProductOwnerDashboard";
 import { PlatformAdminDashboard } from "./PlatformAdminDashboard";
 import { BillingManagerDashboard } from "./BillingManagerDashboard";
@@ -31,6 +33,15 @@ function LegacyPlatformOverviewView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
+  const [minSpinning, setMinSpinning] = useState(false);
+  const isSpinning = loading || minSpinning;
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setMinSpinning(true);
+    setRetryKey((value) => value + 1);
+    setTimeout(() => setMinSpinning(false), 600);
+  };
 
   useEffect(() => {
     let active = true;
@@ -68,11 +79,25 @@ function LegacyPlatformOverviewView() {
           : null;
 
 
+  const displayName = useAppSelector((s) => s.auth.user?.displayName);
+
   return (
     <div className="app-page">
       <PageHeader
-        title="Platform overview"
-        description="Tenant lifecycle, platform access, integrations and service health at a glance."
+        title={renderGreeting(displayName)}
+        description="Platform overview · Tenant lifecycle, platform access, integrations and service health at a glance."
+        actions={
+          <Button
+            variant="tertiary"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isSpinning}
+            aria-label="Refresh dashboard"
+            title="Refresh"
+          >
+            <Icon name="refresh" size={16} spin={isSpinning} />
+          </Button>
+        }
       />
 
       {error && !loading && (

@@ -2,12 +2,15 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Badge,
   Button,
+  CheckboxField,
   DataTable,
   Modal,
   Notice,
   Panel,
   ErrorState,
+  SelectField,
   SkeletonTable,
+  TextAreaField,
   TextField,
 } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
@@ -295,35 +298,27 @@ export function GuardianManagementPanel({
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "4px" }}>
-              Relationship *
-            </label>
-            <select
+            <SelectField
+              id="guardian-link-relationship"
+              label="Relationship *"
+              required
               value={relationship}
               onChange={(e) => setRelationship(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid var(--color-border, #ccc)",
-                borderRadius: "var(--radius-md, 4px)",
-              }}
             >
               <option value="FATHER">Father</option>
               <option value="MOTHER">Mother</option>
               <option value="LEGAL_GUARDIAN">Legal Guardian</option>
               <option value="OTHER">Other</option>
-            </select>
+            </SelectField>
           </div>
 
           <div style={{ marginBottom: "var(--space-4)" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={isPrimary}
-                onChange={(e) => setIsPrimary(e.target.checked)}
-              />
-              Designate as primary guardian
-            </label>
+            <CheckboxField
+              id="guardian-link-primary"
+              label="Designate as primary guardian"
+              checked={isPrimary}
+              onChange={(e) => setIsPrimary(e.target.checked)}
+            />
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
@@ -351,25 +346,14 @@ export function GuardianManagementPanel({
           </p>
 
           <div style={{ marginBottom: "var(--space-4)" }}>
-            <label
-              htmlFor="change-reason-input"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "4px" }}
-            >
-              Reason for Change / Block *
-            </label>
-            <textarea
+            <TextAreaField
               id="change-reason-input"
+              label="Reason for Change / Block *"
               required
               rows={3}
               value={changeReason}
               onChange={(e) => setChangeReason(e.target.value)}
               placeholder="e.g. Change of custody court order, relocation, or parent request..."
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid var(--color-border, #ccc)",
-                borderRadius: "var(--radius-md, 4px)",
-              }}
             />
           </div>
 

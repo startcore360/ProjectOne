@@ -11,6 +11,7 @@ import {
   SelectField,
   StatusBadge,
   TextAreaField,
+  toast,
 } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
@@ -20,6 +21,7 @@ import {
 } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
 import { SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY } from "../../../../services/axios";
+import { readErrorMessage } from "../common/types";
 
 export function TicketsView() {
   const { can } = usePlatformAccess();
@@ -37,8 +39,9 @@ export function TicketsView() {
   const [loadError, setLoadError] = useState("");
   const [grantsError, setGrantsError] = useState("");
 
-  // Resolve Ticket Modal
+  // Resolve / Close Ticket Modal
   const [resolvingTicket, setResolvingTicket] = useState<SupportTicketItem | null>(null);
+  const [resolveTargetStatus, setResolveTargetStatus] = useState<"RESOLVED" | "CLOSED">("RESOLVED");
   const [resolutionNote, setResolutionNote] = useState("");
   const [submittingResolve, setSubmittingResolve] = useState(false);
   const [resolveError, setResolveError] = useState("");
@@ -96,24 +99,29 @@ export function TicketsView() {
     return () => window.removeEventListener("message", onSupportSessionEnd);
   }, []);
 
-  const handleOpenResolve = (ticket: SupportTicketItem) => {
+  const handleOpenResolve = (ticket: SupportTicketItem, targetStatus: "RESOLVED" | "CLOSED" = "RESOLVED") => {
     setResolvingTicket(ticket);
-    setResolutionNote("");
+    setResolveTargetStatus(targetStatus);
+    setResolutionNote(ticket.resolutionNote || "");
     setResolveError("");
   };
 
   const handleUpdateStatus = async (ticket: SupportTicketItem, newStatus: string) => {
     if (newStatus === "RESOLVED" || newStatus === "CLOSED") {
-      handleOpenResolve(ticket);
+      handleOpenResolve(ticket, newStatus as "RESOLVED" | "CLOSED");
       return;
     }
 
     try {
       await platformOpsService.updateSupportTicket(ticket.supportTicketId, { status: newStatus });
-      setMessage(`Ticket ${ticket.ticketNumber} updated to ${newStatus}.`);
+      const msg = `Ticket ${ticket.ticketNumber} updated to ${newStatus}.`;
+      setMessage(msg);
+      toast.success("Ticket updated", msg);
       void loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update ticket");
+      const msg = readErrorMessage(err, "Failed to update ticket");
+      setError(msg);
+      toast.error("Update failed", msg);
     }
   };
 
@@ -141,11 +149,15 @@ export function TicketsView() {
         priority: triagePriority,
         category: triageCategory,
       });
-      setMessage(`Ticket ${triagingTicket.ticketNumber} triaged as ${triageCategory} / ${triagePriority}.`);
+      const msg = `Ticket ${triagingTicket.ticketNumber} triaged as ${triageCategory} / ${triagePriority}.`;
+      setMessage(msg);
+      toast.success("Ticket triaged", msg);
       setTriagingTicket(null);
       void loadData();
     } catch (err: unknown) {
-      setTriageError(err instanceof Error ? err.message : "Failed to triage ticket");
+      const msg = readErrorMessage(err, "Failed to triage ticket. Please verify your permissions and try again.");
+      setTriageError(msg);
+      toast.error("Triage ticket failed", msg);
     } finally {
       setSubmittingTriage(false);
     }
@@ -154,18 +166,34 @@ export function TicketsView() {
   const handleConfirmResolve = async (e: FormEvent) => {
     e.preventDefault();
     if (!resolvingTicket) return;
+    const note = resolutionNote.trim();
+    if (!note) {
+      setResolveError(
+        resolveTargetStatus === "CLOSED"
+          ? "A closing note is required before closing this ticket."
+          : "A resolution note is required before marking this ticket as resolved."
+      );
+      return;
+    }
     setSubmittingResolve(true);
     setResolveError("");
     try {
       await platformOpsService.updateSupportTicket(resolvingTicket.supportTicketId, {
-        status: "RESOLVED",
-        resolutionNote: resolutionNote.trim() || "Resolved by Platform Support Team.",
+        status: resolveTargetStatus,
+        resolutionNote: note,
       });
-      setMessage(`Ticket ${resolvingTicket.ticketNumber} marked as RESOLVED.`);
+      const msg = `Ticket ${resolvingTicket.ticketNumber} marked as ${resolveTargetStatus}.`;
+      setMessage(msg);
+      toast.success("Ticket updated", msg);
       setResolvingTicket(null);
       void loadData();
     } catch (err: unknown) {
-      setResolveError(err instanceof Error ? err.message : "Failed to resolve ticket");
+      const msg = readErrorMessage(
+        err,
+        `Failed to ${resolveTargetStatus === "CLOSED" ? "close" : "resolve"} ticket. Check that a valid note is provided.`
+      );
+      setResolveError(msg);
+      toast.error("Update ticket failed", msg);
     } finally {
       setSubmittingResolve(false);
     }
@@ -176,19 +204,26 @@ export function TicketsView() {
     if (!escalatingTicket) return;
     const note = escalationNote.trim();
     if (!note) {
-      setEscalateError("An escalation note is required.");
+      setEscalateError("An escalation note is required to explain why this ticket requires attention.");
       return;
     }
     setSubmittingEscalation(true);
     setEscalateError("");
     try {
       await platformOpsService.escalateSupportTicket(escalatingTicket.supportTicketId, { to: escalationTarget, note });
-      setMessage(`Ticket ${escalatingTicket.ticketNumber} escalated to ${escalationTarget.replace("_", " ")}.`);
+      const msg = `Ticket ${escalatingTicket.ticketNumber} escalated to ${escalationTarget.replace("_", " ")}.`;
+      setMessage(msg);
+      toast.success("Ticket escalated", msg);
       setEscalatingTicket(null);
       setEscalationNote("");
       void loadData();
     } catch (err: unknown) {
-      setEscalateError(err instanceof Error ? err.message : "Failed to escalate ticket");
+      const msg = readErrorMessage(
+        err,
+        "Failed to escalate ticket. Verify that the ticket is open and you have permission to escalate."
+      );
+      setEscalateError(msg);
+      toast.error("Escalation failed", msg);
     } finally {
       setSubmittingEscalation(false);
     }
@@ -214,7 +249,12 @@ export function TicketsView() {
       setMessage(`Opened a read-only session for ticket ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`);
     } catch (err: unknown) {
       opened.close();
-      setError(err instanceof Error ? err.message : "Failed to assume support session. Ensure tenant granted access.");
+      setError(
+        readErrorMessage(
+          err,
+          "Failed to assume support session. Ensure the tenant has granted active support access."
+        )
+      );
     }
   };
 
@@ -241,8 +281,8 @@ export function TicketsView() {
         description="Tenant problem tickets, resolution audit trails, and ticket-bound read-only diagnostic session assumption."
       />
 
-      {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {message && <Notice popup tone="success" onDismiss={() => setMessage("")}>{message}</Notice>}
+      {error && <Notice popup tone="danger" onDismiss={() => setError("")}>{error}</Notice>}
       {loadError && (
         <ErrorState
           message={loadError}
@@ -264,13 +304,34 @@ export function TicketsView() {
       </div>
 
       <Panel title="Platform Support Queue" description="Incoming issues raised by tenant representatives">
+        <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center", marginBottom: "var(--space-4)" }}>
+          <div className="app-filter-tabs" role="tablist" aria-label="Filter tickets by status">
+            {(["All", "NEW", "TRIAGED", "ASSIGNED", "ESCALATED", "RESOLVED", "CLOSED"] as const).map((st) => {
+              const count = st === "All" ? tickets.length : tickets.filter((t) => t.status === st).length;
+              const label = st === "All" ? "All" : st.charAt(0) + st.slice(1).toLowerCase();
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === st}
+                  className={`app-filter-tab ${statusFilter === st ? "app-filter-tab--active" : ""}`}
+                  onClick={() => setStatusFilter(st)}
+                >
+                  {label} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="app-toolbar">
           <SearchBox
             value={query}
             onChange={(val) => setQuery(val)}
             placeholder="Search ticket #, subject, or requester..."
           />
-          <label className="app-select-label">
+          <label className="app-select-label" style={{ display: "none" }}>
             Status{" "}
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="All">All</option>
@@ -371,7 +432,7 @@ export function TicketsView() {
                         </Button>
                       )}
                       {(t.status === "ASSIGNED" || t.status === "ESCALATED") && canManageTickets && (
-                        <Button size="sm" variant="secondary" onClick={() => handleOpenResolve(t)}>
+                        <Button size="sm" variant="secondary" onClick={() => handleOpenResolve(t, "RESOLVED")}>
                           Resolve
                         </Button>
                       )}
@@ -379,7 +440,7 @@ export function TicketsView() {
                         <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => handleOpenResolve(t)}
+                          onClick={() => handleOpenResolve(t, "CLOSED")}
                         >
                           Close
                         </Button>
@@ -397,9 +458,13 @@ export function TicketsView() {
         isOpen={!!resolvingTicket}
         onClose={() => setResolvingTicket(null)}
         kicker="SUPPORT TICKET"
-        title={`Resolve · ${resolvingTicket?.ticketNumber ?? ""}`}
+        title={`${resolveTargetStatus === "CLOSED" ? "Close" : "Resolve"} · ${resolvingTicket?.ticketNumber ?? ""}`}
         titleId="resolve-ticket-title"
-        description="Mandatory resolution remark required per Rule ck_support_ticket_r1."
+        description={
+          resolveTargetStatus === "CLOSED"
+            ? "Mandatory closing remarks required to close this ticket (Rule ck_support_ticket_r1)."
+            : "Mandatory resolution remark required per Rule ck_support_ticket_r1."
+        }
         size="sm"
         footer={
           <>
@@ -407,7 +472,7 @@ export function TicketsView() {
               Cancel
             </Button>
             <Button form="resolve-ticket-form" type="submit" busy={submittingResolve}>
-              Confirm resolution
+              {resolveTargetStatus === "CLOSED" ? "Confirm closure" : "Confirm resolution"}
             </Button>
           </>
         }
@@ -415,16 +480,20 @@ export function TicketsView() {
         <form id="resolve-ticket-form" onSubmit={handleConfirmResolve}>
           {resolveError && (
             <div style={{ marginBottom: "12px" }}>
-              <Notice tone="danger">{resolveError}</Notice>
+              <Notice popup tone="danger" onDismiss={() => setResolveError("")}>{resolveError}</Notice>
             </div>
           )}
           <TextAreaField
             id="resolve-resolution-note"
-            label="Resolution note"
+            label={resolveTargetStatus === "CLOSED" ? "Closing note" : "Resolution note"}
             rows={4}
             value={resolutionNote}
             onChange={(e) => setResolutionNote(e.target.value)}
-            placeholder="Describe the diagnostics performed and fix applied..."
+            placeholder={
+              resolveTargetStatus === "CLOSED"
+                ? "Describe any final closing remarks, confirmation from user, or resolution outcome..."
+                : "Describe the diagnostics performed and fix applied..."
+            }
             required
           />
         </form>
@@ -452,7 +521,7 @@ export function TicketsView() {
         <form id="escalate-ticket-form" onSubmit={handleConfirmEscalation}>
           {escalateError && (
             <div style={{ marginBottom: "12px" }}>
-              <Notice tone="danger">{escalateError}</Notice>
+              <Notice popup tone="danger" onDismiss={() => setEscalateError("")}>{escalateError}</Notice>
             </div>
           )}
           <div style={{ display: "grid", gap: "12px" }}>
@@ -501,7 +570,7 @@ export function TicketsView() {
         <form id="triage-ticket-form" onSubmit={handleConfirmTriage}>
           {triageError && (
             <div style={{ marginBottom: "12px" }}>
-              <Notice tone="danger">{triageError}</Notice>
+              <Notice popup tone="danger" onDismiss={() => setTriageError("")}>{triageError}</Notice>
             </div>
           )}
           <div style={{ display: "grid", gap: "12px" }}>

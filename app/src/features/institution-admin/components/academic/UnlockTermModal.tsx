@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal } from "../../../../design-system/components";
+import { Button, Modal, TextAreaField, TextField } from "../../../../design-system/components";
 
 export interface UnlockTermModalProps {
   isOpen: boolean;
@@ -38,14 +38,9 @@ export function UnlockTermModal({
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <label
-            htmlFor="unlock-reason"
-            style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-          >
-            Statutory Justification / Reason * (minimum 20 characters)
-          </label>
-          <textarea
+          <TextAreaField
             id="unlock-reason"
+            label="Statutory Justification / Reason * (minimum 20 characters)"
             rows={3}
             required
             minLength={20}
@@ -53,37 +48,18 @@ export function UnlockTermModal({
             placeholder="Explain the emergency and the reason for temporary access"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-md, 4px)",
-              border: "1px solid var(--color-border, #ccc)",
-              fontFamily: "inherit",
-              fontSize: "0.875rem",
-            }}
+            hint={`${reason.trim().length}/20 minimum characters`}
           />
-          <small aria-live="polite">{reason.trim().length}/20 minimum characters</small>
         </div>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label
-            htmlFor="unlock-duration"
-            style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-          >
-            Unlock Duration (fixed at 72 hours)
-          </label>
-          <input
+          <TextField
             id="unlock-duration"
             type="number"
+            label="Unlock Duration (fixed at 72 hours)"
             value={72}
             disabled
             readOnly
-            style={{
-              width: "100%",
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-md, 4px)",
-              border: "1px solid var(--color-border, #ccc)",
-            }}
           />
         </div>
 

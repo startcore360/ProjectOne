@@ -9,6 +9,7 @@ import {
   Panel,
   SearchBox,
   StatusBadge,
+  toast,
 } from "../../../../design-system/components";
 import { CreatedCredentialsModal } from "../../../user-management/components/users/CreatedCredentialsModal";
 import { PageHeader } from "../../../../components/layout/PageHeader";
@@ -94,7 +95,7 @@ function ChangeRoleModal({
           <RoleOptions customRoles={customRoles} />
         </select>
       </label>
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error && <Notice popup tone="danger">{error}</Notice>}
     </Modal>
   );
 }
@@ -123,6 +124,8 @@ export function PlatformUsersView() {
   const [statusBusy, setStatusBusy] = useState(false);
   const [unlockTarget, setUnlockTarget] = useState<PlatformUserItem | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
+  const [passwordTarget, setPasswordTarget] = useState<PlatformUserItem | null>(null);
+  const [passwordBusy, setPasswordBusy] = useState(false);
   // MFA-01 / E8-S4: reset a staff member's two-step login (never your own).
   const [mfaTarget, setMfaTarget] = useState<PlatformUserItem | null>(null);
   const [mfaBusy, setMfaBusy] = useState(false);
@@ -182,9 +185,12 @@ export function PlatformUsersView() {
       setCreatedUser(response.data);
       setShowCreate(false);
       setDraft(EMPTY_DRAFT);
+      toast.success("Platform user created", `${response.data.fullName} was created successfully.`);
       loadUsers();
     } catch (err) {
-      setCreateError(readErrorMessage(err, "Failed to create platform user"));
+      const msg = readErrorMessage(err, "Failed to create platform user");
+      setCreateError(msg);
+      toast.error("Failed to create platform user", msg);
     } finally {
       setCreating(false);
     }
@@ -199,10 +205,14 @@ export function PlatformUsersView() {
       await platformUserService.updatePlatformUser(statusTarget.platformUserId, {
         status: reactivate ? "ACTIVE" : "INACTIVE",
       });
-      setNotice(`${statusTarget.fullName} is ${reactivate ? "active again" : "deactivated and signed out"}.`);
+      const msg = `${statusTarget.fullName} is ${reactivate ? "active again" : "deactivated and signed out"}.`;
+      setNotice(msg);
+      toast.success("Account status updated", msg);
       loadUsers();
     } catch (err) {
-      setActionError(readErrorMessage(err, "Could not change this account."));
+      const msg = readErrorMessage(err, "Could not change this account.");
+      setActionError(msg);
+      toast.error("Status update failed", msg);
     } finally {
       setStatusBusy(false);
       setStatusTarget(null);
@@ -215,12 +225,35 @@ export function PlatformUsersView() {
     setActionError("");
     try {
       await platformUserService.unlockPlatformUser(unlockTarget.platformUserId);
-      setNotice(`${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`);
+      const msg = `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`;
+      setNotice(msg);
+      toast.success("Account unlocked", msg);
       setUnlockTarget(null);
     } catch (err) {
-      setActionError(readErrorMessage(err, "Could not unlock this account."));
+      const msg = readErrorMessage(err, "Could not unlock this account.");
+      setActionError(msg);
+      toast.error("Unlock failed", msg);
     } finally {
       setUnlockBusy(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!passwordTarget) return;
+    setPasswordBusy(true);
+    setActionError("");
+    try {
+      const { data } = await platformUserService.resetPassword(passwordTarget.platformUserId);
+      setCreatedUser(data);
+      toast.success("Password reset", `A new temporary password was generated for ${passwordTarget.fullName}.`);
+      setPasswordTarget(null);
+    } catch (err) {
+      const msg = readErrorMessage(err, "Could not reset this platform user's password.");
+      setActionError(msg);
+      toast.error("Password reset failed", msg);
+      setPasswordTarget(null);
+    } finally {
+      setPasswordBusy(false);
     }
   };
 
@@ -262,8 +295,8 @@ export function PlatformUsersView() {
           temporaryPassword: createdUser?.tempPassword,
         }}
       />
-      {notice && <Notice tone="success">{notice}</Notice>}
-      {actionError && <Notice tone="danger">{actionError}</Notice>}
+      {notice && <Notice popup tone="success" onDismiss={() => setNotice("")}>{notice}</Notice>}
+      {actionError && <Notice popup tone="danger" onDismiss={() => setActionError("")}>{actionError}</Notice>}
       {rolesError && (
         <ErrorState
           message={rolesError}
@@ -280,9 +313,28 @@ export function PlatformUsersView() {
         title="Platform access"
         description="Platform staff accounts only. Institution users are managed within their institution."
       >
+        <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center", marginBottom: "var(--space-4)" }}>
+          <div className="app-filter-tabs" role="tablist" aria-label="Filter platform staff by status">
+            {(["All", "Active", "Inactive"] as const).map((st) => {
+              const count = st === "All" ? users.length : users.filter((u) => u.status === (st === "Inactive" ? "INACTIVE" : "ACTIVE")).length;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  role="tab"
+                  aria-selected={filter === st}
+                  className={`app-filter-tab ${filter === st ? "app-filter-tab--active" : ""}`}
+                  onClick={() => setFilter(st)}
+                >
+                  {st} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="app-toolbar">
           <SearchBox value={query} onChange={setQuery} placeholder="Search name, email or role" />
-          <label className="app-select-label">
+          <label className="app-select-label" style={{ display: "none" }}>
             Status{" "}
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option>All</option>
@@ -317,6 +369,9 @@ export function PlatformUsersView() {
                       </Button>
                       {u.status === "ACTIVE" && (
                         <>
+                          <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setActionError(""); setPasswordTarget(u); }}>
+                            Reset password
+                          </Button>
                           <Button variant="secondary" size="sm" onClick={() => { setNotice(""); setMfaError(""); setMfaTarget(u); }}>
                             Reset two-step login
                           </Button>
@@ -354,6 +409,16 @@ export function PlatformUsersView() {
         confirmTone="primary"
         busy={unlockBusy}
       />
+      <ConfirmDialog
+        isOpen={!!passwordTarget}
+        onClose={() => setPasswordTarget(null)}
+        onConfirm={() => void resetPassword()}
+        title={passwordTarget ? `Reset password for ${passwordTarget.fullName}?` : "Reset password?"}
+        message="A new temporary password will be generated. Their current password stops working immediately and all existing sessions will end."
+        confirmLabel="Reset password"
+        confirmTone="danger"
+        busy={passwordBusy}
+      />
       <CreatePlatformUserModal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
@@ -372,6 +437,7 @@ export function PlatformUsersView() {
           onSaved={(message) => {
             setChangingRole(null);
             setNotice(message);
+            toast.success("Role updated", message);
             loadUsers();
           }}
         />

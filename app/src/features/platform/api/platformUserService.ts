@@ -50,6 +50,8 @@ export const platformUserService = {
     api.patch<PlatformUserItem>(`/platform/platform-users/${id}`, data),
   unlockPlatformUser: (id: string) =>
     api.post<void>(`/platform/platform-users/${id}/unlock`),
+  resetPassword: (id: string) =>
+    api.post<PlatformUserItem>(`/platform/platform-users/${id}/password-reset`),
   // MFA-01 / E8-S4: Product Owner resets a staff member's two-step login (PLATFORM_USER_MANAGE).
   resetMfa: (id: string, reason: string) =>
     api.post<{ actionCode: string; status: string; message: string }>(

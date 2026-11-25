@@ -12,8 +12,11 @@ import PublicRoute from "./PublicRoute";
 import ActionGate from "./ActionGate";
 import TenantUserRoute from "./TenantUserRoute";
 import { TENANT_ROUTE_ACTIONS } from "./tenantRouteActions";
+import { isSharedLandingHost } from "../lib/tenantHost";
+import { useSupportSession } from "../features/support/useSupportSession";
 
 const AppLayout = lazy(() => import("../layout/AppLayout"));
+const LandingPage = lazy(() => import("../features/landing/LandingPage"));
 
 const ApplicantPortalPage = lazy(() => import("../features/admissions/pages/ApplicantPortalPage"));
 const AdmissionCyclesPage = lazy(() => import("../features/admissions/pages/AdmissionCyclesPage"));
@@ -37,23 +40,24 @@ const StaffAppraisalPage = lazy(() => import("../features/staff/pages/StaffAppra
 const TenantDataProtectionPage = lazy(() => import("../features/dataprotection/TenantDataProtectionPage"));
 
 // Lazy-loaded platform pages
-const PlatformOverviewPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.PlatformOverviewPage })));
-const TenantsPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.TenantsPage })));
-const PlansPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.PlansPage })));
-const InvoicesPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.InvoicesPage })));
-const ReleasesPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.ReleasesPage })));
-const ReportsPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.ReportsPage })));
-const SecurityPolicyPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.SecurityPolicyPage })));
-const TicketsPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.TicketsPage })));
-const PlatformUsersPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.PlatformUsersPage })));
-const PlatformRolesPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.PlatformRolesPage })));
-const PlatformRoleTemplatesPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.PlatformRoleTemplatesPage })));
-const SupportAccessPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.SupportAccessPage })));
-const AuditLogPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.AuditLogPage })));
-const UsageCountsPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.UsageCountsPage })));
-const BackupStatusPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.BackupStatusPage })));
-const IntegrationTypesPage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.IntegrationTypesPage })));
-const DataProtectionWorkspacePage = lazy(() => import("../features/platform/pages/PlatformPages").then((m) => ({ default: m.DataProtectionWorkspacePage })));
+const PlatformOverviewPage = lazy(() => import("../features/platform/components/overview/PlatformOverviewView").then((m) => ({ default: m.PlatformOverviewPage })));
+const TenantsPage = lazy(() => import("../features/platform/components/tenants/TenantsView").then((m) => ({ default: m.TenantsPage })));
+const PlansPage = lazy(() => import("../features/platform/components/plans/PlansView").then((m) => ({ default: m.PlansPage })));
+const InvoicesPage = lazy(() => import("../features/platform/components/billing/InvoicesView").then((m) => ({ default: m.InvoicesPage })));
+const ReleasesPage = lazy(() => import("../features/platform/components/release/ReleasesView").then((m) => ({ default: m.ReleasesPage })));
+const ReportsPage = lazy(() => import("../features/platform/components/reports/ReportsView").then((m) => ({ default: m.ReportsPage })));
+const SecurityPolicyPage = lazy(() => import("../features/platform/components/security/SecurityPolicyView").then((m) => ({ default: m.SecurityPolicyPage })));
+const TicketsPage = lazy(() => import("../features/platform/components/support/TicketsView").then((m) => ({ default: m.TicketsPage })));
+const PlatformUsersPage = lazy(() => import("../features/platform/components/users/PlatformUsersView").then((m) => ({ default: m.PlatformUsersPage })));
+const PlatformRolesPage = lazy(() => import("../features/platform/components/roles/RolesView").then((m) => ({ default: m.PlatformRolesPage })));
+const PlatformRoleTemplatesPage = lazy(() => import("../features/platform/components/roles/TemplatesView").then((m) => ({ default: m.PlatformRoleTemplatesPage })));
+const SupportAccessPage = lazy(() => import("../features/platform/components/support/SupportAccessView").then((m) => ({ default: m.SupportAccessPage })));
+const AuditLogPage = lazy(() => import("../features/platform/components/observability/AuditLogView").then((m) => ({ default: m.AuditLogPage })));
+const UsageCountsPage = lazy(() => import("../features/platform/components/observability/UsageCountsView").then((m) => ({ default: m.UsageCountsPage })));
+const BackupStatusPage = lazy(() => import("../features/platform/components/observability/BackupStatusView").then((m) => ({ default: m.BackupStatusPage })));
+const IntegrationTypesPage = lazy(() => import("../features/platform/components/integrations/IntegrationTypesView").then((m) => ({ default: m.IntegrationTypesPage })));
+const DataProtectionWorkspacePage = lazy(() => import("../features/platform/components/dataprotection/DataProtectionWorkspaceView").then((m) => ({ default: m.DataProtectionWorkspacePage })));
+const PlatformLandingCmsPage = lazy(() => import("../features/platform/components/landing/PlatformLandingCmsView").then((m) => ({ default: m.PlatformLandingCmsPage })));
 
 // Lazy-loaded institution admin pages
 const InstitutionsPage = lazy(() => import("../features/institution-admin/pages/InstitutionAdminPages").then((m) => ({ default: m.InstitutionsPage })));
@@ -111,11 +115,36 @@ function RoleHomeRedirect() {
   return <Navigate to="/dashboard" replace />;
 }
 
+function RootEntry() {
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const mustChangePassword = useAppSelector((state) => state.auth.user?.mustChangePassword);
+  const { isSupportSession } = useSupportSession();
+
+  if (isAuthenticated || isSupportSession) {
+    if (!isSupportSession && mustChangePassword) {
+      return <Navigate to="/change-password" replace />;
+    }
+    return <RoleHomeRedirect />;
+  }
+
+  if (typeof window !== "undefined" && isSharedLandingHost(window.location.hostname)) {
+    return (
+      <RouteErrorBoundary>
+        <Suspense fallback={<SkeletonPage title="Loading EDU 360" />}>
+          <LandingPage />
+        </Suspense>
+      </RouteErrorBoundary>
+    );
+  }
+
+  return <Navigate to="/login" replace />;
+}
+
 // Server-backed authorization for tenant and university administration routes.
 // The backend enforces each endpoint independently via PermissionEvaluatorService.
 function UniversityAdminRoute() {
-  const user = useAppSelector((s) => s.auth.user);
-  if (user?.userType === "STUDENT" || user?.userType === "GUARDIAN") {
+  const userType = useAppSelector((s) => s.auth.user?.userType);
+  if (userType === "STUDENT" || userType === "GUARDIAN") {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;
@@ -124,6 +153,7 @@ function UniversityAdminRoute() {
 export default function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<RootEntry />} />
       <Route element={<PublicRoute />}>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
@@ -220,10 +250,12 @@ export default function AppRoutes() {
               <Route element={<PlatformPageGate anyOf={PLATFORM_PAGE_ACTIONS.dataProtection} />}>
                 <Route path="/platform/data-protection" element={<DataProtectionWorkspacePage />} />
               </Route>
+              <Route element={<PlatformPageGate anyOf={PLATFORM_PAGE_ACTIONS.landing} />}>
+                <Route path="/platform/landing" element={<PlatformLandingCmsPage />} />
+              </Route>
             </Route>
           </Route>
         </Route>
-        <Route path="/" element={<RoleHomeRedirect />} />
         <Route element={<AppLayout />}>
           <Route element={<LazyRouteView />}>
             <Route path="/dashboard" element={<DashboardPage />} />

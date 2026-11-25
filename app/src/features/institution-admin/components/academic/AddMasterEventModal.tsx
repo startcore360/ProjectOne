@@ -1,5 +1,5 @@
 ﻿import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export interface AcademicSessionOption {
   academicSessionId: string;
@@ -64,24 +64,21 @@ export function AddMasterEventModal({
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
-        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="master-event-session-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-            Academic Session
-          </label>
-          {sessions && sessions.length > 0 ? (
-            <select
-              id="master-event-session-select"
-              value={targetSessionId || sessions[0]?.academicSessionId || ""}
-              onChange={(e) => setTargetSessionId(e.target.value)}
-              className="app-input"
-            >
-              {sessions.map((s) => (
-                <option key={s.academicSessionId} value={s.academicSessionId}>
-                  {s.sessionLabel} ({s.startDate} to {s.endDate})
-                </option>
-              ))}
-            </select>
-          ) : (
+        {sessions && sessions.length > 0 ? (
+          <SelectField
+            id="master-event-session-select"
+            label="Academic Session"
+            value={targetSessionId || sessions[0]?.academicSessionId || ""}
+            onChange={(e) => setTargetSessionId(e.target.value)}
+          >
+            {sessions.map((s) => (
+              <option key={s.academicSessionId} value={s.academicSessionId}>
+                {s.sessionLabel} ({s.startDate} to {s.endDate})
+              </option>
+            ))}
+          </SelectField>
+        ) : (
+          <div style={{ marginBottom: "1rem" }}>
             <TextField
               id="master-event-session-input"
               label="Academic Session ID"
@@ -90,23 +87,18 @@ export function AddMasterEventModal({
               onChange={(e) => setTargetSessionId(e.target.value)}
               placeholder="Enter academic session UUID"
             />
-          )}
-        </div>
-        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="master-event-type-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-            Event Type
-          </label>
-          <select
-            id="master-event-type-select"
-            value={masterEventType}
-            onChange={(e) => setMasterEventType(e.target.value)}
-            className="app-input"
-          >
-            <option value="SEMESTER_DATES">Semester Dates (SEMESTER_DATES)</option>
-            <option value="UNIVERSITY_HOLIDAY">University Holiday (UNIVERSITY_HOLIDAY)</option>
-            <option value="EXAM_DAY">Exam day (EXAM_DAY)</option>
-          </select>
-        </div>
+          </div>
+        )}
+        <SelectField
+          id="master-event-type-select"
+          label="Event Type"
+          value={masterEventType}
+          onChange={(e) => setMasterEventType(e.target.value)}
+        >
+          <option value="SEMESTER_DATES">Semester Dates (SEMESTER_DATES)</option>
+          <option value="UNIVERSITY_HOLIDAY">University Holiday (UNIVERSITY_HOLIDAY)</option>
+          <option value="EXAM_DAY">Exam day (EXAM_DAY)</option>
+        </SelectField>
         <div style={{ marginBottom: "1rem" }}>
           <TextField
             id="master-event-title-input"

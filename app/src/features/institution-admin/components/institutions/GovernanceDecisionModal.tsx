@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice } from "../../../../design-system/components";
+import { Button, Modal, Notice, TextAreaField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { institutionService, type InstitutionItem } from "../../api/institutionService";
 
@@ -91,24 +91,13 @@ export function GovernanceDecisionModal({
         </div>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <label
-            htmlFor="decision-notes"
-            style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-          >
-            Decision Notes
-          </label>
-          <textarea
+          <TextAreaField
             id="decision-notes"
+            label="Decision Notes"
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Official executive findings and notes..."
-            style={{
-              width: "100%",
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-md, 4px)",
-              border: "1px solid var(--color-border, #ccc)",
-            }}
           />
         </div>
 

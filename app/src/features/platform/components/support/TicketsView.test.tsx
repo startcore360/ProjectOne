@@ -92,4 +92,42 @@ describe("TicketsView", () => {
     expect(screen.getByLabelText(/Escalate to/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Escalation note/i)).toBeInTheDocument();
   });
+
+  it("renders close modal and submits CLOSED status with closing note", async () => {
+    const user = userEvent.setup();
+    const resolvedTicket: SupportTicketItem = {
+      ...mockTicket,
+      status: "RESOLVED",
+      resolutionNote: "Fixed the user permission",
+    };
+    vi.mocked(platformOpsService.listSupportTickets).mockResolvedValueOnce([resolvedTicket]);
+    vi.mocked(platformOpsService.listActiveGrants).mockResolvedValueOnce([]);
+    vi.mocked(platformOpsService.updateSupportTicket).mockResolvedValueOnce({
+      ...resolvedTicket,
+      status: "CLOSED",
+    });
+
+    render(<TicketsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("TICK-101")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    // Verify close modal heading and label
+    expect(screen.getByRole("heading", { name: /Close · TICK-101/i })).toBeInTheDocument();
+    const closingInput = screen.getByLabelText(/Closing note/i);
+    expect(closingInput).toBeInTheDocument();
+
+    fireEvent.change(closingInput, { target: { value: "User confirmed resolution, ticket closed" } });
+    await user.click(screen.getByRole("button", { name: "Confirm closure" }));
+
+    await waitFor(() => {
+      expect(platformOpsService.updateSupportTicket).toHaveBeenCalledWith("ticket-1", {
+        status: "CLOSED",
+        resolutionNote: "User confirmed resolution, ticket closed",
+      });
+    });
+  });
 });

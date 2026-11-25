@@ -4,6 +4,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Button, Notice, Panel, SkeletonPage, StatusBadge } from "../../../../design-system/components";
 import { MetricCard } from "../../../../design-system/components/MetricCard";
 import { useAppSelector } from "../../../../store/hooks";
+import { renderGreeting } from "../../../../utils/greeting";
 import {
   platformDataProtectionService,
   type RetentionChangeRequestDto,
@@ -16,8 +17,17 @@ export function DataProtectionOfficerDashboard() {
   const [deletions, setDeletions] = useState<DeletionRequestDto[]>([]);
   const [retentionChanges, setRetentionChanges] = useState<RetentionChangeRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [minSpinning, setMinSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const isSpinning = loading || minSpinning;
+
+  const handleRefresh = useCallback(() => {
+    setMinSpinning(true);
+    setRefreshKey((k) => k + 1);
+    setTimeout(() => setMinSpinning(false), 600);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -51,8 +61,6 @@ export function DataProtectionOfficerDashboard() {
   const pendingRetention = safeRetention.filter((r) => r?.status === "REQUESTED");
   const totalPending = pendingExports.length + pendingDeletions.length + pendingRetention.length;
 
-  const name = displayName?.trim();
-  const personName = name && !name.includes("@") ? name : null;
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
   const allPendingRows = [
@@ -82,7 +90,7 @@ export function DataProtectionOfficerDashboard() {
   return (
     <div className="app-page po-dash">
       <PageHeader
-        title={`Welcome${personName ? `, ${personName}` : ""}`}
+        title={renderGreeting(displayName)}
         description={`Data protection workspace · ${today}`}
         actions={
           <div className="po-dash__actions">
@@ -90,11 +98,12 @@ export function DataProtectionOfficerDashboard() {
               variant="tertiary"
               size="sm"
               className="po-dash__refresh"
-              onClick={() => setRefreshKey((k) => k + 1)}
+              onClick={handleRefresh}
+              disabled={isSpinning}
               aria-label="Refresh dashboard"
               title="Refresh"
             >
-              <Icon name="refresh" size={16} />
+              <Icon name="refresh" size={16} spin={isSpinning} />
             </Button>
           </div>
         }

@@ -90,7 +90,7 @@ export function CreatedCredentialsModal({
                 value={user.temporaryPassword}
                 onFocus={(e) => e.target.select()}
                 style={{
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-mono)",
                   fontSize: "1.1rem",
                   padding: "0.5rem 0.75rem",
                   borderRadius: "var(--radius-sm)",

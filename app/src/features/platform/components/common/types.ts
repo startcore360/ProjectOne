@@ -76,11 +76,29 @@ export function titleCaseOutcome(outcome: string): string {
 
 export function readErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === "object" && "response" in err) {
-    const response = (err as { response?: { data?: { error?: string; message?: string } } }).response;
-    const raw = response?.data?.error ?? response?.data?.message;
+    const response = (err as { response?: { data?: { error?: string; message?: string; code?: string } } }).response;
+    const raw = response?.data?.error ?? response?.data?.message ?? response?.data?.code;
     if (raw) {
       if (/does not hold action\s+[A-Z0-9_]+/i.test(raw) || /does not hold permission\s+[A-Z0-9_]+/i.test(raw)) {
         return "Your current role does not have permission to perform this action. Ask your administrator to review your access.";
+      }
+      if (/BUSINESS_RULE_VIOLATION/i.test(raw) || /violates a business rule constraint/i.test(raw)) {
+        return "The requested operation violates a business rule constraint. Please contact your Platform Administrator to review system constraints.";
+      }
+      if (/SUPPORT_TICKET_CLOSED/i.test(raw)) {
+        return "This support ticket is already closed and cannot be updated or escalated. If further action is needed, please open a new ticket.";
+      }
+      if (/INVALID_SUPPORT_TICKET_ESCALATION_TARGET/i.test(raw)) {
+        return "Invalid escalation target. Tickets can only be escalated to Engineering or Release Manager.";
+      }
+      if (/SUPPORT_TICKET_ESCALATION_NOTE_REQUIRED/i.test(raw)) {
+        return "An escalation note explaining why this ticket needs escalation is required. Provide details on the issue and reason for routing.";
+      }
+      if (/ck_support_ticket_r1|resolution_note is required/i.test(raw)) {
+        return "A resolution or closing note is required when marking a ticket as Resolved or Closed (Rule ck_support_ticket_r1). Please enter a note before submitting.";
+      }
+      if (/ck_platform_notification_priority/i.test(raw)) {
+        return "Escalation notification failed due to an invalid priority constraint. System priority has been adjusted to normal. If this persists, contact Engineering.";
       }
       const safe = raw
         .replace(/^STEP_IN_REQUIRED:\s*/i, "")
@@ -92,6 +110,9 @@ export function readErrorMessage(err: unknown, fallback: string): string {
     }
   }
   if (err instanceof Error && err.message && !err.message.startsWith("Request failed with status code")) {
+    if (/BUSINESS_RULE_VIOLATION/i.test(err.message) || /violates a business rule/i.test(err.message)) {
+      return "The requested operation violates a business rule constraint. If you believe this is in error or need an exception, please escalate this ticket to Engineering or contact your Platform Administrator.";
+    }
     const safe = err.message.replace(/\s*(?:please contact support quoting\s*)?correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "").trim();
     if (safe && !/^[A-Z][A-Z0-9_]{2,}$/.test(safe)) return safe;
   }

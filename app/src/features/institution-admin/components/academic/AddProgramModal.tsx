@@ -1,5 +1,5 @@
 ﻿import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export interface DepartmentOption {
   departmentId: string;
@@ -64,23 +64,18 @@ export function AddProgramModal({
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
-        <div className="app-form-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="prog-dept-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-            Owning Department
-          </label>
-          <select
-            id="prog-dept-select"
-            value={deptId || departments[0]?.departmentId || ""}
-            onChange={(e) => setDeptId(e.target.value)}
-            className="app-input"
-          >
-            {departments.map((d) => (
-              <option key={d.departmentId} value={d.departmentId}>
-                {d.departmentCode} — {d.departmentName}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          id="prog-dept-select"
+          label="Owning Department"
+          value={deptId || departments[0]?.departmentId || ""}
+          onChange={(e) => setDeptId(e.target.value)}
+        >
+          {departments.map((d) => (
+            <option key={d.departmentId} value={d.departmentId}>
+              {d.departmentCode} — {d.departmentName}
+            </option>
+          ))}
+        </SelectField>
         <div style={{ marginBottom: "1rem" }}>
           <TextField
             id="prog-code-input"

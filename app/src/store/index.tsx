@@ -2,12 +2,14 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import platformPermissionsReducer from "./slices/platformPermissionsSlice";
 import tenantPermissionsReducer from "./slices/tenantPermissionsSlice";
+import notificationsReducer from "./slices/notificationsSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     platformPermissions: platformPermissionsReducer,
     tenantPermissions: tenantPermissionsReducer,
+    notifications: notificationsReducer,
   },
 });
 

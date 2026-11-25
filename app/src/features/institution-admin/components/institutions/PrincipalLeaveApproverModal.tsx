@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   leaveApproverService,
@@ -70,29 +70,17 @@ export function PrincipalLeaveApproverModal({
       )}
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <label
-            htmlFor="approver-kind"
-            style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-          >
-            Approver Role / Kind *
-          </label>
-          <select
-            id="approver-kind"
-            value={approverKind}
-            onChange={(e) => setApproverKind(e.target.value as ApproverKind)}
-            style={{
-              width: "100%",
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-md, 4px)",
-              border: "1px solid var(--color-border, #ccc)",
-            }}
-          >
-            <option value="MANAGEMENT">Management / Trustees</option>
-            <option value="VICE_CHANCELLOR">Vice Chancellor</option>
-            <option value="GOVERNING_BODY_APPROVER">Governing Body Approver</option>
-          </select>
-        </div>
+        <SelectField
+          id="approver-kind"
+          label="Approver Role / Kind *"
+          required
+          value={approverKind}
+          onChange={(e) => setApproverKind(e.target.value as ApproverKind)}
+        >
+          <option value="MANAGEMENT">Management / Trustees</option>
+          <option value="VICE_CHANCELLOR">Vice Chancellor</option>
+          <option value="GOVERNING_BODY_APPROVER">Governing Body Approver</option>
+        </SelectField>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
           <TextField

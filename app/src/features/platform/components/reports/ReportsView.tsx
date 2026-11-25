@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useMemo } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
-import { Button, MetricCard, Panel, SkeletonMetricCard } from "../../../../design-system/components";
+import { Button, MetricCard, Notice, Panel, SkeletonMetricCard } from "../../../../design-system/components";
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { Icon, type IconName } from "../../../../components/ui/Icon";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
@@ -22,6 +22,9 @@ export function ReportsView() {
   const [report, setReport] = useState<PlatformReportItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [tenantsError, setTenantsError] = useState("");
+  const [invoicesError, setInvoicesError] = useState("");
+  const [ticketsError, setTicketsError] = useState("");
 
   // Detailed dataset states for rich interactive tables
   const [tenants, setTenants] = useState<TenantItem[]>([]);
@@ -38,37 +41,49 @@ export function ReportsView() {
   const loadReport = async (code: string) => {
     setLoading(true);
     setError("");
+    setTenantsError("");
+    setInvoicesError("");
+    setTicketsError("");
     setReport(null);
-    try {
-      const data = await platformOpsService.getReport(code);
-      setReport(data);
 
-      // Supplementary dataset loads based on active report
-      if (code === "PLATFORM_OVERVIEW") {
-        try {
-          const res = await platformTenantService.getTenants(0, 100);
-          const items = Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data) ? res.data : [];
-          setTenants(items);
-        } catch {
-          // Graceful fallback to report metrics
-        }
-      } else if (code === "BILLING_REVENUE" || code === "REVENUE") {
-        try {
-          const invList = await platformOpsService.listInvoices();
-          setInvoices(Array.isArray(invList) ? invList : []);
-        } catch {
-          // Graceful fallback
-        }
-      } else if (code === "SUPPORT_SLA") {
-        try {
-          const tkList = await platformOpsService.listSupportTickets();
-          setTickets(Array.isArray(tkList) ? tkList : []);
-        } catch {
-          // Graceful fallback
-        }
+    try {
+      const [reportResult, tenantsResult, invoicesResult, ticketsResult] = await Promise.allSettled([
+        platformOpsService.getReport(code),
+        platformTenantService.getTenants(0, 100),
+        platformOpsService.listInvoices(),
+        platformOpsService.listSupportTickets(),
+      ]);
+
+      if (reportResult.status === "fulfilled") {
+        setReport(reportResult.value);
+      } else {
+        setError(getApiErrorMessage(reportResult.reason));
       }
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err));
+
+      if (tenantsResult.status === "fulfilled") {
+        const res = tenantsResult.value;
+        const items = Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data) ? res.data : [];
+        setTenants(items);
+      } else {
+        setTenants([]);
+        setTenantsError(getApiErrorMessage(tenantsResult.reason));
+      }
+
+      if (invoicesResult.status === "fulfilled") {
+        const invList = invoicesResult.value;
+        setInvoices(Array.isArray(invList) ? invList : []);
+      } else {
+        setInvoices([]);
+        setInvoicesError(getApiErrorMessage(invoicesResult.reason));
+      }
+
+      if (ticketsResult.status === "fulfilled") {
+        const tkList = ticketsResult.value;
+        setTickets(Array.isArray(tkList) ? tkList : []);
+      } else {
+        setTickets([]);
+        setTicketsError(getApiErrorMessage(ticketsResult.reason));
+      }
     } finally {
       setLoading(false);
     }
@@ -285,7 +300,7 @@ export function ReportsView() {
             disabled={loading}
             style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", whiteSpace: "nowrap" }}
           >
-            <Icon name="refresh" size={14} />
+            <Icon name="refresh" size={14} spin={loading} />
             <span>Refresh</span>
           </Button>
         </div>
@@ -460,6 +475,11 @@ export function ReportsView() {
                         description="Verified institution environments, active subscription plans, and resource ceilings"
                       >
                         <div className="app-panel__body">
+                          {tenantsError && (
+                            <Notice tone="danger" style={{ marginBottom: "var(--space-3)" }}>
+                              {tenantsError}
+                            </Notice>
+                          )}
                           {/* Search and Filter Bar */}
                           <div
                             style={{
@@ -858,6 +878,11 @@ export function ReportsView() {
                     <div style={{ marginTop: "var(--space-4)" }}>
                       <Panel title="Customer Invoices &amp; Receivables Ledger" description="Individual tenant subscription invoices and settlement status">
                         <div className="app-panel__body">
+                          {invoicesError && (
+                            <Notice tone="danger" style={{ marginBottom: "var(--space-3)" }}>
+                              {invoicesError}
+                            </Notice>
+                          )}
                           {/* Filter Tabs */}
                           <div style={{ display: "flex", gap: "6px", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
                             {(
@@ -1048,6 +1073,11 @@ export function ReportsView() {
                     <div style={{ marginTop: "var(--space-5)" }}>
                       <Panel title="Live Support Incidents &amp; SLA Triage" description="Operational customer tickets and statutory resolution velocity">
                         <div className="app-panel__body">
+                          {ticketsError && (
+                            <Notice tone="danger" style={{ marginBottom: "var(--space-3)" }}>
+                              {ticketsError}
+                            </Notice>
+                          )}
                           {/* Filter Tabs */}
                           <div style={{ display: "flex", gap: "6px", marginBottom: "var(--space-3)", flexWrap: "wrap" }}>
                             {(

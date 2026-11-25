@@ -81,6 +81,21 @@ public class PlatformUserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{platformUserId}/password-reset")
+    @Operation(summary = "Issue a temporary password to another platform user (PLATFORM_USER_MANAGE)")
+    public ResponseEntity<PlatformUserResponse> resetPlatformUserPassword(
+            @PathVariable UUID platformUserId,
+            Authentication authentication) {
+
+        PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+        platformPermissionService.authorize(principal, "PLATFORM_USER_MANAGE");
+        PlatformUserResponse reset = platformUserManagementService.resetPlatformUserPassword(
+                platformUserId, principal);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(reset);
+    }
+
     @GetMapping
     @Operation(summary = "List platform staff accounts")
     public ResponseEntity<List<PlatformUserResponse>> listPlatformUsers(Authentication authentication) {

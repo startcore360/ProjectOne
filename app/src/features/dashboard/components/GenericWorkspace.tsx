@@ -2,6 +2,7 @@
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader } from "../../../design-system/components";
 import { Button } from "../../../design-system/components";
+import { renderGreeting } from "../../../utils/greeting";
 
 export interface GenericWorkspaceProps {
   name: string;
@@ -50,7 +51,7 @@ export function GenericWorkspace({ name, userType }: GenericWorkspaceProps) {
   };
   return (
     <div className="app-dashboard">
-      <PageHeader title={`Welcome, ${name}.`} description={content.title} />
+      <PageHeader title={renderGreeting(name)} description={content.title} />
       <section className="app-dash-card app-welcome-state">
         <span className="app-dash-card__chevron">
           <Icon name="home" size={20} />

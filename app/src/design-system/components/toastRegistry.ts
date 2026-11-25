@@ -2,6 +2,16 @@ import type { ReactNode } from "react";
 
 export type ToastVariant = "info" | "success" | "warning" | "error" | "neutral";
 
+export type ToastPosition =
+  | "top"
+  | "top-center"
+  | "top-right"
+  | "top-left"
+  | "bottom"
+  | "bottom-center"
+  | "bottom-right"
+  | "bottom-left";
+
 export type ToastAction = {
   label: string;
   onClick: () => void;
@@ -17,6 +27,8 @@ export type ToastItem = {
   showAction?: boolean;
   alertDuration?: number;
   onDismiss?: () => void;
+  popup?: boolean;
+  position?: ToastPosition;
 };
 
 export type ToastListener = (toasts: ToastItem[]) => void;
@@ -82,17 +94,18 @@ export const toastRegistry = new ToastRegistry();
  * E.g. toast.success("Term locked", "The term is now frozen.");
  */
 export const toast = {
-  show: (options: Omit<ToastItem, "id"> & { id?: string }) => toastRegistry.show(options),
+  show: (options: Omit<ToastItem, "id"> & { id?: string }) =>
+    toastRegistry.show({ popup: true, ...options }),
   success: (title: string, description?: string, options?: Partial<ToastItem>) =>
-    toastRegistry.show({ variant: "success", title, description, ...options }),
+    toastRegistry.show({ variant: "success", title, description, popup: true, ...options }),
   error: (title: string, description?: string, options?: Partial<ToastItem>) =>
-    toastRegistry.show({ variant: "error", title, description, ...options }),
+    toastRegistry.show({ variant: "error", title, description, popup: true, ...options }),
   warning: (title: string, description?: string, options?: Partial<ToastItem>) =>
-    toastRegistry.show({ variant: "warning", title, description, ...options }),
+    toastRegistry.show({ variant: "warning", title, description, popup: true, ...options }),
   info: (title: string, description?: string, options?: Partial<ToastItem>) =>
-    toastRegistry.show({ variant: "info", title, description, ...options }),
+    toastRegistry.show({ variant: "info", title, description, popup: true, ...options }),
   neutral: (title: string, description?: string, options?: Partial<ToastItem>) =>
-    toastRegistry.show({ variant: "neutral", title, description, ...options }),
+    toastRegistry.show({ variant: "neutral", title, description, popup: true, ...options }),
   dismiss: (id?: string) => toastRegistry.hide(id),
   clear: () => toastRegistry.clear(),
 };

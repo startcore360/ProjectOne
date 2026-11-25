@@ -1,14 +1,7 @@
 import api from "../../../services/axios";
+import { notificationsApi, type BellNotification } from "../../notifications/api/notificationsApi";
 
-export interface NotificationItem {
-  notificationId: string;
-  triggerCode: string;
-  title: string;
-  body: string | null;
-  priorityClass: string;
-  createdAt: string;
-  readAt: string | null;
-}
+export type NotificationItem = BellNotification;
 
 export interface LeaveBalanceItem {
   leaveBalanceId: string;
@@ -44,14 +37,13 @@ export interface NoticeItem {
 
 export const selfServiceApi = {
   getNotifications: async (tenantId: string): Promise<NotificationItem[]> => {
-    const res = await api.get<NotificationItem[]>(`/tenants/${tenantId}/me/notifications`);
-    return Array.isArray(res.data) ? res.data : [];
+    return notificationsApi.list(tenantId);
   },
   markNotificationRead: async (tenantId: string, notificationId: string): Promise<void> => {
-    await api.post(`/tenants/${tenantId}/me/notifications/${notificationId}/read`);
+    return notificationsApi.markRead(tenantId, notificationId);
   },
   markAllNotificationsRead: async (tenantId: string): Promise<void> => {
-    await api.post(`/tenants/${tenantId}/me/notifications/read-all`);
+    return notificationsApi.markAllRead(tenantId);
   },
   getLeaveBalances: async (tenantId: string): Promise<LeaveBalanceItem[]> => {
     const res = await api.get<LeaveBalanceItem[]>(`/tenants/${tenantId}/me/leave-balances`);

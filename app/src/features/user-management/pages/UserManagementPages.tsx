@@ -107,6 +107,7 @@ export function ConfirmDialog({
 
 function MoreActionsMenu({ items }: { items: { label: string; onClick: () => void }[] }) {
   const [open, setOpen] = useState(false);
+  const [alignLeft, setAlignLeft] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -123,6 +124,12 @@ function MoreActionsMenu({ items }: { items: { label: string; onClick: () => voi
     };
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setAlignLeft(rect.left < 220 || rect.right - 220 < 16);
   }, [open]);
 
   useEffect(() => {
@@ -195,10 +202,12 @@ function MoreActionsMenu({ items }: { items: { label: string; onClick: () => voi
         <div
           ref={menuRef}
           role="menu"
+          className="app-row-menu__dropdown"
           aria-label="More user actions"
           style={{
             position: "absolute",
-            right: 0,
+            left: alignLeft ? 0 : "auto",
+            right: alignLeft ? "auto" : 0,
             top: "calc(100% + 4px)",
             zIndex: 50,
             background: "var(--color-bg-surface)",
@@ -206,6 +215,7 @@ function MoreActionsMenu({ items }: { items: { label: string; onClick: () => voi
             borderRadius: "var(--radius-md)",
             boxShadow: "var(--elevation-2)",
             minWidth: "220px",
+            maxWidth: "calc(100vw - 32px)",
             padding: "4px 0",
           }}
           onClick={closeMenu}
@@ -525,17 +535,21 @@ export function UserDetailPage() {
   const [actionBanner, setActionBanner] = useState<ActionBanner>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState("");
+  const latestUserIdRef = useRef<string | undefined>(userId);
+  latestUserIdRef.current = userId;
 
-  const load = async (scopeToUse: ActingScope) => {
-    if (!tenantId || !userId) return;
+  const load = async (scopeToUse: ActingScope, targetUserId = userId) => {
+    if (!tenantId || !targetUserId) return;
     setState("loading");
     setErrorMessage("");
     try {
-      const { data } = await userManagementService.getUser(tenantId, userId, scopeToUse);
+      const { data } = await userManagementService.getUser(tenantId, targetUserId, scopeToUse);
+      if (latestUserIdRef.current !== targetUserId) return;
       setUser(data);
       setFields({ displayName: data.displayName, email: data.email, mobile: data.mobile });
       setState("loaded");
     } catch (error) {
+      if (latestUserIdRef.current !== targetUserId) return;
       setUser(null);
       setState(isForbidden(error) ? "denied" : "error");
       setErrorMessage(getApiErrorMessage(error));
@@ -543,9 +557,15 @@ export function UserDetailPage() {
   };
 
   useEffect(() => {
-    if (initialScopeType) void load(scope);
+    setSaveBanner(null);
+    setActionBanner(null);
+    setTemporaryPassword(null);
+    setCopyNotice("");
+    if ((initialScopeType || !needsScope) && userId) {
+      void load(scope, userId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId, initialScopeType, needsScope]);
 
   if (!tenantId || !userId) {
     return (

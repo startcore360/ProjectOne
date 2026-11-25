@@ -8,13 +8,62 @@ import { clearLogoutReason, getLogoutReason } from "../../../services/logoutNoti
 import { authService } from "../../../services/modules/authService";
 import { AuthenticatorSetup, type PendingEnrolment } from "../components/AuthenticatorSetup";
 import { BackupCodes } from "../components/BackupCodes";
+import { buildSharedLandingUrl, isSharedLandingHost, isTunnelHost } from "../../../lib/tenantHost";
+
+const LOGIN_DRAFT_KEY = "edu360_login_draft";
+
+interface LoginDraft {
+  email: string;
+  password?: string;
+  step: "password" | "code" | "enrol" | "backup" | "codes" | "locked" | "expired";
+  enrolment?: PendingEnrolment | null;
+  savedAt: number;
+}
+
+function loadLoginDraft(): LoginDraft | null {
+  try {
+    const raw = sessionStorage.getItem(LOGIN_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed: LoginDraft = JSON.parse(raw);
+    // Keep draft for up to 15 minutes (active login session duration)
+    if (Date.now() - parsed.savedAt > 15 * 60 * 1000) {
+      sessionStorage.removeItem(LOGIN_DRAFT_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveLoginDraft(draft: Partial<LoginDraft>) {
+  try {
+    const existing = loadLoginDraft() || { email: "", step: "password", savedAt: Date.now() };
+    const merged: LoginDraft = {
+      ...existing,
+      ...draft,
+      savedAt: Date.now(),
+    };
+    sessionStorage.setItem(LOGIN_DRAFT_KEY, JSON.stringify(merged));
+  } catch {
+    // Graceful fallback if storage disabled
+  }
+}
+
+function clearLoginDraft() {
+  try {
+    sessionStorage.removeItem(LOGIN_DRAFT_KEY);
+  } catch {}
+}
+
 // The sign-in screen. Posts straight to this app's own /api/auth/login - Keycloak verifies
 // the password behind the scenes (see docs/KEYCLOAK_MIGRATION_PLAN.md), but this screen is
 // the only thing a user ever sees; there is no redirect to Keycloak's own page.
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [draft] = useState<LoginDraft | null>(() => loadLoginDraft());
+  const [email, setEmail] = useState(() => draft?.email ?? "");
+  const [password, setPassword] = useState(() => draft?.password ?? "");
   const [error, setError] = useState("");
   // I-10: why the last session ended (idle, expired, password changed), shown once.
   const [notice, setNotice] = useState(() => {
@@ -25,8 +74,8 @@ export default function LoginPage() {
   // I-01: "code" = password accepted, waiting for the authenticator app code.
   // MFA-ENROL: "enrol" = password accepted, no authenticator yet: set one up right here.
   // MFA-01: "backup" = signing in with a one-time backup code; "codes" = new backup codes, shown once.
-  const [step, setStep] = useState<"password" | "code" | "enrol" | "backup" | "codes" | "locked" | "expired">("password");
-  const [enrolment, setEnrolment] = useState<PendingEnrolment | null>(null);
+  const [step, setStep] = useState<"password" | "code" | "enrol" | "backup" | "codes" | "locked" | "expired">(() => draft?.step ?? "password");
+  const [enrolment, setEnrolment] = useState<PendingEnrolment | null>(() => draft?.enrolment ?? null);
   const [code, setCode] = useState("");
   const [backupCode, setBackupCode] = useState("");
   const [showCodeHelp, setShowCodeHelp] = useState(false);
@@ -58,6 +107,7 @@ export default function LoginPage() {
         return;
       }
       const user = await login(email.trim(), password, step === "code" ? code : undefined);
+      clearLoginDraft();
       navigate(user.mustChangePassword ? "/change-password" : "/");
     } catch (err) {
       const body = axios.isAxiosError<{
@@ -71,11 +121,13 @@ export default function LoginPage() {
         ? err.response?.data
         : undefined;
       if (body?.code === "LOCKED" || body?.code === "ACCOUNT_LOCKED" || body?.code === "ACCOUNT_TEMPORARILY_LOCKED") {
+        clearLoginDraft();
         setStep("locked");
         setError(body.error ?? "This account is temporarily locked after repeated failed sign-in attempts. Try again after 30 minutes or contact your administrator.");
         return;
       }
       if (body?.code === "PASSWORD_EXPIRED") {
+        clearLoginDraft();
         setStep("expired");
         setError(body.error ?? "Your password has expired. Use password recovery or contact your administrator.");
         return;
@@ -85,6 +137,7 @@ export default function LoginPage() {
         setStep("code");
         setCode("");
         setBusy(false);
+        saveLoginDraft({ email: email.trim(), password, step: "code" });
         return;
       }
       if (body?.code === "MFA_ENROLMENT_REQUIRED" && body.enrolmentId && body.qrCode && body.secret) {
@@ -92,10 +145,12 @@ export default function LoginPage() {
         if (step === "backup") {
           setNotice("Backup code accepted. Your old authenticator was removed - set up a new one now.");
         }
-        setEnrolment({ enrolmentId: body.enrolmentId, qrCode: body.qrCode, secret: body.secret });
+        const pending = { enrolmentId: body.enrolmentId, qrCode: body.qrCode, secret: body.secret };
+        setEnrolment(pending);
         setBackupCode("");
         setStep("enrol");
         setBusy(false);
+        saveLoginDraft({ email: email.trim(), password, step: "enrol", enrolment: pending });
         return;
       }
       if (body?.code === "MFA_ENROLMENT_REQUIRED") {
@@ -357,6 +412,14 @@ export default function LoginPage() {
           <span aria-hidden="true">◆</span>Your access follows your institution’s roles and
           permissions. Never share your password.
         </p>
+        {typeof window !== "undefined" &&
+          (isTunnelHost(window.location.hostname) || !isSharedLandingHost(window.location.hostname)) && (
+          <div className="auth-options" style={{ justifyContent: "center", marginTop: "var(--space-3)" }}>
+            <a href={buildSharedLandingUrl(window.location)} className="app-text-link">
+              Not your institution? Switch institution
+            </a>
+          </div>
+        )}
       </section>
       <footer className="auth-footer">
         EDU 360 <span>·</span> One Platform. Every Institution. One Connected Ecosystem.

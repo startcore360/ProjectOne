@@ -66,8 +66,9 @@ function TenantContextNotice() {
 }
 
 export function InstitutionsPage() {
-  const user = useAppSelector((state) => state.auth.user);
-  const tenantId = user?.tenantId ?? "";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId ?? "");
+  const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
+  const roleName = useAppSelector((state) => state.auth.user?.roleName);
   const { can } = useTenantAccess();
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,18 +86,18 @@ export function InstitutionsPage() {
   } | null>(null);
 
   const isNonAdminRole =
-    user?.roleCode === "SCHOOL_ADMIN" ||
-    user?.roleCode === "COLLEGE_ADMIN" ||
-    user?.roleCode === "STUDENT_COLLEGE" ||
-    user?.roleCode === "STUDENT_SCHOOL" ||
-    user?.roleCode === "PARENT_COLLEGE" ||
-    user?.roleCode === "PARENT_SCHOOL" ||
-    user?.roleCode === "CLASS_TEACHER" ||
-    user?.roleCode === "SUBJECT_TEACHER";
+    roleCode === "SCHOOL_ADMIN" ||
+    roleCode === "COLLEGE_ADMIN" ||
+    roleCode === "STUDENT_COLLEGE" ||
+    roleCode === "STUDENT_SCHOOL" ||
+    roleCode === "PARENT_COLLEGE" ||
+    roleCode === "PARENT_SCHOOL" ||
+    roleCode === "CLASS_TEACHER" ||
+    roleCode === "SUBJECT_TEACHER";
   const canManageInstitutions =
     can("INSTITUTION_CREATE_DRAFT") ||
     can("INSTITUTION_ACTIVATE") ||
-    (!isNonAdminRole && (!user?.roleCode || user?.roleCode === "UNIVERSITY_ADMIN"));
+    (!isNonAdminRole && (!roleCode || roleCode === "UNIVERSITY_ADMIN"));
 
   // Leave Approver state (Stories #45 & #46)
   const [goLiveCheck, setGoLiveCheck] = useState<GoLiveCheckResponse | null>(null);
@@ -208,7 +209,7 @@ export function InstitutionsPage() {
 
       {!canManageInstitutions && (
         <Notice tone="info" style={{ marginBottom: "var(--space-4)" }}>
-          <strong>Read-only institution register:</strong> Institution creation and executive approvals are restricted to University Administrators. As a {user?.roleName || "College or School Administrator"}, your assigned institutions are listed below.
+          <strong>Read-only institution register:</strong> Institution creation and executive approvals are restricted to University Administrators. As a {roleName || "College or School Administrator"}, your assigned institutions are listed below.
         </Notice>
       )}
 
@@ -505,10 +506,10 @@ export function InstitutionUsersPage() {
 }
 
 export function RolesPermissionsPage() {
-  const user = useAppSelector((state) => state.auth.user);
-  const tenantId = user?.tenantId ?? "";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId ?? "");
+  const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
   const { can } = useTenantAccess();
-  const canManageCustomRole = can("ROLE_CUSTOM_MANAGE") || !user?.roleCode || user?.roleCode === "UNIVERSITY_ADMIN";
+  const canManageCustomRole = can("ROLE_CUSTOM_MANAGE") || !roleCode || roleCode === "UNIVERSITY_ADMIN";
   const [query, setQuery] = useState("");
   const [roles, setRoles] = useState<RoleDefinitionItem[]>([]);
   const [loading, setLoading] = useState(true);

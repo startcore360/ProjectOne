@@ -15,6 +15,15 @@ import "./main.css";
 
 initTheme();
 
+// Prevent Vite dev server from auto-reloading when mobile browsers background the tab
+// (which drops the HMR WebSocket connection while the user switches to an Authenticator app)
+if (import.meta.hot) {
+  import.meta.hot.on("vite:ws:disconnect", () => {
+    // Halts Vite's internal reconnect polling from calling location.reload()
+    throw new Error("[Vite HMR] Disconnect reload suppressed to preserve mobile form state.");
+  });
+}
+
 // Install the response interceptor before bootstrapAuth makes its first API call.
 // Without this, expired access tokens cannot use the refresh flow during the session.
 setupAxiosInterceptors();
