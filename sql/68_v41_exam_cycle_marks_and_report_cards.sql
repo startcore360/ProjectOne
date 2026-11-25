@@ -357,7 +357,74 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS p_tenant ON app.%I', t);
     EXECUTE format('CREATE POLICY p_tenant ON app.%I USING (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid) WITH CHECK (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid)', t);
   END LOOP;
-END $$;
+END $;
+
+-- Institution scope is independently enforced for all examination and results records.
+CREATE POLICY p_institution ON app.exam_cycle AS RESTRICTIVE
+USING (current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))
+WITH CHECK (current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]));
+
+CREATE POLICY p_institution ON app.exam_schedule AS RESTRICTIVE
+USING (EXISTS (SELECT 1 FROM app.exam_cycle ec WHERE ec.tenant_id = exam_schedule.tenant_id
+                AND ec.exam_cycle_id = exam_schedule.exam_cycle_id
+                AND (current_setting('app.institution_scope', true) = 'ALL'
+                     OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))))
+WITH CHECK (EXISTS (SELECT 1 FROM app.exam_cycle ec WHERE ec.tenant_id = exam_schedule.tenant_id
+                     AND ec.exam_cycle_id = exam_schedule.exam_cycle_id
+                     AND (current_setting('app.institution_scope', true) = 'ALL'
+                          OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))));
+
+CREATE POLICY p_institution ON app.exam_invigilator AS RESTRICTIVE
+USING (EXISTS (SELECT 1 FROM app.exam_schedule es JOIN app.exam_cycle ec
+                ON ec.tenant_id = es.tenant_id AND ec.exam_cycle_id = es.exam_cycle_id
+                WHERE es.tenant_id = exam_invigilator.tenant_id
+                  AND es.exam_schedule_id = exam_invigilator.exam_schedule_id
+                  AND (current_setting('app.institution_scope', true) = 'ALL'
+                       OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))))
+WITH CHECK (EXISTS (SELECT 1 FROM app.exam_schedule es JOIN app.exam_cycle ec
+                     ON ec.tenant_id = es.tenant_id AND ec.exam_cycle_id = es.exam_cycle_id
+                     WHERE es.tenant_id = exam_invigilator.tenant_id
+                       AND es.exam_schedule_id = exam_invigilator.exam_schedule_id
+                       AND (current_setting('app.institution_scope', true) = 'ALL'
+                            OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))));
+
+CREATE POLICY p_institution ON app.hall_ticket AS RESTRICTIVE
+USING (EXISTS (SELECT 1 FROM app.exam_cycle ec WHERE ec.tenant_id = hall_ticket.tenant_id
+                AND ec.exam_cycle_id = hall_ticket.exam_cycle_id
+                AND (current_setting('app.institution_scope', true) = 'ALL'
+                     OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))))
+WITH CHECK (EXISTS (SELECT 1 FROM app.exam_cycle ec WHERE ec.tenant_id = hall_ticket.tenant_id
+                     AND ec.exam_cycle_id = hall_ticket.exam_cycle_id
+                     AND (current_setting('app.institution_scope', true) = 'ALL'
+                          OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))));
+
+CREATE POLICY p_institution ON app.exam_mark AS RESTRICTIVE
+USING (EXISTS (SELECT 1 FROM app.exam_schedule es JOIN app.exam_cycle ec
+                ON ec.tenant_id = es.tenant_id AND ec.exam_cycle_id = es.exam_cycle_id
+                WHERE es.tenant_id = exam_mark.tenant_id
+                  AND es.exam_schedule_id = exam_mark.exam_schedule_id
+                  AND (current_setting('app.institution_scope', true) = 'ALL'
+                       OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))))
+WITH CHECK (EXISTS (SELECT 1 FROM app.exam_schedule es JOIN app.exam_cycle ec
+                     ON ec.tenant_id = es.tenant_id AND ec.exam_cycle_id = es.exam_cycle_id
+                     WHERE es.tenant_id = exam_mark.tenant_id
+                       AND es.exam_schedule_id = exam_mark.exam_schedule_id
+                       AND (current_setting('app.institution_scope', true) = 'ALL'
+                            OR ec.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))));
+
+CREATE POLICY p_institution ON app.grade_scale AS RESTRICTIVE
+USING (institution_id IS NULL OR current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))
+WITH CHECK (institution_id IS NULL OR current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]));
+
+CREATE POLICY p_institution ON app.report_card AS RESTRICTIVE
+USING (current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))
+WITH CHECK (current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]));
 
 GRANT SELECT, INSERT, UPDATE ON app.exam_cycle, app.exam_schedule, app.exam_invigilator, app.hall_ticket, app.exam_mark, app.grade_scale, app.report_card TO edu_app;
 GRANT SELECT ON app.exam_cycle, app.exam_schedule, app.exam_invigilator, app.hall_ticket, app.exam_mark, app.grade_scale, app.report_card TO edu_report;
