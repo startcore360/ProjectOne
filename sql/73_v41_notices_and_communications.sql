@@ -42,15 +42,17 @@ CREATE TABLE IF NOT EXISTS app.message_dispatch (
  channel text NOT NULL, attempt_order integer NOT NULL DEFAULT 1, recipient_user_id uuid, phone text, email text,
  message_body text NOT NULL, carrier_message_id text, status text NOT NULL DEFAULT 'QUEUED',
  failure_reason text, sent_at timestamptz, delivered_at timestamptz,
+ claimed_at timestamptz, attempt_count integer NOT NULL DEFAULT 0,
  created_at timestamptz NOT NULL DEFAULT now(),
  CHECK(channel IN ('IN_APP','PUSH','SMS','EMAIL')),
- CHECK(status IN ('QUEUED','WAITING','SENT','DELIVERED','FAILED','CANCELLED')),
- UNIQUE(tenant_id,campaign_id,attempt_order)
+ CONSTRAINT ck_message_dispatch_status CHECK(status IN ('QUEUED','WAITING','PROCESSING','SENT','DELIVERED','FAILED','CANCELLED')),
+ CHECK(attempt_count>=0), UNIQUE(tenant_id,campaign_id,attempt_order)
 );
 CREATE INDEX IF NOT EXISTS ix_notice_published_target ON app.notice_bulletin(tenant_id,institution_id,status,published_at DESC);
 CREATE INDEX IF NOT EXISTS ix_notice_ack_user ON app.notice_acknowledgment(tenant_id,user_id,notice_id);
 CREATE INDEX IF NOT EXISTS ix_dispatch_usage ON app.message_dispatch(tenant_id,created_at) WHERE channel='SMS' AND status IN ('SENT','DELIVERED');
 CREATE INDEX IF NOT EXISTS ix_dispatch_campaign ON app.message_dispatch(tenant_id,campaign_id,status,attempt_order);
+CREATE INDEX IF NOT EXISTS ix_dispatch_worker_claim ON app.message_dispatch(status,created_at,attempt_order) WHERE status IN ('QUEUED','PROCESSING');
 DO $$
 DECLARE t text;
 BEGIN
