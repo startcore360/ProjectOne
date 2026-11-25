@@ -450,6 +450,15 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
     landingData?.footerTagline || "One Platform. Every Institution. One Connected Ecosystem.";
 
   const marqueeItems = [...testimonials, ...testimonials];
+  const quoteProgress = [
+    Boolean(instType),
+    Boolean(studentRange),
+    selectedModules.length > 0,
+    Boolean(qName.trim()),
+    Boolean(qEmail.trim()),
+    Boolean(qInstitution.trim()),
+  ].filter(Boolean).length;
+  const quoteProgressPercent = Math.round((quoteProgress / 6) * 100);
 
   return (
     <div className="landing-page">
@@ -457,6 +466,7 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
         <div className="landing-wrap landing-nav">
           <a href="#top" className="landing-brand" aria-label="EDU 360 Home">
             <Edu360Logo className="landing-brand__logo" />
+            <span className="landing-brand__descriptor">Connected education, clearly managed</span>
           </a>
           <nav className="landing-navlinks" aria-label="Primary navigation">
             <a href="#platform">Platform</a>
@@ -673,6 +683,22 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
           </div>
         </section>
 
+        {/* Connected operations overview */}
+        <section className="landing-section landing-connected-section">
+          <div className="landing-wrap">
+            <div className="landing-section__head landing-section__head--center">
+              <Kicker>ONE CONNECTED OPERATING PICTURE</Kicker>
+              <h2 className="landing-section__title">The everyday work of education, working together.</h2>
+              <p className="landing-section__desc">EDU 360 brings the people, processes and information behind an institution into a more coordinated digital workspace.</p>
+            </div>
+            <div className="landing-connected-grid">
+              <article className="landing-connected-card"><span className="landing-connected-icon">01</span><h3>Academic operations</h3><p>Coordinate academic administration, attendance, examinations and the information teams need to keep learning operations organised.</p><small>ACADEMICS · ATTENDANCE · EXAMS</small></article>
+              <article className="landing-connected-card"><span className="landing-connected-icon">02</span><h3>Institutional administration</h3><p>Bring administrative workflows, people operations, approvals and institutional oversight into a structured working environment.</p><small>ADMINISTRATION · HR · GOVERNANCE</small></article>
+              <article className="landing-connected-card"><span className="landing-connected-icon">03</span><h3>Finance &amp; communication</h3><p>Support fee and finance workflows while making it easier to keep families and stakeholders informed through connected communication.</p><small>FEES · FINANCE · FAMILIES</small></article>
+            </div>
+          </div>
+        </section>
+
         {/* Institution Solutions & How it works */}
         <section className="landing-section landing-section--soft" id="solutions">
           <div className="landing-wrap landing-split">
@@ -833,20 +859,29 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                 <Kicker>SCOPED TO YOUR NEEDS</Kicker>
                 <h3>A proposal tailored to how you operate.</h3>
                 <p>
-                  Every institution has a different campus structure and rollout pace. Submitting
-                  this form prepares a commercial brief for our implementation specialists:
+                  Build a clear starting brief for a solution shaped around your institution,
+                  your teams and the way your campuses operate.
                 </p>
-                <ul>
-                  <li>Approved catalog module selection</li>
-                  <li>Student &amp; faculty capacity tiers</li>
-                  <li>Data migration &amp; onboarding scope</li>
-                  <li>Remote or on-site training plan</li>
-                </ul>
+                <div className="landing-quote-benefits">
+                  <div><span>01</span><p><strong>Right-sized scope</strong><small>Institution type, student capacity and campus structure</small></p></div>
+                  <div><span>02</span><p><strong>Relevant modules</strong><small>Prioritise the workflows your teams need first</small></p></div>
+                  <div><span>03</span><p><strong>Practical rollout</strong><small>Migration, onboarding and training preferences</small></p></div>
+                </div>
+                <div className="landing-quote-next">
+                  <strong>What happens next?</strong>
+                  <p>Your details are sent to the EDU 360 team for a requirements and commercial review. No instant or placeholder pricing is generated.</p>
+                </div>
               </aside>
 
               <form className="landing-quote-form" onSubmit={handleQuotationSubmit} noValidate>
+                <div className="landing-form-heading">
+                  <div><span className="landing-form-kicker">YOUR PROJECT BRIEF</span><h3>Tell us what your institution needs.</h3><p>Complete the essentials below. You can add detail as you go.</p></div>
+                  <div className="landing-form-progress"><strong>{quoteProgressPercent}%</strong><span>complete</span></div>
+                </div>
+                <div className="landing-progress-track" role="progressbar" aria-label="Quotation form completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={quoteProgressPercent}><span style={{ width: `${quoteProgressPercent}%` }} /></div>
                 {qError && <Notice tone="danger">{qError}</Notice>}
                 {qSuccess && <Notice tone="success">{qSuccess}</Notice>}
+                <div className="landing-form-section-heading"><span>01</span><div><strong>Institution profile</strong><small>Help us understand your scale and structure</small></div></div>
 
                 <div className="landing-form-row">
                   <SelectField
@@ -881,10 +916,9 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                   />
                 </div>
 
-                <div>
-                  <span style={{ fontSize: "var(--fs-label)", fontWeight: "var(--fw-semibold)" }}>
-                    Modules you want to explore
-                  </span>
+                <div className="landing-form-section-heading"><span>02</span><div><strong>Choose your priorities</strong><small>Select the modules you would like to explore</small></div></div>
+                <div className="landing-form-module-group">
+                  <span className="landing-form-field-title">Modules you want to explore</span>
                   <div className="landing-module-grid">
                     {modules.map((mod) => (
                       <label className="landing-module-item" key={mod.moduleCode}>
@@ -899,6 +933,7 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                   </div>
                 </div>
 
+                <div className="landing-form-section-heading"><span>03</span><div><strong>Plan your rollout</strong><small>Tell us what kind of implementation support may help</small></div></div>
                 <div className="landing-form-row">
                   <SelectField
                     id="quote-migration"
@@ -940,6 +975,7 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                   </small>
                 </div>
 
+                <div className="landing-form-section-heading"><span>04</span><div><strong>Your contact details</strong><small>Who should our team contact about this request?</small></div></div>
                 <div className="landing-form-row">
                   <TextField
                     id="quote-contact-name"
@@ -988,10 +1024,11 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                   onChange={(e) => setQNotes(e.target.value)}
                 />
 
-                <div>
+                <div className="landing-form-submit">
                   <Button type="submit" size="lg" busy={qBusy}>
-                    {qBusy ? "Submitting request…" : "Request my quotation ↗"}
+                    {qBusy ? "Submitting request…" : "Send my project brief ↗"}
                   </Button>
+                  <small>Submitting this form does not commit your institution to a purchase.</small>
                 </div>
               </form>
             </div>
