@@ -16,9 +16,8 @@ SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role
         WHERE role_code='MANAGEMENT' AND action_code='CONCESSION_APPROVE'
  );
 
--- University Finance Director can be designated as the Management-step stand-in through
--- the existing role roll-down override mechanism. The approval router still requires that
--- the current step resolves to this role; this grant alone does not create an approval step.
+-- Trustees (Governing Body Approver) are the alternate primary authority when no
+-- Management assignment exists. The router enforces that precedence at decision time.
 INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
 SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
        'GOVERNING_BODY_APPROVER', 'CONCESSION_APPROVE',
@@ -28,6 +27,8 @@ SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role
         WHERE role_code='GOVERNING_BODY_APPROVER' AND action_code='CONCESSION_APPROVE'
  );
 
+-- Finance Director is permitted only when an authorized Management-step roll-down
+-- explicitly designates that role; the action grant alone does not create an approval step.
 INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
 SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
        'FINANCE_DIRECTOR', 'CONCESSION_APPROVE',
