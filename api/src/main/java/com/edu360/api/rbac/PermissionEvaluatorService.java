@@ -85,7 +85,7 @@ public class PermissionEvaluatorService {
     /** PO-T05 confidential case actions can never be delegated through tenant custom roles. */
     public static final Set<String> POT05_CONFIDENTIAL_ACTIONS = Set.of(
             "GRIEVANCE_CASE_VIEW", "GRIEVANCE_CASE_ASSIGN", "GRIEVANCE_HEARING_MANAGE",
-            "GRIEVANCE_CASE_RESOLVE", "GRIEVANCE_EVIDENCE_VIEW"
+            "GRIEVANCE_CASE_RESOLVE", "GRIEVANCE_EVIDENCE_VIEW", "GRIEVANCE_EVIDENCE_UPLOAD"
     );
 
     private static final Set<String> POT05_AUTHORIZED_ROLE_CODES = Set.of(
