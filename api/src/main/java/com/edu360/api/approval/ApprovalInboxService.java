@@ -516,7 +516,8 @@ public class ApprovalInboxService {
                 promotionRunRepository.save(run);
             });
         } else if (isAttendanceProcess(request) || isStaffLeaveApproval(request)
-                || ("CONCESSION".equalsIgnoreCase(request.getProcessCode()) && "CONCESSION".equalsIgnoreCase(request.getSubjectType()))) {
+                || ("CONCESSION".equalsIgnoreCase(request.getProcessCode()) && "CONCESSION".equalsIgnoreCase(request.getSubjectType()))
+                || "SCHOLARSHIP_LIST".equalsIgnoreCase(request.getProcessCode())) {
             ApprovalOutcomeHandler handler = outcomeHandlers.stream().filter(candidate -> candidate.supports(request))
                     .findFirst().orElseThrow(() -> new BusinessRuleViolationException(
                             "APPROVAL_HANDLER_NOT_REGISTERED",
