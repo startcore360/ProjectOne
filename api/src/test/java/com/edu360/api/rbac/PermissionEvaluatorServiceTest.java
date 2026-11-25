@@ -210,9 +210,6 @@ class PermissionEvaluatorServiceTest {
                 .status(RoleDefinitionStatus.ACTIVE).build();
         when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
                 .thenReturn(Optional.of(genericAdmin));
-        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
-                TENANT_ID, ROLE_DEFINITION_ID, "GRIEVANCE_CASE_VIEW")).thenReturn(true);
-
         PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
                 "GRIEVANCE_CASE_VIEW", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
 
