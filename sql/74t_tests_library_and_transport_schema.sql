@@ -13,4 +13,10 @@ BEGIN
  THEN RAISE EXCEPTION 'transport capacity trigger missing'; END IF;
  IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid='app.book_circulation'::regclass)
  THEN RAISE EXCEPTION 'book_circulation RLS missing'; END IF;
+ IF NOT EXISTS (
+   SELECT 1 FROM information_schema.columns WHERE table_schema='app'
+    AND table_name='v_student_library_dues_flag' AND column_name='outstanding_fine_balance'
+ ) THEN RAISE EXCEPTION 'T9 library dues balance contract missing'; END IF;
+ IF position('fn_library_fine_amount' IN pg_get_viewdef('app.v_student_library_dues_flag'::regclass))=0
+ THEN RAISE EXCEPTION 'T9 library dues view must include dynamic overdue accrual'; END IF;
 END $$;
