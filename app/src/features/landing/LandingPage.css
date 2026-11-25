@@ -1891,3 +1891,124 @@ html[data-theme="dark"] .landing-page .landing-brand__tagline { color:#b7c9bd; }
 @media(max-width:680px) {
  .landing-page .landing-role-ui__stats--four { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+
+
+/* Final theme contrast and neutral surface correction.
+   The theme attribute is set on html by the shared theme controller. */
+html[data-theme="light"] .landing-page {
+  --color-bg-canvas:#f6f7f5;
+  --color-bg-surface:#ffffff;
+  --color-bg-subtle:#eef1ee;
+  --color-bg-subtle-strong:#e4e9e5;
+  --color-text:#18231e;
+  --color-text-muted:#4e5e55;
+  --color-text-brand:#315d4b;
+  --color-border-divider:#d7dfd9;
+  --color-border-control:#87978d;
+}
+html[data-theme="dark"] .landing-page {
+  --color-bg-canvas:#111714;
+  --color-bg-surface:#191f1c;
+  --color-bg-subtle:#202824;
+  --color-bg-subtle-strong:#28312c;
+  --color-bg-input:#171d19;
+  --color-text:#eef2ee;
+  --color-text-muted:#b6c0b9;
+  --color-text-brand:#d0dcd3;
+  --color-text-brand-strong:#e2e9e4;
+  --color-action-primary:#819b8a;
+  --color-action-primary-hover:#96ad9e;
+  --color-bg-brand-soft:#29342d;
+  --color-border-divider:#37433c;
+  --color-border-control:#617168;
+  --color-hero-bg:#191f1c;
+}
+
+/* Override older theme-specific hero rules with explicit, high-specificity text colours. */
+html[data-theme="light"] .landing-page .landing-hero .landing-hero__title,
+html[data-theme="light"] .landing-page .landing-hero .landing-hero__subtitle,
+html[data-theme="light"] .landing-page .landing-hero .landing-hero__note {
+  color:#18231e !important;
+}
+html[data-theme="light"] .landing-page .landing-hero .landing-hero__proof span { color:#34483d !important; }
+html[data-theme="light"] .landing-page .landing-hero .landing-hero__eyebrow { color:#75552b !important; }
+html[data-theme="dark"] .landing-page .landing-hero .landing-hero__title { color:#f0f3f0 !important; }
+html[data-theme="dark"] .landing-page .landing-hero .landing-hero__subtitle,
+html[data-theme="dark"] .landing-page .landing-hero .landing-hero__note { color:#c0cbc3 !important; }
+html[data-theme="dark"] .landing-page .landing-hero .landing-hero__proof span { color:#d5dfd8 !important; }
+html[data-theme="dark"] .landing-page .landing-hero .landing-hero__eyebrow { color:#d7c29c !important; }
+
+/* Quotation panel: neutral in both themes, including legacy !important rules. */
+html[data-theme="light"] .landing-page .landing-quote-intro,
+html[data-theme="dark"] .landing-page .landing-quote-intro {
+  background:var(--color-bg-subtle) !important;
+  color:var(--color-text) !important;
+  border:1px solid var(--color-border-divider) !important;
+}
+html[data-theme="light"] .landing-page .landing-quote-intro h3,
+html[data-theme="light"] .landing-page .landing-quote-intro p,
+html[data-theme="light"] .landing-page .landing-quote-intro .landing-quote-benefits strong,
+html[data-theme="light"] .landing-page .landing-quote-next strong { color:#18231e !important; }
+html[data-theme="light"] .landing-page .landing-quote-intro .landing-quote-benefits small,
+html[data-theme="light"] .landing-page .landing-quote-next p { color:#4e5e55 !important; }
+html[data-theme="dark"] .landing-page .landing-quote-intro h3,
+html[data-theme="dark"] .landing-page .landing-quote-intro .landing-quote-benefits strong,
+html[data-theme="dark"] .landing-page .landing-quote-next strong { color:#eef2ee !important; }
+html[data-theme="dark"] .landing-page .landing-quote-intro p,
+html[data-theme="dark"] .landing-page .landing-quote-intro .landing-quote-benefits small,
+html[data-theme="dark"] .landing-page .landing-quote-next p { color:#b6c0b9 !important; }
+html[data-theme="light"] .landing-page .landing-quote-next,
+html[data-theme="dark"] .landing-page .landing-quote-next {
+  background:var(--color-bg-surface) !important;
+  border:1px solid var(--color-border-divider) !important;
+}
+html[data-theme="light"] .landing-page .landing-quote-benefits > div > span,
+html[data-theme="dark"] .landing-page .landing-quote-benefits > div > span {
+  background:var(--color-bg-surface) !important;
+  border:1px solid var(--color-border-divider) !important;
+  color:var(--color-text-brand) !important;
+}
+
+/* Form fields and cards use neutral, legible surfaces in dark mode. */
+html[data-theme="dark"] .landing-page .landing-quote-form,
+html[data-theme="dark"] .landing-page .landing-summary-box,
+html[data-theme="dark"] .landing-page .landing-module-item,
+html[data-theme="dark"] .landing-page .landing-form-section-heading > span {
+  background:var(--color-bg-surface) !important;
+  border-color:var(--color-border-divider) !important;
+  color:var(--color-text) !important;
+}
+html[data-theme="dark"] .landing-page .landing-form-heading h3,
+html[data-theme="dark"] .landing-page .landing-form-section-heading strong,
+html[data-theme="dark"] .landing-page .landing-form-field-title,
+html[data-theme="dark"] .landing-page .landing-module-item span,
+html[data-theme="dark"] .landing-page .landing-summary-box strong {
+  color:#eef2ee !important;
+}
+html[data-theme="dark"] .landing-page .landing-form-heading p,
+html[data-theme="dark"] .landing-page .landing-form-section-heading small,
+html[data-theme="dark"] .landing-page .landing-module-item small,
+html[data-theme="dark"] .landing-page .landing-summary-box small {
+  color:#b6c0b9 !important;
+}
+html[data-theme="dark"] .landing-page .eds-field__control,
+html[data-theme="dark"] .landing-page input,
+html[data-theme="dark"] .landing-page select,
+html[data-theme="dark"] .landing-page textarea {
+  background:#171d19 !important;
+  color:#eef2ee !important;
+  border-color:#59675e !important;
+}
+html[data-theme="light"] .landing-page .landing-quote-form,
+html[data-theme="light"] .landing-page .landing-summary-box,
+html[data-theme="light"] .landing-page .landing-module-item {
+  color:#18231e;
+}
+html[data-theme="light"] .landing-page .landing-form-heading h3,
+html[data-theme="light"] .landing-page .landing-form-section-heading strong,
+html[data-theme="light"] .landing-page .landing-form-field-title,
+html[data-theme="light"] .landing-page .landing-module-item span,
+html[data-theme="light"] .landing-page .landing-summary-box strong { color:#18231e !important; }
+html[data-theme="light"] .landing-page .landing-form-heading p,
+html[data-theme="light"] .landing-page .landing-form-section-heading small,
+html[data-theme="light"] .landing-page .landing-summary-box small { color:#4e5e55 !important; }
