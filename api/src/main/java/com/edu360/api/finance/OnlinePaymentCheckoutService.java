@@ -223,6 +223,10 @@ public class OnlinePaymentCheckoutService {
             throw new BusinessRuleViolationException("IDEMPOTENCY_KEY_REUSED",
                     "The checkout request key has already been used for a different payment.");
         }
+        String paymentStatus = (String) payment.get("status");
+        if (!"PENDING".equals(paymentStatus)) {
+            return Map.of("paymentId", payment.get("paymentId"), "status", paymentStatus);
+        }
         Map<String, Object> order = jdbc.query("""
             SELECT gateway_order_id, provider, provider_order_id, order_amount
               FROM app.gateway_order
@@ -253,7 +257,7 @@ public class OnlinePaymentCheckoutService {
 
     private Map<String, Object> findPayment(UUID tenantId, String requestKey) {
         return jdbc.query("""
-            SELECT payment_id, student_fee_account_id, method, quoted_amount
+            SELECT payment_id, student_fee_account_id, method, quoted_amount, status
               FROM app.payment WHERE tenant_id=:tenantId AND request_key=:requestKey
             """, new MapSqlParameterSource().addValue("tenantId", tenantId).addValue("requestKey", requestKey), rs -> {
                 if (!rs.next()) return null;
@@ -266,7 +270,7 @@ public class OnlinePaymentCheckoutService {
                 return Map.of("paymentId", paymentId,
                         "accountId", rs.getObject("student_fee_account_id", UUID.class),
                         "method", rs.getString("method"), "quotedAmount", rs.getBigDecimal("quoted_amount"),
-                        "installmentIds", ids);
+                        "status", rs.getString("status"), "installmentIds", ids);
             });
     }
 
