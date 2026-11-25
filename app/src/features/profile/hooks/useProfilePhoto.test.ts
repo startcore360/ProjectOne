@@ -1,4 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
+import type { InternalAxiosRequestConfig } from "axios";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useProfilePhoto, clearProfilePhotoCache } from "./useProfilePhoto";
 import { profileService } from "../api/profileService";
@@ -18,7 +19,7 @@ describe("useProfilePhoto", () => {
       status: 200,
       statusText: "OK",
       headers: {},
-      config: {} as any,
+      config: {} as InternalAxiosRequestConfig,
     });
 
     const { result, unmount } = renderHook(() => useProfilePhoto("/me/profile/photo", 0));
