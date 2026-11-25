@@ -129,14 +129,31 @@ public class ConcessionService {
                 .addValue("amount", request.amount()).addValue("reason", request.reason())
                 .addValue("actorId", actor.userAccountId()).addValue("approvalRequestId", approvalRequestId));
 
-        // Management is always the actual step role. ApprovalRouting resolves it to the
-        // Principal by default when no Management assignment exists, or to an explicitly
-        // configured designated financial approver through the existing roll-down override.
+        // Management is first; Trustees (Governing Body Approver) act when no Management
+        // assignment exists. If neither is assigned, the MANAGEMENT step rolls down to the
+        // Principal by default or a designated Finance Director via the existing override.
+        String approverRole = jdbc.query("""
+            SELECT rd.role_code
+              FROM app.user_role_assignment ura
+              JOIN app.role_definition rd
+                ON rd.tenant_id=ura.tenant_id AND rd.role_definition_id=ura.role_definition_id
+             WHERE ura.tenant_id=:tenantId
+               AND ura.scope_type='TENANT'
+               AND ura.status='ACTIVE'
+               AND rd.status='ACTIVE'
+               AND rd.role_code IN ('MANAGEMENT','GOVERNING_BODY_APPROVER')
+               AND (ura.effective_from IS NULL OR ura.effective_from <= now())
+               AND (ura.effective_to IS NULL OR ura.effective_to > now())
+             ORDER BY CASE rd.role_code WHEN 'MANAGEMENT' THEN 1 ELSE 2 END
+             LIMIT 1
+            """, Map.of("tenantId", tenantId), rs -> rs.next() ? rs.getString(1) : null);
+        if (approverRole == null) approverRole = "MANAGEMENT";
+
         ApprovalStep step = ApprovalStep.builder()
                 .id(new ApprovalStepId(tenantId, UUID.randomUUID()))
                 .approvalRequestId(approvalRequestId)
                 .stepNo((short) 1)
-                .approverRoleCode("MANAGEMENT")
+                .approverRoleCode(approverRole)
                 .decision("PENDING")
                 .createdAt(now).createdBy(actor.userAccountId())
                 .updatedAt(now).updatedBy(actor.userAccountId())
@@ -147,7 +164,7 @@ public class ConcessionService {
         audit.record(AuditEventType.CREATE, null, actor.userAccountId().toString(),
                 tenantId.toString(), "Fee concession " + concessionId + " submitted for PO-T04 approval.");
         return Map.of("concessionId", concessionId, "approvalRequestId", approvalRequestId,
-                "status", "REQUESTED", "approverRole", "MANAGEMENT");
+                "status", "REQUESTED", "approverRole", approverRole);
     }
 
     public record ConcessionRequest(UUID studentFeeAccountId, UUID studentInstallmentId,
