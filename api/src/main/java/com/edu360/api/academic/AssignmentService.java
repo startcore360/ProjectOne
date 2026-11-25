@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ public class AssignmentService {
     private final JdbcTemplate jdbc;
     private final FileService files;
     private final PermissionEvaluatorService permissions;
+    private final ObjectMapper objectMapper;
 
     public AssignmentService(JdbcTemplate jdbc, FileService files, PermissionEvaluatorService permissions) {
         this.jdbc = jdbc;
@@ -37,7 +40,9 @@ public class AssignmentService {
     public Map<String, Object> create(UUID tenantId, TenantPrincipal actor, CreateAssignmentRequest request) {
         authorize(tenantId, actor, "ASSIGNMENT_CREATE", request.institutionId());
         UUID id = UUID.randomUUID();
-        String rubric = request.rubricJson() == null || request.rubricJson().isBlank() ? "[]" : request.rubricJson();
+        String rubric = request.rubricJson() == null || request.rubricJson().isBlank()
+                ? "[{\\"criterion\\":\\"Overall\\",\\"weight\\":100}]" : request.rubricJson();
+        validateRubric(rubric);
         jdbc.update("""
                 INSERT INTO app.assignment
                 (tenant_id, assignment_id, institution_id, section_id, course_offering_id, teacher_user_id,
@@ -109,6 +114,11 @@ public class AssignmentService {
         if (late && !Boolean.TRUE.equals(assignment.get("allow_late_submission"))) {
             throw new BusinessRuleViolationException("LATE_SUBMISSION_NOT_ALLOWED", "The assignment deadline has passed.");
         }
+        Boolean ownsProfile = jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM app.student_profile
+                                WHERE tenant_id = ? AND student_profile_id = ? AND user_account_id = ? AND status = 'ACTIVE')
+                """, Boolean.class, tenantId, studentProfileId, student.userAccountId());
+        if (!Boolean.TRUE.equals(ownsProfile)) throw new ResourceNotFoundException("Active student profile not found.");
         FileUploadResponse file = files.upload(student, upload, "ASSIGNMENT_SUBMISSION", (UUID) assignment.get("institution_id"));
         if (!"CLEAN".equals(file.scanStatus()) || !"ACTIVE".equals(file.status())) {
             throw new BusinessRuleViolationException("SUBMISSION_FILE_NOT_CLEAN", "Submission was not accepted because the uploaded file did not pass malware scanning.");
@@ -162,6 +172,30 @@ public class AssignmentService {
                 SELECT submission_id, marks_awarded, late_penalty_marks, final_marks, feedback, status, graded_at
                   FROM app.assignment_submission WHERE tenant_id = ? AND submission_id = ?
                 """, tenantId, submissionId);
+    }
+
+    private void validateRubric(String rubric) {
+        try {
+            JsonNode root = objectMapper.readTree(rubric);
+            if (!root.isArray() || root.isEmpty()) {
+                throw new BusinessRuleViolationException("INVALID_ASSIGNMENT_RUBRIC", "Rubric must be a non-empty array of weighted criteria.");
+            }
+            BigDecimal total = BigDecimal.ZERO;
+            for (JsonNode item : root) {
+                JsonNode weight = item.get("weight");
+                if (weight == null || !weight.isNumber() || weight.decimalValue().signum() <= 0
+                        || item.get("criterion") == null || !item.get("criterion").isTextual()
+                        || item.get("criterion").asText().isBlank()) {
+                    throw new BusinessRuleViolationException("INVALID_ASSIGNMENT_RUBRIC", "Each rubric criterion requires a name and positive numeric weight.");
+                }
+                total = total.add(weight.decimalValue());
+            }
+            if (total.compareTo(new BigDecimal("100")) != 0) {
+                throw new BusinessRuleViolationException("INVALID_ASSIGNMENT_RUBRIC", "Rubric weights must total exactly 100 percent.");
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+            throw new BusinessRuleViolationException("INVALID_ASSIGNMENT_RUBRIC", "Rubric must contain valid JSON.");
+        }
     }
 
     private void authorize(UUID tenantId, TenantPrincipal actor, String action, UUID institutionId) {
