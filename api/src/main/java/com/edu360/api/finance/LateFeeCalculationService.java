@@ -10,7 +10,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Applies PO-T03 late fees as append-only ledger debits; repeated runs are idempotent. */
+/**
+ * Applies PO-T03 late fees as append-only ledger debits; repeated runs are idempotent.
+ * PERCENTAGE_MONTHLY accrues once per completed 30-day overdue period after grace.
+ */
 @Service
 @RequiredArgsConstructor
 public class LateFeeCalculationService {
