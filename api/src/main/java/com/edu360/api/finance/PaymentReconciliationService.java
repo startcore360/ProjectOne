@@ -159,9 +159,8 @@ public class PaymentReconciliationService {
                 outcome = transactionId == null ? "NO_CHANGE" : "APPLIED";
             }
         } else if (failed) {
-            markPaymentFailed(tenantId, paymentId, gatewayOrderId, institutionId,
-                    normalizedProvider, providerPaymentId, orderAmount, systemActorId);
-            outcome = "APPLIED";
+            outcome = markPaymentFailed(tenantId, paymentId, gatewayOrderId, institutionId,
+                    normalizedProvider, providerPaymentId, orderAmount, systemActorId) ? "APPLIED" : "NO_CHANGE";
         }
         finishEvent(tenantId, eventRowId, institutionId, gatewayOrderId, transactionId, outcome, systemActorId);
         return new WebhookResult(outcome, paymentId, transactionId);
@@ -295,13 +294,13 @@ public class PaymentReconciliationService {
         return transactionId;
     }
 
-    private void markPaymentFailed(UUID tenantId, UUID paymentId, UUID orderId, UUID institutionId,
+    private boolean markPaymentFailed(UUID tenantId, UUID paymentId, UUID orderId, UUID institutionId,
             String provider, String providerPaymentId, BigDecimal amount, UUID actorId) {
         Map<String, Object> payment = jdbc.query("""
             SELECT status FROM app.payment WHERE tenant_id=:tenantId AND payment_id=:paymentId FOR UPDATE
             """, new MapSqlParameterSource().addValue("tenantId", tenantId).addValue("paymentId", paymentId),
                 rs -> rs.next() ? Map.of("status", rs.getString(1)) : null);
-        if (payment == null || !"PENDING".equals(payment.get("status"))) return;
+        if (payment == null || !"PENDING".equals(payment.get("status"))) return false;
         UUID transactionId = null;
         if (providerPaymentId != null && !providerPaymentId.isBlank()) {
             transactionId = UUID.randomUUID();
@@ -328,6 +327,7 @@ public class PaymentReconciliationService {
              WHERE tenant_id=:tenantId AND gateway_order_id=:orderId AND status='CREATED'
             """, new MapSqlParameterSource().addValue("tenantId", tenantId)
                     .addValue("orderId", orderId).addValue("actorId", actorId));
+        return true;
     }
 
     private void issueReceipt(UUID tenantId, UUID institutionId, UUID paymentId, BigDecimal amount,
