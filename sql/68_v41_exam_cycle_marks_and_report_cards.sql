@@ -61,6 +61,27 @@ CREATE TABLE app.exam_schedule (
 );
 CREATE INDEX ix_exam_schedule_date ON app.exam_schedule(tenant_id, exam_cycle_id, exam_date, start_time);
 
+-- Room collisions are rejected transactionally, independently of UI validation.
+DO $
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'app.exam_schedule'::regclass
+                    AND conname = 'ex_exam_schedule_room_no_overlap') THEN
+        ALTER TABLE app.exam_schedule
+          ADD CONSTRAINT ex_exam_schedule_room_no_overlap
+          EXCLUDE USING gist (
+              tenant_id WITH =,
+              room_id WITH =,
+              (tsrange(exam_date + start_time, exam_date + end_time, '[)')) WITH &&
+          ) WHERE (room_id IS NOT NULL);
+    END IF;
+    IF to_regclass('app.room') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'app.exam_schedule'::regclass
+                        AND conname = 'fk_exam_schedule_room') THEN
+        ALTER TABLE app.exam_schedule ADD CONSTRAINT fk_exam_schedule_room
+          FOREIGN KEY (tenant_id, room_id) REFERENCES app.room(tenant_id, room_id) ON DELETE RESTRICT;
+    END IF;
+END $;
+
 CREATE TABLE app.exam_invigilator (
     tenant_id uuid NOT NULL,
     exam_invigilator_id uuid NOT NULL,
