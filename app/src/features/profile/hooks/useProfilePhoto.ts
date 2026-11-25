@@ -65,7 +65,7 @@ export function useProfilePhoto(photoUrl: string | null | undefined, revision = 
 
   useEffect(() => {
     if (!cacheKey) {
-      setObjectUrl(null);
+      void Promise.resolve().then(() => setObjectUrl(null));
       return;
     }
 
