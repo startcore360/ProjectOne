@@ -8,6 +8,12 @@ BEGIN
     IF to_regclass('app.v_fee_invoice') IS NULL THEN
         RAISE EXCEPTION 'T8-DB-02: app.v_fee_invoice read model is missing';
     END IF;
+    IF to_regclass('app.uq_student_fee_account_student') IS NULL
+       OR to_regclass('app.uq_fee_assignment_active_enrollment_structure') IS NULL
+       OR to_regclass('app.uq_student_installment_assignment_no') IS NULL
+       OR to_regclass('app.uq_fee_structure_installment_structure_no') IS NULL THEN
+        RAISE EXCEPTION 'T8-DB-20: fee assignment idempotency constraints are missing';
+    END IF;
     IF to_regclass('app.fee_invoice') IS NOT NULL OR to_regclass('app.fee_payment') IS NOT NULL THEN
         RAISE EXCEPTION 'T8-DB-03: parallel invoice/payment source tables must not be created';
     END IF;
