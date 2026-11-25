@@ -9,8 +9,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 /** M13 schema acceptance checks against the PostgreSQL fixture built by sql/run_all.sh. */
+@EnabledIfEnvironmentVariable(named = "SPRING_DATASOURCE_URL", matches = ".+")
 class StaffAppraisalIT {
     private Connection connection() throws SQLException {
         String url = System.getenv("SPRING_DATASOURCE_URL");
