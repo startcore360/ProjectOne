@@ -97,22 +97,6 @@ public class ConcessionService {
                     "Select the active Accountant role before requesting a concession.");
         }
 
-        jdbc.update("""
-            INSERT INTO app.concession
-              (tenant_id, concession_id, institution_id, student_fee_account_id,
-               student_installment_id, fee_head_id, amount, reason, requested_by,
-               approval_request_id, status, created_by, updated_by)
-            VALUES
-              (:tenantId, :concessionId, :institutionId, :accountId,
-               :installmentId, :feeHeadId, :amount, :reason, :actorId,
-               :approvalRequestId, 'REQUESTED', :actorId, :actorId)
-            """, new MapSqlParameterSource()
-                .addValue("tenantId", tenantId).addValue("concessionId", concessionId)
-                .addValue("institutionId", institutionId).addValue("accountId", request.studentFeeAccountId())
-                .addValue("installmentId", request.studentInstallmentId()).addValue("feeHeadId", request.feeHeadId())
-                .addValue("amount", request.amount()).addValue("reason", request.reason())
-                .addValue("actorId", actor.userAccountId()).addValue("approvalRequestId", approvalRequestId));
-
         ApprovalRequest approval = ApprovalRequest.builder()
                 .id(new ApprovalRequestId(tenantId, approvalRequestId))
                 .institutionId(institutionId)
@@ -128,6 +112,22 @@ public class ConcessionService {
                 .rowVersion(1)
                 .build();
         approvalRequests.save(approval);
+
+        jdbc.update("""
+            INSERT INTO app.concession
+              (tenant_id, concession_id, institution_id, student_fee_account_id,
+               student_installment_id, fee_head_id, amount, reason, requested_by,
+               approval_request_id, status, created_by, updated_by)
+            VALUES
+              (:tenantId, :concessionId, :institutionId, :accountId,
+               :installmentId, :feeHeadId, :amount, :reason, :actorId,
+               :approvalRequestId, 'REQUESTED', :actorId, :actorId)
+            """, new MapSqlParameterSource()
+                .addValue("tenantId", tenantId).addValue("concessionId", concessionId)
+                .addValue("institutionId", institutionId).addValue("accountId", request.studentFeeAccountId())
+                .addValue("installmentId", request.studentInstallmentId()).addValue("feeHeadId", request.feeHeadId())
+                .addValue("amount", request.amount()).addValue("reason", request.reason())
+                .addValue("actorId", actor.userAccountId()).addValue("approvalRequestId", approvalRequestId));
 
         // Management is always the actual step role. ApprovalRouting resolves it to the
         // Principal by default when no Management assignment exists, or to an explicitly
