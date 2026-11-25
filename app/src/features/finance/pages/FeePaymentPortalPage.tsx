@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 import RazorpayCheckoutModal, { type CheckoutSession } from "../components/RazorpayCheckoutModal";
-import PrintableFeeReceipt, { type FeeReceiptDetails } from "../components/PrintableFeeReceipt";
 
 type Invoice = {
   invoiceId: string;
@@ -24,7 +23,6 @@ export default function FeePaymentPortalPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [session, setSession] = useState<CheckoutSession | null>(null);
-  const [receipt, setReceipt] = useState<FeeReceiptDetails | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -115,7 +113,6 @@ export default function FeePaymentPortalPage() {
         <button type="button" disabled={busy || payable.length === 0} onClick={() => void startCheckout()} className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Creating secure checkout…" : `Continue to payment · ${money(total)}`}</button>
       </section>}
       {session && <RazorpayCheckoutModal session={session} onClose={() => setSession(null)} onSubmitted={paymentSubmitted} />}
-      {receipt && <PrintableFeeReceipt receipt={receipt} />}
     </main>
   );
 }
