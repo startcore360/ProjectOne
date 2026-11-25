@@ -2,6 +2,7 @@ package com.edu360.api.tenant;
 
 import javax.sql.DataSource;
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -12,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(prefix="app.edu-report.datasource",name="url")
 public class EduReportDataSourceConfig {
  @Bean(name="eduReportDataSource")
- public HikariDataSource dataSource(
+ public DataSource dataSource(
         @Value("${app.edu-report.datasource.url}") String url,
         @Value("${app.edu-report.datasource.username}") String username,
         @Value("${app.edu-report.datasource.password}") String password,
@@ -24,6 +25,6 @@ public class EduReportDataSourceConfig {
   ds.setJdbcUrl(url); ds.setUsername(username); ds.setPassword(password); ds.setDriverClassName(driver);
   ds.setPoolName("edu-report-readonly"); ds.setReadOnly(true);
   ds.setConnectionInitSql("SET default_transaction_read_only = on");
-  return ds;
+  return new LazyConnectionDataSourceProxy(ds);
  }
 }
