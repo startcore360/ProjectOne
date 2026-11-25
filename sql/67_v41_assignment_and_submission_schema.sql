@@ -37,6 +37,32 @@ CREATE TABLE app.assignment (
     CONSTRAINT ck_assignment_row_version CHECK (row_version >= 1),
     CONSTRAINT ck_assignment_updated CHECK (updated_at >= created_at)
 );
+CREATE OR REPLACE FUNCTION app.fn_assignment_scope_guard()
+RETURNS trigger LANGUAGE plpgsql AS $
+DECLARE v_section record; v_offering record;
+BEGIN
+    SELECT institution_id, academic_session_id, semester_id, class_id
+      INTO v_section FROM app.section
+     WHERE tenant_id = NEW.tenant_id AND section_id = NEW.section_id;
+    SELECT institution_id, academic_session_id, semester_id, class_id
+      INTO v_offering FROM app.course_offering
+     WHERE tenant_id = NEW.tenant_id AND course_offering_id = NEW.course_offering_id;
+    IF v_section IS NULL OR v_offering IS NULL
+       OR v_section.institution_id <> NEW.institution_id
+       OR v_offering.institution_id <> NEW.institution_id
+       OR v_section.academic_session_id <> v_offering.academic_session_id
+       OR v_section.semester_id IS DISTINCT FROM v_offering.semester_id
+       OR v_section.class_id IS DISTINCT FROM v_offering.class_id THEN
+        RAISE EXCEPTION 'ASSIGNMENT_ACADEMIC_SCOPE_MISMATCH'
+            USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$;
+CREATE TRIGGER trg_assignment_scope_guard
+    BEFORE INSERT OR UPDATE ON app.assignment
+    FOR EACH ROW EXECUTE FUNCTION app.fn_assignment_scope_guard();
+
 CREATE INDEX ix_assignment_section_due ON app.assignment(tenant_id, section_id, due_at DESC);
 CREATE INDEX ix_assignment_teacher ON app.assignment(tenant_id, teacher_user_id, status);
 
