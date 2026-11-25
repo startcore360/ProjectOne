@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping({"/v1/tenants/{tenantId}/notices", "/api/tenants/{tenantId}/notices"})
+@RequestMapping({"/v1/tenants/{tenantId}/notice-bulletins", "/api/tenants/{tenantId}/notice-bulletins"})
 public class NoticeBulletinController {
     private final T10DomainService service;
     @GetMapping public List<Map<String,Object>> list(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
