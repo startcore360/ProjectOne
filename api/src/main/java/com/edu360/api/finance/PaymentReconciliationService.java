@@ -116,6 +116,7 @@ public class PaymentReconciliationService {
         UUID systemActorId = findSystemActor(tenantId);
         String safePayload = safePayload(eventId, eventType, providerOrderId, providerPaymentId, amountMinor, currency);
         UUID eventRowId = UUID.randomUUID();
+        org.springframework.jdbc.core.ResultSetExtractor<Boolean> insertedExtractor = rs -> rs.next();
         boolean inserted = jdbc.query("""
             INSERT INTO app.payment_gateway_event
               (tenant_id, payment_gateway_event_id, institution_id, provider,
@@ -133,7 +134,7 @@ public class PaymentReconciliationService {
                     .addValue("verified", signatureValid).addValue("payload", safePayload)
                     .addValue("outcome", signatureValid ? "NO_CHANGE" : "REJECTED_SIGNATURE")
                     .addValue("actorId", systemActorId),
-                    (org.springframework.jdbc.core.ResultSetExtractor<Boolean>) rs -> rs.next());
+                    insertedExtractor);
         if (!signatureValid) {
             if (inserted) {
                 finishEvent(tenantId, eventRowId, institutionId, null, null, "REJECTED_SIGNATURE", systemActorId);
