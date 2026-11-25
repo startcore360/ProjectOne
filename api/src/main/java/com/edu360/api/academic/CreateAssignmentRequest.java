@@ -1,6 +1,7 @@
 package com.edu360.api.academic;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,6 +18,6 @@ public record CreateAssignmentRequest(
         @NotNull @DecimalMin(value = "0.01") BigDecimal maxMarks,
         @NotNull Instant dueAt,
         boolean allowLateSubmission,
-        @DecimalMin(value = "0.0") BigDecimal latePenaltyPercentPerDay,
+        @DecimalMin(value = "0.0") @DecimalMax(value = "100.0") BigDecimal latePenaltyPercentPerDay,
         String rubricJson) {
 }
