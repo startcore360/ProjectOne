@@ -72,6 +72,7 @@ jobs:
           LINT: ${{ steps.lint.outcome }}
           T1: ${{ steps.t1.outcome }}
           T5: ${{ steps.t5.outcome }}
+          T7: ${{ steps.t7.outcome }}
           UNIT: ${{ steps.unit.outcome }}
           BUILD: ${{ steps.build.outcome }}
         run: |
@@ -135,6 +136,7 @@ jobs:
           T4: ${{ steps.t4.outcome }}
           T5: ${{ steps.t5.outcome }}
           M13: ${{ steps.m13.outcome }}
+          T7: ${{ steps.t7.outcome }}
           VERIFY: ${{ steps.verify.outcome }}
         run: |
           failed=0
