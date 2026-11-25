@@ -244,7 +244,7 @@ public class OfflinePaymentService {
                         .addValue("institutionId", institutionId).addValue("financialYear", financialYear),
                 Integer.class);
         UUID receiptId = UUID.randomUUID();
-        String receiptLabel = prefix + "-" + financialYear + "-" + String.format(Locale.ROOT, "%06d", receiptNumber);
+        String receiptLabel = prefix + receiptNumber;
         jdbc.update("""
             INSERT INTO app.receipt
               (tenant_id, receipt_id, institution_id, payment_id, financial_year,
