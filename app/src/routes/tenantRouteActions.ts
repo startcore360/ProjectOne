@@ -28,5 +28,12 @@ export const TENANT_ROUTE_ACTIONS = {
   applicantPortal: ["APPLICATION_SUBMIT"],
   admissionCycles: ["ADMISSION_FORM_CREATE", "APPLICATION_SUBMIT", "APPLICATION_VERIFY", "MERIT_LIST_GENERATE", "SEAT_ALLOCATE"],
   applicationScrutiny: ["APPLICATION_VERIFY"],
+  // T9 identity cards and official certificates use their dedicated action codes.
+  identityCards: ["ID_CARD_ISSUE", "ID_CARD_REPLACE", "ID_CARD_TEMPLATE_MANAGE", "ID_CARD_REVOKE"],
+  certificates: ["CERTIFICATE_REQUEST", "CERTIFICATE_APPROVE", "CERTIFICATE_PREPARE", "CERTIFICATE_TEMPLATE_MANAGE", "CERTIFICATE_REVOKE", "NO_DUES_OVERRIDE"],
+  disciplinaryIncidents: ["DISCIPLINARY_INCIDENT_VIEW", "DISCIPLINARY_INCIDENT_MANAGE"],
+  grievanceSubmission: ["GRIEVANCE_CASE_SUBMIT"],
+  // PO-T05 confidential case actions; backend allowlisting and database RLS are authoritative.
+  confidentialGrievances: ["GRIEVANCE_CASE_VIEW", "GRIEVANCE_CASE_ASSIGN", "GRIEVANCE_HEARING_MANAGE", "GRIEVANCE_CASE_RESOLVE", "GRIEVANCE_EVIDENCE_VIEW"],
   meritLists: ["MERIT_LIST_GENERATE", "MERIT_LIST_APPROVE", "SEAT_ALLOCATE", "APPLICATION_VERIFY"],
 } as const;
