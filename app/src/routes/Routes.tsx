@@ -33,6 +33,11 @@ const DashboardPage = lazy(() => import("../features/dashboard/pages/DashboardPa
 const RoleDashboardPage = lazy(() => import("../features/role-previews/RoleDashboardPage"));
 const ProfilePage = lazy(() => import("../features/profile/pages/ProfilePage"));
 const SelfServicePage = lazy(() => import("../features/self-service/pages/SelfServicePage"));
+const NoticeBulletinPage = lazy(() => import("../features/t10/pages/NoticeBulletinPage"));
+const MessageComposerPage = lazy(() => import("../features/t10/pages/MessageComposerPage"));
+const LibraryCatalogPage = lazy(() => import("../features/t10/pages/LibraryCatalogPage"));
+const TransportRoutePage = lazy(() => import("../features/t10/pages/TransportRoutePage"));
+const ExecutiveDashboardPage = lazy(() => import("../features/t10/pages/ExecutiveDashboardPage"));
 const SessionsPage = lazy(() => import("../features/sessions/pages/SessionsPage"));
 const TenantSupportPage = lazy(() => import("../features/institution-admin/pages/TenantSupportPage"));
 const StaffRecordsPage = lazy(() => import("../features/institution-admin/pages/StaffRecordsPage"));
@@ -275,6 +280,11 @@ export default function AppRoutes() {
             {import.meta.env.DEV && <><Route path="/role-previews" element={<RoleDashboardPage />} /><Route path="/role-preview/:roleCode" element={<RoleDashboardPage />} /></>}
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/self-service" element={<TenantUserRoute><SelfServicePage /></TenantUserRoute>} />
+            <Route path="/notices" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.notices}><NoticeBulletinPage /></ActionGate>} />
+            <Route path="/communications" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.communications}><MessageComposerPage /></ActionGate>} />
+            <Route path="/library" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.library}><LibraryCatalogPage /></ActionGate>} />
+            <Route path="/transport" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.transport}><TransportRoutePage /></ActionGate>} />
+            <Route path="/executive-dashboard" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.reports}><ExecutiveDashboardPage /></ActionGate>} />
             <Route path="/sessions" element={<SessionsPage />} />
           </Route>
         </Route>
