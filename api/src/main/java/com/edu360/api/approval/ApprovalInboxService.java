@@ -517,7 +517,8 @@ public class ApprovalInboxService {
             });
         } else if (isAttendanceProcess(request) || isStaffLeaveApproval(request)
                 || ("CONCESSION".equalsIgnoreCase(request.getProcessCode()) && "CONCESSION".equalsIgnoreCase(request.getSubjectType()))
-                || "SCHOLARSHIP_LIST".equalsIgnoreCase(request.getProcessCode())) {
+                || "SCHOLARSHIP_LIST".equalsIgnoreCase(request.getProcessCode())
+                || "FEE_STRUCTURE".equalsIgnoreCase(request.getProcessCode())) {
             ApprovalOutcomeHandler handler = outcomeHandlers.stream().filter(candidate -> candidate.supports(request))
                     .findFirst().orElseThrow(() -> new BusinessRuleViolationException(
                             "APPROVAL_HANDLER_NOT_REGISTERED",
