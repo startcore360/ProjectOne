@@ -21,6 +21,15 @@ SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role
 -- the current step resolves to this role; this grant alone does not create an approval step.
 INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
 SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
+       'GOVERNING_BODY_APPROVER', 'CONCESSION_APPROVE',
+       'Own tenant; Trustee authority when no active Management assignment exists (PO-T04 / TPA-04)'
+ WHERE NOT EXISTS (
+       SELECT 1 FROM ref.standard_role_action
+        WHERE role_code='GOVERNING_BODY_APPROVER' AND action_code='CONCESSION_APPROVE'
+ );
+
+INSERT INTO ref.standard_role_action (standard_role_action_id, role_code, action_code, limited_to)
+SELECT (SELECT COALESCE(MAX(standard_role_action_id),0)+1 FROM ref.standard_role_action),
        'FINANCE_DIRECTOR', 'CONCESSION_APPROVE',
        'Own university scope; only when designated by the Management approval roll-down'
  WHERE NOT EXISTS (
@@ -44,7 +53,7 @@ SELECT rd.tenant_id, gen_random_uuid(), rd.role_definition_id, 'CONCESSION_APPRO
        LIMIT 1
   ) system_actor ON true
  WHERE rd.role_origin='STANDARD'
-   AND rd.role_code IN ('MANAGEMENT','FINANCE_DIRECTOR')
+   AND rd.role_code IN ('MANAGEMENT','GOVERNING_BODY_APPROVER','FINANCE_DIRECTOR')
    AND NOT EXISTS (
        SELECT 1 FROM app.role_action ra
         WHERE ra.tenant_id=rd.tenant_id
