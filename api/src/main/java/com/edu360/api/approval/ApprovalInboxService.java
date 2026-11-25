@@ -281,8 +281,7 @@ public class ApprovalInboxService {
         }
         ApprovalRouting.Route route = approvalRouting.route(tenantId, userId, activeRole, request, step)
                 .orElseThrow(() -> new UnauthorizedException(
-                        "NOT_CURRENT_APPROVER: your active role is not the approver of step " + stepNo + " ("
-                                + step.getApproverRoleCode() + ")."));
+                        "NOT_CURRENT_APPROVER: your active role is not authorized by the current approval hierarchy for step " + stepNo + "."));
 
         // The action and scope check: the delegator's rights when acting by delegation.
         UUID checked = route.via() == ApprovalRouting.Via.DELEGATION ? route.delegatorUserId() : userId;
