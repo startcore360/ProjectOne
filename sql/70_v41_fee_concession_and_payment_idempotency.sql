@@ -137,6 +137,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_gateway_order_provider_order
 CREATE INDEX IF NOT EXISTS ix_payment_account_status_created
     ON app.payment (tenant_id, student_fee_account_id, status, created_at DESC);
 
+-- PO-T03 supersedes the earlier OD-28 draft modes.
+ALTER TABLE app.late_fee_rule DROP CONSTRAINT IF EXISTS ck_late_fee_rule_calculation_mode;
+ALTER TABLE app.late_fee_rule
+    ADD CONSTRAINT ck_late_fee_rule_calculation_mode
+    CHECK (calculation_mode IN ('FLAT_DAILY','PERCENTAGE_MONTHLY','NONE'));
+ALTER TABLE app.late_fee_rule DROP CONSTRAINT IF EXISTS ck_late_fee_rule_amount_or_percent;
+ALTER TABLE app.late_fee_rule
+    ADD CONSTRAINT ck_late_fee_rule_amount_or_percent
+    CHECK (calculation_mode='NONE' OR amount_or_percent > 0);
+
+CREATE INDEX IF NOT EXISTS ix_late_fee_rule_effective
+    ON app.late_fee_rule (tenant_id, institution_id, status, effective_from DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_late_fee_entry_installment_day
+    ON app.ledger_entry (tenant_id, student_installment_id, posting_date)
+ WHERE entry_type='LATE_FEE' AND student_installment_id IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION app.fn_concession_guard()
 RETURNS trigger
 LANGUAGE plpgsql
