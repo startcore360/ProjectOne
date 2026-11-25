@@ -129,6 +129,8 @@ function MoreActionsMenu({ items }: { items: { label: string; onClick: () => voi
   useEffect(() => {
     if (!open || !triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
+    // DOM geometry is only available after the menu opens; this measurement is intentionally effect-driven.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAlignLeft(rect.left < 220 || rect.right - 220 < 16);
   }, [open]);
 
