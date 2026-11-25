@@ -97,6 +97,15 @@ public class PaymentReconciliationService {
             throw new BusinessRuleViolationException("WEBHOOK_ORDER_UNMATCHED",
                     "The webhook could not be associated with a configured institution.");
         }
+        Boolean knownInstitution = jdbc.queryForObject("""
+            SELECT EXISTS (SELECT 1 FROM app.institution
+                            WHERE tenant_id=:tenantId AND institution_id=:institutionId)
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("institutionId", institutionId), Boolean.class);
+        if (!Boolean.TRUE.equals(knownInstitution)) {
+            throw new BusinessRuleViolationException("WEBHOOK_ORDER_UNMATCHED",
+                    "The webhook institution does not belong to this tenant.");
+        }
 
         PaymentGatewayCredentialsResolver.PaymentGatewayCredentials credentials =
                 credentialsResolver.resolve(tenantId, institutionId);
@@ -198,7 +207,11 @@ public class PaymentReconciliationService {
                         rs.getBigDecimal("net_due"),
                         rs.getObject("academic_session_id", UUID.class),
                         rs.getBigDecimal("quoted_net_due")));
-        if (items.isEmpty() || items.stream().anyMatch(i -> !"UNPAID".equals(readInstallmentStatus(tenantId, i.installmentId()))
+        UUID expectedAccountId = (UUID) payment.get("accountId");
+        if (items.isEmpty() || items.stream().anyMatch(i ->
+                !expectedAccountId.equals(i.accountId())
+                || !institutionId.equals(i.institutionId())
+                || !"UNPAID".equals(readInstallmentStatus(tenantId, i.installmentId()))
                 || i.netDue().compareTo(i.quotedNetDue()) != 0)) return null;
         BigDecimal allocationTotal = items.stream().map(SettlementItem::netDue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
