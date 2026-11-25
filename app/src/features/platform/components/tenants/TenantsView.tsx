@@ -47,6 +47,8 @@ function RowMenu({ tenantName, children }: { tenantName?: string; children: Reac
     const spaceOnRight = window.innerWidth - rect.right;
     // Default to right-aligned (opening inwards to the left into the table).
     // Only align left if the button is close to the viewport's left edge and there is enough room on the right.
+    // DOM geometry is only available after the menu opens; this measurement is intentionally effect-driven.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAlignLeft(rect.left < 180 && spaceOnRight >= 180);
   }, [open]);
 
