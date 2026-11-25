@@ -78,6 +78,14 @@ BEGIN
     IF to_regclass('app.uq_late_fee_entry_installment_day') IS NULL THEN
         RAISE EXCEPTION 'T8-DB-18: daily late-fee idempotency index is missing';
     END IF;
+    IF to_regclass('app.uq_payment_request_key') IS NULL
+       OR to_regclass('app.uq_payment_intent_item_installment') IS NULL
+       OR to_regclass('app.uq_payment_allocation_installment') IS NULL
+       OR to_regclass('app.uq_receipt_payment') IS NULL
+       OR to_regclass('app.uq_gateway_transaction_provider_payment') IS NULL
+       OR to_regclass('app.uq_ledger_payment_session') IS NULL THEN
+        RAISE EXCEPTION 'T8-DB-21: payment idempotency indexes are missing';
+    END IF;
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
          WHERE conname='ck_late_fee_rule_calculation_mode'
