@@ -1,0 +1,11 @@
+DO $$
+DECLARE t text;
+BEGIN
+ FOREACH t IN ARRAY ARRAY['id_card_template','id_card_issuance','id_card_replacement','certificate_template','certificate_request','certificate_issuance'] LOOP
+  IF to_regclass('app.'||t) IS NULL THEN RAISE EXCEPTION 'T9_DB_71 missing app.%',t; END IF;
+  IF NOT (SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid=to_regclass('app.'||t)) THEN RAISE EXCEPTION 'T9_DB_71 RLS not forced: %',t; END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename=t AND policyname='p_tenant') THEN RAISE EXCEPTION 'T9_DB_71 tenant policy missing: %',t; END IF;
+ END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='id_card_issuance_qr_hash_check') THEN RAISE EXCEPTION 'T9_DB_71 QR digest constraint missing'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='certificate_issuance_verification_code_hash_key') THEN RAISE EXCEPTION 'T9_DB_71 unique certificate verification digest missing'; END IF;
+END $$;
