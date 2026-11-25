@@ -155,7 +155,7 @@ public class TimetableService {
         authorize(tenantId,actor,"ONLINE_PERIOD_SET",institutionId,departmentId);
         if(!List.of("DRAFT","PUBLISHED").contains(existing.get("status")))throw new BusinessRuleViolationException("TIMETABLE_SLOT_NOT_AVAILABLE","A superseded timetable slot cannot receive a meeting link.");
         if(occurrenceDate.isBefore(asLocalDate(existing.get("valid_from")))
-          || (existing.get("valid_to")!=null && occurrenceDate.isAfter(asLocalDate(existing.get("valid_to"))))
+          || (existing.get("valid_to")!=null && occurrenceDate.isAfter(asLocalDate(existing.get("valid_to")))))
             throw new BusinessRuleViolationException("MEETING_DATE_OUTSIDE_SLOT","Meeting date is outside the timetable slot validity.");
         if(!expiresAt.isAfter(Instant.now()))throw new BusinessRuleViolationException("MEETING_TOKEN_EXPIRY_INVALID","Meeting access token expiry must be in the future.");
         byte[] tokenBytes=new byte[32];random.nextBytes(tokenBytes);
