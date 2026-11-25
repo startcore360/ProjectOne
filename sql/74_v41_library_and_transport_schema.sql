@@ -21,12 +21,14 @@ CREATE TABLE IF NOT EXISTS app.library_fine_policy (
  calculation_mode text NOT NULL DEFAULT 'FLAT_DAILY_AMOUNT',
  daily_amount numeric(12,2) NOT NULL DEFAULT 5.00,
  day_basis text NOT NULL DEFAULT 'CALENDAR_DAYS',
+ working_days jsonb NOT NULL DEFAULT '[1,2,3,4,5,6]'::jsonb,
  fine_cap numeric(12,2) NOT NULL DEFAULT 500.00,
  is_placeholder_default boolean NOT NULL DEFAULT true,
  updated_at timestamptz NOT NULL DEFAULT now(), updated_by uuid,
  UNIQUE(tenant_id,institution_id),
  CHECK(grace_period_days>=0), CHECK(calculation_mode='FLAT_DAILY_AMOUNT'),
  CHECK(daily_amount>=0), CHECK(day_basis IN ('CALENDAR_DAYS','WORKING_DAYS')),
+ CHECK(jsonb_typeof(working_days)='array'),
  CHECK(fine_cap>=0)
 );
 -- PLACEHOLDER ONLY: INR 5/day, INR 500 cap, zero grace, calendar days.
@@ -34,6 +36,25 @@ CREATE TABLE IF NOT EXISTS app.library_fine_policy (
 INSERT INTO app.library_fine_policy(id,tenant_id,institution_id)
  SELECT gen_random_uuid(),tenant_id,institution_id FROM app.institution
  ON CONFLICT DO NOTHING;
+CREATE OR REPLACE FUNCTION app.fn_library_fine_amount(p_tenant uuid,p_institution uuid,p_due_date date)
+RETURNS numeric(12,2) LANGUAGE plpgsql STABLE AS $
+DECLARE pol app.library_fine_policy%ROWTYPE; days_late integer; billable_days integer;
+BEGIN
+ SELECT * INTO pol FROM app.library_fine_policy
+  WHERE tenant_id=p_tenant AND institution_id=p_institution;
+ IF NOT FOUND THEN RETURN 0; END IF;
+ days_late := GREATEST(0,current_date-p_due_date-pol.grace_period_days);
+ IF days_late=0 THEN RETURN 0; END IF;
+ IF pol.day_basis='CALENDAR_DAYS' THEN billable_days:=days_late;
+ ELSE
+  SELECT count(*) INTO billable_days
+   FROM generate_series(p_due_date+pol.grace_period_days+1,current_date,interval '1 day') d
+   WHERE EXTRACT(ISODOW FROM d)::integer IN
+     (SELECT value::integer FROM jsonb_array_elements_text(pol.working_days));
+ END IF;
+ RETURN LEAST(pol.fine_cap,pol.daily_amount*billable_days)::numeric(12,2);
+END $;
+
 CREATE TABLE IF NOT EXISTS app.book_circulation (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
  book_id uuid NOT NULL REFERENCES app.library_book(id) ON DELETE RESTRICT,
