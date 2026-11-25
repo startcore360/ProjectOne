@@ -47,7 +47,7 @@ public class AssignmentController {
     @PostMapping("/submissions/{submissionId}/grade")
     public Map<String, Object> grade(@PathVariable UUID tenantId, @PathVariable UUID submissionId,
             @RequestBody GradeSubmissionRequest request, Authentication auth) {
-        return service.grade(tenantId, principal(auth, tenantId), submissionId, request.marksAwarded(), request.feedback());
+        return service.grade(tenantId, principal(auth, tenantId), submissionId, request.marksAwarded(), request.feedback(), request.rubricMarks());
     }
 
     private static TenantPrincipal principal(Authentication auth, UUID tenantId) {
@@ -56,5 +56,5 @@ public class AssignmentController {
         return p;
     }
 
-    public record GradeSubmissionRequest(BigDecimal marksAwarded, String feedback) {}
+    public record GradeSubmissionRequest(BigDecimal marksAwarded, String feedback, List<AssignmentService.RubricMark> rubricMarks) {}
 }
