@@ -161,7 +161,8 @@ class PlatformPermissionServiceTest {
     @Test
     void productOwnerHoldsTheTwentyThreePlatformActionsAndNoApprovals() {
         assertThat(PlatformPermissionService.standardActions(PlatformRole.PRODUCT_OWNER))
-                .hasSize(23)
+                .hasSize(24)
+                .contains("LANDING_CMS_MANAGE")
                 .doesNotContain("TENANT_EXPORT_APPROVE", "TENANT_DELETION_APPROVE",
                         "RETENTION_CHANGE_APPROVE", "APPROVAL_DELEGATE");
     }
