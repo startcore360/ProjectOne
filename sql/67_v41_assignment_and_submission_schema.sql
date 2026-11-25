@@ -123,7 +123,54 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS p_tenant ON app.%I', t);
     EXECUTE format('CREATE POLICY p_tenant ON app.%I USING (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid) WITH CHECK (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid)', t);
   END LOOP;
-END $$;
+END $;
+
+-- Institution scope is enforced in PostgreSQL as well as by service authorization.
+CREATE POLICY p_institution ON app.assignment AS RESTRICTIVE
+USING (current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))
+WITH CHECK (current_setting('app.institution_scope', true) = 'ALL'
+       OR institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]));
+
+CREATE POLICY p_institution ON app.assignment_submission AS RESTRICTIVE
+USING (EXISTS (SELECT 1 FROM app.assignment a
+                WHERE a.tenant_id = assignment_submission.tenant_id
+                  AND a.assignment_id = assignment_submission.assignment_id
+                  AND (current_setting('app.institution_scope', true) = 'ALL'
+                       OR a.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))))
+WITH CHECK (EXISTS (SELECT 1 FROM app.assignment a
+                     WHERE a.tenant_id = assignment_submission.tenant_id
+                       AND a.assignment_id = assignment_submission.assignment_id
+                       AND (current_setting('app.institution_scope', true) = 'ALL'
+                            OR a.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))));
+
+CREATE POLICY p_institution ON app.submission_grade AS RESTRICTIVE
+USING (EXISTS (SELECT 1 FROM app.assignment_submission s
+                JOIN app.assignment a ON a.tenant_id = s.tenant_id AND a.assignment_id = s.assignment_id
+                WHERE s.tenant_id = submission_grade.tenant_id
+                  AND s.submission_id = submission_grade.submission_id
+                  AND (current_setting('app.institution_scope', true) = 'ALL'
+                       OR a.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))))
+WITH CHECK (EXISTS (SELECT 1 FROM app.assignment_submission s
+                     JOIN app.assignment a ON a.tenant_id = s.tenant_id AND a.assignment_id = s.assignment_id
+                     WHERE s.tenant_id = submission_grade.tenant_id
+                       AND s.submission_id = submission_grade.submission_id
+                       AND (current_setting('app.institution_scope', true) = 'ALL'
+                            OR a.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))));
+
+CREATE POLICY p_institution ON app.plagiarism_log AS RESTRICTIVE
+USING (EXISTS (SELECT 1 FROM app.assignment_submission s
+                JOIN app.assignment a ON a.tenant_id = s.tenant_id AND a.assignment_id = s.assignment_id
+                WHERE s.tenant_id = plagiarism_log.tenant_id
+                  AND s.submission_id = plagiarism_log.submission_id
+                  AND (current_setting('app.institution_scope', true) = 'ALL'
+                       OR a.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))))
+WITH CHECK (EXISTS (SELECT 1 FROM app.assignment_submission s
+                     JOIN app.assignment a ON a.tenant_id = s.tenant_id AND a.assignment_id = s.assignment_id
+                     WHERE s.tenant_id = plagiarism_log.tenant_id
+                       AND s.submission_id = plagiarism_log.submission_id
+                       AND (current_setting('app.institution_scope', true) = 'ALL'
+                            OR a.institution_id = ANY (string_to_array(NULLIF(current_setting('app.institution_ids', true), ''), ',')::uuid[]))));
 
 GRANT SELECT, INSERT, UPDATE ON app.assignment TO edu_app;
 GRANT SELECT, INSERT, UPDATE ON app.assignment_submission TO edu_app;
