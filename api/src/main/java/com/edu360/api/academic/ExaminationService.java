@@ -134,7 +134,7 @@ public class ExaminationService {
         if (!actor.userAccountId().equals(mark.get("course_teacher_user_id"))) {
             throw new BusinessRuleViolationException("COURSE_TEACHER_REQUIRED", "Only the assigned course teacher may complete the first moderation tier.");
         }
-        authorize(tenantId, actor, "MARKS_APPROVE_HOD", institutionForSchedule(tenantId, (UUID) mark.get("exam_schedule_id")));
+        authorize(tenantId, actor, "MARKS_SUBMIT", institutionForSchedule(tenantId, (UUID) mark.get("exam_schedule_id")));
         jdbc.update("""
                 UPDATE app.exam_mark SET course_teacher_decision = 'APPROVED', status = 'MODERATION_PENDING',
                        updated_at = now(), updated_by = ?, row_version = row_version + 1
