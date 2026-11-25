@@ -40,7 +40,7 @@ export function TenantUsageModal({ isOpen, onClose, tenant }: TenantUsageModalPr
     }
     if (requestedTenantIdRef.current === tenantId) return;
     requestedTenantIdRef.current = tenantId;
-    fetchUsage(tenantId);
+    void Promise.resolve().then(() => fetchUsage(tenantId));
   }, [isOpen, tenantId, fetchUsage]);
 
   if (!tenant) return null;
