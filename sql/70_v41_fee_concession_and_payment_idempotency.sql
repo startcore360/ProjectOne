@@ -139,13 +139,13 @@ CREATE INDEX IF NOT EXISTS ix_payment_account_status_created
 
 -- PO-T03 supersedes the earlier OD-28 draft modes. Do not silently reinterpret existing
 -- FLAT / PERCENT_OF_DUE / PER_DAY rules: require an explicit data migration if any exist.
-DO $
+DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM app.late_fee_rule
                 WHERE calculation_mode NOT IN ('FLAT_DAILY','PERCENTAGE_MONTHLY','NONE')) THEN
         RAISE EXCEPTION 'PO-T03_MODE_MIGRATION_REQUIRED: map existing OD-28 late-fee rules explicitly before applying migration 70';
     END IF;
-END $;
+END $$;
 ALTER TABLE app.late_fee_rule DROP CONSTRAINT IF EXISTS ck_late_fee_rule_calculation_mode;
 ALTER TABLE app.late_fee_rule
     ADD CONSTRAINT ck_late_fee_rule_calculation_mode
