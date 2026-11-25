@@ -34,7 +34,6 @@ import com.edu360.api.platformops.subscription.dto.CustomerQuoteResponse;
 import com.edu360.api.tenant.Tenant;
 import com.edu360.api.tenant.TenantRepository;
 import com.edu360.api.tenant.TenantState;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 class LandingCmsServiceTest {
 
@@ -78,8 +77,7 @@ class LandingCmsServiceTest {
                 mock(CommercialCatalogItemRepository.class),
                 subService,
                 new PlatformConcurrency(),
-                mock(PlatformAuditWriter.class),
-                new ObjectMapper()
+                mock(PlatformAuditWriter.class)
         );
 
         PublicEnquiryResponse resp = service.submitPublicEnquiry(new PublicEnquiryRequest(
@@ -125,8 +123,7 @@ class LandingCmsServiceTest {
                 mock(CommercialCatalogItemRepository.class),
                 subService,
                 new PlatformConcurrency(),
-                mock(PlatformAuditWriter.class),
-                new ObjectMapper()
+                mock(PlatformAuditWriter.class)
         );
 
         service.submitPublicEnquiry(new PublicEnquiryRequest(
@@ -204,8 +201,7 @@ class LandingCmsServiceTest {
                 mock(CommercialCatalogItemRepository.class),
                 subService,
                 new PlatformConcurrency(),
-                mock(PlatformAuditWriter.class),
-                new ObjectMapper()
+                mock(PlatformAuditWriter.class)
         );
     }
 }
