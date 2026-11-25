@@ -19,6 +19,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class LateFeeCalculationService {
     private final NamedParameterJdbcTemplate jdbc;
 
+    /**
+     * Counts calendar-month boundaries crossed after the grace-period end date.
+     * The service's SQL uses the equivalent year/month arithmetic for set-based accrual.
+     */
+    static long calendarMonthsAfterGrace(LocalDate dueDate, int graceDays, LocalDate asOfDate) {
+        if (dueDate == null || asOfDate == null || graceDays < 0) {
+            throw new IllegalArgumentException("Due date, as-of date and non-negative grace days are required.");
+        }
+        LocalDate graceEnds = dueDate.plusDays(graceDays);
+        if (!asOfDate.isAfter(graceEnds)) {
+            return 0;
+        }
+        return Math.max(0, (asOfDate.getYear() - graceEnds.getYear()) * 12L
+                + asOfDate.getMonthValue() - graceEnds.getMonthValue());
+    }
+
     @Transactional
     public int calculateForTenant(LocalDate asOfDate, UUID systemActorId) {
         if (asOfDate == null || systemActorId == null) {
