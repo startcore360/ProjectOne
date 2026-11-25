@@ -59,7 +59,7 @@ public class AssignmentService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> list(UUID tenantId, TenantPrincipal actor, UUID institutionId, UUID sectionId) {
-        authorize(tenantId, actor, "ASSIGNMENT_VIEW", institutionId);
+        authorizeAny(tenantId, actor, institutionId, "ASSIGNMENT_CREATE", "ASSIGNMENT_VIEW_OWN", "HOMEWORK_COMPLIANCE_VIEW", "TENANT_OVERSIGHT_VIEW");
         return jdbc.queryForList("""
                 SELECT assignment_id, institution_id, section_id, course_offering_id, teacher_user_id,
                        title, description, max_marks, due_at, allow_late_submission,
@@ -95,7 +95,7 @@ public class AssignmentService {
                     put("createdAt", rs.getTimestamp("created_at").toInstant());
                 }} : null, tenantId, assignmentId);
         if (row == null) throw new ResourceNotFoundException("Assignment not found.");
-        authorize(tenantId, actor, "ASSIGNMENT_VIEW", (UUID) row.get("institutionId"));
+        authorizeAny(tenantId, actor, (UUID) row.get("institutionId"), "ASSIGNMENT_CREATE", "ASSIGNMENT_VIEW_OWN", "HOMEWORK_COMPLIANCE_VIEW", "TENANT_OVERSIGHT_VIEW");
         return row;
     }
 
@@ -196,6 +196,15 @@ public class AssignmentService {
         } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
             throw new BusinessRuleViolationException("INVALID_ASSIGNMENT_RUBRIC", "Rubric must contain valid JSON.");
         }
+    }
+
+    private void authorizeAny(UUID tenantId, TenantPrincipal actor, UUID institutionId, String... actions) {
+        RbacPrincipal principal = new RbacPrincipal(tenantId, actor.userAccountId());
+        RbacScope scope = institutionId == null ? RbacScope.tenant() : RbacScope.institution(institutionId);
+        for (String action : actions) {
+            if (permissions.can(principal, action, scope, RbacTarget.NONE).allowed()) return;
+        }
+        permissions.authorize(principal, actions[0], scope, RbacTarget.NONE);
     }
 
     private void authorize(UUID tenantId, TenantPrincipal actor, String action, UUID institutionId) {
