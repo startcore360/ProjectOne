@@ -181,6 +181,8 @@ public class OnlinePaymentCheckoutService {
                 providerOrderId = providerResponse.path("id").asText();
                 checkoutUrl = providerResponse.path("url").asText(null);
             }
+        } catch (BusinessRuleViolationException ex) {
+            throw ex;
         } catch (RuntimeException ex) {
             throw new BusinessRuleViolationException("PAYMENT_GATEWAY_UNAVAILABLE",
                     "The payment provider could not create a checkout session. Please retry.");
