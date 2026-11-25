@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;\nimport org.mockito.ArgumentCaptor;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 
 import com.edu360.api.config.PlatformPrincipal;
