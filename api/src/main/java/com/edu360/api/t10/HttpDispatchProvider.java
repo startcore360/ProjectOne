@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClient;
 public class HttpDispatchProvider implements DispatchProvider {
     private final RestClient client;
     private final Map<String,Gateway> gateways=new LinkedHashMap<>();
+    @org.springframework.beans.factory.annotation.Autowired
     public HttpDispatchProvider(
             @Value("${app.dispatch.providers.push.url:}") String pushUrl,
             @Value("${app.dispatch.providers.push.token:}") String pushToken,
@@ -27,13 +28,19 @@ public class HttpDispatchProvider implements DispatchProvider {
             @Value("${app.dispatch.providers.email.url:}") String emailUrl,
             @Value("${app.dispatch.providers.email.token:}") String emailToken,
             RestClient.Builder builder) {
-        SimpleClientHttpRequestFactory factory=new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(3));
-        factory.setReadTimeout(Duration.ofSeconds(10));
-        this.client=builder.requestFactory(factory).build();
+        this(configuredClient(builder),pushUrl,pushToken,smsUrl,smsToken,emailUrl,emailToken);
+    }
+    HttpDispatchProvider(RestClient client,String pushUrl,String pushToken,String smsUrl,String smsToken,String emailUrl,String emailToken) {
+        this.client=client;
         gateways.put("PUSH",new Gateway(pushUrl,pushToken));
         gateways.put("SMS",new Gateway(smsUrl,smsToken));
         gateways.put("EMAIL",new Gateway(emailUrl,emailToken));
+    }
+    private static RestClient configuredClient(RestClient.Builder builder) {
+        SimpleClientHttpRequestFactory factory=new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(3));
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        return builder.requestFactory(factory).build();
     }
     @Override public boolean supports(String channel) { return gateways.containsKey(channel); }
     @Override public DispatchProviderResult send(DispatchMessage message) {
