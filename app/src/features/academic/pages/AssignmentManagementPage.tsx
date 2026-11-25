@@ -37,7 +37,7 @@ export default function AssignmentManagementPage() {
       await api.post(`/api/tenants/${tenantId}/academic/assignments`, {
         institutionId, sectionId, courseOfferingId, title, maxMarks: Number(maxMarks),
         dueAt: new Date(dueAt).toISOString(), allowLateSubmission: allowLateSubmission,
-        latePenaltyPercentPerDay: Number(penalty), rubricJson: "[]",
+        latePenaltyPercentPerDay: Number(penalty), rubricJson: JSON.stringify([{ criterion: "Overall", weight: 100 }]),
       });
       setTitle(""); await load(); setFeedback("Assignment published.");
     } catch (error) {
