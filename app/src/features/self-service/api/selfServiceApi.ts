@@ -33,6 +33,9 @@ export interface NoticeItem {
   body: string;
   authoredActiveRole: string;
   publishedAt: string | null;
+  institutionId?: string | null;
+  requiresAcknowledgment?: boolean;
+  acknowledged?: boolean;
 }
 
 export const selfServiceApi = {
@@ -52,6 +55,9 @@ export const selfServiceApi = {
   getLeaveRequests: async (tenantId: string): Promise<LeaveRequestItem[]> => {
     const res = await api.get<LeaveRequestItem[]>(`/tenants/${tenantId}/me/leave-requests`);
     return Array.isArray(res.data) ? res.data : [];
+  },
+  acknowledgeNotice: async (tenantId: string, institutionId: string, noticeId: string): Promise<void> => {
+    await api.post(`/tenants/${tenantId}/notice-bulletins/${noticeId}/acknowledgment`, null, { params: { institutionId } });
   },
   getNotices: async (tenantId: string): Promise<NoticeItem[]> => {
     const res = await api.get<NoticeItem[]>(`/tenants/${tenantId}/notices`);
