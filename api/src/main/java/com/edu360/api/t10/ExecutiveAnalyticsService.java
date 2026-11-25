@@ -63,10 +63,14 @@ public class ExecutiveAnalyticsService {
                 db.queryForObject("SELECT set_config('app.institution_ids', ?, true)",String.class,institution.toString());
                 Map<String,Object> values=new LinkedHashMap<>();
                 values.put("activeStudents",scalar(db,"SELECT count(*) FROM app.student_profile WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
-                values.put("activeStaff",scalar(db,"SELECT count(DISTINCT p.staff_profile_id) FROM app.staff_profile p
-                  JOIN app.staff_assignment a ON a.tenant_id=p.tenant_id AND a.staff_profile_id=p.staff_profile_id
-                 WHERE p.tenant_id=? AND a.institution_id=? AND p.employment_status='ACTIVE'
-                   AND a.status='ACTIVE' AND a.effective_from<=current_date AND (a.effective_to IS NULL OR a.effective_to>=current_date)",tenant,institution));
+                values.put("activeStaff",scalar(db,"""
+                    SELECT count(DISTINCT p.staff_profile_id)
+                      FROM app.staff_profile p
+                      JOIN app.staff_assignment a ON a.tenant_id=p.tenant_id AND a.staff_profile_id=p.staff_profile_id
+                     WHERE p.tenant_id=? AND a.institution_id=? AND p.employment_status='ACTIVE'
+                       AND a.status='ACTIVE' AND a.effective_from<=current_date
+                       AND (a.effective_to IS NULL OR a.effective_to>=current_date)
+                    """,tenant,institution));
                 values.put("libraryOutstandingFines",scalar(db,"SELECT COALESCE(sum(outstanding_fine_balance),0) FROM app.v_student_library_dues_flag WHERE tenant_id=? AND institution_id=?",tenant,institution));
                 values.put("openLibraryCirculations",scalar(db,"SELECT count(*) FROM app.book_circulation WHERE tenant_id=? AND institution_id=? AND returned_at IS NULL",tenant,institution));
                 values.put("transportAllocations",scalar(db,"SELECT count(*) FROM app.transport_allocation WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'",tenant,institution));
