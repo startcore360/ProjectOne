@@ -34,6 +34,7 @@ class PermissionEvaluatorServiceTest {
     @Mock private ActionCatalogRepository actionCatalogRepository;
     @Mock private UserRoleAssignmentRepository userRoleAssignmentRepository;
     @Mock private RoleActionRepository roleActionRepository;
+    @Mock private RoleDefinitionRepository roleDefinitionRepository;
 
     private PermissionEvaluatorService evaluator;
 
@@ -233,4 +234,59 @@ class PermissionEvaluatorServiceTest {
 
         assertThat(decision.allowed()).isTrue();
     }
+
+    @Test
+    void can_allowsFinanceDirectorOnlyForDesignatedConcessionApprovalAcrossInstitutionScope() {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        when(actionCatalogRepository.findById("CONCESSION_APPROVE"))
+                .thenReturn(Optional.of(action("CONCESSION_APPROVE", true)));
+        UserRoleAssignment assignment = activeAssignment(null);
+        when(userRoleAssignmentRepository.findAllByIdTenantIdAndUserAccountIdAndStatusOrderByEffectiveFromAsc(
+                TENANT_ID, USER_ACCOUNT_ID, AssignmentStatus.ACTIVE)).thenReturn(List.of(assignment));
+        RoleDefinition financeDirector = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
+                .roleCode("FINANCE_DIRECTOR")
+                .roleName("Finance Director")
+                .roleOrigin(RoleOrigin.STANDARD)
+                .roleLevel(RoleLevel.TENANT)
+                .status(RoleDefinitionStatus.ACTIVE)
+                .build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(financeDirector));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                TENANT_ID, ROLE_DEFINITION_ID, "CONCESSION_APPROVE")).thenReturn(true);
+
+        PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "CONCESSION_APPROVE", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isTrue();
+    }
+
+    @Test
+    void canDoesNotGiveFinanceDirectorGeneralTopPostCoverage() {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        when(actionCatalogRepository.findById(USER_CREATE)).thenReturn(Optional.of(action(USER_CREATE, false)));
+        UserRoleAssignment assignment = activeAssignment(null);
+        when(userRoleAssignmentRepository.findAllByIdTenantIdAndUserAccountIdAndStatusOrderByEffectiveFromAsc(
+                TENANT_ID, USER_ACCOUNT_ID, AssignmentStatus.ACTIVE)).thenReturn(List.of(assignment));
+        RoleDefinition financeDirector = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
+                .roleCode("FINANCE_DIRECTOR")
+                .roleName("Finance Director")
+                .roleOrigin(RoleOrigin.STANDARD)
+                .roleLevel(RoleLevel.TENANT)
+                .status(RoleDefinitionStatus.ACTIVE)
+                .build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(financeDirector));
+
+        PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                USER_CREATE, RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.reasonCode()).isEqualTo("NO_ACTIVE_ROLE_IN_SCOPE");
+    }
+
 }
