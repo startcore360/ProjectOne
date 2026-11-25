@@ -96,14 +96,23 @@ public class T10DomainService {
     public Map<String,Object> dispatch(UUID tenant,TenantPrincipal p,CommunicationDispatchController.DispatchRequest r) {
         allow(tenant,p.userAccountId(),"MESSAGE_SEND",r.institutionId());
         if(r.body()==null || r.body().isBlank() || r.recipientUserId()==null) throw new BusinessRuleViolationException("VALIDATION_FAILED","Recipient and message body are required.");
-        UUID campaign=UUID.randomUUID();
-        jdbc.update("INSERT INTO app.communication_campaign(id,tenant_id,institution_id,name,target_roles_json,channels_json,status,created_by) VALUES (?,?,?,'Direct dispatch','[]'::jsonb,?::jsonb,'QUEUED',?)",
-            campaign,tenant,r.institutionId(),json(r.channels()==null?List.of("IN_APP","PUSH","SMS","EMAIL"):r.channels()),p.userAccountId());
-        // First selected channel is claimable; later channels remain WAITING until a failure advances the chain.
+        Map<String,Object> recipient;
+        try {
+            recipient=jdbc.queryForMap("SELECT email,mobile FROM app.user_account WHERE tenant_id=? AND user_account_id=? AND status='ACTIVE'",
+                tenant,r.recipientUserId());
+        } catch(org.springframework.dao.EmptyResultDataAccessException ex) {
+            throw new BusinessRuleViolationException("RECIPIENT_NOT_ACTIVE","Recipient must be an active user in this tenant.");
+        }
+        String recipientEmail=(String)recipient.get("email");
+        String recipientPhone=(String)recipient.get("mobile");
         List<String> chain=List.of("IN_APP","PUSH","SMS","EMAIL");
         List<String> requested=r.channels()==null||r.channels().isEmpty()?chain:r.channels();
         List<String> selected=chain.stream().filter(requested::contains).toList();
         if(selected.isEmpty()) throw new BusinessRuleViolationException("CHANNEL_REQUIRED","Choose at least one supported channel.");
+        UUID campaign=UUID.randomUUID();
+        jdbc.update("INSERT INTO app.communication_campaign(id,tenant_id,institution_id,name,target_roles_json,channels_json,status,created_by) VALUES (?,?,?,'Direct dispatch','[]'::jsonb,?::jsonb,'QUEUED',?)",
+            campaign,tenant,r.institutionId(),json(selected),p.userAccountId());
+        // First selected channel is claimable; later channels remain WAITING until a failure advances the chain.
         UUID first=null;
         for(int i=0;i<selected.size();i++) {
             String channel=selected.get(i);
@@ -112,7 +121,7 @@ public class T10DomainService {
                 INSERT INTO app.message_dispatch(id,tenant_id,institution_id,campaign_id,channel,attempt_order,
                     recipient_user_id,phone,email,message_body,status)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                """,id,tenant,r.institutionId(),campaign,channel,i+1,r.recipientUserId(),r.phone(),r.email(),r.body(),
+                """,id,tenant,r.institutionId(),campaign,channel,i+1,r.recipientUserId(),recipientPhone,recipientEmail,r.body(),
                     i==0?"QUEUED":"WAITING");
         }
         audit.record(AuditEventType.CREATE,null,null,null,"Communication campaign "+campaign+" queued");
