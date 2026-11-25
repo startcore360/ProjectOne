@@ -538,6 +538,11 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                 </a>
               </div>
               <p className="landing-hero__note">{heroNote}</p>
+              <div className="landing-hero__proof" aria-label="Platform capabilities">
+                <span><i aria-hidden="true">✓</i> One connected workspace</span>
+                <span><i aria-hidden="true">✓</i> Role-based access</span>
+                <span><i aria-hidden="true">✓</i> Multi-campus ready</span>
+              </div>
             </div>
 
             <div className="landing-hero__visual">
