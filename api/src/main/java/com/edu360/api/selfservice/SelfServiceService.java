@@ -18,6 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.edu360.api.live.LiveEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
+import com.edu360.api.tenant.TenantContext;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,10 @@ public class SelfServiceService {
     private final UserLeaveRequestRepository leaveRequestRepository;
     private final NoticeRepository noticeRepository;
     private LiveEventPublisher liveEvents;
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired(required = false)
+    public void setJdbcTemplate(@Qualifier("jdbcTemplate") JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
 
     @Autowired(required = false)
     public void setLiveEventPublisher(LiveEventPublisher liveEvents) { this.liveEvents = liveEvents; }
@@ -143,18 +150,28 @@ public class SelfServiceService {
     @Transactional(readOnly = true)
     public List<NoticeDto> getNotices(UUID tenantId, UUID userId) {
         authorizeSelfService(tenantId, userId);
-        return noticeRepository.findByIdTenantIdAndStatusOrderByCreatedAtDesc(tenantId, "PUBLISHED")
+        List<NoticeDto> notices = new java.util.ArrayList<>(noticeRepository.findByIdTenantIdAndStatusOrderByCreatedAtDesc(tenantId, "PUBLISHED")
                 .stream()
-                .map(n -> new NoticeDto(
-                        n.getId().getNoticeId(),
-                        n.getNoticeLevel(),
-                        n.getNoticeKind(),
-                        n.getTitle(),
-                        n.getBody(),
-                        n.getAuthoredActiveRole(),
-                        n.getPublishedAt()
-                ))
-                .toList();
+                .map(n -> new NoticeDto(n.getId().getNoticeId(),n.getNoticeLevel(),n.getNoticeKind(),n.getTitle(),n.getBody(),n.getAuthoredActiveRole(),n.getPublishedAt()))
+                .toList());
+        if (jdbcTemplate != null) {
+            String role = java.util.Objects.toString(TenantContext.currentActiveRoleCode(), "");
+            notices.addAll(jdbcTemplate.query("""
+                SELECT n.id,n.institution_id,n.title,n.body,n.is_urgent,n.requires_acknowledgment,n.published_at,
+                       EXISTS(SELECT 1 FROM app.notice_acknowledgment a WHERE a.tenant_id=n.tenant_id AND a.notice_id=n.id AND a.user_id=?) AS acknowledged
+                  FROM app.notice_bulletin n
+                 WHERE n.tenant_id=? AND n.status='PUBLISHED'
+                   AND (n.expires_at IS NULL OR n.expires_at>now())
+                   AND (n.target_roles_json='[]'::jsonb OR n.target_roles_json ? ?)
+                """, (rs, row) -> new NoticeDto(
+                    rs.getObject("id", UUID.class), rs.getBoolean("is_urgent") ? "URGENT" : "INSTITUTION",
+                    "CIRCULAR", rs.getString("title"), rs.getString("body"), "NOTICE_BULLETIN",
+                    rs.getTimestamp("published_at")==null?null:rs.getTimestamp("published_at").toInstant(),
+                    rs.getObject("institution_id", UUID.class),rs.getBoolean("requires_acknowledgment"),rs.getBoolean("acknowledged")),
+                    userId,tenantId,role));
+        }
+        return notices.stream().sorted(java.util.Comparator.comparing(NoticeDto::publishedAt,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder()))).toList();
     }
 
     /**
