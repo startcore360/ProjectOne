@@ -38,7 +38,7 @@ public class ConcessionService {
     @Transactional
     public Map<String, Object> request(UUID tenantId, TenantPrincipal actor, ConcessionRequest request) {
         Map<String, Object> target = jdbc.query("""
-            SELECT sfa.institution_id, si.student_installment_id, si.status AS installment_status,
+            SELECT si.institution_id, si.student_installment_id, si.status AS installment_status,
                    nd.net_due, fs.fee_structure_id
               FROM app.student_fee_account sfa
               JOIN app.student_installment si
