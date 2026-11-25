@@ -35,6 +35,13 @@ public class FeeReadController {
         return service.listFeeStructures(tenantId, principal(authentication, tenantId), institutionId);
     }
 
+    @GetMapping({"/v1/tenants/{tenantId}/me/student-fee-accounts",
+                 "/api/tenants/{tenantId}/me/student-fee-accounts"})
+    public List<Map<String, Object>> listMyFeeAccounts(@PathVariable UUID tenantId,
+            Authentication authentication) {
+        return service.listMyFeeAccounts(tenantId, principal(authentication, tenantId));
+    }
+
     @GetMapping({"/v1/tenants/{tenantId}/student-fee-accounts/{id}/ledger",
                  "/api/tenants/{tenantId}/student-fee-accounts/{id}/ledger"})
     public Map<String, Object> getStudentLedger(@PathVariable UUID tenantId, @PathVariable("id") UUID id,
