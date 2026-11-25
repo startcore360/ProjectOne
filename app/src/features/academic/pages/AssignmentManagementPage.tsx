@@ -27,8 +27,8 @@ export default function AssignmentManagementPage() {
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Unable to load assignments.");
     }
-  }
-  useEffect(() => { void load(); }, [tenantId]);
+  }, [tenantId]);
+  useEffect(() => { void load(); }, [load]);
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -37,7 +37,7 @@ export default function AssignmentManagementPage() {
     try {
       await api.post(`/api/tenants/${tenantId}/academic/assignments`, {
         institutionId, sectionId, courseOfferingId, title, maxMarks: Number(maxMarks),
-        dueAt: new Date(dueAt).toISOString(), allowLateSubmission: allowLateSubmission,
+        dueAt: new Date(dueAt).toISOString(), allowLateSubmission: allowLate,
         latePenaltyPercentPerDay: Number(penalty), rubricJson: JSON.stringify([{ criterion: "Overall", weight: 100 }]),
       });
       setTitle(""); await load(); setFeedback("Assignment saved as draft. Publish it when ready.");
