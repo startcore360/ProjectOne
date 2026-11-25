@@ -416,7 +416,7 @@ public class PermissionEvaluatorService {
         // Management is absent; a Finance Director may act only when explicitly designated
         // by the Management-step roll-down. Neither receives general top-post coverage.
         if (("GOVERNING_BODY_APPROVER".equals(roleCode) || "FINANCE_DIRECTOR".equals(roleCode))
-                && "CONCESSION_APPROVE".equals(actionCode)) {
+                && ("CONCESSION_APPROVE".equals(actionCode) || "SCHOLARSHIP_LIST_APPROVE".equals(actionCode))) {
             return a.getScopeType() == ScopeType.TENANT;
         }
         return switch (roleCode) {
