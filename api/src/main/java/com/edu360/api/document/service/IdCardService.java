@@ -279,10 +279,21 @@ public class IdCardService {
                 Map.of("status", "REVOKED", "reason", reason.trim()), 1, "P", "SUCCESS"));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public String svg(TenantPrincipal principal, UUID issuanceId) {
         Card card = card(principal.tenantId(), issuanceId);
-        authorize(principal, card.institutionId(), "ID_CARD_EXPORT", RbacTarget.NONE);
+        RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        RbacScope scope = permissions.targetScope(caller, card.institutionId(), null);
+        boolean canExport = permissions.can(caller, "ID_CARD_EXPORT", scope, RbacTarget.NONE).allowed();
+        boolean canViewOwn = permissions.can(caller, "ID_CARD_REPLACEMENT_REQUEST", scope, RbacTarget.NONE).allowed()
+                && principal.userAccountId().equals(card.userId());
+        if (!canExport && !canViewOwn) {
+            throw new com.edu360.api.exception.UnauthorizedException("Identity-card print access is not granted.");
+        }
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW,
+                canExport ? "ID_CARD_EXPORT" : "ID_CARD_REPLACEMENT_REQUEST",
+                "ID_CARD_ISSUANCE", issuanceId, card.institutionId(), null,
+                Map.of("cardNumber", card.cardNumber()), 1, "P", "SUCCESS"));
         return renderer.toSvg(cardData(card), card.qrToken());
     }
 
