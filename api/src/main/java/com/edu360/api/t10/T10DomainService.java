@@ -91,7 +91,7 @@ public class T10DomainService {
     }
     @Transactional
     public void acknowledgeNotice(UUID tenant,TenantPrincipal p,UUID institution,UUID notice) {
-        allow(tenant,p.userAccountId(),"SELF_SERVICE_VIEW",institution);
+        allowAny(tenant,p.userAccountId(),institution,"SELF_SERVICE_VIEW","NOTICE_PUBLISH_INSTITUTION","NOTICE_PUBLISH_CLASS_DEPT","NOTICE_PUBLISH_UNIVERSITY","NOTICE_EMERGENCY");
         jdbc.update("""
           INSERT INTO app.notice_acknowledgment(id,tenant_id,institution_id,notice_id,user_id)
           SELECT ?,?,?,n.id,? FROM app.notice_bulletin n WHERE n.id=? AND n.tenant_id=? AND n.institution_id=?
