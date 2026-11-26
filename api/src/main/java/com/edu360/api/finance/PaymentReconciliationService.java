@@ -82,6 +82,7 @@ public class PaymentReconciliationService {
                     && (!"checkout.session.completed".equals(eventType)
                         || "paid".equals(text(event, "/data/object/payment_status")));
             failed = "checkout.session.async_payment_failed".equals(eventType)
+                    || "checkout.session.expired".equals(eventType)
                     || "payment_intent.payment_failed".equals(eventType);
             if (providerPaymentId == null) providerPaymentId = text(object, "/id");
         }
@@ -141,7 +142,7 @@ public class PaymentReconciliationService {
                     .addValue("actorId", systemActorId),
                     insertedExtractor);
         if (!inserted) return new WebhookResult("IGNORED_DUPLICATE", paymentId, null);
-        if (order == null || paymentId == null || providerPaymentId == null) {
+        if (order == null || paymentId == null || (providerPaymentId == null && !failed)) {
             createReconciliationCase(tenantId, institutionId, paymentId, eventRowId,
                     "UNMATCHED_EVENT", systemActorId);
             finishEvent(tenantId, eventRowId, institutionId, null, null, "UNMATCHED", systemActorId);
