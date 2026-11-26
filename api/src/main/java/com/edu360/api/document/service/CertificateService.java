@@ -130,12 +130,14 @@ public class CertificateService {
         if (reason == null || reason.isBlank() || reason.length() > 1000) {
             throw new BusinessRuleViolationException("CERTIFICATE_REASON_REQUIRED", "A reason of up to 1,000 characters is required.");
         }
-        Integer templateExists = jdbc.query("""
-                SELECT count(*) FROM app.certificate_template
+        String templateType = jdbc.query("""
+                SELECT type FROM app.certificate_template
                  WHERE tenant_id=? AND institution_id=? AND certificate_template_id=? AND status='ACTIVE'
-                """, rs -> rs.next() ? rs.getInt(1) : 0, principal.tenantId(), institutionId, templateId);
-        if (templateExists == 0) throw new ResourceNotFoundException("Certificate template not found.");
-        NoDuesVerificationService.ClearanceResult clearance = noDues.verifyClearance(studentId);
+                """, rs -> rs.next() ? rs.getString(1) : null,
+                principal.tenantId(), institutionId, templateId);
+        if (templateType == null) throw new ResourceNotFoundException("Certificate template not found.");
+        NoDuesVerificationService.ClearanceResult clearance = verifyClearanceForType(
+                studentId, institutionId, templateType);
         String status = clearance.clear() ? "REQUESTED" : "NO_DUES_PENDING";
         String dues;
         try { dues = mapper.writeValueAsString(clearance.items()); }
@@ -198,7 +200,7 @@ public class CertificateService {
         UUID targetUser = studentUser(principal.tenantId(), row.studentId());
         authorize(principal, row.institutionId(), "CERTIFICATE_APPROVE",
                 targetUser == null ? RbacTarget.NONE : RbacTarget.of(targetUser));
-        NoDuesVerificationService.ClearanceResult clearance = noDues.verifyClearance(row.studentId());
+        NoDuesVerificationService.ClearanceResult clearance = verifyClearanceForType(row.studentId(), row.institutionId(), row.type());
         if (!clearance.clear()) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             return new Request(requestId, row.institutionId(), row.studentId(), row.templateId(),
@@ -403,17 +405,19 @@ public class CertificateService {
                 hash);
     }
 
-    private record RequestRow(UUID institutionId, UUID studentId, UUID templateId,
+    private record RequestRow(UUID institutionId, UUID studentId, UUID templateId, String type,
             String reason, String status, OffsetDateTime noDuesOverrideAt) { }
 
     private RequestRow requestRow(UUID tenantId, UUID requestId) {
         return jdbc.query("""
-                SELECT institution_id,student_id,template_id,reason,status,no_dues_override_at
-                  FROM app.certificate_request
-                 WHERE tenant_id=? AND certificate_request_id=?
+                SELECT cr.institution_id,cr.student_id,cr.template_id,ct.type,cr.reason,cr.status,cr.no_dues_override_at
+                  FROM app.certificate_request cr
+                  JOIN app.certificate_template ct ON ct.tenant_id=cr.tenant_id
+                   AND ct.certificate_template_id=cr.template_id
+                 WHERE cr.tenant_id=? AND cr.certificate_request_id=?
                 """, rs -> rs.next() ? new RequestRow(rs.getObject(1, UUID.class),
-                rs.getObject(2, UUID.class), rs.getObject(3, UUID.class),
-                rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class)) : null, tenantId, requestId);
+                rs.getObject(2, UUID.class), rs.getObject(3, UUID.class), rs.getString(4),
+                rs.getString(5), rs.getString(6), rs.getObject(7, OffsetDateTime.class)) : null, tenantId, requestId);
     }
 
     private UUID studentUser(UUID tenantId, UUID studentId) {
@@ -422,6 +426,15 @@ public class CertificateService {
                  WHERE tenant_id=? AND student_profile_id=?
                 """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
                 tenantId, studentId);
+    }
+
+    private NoDuesVerificationService.ClearanceResult verifyClearanceForType(
+            UUID studentId, UUID institutionId, String certificateType) {
+        if ("TRANSFER_CERTIFICATE".equals(certificateType)) {
+            return noDues.verifyClearance(studentId);
+        }
+        return new NoDuesVerificationService.ClearanceResult(
+                studentId, institutionId, true, "CLEAR", List.of());
     }
 
     private String serializeDues(NoDuesVerificationService.ClearanceResult clearance) {
