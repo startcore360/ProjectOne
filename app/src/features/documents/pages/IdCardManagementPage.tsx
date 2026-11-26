@@ -31,7 +31,7 @@ export default function IdCardManagementPage() {
   const [replacements, setReplacements] = useState<IdCardReplacement[]>([]);
   const [templateName, setTemplateName] = useState("Standard identity card");
   const [layout, setLayout] = useState<"PORTRAIT" | "LANDSCAPE">("PORTRAIT");
-  const [fieldsConfigJson, setFieldsConfigJson] = useState('{"showPhoto":true,"showQr":true,"showExpiry":true}');
+  const [fieldsConfigJson, setFieldsConfigJson] = useState('{"showInstitution":true,"showProfileCode":true,"showCardNumber":true,"showIssueDate":true,"showExpiry":true,"showQr":true,"headerColor":"#172554","backgroundColor":"#ffffff","textColor":"#0f172a"}');
   const [subjectType, setSubjectType] = useState<"STUDENT" | "STAFF">("STUDENT");
   const [profileId, setProfileId] = useState("");
   const [templateId, setTemplateId] = useState("");
@@ -192,11 +192,11 @@ export default function IdCardManagementPage() {
         </div>
       </Panel>
 
-      {canManageTemplate && <Panel title="Card template management" description="Configure portrait or landscape card layouts and visible data fields.">
+      {canManageTemplate && <Panel title="Card template management" description="Configure portrait or landscape layouts, visible card fields, and validated hexadecimal theme colours.">
         <form className="grid gap-3 md:grid-cols-2" onSubmit={createTemplate}>
           <label><span className={labelClass}>Template name</span><input className={inputClass} required value={templateName} onChange={e => setTemplateName(e.target.value)} /></label>
           <label><span className={labelClass}>Layout</span><select className={inputClass} value={layout} onChange={e => setLayout(e.target.value as "PORTRAIT" | "LANDSCAPE")}><option value="PORTRAIT">Portrait</option><option value="LANDSCAPE">Landscape</option></select></label>
-          <label className="md:col-span-2"><span className={labelClass}>Fields configuration (JSON)</span><textarea className={inputClass + " min-h-24 font-mono"} value={fieldsConfigJson} onChange={e => setFieldsConfigJson(e.target.value)} /></label>
+          <label className="md:col-span-2"><span className={labelClass}>Fields and theme configuration (JSON)</span><textarea className={inputClass + " min-h-24 font-mono"} value={fieldsConfigJson} onChange={e => setFieldsConfigJson(e.target.value)} /></label>
           <div><Button type="submit" busy={busy}>Create template</Button></div>
         </form>
         <ul className="mt-4 divide-y divide-slate-100">
