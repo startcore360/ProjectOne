@@ -26,7 +26,7 @@ export default function StudentFeeInvoicesPage() {
   const [accounts, setAccounts] = useState<FeeAccountOption[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [busy, setBusy] = useState(false);
-  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(Boolean(tenantId));
   const [accountsError, setAccountsError] = useState("");
   const [hasLoadedInvoices, setHasLoadedInvoices] = useState(false);
   const [error, setError] = useState("");
@@ -35,10 +35,8 @@ export default function StudentFeeInvoicesPage() {
   useEffect(() => {
     if (!tenantId) return;
     let active = true;
-    setAccountsLoading(true);
-    setAccountsError("");
     void api.get<FeeAccountOption[]>(`/tenants/${tenantId}/me/student-fee-accounts`)
-      .then((response) => { if (active) setAccounts(response.data); })
+      .then((response) => { if (active) { setAccounts(response.data); setAccountsError(""); } })
       .catch(() => { if (active) setAccountsError("Unable to load your fee accounts. Check your access and retry."); })
       .finally(() => { if (active) setAccountsLoading(false); });
     return () => { active = false; };
