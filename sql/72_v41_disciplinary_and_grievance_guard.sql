@@ -20,7 +20,7 @@ WHERE role_origin='STANDARD' AND role_code IN
 
 
 -- T9 action catalogue extension. Action numbers continue after the authoritative seeded
--- sql/05_ref_data.sql catalogue (highest seeded action_no: 282). Generic COMPLAINT_* actions
+-- sql/05_ref_data.sql catalogue (highest seeded action_no: 283). Generic COMPLAINT_* actions
 -- and their grants are intentionally untouched.
 INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_version,requires_two_step_login,is_staff)
 VALUES ('INTERNAL_COMPLAINTS_COMMITTEE','Internal Complaints Committee','COLLEGE','4.1-T9',true,true)
@@ -274,6 +274,6 @@ CREATE POLICY p_grievance_action_insert ON app.grievance_action AS RESTRICTIVE F
   AND gc.grievance_case_id=grievance_action.grievance_case_id
   AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)));
 GRANT EXECUTE ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) TO edu_app;
-COMMENT ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) IS 'PO-T05: ICC and Principal only, using the one active role; accused and immediate HOD always excluded. Missing context denies. Tenant DPO is not authorized. ICC must be configured as an institution-scoped custom role with role_code INTERNAL_COMPLAINTS_COMMITTEE; unconfigured roles fail closed.';
+COMMENT ON FUNCTION app.fn_complaint_guard(uuid,uuid,uuid) IS 'PO-T05: ICC and Principal only, using the one active role; accused and immediate HOD always excluded. Missing context denies. Tenant DPO is not authorized. ICC must be provisioned from the institution-scoped standard role INTERNAL_COMPLAINTS_COMMITTEE; unconfigured roles fail closed.';
 COMMENT ON TABLE app.grievance_case IS 'Confidential grievance cases protected by PO-T05 restrictive RLS; only ICC and Principal may SELECT.';
 COMMIT;
