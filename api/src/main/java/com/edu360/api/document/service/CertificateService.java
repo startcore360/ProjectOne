@@ -3,6 +3,9 @@ package com.edu360.api.document.service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Base64;
@@ -38,14 +41,17 @@ public class CertificateService {
     private final NoDuesVerificationService noDues;
     private final AuditLogService audit;
     private final ObjectMapper mapper;
+    private final String signingSecret;
 
     public CertificateService(JdbcTemplate jdbc, PermissionEvaluatorService permissions,
-            NoDuesVerificationService noDues, AuditLogService audit, ObjectMapper mapper) {
+            NoDuesVerificationService noDues, AuditLogService audit, ObjectMapper mapper,
+            @Value("${edu360.documents.signing-secret:}") String signingSecret) {
         this.jdbc = jdbc;
         this.permissions = permissions;
         this.noDues = noDues;
         this.audit = audit;
         this.mapper = mapper;
+        this.signingSecret = signingSecret;
     }
 
     public record Template(UUID certificateTemplateId, UUID institutionId, String type,
@@ -56,6 +62,8 @@ public class CertificateService {
             String verificationCode, String verificationUrl, OffsetDateTime issuedAt) { }
     public record PublicVerification(String status, String studentName, String programName,
             String certificateType, OffsetDateTime issuedAt, String institutionName) { }
+    public record IssuanceSummary(UUID issuanceId, UUID requestId, String certificateNumber,
+            OffsetDateTime issuedAt, OffsetDateTime revokedAt) { }
 
     @Transactional(readOnly = true)
     public List<Template> templates(TenantPrincipal principal, UUID institutionId) {
@@ -183,10 +191,10 @@ public class CertificateService {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             throw new BusinessRuleViolationException("NO_DUES_PENDING", "No-Dues clearance must be revalidated or explicitly overridden before issuance.");
         }
-        String code = randomCode();
-        String hash = sha256(code);
         String number = "CERT-" + LocalDate.now() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         UUID issuanceId = UUID.randomUUID();
+        String code = certificateCode(principal.tenantId(), issuanceId, number);
+        String hash = sha256(code);
         jdbc.update("""
                 INSERT INTO app.certificate_issuance
                   (tenant_id,certificate_issuance_id,institution_id,certificate_request_id,
@@ -203,6 +211,68 @@ public class CertificateService {
                 Map.of("certificateNumber", number, "requestId", requestId.toString()), 1, "P", "SUCCESS"));
         return new Issuance(issuanceId, number, code,
                 "/api/public/certificates/verify/" + code, OffsetDateTime.now());
+    }
+
+    @Transactional(readOnly = true)
+    public List<IssuanceSummary> issuances(TenantPrincipal principal, UUID institutionId) {
+        authorize(principal, institutionId, "CERTIFICATE_PREPARE", RbacTarget.NONE);
+        return jdbc.query("""
+                SELECT certificate_issuance_id,certificate_request_id,certificate_number,issued_at,revoked_at
+                  FROM app.certificate_issuance
+                 WHERE tenant_id=? AND institution_id=?
+                 ORDER BY issued_at DESC
+                """, (rs, n) -> new IssuanceSummary(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+                rs.getString(3), rs.getObject(4, OffsetDateTime.class), rs.getObject(5, OffsetDateTime.class)),
+                principal.tenantId(), institutionId);
+    }
+
+    @Transactional(readOnly = true)
+    public String renderIssuance(TenantPrincipal principal, UUID issuanceId) {
+        Map<String, Object> row = jdbc.query("""
+                SELECT ci.institution_id,ci.certificate_number,ci.issued_at,ci.revoked_at,
+                       cr.student_id,ct.template_html,ct.type,sp.full_name,sp.program_id,
+                       COALESCE(p.program_name,'Not recorded'),inst.institution_name
+                  FROM app.certificate_issuance ci
+                  JOIN app.certificate_request cr ON cr.tenant_id=ci.tenant_id
+                   AND cr.certificate_request_id=ci.certificate_request_id
+                  JOIN app.certificate_template ct ON ct.tenant_id=cr.tenant_id
+                   AND ct.certificate_template_id=cr.template_id
+                  JOIN app.student_profile sp ON sp.tenant_id=cr.tenant_id
+                   AND sp.student_profile_id=cr.student_id
+                  LEFT JOIN app.program p ON p.tenant_id=sp.tenant_id AND p.program_id=sp.program_id
+                  JOIN app.institution inst ON inst.tenant_id=ci.tenant_id AND inst.institution_id=ci.institution_id
+                 WHERE ci.tenant_id=? AND ci.certificate_issuance_id=?
+                """, rs -> rs.next() ? Map.of(
+                "institutionId", rs.getObject(1, UUID.class),
+                "certificateNumber", rs.getString(2),
+                "issuedAt", rs.getObject(3, OffsetDateTime.class),
+                "revoked", rs.getObject(4) != null,
+                "studentId", rs.getObject(5, UUID.class),
+                "templateHtml", rs.getString(6),
+                "type", rs.getString(7),
+                "studentName", rs.getString(8),
+                "programName", rs.getString(10),
+                "institutionName", rs.getString(11)) : null,
+                principal.tenantId(), issuanceId);
+        if (row == null) throw new ResourceNotFoundException("Certificate issuance not found.");
+        authorize(principal, (UUID) row.get("institutionId"), "CERTIFICATE_PREPARE", RbacTarget.NONE);
+        String code = certificateCode(principal.tenantId(), issuanceId, (String) row.get("certificateNumber"));
+        String html = (String) row.get("templateHtml");
+        html = html.replace("{{studentName}}", html((String) row.get("studentName")))
+                .replace("{{programName}}", html((String) row.get("programName")))
+                .replace("{{certificateNumber}}", html((String) row.get("certificateNumber")))
+                .replace("{{certificateType}}", html((String) row.get("type")))
+                .replace("{{institutionName}}", html((String) row.get("institutionName")))
+                .replace("{{issueDate}}", html(row.get("issuedAt").toString()))
+                .replace("{{verificationUrl}}", html("/api/public/certificates/verify/" + code))
+                .replace("{{verificationCode}}", html(code));
+        if (Boolean.TRUE.equals(row.get("revoked"))) {
+            html = "<div role='alert'>REVOKED CERTIFICATE</div>" + html;
+        }
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "CERTIFICATE_PREPARE",
+                "CERTIFICATE_ISSUANCE", issuanceId, (UUID) row.get("institutionId"), null,
+                Map.of("print", true, "revoked", row.get("revoked")), 1, "P", "SUCCESS"));
+        return html;
     }
 
     @Transactional
@@ -330,10 +400,29 @@ public class CertificateService {
         return scope;
     }
 
-    private static String randomCode() {
-        byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    private String certificateCode(UUID tenantId, UUID issuanceId, String certificateNumber) {
+        if (signingSecret == null || signingSecret.length() < 32) {
+            throw new BusinessRuleViolationException("DOCUMENT_SIGNING_NOT_CONFIGURED",
+                    "The certificate signing key is not configured with at least 32 characters.");
+        }
+        String payload = tenantId + "|" + issuanceId + "|" + certificateNumber;
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(signingSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String encoded = Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+            String signature = Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(mac.doFinal(payload.getBytes(StandardCharsets.UTF_8)));
+            return encoded + "." + signature;
+        } catch (Exception ex) {
+            throw new IllegalStateException("Could not sign certificate verification code.", ex);
+        }
+    }
+
+    private static String html(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private static String sha256(String value) {
