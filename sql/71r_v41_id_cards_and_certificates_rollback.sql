@@ -1,6 +1,7 @@
 -- Destructive rollback for migration 71; use only when T9 card/certificate data may be discarded.
 BEGIN;
 DROP FUNCTION IF EXISTS app.fn_public_certificate_verify(char(64));
+DROP TABLE IF EXISTS app.department_equipment_clearance;
 DROP TABLE IF EXISTS app.certificate_issuance;
 DROP TABLE IF EXISTS app.certificate_request;
 DROP TABLE IF EXISTS app.certificate_template;
