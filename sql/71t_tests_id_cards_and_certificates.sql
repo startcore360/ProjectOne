@@ -8,7 +8,8 @@ BEGIN
  END LOOP;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.id_card_issuance'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%qr_hash%') THEN RAISE EXCEPTION 'T9_DB_71 QR digest constraint missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.id_card_replacement'::regclass
-   AND conname='id_card_replacement_tenant_id_institution_id_fee_receipt_id_fkey') THEN
+   AND contype='f' AND pg_get_constraintdef(oid) LIKE '%institution_id, fee_receipt_id%'
+   AND pg_get_constraintdef(oid) LIKE '%app.receipt%') THEN
   RAISE EXCEPTION 'T9_DB_71 replacement requests must reference an institution-bound fee receipt';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_indexes WHERE schemaname='app'
