@@ -124,6 +124,7 @@ public class OnlinePaymentCheckoutService {
         if (existing != null) {
             return replay(tenantId, request, installmentIds, institutionId, total, existing);
         }
+        expireStalePendingPayments(tenantId, installmentIds, actor.userAccountId());
 
         PaymentGatewayCredentialsResolver.PaymentGatewayCredentials credentials =
                 credentialsResolver.resolve(tenantId, institutionId);
@@ -215,6 +216,59 @@ public class OnlinePaymentCheckoutService {
         audit.record(AuditEventType.CREATE, null, actor.userAccountId().toString(), tenantId.toString(),
                 "Online " + provider + " checkout started for payment " + paymentId + ".");
         return checkoutResponse(paymentId, provider, providerOrderId, total, keyId, checkoutUrl);
+    }
+
+    /**
+     * A different idempotency key must not create a second live checkout for an installment.
+     * The caller already holds FOR UPDATE locks on the selected installment rows, serializing
+     * competing checkout attempts for overlapping selections.
+     */
+    private void expireStalePendingPayments(UUID tenantId, List<UUID> installmentIds, UUID actorId) {
+        Instant now = Instant.now();
+        List<PendingPayment> pending = jdbc.query("""
+            SELECT p.payment_id, p.expires_at
+              FROM app.payment p
+             WHERE p.tenant_id=:tenantId AND p.status='PENDING'
+               AND EXISTS (
+                   SELECT 1 FROM app.payment_intent_item pii
+                    WHERE pii.tenant_id=p.tenant_id AND pii.payment_id=p.payment_id
+                      AND pii.student_installment_id IN (:installmentIds)
+               )
+             ORDER BY p.created_at DESC
+             FOR UPDATE OF p
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("installmentIds", installmentIds),
+                (rs, rowNum) -> {
+                    java.sql.Timestamp expiresAt = rs.getTimestamp("expires_at");
+                    return new PendingPayment(rs.getObject("payment_id", UUID.class),
+                            expiresAt == null ? null : expiresAt.toInstant());
+                });
+        if (pending.isEmpty()) return;
+
+        List<UUID> activePaymentIds = pending.stream()
+                .filter(payment -> payment.expiresAt() == null || payment.expiresAt().isAfter(now))
+                .map(PendingPayment::paymentId).toList();
+        if (!activePaymentIds.isEmpty()) {
+            throw new BusinessRuleViolationException("PAYMENT_ALREADY_PENDING",
+                    "One or more selected installments already have a pending checkout. Retry that checkout or wait for it to expire.");
+        }
+
+        List<UUID> expiredPaymentIds = pending.stream().map(PendingPayment::paymentId).toList();
+        jdbc.update("""
+            UPDATE app.payment
+               SET status='EXPIRED', updated_at=:now, updated_by=:actorId
+             WHERE tenant_id=:tenantId AND payment_id IN (:paymentIds)
+               AND status='PENDING' AND expires_at <= :now
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("paymentIds", expiredPaymentIds).addValue("now", now).addValue("actorId", actorId));
+        jdbc.update("""
+            UPDATE app.gateway_order
+               SET status='EXPIRED', updated_at=:now, updated_by=:actorId
+             WHERE tenant_id=:tenantId AND payment_id IN (:paymentIds) AND status='CREATED'
+            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
+                    .addValue("paymentIds", expiredPaymentIds).addValue("now", now).addValue("actorId", actorId));
+        audit.record(AuditEventType.UPDATE, null, actorId.toString(), tenantId.toString(),
+                "Expired " + expiredPaymentIds.size() + " stale pending online payment attempt(s) before a new checkout.");
     }
 
     private Map<String, Object> replay(UUID tenantId, CheckoutRequest request, List<UUID> installmentIds,
@@ -353,5 +407,6 @@ public class OnlinePaymentCheckoutService {
     }
 
     private record Installment(UUID installmentId, UUID institutionId, BigDecimal netDue, String status) {}
+    private record PendingPayment(UUID paymentId, Instant expiresAt) {}
     public record CheckoutRequest(UUID studentFeeAccountId, List<UUID> installmentIds, String provider, String requestKey) {}
 }
