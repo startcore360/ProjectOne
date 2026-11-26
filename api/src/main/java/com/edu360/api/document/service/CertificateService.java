@@ -191,7 +191,7 @@ public class CertificateService {
     @Transactional
     public Request approve(TenantPrincipal principal, UUID requestId) {
         RequestRow row = requestRow(principal.tenantId(), requestId);
-        UUID targetUser = studentUser(row.studentId());
+        UUID targetUser = studentUser(principal.tenantId(), row.studentId());
         authorize(principal, row.institutionId(), "CERTIFICATE_APPROVE",
                 targetUser == null ? RbacTarget.NONE : RbacTarget.of(targetUser));
         NoDuesVerificationService.ClearanceResult clearance = noDues.verifyClearance(row.studentId());
@@ -320,7 +320,7 @@ public class CertificateService {
     @Transactional
     public void overrideNoDues(TenantPrincipal principal, UUID requestId, String reason) {
         RequestRow row = requestRow(principal.tenantId(), requestId);
-        UUID studentUser = studentUser(row.studentId());
+        UUID studentUser = studentUser(principal.tenantId(), row.studentId());
         if (studentUser != null && studentUser.equals(principal.userAccountId())) {
             throw new BusinessRuleViolationException("SELF_OVERRIDE_FORBIDDEN",
                     "A student cannot override their own No-Dues clearance.");
@@ -406,12 +406,12 @@ public class CertificateService {
                 rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class)) : null, tenantId, requestId);
     }
 
-    private UUID studentUser(UUID studentId) {
+    private UUID studentUser(UUID tenantId, UUID studentId) {
         return jdbc.query("""
                 SELECT user_account_id FROM app.student_profile
                  WHERE tenant_id=? AND student_profile_id=?
                 """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
-                TenantContext.currentTenantId(), studentId);
+                tenantId, studentId);
     }
 
     private String serializeDues(NoDuesVerificationService.ClearanceResult clearance) {
