@@ -152,7 +152,7 @@ public class CertificateService {
                 status, dues, principal.userAccountId(), principal.userAccountId());
         audit.record(new AuditEntry(AuditEventType.CREATE, "CERTIFICATE_REQUEST",
                 "CERTIFICATE_REQUEST", id, institutionId, null, Map.of("status", status), 1, "P", "SUCCESS"));
-        return new Request(id, institutionId, studentId, templateId, reason.trim(), status, dues, null);
+        return new Request(id, institutionId, studentId, templateId, reason.trim(), status, dues, null, null);
     }
 
     @Transactional
@@ -168,7 +168,7 @@ public class CertificateService {
         }
         String sql = """
                 SELECT cr.certificate_request_id,cr.institution_id,cr.student_id,cr.template_id,cr.reason,cr.status,
-                       cr.dues_json::text,cr.created_at
+                       cr.dues_json::text,cr.created_at,cr.rejection_reason
                   FROM app.certificate_request cr
                  WHERE cr.tenant_id=? AND cr.institution_id=?
                 """ + ((canPrepare || canApprove || canOverride) ? "" : """
@@ -179,7 +179,7 @@ public class CertificateService {
         List<Request> result = (canPrepare || canApprove || canOverride)
                 ? jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                     rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
-                    rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
+                    rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class), rs.getString(9)),
                     principal.tenantId(), institutionId)
                 : jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                     rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
@@ -204,7 +204,7 @@ public class CertificateService {
         if (!clearance.clear()) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             return new Request(requestId, row.institutionId(), row.studentId(), row.templateId(),
-                    row.reason(), "NO_DUES_PENDING", serializeDues(clearance), null);
+                    row.reason(), "NO_DUES_PENDING", serializeDues(clearance), null, null);
         }
         jdbc.update("""
                 UPDATE app.certificate_request SET status='APPROVED',dues_json='[]'::jsonb,
@@ -215,7 +215,34 @@ public class CertificateService {
                 "CERTIFICATE_REQUEST", requestId, row.institutionId(), Map.of("status", row.status()),
                 Map.of("status", "APPROVED"), 1, "P", "SUCCESS"));
         return new Request(requestId, row.institutionId(), row.studentId(), row.templateId(),
-                row.reason(), "APPROVED", "[]", null);
+                row.reason(), "APPROVED", "[]", null, null);
+    }
+
+    @Transactional
+    public Request reject(TenantPrincipal principal, UUID requestId, String reason) {
+        RequestRow row = requestRow(principal.tenantId(), requestId);
+        UUID targetUser = studentUser(principal.tenantId(), row.studentId());
+        authorize(principal, row.institutionId(), "CERTIFICATE_APPROVE",
+                targetUser == null ? RbacTarget.NONE : RbacTarget.of(targetUser));
+        if (reason == null || reason.isBlank() || reason.length() > 1000) {
+            throw new BusinessRuleViolationException("CERTIFICATE_REJECTION_REASON_REQUIRED",
+                    "A rejection reason of up to 1,000 characters is required.");
+        }
+        if (!List.of("REQUESTED", "NO_DUES_PENDING", "APPROVED").contains(row.status())) {
+            throw new BusinessRuleViolationException("CERTIFICATE_REJECTION_NOT_APPLICABLE",
+                    "Only a pending or approved certificate request can be rejected.");
+        }
+        jdbc.update("""
+                UPDATE app.certificate_request SET status='REJECTED',rejection_reason=?,
+                       updated_by=?,updated_at=now()
+                 WHERE tenant_id=? AND certificate_request_id=?
+                """, reason.trim(), principal.userAccountId(), principal.tenantId(), requestId);
+        audit.record(new AuditEntry(AuditEventType.APPROVAL, "CERTIFICATE_APPROVE",
+                "CERTIFICATE_REQUEST", requestId, row.institutionId(),
+                Map.of("status", row.status()), Map.of("status", "REJECTED", "reason", reason.trim()),
+                1, "P", "SUCCESS"));
+        return new Request(requestId, row.institutionId(), row.studentId(), row.templateId(),
+                row.reason(), "REJECTED", "[]", null, reason.trim());
     }
 
     @Transactional(noRollbackFor = BusinessRuleViolationException.class)
@@ -225,7 +252,7 @@ public class CertificateService {
         if (!"APPROVED".equals(row.status())) {
             throw new BusinessRuleViolationException("CERTIFICATE_NOT_APPROVED", "Only an approved request can be prepared.");
         }
-        NoDuesVerificationService.ClearanceResult clearance = noDues.verifyClearance(row.studentId());
+        NoDuesVerificationService.ClearanceResult clearance = verifyClearanceForType(row.studentId(), row.institutionId(), row.type());
         if (!clearance.clear() && row.noDuesOverrideAt() == null) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             throw new BusinessRuleViolationException("NO_DUES_PENDING", "No-Dues clearance must be revalidated or explicitly overridden before issuance.");
