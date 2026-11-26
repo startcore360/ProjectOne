@@ -54,7 +54,7 @@ public class IdCardService {
             String backgroundImageRef, String fieldsConfigJson, String status, Integer rowVersion) { }
     public record Card(UUID issuanceId, UUID institutionId, UUID userId, String cardNumber,
             LocalDate issueDate, LocalDate expiryDate, String status, String qrToken,
-            String fullName, String profileCode, String institutionName, String layout) { }
+            String fullName, String profileCode, String institutionName, String layout, String fieldsConfigJson) { }
     public record Replacement(UUID replacementId, UUID originalIssuanceId, String reason,
             String status, UUID replacementIssuanceId) { }
     private record Profile(UUID userId, UUID institutionId, UUID studentProfileId,
@@ -380,7 +380,7 @@ public class IdCardService {
                 id, institutionId, null, Map.of("cardNumber", cardNumber), 1, "P", "SUCCESS"));
         return new Card(id, institutionId, profile.userId(), cardNumber, issueDate, expiryDate,
                 "ACTIVE", token, profile.fullName(), profile.profileCode(),
-                institutionName(principal.tenantId(), institutionId), template.layout());
+                institutionName(principal.tenantId(), institutionId), template.layout(), template.fieldsConfigJson());
     }
 
     private Card card(UUID tenantId, UUID issuanceId) {
@@ -388,7 +388,7 @@ public class IdCardService {
                 SELECT i.id_card_issuance_id,i.institution_id,i.user_id,i.card_number,i.issue_date,
                        i.expiry_date,i.status,COALESCE(sp.full_name,st.full_name) AS full_name,
                        COALESCE(sp.student_code,st.staff_code) AS profile_code,ins.institution_name,
-                       t.layout,i.student_profile_id,i.staff_profile_id
+                       t.layout,i.student_profile_id,i.staff_profile_id,t.fields_config_json::text
                   FROM app.id_card_issuance i
                   LEFT JOIN app.student_profile sp ON sp.tenant_id=i.tenant_id AND sp.student_profile_id=i.student_profile_id
                   LEFT JOIN app.staff_profile st ON st.tenant_id=i.tenant_id AND st.staff_profile_id=i.staff_profile_id
@@ -400,7 +400,7 @@ public class IdCardService {
                 rs.getObject(6, LocalDate.class), rs.getString(7),
                 qrToken(tenantId, rs.getObject(2, UUID.class), rs.getObject(3, UUID.class),
                         rs.getString(4), rs.getObject(5, LocalDate.class), rs.getObject(6, LocalDate.class)),
-                rs.getString(8), rs.getString(9), rs.getString(10), rs.getString(11)) : null,
+                rs.getString(8), rs.getString(9), rs.getString(10), rs.getString(11), rs.getString(14)) : null,
                 tenantId, issuanceId);
         if (card == null) throw new ResourceNotFoundException("Identity card not found.");
         return card;
@@ -459,7 +459,7 @@ public class IdCardService {
     private IdCardRenderer.CardData cardData(Card card) {
         return new IdCardRenderer.CardData(card.cardNumber(), card.fullName(), card.profileCode(),
                 card.institutionName(), card.issueDate().toString(),
-                card.expiryDate() == null ? null : card.expiryDate().toString(), card.layout());
+                card.expiryDate() == null ? null : card.expiryDate().toString(), card.layout(), card.fieldsConfigJson());
     }
 
     private void authorize(TenantPrincipal principal, UUID institutionId, String action, RbacTarget target) {
