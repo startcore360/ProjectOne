@@ -235,6 +235,10 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
              WHERE e.tenant_id=? AND e.document_ref=?
             """,rs->rs.next()?rs.getObject(1,UUID.class):null,principal.tenantId(),file.getId().getFileId());
         RbacPrincipal caller=new RbacPrincipal(principal.tenantId(),principal.userAccountId());
+        var active=permissions.activeAssignment(caller).orElse(null);
+        if(active==null)return false;
+        if("DEPARTMENT".equals(active.getScopeType().name())
+                && (departmentId==null || !departmentId.equals(active.getDepartmentId())))return false;
         RbacScope scope=permissions.targetScope(caller,file.getInstitutionId(),departmentId);
         return permissions.can(caller,"ATTENDANCE_CORRECTION_APPROVE",scope,RbacTarget.NONE).allowed();
     }
