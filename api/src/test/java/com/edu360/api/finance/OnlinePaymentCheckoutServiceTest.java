@@ -91,8 +91,8 @@ class OnlinePaymentCheckoutServiceTest {
     }
 
     @Test
-    void expiresStalePendingPaymentBeforeAllowingANewCheckoutAttempt() {
-        Instant expiresAt = Instant.now().minusSeconds(30);
+    void doesNotTreatLocalExpiryAsProofThatProviderCheckoutCannotBeCaptured() {
+        Instant locallyExpiredAt = Instant.now().minusSeconds(30);
         doAnswer(invocation -> {
             String sql = invocation.getArgument(0);
             if (sql.contains("FROM app.student_installment")) {
@@ -100,12 +100,10 @@ class OnlinePaymentCheckoutServiceTest {
                         installmentId, institutionId, new BigDecimal("1200.00"), "UNPAID"));
             }
             if (sql.contains("FROM app.payment p")) {
-                return List.of(new OnlinePaymentCheckoutService.PendingPayment(UUID.randomUUID(), expiresAt));
+                return List.of(new OnlinePaymentCheckoutService.PendingPayment(UUID.randomUUID(), locallyExpiredAt));
             }
             throw new AssertionError("Unexpected row-mapper query: " + sql);
         }).when(jdbc).query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class));
-        when(credentialsResolver.resolve(tenantId, institutionId)).thenReturn(
-                new PaymentGatewayCredentialsResolver.PaymentGatewayCredentials(null, null, null, null, null));
 
         OnlinePaymentCheckoutService service = new OnlinePaymentCheckoutService(
                 jdbc, permissions, credentialsResolver, audit);
@@ -114,12 +112,9 @@ class OnlinePaymentCheckoutServiceTest {
 
         assertThatThrownBy(() -> service.start(tenantId, actor, request))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("Razorpay is not configured");
+                .hasMessageContaining("provider's final notification");
 
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("UPDATE app.payment"),
-                any(MapSqlParameterSource.class));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("UPDATE app.gateway_order"),
-                any(MapSqlParameterSource.class));
-        verify(audit).record(any(), any(), anyString(), anyString(), anyString());
+        verify(credentialsResolver, never()).resolve(tenantId, institutionId);
+        verify(jdbc, never()).update(anyString(), any(MapSqlParameterSource.class));
     }
 }
