@@ -213,6 +213,8 @@ AS $$
     AND active.user_account_id=NULLIF(current_setting('app.user_id',true),'')::uuid
     AND ura.status='ACTIVE' AND ura.effective_from<=now() AND (ura.effective_to IS NULL OR ura.effective_to>now())
     AND ura.scope_type='INSTITUTION' AND ura.institution_id=p_institution_id AND rd.status='ACTIVE'
+    AND rd.role_origin='STANDARD' AND rd.base_standard_role=rd.role_code
+    AND rd.is_sensitive_role=true
     AND rd.role_code IN ('INTERNAL_COMPLAINTS_COMMITTEE','PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL')
   ) THEN true
   ELSE false
