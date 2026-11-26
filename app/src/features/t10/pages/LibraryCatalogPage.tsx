@@ -6,13 +6,14 @@ import {
   type LibraryFine, type LibraryReservation,
 } from "../api/t10Api";
 
+const NO_ACTIONS: string[] = [];
 const weekdays = [{ id: 1, label: "Mon" }, { id: 2, label: "Tue" }, { id: 3, label: "Wed" },
   { id: 4, label: "Thu" }, { id: 5, label: "Fri" }, { id: 6, label: "Sat" }, { id: 7, label: "Sun" }];
 
 export default function LibraryCatalogPage() {
   const tenant = useAppSelector((s) => s.auth.user?.tenantId ?? "");
   const institution = useAppSelector((s) => s.tenantPermissions.current?.institutionId ?? "");
-  const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? []);
+  const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? NO_ACTIONS);
   const can = useCallback((action: string) => actions.includes(action), [actions]);
 
   const [query, setQuery] = useState("");
