@@ -54,6 +54,10 @@ jobs:
         id: t6
         continue-on-error: true
         run: npm test -- AttendanceRegisterPage
+      - name: Run T8 fee payment portal tests
+        id: t8
+        continue-on-error: true
+        run: npm test -- FeePaymentPortalPage
       - name: Run complete unit test suite
         id: unit
         continue-on-error: true
@@ -78,11 +82,12 @@ jobs:
           T5: ${{ steps.t5.outcome }}
           T7: ${{ steps.t7.outcome }}
           T6: ${{ steps.t6.outcome }}
+          T8: ${{ steps.t8.outcome }}
           UNIT: ${{ steps.unit.outcome }}
           BUILD: ${{ steps.build.outcome }}
         run: |
           failed=0
-          for check in LINT T1 T5 T6 T7 UNIT BUILD; do
+          for check in LINT T1 T5 T6 T7 T8 UNIT BUILD; do
             value="${!check}"
             echo "$check: $value"
             [ "$value" = "success" ] || failed=1
@@ -126,6 +131,10 @@ jobs:
         id: t6
         continue-on-error: true
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=TimetableGiSTConflictIT,AttendanceCalculationIT
+      - name: Run T8 fee and payment security tests
+        id: t8
+        continue-on-error: true
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml test -Dtest=PaymentWebhookSecurityIT,LateFeeCalculationIT,PaymentReconciliationServiceTest
       - name: Verify backend
         id: verify
         continue-on-error: true
@@ -147,10 +156,11 @@ jobs:
           M13: ${{ steps.m13.outcome }}
           T7: ${{ steps.t7.outcome }}
           T6: ${{ steps.t6.outcome }}
+          T8: ${{ steps.t8.outcome }}
           VERIFY: ${{ steps.verify.outcome }}
         run: |
           failed=0
-          for check in T1 T4 T5 M13 T6 T7 VERIFY; do
+          for check in T1 T4 T5 M13 T6 T7 T8 VERIFY; do
             value="${!check}"
             echo "$check: $value"
             [ "$value" = "success" ] || failed=1
