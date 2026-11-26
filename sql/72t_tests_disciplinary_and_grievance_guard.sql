@@ -13,7 +13,7 @@ BEGIN
   LEFT JOIN ref.action_catalog a ON a.action_code=expected.code AND a.action_no=expected.action_no
   WHERE a.action_code IS NULL
  ) THEN RAISE EXCEPTION 'T9_DB_72 action codes or numbers do not match the catalog extension'; END IF;
- IF EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no BETWEEN 284 AND 299 GROUP BY action_no HAVING count(*)>1) THEN
+ IF EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no BETWEEN 284 AND 300 GROUP BY action_no HAVING count(*)>1) THEN
   RAISE EXCEPTION 'T9_DB_72 action number collision';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_code='ID_CARD_REPLACE' AND is_approval_action=true) THEN
@@ -34,6 +34,12 @@ BEGIN
   WHERE sra.action_code IN ('GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN','GRIEVANCE_HEARING_MANAGE','GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW')
    AND sra.role_code NOT IN ('INTERNAL_COMPLAINTS_COMMITTEE','PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL')) THEN
   RAISE EXCEPTION 'T9_DB_72 confidential grievance action granted outside ICC/Principal';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no=300 AND action_code='DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE') THEN
+  RAISE EXCEPTION 'T9_DB_72 department equipment clearance action missing';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='HEAD_OF_DEPARTMENT' AND action_code='DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE') THEN
+  RAISE EXCEPTION 'T9_DB_72 HOD department equipment clearance grant missing';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='INTERNAL_COMPLAINTS_COMMITTEE' AND action_code='GRIEVANCE_CASE_VIEW') THEN
   RAISE EXCEPTION 'T9_DB_72 ICC grievance view grant missing';
