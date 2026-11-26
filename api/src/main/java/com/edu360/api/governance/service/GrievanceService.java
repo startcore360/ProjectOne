@@ -50,6 +50,9 @@ public class GrievanceService {
     public record CaseAction(UUID actionId, String actionType, String actionNotes,
             OffsetDateTime actionAt, UUID performedByUserId, UUID noticeFileId,
             UUID minutesFileId, String penalty) { }
+    public record Hearing(UUID hearingId, OffsetDateTime hearingAt, String hearingNotes,
+            UUID noticeFileId, UUID minutesFileId, String minutesNotes, String status,
+            OffsetDateTime updatedAt) { }
 
     @Transactional
     public SubmissionReceipt submit(TenantPrincipal principal, UUID institutionId, String category,
@@ -204,6 +207,13 @@ public class GrievanceService {
                        updated_by=?,updated_at=now()
                  WHERE tenant_id=? AND grievance_case_id=?
                 """, hearingAt, principal.userAccountId(), principal.tenantId(), caseId);
+        jdbc.update("""
+                INSERT INTO app.grievance_hearing
+                  (tenant_id,grievance_hearing_id,grievance_case_id,hearing_at,hearing_notes,
+                   notice_file_id,status,created_by,updated_by)
+                VALUES (?,?,?,?,?,?,'SCHEDULED',?,?)
+                """, principal.tenantId(), UUID.randomUUID(), caseId, hearingAt, notes.trim(),
+                noticeFileId, principal.userAccountId(), principal.userAccountId());
         appendAction(principal, current, "HEARING_SCHEDULED", notes, noticeFileId, null, null, hearingAt);
         return get(principal, caseId);
     }
@@ -214,6 +224,19 @@ public class GrievanceService {
         authorize(principal, current.institutionId(), "GRIEVANCE_HEARING_MANAGE", RbacTarget.NONE);
         if (notes == null || notes.isBlank() || notes.length() > 5000) {
             throw new BusinessRuleViolationException("HEARING_MINUTES_REQUIRED", "Hearing minutes are required.");
+        }
+        int updated = jdbc.update("""
+                UPDATE app.grievance_hearing
+                   SET status='HELD',minutes_notes=?,minutes_file_id=?,updated_by=?,updated_at=now()
+                 WHERE tenant_id=? AND grievance_hearing_id=(
+                   SELECT grievance_hearing_id FROM app.grievance_hearing
+                    WHERE tenant_id=? AND grievance_case_id=? AND status='SCHEDULED'
+                    ORDER BY hearing_at DESC LIMIT 1)
+                """, notes.trim(), minutesFileId, principal.userAccountId(),
+                principal.tenantId(), principal.tenantId(), caseId);
+        if (updated != 1) {
+            throw new BusinessRuleViolationException("HEARING_NOT_SCHEDULED",
+                    "Schedule a hearing before recording its minutes.");
         }
         appendAction(principal, current, "MINUTES_RECORDED", notes, null, minutesFileId, null, OffsetDateTime.now());
     }
@@ -281,6 +304,27 @@ public class GrievanceService {
         audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "GRIEVANCE_EVIDENCE_VIEW",
                 "GRIEVANCE_EVIDENCE", null, current.institutionId(), null,
                 Map.of("recordCount", result.size()), result.size(), "H", "SUCCESS"));
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Hearing> hearings(TenantPrincipal principal, UUID caseId) {
+        CaseView current = get(principal, caseId);
+        authorize(principal, current.institutionId(), "GRIEVANCE_CASE_VIEW", RbacTarget.NONE);
+        List<Hearing> result = jdbc.query("""
+                SELECT grievance_hearing_id,hearing_at,hearing_notes,notice_file_id,
+                       minutes_file_id,minutes_notes,status,updated_at
+                  FROM app.grievance_hearing
+                 WHERE tenant_id=? AND grievance_case_id=?
+                 ORDER BY hearing_at DESC
+                """, (rs, n) -> new Hearing(rs.getObject(1, UUID.class),
+                rs.getObject(2, OffsetDateTime.class), rs.getString(3), rs.getObject(4, UUID.class),
+                rs.getObject(5, UUID.class), rs.getString(6), rs.getString(7),
+                rs.getObject(8, OffsetDateTime.class)), principal.tenantId(), caseId);
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "GRIEVANCE_CASE_VIEW",
+                "GRIEVANCE_HEARING", null, current.institutionId(), null,
+                Map.of("caseId", caseId.toString(), "recordCount", result.size()),
+                result.size(), "H", "SUCCESS"));
         return result;
     }
 
