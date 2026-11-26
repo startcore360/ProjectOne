@@ -1,5 +1,5 @@
 BEGIN;
-DO $ DECLARE v_forced boolean; v_teacher_def text; v_room_def text; BEGIN
+DO $T6$ DECLARE v_forced boolean; v_teacher_def text; v_room_def text; BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_extension WHERE extname='btree_gist') THEN RAISE EXCEPTION 'DB-T6-01 btree_gist missing'; END IF;
  IF to_regclass('app.room') IS NULL OR to_regclass('app.timetable_slot') IS NULL THEN RAISE EXCEPTION 'DB-T6-02 timetable objects missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='app' AND table_name='timetable_slot' AND column_name='teacher_id') THEN RAISE EXCEPTION 'DB-T6-03 teacher_id missing'; END IF;
@@ -14,5 +14,5 @@ DO $ DECLARE v_forced boolean; v_teacher_def text; v_room_def text; BEGIN
  IF to_regclass('app.online_session_access_log') IS NULL THEN RAISE EXCEPTION 'DB-T6-10 access log missing'; END IF;
  SELECT relrowsecurity AND relforcerowsecurity INTO v_forced FROM pg_class WHERE oid='app.timetable_slot'::regclass;
  IF v_forced IS DISTINCT FROM true THEN RAISE EXCEPTION 'DB-T6-11 timetable RLS must remain forced'; END IF;
-END $$;
+END $T6$;
 ROLLBACK;
