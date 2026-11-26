@@ -79,6 +79,7 @@ export default function LibraryCatalogPage() {
 
   const loadCopies = useCallback(async (bookId: string) => {
     if (!tenant || !institution || !bookId) { setCopies([]); return; }
+    setCopies([]);
     try {
       const result = await t10Api.copies(tenant, institution, bookId);
       const available = result.filter((copy) => copy.status === "AVAILABLE");
@@ -94,6 +95,7 @@ export default function LibraryCatalogPage() {
 
   const loadManagedCopies = useCallback(async () => {
     if (!tenant || !institution || !manageBookId) { setManagedCopies([]); return; }
+    setManagedCopies([]);
     try { setManagedCopies(await t10Api.copies(tenant, institution, manageBookId)); }
     catch { setManagedCopies([]); setError("Book copies could not be loaded."); }
   }, [tenant, institution, manageBookId]);
