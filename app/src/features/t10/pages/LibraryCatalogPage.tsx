@@ -31,6 +31,9 @@ export default function LibraryCatalogPage() {
   const [isbn, setIsbn] = useState("");
   const [category, setCategory] = useState("");
   const [copyCount, setCopyCount] = useState("1");
+  const [manageBookId, setManageBookId] = useState("");
+  const [accessionNumber, setAccessionNumber] = useState("");
+  const [managedCopies, setManagedCopies] = useState<BookCopy[]>([]);
 
   const [issueBookId, setIssueBookId] = useState("");
   const [issueCopyId, setIssueCopyId] = useState("");
@@ -88,6 +91,13 @@ export default function LibraryCatalogPage() {
 
   useEffect(() => { void loadCopies(issueBookId); }, [issueBookId, loadCopies]);
 
+  const loadManagedCopies = useCallback(async () => {
+    if (!tenant || !institution || !manageBookId) { setManagedCopies([]); return; }
+    try { setManagedCopies(await t10Api.copies(tenant, institution, manageBookId)); }
+    catch { setManagedCopies([]); setError("Book copies could not be loaded."); }
+  }, [tenant, institution, manageBookId]);
+  useEffect(() => { void loadManagedCopies(); }, [loadManagedCopies]);
+
   async function submit(event: FormEvent, task: () => Promise<unknown>, success: string) {
     event.preventDefault();
     setBusy(true); setError(""); setNotice("");
@@ -120,6 +130,27 @@ export default function LibraryCatalogPage() {
         <tbody>{books.map((book) => <tr key={book.id}><td>{book.title}</td><td>{book.author ?? "—"}</td><td>{book.isbn ?? "—"}</td><td>{book.available_copies}</td><td>{book.total_copies}</td></tr>)}</tbody>
       </table></div>
       {books.length === 0 && <p>No catalog matches. Add a book if you have catalog permissions.</p>}
+      {can("CATALOG_MANAGE") && <section className="app-subpanel">
+        <h3>Manage individual copies</h3>
+        <label>Catalog item <select value={manageBookId} onChange={(e) => setManageBookId(e.target.value)}>
+          <option value="">Select a book</option>{books.map((book) => <option key={book.id} value={book.id}>{book.title}</option>)}
+        </select></label>
+        <form className="form-grid" onSubmit={(e) => submit(e, async () => {
+          await t10Api.addCopy(tenant, manageBookId, { institutionId: institution, accessionNumber });
+          setAccessionNumber(""); await loadManagedCopies();
+        }, "Book copy added.")}>
+          <label>Accession number <input required maxLength={80} value={accessionNumber} onChange={(e) => setAccessionNumber(e.target.value)} /></label>
+          <button type="submit" disabled={busy || !manageBookId || !accessionNumber.trim()}>Add copy</button>
+        </form>
+        {managedCopies.length === 0 ? <p>No individual copies recorded for this item.</p> :
+          <ul>{managedCopies.map((copy) => <li key={copy.id}>{copy.accession_number} — {copy.status}
+            {copy.status === "AVAILABLE" && <button type="button" disabled={busy} onClick={() => {
+              setBusy(true); setError(""); setNotice("");
+              void t10Api.withdrawCopy(tenant, institution, copy.id).then(async () => { setNotice("Available copy withdrawn."); await loadManagedCopies(); await load(); })
+                .catch(() => setError("Copy could not be withdrawn. Only available copies can be withdrawn.")).finally(() => setBusy(false));
+            }}>Withdraw</button>}
+          </li>)}</ul>}
+      </section>}
     </section>
 
     {can("BOOK_ISSUE_RETURN") && <section className="app-panel">
