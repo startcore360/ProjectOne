@@ -29,18 +29,19 @@ CREATE UNIQUE INDEX uq_id_card_active_user ON app.id_card_issuance(tenant_id,ins
 CREATE INDEX ix_id_card_user_status ON app.id_card_issuance(tenant_id,user_id,status);
 CREATE TABLE app.id_card_replacement (
  tenant_id uuid NOT NULL,id_card_replacement_id uuid NOT NULL,institution_id uuid NOT NULL,
- original_issuance_id uuid NOT NULL,reason text NOT NULL,fee_receipt_file_id uuid,
+ original_issuance_id uuid NOT NULL,reason text NOT NULL,fee_receipt_id uuid NOT NULL,
  status text NOT NULL DEFAULT 'REQUESTED',reviewed_by_user_id uuid,reviewed_at timestamptz,
  replacement_issuance_id uuid,created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
  updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL,row_version integer NOT NULL DEFAULT 1,
  PRIMARY KEY(tenant_id,id_card_replacement_id),
  FOREIGN KEY(tenant_id,original_issuance_id) REFERENCES app.id_card_issuance(tenant_id,id_card_issuance_id),
- FOREIGN KEY(tenant_id,fee_receipt_file_id) REFERENCES app.file_object(tenant_id,file_id),
+ FOREIGN KEY(tenant_id,institution_id,fee_receipt_id) REFERENCES app.receipt(tenant_id,institution_id,receipt_id),
  FOREIGN KEY(tenant_id,replacement_issuance_id) REFERENCES app.id_card_issuance(tenant_id,id_card_issuance_id),
  CHECK(char_length(reason) BETWEEN 1 AND 1000),CHECK(status IN ('REQUESTED','APPROVED','REJECTED','COMPLETED')),
  CHECK((status IN ('APPROVED','REJECTED','COMPLETED'))=(reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)),
  CHECK(row_version>=1)
 );
+CREATE UNIQUE INDEX uq_id_card_replacement_receipt ON app.id_card_replacement(tenant_id,fee_receipt_id);
 CREATE TABLE app.certificate_template (
  tenant_id uuid NOT NULL,certificate_template_id uuid NOT NULL,institution_id uuid NOT NULL,
  type text NOT NULL,name text NOT NULL,template_html text NOT NULL,status text NOT NULL DEFAULT 'ACTIVE',
