@@ -116,9 +116,13 @@ export default function IdCardManagementPage() {
     if (!tenantId) return;
     const reason = window.prompt("Describe why this card needs replacement (lost, damaged, or incorrect):");
     if (!reason?.trim()) return;
+    const feeReceiptId = window.prompt("Enter the UUID of the paid, non-void fee receipt for this replacement:");
+    if (!feeReceiptId?.trim()) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const replacement = await documentsApi.requestReplacement(tenantId, card.issuanceId, { reason: reason.trim() });
+      const replacement = await documentsApi.requestReplacement(tenantId, card.issuanceId, {
+        reason: reason.trim(), feeReceiptId: feeReceiptId.trim(),
+      });
       setNotice(`Replacement request ${replacement.replacementId} submitted.`);
       await load();
     } catch (cause) { setError(messageOf(cause, "Unable to submit the replacement request.")); }
@@ -228,7 +232,7 @@ export default function IdCardManagementPage() {
         </div>
       </Panel>}
 
-      {canProcessReplacement && <Panel title="Replacement request queue" description="Approve or reject lost, damaged or incorrect card replacement requests.">
+      {canProcessReplacement && <Panel title="Replacement request queue" description="Approve or reject replacement requests after the backend revalidates the paid, non-void fee receipt.">
         <div className="space-y-3">
           {replacements.map(request => <div key={request.replacementId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
             <div><p className="font-medium">{request.replacementId}</p><p className="text-sm text-slate-600">{request.reason} · {request.status}</p></div>
