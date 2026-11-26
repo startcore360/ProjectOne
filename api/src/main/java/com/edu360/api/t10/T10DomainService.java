@@ -323,7 +323,7 @@ public class T10DomainService {
     public List<Map<String,Object>> transportRoutes(UUID tenant,TenantPrincipal p,UUID institution) {
         allow(tenant,p.userAccountId(),"DRIVER_ROUTE_VIEW",institution);
         return jdbc.queryForList("""
-          SELECT r.id,r.route_name,r.vehicle_number,r.driver_name,r.driver_phone,r.total_capacity,
+          SELECT r.id,r.route_name,r.vehicle_number,r.driver_name,r.driver_phone,r.total_capacity,r.active,
              count(a.id) FILTER(WHERE a.status='ACTIVE') AS allocated_seats,r.transport_fee_code
           FROM app.transport_route r LEFT JOIN app.transport_allocation a ON a.route_id=r.id AND a.tenant_id=r.tenant_id
           WHERE r.tenant_id=? AND r.institution_id=? GROUP BY r.id ORDER BY r.route_name
