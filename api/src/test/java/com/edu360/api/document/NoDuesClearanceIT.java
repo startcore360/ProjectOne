@@ -18,10 +18,23 @@ class NoDuesClearanceIT {
     @Test
     void feeLibraryAndDepartmentEquipmentIntegrationsArePresent() {
         for (String relation : new String[]{"app.v_fee_invoice", "app.book_circulation",
-                "app.library_fine", "app.department_equipment_clearance"}) {
+                "app.library_fine", "app.v_student_library_dues_flag",
+                "app.department_equipment_clearance"}) {
             Boolean exists = jdbc.queryForObject("SELECT to_regclass(?) IS NOT NULL", Boolean.class, relation);
             assertThat(exists).as(relation + " is required for No-Dues").isTrue();
         }
+    }
+
+    @Test
+    void libraryDuesReadModelUsesCirculationAndFineLedgerUnderInvokerSecurity() {
+        String definition = jdbc.queryForObject(
+                "SELECT pg_get_viewdef('app.v_student_library_dues_flag'::regclass,true)", String.class);
+        assertThat(definition).contains("book_circulation", "library_fine", "returned_at", "outstanding");
+        Boolean securityInvoker = jdbc.queryForObject("""
+            SELECT COALESCE('security_invoker=true'=ANY(reloptions),false)
+              FROM pg_class WHERE oid='app.v_student_library_dues_flag'::regclass
+            """, Boolean.class);
+        assertThat(securityInvoker).isTrue();
     }
 
     @Test
