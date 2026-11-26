@@ -58,6 +58,27 @@ describe("FeePaymentPortalPage", () => {
     expect(screen.getByText(/confirmed only after the provider's signed server notification/)).toBeInTheDocument();
   });
 
+  it("reuses the same idempotency key when a checkout request is retried after a transient failure", async () => {
+    const user = userEvent.setup();
+    mocks.post.mockRejectedValueOnce(new Error("temporary network failure")).mockResolvedValueOnce({ data: {
+      paymentId: "payment-123", provider: "RAZORPAY", providerOrderId: "order-123",
+      amount: 1200, currency: "INR", keyId: "rzp_test_public",
+    } });
+    render(<FeePaymentPortalPage />);
+
+    await user.type(screen.getByLabelText("Student fee account ID"), "account-123");
+    await user.click(await screen.findByRole("button", { name: "Refresh" }));
+    expect(await screen.findByText("Installment #1")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("checkbox")[0]);
+    await user.click(screen.getByRole("button", { name: /Continue to payment/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to start checkout");
+
+    const firstRequestKey = mocks.post.mock.calls[0][1].requestKey;
+    await user.click(screen.getByRole("button", { name: /Continue to payment/ }));
+    await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(2));
+    expect(mocks.post.mock.calls[1][1].requestKey).toBe(firstRequestKey);
+  });
+
   it("does not allow a paid invoice to be selected", async () => {
     const user = userEvent.setup();
     render(<FeePaymentPortalPage />);
