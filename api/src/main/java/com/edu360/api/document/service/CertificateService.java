@@ -67,7 +67,13 @@ public class CertificateService {
 
     @Transactional(readOnly = true)
     public List<Template> templates(TenantPrincipal principal, UUID institutionId) {
-        authorize(principal, institutionId, "CERTIFICATE_REQUEST", RbacTarget.NONE);
+        RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        RbacScope scope = permissions.targetScope(caller, institutionId, null);
+        if (!permissions.can(caller, "CERTIFICATE_REQUEST", scope, RbacTarget.NONE).allowed()
+                && !permissions.can(caller, "CERTIFICATE_PREPARE", scope, RbacTarget.NONE).allowed()
+                && !permissions.can(caller, "CERTIFICATE_TEMPLATE_MANAGE", scope, RbacTarget.NONE).allowed()) {
+            throw new com.edu360.api.exception.UnauthorizedException("Certificate template access is not granted.");
+        }
         return jdbc.query("""
                 SELECT certificate_template_id,institution_id,type,name,template_html,status,row_version
                   FROM app.certificate_template
@@ -142,17 +148,32 @@ public class CertificateService {
 
     @Transactional(readOnly = true)
     public List<Request> requests(TenantPrincipal principal, UUID institutionId) {
-        authorize(principal, institutionId, "CERTIFICATE_PREPARE", RbacTarget.NONE);
-        return jdbc.query("""
-                SELECT certificate_request_id,institution_id,student_id,template_id,reason,status,
-                       dues_json::text,created_at
-                  FROM app.certificate_request
-                 WHERE tenant_id=? AND institution_id=?
-                 ORDER BY created_at DESC
-                """, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
-                rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
-                rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
-                principal.tenantId(), institutionId);
+        RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        RbacScope scope = permissions.targetScope(caller, institutionId, null);
+        boolean canPrepare = permissions.can(caller, "CERTIFICATE_PREPARE", scope, RbacTarget.NONE).allowed();
+        boolean canRequest = permissions.can(caller, "CERTIFICATE_REQUEST", scope, RbacTarget.NONE).allowed();
+        if (!canPrepare && !canRequest) {
+            throw new com.edu360.api.exception.UnauthorizedException("Certificate request access is not granted.");
+        }
+        String sql = """
+                SELECT cr.certificate_request_id,cr.institution_id,cr.student_id,cr.template_id,cr.reason,cr.status,
+                       cr.dues_json::text,cr.created_at
+                  FROM app.certificate_request cr
+                 WHERE cr.tenant_id=? AND cr.institution_id=?
+                """ + (canPrepare ? "" : """
+                  AND EXISTS (SELECT 1 FROM app.student_profile sp
+                               WHERE sp.tenant_id=cr.tenant_id AND sp.student_profile_id=cr.student_id
+                                 AND sp.user_account_id=?)
+                """) + " ORDER BY cr.created_at DESC";
+        return canPrepare
+                ? jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+                    rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
+                    rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
+                    principal.tenantId(), institutionId)
+                : jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+                    rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
+                    rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
+                    principal.tenantId(), institutionId, principal.userAccountId());
     }
 
     @Transactional
@@ -282,6 +303,10 @@ public class CertificateService {
         if (reason == null || reason.isBlank() || reason.length() > 1000) {
             throw new BusinessRuleViolationException("OVERRIDE_REASON_REQUIRED", "A reason is required for a No-Dues override.");
         }
+        if (!"NO_DUES_PENDING".equals(row.status())) {
+            throw new BusinessRuleViolationException("NO_DUES_OVERRIDE_NOT_APPLICABLE",
+                    "No-Dues override is available only for a request blocked by clearance.");
+        }
         jdbc.update("""
                 UPDATE app.certificate_request SET status='APPROVED',
                        no_dues_override_by_user_id=?,no_dues_override_at=now(),
@@ -329,8 +354,8 @@ public class CertificateService {
 
     @Transactional(readOnly = true)
     public PublicVerification verifyPublic(String code) {
-        if (code == null || code.length() < 32 || code.length() > 128
-                || !code.matches("[A-Za-z0-9_-]+")) {
+        if (code == null || code.length() < 32 || code.length() > 256
+                || !code.matches("[A-Za-z0-9_.-]+")) {
             throw new ResourceNotFoundException("Certificate not found.");
         }
         String hash = sha256(code);
