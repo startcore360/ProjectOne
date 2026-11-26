@@ -63,6 +63,12 @@ run edu360_v4_test 71_v41_id_cards_and_certificates.sql > /dev/null
 $PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_test -f "$D/71t_tests_id_cards_and_certificates.sql" > /dev/null
 run edu360_v4_test 72_v41_disciplinary_and_grievance_guard.sql > /dev/null
 $PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_test -f "$D/72t_tests_disciplinary_and_grievance_guard.sql" > /dev/null
+run edu360_v4_test 73_v41_notices_and_communications.sql > /dev/null
+$PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_test -f "$D/73t_tests_notices_and_communications.sql" > /dev/null
+run edu360_v4_test 74_v41_library_and_transport_schema.sql > /dev/null
+$PSQL -q -v ON_ERROR_STOP=1 -d edu360_v4_test -f "$D/74t_tests_library_and_transport_schema.sql" > /dev/null
+run edu360_v4_test 75_v41_landing_cms_and_enquiries.sql > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/75t_tests_landing_cms_and_enquiries.sql" > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/57_58_migration_smoke_tests.sql" > /dev/null
 run edu360_v4_test 59_v41_staff_qualification_and_leave_indexes.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/59t_tests_staff_qualification_and_leave.sql" > /dev/null
