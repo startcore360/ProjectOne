@@ -131,7 +131,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_vehicle_scope ON app.vehicle(tenant_id,inst
 CREATE UNIQUE INDEX IF NOT EXISTS ux_transport_route_scope ON app.transport_route(tenant_id,institution_id,id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_route_stop_scope ON app.route_stop(tenant_id,institution_id,id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_report_definition_scope ON app.report_definition(tenant_id,institution_id,id);
-DO $
+DO $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.book_copy'::regclass AND conname='fk_book_copy_catalog_scope') THEN ALTER TABLE app.book_copy ADD CONSTRAINT fk_book_copy_catalog_scope FOREIGN KEY(tenant_id,institution_id,book_id) REFERENCES app.library_catalog(tenant_id,institution_id,id); END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.book_circulation'::regclass AND conname='fk_circulation_catalog_scope') THEN ALTER TABLE app.book_circulation ADD CONSTRAINT fk_circulation_catalog_scope FOREIGN KEY(tenant_id,institution_id,book_id) REFERENCES app.library_catalog(tenant_id,institution_id,id); END IF;
@@ -146,7 +146,7 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.library_fine_policy'::regclass AND conname='ck_library_working_days_values') THEN
   ALTER TABLE app.library_fine_policy ADD CONSTRAINT ck_library_working_days_values CHECK(jsonb_typeof(working_days)='array' AND jsonb_array_length(working_days)>0 AND working_days <@ '[1,2,3,4,5,6,7]'::jsonb);
  END IF;
-END $;
+END $$;
 CREATE OR REPLACE FUNCTION app.fn_transport_capacity_guard() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE cap integer; used integer; route_active boolean;
 BEGIN
