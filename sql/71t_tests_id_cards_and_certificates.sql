@@ -20,6 +20,10 @@ BEGIN
   RAISE EXCEPTION 'T9_DB_71 certificate issuance must have exactly one institution policy';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='certificate_issuance_verification_code_hash_key') THEN RAISE EXCEPTION 'T9_DB_71 unique certificate verification digest missing'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.certificate_request'::regclass
+   AND contype='c' AND pg_get_constraintdef(oid) LIKE '%rejection_reason%') THEN
+  RAISE EXCEPTION 'T9_DB_71 certificate rejection reason invariant missing';
+ END IF;
  IF to_regprocedure('app.fn_no_dues_department_clearance(uuid,uuid,uuid)') IS NULL THEN
   RAISE EXCEPTION 'T9_DB_71 tenant-bound departmental No-Dues helper missing';
  END IF;
