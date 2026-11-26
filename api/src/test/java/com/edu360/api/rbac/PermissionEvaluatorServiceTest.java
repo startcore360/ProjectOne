@@ -233,6 +233,7 @@ class PermissionEvaluatorServiceTest {
                 .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
                 .roleCode("COLLEGE_ADMIN").roleName("College Admin")
                 .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.COLLEGE)
+                .baseStandardRole("COLLEGE_ADMIN").sensitiveRole(true)
                 .status(RoleDefinitionStatus.ACTIVE).build();
         when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
                 .thenReturn(Optional.of(genericAdmin));
@@ -257,6 +258,7 @@ class PermissionEvaluatorServiceTest {
                 .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
                 .roleCode("INTERNAL_COMPLAINTS_COMMITTEE").roleName("Internal Complaints Committee")
                 .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.COLLEGE)
+                .baseStandardRole("INTERNAL_COMPLAINTS_COMMITTEE").sensitiveRole(true)
                 .status(RoleDefinitionStatus.ACTIVE).build();
         when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
                 .thenReturn(Optional.of(icc));
