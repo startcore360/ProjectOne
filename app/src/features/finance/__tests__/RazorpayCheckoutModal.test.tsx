@@ -11,7 +11,7 @@ describe("RazorpayCheckoutModal", () => {
   it("opens a single provider checkout and disables repeat opening", async () => {
     const user = userEvent.setup();
     const open = vi.fn();
-    const RazorpayMock = vi.fn().mockImplementation(() => ({ open }));
+    const RazorpayMock = vi.fn(function RazorpayMockImplementation() { return { open }; });
     window.Razorpay = RazorpayMock as unknown as typeof window.Razorpay;
     const session: CheckoutSession = {
       paymentId: "payment-123", provider: "RAZORPAY", providerOrderId: "order-123",
