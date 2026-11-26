@@ -253,7 +253,7 @@ public class CertificateService {
                 principal.tenantId(), institutionId);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public String renderIssuance(TenantPrincipal principal, UUID issuanceId) {
         Map<String, Object> row = jdbc.query("""
                 SELECT ci.institution_id,ci.certificate_number,ci.issued_at,ci.revoked_at,
