@@ -245,7 +245,8 @@ public class T10DomainService {
         Map<String,Object> copy=jdbc.queryForMap("SELECT book_id FROM app.book_copy WHERE id=? AND tenant_id=? AND institution_id=? AND status='AVAILABLE' FOR UPDATE",copyId,tenant,institution);
         int changed=jdbc.update("UPDATE app.book_copy SET status='WITHDRAWN' WHERE id=? AND tenant_id=? AND institution_id=? AND status='AVAILABLE'",copyId,tenant,institution);
         if(changed!=1) throw new BusinessRuleViolationException("COPY_NOT_AVAILABLE","Only an available copy can be withdrawn.");
-        jdbc.update("UPDATE app.library_catalog SET total_copies=total_copies-1,available_copies=available_copies-1 WHERE id=? AND tenant_id=? AND institution_id=? AND total_copies>0 AND available_copies>0",copy.get("book_id"),tenant,institution);
+        int catalogChanged=jdbc.update("UPDATE app.library_catalog SET total_copies=total_copies-1,available_copies=available_copies-1 WHERE id=? AND tenant_id=? AND institution_id=? AND total_copies>0 AND available_copies>0",copy.get("book_id"),tenant,institution);
+        if(catalogChanged!=1) throw new BusinessRuleViolationException("CATALOG_COPY_COUNT_INVALID","Catalog copy counts are inconsistent; withdrawal was rolled back.");
         return Map.of("copyId",copyId,"status","WITHDRAWN");
     }
     @Transactional
