@@ -283,7 +283,7 @@ public class TimetableService {
         String tokenHash=sha256(accessToken);
         List<Map<String,Object>> rows=jdbc.queryForList("""
             SELECT ml.meeting_link_id,ml.institution_id,ml.provider,ml.join_url,ml.occurrence_date,
-                   (ml.status='CREATED' AND ml.token_expires_at>now()) AS token_valid,
+                   (ts.status='PUBLISHED' AND ts.is_online AND ml.status='CREATED' AND ml.token_expires_at>now()) AS token_valid,
                    sp.student_profile_id,
                    CASE WHEN sp.student_profile_id IS NULL THEN false ELSE EXISTS(
                     SELECT 1 FROM app.student_enrollment e
