@@ -29,7 +29,7 @@ export default function FeePaymentPortalPage() {
   const [receipt, setReceipt] = useState<FeeReceiptDetails | null>(null);
   const [receiptPaymentId, setReceiptPaymentId] = useState(() => new URLSearchParams(window.location.search).get("paymentId") || "");
   const [busy, setBusy] = useState(false);
-  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(Boolean(tenantId));
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [hasLoadedInvoices, setHasLoadedInvoices] = useState(false);
   const [accountsError, setAccountsError] = useState("");
@@ -43,10 +43,8 @@ export default function FeePaymentPortalPage() {
   useEffect(() => {
     if (!tenantId) return;
     let active = true;
-    setAccountsLoading(true);
-    setAccountsError("");
     void api.get<FeeAccountOption[]>(`/tenants/${tenantId}/me/student-fee-accounts`)
-      .then((response) => { if (active) setAccounts(response.data); })
+      .then((response) => { if (active) { setAccounts(response.data); setAccountsError(""); } })
       .catch(() => { if (active) setAccountsError("Unable to load your fee accounts. Check your access and retry."); })
       .finally(() => { if (active) setAccountsLoading(false); });
     return () => { active = false; };
