@@ -54,13 +54,17 @@ CREATE TABLE app.certificate_template (
 CREATE TABLE app.certificate_request (
  tenant_id uuid NOT NULL,certificate_request_id uuid NOT NULL,institution_id uuid NOT NULL,
  student_id uuid NOT NULL,template_id uuid NOT NULL,reason text NOT NULL,status text NOT NULL DEFAULT 'REQUESTED',
- dues_json jsonb NOT NULL DEFAULT '[]'::jsonb,created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
+ dues_json jsonb NOT NULL DEFAULT '[]'::jsonb,no_dues_override_by_user_id uuid,
+ no_dues_override_at timestamptz,no_dues_override_reason text,
+ created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
  updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL,row_version integer NOT NULL DEFAULT 1,
  PRIMARY KEY(tenant_id,certificate_request_id),
  FOREIGN KEY(tenant_id,student_id) REFERENCES app.student_profile(tenant_id,student_profile_id),
  FOREIGN KEY(tenant_id,template_id) REFERENCES app.certificate_template(tenant_id,certificate_template_id),
  CHECK(char_length(reason) BETWEEN 1 AND 1000),CHECK(status IN ('REQUESTED','NO_DUES_PENDING','APPROVED','ISSUED','REJECTED')),
- CHECK(jsonb_typeof(dues_json)='array'),CHECK(row_version>=1)
+ CHECK(jsonb_typeof(dues_json)='array'),
+ CHECK(no_dues_override_reason IS NULL OR char_length(no_dues_override_reason) BETWEEN 1 AND 1000),
+ CHECK((no_dues_override_at IS NULL)=(no_dues_override_by_user_id IS NULL)),CHECK(row_version>=1)
 );
 CREATE INDEX ix_certificate_request_student ON app.certificate_request(tenant_id,student_id,status);
 CREATE TABLE app.certificate_issuance (
