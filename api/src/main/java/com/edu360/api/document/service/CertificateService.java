@@ -155,9 +155,9 @@ public class CertificateService {
                 targetUser == null ? RbacTarget.NONE : RbacTarget.of(targetUser));
         NoDuesVerificationService.ClearanceResult clearance = noDues.verifyClearance(row.studentId());
         if (!clearance.clear()) {
-            updateDues(principal, row, clearance, "NO_DUES_PENDING");
-            throw new BusinessRuleViolationException("NO_DUES_PENDING",
-                    "Certificate approval is blocked until all fee, library and departmental clearances are confirmed.");
+            updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
+            return new Request(requestId, row.institutionId(), row.studentId(), row.templateId(),
+                    row.reason(), "NO_DUES_PENDING", mapper.writeValueAsString(clearance.items()), null);
         }
         jdbc.update("""
                 UPDATE app.certificate_request SET status='APPROVED',dues_json='[]'::jsonb,
@@ -171,7 +171,7 @@ public class CertificateService {
                 row.reason(), "APPROVED", "[]", null);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = BusinessRuleViolationException.class)
     public Issuance prepare(TenantPrincipal principal, UUID requestId) {
         RequestRow row = requestRow(principal.tenantId(), requestId);
         authorize(principal, row.institutionId(), "CERTIFICATE_PREPARE", RbacTarget.NONE);
@@ -180,7 +180,7 @@ public class CertificateService {
         }
         NoDuesVerificationService.ClearanceResult clearance = noDues.verifyClearance(row.studentId());
         if (!clearance.clear()) {
-            updateDues(principal, row, clearance, "NO_DUES_PENDING");
+            updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             throw new BusinessRuleViolationException("NO_DUES_PENDING", "No-Dues clearance must be revalidated before issuance.");
         }
         String code = randomCode();
@@ -290,7 +290,7 @@ public class CertificateService {
                 TenantContext.currentTenantId(), studentId);
     }
 
-    private void updateDues(TenantPrincipal principal, RequestRow row,
+    private void updateDues(TenantPrincipal principal, UUID requestId,
             NoDuesVerificationService.ClearanceResult clearance, String status) {
         try {
             jdbc.update("""
@@ -298,19 +298,21 @@ public class CertificateService {
                            updated_by=?,updated_at=now()
                      WHERE tenant_id=? AND certificate_request_id=?
                     """, status, mapper.writeValueAsString(clearance.items()), principal.userAccountId(),
-                    principal.tenantId(), row == null ? null : findRequestId(row));
+                    principal.tenantId(), requestId);
         } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Could not serialize No-Dues result.", ex);
         }
     }
 
-    private UUID findRequestId(RequestRow row) {
-        return jdbc.query("""
-                SELECT certificate_request_id FROM app.certificate_request
-                 WHERE tenant_id=? AND institution_id=? AND student_id=? AND template_id=? AND status=?
-                 ORDER BY created_at DESC LIMIT 1
-                """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
-                TenantContext.currentTenantId(), row.institutionId(), row.studentId(), row.templateId(), row.status());
+    @Transactional(readOnly = true)
+    public NoDuesVerificationService.ClearanceResult verifyNoDues(TenantPrincipal principal, UUID studentId) {
+        UUID institutionId = jdbc.query("""
+                SELECT institution_id FROM app.student_profile
+                 WHERE tenant_id=? AND student_profile_id=?
+                """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null, principal.tenantId(), studentId);
+        if (institutionId == null) throw new ResourceNotFoundException("Student not found.");
+        authorize(principal, institutionId, "CERTIFICATE_REQUEST", RbacTarget.NONE);
+        return noDues.verifyClearance(studentId);
     }
 
     private RbacScope authorize(TenantPrincipal principal, UUID institutionId, String action, RbacTarget target) {
