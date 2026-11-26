@@ -1,5 +1,9 @@
--- Destructive rollback for migration 72; use only when T9 grievance data may be discarded.
 BEGIN;
+DROP POLICY IF EXISTS p_disciplinary_action_insert ON app.disciplinary_action;
+DROP POLICY IF EXISTS p_disciplinary_action_select ON app.disciplinary_action;
+DROP POLICY IF EXISTS p_disciplinary_evidence_insert ON app.disciplinary_evidence;
+DROP POLICY IF EXISTS p_disciplinary_evidence_select ON app.disciplinary_evidence;
+DROP POLICY IF EXISTS p_disciplinary_institution ON app.disciplinary_incident;
 DROP POLICY IF EXISTS p_grievance_action_insert ON app.grievance_action;
 DROP POLICY IF EXISTS p_grievance_evidence_insert ON app.grievance_evidence;
 DROP POLICY IF EXISTS p_grievance_confidentiality_update ON app.grievance_case;
@@ -7,8 +11,46 @@ DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_action;
 DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_evidence;
 DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_case;
 DROP FUNCTION IF EXISTS app.fn_complaint_guard(uuid,uuid,uuid);
+DROP TABLE IF EXISTS app.disciplinary_action;
+DROP TABLE IF EXISTS app.disciplinary_evidence;
 DROP TABLE IF EXISTS app.grievance_action;
 DROP TABLE IF EXISTS app.grievance_evidence;
 DROP TABLE IF EXISTS app.grievance_case;
 DROP TABLE IF EXISTS app.disciplinary_incident;
+
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_disciplinary_evidence_type;
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_grievance_evidence_type;
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_purpose;
+ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK (purpose IN (
+ 'MESSAGE_ATTACHMENT','ASSIGNMENT_SUBMISSION','STUDY_MATERIAL','STAFF_DOCUMENT','POLICY','DEPARTMENT_DOCUMENT',
+ 'ACCREDITATION','COMPLIANCE','LEAVE_DOCUMENT','HALL_TICKET','COMMUNITY_MEDIA','IMPORT_SOURCE','EXPORT',
+ 'PROFILE_PHOTO','BRANDING','ATTENDANCE_UPLOAD','ATTENDANCE_MEDICAL_EXEMPTION','MARKS_SOURCE','SYLLABUS',
+ 'CERTIFICATE','CONSENT_FORM','SERVICE_RECORD'
+));
+
+DELETE FROM app.role_action
+ WHERE action_code IN (
+  'ID_CARD_ISSUE','ID_CARD_REPLACE','ID_CARD_TEMPLATE_MANAGE','ID_CARD_REVOKE','ID_CARD_REPLACEMENT_REQUEST',
+  'CERTIFICATE_TEMPLATE_MANAGE','CERTIFICATE_REVOKE','DISCIPLINARY_INCIDENT_VIEW','DISCIPLINARY_INCIDENT_MANAGE',
+  'GRIEVANCE_CASE_SUBMIT','GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN','GRIEVANCE_HEARING_MANAGE',
+  'GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW','GRIEVANCE_EVIDENCE_UPLOAD'
+ );
+DELETE FROM ref.standard_role_action
+ WHERE action_code IN (
+  'ID_CARD_ISSUE','ID_CARD_REPLACE','ID_CARD_TEMPLATE_MANAGE','ID_CARD_REVOKE','ID_CARD_REPLACEMENT_REQUEST',
+  'CERTIFICATE_TEMPLATE_MANAGE','CERTIFICATE_REVOKE','DISCIPLINARY_INCIDENT_VIEW','DISCIPLINARY_INCIDENT_MANAGE',
+  'GRIEVANCE_CASE_SUBMIT','GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN','GRIEVANCE_HEARING_MANAGE',
+  'GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW','GRIEVANCE_EVIDENCE_UPLOAD'
+ );
+DELETE FROM ref.action_catalog
+ WHERE action_code IN (
+  'ID_CARD_ISSUE','ID_CARD_REPLACE','ID_CARD_TEMPLATE_MANAGE','ID_CARD_REVOKE','ID_CARD_REPLACEMENT_REQUEST',
+  'CERTIFICATE_TEMPLATE_MANAGE','CERTIFICATE_REVOKE','DISCIPLINARY_INCIDENT_VIEW','DISCIPLINARY_INCIDENT_MANAGE',
+  'GRIEVANCE_CASE_SUBMIT','GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN','GRIEVANCE_HEARING_MANAGE',
+  'GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW','GRIEVANCE_EVIDENCE_UPLOAD'
+ );
+DELETE FROM ref.standard_role
+ WHERE role_code='INTERNAL_COMPLAINTS_COMMITTEE'
+   AND NOT EXISTS (SELECT 1 FROM app.role_definition rd
+                    WHERE rd.base_standard_role='INTERNAL_COMPLAINTS_COMMITTEE');
 COMMIT;
