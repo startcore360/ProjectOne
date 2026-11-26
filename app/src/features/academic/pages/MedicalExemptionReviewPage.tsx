@@ -6,6 +6,8 @@ type Exemption = {
   attendance_medical_exemption_id: string;
   enrollment_id: string;
   student_profile_id: string;
+  full_name: string;
+  student_code: string;
   section_name: string;
   start_date: string;
   end_date: string;
@@ -40,6 +42,29 @@ export default function MedicalExemptionReviewPage() {
       setBusy(false);
     }
   }, [tenantId, institutionId, departmentId]);
+
+  async function downloadCertificate(row: Exemption) {
+    if (!tenantId) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await api.get<Blob>("/api/tenants/" + tenantId + "/files/" + row.document_ref + "/download", {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "medical-certificate-" + row.attendance_medical_exemption_id;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : "Unable to download the medical certificate.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function decide(row: Exemption, decision: "APPROVED" | "REJECTED") {
     if (!tenantId) return;
@@ -80,10 +105,10 @@ export default function MedicalExemptionReviewPage() {
         <thead><tr><th>Student</th><th>Section</th><th>Absence period</th><th>Certificate reference</th><th>Status</th><th>Decision note</th><th>Actions</th></tr></thead>
         <tbody>
           {rows.map((row) => <tr key={row.attendance_medical_exemption_id}>
-            <td>{row.student_profile_id.slice(0, 8)}</td>
+            <td>{row.full_name} ({row.student_code})</td>
             <td>{row.section_name}</td>
             <td>{row.start_date} – {row.end_date}</td>
-            <td>{row.document_ref}</td>
+            <td><button type="button" disabled={busy} onClick={() => void downloadCertificate(row)}>Download certificate</button></td>
             <td>{row.status}</td>
             <td>{row.status === "PENDING"
               ? <textarea value={notes[row.attendance_medical_exemption_id] ?? ""}

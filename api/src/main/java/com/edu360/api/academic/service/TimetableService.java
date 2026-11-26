@@ -41,7 +41,7 @@ public class TimetableService {
     @Transactional
     public Map<String,Object> createRoom(UUID tenantId,TenantPrincipal actor,UUID institutionId,String roomNumber,
             String building,int capacity,String roomType) {
-        authorize(tenantId,actor,"TIMETABLE_BUILD",institutionId,null);
+        authorize(tenantId,actor,"TIMETABLE_BUILD",institutionId,activeDepartmentScope(tenantId,actor));
         UUID id=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO app.room(tenant_id,room_id,institution_id,room_number,building,capacity,room_type,created_by,updated_by)
@@ -52,7 +52,7 @@ public class TimetableService {
 
     @Transactional(readOnly=true)
     public List<Map<String,Object>> listRooms(UUID tenantId,TenantPrincipal actor,UUID institutionId) {
-        authorize(tenantId,actor,"TIMETABLE_VIEW",institutionId,null);
+        authorize(tenantId,actor,"TIMETABLE_VIEW",institutionId,activeDepartmentScope(tenantId,actor));
         return jdbc.queryForList("""
             SELECT * FROM app.room WHERE tenant_id=? AND institution_id=? AND status='ACTIVE'
              ORDER BY building,room_number
@@ -323,6 +323,11 @@ public class TimetableService {
              WHERE ts.tenant_id=? AND ts.timetable_slot_id=?
             """,tenantId,slotId);}
         catch(org.springframework.dao.EmptyResultDataAccessException ex){throw new ResourceNotFoundException("Timetable slot not found.");}
+    }
+
+    private UUID activeDepartmentScope(UUID tenantId,TenantPrincipal actor){
+        return permissions.activeAssignment(rbac(tenantId,actor))
+            .map(UserRoleAssignment::getDepartmentId).orElse(null);
     }
 
     private void authorize(UUID tenantId,TenantPrincipal actor,String action,UUID institutionId,UUID departmentId){

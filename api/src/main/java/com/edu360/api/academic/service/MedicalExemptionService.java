@@ -105,12 +105,13 @@ public class MedicalExemptionService {
         UUID scopeDepartment=departmentId!=null?departmentId:enrollmentId==null?null:departmentForEnrollment(tenantId,institutionId,enrollmentId);
         authorize(tenantId,actor,"ATTENDANCE_VIEW",institutionId,scopeDepartment);
         return jdbc.queryForList("""
-            SELECT x.attendance_medical_exemption_id,x.enrollment_id,x.student_profile_id,x.start_date,x.end_date,
+            SELECT x.attendance_medical_exemption_id,x.enrollment_id,x.student_profile_id,p.full_name,p.student_code,x.start_date,x.end_date,
                    x.document_ref,x.status,x.requested_at,x.approved_by_user_id,x.decided_at,x.decision_note,
                    e.section_id,s.section_name,pr.department_id
               FROM app.attendance_medical_exemption x
               JOIN app.student_enrollment e ON e.tenant_id=x.tenant_id AND e.institution_id=x.institution_id AND e.enrollment_id=x.enrollment_id
               JOIN app.section s ON s.tenant_id=e.tenant_id AND s.institution_id=e.institution_id AND s.section_id=e.section_id
+              JOIN app.student_profile p ON p.tenant_id=x.tenant_id AND p.institution_id=x.institution_id AND p.student_profile_id=x.student_profile_id
               LEFT JOIN app.semester sm ON sm.tenant_id=s.tenant_id AND sm.semester_id=s.semester_id
               LEFT JOIN app.program_year py ON py.tenant_id=sm.tenant_id AND py.program_year_id=sm.program_year_id
               LEFT JOIN app.program pr ON pr.tenant_id=py.tenant_id AND pr.program_id=py.program_id

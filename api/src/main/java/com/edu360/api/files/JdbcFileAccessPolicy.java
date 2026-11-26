@@ -160,7 +160,14 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
               SELECT 1 FROM app.attendance_medical_exemption e
               JOIN app.student_profile p
                 ON p.tenant_id=e.tenant_id AND p.student_profile_id=e.student_profile_id
-              WHERE e.tenant_id=? AND e.document_ref=? AND p.user_account_id=?
+              WHERE e.tenant_id=? AND e.document_ref=?
+                AND (p.user_account_id=? OR EXISTS (
+                  SELECT 1 FROM app.student_guardian_link gl
+                  JOIN app.guardian_profile gp ON gp.tenant_id=gl.tenant_id
+                   AND gp.guardian_profile_id=gl.guardian_profile_id
+                  WHERE gl.tenant_id=e.tenant_id AND gl.student_profile_id=e.student_profile_id
+                   AND gl.status='ACTIVE' AND gl.is_primary AND gp.user_account_id=?
+                ))
             )
             """;
 
@@ -185,7 +192,7 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
             case SYLLABUS -> exists(SYLLABUS, tenantId, fileId);
             case STAFF_DOCUMENT -> exists(STAFF_DOCUMENT, tenantId, fileId);
             case ATTENDANCE_UPLOAD -> exists(ATTENDANCE_UPLOAD, tenantId, fileId);
-            case ATTENDANCE_MEDICAL_EXEMPTION -> exists(MEDICAL_EXEMPTION, tenantId, fileId, userId)
+            case ATTENDANCE_MEDICAL_EXEMPTION -> exists(MEDICAL_EXEMPTION, tenantId, fileId, userId, userId)
                     || canViewMedicalExemption(file, principal);
             case ADMISSION_DOCUMENT -> exists(ADMISSION_DOCUMENT, tenantId, fileId, userId)
                     || canVerifyAdmissionDocument(file, principal);
@@ -216,8 +223,20 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
 
     private boolean canViewMedicalExemption(FileObject file, TenantPrincipal principal) {
         if (permissions == null || file.getInstitutionId() == null) return false;
-        return permissions.can(new RbacPrincipal(principal.tenantId(), principal.userAccountId()),
-                "ATTENDANCE_VIEW", RbacScope.institution(file.getInstitutionId()), RbacTarget.NONE).allowed();
+        UUID departmentId=jdbc.query("""
+            SELECT pr.department_id
+              FROM app.attendance_medical_exemption e
+              JOIN app.student_enrollment en ON en.tenant_id=e.tenant_id AND en.institution_id=e.institution_id
+               AND en.enrollment_id=e.enrollment_id
+              JOIN app.section s ON s.tenant_id=en.tenant_id AND s.institution_id=en.institution_id AND s.section_id=en.section_id
+              LEFT JOIN app.semester sm ON sm.tenant_id=s.tenant_id AND sm.semester_id=s.semester_id
+              LEFT JOIN app.program_year py ON py.tenant_id=sm.tenant_id AND py.program_year_id=sm.program_year_id
+              LEFT JOIN app.program pr ON pr.tenant_id=py.tenant_id AND pr.program_id=py.program_id
+             WHERE e.tenant_id=? AND e.document_ref=?
+            """,rs->rs.next()?rs.getObject(1,UUID.class):null,principal.tenantId(),file.getId().getFileId());
+        RbacPrincipal caller=new RbacPrincipal(principal.tenantId(),principal.userAccountId());
+        RbacScope scope=permissions.targetScope(caller,file.getInstitutionId(),departmentId);
+        return permissions.can(caller,"ATTENDANCE_VIEW",scope,RbacTarget.NONE).allowed();
     }
 
     private boolean canVerifyAdmissionDocument(FileObject file, TenantPrincipal principal) {
