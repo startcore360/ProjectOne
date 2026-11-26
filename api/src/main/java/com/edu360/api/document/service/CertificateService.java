@@ -255,7 +255,7 @@ public class CertificateService {
         if (!"APPROVED".equals(row.status())) {
             throw new BusinessRuleViolationException("CERTIFICATE_NOT_APPROVED", "Only an approved request can be prepared.");
         }
-        NoDuesVerificationService.ClearanceResult clearance = verifyClearanceForType(row.studentId(), row.institutionId(), row.type());
+        NoDuesVerificationService.ClearanceResult clearance = verifyNoDues(row.studentId());
         if (!clearance.clear() && row.noDuesOverrideAt() == null) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             throw new BusinessRuleViolationException("NO_DUES_PENDING", "No-Dues clearance must be revalidated or explicitly overridden before issuance.");
