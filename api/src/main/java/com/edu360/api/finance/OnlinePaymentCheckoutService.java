@@ -267,7 +267,7 @@ public class OnlinePaymentCheckoutService {
              WHERE tenant_id=:tenantId AND payment_id IN (:paymentIds) AND status='CREATED'
             """, new MapSqlParameterSource().addValue("tenantId", tenantId)
                     .addValue("paymentIds", expiredPaymentIds).addValue("now", now).addValue("actorId", actorId));
-        audit.record(AuditEventType.UPDATE, null, actorId.toString(), tenantId.toString(),
+        audit.record(AuditEventType.EDIT, null, actorId.toString(), tenantId.toString(),
                 "Expired " + expiredPaymentIds.size() + " stale pending online payment attempt(s) before a new checkout.");
     }
 
