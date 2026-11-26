@@ -241,7 +241,11 @@ public class PermissionEvaluatorService {
         // PO-T05 is a role boundary, not merely a grant-list convention. Require a resolvable
         // active standard role and reject all other roles before consulting their action rows.
         if (POT05_CONFIDENTIAL_ACTIONS.contains(actionCode)
-                && (activeRole == null || !isPot05AuthorizedRole(activeRole.getRoleCode()))) {
+                && (activeRole == null
+                    || !isPot05AuthorizedRole(activeRole.getRoleCode())
+                    || activeRole.getRoleOrigin() != RoleOrigin.STANDARD
+                    || !activeRole.getRoleCode().equals(activeRole.getBaseStandardRole())
+                    || !activeRole.isSensitiveRole())) {
             return PermissionDecision.deny("POT05_ROLE_FORBIDDEN",
                     "Confidential grievance actions are restricted to the ICC and institution Principal under PO-T05.");
         }
