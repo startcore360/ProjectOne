@@ -70,6 +70,8 @@ export default function IdCardManagementPage() {
     setTemplates([]);
     setCards([]);
     setReplacements([]);
+    setSelectedIds([]);
+    setPreviewSvg("");
   }, [institutionId]);
 
   async function createTemplate(event: FormEvent<HTMLFormElement>) {
