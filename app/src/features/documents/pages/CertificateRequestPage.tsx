@@ -38,8 +38,8 @@ export default function CertificateRequestPage() {
     setBusy(true);setError("");
     try {
       const tasks:Promise<unknown>[]=[];
-      if(canRequest||canApprove||canPrepare||canTemplate)tasks.push(documentsApi.certificateTemplates(tenantId,institutionId).then(setTemplates));
-      if(canRequest||canApprove||canPrepare)tasks.push(documentsApi.certificateRequests(tenantId,institutionId).then(setRequests));
+      if(canRequest||canPrepare||canTemplate)tasks.push(documentsApi.certificateTemplates(tenantId,institutionId).then(setTemplates));
+      if(canRequest||canApprove||canPrepare||canOverride)tasks.push(documentsApi.certificateRequests(tenantId,institutionId).then(setRequests));
       if(canPrepare||canRevoke)tasks.push(documentsApi.certificateIssuances(tenantId,institutionId).then(setIssuances));
       await Promise.all(tasks);
     } catch(e){setError(messageOf(e,"Unable to load certificate records for this institution."));}
@@ -131,7 +131,7 @@ export default function CertificateRequestPage() {
         <label className="md:col-span-2"><span className={labelClass}>Reason</span><textarea className={inputClass} required maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)}/></label>
         <div><Button type="submit" busy={busy} disabled={!institutionId||!templateId}>Submit request</Button></div>
       </form></Panel>}
-    {(canRequest||canApprove||canPrepare)&&<Panel title="Certificate requests" description="Requesters see only their own requests; preparation roles see the institution queue.">
+    {(canRequest||canApprove||canPrepare||canOverride)&&<Panel title="Certificate requests" description="Requesters see only their own requests; preparation roles see the institution queue.">
       <div className="space-y-3">{requests.map(r=>{
         let blockers:Array<{source?:string;code?:string;description?:string}>=[];
         try{blockers=JSON.parse(r.duesJson) as typeof blockers;}catch{/* show request status only */}
