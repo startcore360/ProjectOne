@@ -17,7 +17,10 @@ export default function CertificateRequestPage() {
   const canRequest = can("CERTIFICATE_REQUEST"), canApprove = can("CERTIFICATE_APPROVE");
   const canPrepare = can("CERTIFICATE_PREPARE"), canTemplate = can("CERTIFICATE_TEMPLATE_MANAGE");
   const canOverride = can("NO_DUES_OVERRIDE"), canRevoke = can("CERTIFICATE_REVOKE");
+  const canDepartmentClearance = can("DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE");
   const [institutionId,setInstitutionId]=useState(""),[studentId,setStudentId]=useState("");
+  const [departmentId,setDepartmentId]=useState(""),[clearanceStudentId,setClearanceStudentId]=useState("");
+  const [outstandingItems,setOutstandingItems]=useState("0"),[clearanceNotes,setClearanceNotes]=useState("");
   const [templateId,setTemplateId]=useState(""),[reason,setReason]=useState("");
   const [templates,setTemplates]=useState<CertificateTemplate[]>([]);
   const [requests,setRequests]=useState<CertificateRequest[]>([]);
@@ -81,6 +84,18 @@ export default function CertificateRequestPage() {
     try{setPrintHtml(await documentsApi.printCertificate(tenantId,i.issuanceId));setPrintTitle(i.certificateNumber);}
     catch(e){setError(messageOf(e,"Unable to load printable certificate."));}finally{setBusy(false);}
   }
+  async function recordDepartmentClearance(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();if(!tenantId)return;setBusy(true);setError("");setNotice("");
+    try{
+      const result=await documentsApi.recordDepartmentClearance(tenantId,{
+        institutionId,departmentId,studentId:clearanceStudentId,
+        outstandingItems:Number(outstandingItems),notes:clearanceNotes,
+      });
+      setNotice(`Department clearance recorded: ${result.status}.`);
+      setClearanceNotes("");setOutstandingItems("0");
+    }catch(e){setError(messageOf(e,"Unable to record departmental equipment clearance."));}
+    finally{setBusy(false);}
+  }
   async function verify(){
     setBusy(true);setError("");setVerification(null);
     try{setVerification(await documentsApi.verifyCertificate(verificationCode.trim()));}
@@ -99,6 +114,16 @@ export default function CertificateRequestPage() {
       <label><span className={labelClass}>Template HTML</span><textarea className={inputClass+" min-h-56 font-mono"} value={templateHtml} onChange={e=>setTemplateHtml(e.target.value)}/></label>
       <p className="text-xs text-slate-500">Tokens: {"{{studentName}}"}, {"{{programName}}"}, {"{{certificateNumber}}"}, {"{{certificateType}}"}, {"{{institutionName}}"}, {"{{issueDate}}"}, {"{{verificationUrl}}"}.</p>
       <Button type="submit" busy={busy}>Create template</Button></form></Panel>}
+    {canDepartmentClearance&&<Panel title="Department equipment clearance" description="Each active college department must record zero outstanding equipment before automated No-Dues can clear.">
+      <form className="grid gap-3 md:grid-cols-2" onSubmit={recordDepartmentClearance}>
+        <label><span className={labelClass}>Institution ID</span><input className={inputClass} required value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/></label>
+        <label><span className={labelClass}>Department ID</span><input className={inputClass} required value={departmentId} onChange={e=>setDepartmentId(e.target.value)}/></label>
+        <label><span className={labelClass}>Student profile ID</span><input className={inputClass} required value={clearanceStudentId} onChange={e=>setClearanceStudentId(e.target.value)}/></label>
+        <label><span className={labelClass}>Outstanding equipment items</span><input className={inputClass} type="number" min="0" max="10000" value={outstandingItems} onChange={e=>setOutstandingItems(e.target.value)}/></label>
+        <label className="md:col-span-2"><span className={labelClass}>Notes</span><textarea className={inputClass} maxLength={2000} value={clearanceNotes} onChange={e=>setClearanceNotes(e.target.value)}/></label>
+        <div><Button type="submit" busy={busy} disabled={!institutionId||!departmentId||!clearanceStudentId}>Save departmental clearance</Button></div>
+      </form>
+    </Panel>}
     {canRequest&&<Panel title="Request a certificate" description="Clearance is checked when requesting, approving and preparing. Missing integrations remain blockers.">
       <form className="grid gap-3 md:grid-cols-2" onSubmit={submit}>
         <label><span className={labelClass}>Student profile ID</span><input className={inputClass} required value={studentId} onChange={e=>setStudentId(e.target.value)}/></label>
