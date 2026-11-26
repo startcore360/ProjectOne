@@ -76,10 +76,11 @@ export default function TransportRoutePage() {
 
     <section className="app-panel">
       <h2>Routes and seat utilization</h2>
-      <div className="app-table-wrap"><table><thead><tr><th>Route</th><th>Vehicle</th><th>Driver</th><th>Allocated / Capacity</th><th>Transport fee code</th></tr></thead>
+      <div className="app-table-wrap"><table><thead><tr><th>Route</th><th>Vehicle</th><th>Driver</th><th>Allocated / Capacity</th><th>Transport fee code</th>{canManage && <th>Actions</th>}</tr></thead>
         <tbody>{routes.map((route) => <tr key={route.id}>
           <td>{route.route_name}</td><td>{route.vehicle_number}</td><td>{route.driver_name}</td>
           <td>{route.allocated_seats} / {route.total_capacity}</td><td>{route.transport_fee_code ?? "—"}</td>
+          {canManage && <td>{route.active ? <button type="button" disabled={busy} onClick={async () => { setBusy(true); setError(""); setNotice(""); try { await t10Api.cancelRoute(tenant,institution,route.id); setNotice("Route cancelled and active allocations released."); await load(); } catch { setError("Route could not be cancelled."); } finally { setBusy(false); } }}>Cancel route</button> : "Cancelled"}</td>}
         </tr>)}</tbody>
       </table></div>
       {routes.length === 0 && <p>No transport routes configured for this institution.</p>}
