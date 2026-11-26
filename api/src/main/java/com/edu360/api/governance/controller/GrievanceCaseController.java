@@ -11,10 +11,12 @@ import jakarta.validation.constraints.Size;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.config.SupportPrincipal;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.files.FileUploadResponse;
@@ -105,6 +107,9 @@ public class GrievanceCaseController {
     }
 
     private static TenantPrincipal principal(Authentication auth, UUID tenantId) {
+        if (auth != null && auth.getPrincipal() instanceof SupportPrincipal) {
+            throw new AccessDeniedException("Support sessions are never permitted to access confidential grievance workflows.");
+        }
         if (auth == null || !(auth.getPrincipal() instanceof TenantPrincipal p)) {
             throw new UnauthorizedException("Tenant authentication is required.");
         }
