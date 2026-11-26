@@ -139,7 +139,7 @@ public class GrievanceService {
                   AND ura.scope_type='INSTITUTION' AND ura.institution_id=?
                   AND ura.status='ACTIVE' AND ura.effective_from<=now()
                   AND (ura.effective_to IS NULL OR ura.effective_to>now())
-                  AND rd.status='ACTIVE' AND rd.role_origin='STANDARD'
+                  AND rd.status='ACTIVE' AND rd.role_origin='STANDARD' AND rd.is_sensitive_role=true
                   AND rd.base_standard_role=rd.role_code
                   AND rd.role_code IN ('INTERNAL_COMPLAINTS_COMMITTEE','PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL')
                 """, rs -> rs.next() ? rs.getInt(1) : 0,
