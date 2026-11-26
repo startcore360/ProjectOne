@@ -27,6 +27,13 @@ public class T10DomainService {
     public T10DomainService(@Qualifier("jdbcTemplate") JdbcTemplate jdbc,PermissionEvaluatorService permissions,AuditLogService audit) {
         this.jdbc=jdbc; this.permissions=permissions; this.audit=audit;
     }
+    private void allowAny(UUID tenant,UUID user,UUID institution,String... actions) {
+        ScopeType active=com.edu360.api.tenant.TenantContext.currentActiveScopeType();
+        RbacScope scope=active==ScopeType.TENANT?RbacScope.tenant():RbacScope.institution(institution);
+        RbacPrincipal principal=new RbacPrincipal(tenant,user);
+        for(String action:actions) if(permissions.can(principal,action,scope,RbacTarget.NONE).allowed()) return;
+        permissions.authorize(principal,actions[0],scope,RbacTarget.NONE);
+    }
     private void allow(UUID tenant,UUID user,String action,UUID institution) {
         ScopeType active= com.edu360.api.tenant.TenantContext.currentActiveScopeType();
         RbacScope scope=active==ScopeType.TENANT?RbacScope.tenant():RbacScope.institution(institution);
@@ -352,7 +359,7 @@ public class T10DomainService {
     }
     @Transactional(readOnly=true)
     public List<Map<String,Object>> transportRoutes(UUID tenant,TenantPrincipal p,UUID institution) {
-        allow(tenant,p.userAccountId(),"DRIVER_ROUTE_VIEW",institution);
+        allowAny(tenant,p.userAccountId(),institution,"DRIVER_ROUTE_VIEW","TRANSPORT_MANAGE");
         return jdbc.queryForList("""
           SELECT r.id,r.route_name,r.vehicle_number,r.driver_name,r.driver_phone,r.total_capacity,r.active,
                  r.allocated_seats,r.transport_fee_code
