@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader, Button } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { t10Api } from "../api/t10Api";
@@ -13,7 +13,17 @@ export default function MessageComposerPage() {
   const [body, setBody] = useState("");
   const [channels, setChannels] = useState<Channel[]>([...availableChannels]);
   const [status, setStatus] = useState("");
+  const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? []);
+  const [history, setHistory] = useState<Array<{ id: string; channel: string; status: string; failure_reason: string | null; sent_at: string | null; delivered_at: string | null; created_at: string }>>([]);
+  const [historyError, setHistoryError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    if (!tenant || !institution || !actions.includes("DELIVERY_FAILURES_VIEW")) return;
+    try { setHistory(await t10Api.dispatchHistory(tenant, institution)); setHistoryError(""); }
+    catch { setHistoryError("Dispatch history could not be loaded."); }
+  }, [tenant, institution, actions]);
+  useEffect(() => { void loadHistory(); }, [loadHistory]);
 
   const send = async () => {
     if (!tenant || !institution || !recipient.trim() || !body.trim() || channels.length === 0) return;
@@ -28,6 +38,7 @@ export default function MessageComposerPage() {
       });
       setStatus(`Dispatch queued: ${result.campaignId}. Contact details are resolved from the recipient's tenant account.`);
       setBody("");
+      await loadHistory();
     } catch {
       setStatus("Dispatch could not be queued. Check recipient status, permissions and selected channels.");
     } finally {
@@ -59,5 +70,19 @@ export default function MessageComposerPage() {
       </Button>
       {status && <p role="status">{status}</p>}
     </section>
+    {actions.includes("DELIVERY_FAILURES_VIEW") && <section className="app-panel">
+      <h2>Dispatch history</h2>
+      {historyError && <p role="alert">{historyError}</p>}
+      {history.length === 0 && !historyError && <p>No dispatch attempts recorded for this institution.</p>}
+      {history.length > 0 && <div className="app-table-wrap"><table>
+        <thead><tr><th>Channel</th><th>Status</th><th>Created</th><th>Sent</th><th>Delivered</th><th>Failure</th></tr></thead>
+        <tbody>{history.map((item) => <tr key={item.id}>
+          <td>{item.channel}</td><td>{item.status}</td><td>{new Date(item.created_at).toLocaleString()}</td>
+          <td>{item.sent_at ? new Date(item.sent_at).toLocaleString() : "—"}</td>
+          <td>{item.delivered_at ? new Date(item.delivered_at).toLocaleString() : "—"}</td>
+          <td>{item.failure_reason ?? "—"}</td>
+        </tr>)}</tbody>
+      </table></div>}
+    </section>}
   </main>;
 }
