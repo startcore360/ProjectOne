@@ -69,7 +69,8 @@ export default function FeeStructureManagementPage() {
         throw new Error("Provide exactly one of Program year ID or Class ID.");
       }
       if (!Array.isArray(lines) || lines.length === 0 || lines.some((line) =>
-        !line.feeHeadId?.trim() || !validMoney(Number(line.amount)) || Number(line.amount) < 0)) {
+        !line || typeof line.feeHeadId !== "string" || !line.feeHeadId.trim()
+        || typeof line.amount !== "number" || !validMoney(line.amount) || line.amount < 0)) {
         throw new Error("Fee lines must contain a fee-head ID and a non-negative amount with at most two decimal places.");
       }
       if (!Array.isArray(installments) || installments.length === 0) {
@@ -79,10 +80,10 @@ export default function FeeStructureManagementPage() {
       let previousDate = "";
       for (const installment of installments) {
         const amount = Number(installment.amount);
-        if (!Number.isInteger(installment.installmentNo) || installment.installmentNo <= previousNo
-          || !/^\d{4}-\d{2}-\d{2}$/.test(installment.dueDate)
+        if (!installment || !Number.isInteger(installment.installmentNo) || installment.installmentNo <= previousNo
+          || typeof installment.dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(installment.dueDate)
           || !Number.isFinite(Date.parse(installment.dueDate)) || (previousDate && installment.dueDate <= previousDate)
-          || !validMoney(amount) || amount <= 0) {
+          || typeof installment.amount !== "number" || !validMoney(amount) || amount <= 0) {
           throw new Error("Installments must have increasing numbers and dates, and positive amounts with at most two decimal places.");
         }
         previousNo = installment.installmentNo;
