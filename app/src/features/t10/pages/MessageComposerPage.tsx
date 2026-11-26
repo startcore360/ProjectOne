@@ -6,6 +6,8 @@ import { t10Api } from "../api/t10Api";
 const availableChannels = ["IN_APP", "PUSH", "SMS", "EMAIL"] as const;
 type Channel = typeof availableChannels[number];
 
+const NO_ACTIONS: string[] = [];
+
 export default function MessageComposerPage() {
   const tenant = useAppSelector((s) => s.auth.user?.tenantId ?? "");
   const institution = useAppSelector((s) => s.tenantPermissions.current?.institutionId ?? "");
@@ -13,7 +15,7 @@ export default function MessageComposerPage() {
   const [body, setBody] = useState("");
   const [channels, setChannels] = useState<Channel[]>([...availableChannels]);
   const [status, setStatus] = useState("");
-  const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? []);
+  const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? NO_ACTIONS);
   const [history, setHistory] = useState<Array<{ id: string; channel: string; status: string; failure_reason: string | null; sent_at: string | null; delivered_at: string | null; created_at: string }>>([]);
   const [historyError, setHistoryError] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
