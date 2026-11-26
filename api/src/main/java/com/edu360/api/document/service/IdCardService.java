@@ -146,11 +146,12 @@ public class IdCardService {
         RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
         RbacScope scope = permissions.targetScope(caller, institutionId, null);
         boolean canIssue = permissions.can(caller, "ID_CARD_ISSUE", scope, RbacTarget.NONE).allowed();
+        boolean canExport = permissions.can(caller, "ID_CARD_EXPORT", scope, RbacTarget.NONE).allowed();
         boolean canRequestOwn = permissions.can(caller, "ID_CARD_REPLACEMENT_REQUEST", scope, RbacTarget.NONE).allowed();
-        if (!canIssue && !canRequestOwn) {
+        if (!canIssue && !canExport && !canRequestOwn) {
             throw new com.edu360.api.exception.UnauthorizedException("Identity-card listing is not granted.");
         }
-        List<UUID> ids = canIssue
+        List<UUID> ids = (canIssue || canExport)
                 ? jdbc.query("""
                     SELECT id_card_issuance_id FROM app.id_card_issuance
                      WHERE tenant_id=? AND institution_id=? ORDER BY issue_date DESC
