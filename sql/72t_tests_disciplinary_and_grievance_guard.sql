@@ -54,6 +54,9 @@ BEGIN
  IF def NOT LIKE '%user_active_role%' THEN RAISE EXCEPTION 'T9_DB_72 predicate must honor the single active role'; END IF;
  IF def NOT LIKE '%hod_staff_assignment_id%' THEN RAISE EXCEPTION 'T9_DB_72 immediate HOD exclusion missing'; END IF;
  IF def NOT LIKE '%scope_type=''INSTITUTION''%' THEN RAISE EXCEPTION 'T9_DB_72 ICC/Principal must hold institution-scoped active role'; END IF;
+ IF def NOT LIKE '%role_origin=''STANDARD''%' OR def NOT LIKE '%base_standard_role=rd.role_code%' OR def NOT LIKE '%is_sensitive_role=true%' THEN
+  RAISE EXCEPTION 'T9_DB_72 requires an active sensitive standard-role definition, not a custom role code';
+ END IF;
  IF to_regprocedure('app.fn_complaint_guard()') IS NULL THEN RAISE EXCEPTION 'T9_DB_72 original complaint state-transition trigger function was replaced'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='app.grievance_action'::regclass AND tgname='trg_append_only' AND NOT tgisinternal) THEN RAISE EXCEPTION 'T9_DB_72 grievance action ledger is not append-only'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_evidence' AND policyname='p_grievance_confidentiality' AND permissive='RESTRICTIVE' AND cmd='SELECT') THEN RAISE EXCEPTION 'T9_DB_72 evidence confidentiality policy missing'; END IF;
