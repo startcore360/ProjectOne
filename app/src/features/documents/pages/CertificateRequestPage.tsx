@@ -130,7 +130,7 @@ export default function CertificateRequestPage() {
         <div><Button type="submit" busy={busy} disabled={!institutionId||!departmentId||!clearanceStudentId}>Save departmental clearance</Button></div>
       </form>
     </Panel>}
-    {canRequest&&<Panel title="Request a certificate" description="Transfer Certificates are blocked until Fees, Library and every active Department confirm No-Dues; clearance is rechecked at approval and issue. Other certificate types follow their own approval flow.">
+    {canRequest&&<Panel title="Request a certificate" description="Every certificate request is blocked until Fees, Library and every active Department confirm No-Dues; clearance is rechecked at approval and issue. The Principal can apply the documented override with a reason.">
       <form className="grid gap-3 md:grid-cols-2" onSubmit={submit}>
         <label><span className={labelClass}>Student profile ID</span><input className={inputClass} required value={studentId} onChange={e=>setStudentId(e.target.value)}/></label>
         <label><span className={labelClass}>Template</span><select className={inputClass} required value={templateId} onChange={e=>setTemplateId(e.target.value)}><option value="">Select template</option>{templates.map(t=><option key={t.certificateTemplateId} value={t.certificateTemplateId}>{t.name} · {t.type}</option>)}</select></label>
