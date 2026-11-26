@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -65,6 +66,8 @@ class PaymentReconciliationServiceTest {
         assertThat(result.outcome()).isEqualTo("REJECTED_SIGNATURE");
         assertThat(result.paymentId()).isEqualTo(paymentId);
         verify(verifier).verifyStripe(any(byte[].class), any(String.class), any(String.class), any());
+        verify(jdbc, times(1)).query(anyString(), any(MapSqlParameterSource.class), any(ResultSetExtractor.class));
+        verify(jdbc).queryForObject(anyString(), any(MapSqlParameterSource.class), org.mockito.ArgumentMatchers.eq(Boolean.class));
         verifyNoMoreInteractions(jdbc);
     }
 }
