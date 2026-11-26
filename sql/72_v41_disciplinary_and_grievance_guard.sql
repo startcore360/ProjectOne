@@ -47,7 +47,8 @@ VALUES
  ('GRIEVANCE_CASE_RESOLVE',296,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
  ('GRIEVANCE_EVIDENCE_VIEW',297,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
  ('GRIEVANCE_EVIDENCE_UPLOAD',298,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9'),
- ('ID_CARD_REPLACEMENT_REQUEST',299,'Identity cards',1,'Request replacement of own lost or damaged identity card',false,'Personal – Create (own identity card replacement)','4.1-T9')
+ ('ID_CARD_REPLACEMENT_REQUEST',299,'Identity cards',1,'Request replacement of own lost or damaged identity card',false,'Personal – Create (own identity card replacement)','4.1-T9'),
+ ('DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE',300,'Certificates',1,'Record departmental equipment clearance for student No-Dues verification',false,'Personal – Correct','4.1-T9')
 -- T9 / M16. PO-T05: ICC and Principal only; accused and immediate HOD always denied.
 -- The zero-argument fn_complaint_guard() trigger from 02_rules.sql is intentionally preserved.
 BEGIN;
@@ -128,6 +129,11 @@ WITH pairs(role_code,action_code,limited_to) AS (
  ('SCHOOL_PRINCIPAL','CERTIFICATE_TEMPLATE_MANAGE','Own institution'),
  ('PRINCIPAL_COLLEGE','CERTIFICATE_REVOKE','Own institution'),
  ('SCHOOL_PRINCIPAL','CERTIFICATE_REVOKE','Own institution'),
+ ('HEAD_OF_DEPARTMENT','DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE','Own department'),
+ ('COLLEGE_ADMIN','DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE','Own institution'),
+ ('PRINCIPAL_COLLEGE','DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE','Own institution'),
+ ('SCHOOL_ADMIN','DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE','Own institution'),
+ ('SCHOOL_PRINCIPAL','DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE','Own institution'),
  ('PRINCIPAL_COLLEGE','DISCIPLINARY_INCIDENT_VIEW','Own institution'),
  ('SCHOOL_PRINCIPAL','DISCIPLINARY_INCIDENT_VIEW','Own institution'),
  ('COLLEGE_ADMIN','DISCIPLINARY_INCIDENT_VIEW','Own institution'),
@@ -197,7 +203,7 @@ WHERE rd.role_origin='STANDARD'
   'CERTIFICATE_TEMPLATE_MANAGE','CERTIFICATE_REVOKE',
   'DISCIPLINARY_INCIDENT_VIEW','DISCIPLINARY_INCIDENT_MANAGE',
   'GRIEVANCE_CASE_SUBMIT','GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN',
-  'GRIEVANCE_HEARING_MANAGE','GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW','GRIEVANCE_EVIDENCE_UPLOAD'
+  'GRIEVANCE_HEARING_MANAGE','GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW','GRIEVANCE_EVIDENCE_UPLOAD','DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE'
  )
  AND NOT EXISTS (
   SELECT 1 FROM app.role_action existing
