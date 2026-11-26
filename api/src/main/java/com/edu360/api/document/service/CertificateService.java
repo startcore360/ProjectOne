@@ -153,7 +153,7 @@ public class CertificateService {
         return new Request(id, institutionId, studentId, templateId, reason.trim(), status, dues, null);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Request> requests(TenantPrincipal principal, UUID institutionId) {
         RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
         RbacScope scope = permissions.targetScope(caller, institutionId, null);
@@ -174,7 +174,7 @@ public class CertificateService {
                                WHERE sp.tenant_id=cr.tenant_id AND sp.student_profile_id=cr.student_id
                                  AND sp.user_account_id=?)
                 """) + " ORDER BY cr.created_at DESC";
-        return (canPrepare || canApprove || canOverride)
+        List<Request> result = (canPrepare || canApprove || canOverride)
                 ? jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                     rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
                     rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
@@ -183,6 +183,13 @@ public class CertificateService {
                     rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
                     rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
                     principal.tenantId(), institutionId, principal.userAccountId());
+        String auditAction = canPrepare ? "CERTIFICATE_PREPARE"
+                : canApprove ? "CERTIFICATE_APPROVE"
+                : canOverride ? "NO_DUES_OVERRIDE" : "CERTIFICATE_REQUEST";
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, auditAction,
+                "CERTIFICATE_REQUEST", null, institutionId, null,
+                Map.of("recordCount", result.size()), result.size(), "P", "SUCCESS"));
+        return result;
     }
 
     @Transactional
@@ -243,7 +250,7 @@ public class CertificateService {
                 "/verify/certificate?code=" + code, OffsetDateTime.now());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<IssuanceSummary> issuances(TenantPrincipal principal, UUID institutionId) {
         RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
         RbacScope scope = permissions.targetScope(caller, institutionId, null);
@@ -251,7 +258,7 @@ public class CertificateService {
                 && !permissions.can(caller, "CERTIFICATE_REVOKE", scope, RbacTarget.NONE).allowed()) {
             throw new com.edu360.api.exception.UnauthorizedException("Certificate issuance access is not granted.");
         }
-        return jdbc.query("""
+        List<IssuanceSummary> result = jdbc.query("""
                 SELECT certificate_issuance_id,certificate_request_id,certificate_number,issued_at,revoked_at
                   FROM app.certificate_issuance
                  WHERE tenant_id=? AND institution_id=?
@@ -259,6 +266,12 @@ public class CertificateService {
                 """, (rs, n) -> new IssuanceSummary(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                 rs.getString(3), rs.getObject(4, OffsetDateTime.class), rs.getObject(5, OffsetDateTime.class)),
                 principal.tenantId(), institutionId);
+        String auditAction = permissions.can(caller, "CERTIFICATE_PREPARE", scope, RbacTarget.NONE).allowed()
+                ? "CERTIFICATE_PREPARE" : "CERTIFICATE_REVOKE";
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, auditAction,
+                "CERTIFICATE_ISSUANCE", null, institutionId, null,
+                Map.of("recordCount", result.size()), result.size(), "P", "SUCCESS"));
+        return result;
     }
 
     @Transactional
