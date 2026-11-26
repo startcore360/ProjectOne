@@ -274,7 +274,7 @@ public class PaymentReconciliationService {
         Map<UUID, BigDecimal> bySession = new HashMap<>();
         items.forEach(i -> bySession.merge(i.academicSessionId(), i.netDue(), BigDecimal::add));
         LocalDate today = LocalDate.now(FINANCIAL_ZONE);
-        short financialYear = (short) (today.getMonthValue() >= 4 ? today.getYear() : today.getYear() - 1);
+        short financialYear = FinanceCalendar.financialYearStartYear(today);
         for (Map.Entry<UUID, BigDecimal> entry : bySession.entrySet()) {
             jdbc.update("""
                 INSERT INTO app.ledger_entry
