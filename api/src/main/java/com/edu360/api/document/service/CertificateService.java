@@ -136,8 +136,7 @@ public class CertificateService {
                 """, rs -> rs.next() ? rs.getString(1) : null,
                 principal.tenantId(), institutionId, templateId);
         if (templateType == null) throw new ResourceNotFoundException("Certificate template not found.");
-        NoDuesVerificationService.ClearanceResult clearance = verifyClearanceForType(
-                studentId, institutionId, templateType);
+        NoDuesVerificationService.ClearanceResult clearance = verifyNoDues(studentId);
         String status = clearance.clear() ? "REQUESTED" : "NO_DUES_PENDING";
         String dues;
         try { dues = mapper.writeValueAsString(clearance.items()); }
@@ -204,7 +203,7 @@ public class CertificateService {
             throw new BusinessRuleViolationException("CERTIFICATE_APPROVAL_NOT_APPLICABLE",
                     "Only a pending certificate request can be approved.");
         }
-        NoDuesVerificationService.ClearanceResult clearance = verifyClearanceForType(row.studentId(), row.institutionId(), row.type());
+        NoDuesVerificationService.ClearanceResult clearance = verifyNoDues(row.studentId());
         if (!clearance.clear()) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             return new Request(requestId, row.institutionId(), row.studentId(), row.templateId(),
@@ -459,13 +458,10 @@ public class CertificateService {
                 tenantId, studentId);
     }
 
-    private NoDuesVerificationService.ClearanceResult verifyClearanceForType(
-            UUID studentId, UUID institutionId, String certificateType) {
-        if ("TRANSFER_CERTIFICATE".equals(certificateType)) {
-            return noDues.verifyClearance(studentId);
-        }
-        return new NoDuesVerificationService.ClearanceResult(
-                studentId, institutionId, true, "CLEAR", List.of());
+    private NoDuesVerificationService.ClearanceResult verifyNoDues(UUID studentId) {
+        // The master product specification requires clearance before a transfer certificate
+        // or other certificates; every certificate type therefore runs the same three-way check.
+        return noDues.verifyClearance(studentId);
     }
 
     private String serializeDues(NoDuesVerificationService.ClearanceResult clearance) {
