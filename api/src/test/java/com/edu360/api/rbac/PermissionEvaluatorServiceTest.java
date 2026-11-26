@@ -43,6 +43,7 @@ class PermissionEvaluatorServiceTest {
     private static final UUID ROLE_DEFINITION_ID = UUID.randomUUID();
     private static final UUID INSTITUTION_ID = UUID.randomUUID();
     private static final UUID OTHER_INSTITUTION_ID = UUID.randomUUID();
+    private static final UUID DEPARTMENT_ID = UUID.randomUUID();
 
     private static final String USER_CREATE = "USER_CREATE";
     private static final String GUARDIAN_CHANGE_APPROVE = "GUARDIAN_CHANGE_APPROVE";
@@ -55,7 +56,7 @@ class PermissionEvaluatorServiceTest {
                 ? UserRoleAssignment.builder()
                     .id(new UserRoleAssignmentId(TENANT_ID, UUID.randomUUID()))
                     .userAccountId(USER_ACCOUNT_ID).roleDefinitionId(ROLE_DEFINITION_ID)
-                    .scopeType(ScopeType.DEPARTMENT).institutionId(INSTITUTION_ID).departmentId(UUID.randomUUID())
+                    .scopeType(ScopeType.DEPARTMENT).institutionId(INSTITUTION_ID).departmentId(DEPARTMENT_ID)
                     .effectiveFrom(Instant.now().minusSeconds(3600)).status(AssignmentStatus.ACTIVE).build()
                 : activeAssignment(INSTITUTION_ID);
         UUID departmentId = assignment.getDepartmentId();
@@ -412,23 +413,10 @@ class PermissionEvaluatorServiceTest {
     @Test
     void disciplinaryIncidentAccessUsesItsDedicatedDepartmentAction() {
         configureGrantedAction("DISCIPLINARY_INCIDENT_VIEW", false, "HEAD_OF_DEPARTMENT", true);
-        UserRoleAssignment assignment = userRoleAssignmentRepository
-                .findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
-                        TENANT_ID, USER_ACCOUNT_ID, ScopeType.DEPARTMENT, INSTITUTION_ID,
-                        assignmentDepartment(), AssignmentStatus.ACTIVE).get(0);
         PermissionDecision allowed = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
                 "DISCIPLINARY_INCIDENT_VIEW",
-                RbacScope.department(INSTITUTION_ID, assignment.getDepartmentId()), RbacTarget.NONE);
+                RbacScope.department(INSTITUTION_ID, DEPARTMENT_ID), RbacTarget.NONE);
         assertThat(allowed.allowed()).isTrue();
-    }
-
-    private UUID assignmentDepartment() {
-        // The configured department-scoped assignment is returned from the mocked exact-scope query.
-        return userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
-                org.mockito.ArgumentMatchers.eq(TENANT_ID), org.mockito.ArgumentMatchers.eq(USER_ACCOUNT_ID),
-                org.mockito.ArgumentMatchers.eq(ScopeType.DEPARTMENT), org.mockito.ArgumentMatchers.eq(INSTITUTION_ID),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(AssignmentStatus.ACTIVE))
-                .get(0).getDepartmentId();
     }
 
 }
