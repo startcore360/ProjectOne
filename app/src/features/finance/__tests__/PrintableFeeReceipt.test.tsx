@@ -6,7 +6,8 @@ import PrintableFeeReceipt, { type FeeReceiptDetails } from "../components/Print
 describe("PrintableFeeReceipt", () => {
   it("renders server-issued receipt details and invokes print", async () => {
     const user = userEvent.setup();
-    const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    const print = vi.fn();
+    Object.defineProperty(window, "print", { configurable: true, value: print });
     const receipt: FeeReceiptDetails = {
       receiptLabel: "EDU/2026/0001",
       paymentId: "payment-123",
