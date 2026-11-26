@@ -41,7 +41,7 @@ public class T10DomainService {
     }
     @Transactional(readOnly=true)
     public List<Map<String,Object>> listNotices(UUID tenant,TenantPrincipal p,UUID institution) {
-        allow(tenant,p.userAccountId(),"SELF_SERVICE_VIEW",institution);
+        allowAny(tenant,p.userAccountId(),institution,"SELF_SERVICE_VIEW","NOTICE_PUBLISH_INSTITUTION","NOTICE_PUBLISH_CLASS_DEPT","NOTICE_PUBLISH_UNIVERSITY","NOTICE_EMERGENCY");
         return jdbc.queryForList("""
             SELECT n.id AS notice_id,n.title,n.body,n.is_urgent,n.requires_acknowledgment,n.published_at,
                    EXISTS(SELECT 1 FROM app.notice_acknowledgment a WHERE a.tenant_id=n.tenant_id AND a.notice_id=n.id AND a.user_id=?) AS acknowledged
