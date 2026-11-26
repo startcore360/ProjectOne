@@ -111,7 +111,7 @@ export default function LibraryCatalogPage() {
   return <main className="app-page">
     <PageHeader title="Library Operations" description="Catalog, circulation, reservations and institution-configured overdue fines." />
     {loading && <p role="status">Loading library data…</p>}
-    {error && <p role="alert">{error}</p>
+    {error && <p role="alert">{error}</p>}
     {notice && <p role="status">{notice}</p>}
 
     <section className="app-panel">
