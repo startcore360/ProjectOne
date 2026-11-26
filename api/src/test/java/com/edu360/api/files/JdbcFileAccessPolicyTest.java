@@ -135,4 +135,54 @@ class JdbcFileAccessPolicyTest {
         assertThat(new JdbcFileAccessPolicy(mock(JdbcTemplate.class))
                 .canAttach(file, actor, "STAFF_DOCUMENT", UUID.randomUUID())).isFalse();
     }
+
+    @Test
+    void grievanceEvidenceDownloadRequiresTheCaseConfidentialityPredicate() {
+        UUID tenantId=UUID.randomUUID(), userId=UUID.randomUUID(), institutionId=UUID.randomUUID();
+        UUID caseId=UUID.randomUUID(), fileId=UUID.randomUUID();
+        JdbcTemplate jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),eq(Boolean.class),any(Object[].class))).thenReturn(Boolean.TRUE);
+        JdbcFileAccessPolicy policy=new JdbcFileAccessPolicy(jdbc);
+        TenantPrincipal actor=new TenantPrincipal(tenantId,userId,UserType.STAFF,"ICC",false);
+        FileObject file=FileObject.builder().id(new FileObjectId(tenantId,fileId))
+                .institutionId(institutionId).purpose("GRIEVANCE_EVIDENCE").status("ACTIVE")
+                .scanStatus("CLEAN").uploadedBy(UUID.randomUUID()).build();
+
+        assertThat(policy.canAccess(file,actor)).isTrue();
+        org.mockito.ArgumentCaptor<String> sql=org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(jdbc).queryForObject(sql.capture(),eq(Boolean.class),any(Object[].class));
+        assertThat(sql.getValue()).contains("app.grievance_case","app.fn_complaint_guard");
+    }
+
+    @Test
+    void grievanceEvidenceUploadRequiresCaseConfidentialityAndUploaderOwnership() {
+        UUID tenantId=UUID.randomUUID(), userId=UUID.randomUUID(), institutionId=UUID.randomUUID();
+        UUID caseId=UUID.randomUUID(), fileId=UUID.randomUUID();
+        JdbcTemplate jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),eq(Boolean.class),any(Object[].class))).thenReturn(Boolean.TRUE);
+        JdbcFileAccessPolicy policy=new JdbcFileAccessPolicy(jdbc);
+        TenantPrincipal actor=new TenantPrincipal(tenantId,userId,UserType.STAFF,"ICC",false);
+        FileObject file=FileObject.builder().id(new FileObjectId(tenantId,fileId))
+                .institutionId(institutionId).purpose("GRIEVANCE_EVIDENCE").status("ACTIVE")
+                .scanStatus("PENDING").uploadedBy(userId).build();
+
+        assertThat(policy.canAttach(file,actor,"GRIEVANCE_CASE",caseId)).isTrue();
+        FileObject otherUploader=FileObject.builder().id(new FileObjectId(tenantId,UUID.randomUUID()))
+                .institutionId(institutionId).purpose("GRIEVANCE_EVIDENCE").status("ACTIVE")
+                .scanStatus("PENDING").uploadedBy(UUID.randomUUID()).build();
+        assertThat(policy.canAttach(otherUploader,actor,"GRIEVANCE_CASE",caseId)).isFalse();
+    }
+
+    @Test
+    void grievanceEvidenceDownloadDeniesWhenConfidentialityPredicateReturnsFalse() {
+        UUID tenantId=UUID.randomUUID(), userId=UUID.randomUUID();
+        JdbcTemplate jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),eq(Boolean.class),any(Object[].class))).thenReturn(Boolean.FALSE);
+        JdbcFileAccessPolicy policy=new JdbcFileAccessPolicy(jdbc);
+        TenantPrincipal actor=new TenantPrincipal(tenantId,userId,UserType.STAFF,"Generic admin",false);
+        FileObject file=FileObject.builder().id(new FileObjectId(tenantId,UUID.randomUUID()))
+                .institutionId(UUID.randomUUID()).purpose("GRIEVANCE_EVIDENCE").status("ACTIVE")
+                .scanStatus("CLEAN").uploadedBy(UUID.randomUUID()).build();
+        assertThat(policy.canAccess(file,actor)).isFalse();
+    }
 }
