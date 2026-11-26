@@ -75,6 +75,8 @@ export const t10Api = {
     dailyAmount: number; dayBasis: "CALENDAR_DAYS" | "WORKING_DAYS"; fineCap: number; workingDays: number[];
   }) => (await api.put<FinePolicy>(`/tenants/${tenant}/library/fine-policy`, body)).data,
   dispatch: async (tenant: string, body: unknown) => (await api.post(`/tenants/${tenant}/communications/dispatch`, body)).data,
+  dispatchHistory: async (tenant: string, institution: string) =>
+    (await api.get<Array<{ id: string; channel: string; status: string; failure_reason: string | null; sent_at: string | null; delivered_at: string | null; created_at: string }>>(`/tenants/${tenant}/communications/dispatch`, { params: { institutionId: institution } })).data,
   routes: async (tenant: string, institution: string) =>
     (await api.get<TransportRoute[]>(`/tenants/${tenant}/transport/routes`, { params: { institutionId: institution } })).data,
   routeStops: async (tenant: string, institution: string, routeId: string) =>
