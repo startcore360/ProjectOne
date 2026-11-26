@@ -1,4 +1,4 @@
-DO $
+DO $$
 DECLARE t text;
 BEGIN
  IF to_regclass('app.library_fine_policy') IS NULL OR to_regclass('app.v_student_library_dues_flag') IS NULL
