@@ -106,16 +106,30 @@ public class NoDuesVerificationService {
             }
         }
 
-        // No departmental equipment-loan/clearance table exists in the current migrations.
-        // Never infer a clear result from a missing integration: it remains an explicit blocker.
         if (!exists("app.department_equipment_clearance")) {
             items.add(new DuesItem("DEPARTMENT", "INTEGRATION_UNAVAILABLE",
                     "Departmental equipment clearance is not configured; clearance cannot be confirmed.",
                     0, BigDecimal.ZERO, true));
         } else {
-            items.add(new DuesItem("DEPARTMENT", "INTEGRATION_UNVERIFIED",
-                    "The departmental equipment integration has no approved data contract.",
-                    0, BigDecimal.ZERO, true));
+            Map<String, Object> departmentCheck = jdbc.queryForMap("""
+                    SELECT count(*) FILTER (
+                             WHERE c.department_equipment_clearance_id IS NULL
+                                OR c.clearance_status<>'CLEARED' OR c.outstanding_items>0
+                           )::bigint AS pending_departments,
+                           COALESCE(sum(COALESCE(c.outstanding_items,0)),0)::bigint AS outstanding_items
+                      FROM app.department d
+                      LEFT JOIN app.department_equipment_clearance c
+                        ON c.tenant_id=d.tenant_id AND c.institution_id=d.institution_id
+                       AND c.department_id=d.department_id AND c.student_profile_id=?
+                     WHERE d.tenant_id=? AND d.institution_id=? AND d.status='ACTIVE'
+                    """, studentId, tenantId, institutionId);
+            long pendingDepartments = ((Number) departmentCheck.get("pending_departments")).longValue();
+            long outstandingItems = ((Number) departmentCheck.get("outstanding_items")).longValue();
+            if (pendingDepartments > 0) {
+                items.add(new DuesItem("DEPARTMENT", "EQUIPMENT_NOT_CLEARED",
+                        "One or more active departments have missing clearance or outstanding equipment.",
+                        pendingDepartments, BigDecimal.valueOf(outstandingItems), true));
+            }
         }
 
         boolean clear = items.stream().noneMatch(DuesItem::blocking);
