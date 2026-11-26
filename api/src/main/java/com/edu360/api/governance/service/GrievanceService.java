@@ -224,6 +224,7 @@ public class GrievanceService {
     public void recordMinutes(TenantPrincipal principal, UUID caseId, String notes, UUID minutesFileId) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_HEARING_MANAGE", RbacTarget.NONE);
+        ensureCaseOpen(current);
         if (notes == null || notes.isBlank() || notes.length() > 5000) {
             throw new BusinessRuleViolationException("HEARING_MINUTES_REQUIRED", "Hearing minutes are required.");
         }
@@ -279,6 +280,7 @@ public class GrievanceService {
     public FileUploadResponse uploadEvidence(TenantPrincipal principal, UUID caseId, MultipartFile file) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_EVIDENCE_UPLOAD", RbacTarget.NONE);
+        ensureCaseOpen(current);
         FileUploadResponse uploaded = files.upload(principal, file, "GRIEVANCE_EVIDENCE",
                 current.institutionId(), "GRIEVANCE_CASE", caseId);
         jdbc.update("""
