@@ -27,8 +27,8 @@ public class AttendanceController{
  @PutMapping("/thresholds") public Map<String,Object> threshold(@PathVariable UUID tenantId,@Valid @RequestBody ThresholdRequest body,Authentication auth){return service.updateThreshold(tenantId,principal(auth,tenantId),body.institutionId(),body.departmentId(),body.minimumAttendancePercentage(),body.effectiveFrom());}
  public record EntriesRequest(@NotNull UUID institutionId,@NotNull UUID attendanceSessionId,@NotEmpty List<@Valid EntryRequest> entries){}
  public record SessionRequest(@NotNull UUID institutionId,UUID sectionId,UUID subjectGroupId,UUID timetableSlotId,UUID subjectAllocationId,@NotNull LocalDate attendanceDate,
-  @NotBlank @Pattern(regexp="DAILY|PERIOD|SCHOOL_FIRST_HALF|SCHOOL_SECOND_HALF") String sessionKind,boolean notHeld,@NotEmpty List<@Valid EntryRequest> entries){
-  List<AttendanceItem> toAttendanceItems(){return entries.stream().map(e->new AttendanceItem(e.enrollmentId(),e.status())).toList();}
+  @NotBlank @Pattern(regexp="DAILY|PERIOD|SCHOOL_FIRST_HALF|SCHOOL_SECOND_HALF") String sessionKind,boolean notHeld,List<@Valid EntryRequest> entries){
+  List<AttendanceItem> toAttendanceItems(){return entries==null?List.of():entries.stream().map(e->new AttendanceItem(e.enrollmentId(),e.status())).toList();}
  }
  public record EntryRequest(@NotNull UUID enrollmentId,@NotBlank @Pattern(regexp="PRESENT|ABSENT|ON_APPROVED_LEAVE|NOT_HELD") String status){}
  public record ThresholdRequest(@NotNull UUID institutionId,UUID departmentId,@NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal minimumAttendancePercentage,LocalDate effectiveFrom){}

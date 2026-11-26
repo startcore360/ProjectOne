@@ -43,9 +43,10 @@ export default function AttendanceRegisterPage(){
    const entries=students.map(s=>({enrollmentId:s.enrollment_id,status:notHeld?"NOT_HELD":marks[s.enrollment_id]}));
    const response=await api.post("/api/tenants/"+tenantId+"/academic/attendance/sessions",{
     institutionId,sectionId,subjectGroupId:null,timetableSlotId:sessionKind==="PERIOD"?slotId:null,
-    subjectAllocationId:sessionKind==="PERIOD"?subjectAllocationId:null,attendanceDate:date,sessionKind,notHeld,entries,
+    subjectAllocationId:sessionKind==="PERIOD"?subjectAllocationId:null,attendanceDate:date,sessionKind,notHeld,entries:[],
    });
-   setSessionId(response.data.attendance_session_id);setFeedback("Attendance session saved.");
+   await api.post("/api/tenants/"+tenantId+"/academic/attendance/entries",{institutionId,attendanceSessionId:response.data.attendance_session_id,entries});
+   setSessionId(response.data.attendance_session_id);setFeedback("Attendance session and entries saved.");
   }catch(e){setFeedback(e instanceof Error?e.message:"Unable to save attendance.");}finally{setBusy(false);}
  }
  async function saveThreshold(event:FormEvent){

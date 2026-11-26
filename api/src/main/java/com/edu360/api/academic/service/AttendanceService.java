@@ -18,7 +18,7 @@ import com.edu360.api.rbac.PermissionEvaluatorService;import com.edu360.api.rbac
     subject_allocation_id,session_kind,attendance_date,academic_year,held_status,marked_by_user_id,marked_as,sync_source,created_by,updated_by)
    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'ONLINE',?,?)
    """,tenant,id,institution,section,group,slot,allocation,kind,date,year,notHeld?"NOT_HELD":"HELD",actor.userAccountId(),"ASSIGNED",actor.userAccountId(),actor.userAccountId());
-  for(AttendanceItem item:entries)jdbc.update("""
+  if(entries!=null)for(AttendanceItem item:entries)jdbc.update("""
    INSERT INTO app.attendance_entry(tenant_id,attendance_entry_id,institution_id,attendance_session_id,enrollment_id,academic_year,
     status,recorded_via,recorded_by_user_id,created_by,updated_by) VALUES (?,?,?,?,?,?,?,'MANUAL',?,?,?)
    """,tenant,UUID.randomUUID(),institution,id,item.enrollmentId(),year,notHeld?"NOT_HELD":item.status(),actor.userAccountId(),actor.userAccountId(),actor.userAccountId());
