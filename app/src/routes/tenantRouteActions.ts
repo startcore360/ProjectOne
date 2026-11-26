@@ -30,7 +30,7 @@ export const TENANT_ROUTE_ACTIONS = {
   applicationScrutiny: ["APPLICATION_VERIFY"],
   // T9 identity cards and official certificates use their dedicated action codes.
   identityCards: ["ID_CARD_ISSUE", "ID_CARD_REPLACE", "ID_CARD_REPLACEMENT_REQUEST", "ID_CARD_TEMPLATE_MANAGE", "ID_CARD_REVOKE"],
-  certificates: ["CERTIFICATE_REQUEST", "CERTIFICATE_APPROVE", "CERTIFICATE_PREPARE", "CERTIFICATE_TEMPLATE_MANAGE", "CERTIFICATE_REVOKE", "NO_DUES_OVERRIDE"],
+  certificates: ["CERTIFICATE_REQUEST", "CERTIFICATE_APPROVE", "CERTIFICATE_PREPARE", "CERTIFICATE_TEMPLATE_MANAGE", "CERTIFICATE_REVOKE", "NO_DUES_OVERRIDE", "DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE"],
   disciplinaryIncidents: ["DISCIPLINARY_INCIDENT_VIEW", "DISCIPLINARY_INCIDENT_MANAGE"],
   grievanceSubmission: ["GRIEVANCE_CASE_SUBMIT"],
   // PO-T05 confidential case actions; backend allowlisting and database RLS are authoritative.
