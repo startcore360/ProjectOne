@@ -146,6 +146,35 @@ GRANT SELECT ON app.department_equipment_clearance TO edu_report;
 COMMENT ON TABLE app.department_equipment_clearance IS
  'Department-level student equipment clearance; every active department must record CLEARED with zero outstanding items for No-Dues.';
 
+-- No-Dues must evaluate every active department even when the caller's institution/department
+-- RLS scope would otherwise hide another department's clearance row. The function is tenant-bound
+-- to the authenticated session and returns a blocker if context is missing.
+CREATE OR REPLACE FUNCTION app.fn_no_dues_department_clearance(
+ p_tenant_id uuid,p_institution_id uuid,p_student_profile_id uuid
+) RETURNS TABLE(pending_departments bigint,outstanding_items bigint)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path=pg_catalog,app SET row_security=off AS $
+BEGIN
+ IF p_tenant_id IS NULL OR p_institution_id IS NULL OR p_student_profile_id IS NULL
+    OR NULLIF(current_setting('app.tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id THEN
+  RETURN QUERY SELECT 1::bigint,0::bigint;
+  RETURN;
+ END IF;
+ RETURN QUERY
+ SELECT count(*) FILTER (
+          WHERE c.department_equipment_clearance_id IS NULL
+             OR c.clearance_status<>'CLEARED' OR c.outstanding_items>0
+        )::bigint,
+        COALESCE(sum(COALESCE(c.outstanding_items,0)),0)::bigint
+   FROM app.department d
+   LEFT JOIN app.department_equipment_clearance c
+     ON c.tenant_id=d.tenant_id AND c.institution_id=d.institution_id
+    AND c.department_id=d.department_id AND c.student_profile_id=p_student_profile_id
+  WHERE d.tenant_id=p_tenant_id AND d.institution_id=p_institution_id AND d.status='ACTIVE';
+END $;
+REVOKE ALL ON FUNCTION app.fn_no_dues_department_clearance(uuid,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.fn_no_dues_department_clearance(uuid,uuid,uuid) TO edu_app;
+
 -- Public verification is a deliberate, code-possession disclosure of minimal certificate
 -- metadata. row_security=off makes this fail closed unless the migration/function owner has
 -- BYPASSRLS (or superuser) privileges; never broaden ordinary app.* table grants.
