@@ -2,6 +2,8 @@ BEGIN;
 DROP VIEW IF EXISTS app.v_student_library_dues_flag;
 DROP TRIGGER IF EXISTS trg_transport_capacity_guard ON app.transport_allocation;
 DROP FUNCTION IF EXISTS app.fn_transport_capacity_guard();
+DROP TRIGGER IF EXISTS trg_seed_library_fine_policy ON app.institution;
+DROP FUNCTION IF EXISTS app.fn_seed_library_fine_policy();
 DROP FUNCTION IF EXISTS app.fn_library_fine_amount(uuid,uuid,date);
 DROP TABLE IF EXISTS app.report_execution,app.report_definition;
 DROP TABLE IF EXISTS app.transport_allocation,app.route_stop,app.transport_route,app.vehicle;
