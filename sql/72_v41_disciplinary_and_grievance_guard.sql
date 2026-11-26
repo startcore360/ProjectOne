@@ -211,6 +211,24 @@ CREATE TABLE app.grievance_action (
  CHECK(char_length(action_notes) BETWEEN 1 AND 5000),CHECK(penalty IS NULL OR char_length(penalty)<=2000)
 );
 
+CREATE TABLE app.grievance_hearing (
+ tenant_id uuid NOT NULL,grievance_hearing_id uuid NOT NULL,grievance_case_id uuid NOT NULL,
+ hearing_at timestamptz NOT NULL,hearing_notes text NOT NULL,notice_file_id uuid,
+ minutes_file_id uuid,minutes_notes text,status text NOT NULL DEFAULT 'SCHEDULED',
+ created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
+ updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL,row_version integer NOT NULL DEFAULT 1,
+ PRIMARY KEY(tenant_id,grievance_hearing_id),
+ FOREIGN KEY(tenant_id,grievance_case_id) REFERENCES app.grievance_case(tenant_id,grievance_case_id),
+ FOREIGN KEY(tenant_id,notice_file_id) REFERENCES app.file_object(tenant_id,file_id),
+ FOREIGN KEY(tenant_id,minutes_file_id) REFERENCES app.file_object(tenant_id,file_id),
+ CHECK(status IN ('SCHEDULED','HELD','CANCELLED')),
+ CHECK(char_length(hearing_notes) BETWEEN 1 AND 5000),
+ CHECK(minutes_notes IS NULL OR char_length(minutes_notes) BETWEEN 1 AND 5000),
+ CHECK((status='HELD')=(minutes_notes IS NOT NULL)),
+ CHECK(row_version>=1)
+);
+CREATE INDEX ix_grievance_hearing_case_time ON app.grievance_hearing(tenant_id,grievance_case_id,hearing_at);
+
 CREATE TABLE app.disciplinary_evidence (
  tenant_id uuid NOT NULL,disciplinary_evidence_id uuid NOT NULL,disciplinary_incident_id uuid NOT NULL,
  file_id uuid NOT NULL,uploaded_by_user_id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),
@@ -308,7 +326,30 @@ BEGIN
  CREATE POLICY p_tenant ON app.grievance_action USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
  GRANT SELECT,INSERT ON app.grievance_action TO edu_app;
  GRANT SELECT ON app.grievance_action TO edu_report;
-END $$;
+ ALTER TABLE app.grievance_hearing ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE app.grievance_hearing FORCE ROW LEVEL SECURITY;
+ CREATE TRIGGER trg_touch BEFORE UPDATE ON app.grievance_hearing FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
+ CREATE POLICY p_tenant ON app.grievance_hearing
+  USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid)
+  WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
+ CREATE POLICY p_grievance_hearing_select ON app.grievance_hearing AS RESTRICTIVE FOR SELECT
+  USING(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_hearing.tenant_id
+   AND gc.grievance_case_id=grievance_hearing.grievance_case_id
+   AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)));
+ CREATE POLICY p_grievance_hearing_insert ON app.grievance_hearing AS RESTRICTIVE FOR INSERT
+  WITH CHECK(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_hearing.tenant_id
+   AND gc.grievance_case_id=grievance_hearing.grievance_case_id
+   AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)));
+ CREATE POLICY p_grievance_hearing_update ON app.grievance_hearing AS RESTRICTIVE FOR UPDATE
+  USING(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_hearing.tenant_id
+   AND gc.grievance_case_id=grievance_hearing.grievance_case_id
+   AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)))
+  WITH CHECK(EXISTS(SELECT 1 FROM app.grievance_case gc WHERE gc.tenant_id=grievance_hearing.tenant_id
+   AND gc.grievance_case_id=grievance_hearing.grievance_case_id
+   AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)));
+ GRANT SELECT,INSERT,UPDATE ON app.grievance_hearing TO edu_app;
+ GRANT SELECT ON app.grievance_hearing TO edu_report;
+END $;
 CREATE POLICY p_disciplinary_institution ON app.disciplinary_incident AS RESTRICTIVE
  USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL'
   OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]))
