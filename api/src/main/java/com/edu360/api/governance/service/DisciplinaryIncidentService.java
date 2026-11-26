@@ -68,7 +68,7 @@ public class DisciplinaryIncidentService {
         return get(principal, id);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Incident> list(TenantPrincipal principal, UUID institutionId) {
         authorize(principal, institutionId, "DISCIPLINARY_INCIDENT_VIEW");
         List<Incident> rows = jdbc.query("""
@@ -86,7 +86,7 @@ public class DisciplinaryIncidentService {
         return rows;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Incident get(TenantPrincipal principal, UUID incidentId) {
         Incident row = jdbc.query("""
                 SELECT di.disciplinary_incident_id,di.institution_id,di.student_id,sp.full_name,
