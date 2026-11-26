@@ -47,6 +47,9 @@ public class GrievanceService {
             String resolutionNotes, OffsetDateTime submittedAt) { }
     public record Evidence(UUID grievanceEvidenceId, UUID fileId, UUID uploadedByUserId,
             OffsetDateTime createdAt) { }
+    public record CaseAction(UUID actionId, String actionType, String actionNotes,
+            OffsetDateTime actionAt, UUID performedByUserId, UUID noticeFileId,
+            UUID minutesFileId, String penalty) { }
 
     @Transactional
     public SubmissionReceipt submit(TenantPrincipal principal, UUID institutionId, String category,
@@ -278,6 +281,27 @@ public class GrievanceService {
         audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "GRIEVANCE_EVIDENCE_VIEW",
                 "GRIEVANCE_EVIDENCE", null, current.institutionId(), null,
                 Map.of("recordCount", result.size()), result.size(), "H", "SUCCESS"));
+        return result;
+    }
+
+    @Transactional
+    public List<CaseAction> actions(TenantPrincipal principal, UUID caseId) {
+        CaseView current = get(principal, caseId);
+        authorize(principal, current.institutionId(), "GRIEVANCE_CASE_VIEW", RbacTarget.NONE);
+        List<CaseAction> result = jdbc.query("""
+                SELECT grievance_action_id,action_type,action_notes,action_at,performed_by_user_id,
+                       notice_file_id,minutes_file_id,penalty
+                  FROM app.grievance_action
+                 WHERE tenant_id=? AND grievance_case_id=?
+                 ORDER BY action_at,created_at
+                """, (rs, n) -> new CaseAction(rs.getObject(1, UUID.class), rs.getString(2),
+                rs.getString(3), rs.getObject(4, OffsetDateTime.class), rs.getObject(5, UUID.class),
+                rs.getObject(6, UUID.class), rs.getObject(7, UUID.class), rs.getString(8)),
+                principal.tenantId(), caseId);
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "GRIEVANCE_CASE_VIEW",
+                "GRIEVANCE_ACTION", null, current.institutionId(), null,
+                Map.of("caseId", caseId.toString(), "recordCount", result.size()),
+                result.size(), "H", "SUCCESS"));
         return result;
     }
 
