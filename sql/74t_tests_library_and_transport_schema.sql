@@ -16,6 +16,7 @@ BEGIN
   IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid=format('app.%I',t)::regclass) THEN RAISE EXCEPTION 'RLS missing on app.%',t; END IF;
  END LOOP;
  IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='trg_seed_library_fine_policy' AND NOT tgisinternal) THEN RAISE EXCEPTION 'new institution fine policy seed trigger missing'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='app' AND table_name='transport_route' AND column_name='allocated_seats') THEN RAISE EXCEPTION 'atomic transport seat counter missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.book_copy'::regclass AND conname='fk_book_copy_catalog_scope') THEN RAISE EXCEPTION 'book copy scope FK missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.transport_allocation'::regclass AND conname='fk_allocation_stop_scope') THEN RAISE EXCEPTION 'allocation stop scope FK missing'; END IF;
  IF NOT EXISTS (
