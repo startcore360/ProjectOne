@@ -62,7 +62,12 @@ public class IdCardService {
 
     @Transactional(readOnly = true)
     public List<Template> templates(TenantPrincipal principal, UUID institutionId) {
-        authorize(principal, institutionId, "ID_CARD_ISSUE", RbacTarget.NONE);
+        RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        RbacScope scope = permissions.targetScope(caller, institutionId, null);
+        if (!permissions.can(caller, "ID_CARD_ISSUE", scope, RbacTarget.NONE).allowed()
+                && !permissions.can(caller, "ID_CARD_TEMPLATE_MANAGE", scope, RbacTarget.NONE).allowed()) {
+            throw new com.edu360.api.exception.UnauthorizedException("Identity-card template access is not granted.");
+        }
         return jdbc.query("""
                 SELECT id_card_template_id,institution_id,name,layout,background_image_ref,
                        fields_config_json::text,status,row_version
@@ -138,11 +143,22 @@ public class IdCardService {
 
     @Transactional(readOnly = true)
     public List<Card> cards(TenantPrincipal principal, UUID institutionId) {
-        authorize(principal, institutionId, "ID_CARD_ISSUE", RbacTarget.NONE);
-        List<UUID> ids = jdbc.query("""
-                SELECT id_card_issuance_id FROM app.id_card_issuance
-                 WHERE tenant_id=? AND institution_id=? ORDER BY issue_date DESC
-                """, (rs, n) -> rs.getObject(1, UUID.class), principal.tenantId(), institutionId);
+        RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        RbacScope scope = permissions.targetScope(caller, institutionId, null);
+        boolean canIssue = permissions.can(caller, "ID_CARD_ISSUE", scope, RbacTarget.NONE).allowed();
+        boolean canRequestOwn = permissions.can(caller, "ID_CARD_REPLACEMENT_REQUEST", scope, RbacTarget.NONE).allowed();
+        if (!canIssue && !canRequestOwn) {
+            throw new com.edu360.api.exception.UnauthorizedException("Identity-card listing is not granted.");
+        }
+        List<UUID> ids = canIssue
+                ? jdbc.query("""
+                    SELECT id_card_issuance_id FROM app.id_card_issuance
+                     WHERE tenant_id=? AND institution_id=? ORDER BY issue_date DESC
+                    """, (rs, n) -> rs.getObject(1, UUID.class), principal.tenantId(), institutionId)
+                : jdbc.query("""
+                    SELECT id_card_issuance_id FROM app.id_card_issuance
+                     WHERE tenant_id=? AND institution_id=? AND user_id=? ORDER BY issue_date DESC
+                    """, (rs, n) -> rs.getObject(1, UUID.class), principal.tenantId(), institutionId, principal.userAccountId());
         return ids.stream().map(id -> card(principal.tenantId(), id)).toList();
     }
 
