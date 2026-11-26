@@ -8,13 +8,20 @@ BEGIN
    ('DISCIPLINARY_INCIDENT_VIEW',290),('DISCIPLINARY_INCIDENT_MANAGE',291),
    ('GRIEVANCE_CASE_SUBMIT',292),('GRIEVANCE_CASE_VIEW',293),('GRIEVANCE_CASE_ASSIGN',294),
    ('GRIEVANCE_HEARING_MANAGE',295),('GRIEVANCE_CASE_RESOLVE',296),('GRIEVANCE_EVIDENCE_VIEW',297),
-   ('GRIEVANCE_EVIDENCE_UPLOAD',298)
+   ('GRIEVANCE_EVIDENCE_UPLOAD',298),('ID_CARD_REPLACEMENT_REQUEST',299)
   ) AS expected(code,action_no)
   LEFT JOIN ref.action_catalog a ON a.action_code=expected.code AND a.action_no=expected.action_no
   WHERE a.action_code IS NULL
  ) THEN RAISE EXCEPTION 'T9_DB_72 action codes or numbers do not match the catalog extension'; END IF;
  IF EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no BETWEEN 284 AND 298 GROUP BY action_no HAVING count(*)>1) THEN
   RAISE EXCEPTION 'T9_DB_72 action number collision';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_code='ID_CARD_REPLACE' AND is_approval_action=true) THEN
+  RAISE EXCEPTION 'T9_DB_72 ID_CARD_REPLACE must be an approval action';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='STUDENT_COLLEGE' AND action_code='ID_CARD_REPLACEMENT_REQUEST')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='STUDENT_SCHOOL' AND action_code='ID_CARD_REPLACEMENT_REQUEST') THEN
+  RAISE EXCEPTION 'T9_DB_72 self-service ID card replacement request grants missing';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no=283 AND action_code='LANDING_CMS_MANAGE') THEN
   RAISE EXCEPTION 'T9_DB_72 must preserve seeded action number 283';
