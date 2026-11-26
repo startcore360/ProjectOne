@@ -19,7 +19,7 @@ public class AttendanceController{
  @GetMapping("/thresholds") public Map<String,Object> getThreshold(@PathVariable UUID tenantId,@RequestParam UUID institutionId,@RequestParam(required=false) UUID departmentId,Authentication auth){return service.threshold(tenantId,principal(auth,tenantId),institutionId,departmentId);}
  @PutMapping("/thresholds") public Map<String,Object> threshold(@PathVariable UUID tenantId,@Valid @RequestBody ThresholdRequest body,Authentication auth){return service.updateThreshold(tenantId,principal(auth,tenantId),body.institutionId(),body.departmentId(),body.minimumAttendancePercentage(),body.effectiveFrom());}
  public record SessionRequest(@NotNull UUID institutionId,UUID sectionId,UUID subjectGroupId,UUID timetableSlotId,UUID subjectAllocationId,@NotNull LocalDate attendanceDate,
-  @NotBlank @Pattern(regexp="PERIOD|SCHOOL_FIRST_HALF|SCHOOL_SECOND_HALF") String sessionKind,boolean notHeld,@NotEmpty List<@Valid EntryRequest> entries){
+  @NotBlank @Pattern(regexp="DAILY|PERIOD|SCHOOL_FIRST_HALF|SCHOOL_SECOND_HALF") String sessionKind,boolean notHeld,@NotEmpty List<@Valid EntryRequest> entries){
   List<AttendanceItem> toAttendanceItems(){return entries.stream().map(e->new AttendanceItem(e.enrollmentId(),e.status())).toList();}
  }
  public record EntryRequest(@NotNull UUID enrollmentId,@NotBlank @Pattern(regexp="PRESENT|ABSENT|ON_APPROVED_LEAVE|NOT_HELD") String status){}

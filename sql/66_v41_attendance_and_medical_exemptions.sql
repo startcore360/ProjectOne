@@ -1,5 +1,9 @@
 BEGIN;
 
+ALTER TABLE app.attendance_session DROP CONSTRAINT IF EXISTS ck_attendance_session_session_kind;
+ALTER TABLE app.attendance_session ADD CONSTRAINT ck_attendance_session_session_kind
+ CHECK (session_kind IN ('DAILY','PERIOD','SCHOOL_FIRST_HALF','SCHOOL_SECOND_HALF'));
+
 ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_purpose;
 ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK (purpose IN (
  'MESSAGE_ATTACHMENT','ASSIGNMENT_SUBMISSION','STUDY_MATERIAL','STAFF_DOCUMENT','POLICY','DEPARTMENT_DOCUMENT',
@@ -161,7 +165,7 @@ BEGIN
    RAISE EXCEPTION 'ATTENDANCE_MARKER_NOT_ASSIGNED' USING ERRCODE='23514';
   END IF;
  ELSE
-  IF NEW.session_kind NOT IN ('SCHOOL_FIRST_HALF','SCHOOL_SECOND_HALF') OR v_section IS NULL
+  IF NEW.session_kind NOT IN ('DAILY','SCHOOL_FIRST_HALF','SCHOOL_SECOND_HALF') OR v_section IS NULL
     OR NEW.timetable_slot_id IS NOT NULL OR NEW.subject_allocation_id IS NOT NULL
     OR NEW.marked_as<>'ASSIGNED' OR v_section_teacher IS DISTINCT FROM NEW.marked_by_user_id THEN
    RAISE EXCEPTION 'ATTENDANCE_SCHOOL_HALF_SCOPE_INVALID' USING ERRCODE='23514';

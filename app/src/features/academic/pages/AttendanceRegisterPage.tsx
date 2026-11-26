@@ -5,7 +5,7 @@ import { useAppSelector } from "../../../store/hooks";
 
 type Student = { enrollment_id:string; student_profile_id:string; student_code:string; full_name:string };
 type Status = "PRESENT"|"ABSENT"|"ON_APPROVED_LEAVE"|"NOT_HELD"|"";
-type SessionKind = "PERIOD"|"SCHOOL_FIRST_HALF"|"SCHOOL_SECOND_HALF";
+type SessionKind = "DAILY"|"PERIOD"|"SCHOOL_FIRST_HALF"|"SCHOOL_SECOND_HALF";
 
 export default function AttendanceRegisterPage(){
  const tenantId=useAppSelector(s=>s.auth.user?.tenantId);
@@ -62,7 +62,7 @@ export default function AttendanceRegisterPage(){
    <label>Section ID<input value={sectionId} onChange={e=>setSectionId(e.target.value)}/></label>
    <label>Attendance date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
    <label>Session kind<select value={sessionKind} onChange={e=>setSessionKind(e.target.value as SessionKind)}>
-    <option value="PERIOD">College period</option><option value="SCHOOL_FIRST_HALF">School first half</option><option value="SCHOOL_SECOND_HALF">School second half</option>
+    <option value="DAILY">Daily attendance</option><option value="PERIOD">College period</option><option value="SCHOOL_FIRST_HALF">School first half</option><option value="SCHOOL_SECOND_HALF">School second half</option>
    </select></label>
    {sessionKind==="PERIOD"&&<>
     <label>Published timetable slot ID<input value={slotId} onChange={e=>setSlotId(e.target.value)}/></label>
