@@ -37,7 +37,7 @@ INSERT INTO app.library_fine_policy(id,tenant_id,institution_id)
  SELECT gen_random_uuid(),tenant_id,institution_id FROM app.institution
  ON CONFLICT DO NOTHING;
 CREATE OR REPLACE FUNCTION app.fn_library_fine_amount(p_tenant uuid,p_institution uuid,p_due_date date)
-RETURNS numeric(12,2) LANGUAGE plpgsql STABLE AS $
+RETURNS numeric(12,2) LANGUAGE plpgsql STABLE AS $$
 DECLARE pol app.library_fine_policy%ROWTYPE; days_late integer; billable_days integer;
 BEGIN
  SELECT * INTO pol FROM app.library_fine_policy
@@ -53,7 +53,7 @@ BEGIN
      (SELECT value::integer FROM jsonb_array_elements_text(pol.working_days));
  END IF;
  RETURN LEAST(pol.fine_cap,pol.daily_amount*billable_days)::numeric(12,2);
-END $;
+END $$;
 
 CREATE TABLE IF NOT EXISTS app.book_circulation (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
