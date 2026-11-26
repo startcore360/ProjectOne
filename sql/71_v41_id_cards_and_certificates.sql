@@ -106,6 +106,46 @@ BEGIN
  GRANT SELECT ON app.certificate_issuance TO edu_report;
 END $$;
 
+-- Department equipment clearances are part of No-Dues verification. Each active
+-- department must record a clearance for the student; missing records are blockers.
+CREATE TABLE app.department_equipment_clearance (
+ tenant_id uuid NOT NULL,department_equipment_clearance_id uuid NOT NULL,
+ institution_id uuid NOT NULL,department_id uuid NOT NULL,student_profile_id uuid NOT NULL,
+ clearance_status text NOT NULL DEFAULT 'OUTSTANDING',outstanding_items integer NOT NULL DEFAULT 0,
+ notes text,cleared_at timestamptz,cleared_by_user_id uuid,
+ created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
+ updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL,row_version integer NOT NULL DEFAULT 1,
+ PRIMARY KEY(tenant_id,department_equipment_clearance_id),
+ UNIQUE(tenant_id,institution_id,department_id,student_profile_id),
+ FOREIGN KEY(tenant_id,institution_id,department_id)
+  REFERENCES app.department(tenant_id,institution_id,department_id),
+ FOREIGN KEY(tenant_id,student_profile_id)
+  REFERENCES app.student_profile(tenant_id,student_profile_id),
+ CHECK(clearance_status IN ('OUTSTANDING','CLEARED')),
+ CHECK(outstanding_items>=0),
+ CHECK((clearance_status='CLEARED' AND outstanding_items=0 AND cleared_at IS NOT NULL AND cleared_by_user_id IS NOT NULL)
+    OR clearance_status='OUTSTANDING'),
+ CHECK(notes IS NULL OR char_length(notes)<=2000),CHECK(row_version>=1)
+);
+CREATE INDEX ix_department_equipment_clearance_student
+ ON app.department_equipment_clearance(tenant_id,institution_id,student_profile_id);
+CREATE TRIGGER trg_touch BEFORE UPDATE ON app.department_equipment_clearance
+ FOR EACH ROW EXECUTE FUNCTION app.fn_touch();
+ALTER TABLE app.department_equipment_clearance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app.department_equipment_clearance FORCE ROW LEVEL SECURITY;
+CREATE POLICY p_tenant ON app.department_equipment_clearance
+ USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid)
+ WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
+CREATE POLICY p_institution ON app.department_equipment_clearance AS RESTRICTIVE
+ USING(current_setting('app.institution_scope',true)='ALL'
+   OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]))
+ WITH CHECK(current_setting('app.institution_scope',true)='ALL'
+   OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]));
+GRANT SELECT,INSERT,UPDATE ON app.department_equipment_clearance TO edu_app;
+GRANT SELECT ON app.department_equipment_clearance TO edu_report;
+COMMENT ON TABLE app.department_equipment_clearance IS
+ 'Department-level student equipment clearance; every active department must record CLEARED with zero outstanding items for No-Dues.';
+
 -- Public verification is a deliberate, code-possession disclosure of minimal certificate
 -- metadata. row_security=off makes this fail closed unless the migration/function owner has
 -- BYPASSRLS (or superuser) privileges; never broaden ordinary app.* table grants.
