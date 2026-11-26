@@ -195,7 +195,9 @@ public class DisciplinaryIncidentService {
         Incident incident = incidentForAction(principal, incidentId, "DISCIPLINARY_INCIDENT_MANAGE");
         if (!List.of("HEARING_NOTICE", "MINUTES_RECORDED", "PENALTY_ISSUED", "FOLLOW_UP", "CLOSED").contains(type)
                 || notes == null || notes.isBlank() || notes.length() > 5000
-                || (penalty != null && penalty.length() > 2000)) {
+                || (penalty != null && penalty.length() > 2000)
+                || ("PENALTY_ISSUED".equals(type) && (penalty == null || penalty.isBlank()))
+                || (!"PENALTY_ISSUED".equals(type) && penalty != null)) {
             throw new BusinessRuleViolationException("DISCIPLINARY_ACTION_INVALID", "Invalid hearing, minutes or penalty details.");
         }
         appendAction(principal, incident, type, notes, noticeFileId, minutesFileId, penalty);
