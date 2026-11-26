@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   detail: vi.fn(),
   evidence: vi.fn(),
+  actions: vi.fn(),
 }));
 vi.mock("../../profile/hooks/useTenantAccess", () => ({ useTenantAccess: () => ({ can: mocks.can }) }));
 vi.mock("../../../store/hooks", () => ({ useAppSelector: () => "tenant-t9" }));
@@ -17,6 +18,7 @@ vi.mock("../api/governanceApi", () => ({
     grievances: mocks.list,
     grievance: mocks.detail,
     grievanceEvidence: mocks.evidence,
+    grievanceActions: mocks.actions,
     assignGrievance: vi.fn(),
     scheduleHearing: vi.fn(),
     recordMinutes: vi.fn(),
@@ -30,6 +32,7 @@ describe("GrievanceCaseManagementPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.can.mockReturnValue(true);
+    mocks.actions.mockResolvedValue([]);
     mocks.submit.mockResolvedValue({ caseNumber: "GRV-2026-T9TEST", status: "SUBMITTED", submittedAt: "2026-11-26T10:00:00Z" });
   });
 
