@@ -305,6 +305,11 @@ public class CertificateService {
     @Transactional
     public void overrideNoDues(TenantPrincipal principal, UUID requestId, String reason) {
         RequestRow row = requestRow(principal.tenantId(), requestId);
+        UUID studentUser = studentUser(row.studentId());
+        if (studentUser != null && studentUser.equals(principal.userAccountId())) {
+            throw new BusinessRuleViolationException("SELF_OVERRIDE_FORBIDDEN",
+                    "A student cannot override their own No-Dues clearance.");
+        }
         authorize(principal, row.institutionId(), "NO_DUES_OVERRIDE", RbacTarget.NONE);
         if (reason == null || reason.isBlank() || reason.length() > 1000) {
             throw new BusinessRuleViolationException("OVERRIDE_REASON_REQUIRED", "A reason is required for a No-Dues override.");
