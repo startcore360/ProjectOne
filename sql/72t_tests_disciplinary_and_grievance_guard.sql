@@ -55,9 +55,20 @@ BEGIN
    action_code IN ('GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN','GRIEVANCE_HEARING_MANAGE','GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW')) THEN
   RAISE EXCEPTION 'T9_DB_72 generic admin/HOD must not receive confidential grievance permissions';
  END IF;
- IF NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='COLLEGE_ADMIN' AND action_code='COMPLAINT_ASSIGN') OR
-    NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='HEAD_OF_DEPARTMENT' AND action_code='COMPLAINT_RESOLVE') THEN
-  RAISE EXCEPTION 'T9_DB_72 ordinary complaint grants were unexpectedly modified';
+ IF NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='STUDENT_COLLEGE' AND action_code='COMPLAINT_RAISE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='PARENT_COLLEGE' AND action_code='COMPLAINT_RAISE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='PARENT_SCHOOL' AND action_code='COMPLAINT_RAISE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='PRINCIPAL_COLLEGE' AND action_code='COMPLAINT_ASSIGN')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='SCHOOL_PRINCIPAL' AND action_code='COMPLAINT_ASSIGN')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='COLLEGE_ADMIN' AND action_code='COMPLAINT_ASSIGN')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='SCHOOL_ADMIN' AND action_code='COMPLAINT_ASSIGN')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='PRINCIPAL_COLLEGE' AND action_code='COMPLAINT_RESOLVE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='SCHOOL_PRINCIPAL' AND action_code='COMPLAINT_RESOLVE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='COLLEGE_ADMIN' AND action_code='COMPLAINT_RESOLVE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='SCHOOL_ADMIN' AND action_code='COMPLAINT_RESOLVE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='HEAD_OF_DEPARTMENT' AND action_code='COMPLAINT_RESOLVE')
+  OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='UNIVERSITY_ADMIN' AND action_code='COMPLAINT_ESCALATED_VIEW') THEN
+  RAISE EXCEPTION 'T9_DB_72 ordinary COMPLAINT_* role grants changed or missing';
  END IF;
  FOREACH t IN ARRAY ARRAY['disciplinary_incident','disciplinary_evidence','disciplinary_action','grievance_case','grievance_evidence','grievance_action'] LOOP
   IF to_regclass('app.'||t) IS NULL THEN RAISE EXCEPTION 'T9_DB_72 missing app.%',t; END IF;
