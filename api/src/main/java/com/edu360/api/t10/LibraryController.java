@@ -25,6 +25,12 @@ public class LibraryController {
     @GetMapping("/catalog/{bookId}/copies") public List<Map<String,Object>> copies(@PathVariable UUID tenantId,@PathVariable UUID bookId,@RequestParam UUID institutionId,Authentication auth) {
         return service.libraryCopies(tenantId,principal(auth,tenantId),institutionId,bookId);
     }
+    @PostMapping("/catalog/{bookId}/copies") public Map<String,Object> addCopy(@PathVariable UUID tenantId,@PathVariable UUID bookId,@RequestBody CopyRequest r,Authentication auth) {
+        return service.addBookCopy(tenantId,principal(auth,tenantId),r.institutionId(),bookId,r.accessionNumber());
+    }
+    @PostMapping("/copies/{copyId}/withdraw") public Map<String,Object> withdrawCopy(@PathVariable UUID tenantId,@PathVariable UUID copyId,@RequestParam UUID institutionId,Authentication auth) {
+        return service.withdrawBookCopy(tenantId,principal(auth,tenantId),institutionId,copyId);
+    }
     @GetMapping("/circulations") public List<Map<String,Object>> circulations(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
         return service.libraryCirculations(tenantId,principal(auth,tenantId),institutionId);
     }
@@ -58,6 +64,7 @@ public class LibraryController {
         return p;
     }
     public record BookRequest(UUID institutionId,String isbn,String title,String author,String category,int copies) {}
+    public record CopyRequest(UUID institutionId,String accessionNumber) {}
     public record IssueRequest(UUID institutionId,UUID bookId,UUID copyId,UUID borrowerUserId,String borrowerRole,LocalDate dueDate) {}
     public record ReservationRequest(UUID institutionId,UUID bookId,UUID borrowerUserId) {}
     public record FinePolicyRequest(UUID institutionId,int gracePeriodDays,String calculationMode,BigDecimal dailyAmount,String dayBasis,BigDecimal fineCap,List<Integer> workingDays) {}
