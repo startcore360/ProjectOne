@@ -127,9 +127,7 @@ public class LateFeeCalculationService {
                      amount, currency_code, student_installment_id, narrative, created_by, updated_by)
                 SELECT t.tenant_id, gen_random_uuid(), t.institution_id, t.student_fee_account_id,
                        t.academic_session_id,
-                       CASE WHEN EXTRACT(MONTH FROM :asOfDate) >= 4
-                            THEN EXTRACT(YEAR FROM :asOfDate)::smallint
-                            ELSE (EXTRACT(YEAR FROM :asOfDate)-1)::smallint END,
+                       :financialYear,
                        :asOfDate, 'LATE_FEE', 'DEBIT',
                        ROUND(t.target_fines - t.current_fines, 2), 'INR',
                        t.student_installment_id,
@@ -143,6 +141,7 @@ public class LateFeeCalculationService {
             SELECT COUNT(*) FROM posted
             """, new MapSqlParameterSource()
                 .addValue("asOfDate", asOfDate)
+                .addValue("financialYear", FinanceCalendar.financialYearStartYear(asOfDate))
                 .addValue("systemActorId", systemActorId), Integer.class);
         return inserted == null ? 0 : inserted;
     }
