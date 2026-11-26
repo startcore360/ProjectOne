@@ -19,7 +19,7 @@ export type CertificateTemplate = {
 };
 export type CertificateRequest = {
   certificateRequestId: string; institutionId: string; studentId: string;
-  templateId: string; reason: string; status: string; duesJson: string; createdAt: string | null;
+  templateId: string; reason: string; status: string; duesJson: string; createdAt: string | null; rejectionReason: string | null;
 };
 export type CertificateIssuance = {
   issuanceId: string; requestId: string; certificateNumber: string;
@@ -69,6 +69,8 @@ export const documentsApi = {
     api.post<CertificateRequest>(`${root(tenantId)}/certificates/requests`, body).then(r => r.data),
   approveCertificate: (tenantId: string, requestId: string) =>
     api.post<CertificateRequest>(`${root(tenantId)}/certificates/requests/${requestId}/approve`).then(r => r.data),
+  rejectCertificate: (tenantId: string, requestId: string, reason: string) =>
+    api.post<CertificateRequest>(`${root(tenantId)}/certificates/requests/${requestId}/reject`, { reason }).then(r => r.data),
   prepareCertificate: (tenantId: string, requestId: string) =>
     api.post<CertificatePrepared>(`${root(tenantId)}/certificates/requests/${requestId}/prepare`).then(r => r.data),
   overrideNoDues: (tenantId: string, requestId: string, reason: string) =>
