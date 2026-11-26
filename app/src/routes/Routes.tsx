@@ -44,6 +44,7 @@ const StudentFeeInvoicesPage = lazy(() => import("../features/finance/pages/Stud
 const FeePaymentPortalPage = lazy(() => import("../features/finance/pages/FeePaymentPortalPage"));
 const IdCardManagementPage = lazy(() => import("../features/documents/pages/IdCardManagementPage"));
 const CertificateRequestPage = lazy(() => import("../features/documents/pages/CertificateRequestPage"));
+const PublicCertificateVerificationPage = lazy(() => import("../features/documents/pages/PublicCertificateVerificationPage"));
 const GrievanceCaseManagementPage = lazy(() => import("../features/governance/pages/GrievanceCaseManagementPage"));
 const DisciplinaryIncidentManagementPage = lazy(() => import("../features/governance/pages/DisciplinaryIncidentManagementPage"));
 const TenantSupportPage = lazy(() => import("../features/institution-admin/pages/TenantSupportPage"));
@@ -175,6 +176,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<RootEntry />} />
+      <Route path="/verify/certificate" element={<LazyRouteView><PublicCertificateVerificationPage /></LazyRouteView>} />
       <Route element={<PublicRoute />}>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
