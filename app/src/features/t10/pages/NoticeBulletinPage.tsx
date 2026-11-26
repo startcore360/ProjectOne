@@ -22,7 +22,7 @@ export default function NoticeBulletinPage() {
 
   const load = useCallback(async () => {
     if (!tenant || !institution) { setLoading(false); return; }
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setItems([]);
     try { setItems(await t10Api.notices(tenant, institution)); }
     catch { setError("Notices could not be loaded."); }
     finally { setLoading(false); }
