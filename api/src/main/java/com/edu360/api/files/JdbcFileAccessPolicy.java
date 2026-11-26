@@ -236,7 +236,7 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
             """,rs->rs.next()?rs.getObject(1,UUID.class):null,principal.tenantId(),file.getId().getFileId());
         RbacPrincipal caller=new RbacPrincipal(principal.tenantId(),principal.userAccountId());
         RbacScope scope=permissions.targetScope(caller,file.getInstitutionId(),departmentId);
-        return permissions.can(caller,"ATTENDANCE_VIEW",scope,RbacTarget.NONE).allowed();
+        return permissions.can(caller,"ATTENDANCE_CORRECTION_APPROVE",scope,RbacTarget.NONE).allowed();
     }
 
     private boolean canVerifyAdmissionDocument(FileObject file, TenantPrincipal principal) {
