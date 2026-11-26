@@ -222,7 +222,7 @@ public class IdCardService {
             boolean approve, String decisionNote) {
         Map<String, Object> row = jdbc.query("""
                 SELECT r.original_issuance_id,r.reason,r.status,i.institution_id,i.user_id,
-                       i.student_profile_id,i.staff_profile_id,i.template_id,i.expiry_date,r.fee_receipt_id
+                       i.student_profile_id,i.staff_profile_id,i.template_id,i.expiry_date,i.status,r.fee_receipt_id
                   FROM app.id_card_replacement r
                   JOIN app.id_card_issuance i ON i.tenant_id=r.tenant_id
                    AND i.id_card_issuance_id=r.original_issuance_id
@@ -290,6 +290,9 @@ public class IdCardService {
     public void revoke(TenantPrincipal principal, UUID issuanceId, String reason) {
         Card card = card(principal.tenantId(), issuanceId);
         authorize(principal, card.institutionId(), "ID_CARD_REVOKE", RbacTarget.of(card.userId()));
+        if (!"ACTIVE".equals(card.status())) {
+            throw new BusinessRuleViolationException("ID_CARD_NOT_REVOCABLE", "Only an active identity card can be revoked.");
+        }
         if (reason == null || reason.isBlank() || reason.length() > 1000) {
             throw new BusinessRuleViolationException("REVOCATION_REASON_REQUIRED", "A revocation reason is required.");
         }
@@ -382,6 +385,15 @@ public class IdCardService {
         }
         if (expiryDate != null && expiryDate.isBefore(LocalDate.now())) {
             throw new BusinessRuleViolationException("ID_CARD_EXPIRY_INVALID", "Expiry date must be today or later.");
+        }
+        Integer activeCards = jdbc.query("""
+                SELECT count(*) FROM app.id_card_issuance
+                 WHERE tenant_id=? AND institution_id=? AND user_id=? AND status='ACTIVE'
+                """, rs -> rs.next() ? rs.getInt(1) : 0,
+                principal.tenantId(), institutionId, profile.userId());
+        if (activeCards != null && activeCards > 0) {
+            throw new BusinessRuleViolationException("ID_CARD_ALREADY_ACTIVE",
+                    "This person already has an active identity card in the institution. Use the replacement workflow.");
         }
         UUID id = UUID.randomUUID();
         LocalDate issueDate = LocalDate.now();
