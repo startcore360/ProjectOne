@@ -52,8 +52,8 @@ public class IdCardService {
 
     public record Template(UUID templateId, UUID institutionId, String name, String layout,
             String backgroundImageRef, String fieldsConfigJson, String status, Integer rowVersion) { }
-    public record Card(UUID issuanceId, UUID institutionId, UUID userId, String cardNumber,
-            LocalDate issueDate, LocalDate expiryDate, String status, String qrToken,
+    public record Card(UUID issuanceId, UUID institutionId, UUID userId, UUID profileId, String subjectType,
+            String cardNumber, LocalDate issueDate, LocalDate expiryDate, String status, String qrToken,
             String fullName, String profileCode, String institutionName, String layout, String fieldsConfigJson) { }
     public record Replacement(UUID replacementId, UUID originalIssuanceId, String reason,
             String status, UUID replacementIssuanceId) { }
@@ -410,8 +410,10 @@ public class IdCardService {
                 principal.userAccountId(), principal.userAccountId());
         audit.record(new AuditEntry(AuditEventType.CREATE, actionCode, "ID_CARD_ISSUANCE",
                 id, institutionId, null, Map.of("cardNumber", cardNumber), 1, "P", "SUCCESS"));
-        return new Card(id, institutionId, profile.userId(), cardNumber, issueDate, expiryDate,
-                "ACTIVE", token, profile.fullName(), profile.profileCode(),
+        UUID profileId = profile.studentProfileId() != null ? profile.studentProfileId() : profile.staffProfileId();
+        String subjectType = profile.studentProfileId() != null ? "STUDENT" : "STAFF";
+        return new Card(id, institutionId, profile.userId(), profileId, subjectType,
+                cardNumber, issueDate, expiryDate, "ACTIVE", token, profile.fullName(), profile.profileCode(),
                 institutionName(principal.tenantId(), institutionId), template.layout(), template.fieldsConfigJson());
     }
 
@@ -428,10 +430,15 @@ public class IdCardService {
                   JOIN app.id_card_template t ON t.tenant_id=i.tenant_id AND t.id_card_template_id=i.template_id
                  WHERE i.tenant_id=? AND i.id_card_issuance_id=?
                 """, rs -> rs.next() ? new Card(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
-                rs.getObject(3, UUID.class), rs.getString(4), rs.getObject(5, LocalDate.class),
+                rs.getObject(3, UUID.class),
+                rs.getObject(12, UUID.class) != null ? rs.getObject(12, UUID.class) : rs.getObject(13, UUID.class),
+                rs.getObject(12, UUID.class) != null ? "STUDENT" : "STAFF",
+                rs.getString(4), rs.getObject(5, LocalDate.class),
                 rs.getObject(6, LocalDate.class), rs.getString(7),
-                qrToken(tenantId, rs.getObject(2, UUID.class), rs.getObject(3, UUID.class),
-                        rs.getString(4), rs.getObject(5, LocalDate.class), rs.getObject(6, LocalDate.class)),
+                qrToken(tenantId, rs.getObject(2, UUID.class),
+                        rs.getObject(12, UUID.class) != null ? rs.getObject(12, UUID.class) : rs.getObject(13, UUID.class),
+                        rs.getObject(12, UUID.class) != null ? "STUDENT" : "STAFF",
+                        rs.getObject(3, UUID.class), rs.getString(4), rs.getObject(5, LocalDate.class), rs.getObject(6, LocalDate.class)),
                 rs.getString(8), rs.getString(9), rs.getString(10), rs.getString(11), rs.getString(14)) : null,
                 tenantId, issuanceId);
         if (card == null) throw new ResourceNotFoundException("Identity card not found.");
@@ -500,14 +507,14 @@ public class IdCardService {
         permissions.authorize(caller, action, scope, target);
     }
 
-    private String qrToken(UUID tenantId, UUID institutionId, UUID userId,
-            String cardNumber, LocalDate issueDate, LocalDate expiryDate) {
+    private String qrToken(UUID tenantId, UUID institutionId, UUID profileId, String subjectType,
+            UUID userId, String cardNumber, LocalDate issueDate, LocalDate expiryDate) {
         if (signingSecret == null || signingSecret.length() < 32) {
             throw new BusinessRuleViolationException("DOCUMENT_SIGNING_NOT_CONFIGURED",
                     "The identity-card signing key is not configured with at least 32 characters.");
         }
         String payload = String.join("|", tenantId.toString(), institutionId.toString(),
-                userId.toString(), cardNumber, issueDate.toString(),
+                subjectType, profileId.toString(), userId.toString(), cardNumber, issueDate.toString(),
                 expiryDate == null ? "" : expiryDate.toString());
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
