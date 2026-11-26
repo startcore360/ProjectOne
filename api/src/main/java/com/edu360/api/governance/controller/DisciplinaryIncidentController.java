@@ -55,6 +55,12 @@ public class DisciplinaryIncidentController {
         return incidents.get(principal(auth, tenantId), incidentId);
     }
 
+    @GetMapping("/{incidentId}/actions")
+    public List<DisciplinaryIncidentService.Action> actions(@PathVariable UUID tenantId,
+            @PathVariable UUID incidentId, Authentication auth) {
+        return incidents.actions(principal(auth, tenantId), incidentId);
+    }
+
     @PatchMapping("/{incidentId}")
     public DisciplinaryIncidentService.Incident update(@PathVariable UUID tenantId,
             @PathVariable UUID incidentId, @Valid @RequestBody UpdateRequest body, Authentication auth) {
