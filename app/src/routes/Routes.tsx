@@ -161,7 +161,7 @@ function RootEntry() {
 function UniversityAdminRoute() {
   const userType = useAppSelector((s) => s.auth.user?.userType);
   const location = useLocation();
-  if ((userType === "STUDENT" || userType === "GUARDIAN") && location.pathname !== "/student/medical-exemptions") {
+  if ((userType === "STUDENT" || userType === "GUARDIAN") && !["/student/medical-exemptions", "/academic/timetable"].includes(location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;
