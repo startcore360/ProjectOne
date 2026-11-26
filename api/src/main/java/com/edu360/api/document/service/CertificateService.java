@@ -179,9 +179,9 @@ public class CertificateService {
             throw new BusinessRuleViolationException("CERTIFICATE_NOT_APPROVED", "Only an approved request can be prepared.");
         }
         NoDuesVerificationService.ClearanceResult clearance = noDues.verifyClearance(row.studentId());
-        if (!clearance.clear()) {
+        if (!clearance.clear() && row.noDuesOverrideAt() == null) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
-            throw new BusinessRuleViolationException("NO_DUES_PENDING", "No-Dues clearance must be revalidated before issuance.");
+            throw new BusinessRuleViolationException("NO_DUES_PENDING", "No-Dues clearance must be revalidated or explicitly overridden before issuance.");
         }
         String code = randomCode();
         String hash = sha256(code);
@@ -213,9 +213,12 @@ public class CertificateService {
             throw new BusinessRuleViolationException("OVERRIDE_REASON_REQUIRED", "A reason is required for a No-Dues override.");
         }
         jdbc.update("""
-                UPDATE app.certificate_request SET status='APPROVED',updated_by=?,updated_at=now()
+                UPDATE app.certificate_request SET status='APPROVED',
+                       no_dues_override_by_user_id=?,no_dues_override_at=now(),
+                       no_dues_override_reason=?,updated_by=?,updated_at=now()
                  WHERE tenant_id=? AND certificate_request_id=?
-                """, principal.userAccountId(), principal.tenantId(), requestId);
+                """, principal.userAccountId(), reason.trim(), principal.userAccountId(),
+                principal.tenantId(), requestId);
         audit.record(new AuditEntry(AuditEventType.APPROVAL, "NO_DUES_OVERRIDE",
                 "CERTIFICATE_REQUEST", requestId, row.institutionId(),
                 Map.of("status", row.status()), Map.of("status", "APPROVED", "overrideReason", reason.trim()),
@@ -270,16 +273,16 @@ public class CertificateService {
     }
 
     private record RequestRow(UUID institutionId, UUID studentId, UUID templateId,
-            String reason, String status) { }
+            String reason, String status, OffsetDateTime noDuesOverrideAt) { }
 
     private RequestRow requestRow(UUID tenantId, UUID requestId) {
         return jdbc.query("""
-                SELECT institution_id,student_id,template_id,reason,status
+                SELECT institution_id,student_id,template_id,reason,status,no_dues_override_at
                   FROM app.certificate_request
                  WHERE tenant_id=? AND certificate_request_id=?
                 """, rs -> rs.next() ? new RequestRow(rs.getObject(1, UUID.class),
                 rs.getObject(2, UUID.class), rs.getObject(3, UUID.class),
-                rs.getString(4), rs.getString(5)) : null, tenantId, requestId);
+                rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class)) : null, tenantId, requestId);
     }
 
     private UUID studentUser(UUID studentId) {
