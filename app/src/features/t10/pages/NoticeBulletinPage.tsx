@@ -10,6 +10,7 @@ export default function NoticeBulletinPage() {
   const canPublish = ["NOTICE_PUBLISH_INSTITUTION","NOTICE_PUBLISH_CLASS_DEPT","NOTICE_PUBLISH_UNIVERSITY"].some((action) => actions.includes(action));
   const canPublishUrgent = actions.includes("NOTICE_EMERGENCY");
   const [items, setItems] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -19,10 +20,12 @@ export default function NoticeBulletinPage() {
   const [requiresAcknowledgment, setRequiresAcknowledgment] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(() => {
-    if (tenant && institution) {
-      t10Api.notices(tenant, institution).then(setItems).catch(() => setError("Notices could not be loaded."));
-    }
+  const load = useCallback(async () => {
+    if (!tenant || !institution) { setLoading(false); return; }
+    setLoading(true); setError("");
+    try { setItems(await t10Api.notices(tenant, institution)); }
+    catch { setError("Notices could not be loaded."); }
+    finally { setLoading(false); }
   }, [tenant, institution]);
   useEffect(() => { load(); }, [load]);
 
@@ -68,7 +71,7 @@ export default function NoticeBulletinPage() {
       </Button>
     </section>}
     <section className="app-stack" aria-label="Published notices">
-      {items.length === 0 ? <EmptyState title="No published notices" description="Published notices will appear here." /> :
+      {loading ? <p role="status">Loading notices…</p> : items.length === 0 ? <EmptyState title="No published notices" description="Published notices will appear here." /> :
         items.map((notice) => <article className="app-card" key={notice.notice_id}>
           <h2>{notice.title} {notice.is_urgent && <strong>Urgent</strong>}</h2>
           <p>{notice.body}</p>
