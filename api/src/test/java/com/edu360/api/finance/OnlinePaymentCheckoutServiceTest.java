@@ -108,7 +108,7 @@ class OnlinePaymentCheckoutServiceTest {
                 new PaymentGatewayCredentialsResolver.PaymentGatewayCredentials(null, null, null, null, null));
 
         OnlinePaymentCheckoutService service = new OnlinePaymentCheckoutService(
-                jdbc, permissions, credentialsResolver, audit, "", "");
+                jdbc, permissions, credentialsResolver, audit);
         OnlinePaymentCheckoutService.CheckoutRequest request = new OnlinePaymentCheckoutService.CheckoutRequest(
                 accountId, List.of(installmentId), "RAZORPAY", "request-key-456");
 
