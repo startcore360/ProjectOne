@@ -13,7 +13,7 @@ permissions:
 # Keep one running and one latest pending CI run per workflow/ref. New pushes do not
 # cancel the active run; they replace only an obsolete pending run.
 concurrency:
-  group: edu360-ci-${{ github.workflow }}-${{ github.ref }}
+  group: edu360-ci-${{ github.workflow }}-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
