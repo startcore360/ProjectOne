@@ -2,6 +2,23 @@
 -- The zero-argument fn_complaint_guard() trigger from 02_rules.sql is intentionally preserved.
 BEGIN;
 
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_purpose;
+ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK (purpose IN (
+ 'MESSAGE_ATTACHMENT','ASSIGNMENT_SUBMISSION','STUDY_MATERIAL','STAFF_DOCUMENT','POLICY','DEPARTMENT_DOCUMENT',
+ 'ACCREDITATION','COMPLIANCE','LEAVE_DOCUMENT','HALL_TICKET','COMMUNITY_MEDIA','IMPORT_SOURCE','EXPORT',
+ 'PROFILE_PHOTO','BRANDING','ATTENDANCE_UPLOAD','ATTENDANCE_MEDICAL_EXEMPTION','MARKS_SOURCE','SYLLABUS',
+ 'CERTIFICATE','CONSENT_FORM','SERVICE_RECORD','GRIEVANCE_EVIDENCE'
+));
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_grievance_evidence_type;
+ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_grievance_evidence_type
+ CHECK (purpose<>'GRIEVANCE_EVIDENCE' OR content_type IN ('application/pdf','image/jpeg','image/png'));
+
+UPDATE app.role_definition SET is_sensitive_role=true,updated_at=now(),row_version=row_version+1
+WHERE role_origin='STANDARD' AND role_code IN
+ ('INTERNAL_COMPLAINTS_COMMITTEE','PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL')
+ AND is_sensitive_role=false;
+
+
 -- T9 action catalogue extension. Action numbers continue after the authoritative seeded
 -- sql/05_ref_data.sql catalogue (highest seeded action_no: 282). Generic COMPLAINT_* actions
 -- and their grants are intentionally untouched.
