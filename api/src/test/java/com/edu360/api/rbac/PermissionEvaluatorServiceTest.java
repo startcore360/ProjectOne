@@ -47,6 +47,31 @@ class PermissionEvaluatorServiceTest {
     private static final String USER_CREATE = "USER_CREATE";
     private static final String GUARDIAN_CHANGE_APPROVE = "GUARDIAN_CHANGE_APPROVE";
 
+    private void configureGrantedAction(String actionCode, boolean approval, String roleCode, boolean departmentScope) {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        when(actionCatalogRepository.findById(actionCode)).thenReturn(Optional.of(action(actionCode, approval)));
+        UserRoleAssignment assignment = departmentScope
+                ? UserRoleAssignment.builder()
+                    .id(new UserRoleAssignmentId(TENANT_ID, UUID.randomUUID()))
+                    .userAccountId(USER_ACCOUNT_ID).roleDefinitionId(ROLE_DEFINITION_ID)
+                    .scopeType(ScopeType.DEPARTMENT).institutionId(INSTITUTION_ID).departmentId(UUID.randomUUID())
+                    .effectiveFrom(Instant.now().minusSeconds(3600)).status(AssignmentStatus.ACTIVE).build()
+                : activeAssignment(INSTITUTION_ID);
+        UUID departmentId = assignment.getDepartmentId();
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, assignment.getScopeType(), INSTITUTION_ID, departmentId, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(assignment));
+        RoleDefinition role = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
+                .roleCode(roleCode).roleName(roleCode).roleOrigin(RoleOrigin.STANDARD)
+                .roleLevel(RoleLevel.COLLEGE).status(RoleDefinitionStatus.ACTIVE).build();
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(role));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                TENANT_ID, ROLE_DEFINITION_ID, actionCode)).thenReturn(true);
+    }
+
     private void init() {
         evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository, roleActionRepository);
     }
@@ -348,6 +373,62 @@ class PermissionEvaluatorServiceTest {
 
         assertThat(decision.allowed()).isFalse();
         assertThat(decision.reasonCode()).isEqualTo("NO_ACTIVE_ROLE_IN_SCOPE");
+    }
+
+    @Test
+    void idCardIssueIsAllowedOnlyWhenTheActiveRoleHasTheSpecificAction() {
+        configureGrantedAction("ID_CARD_ISSUE", false, "RECORDS_OFFICER", false);
+        PermissionDecision allowed = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "ID_CARD_ISSUE", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+        assertThat(allowed.allowed()).isTrue();
+    }
+
+    @Test
+    void idCardReplacementApprovalRejectsSelfApproval() {
+        configureGrantedAction("ID_CARD_REPLACE", true, "RECORDS_OFFICER", false);
+        PermissionDecision denied = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "ID_CARD_REPLACE", RbacScope.institution(INSTITUTION_ID), RbacTarget.of(USER_ACCOUNT_ID));
+        assertThat(denied.allowed()).isFalse();
+        assertThat(denied.reasonCode()).isEqualTo("SELF_APPROVAL_FORBIDDEN");
+    }
+
+    @Test
+    void certificateRequestUsesItsOwnStudentAction() {
+        configureGrantedAction("CERTIFICATE_REQUEST", false, "STUDENT_COLLEGE", false);
+        PermissionDecision allowed = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "CERTIFICATE_REQUEST", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+        assertThat(allowed.allowed()).isTrue();
+    }
+
+    @Test
+    void certificateApprovalRejectsTheApplicantAsApprover() {
+        configureGrantedAction("CERTIFICATE_APPROVE", true, "PRINCIPAL_COLLEGE", false);
+        PermissionDecision denied = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "CERTIFICATE_APPROVE", RbacScope.institution(INSTITUTION_ID), RbacTarget.of(USER_ACCOUNT_ID));
+        assertThat(denied.allowed()).isFalse();
+        assertThat(denied.reasonCode()).isEqualTo("SELF_APPROVAL_FORBIDDEN");
+    }
+
+    @Test
+    void disciplinaryIncidentAccessUsesItsDedicatedDepartmentAction() {
+        configureGrantedAction("DISCIPLINARY_INCIDENT_VIEW", false, "HEAD_OF_DEPARTMENT", true);
+        UserRoleAssignment assignment = userRoleAssignmentRepository
+                .findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                        TENANT_ID, USER_ACCOUNT_ID, ScopeType.DEPARTMENT, INSTITUTION_ID,
+                        assignmentDepartment(), AssignmentStatus.ACTIVE).get(0);
+        PermissionDecision allowed = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "DISCIPLINARY_INCIDENT_VIEW",
+                RbacScope.department(INSTITUTION_ID, assignment.getDepartmentId()), RbacTarget.NONE);
+        assertThat(allowed.allowed()).isTrue();
+    }
+
+    private UUID assignmentDepartment() {
+        // The configured department-scoped assignment is returned from the mocked exact-scope query.
+        return userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                org.mockito.ArgumentMatchers.eq(TENANT_ID), org.mockito.ArgumentMatchers.eq(USER_ACCOUNT_ID),
+                org.mockito.ArgumentMatchers.eq(ScopeType.DEPARTMENT), org.mockito.ArgumentMatchers.eq(INSTITUTION_ID),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(AssignmentStatus.ACTIVE))
+                .get(0).getDepartmentId();
     }
 
 }
