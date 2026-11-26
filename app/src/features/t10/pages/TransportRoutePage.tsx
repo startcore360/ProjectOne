@@ -26,18 +26,19 @@ export default function TransportRoutePage() {
   const [feeCode, setFeeCode] = useState("");
   const [stopDrafts, setStopDrafts] = useState<StopDraft[]>([emptyStop(0)]);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
-    if (!tenant || !institution) return;
-    setError("");
+    if (!tenant || !institution) { setLoading(false); return; }
+    setLoading(true); setError("");
     try {
       setRoutes(await t10Api.routes(tenant, institution));
       if (canManage) setAllocations(await t10Api.allocations(tenant, institution));
     } catch {
       setError("Transport routes could not be loaded. Check institution permissions.");
-    }
+    } finally { setLoading(false); }
   }, [tenant, institution, canManage]);
 
   const loadStops = useCallback(async (routeId: string) => {
@@ -71,6 +72,7 @@ export default function TransportRoutePage() {
 
   return <main className="app-page">
     <PageHeader title="Transport Tracking" description="Configure routes and stops, allocate passengers, and monitor seat capacity." />
+    {loading && <p role="status">Loading transport routes and allocations…</p>}
     {error && <p role="alert">{error}</p>}
     {notice && <p role="status">{notice}</p>}
 
@@ -83,7 +85,7 @@ export default function TransportRoutePage() {
           {canManage && <td>{route.active ? <button type="button" disabled={busy} onClick={async () => { setBusy(true); setError(""); setNotice(""); try { await t10Api.cancelRoute(tenant,institution,route.id); setNotice("Route cancelled and active allocations released."); await load(); } catch { setError("Route could not be cancelled."); } finally { setBusy(false); } }}>Cancel route</button> : "Cancelled"}</td>}
         </tr>)}</tbody>
       </table></div>
-      {routes.length === 0 && <p>No transport routes configured for this institution.</p>}
+      {!loading && routes.length === 0 && <p>No transport routes configured for this institution.</p>}
     </section>
 
     {canManage && <section className="app-panel">
@@ -147,7 +149,7 @@ export default function TransportRoutePage() {
           }}>Cancel</button>}</td>
         </tr>)}</tbody>
       </table></div>
-      {allocations.length === 0 && <p>No passenger allocations recorded.</p>}
+      {!loading && allocations.length === 0 && <p>No passenger allocations recorded.</p>}
     </section>}
   </main>;
 }
