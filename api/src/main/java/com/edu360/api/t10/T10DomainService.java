@@ -362,6 +362,14 @@ public class T10DomainService {
         return Map.of("allocationId",allocationId,"status","CANCELLED");
     }
     @Transactional
+    public Map<String,Object> cancelTransportRoute(UUID tenant,TenantPrincipal p,UUID institution,UUID routeId) {
+        allow(tenant,p.userAccountId(),"TRANSPORT_MANAGE",institution);
+        int changed=jdbc.update("UPDATE app.transport_route SET active=false WHERE id=? AND tenant_id=? AND institution_id=? AND active=true",routeId,tenant,institution);
+        if(changed!=1) throw new BusinessRuleViolationException("ROUTE_NOT_ACTIVE","Active transport route not found.");
+        jdbc.update("UPDATE app.transport_allocation SET status='CANCELLED' WHERE route_id=? AND tenant_id=? AND institution_id=? AND status='ACTIVE'",routeId,tenant,institution);
+        return Map.of("routeId",routeId,"status","CANCELLED");
+    }
+    @Transactional
     public Map<String,Object> createRoute(UUID tenant,TenantPrincipal p,TransportController.RouteRequest r) {
         allow(tenant,p.userAccountId(),"TRANSPORT_MANAGE",r.institutionId());
         if(r.capacity()<1||r.stops()==null||r.stops().isEmpty()||r.routeName()==null||r.routeName().isBlank()
