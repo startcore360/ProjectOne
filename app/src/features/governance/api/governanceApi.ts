@@ -8,6 +8,10 @@ export type GrievanceCase = {
 };
 export type GrievanceReceipt = { caseNumber: string; status: string; submittedAt: string };
 export type Evidence = { grievanceEvidenceId?: string; evidenceId?: string; fileId: string; uploadedByUserId: string; createdAt: string };
+export type GovernanceAction = {
+  actionId: string; actionType: string; actionNotes: string; actionAt: string;
+  performedByUserId: string; noticeFileId: string | null; minutesFileId: string | null; penalty: string | null;
+};
 export type DisciplinaryIncident = {
   incidentId: string; institutionId: string; studentId: string; studentName: string;
   incidentDate: string; severity: string; description: string; actionTaken: string | null;
@@ -24,6 +28,8 @@ export const governanceApi = {
     api.get<GrievanceCase[]>(`${grievanceRoot(tenantId)}/cases`, { params: { institutionId } }).then(r => r.data),
   grievance: (tenantId: string, caseId: string) =>
     api.get<GrievanceCase>(`${grievanceRoot(tenantId)}/cases/${caseId}`).then(r => r.data),
+  grievanceActions: (tenantId: string, caseId: string) =>
+    api.get<GovernanceAction[]>(`${grievanceRoot(tenantId)}/cases/${caseId}/actions`).then(r => r.data),
   assignGrievance: (tenantId: string, caseId: string, body: object) =>
     api.post<GrievanceCase>(`${grievanceRoot(tenantId)}/cases/${caseId}/assign`, body).then(r => r.data),
   scheduleHearing: (tenantId: string, caseId: string, body: object) =>
@@ -46,6 +52,8 @@ export const governanceApi = {
     api.get<DisciplinaryIncident[]>(disciplinaryRoot(tenantId), { params: { institutionId } }).then(r => r.data),
   incident: (tenantId: string, incidentId: string) =>
     api.get<DisciplinaryIncident>(`${disciplinaryRoot(tenantId)}/${incidentId}`).then(r => r.data),
+  incidentActions: (tenantId: string, incidentId: string) =>
+    api.get<GovernanceAction[]>(`${disciplinaryRoot(tenantId)}/${incidentId}/actions`).then(r => r.data),
   updateIncident: (tenantId: string, incidentId: string, body: object) =>
     api.patch<DisciplinaryIncident>(`${disciplinaryRoot(tenantId)}/${incidentId}`, body).then(r => r.data),
   uploadIncidentEvidence: (tenantId: string, incidentId: string, file: File) => {
