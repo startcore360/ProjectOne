@@ -98,7 +98,7 @@ public class NoDuesVerificationService {
         }
 
         if (!exists("app.department_equipment_clearance")
-                || !exists("app.fn_no_dues_department_clearance")) {
+                || !functionExists("app.fn_no_dues_department_clearance(uuid,uuid,uuid)")) {
             items.add(new DuesItem("DEPARTMENT", "INTEGRATION_UNAVAILABLE",
                     "Departmental equipment clearance is not configured; clearance cannot be confirmed.",
                     0, BigDecimal.ZERO, true));
@@ -118,6 +118,11 @@ public class NoDuesVerificationService {
         boolean clear = items.stream().noneMatch(DuesItem::blocking);
         return new ClearanceResult(studentId, institutionId, clear,
                 clear ? "CLEAR" : "NO_DUES_PENDING", items);
+    }
+
+    private boolean functionExists(String signature) {
+        Boolean result = jdbc.queryForObject("SELECT to_regprocedure(?) IS NOT NULL", Boolean.class, signature);
+        return Boolean.TRUE.equals(result);
     }
 
     private boolean exists(String qualifiedName) {
