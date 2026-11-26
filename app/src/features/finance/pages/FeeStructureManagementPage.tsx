@@ -33,12 +33,12 @@ export default function FeeStructureManagementPage() {
   const busyRef = useRef(false);
   const [notice, setNotice] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (institutionFilter?: string) => {
     if (!tenantId) return;
     setLoading(true);
     try {
       const response = await api.get<FeeStructure[]>(`/tenants/${tenantId}/fee-structures`, {
-        params: institutionId ? { institutionId } : undefined,
+        params: institutionFilter?.trim() ? { institutionId: institutionFilter.trim() } : undefined,
       });
       setStructures(response.data);
       setError("");
@@ -47,7 +47,7 @@ export default function FeeStructureManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, institutionId]);
+  }, [tenantId]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -61,6 +61,7 @@ export default function FeeStructureManagementPage() {
     try {
       const lines = JSON.parse(linesJson) as Array<{ feeHeadId: string; amount: number }>;
       const installments = JSON.parse(installmentsJson) as Array<{ installmentNo: number; dueDate: string; amount: number }>;
+      const validMoney = (value: number) => Number.isFinite(value) && /^\\d+(?:\\.\\d{1,2})?$/.test(String(value));
       if (!institutionId.trim() || !academicSessionId.trim() || !feePolicyId.trim()) {
         throw new Error("Institution, academic session and fee policy are required.");
       }
@@ -68,8 +69,7 @@ export default function FeeStructureManagementPage() {
         throw new Error("Provide exactly one of Program year ID or Class ID.");
       }
       if (!Array.isArray(lines) || lines.length === 0 || lines.some((line) =>
-        !line.feeHeadId?.trim() || !Number.isFinite(Number(line.amount)) || Number(line.amount) < 0
-        || !Number.isInteger(Number(line.amount) * 100))) {
+        !line.feeHeadId?.trim() || !validMoney(Number(line.amount)) || Number(line.amount) < 0)) {
         throw new Error("Fee lines must contain a fee-head ID and a non-negative amount with at most two decimal places.");
       }
       if (!Array.isArray(installments) || installments.length === 0) {
@@ -82,7 +82,7 @@ export default function FeeStructureManagementPage() {
         if (!Number.isInteger(installment.installmentNo) || installment.installmentNo <= previousNo
           || !/^\\d{4}-\\d{2}-\\d{2}$/.test(installment.dueDate)
           || !Number.isFinite(Date.parse(installment.dueDate)) || (previousDate && installment.dueDate <= previousDate)
-          || !Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount * 100)) {
+          || !validMoney(amount) || amount <= 0) {
           throw new Error("Installments must have increasing numbers and dates, and positive amounts with at most two decimal places.");
         }
         previousNo = installment.installmentNo;
@@ -99,10 +99,10 @@ export default function FeeStructureManagementPage() {
         lines, installments,
       });
       setNotice("Draft fee structure created.");
-      await load();
+      await load(institutionId);
     } catch (err) {
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message || "Could not create the fee structure. Check the JSON and required identifiers.");
+      const responseMessage = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      setError(responseMessage || (err instanceof Error ? err.message : "") || "Could not create the fee structure. Check the JSON and required identifiers.");
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -160,7 +160,7 @@ export default function FeeStructureManagementPage() {
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 md:px-6">
           <h2 className="font-semibold text-slate-900">Existing fee structures</h2>
-          <button disabled={loading} onClick={() => void load()} className="text-sm font-medium text-indigo-700 hover:underline disabled:opacity-50">{loading ? "Refreshing…" : "Refresh"}</button>
+          <button disabled={loading} onClick={() => void load(institutionId)} className="text-sm font-medium text-indigo-700 hover:underline disabled:opacity-50">{loading ? "Refreshing…" : "Refresh"}</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
