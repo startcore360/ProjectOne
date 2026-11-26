@@ -124,7 +124,7 @@ public class OnlinePaymentCheckoutService {
         if (existing != null) {
             return replay(tenantId, request, installmentIds, institutionId, total, existing);
         }
-        expireStalePendingPayments(tenantId, installmentIds, actor.userAccountId());
+        rejectPendingPayments(tenantId, installmentIds);
 
         PaymentGatewayCredentialsResolver.PaymentGatewayCredentials credentials =
                 credentialsResolver.resolve(tenantId, institutionId);
@@ -219,12 +219,12 @@ public class OnlinePaymentCheckoutService {
     }
 
     /**
-     * A different idempotency key must not create a second live checkout for an installment.
+     * A different idempotency key must not create a second checkout for an installment.
      * The caller already holds FOR UPDATE locks on the selected installment rows, serializing
-     * competing checkout attempts for overlapping selections.
+     * competing checkout attempts for overlapping selections. Local expiry alone is not proof
+     * that a provider order can no longer be captured; only a trusted provider event releases it.
      */
-    private void expireStalePendingPayments(UUID tenantId, List<UUID> installmentIds, UUID actorId) {
-        Instant now = Instant.now();
+    private void rejectPendingPayments(UUID tenantId, List<UUID> installmentIds) {
         List<PendingPayment> pending = jdbc.query("""
             SELECT p.payment_id, p.expires_at
               FROM app.payment p
@@ -243,32 +243,10 @@ public class OnlinePaymentCheckoutService {
                     return new PendingPayment(rs.getObject("payment_id", UUID.class),
                             expiresAt == null ? null : expiresAt.toInstant());
                 });
-        if (pending.isEmpty()) return;
-
-        List<UUID> activePaymentIds = pending.stream()
-                .filter(payment -> payment.expiresAt() == null || payment.expiresAt().isAfter(now))
-                .map(PendingPayment::paymentId).toList();
-        if (!activePaymentIds.isEmpty()) {
+        if (!pending.isEmpty()) {
             throw new BusinessRuleViolationException("PAYMENT_ALREADY_PENDING",
-                    "One or more selected installments already have a pending checkout. Retry that checkout or wait for it to expire.");
+                    "One or more selected installments already have a pending checkout. Wait for the provider's final notification before starting another payment.");
         }
-
-        List<UUID> expiredPaymentIds = pending.stream().map(PendingPayment::paymentId).toList();
-        jdbc.update("""
-            UPDATE app.payment
-               SET status='EXPIRED', updated_at=:now, updated_by=:actorId
-             WHERE tenant_id=:tenantId AND payment_id IN (:paymentIds)
-               AND status='PENDING' AND expires_at <= :now
-            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
-                    .addValue("paymentIds", expiredPaymentIds).addValue("now", now).addValue("actorId", actorId));
-        jdbc.update("""
-            UPDATE app.gateway_order
-               SET status='EXPIRED', updated_at=:now, updated_by=:actorId
-             WHERE tenant_id=:tenantId AND payment_id IN (:paymentIds) AND status='CREATED'
-            """, new MapSqlParameterSource().addValue("tenantId", tenantId)
-                    .addValue("paymentIds", expiredPaymentIds).addValue("now", now).addValue("actorId", actorId));
-        audit.record(AuditEventType.EDIT, null, actorId.toString(), tenantId.toString(),
-                "Expired " + expiredPaymentIds.size() + " stale pending online payment attempt(s) before a new checkout.");
     }
 
     private Map<String, Object> replay(UUID tenantId, CheckoutRequest request, List<UUID> installmentIds,
