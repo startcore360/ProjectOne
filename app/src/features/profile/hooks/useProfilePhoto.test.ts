@@ -67,6 +67,7 @@ describe("useProfilePhoto", () => {
     rerender({ rev: 1 });
 
     await waitFor(() => {
+      expect(result.current).toBeTruthy();
       expect(result.current).not.toBe(initialUrl);
     });
 
