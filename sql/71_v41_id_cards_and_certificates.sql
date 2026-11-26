@@ -95,7 +95,6 @@ BEGIN
  ALTER TABLE app.certificate_issuance ENABLE ROW LEVEL SECURITY;
  ALTER TABLE app.certificate_issuance FORCE ROW LEVEL SECURITY;
  CREATE POLICY p_tenant ON app.certificate_issuance USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
- CREATE POLICY p_institution ON app.certificate_issuance AS RESTRICTIVE USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[])) WITH CHECK(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]));
  CREATE POLICY p_institution ON app.certificate_issuance AS RESTRICTIVE
   USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL'
     OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]))
