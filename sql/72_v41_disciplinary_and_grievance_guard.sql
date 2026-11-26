@@ -46,8 +46,61 @@ VALUES
  ('GRIEVANCE_HEARING_MANAGE',295,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
  ('GRIEVANCE_CASE_RESOLVE',296,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
  ('GRIEVANCE_EVIDENCE_VIEW',297,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
- ('GRIEVANCE_EVIDENCE_UPLOAD',298,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9')
+ ('GRIEVANCE_EVIDENCE_UPLOAD',298,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9'),
+ ('ID_CARD_REPLACEMENT_REQUEST',299,'Identity cards',1,'Request replacement of own lost or damaged identity card',false,'Personal – Create (own identity card replacement)','4.1-T9')
+-- T9 / M16. PO-T05: ICC and Principal only; accused and immediate HOD always denied.
+-- The zero-argument fn_complaint_guard() trigger from 02_rules.sql is intentionally preserved.
+BEGIN;
+
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_purpose;
+ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK (purpose IN (
+ 'MESSAGE_ATTACHMENT','ASSIGNMENT_SUBMISSION','STUDY_MATERIAL','STAFF_DOCUMENT','POLICY','DEPARTMENT_DOCUMENT',
+ 'ACCREDITATION','COMPLIANCE','LEAVE_DOCUMENT','HALL_TICKET','COMMUNITY_MEDIA','IMPORT_SOURCE','EXPORT',
+ 'PROFILE_PHOTO','BRANDING','ATTENDANCE_UPLOAD','ATTENDANCE_MEDICAL_EXEMPTION','MARKS_SOURCE','SYLLABUS',
+ 'CERTIFICATE','CONSENT_FORM','SERVICE_RECORD','GRIEVANCE_EVIDENCE','DISCIPLINARY_EVIDENCE'
+));
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_grievance_evidence_type;
+ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_grievance_evidence_type
+ CHECK (purpose<>'GRIEVANCE_EVIDENCE' OR content_type IN ('application/pdf','image/jpeg','image/png'));
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_disciplinary_evidence_type;
+ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_disciplinary_evidence_type
+ CHECK (purpose<>'DISCIPLINARY_EVIDENCE' OR content_type IN ('application/pdf','image/jpeg','image/png'));
+
+UPDATE app.role_definition SET is_sensitive_role=true,updated_at=now(),row_version=row_version+1
+WHERE role_origin='STANDARD' AND role_code IN
+ ('INTERNAL_COMPLAINTS_COMMITTEE','PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL')
+ AND is_sensitive_role=false;
+
+
+-- T9 action catalogue extension. Action numbers continue after the authoritative seeded
+-- sql/05_ref_data.sql catalogue (highest seeded action_no: 283). Generic COMPLAINT_* actions
+-- and their grants are intentionally untouched.
+INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_version,requires_two_step_login,is_staff)
+VALUES ('INTERNAL_COMPLAINTS_COMMITTEE','Internal Complaints Committee','COLLEGE','4.1-T9',true,true)
+ON CONFLICT (role_code) DO NOTHING;
+
+INSERT INTO ref.action_catalog
+ (action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in)
+VALUES
+ ('ID_CARD_ISSUE',284,'Identity cards',1,'Issue a student or staff identity card',false,'Personal – Create / edit','4.1-T9'),
+ ('ID_CARD_REPLACE',285,'Identity cards',1,'Review and process a lost or damaged identity card replacement',false,'Personal – Correct','4.1-T9'),
+ ('ID_CARD_TEMPLATE_MANAGE',286,'Identity cards',1,'Create and maintain institution identity card templates',false,'Personal – Create / edit','4.1-T9'),
+ ('ID_CARD_REVOKE',287,'Identity cards',1,'Revoke an identity card issuance',true,'Personal – Correct','4.1-T9'),
+ ('CERTIFICATE_TEMPLATE_MANAGE',288,'Certificates',1,'Create and maintain official certificate templates',false,'Personal – Create / edit','4.1-T9'),
+ ('CERTIFICATE_REVOKE',289,'Certificates',1,'Revoke an issued official certificate',true,'Personal – Correct','4.1-T9'),
+ ('DISCIPLINARY_INCIDENT_VIEW',290,'Disciplinary',1,'View institution disciplinary incident records',false,'Personal – View','4.1-T9'),
+ ('DISCIPLINARY_INCIDENT_MANAGE',291,'Disciplinary',1,'Record and update institution disciplinary incidents',false,'Personal – Create / edit','4.1-T9'),
+ ('GRIEVANCE_CASE_SUBMIT',292,'Confidential grievances',1,'Submit a named or anonymous grievance without access to case records',false,'Personal – Create (confidential submission)','4.1-T9'),
+ ('GRIEVANCE_CASE_VIEW',293,'Confidential grievances',1,'View confidential ICC grievance cases under PO-T05',false,'Personal – View (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_CASE_ASSIGN',294,'Confidential grievances',1,'Assign a confidential grievance case to an investigator',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_HEARING_MANAGE',295,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_CASE_RESOLVE',296,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_EVIDENCE_VIEW',297,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
+ ('GRIEVANCE_EVIDENCE_UPLOAD',298,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9'),
+ ('ID_CARD_REPLACEMENT_REQUEST',299,'Identity cards',1,'Request replacement of own lost or damaged identity card',false,'Personal – Create (own identity card replacement)','4.1-T9')
 ON CONFLICT (action_code) DO NOTHING;
+UPDATE ref.action_catalog SET is_approval_action=true WHERE action_code='ID_CARD_REPLACE';
+
 
 -- Only the ICC and the two Principal roles receive confidential case access or case-management
 -- actions. Ordinary grievance submission is a separate action available to tenant-side roles.
@@ -103,6 +156,11 @@ WITH pairs(role_code,action_code,limited_to) AS (
  ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
  ('PRINCIPAL_COLLEGE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
  ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05')
+ ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
+ ('PRINCIPAL_COLLEGE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
+ ('STUDENT_COLLEGE','ID_CARD_REPLACEMENT_REQUEST','Own identity card'),
+ ('STUDENT_SCHOOL','ID_CARD_REPLACEMENT_REQUEST','Own identity card')
 ), submitters AS (
  SELECT role_code,'GRIEVANCE_CASE_SUBMIT'::text AS action_code,
         'Submit own named or anonymous grievance only; no case-list or case-detail access'::text AS limited_to
@@ -135,7 +193,7 @@ FROM app.role_definition rd
 JOIN ref.standard_role_action sra ON sra.role_code=rd.base_standard_role
 WHERE rd.role_origin='STANDARD'
  AND sra.action_code IN (
-  'ID_CARD_ISSUE','ID_CARD_REPLACE','ID_CARD_TEMPLATE_MANAGE','ID_CARD_REVOKE',
+  'ID_CARD_ISSUE','ID_CARD_REPLACE','ID_CARD_TEMPLATE_MANAGE','ID_CARD_REVOKE','ID_CARD_REPLACEMENT_REQUEST',
   'CERTIFICATE_TEMPLATE_MANAGE','CERTIFICATE_REVOKE',
   'DISCIPLINARY_INCIDENT_VIEW','DISCIPLINARY_INCIDENT_MANAGE',
   'GRIEVANCE_CASE_SUBMIT','GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN',
