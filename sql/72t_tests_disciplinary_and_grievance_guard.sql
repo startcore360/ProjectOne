@@ -70,7 +70,7 @@ BEGIN
   OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='UNIVERSITY_ADMIN' AND action_code='COMPLAINT_ESCALATED_VIEW') THEN
   RAISE EXCEPTION 'T9_DB_72 ordinary COMPLAINT_* role grants changed or missing';
  END IF;
- FOREACH t IN ARRAY ARRAY['disciplinary_incident','disciplinary_evidence','disciplinary_action','grievance_case','grievance_evidence','grievance_action'] LOOP
+ FOREACH t IN ARRAY ARRAY['disciplinary_incident','disciplinary_evidence','disciplinary_action','grievance_case','grievance_evidence','grievance_action','grievance_hearing'] LOOP
   IF to_regclass('app.'||t) IS NULL THEN RAISE EXCEPTION 'T9_DB_72 missing app.%',t; END IF;
   IF NOT (SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid=to_regclass('app.'||t)) THEN RAISE EXCEPTION 'T9_DB_72 RLS not forced: %',t; END IF;
  END LOOP;
@@ -89,6 +89,14 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='app.grievance_action'::regclass AND tgname='trg_append_only' AND NOT tgisinternal) THEN RAISE EXCEPTION 'T9_DB_72 grievance action ledger is not append-only'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_evidence' AND policyname='p_grievance_confidentiality' AND permissive='RESTRICTIVE' AND cmd='SELECT') THEN RAISE EXCEPTION 'T9_DB_72 evidence confidentiality policy missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_action' AND policyname='p_grievance_confidentiality' AND permissive='RESTRICTIVE' AND cmd='SELECT') THEN RAISE EXCEPTION 'T9_DB_72 action confidentiality policy missing'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_hearing'
+   AND policyname='p_grievance_hearing_select' AND permissive='RESTRICTIVE' AND cmd='SELECT') THEN
+  RAISE EXCEPTION 'T9_DB_72 grievance hearing confidentiality policy missing';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_hearing'
+   AND policyname='p_grievance_hearing_update' AND permissive='RESTRICTIVE' AND cmd='UPDATE') THEN
+  RAISE EXCEPTION 'T9_DB_72 grievance hearing update confidentiality policy missing';
+ END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_case' AND policyname='p_grievance_confidentiality_update' AND permissive='RESTRICTIVE' AND cmd='UPDATE') THEN RAISE EXCEPTION 'T9_DB_72 grievance update confidentiality policy missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_evidence' AND policyname='p_grievance_evidence_insert' AND permissive='RESTRICTIVE' AND cmd='INSERT') THEN RAISE EXCEPTION 'T9_DB_72 evidence insert confidentiality policy missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='grievance_action' AND policyname='p_grievance_action_insert' AND permissive='RESTRICTIVE' AND cmd='INSERT') THEN RAISE EXCEPTION 'T9_DB_72 action insert confidentiality policy missing'; END IF;
