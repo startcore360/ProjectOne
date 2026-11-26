@@ -196,18 +196,41 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                     || canViewMedicalExemption(file, principal);
             case ADMISSION_DOCUMENT -> exists(ADMISSION_DOCUMENT, tenantId, fileId, userId)
                     || canVerifyAdmissionDocument(file, principal);
+            case GRIEVANCE_EVIDENCE -> exists("""
+                    SELECT EXISTS (
+                      SELECT 1
+                      FROM app.grievance_evidence ge
+                      JOIN app.grievance_case gc
+                        ON gc.tenant_id=ge.tenant_id
+                       AND gc.grievance_case_id=ge.grievance_case_id
+                      WHERE ge.tenant_id=? AND ge.file_id=?
+                        AND gc.institution_id=?
+                        AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)
+                    )
+                    """, tenantId, fileId, file.getInstitutionId());
         };
     }
 
     @Override
     public boolean canAttach(FileObject file, TenantPrincipal principal, String recordType, UUID recordId) {
-        if (!"STAFF_DOCUMENT".equals(recordType) || recordId == null
-                || !"STAFF_DOCUMENT".equals(file.getPurpose())
-                || !"ACTIVE".equals(file.getStatus())
+        if (recordId == null || !"ACTIVE".equals(file.getStatus())
                 || !java.util.Set.of("PENDING", "CLEAN").contains(file.getScanStatus())
                 || !principal.userAccountId().equals(file.getUploadedBy())) {
             return false;
         }
+        if ("GRIEVANCE_CASE".equals(recordType)
+                && "GRIEVANCE_EVIDENCE".equals(file.getPurpose())
+                && file.getInstitutionId() != null) {
+            return exists("""
+                    SELECT EXISTS (
+                      SELECT 1 FROM app.grievance_case gc
+                      WHERE gc.tenant_id=? AND gc.grievance_case_id=?
+                        AND gc.institution_id=?
+                        AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)
+                    )
+                    """, principal.tenantId(), recordId, file.getInstitutionId());
+        }
+        if (!"STAFF_DOCUMENT".equals(recordType) || !"STAFF_DOCUMENT".equals(file.getPurpose())) return false;
         return exists("""
                 SELECT EXISTS (
                   SELECT 1 FROM app.staff_profile p
