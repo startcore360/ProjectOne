@@ -12,21 +12,21 @@ ON CONFLICT (role_code) DO NOTHING;
 INSERT INTO ref.action_catalog
  (action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in)
 VALUES
- ('ID_CARD_ISSUE',283,'Identity cards',1,'Issue a student or staff identity card',false,'Personal – Create / edit','4.1-T9'),
- ('ID_CARD_REPLACE',284,'Identity cards',1,'Review and process a lost or damaged identity card replacement',false,'Personal – Correct','4.1-T9'),
- ('ID_CARD_TEMPLATE_MANAGE',285,'Identity cards',1,'Create and maintain institution identity card templates',false,'Personal – Create / edit','4.1-T9'),
- ('ID_CARD_REVOKE',286,'Identity cards',1,'Revoke an identity card issuance',true,'Personal – Correct','4.1-T9'),
- ('CERTIFICATE_TEMPLATE_MANAGE',287,'Certificates',1,'Create and maintain official certificate templates',false,'Personal – Create / edit','4.1-T9'),
- ('CERTIFICATE_REVOKE',288,'Certificates',1,'Revoke an issued official certificate',true,'Personal – Correct','4.1-T9'),
- ('DISCIPLINARY_INCIDENT_VIEW',289,'Disciplinary',1,'View institution disciplinary incident records',false,'Personal – View','4.1-T9'),
- ('DISCIPLINARY_INCIDENT_MANAGE',290,'Disciplinary',1,'Record and update institution disciplinary incidents',false,'Personal – Create / edit','4.1-T9'),
- ('GRIEVANCE_CASE_SUBMIT',291,'Confidential grievances',1,'Submit a named or anonymous grievance without access to case records',false,'Personal – Create (confidential submission)','4.1-T9'),
- ('GRIEVANCE_CASE_VIEW',292,'Confidential grievances',1,'View confidential ICC grievance cases under PO-T05',false,'Personal – View (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_CASE_ASSIGN',293,'Confidential grievances',1,'Assign a confidential grievance case to an investigator',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_HEARING_MANAGE',294,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_CASE_RESOLVE',295,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_EVIDENCE_VIEW',296,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
- ('GRIEVANCE_EVIDENCE_UPLOAD',297,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9')
+ ('ID_CARD_ISSUE',284,'Identity cards',1,'Issue a student or staff identity card',false,'Personal – Create / edit','4.1-T9'),
+ ('ID_CARD_REPLACE',285,'Identity cards',1,'Review and process a lost or damaged identity card replacement',false,'Personal – Correct','4.1-T9'),
+ ('ID_CARD_TEMPLATE_MANAGE',286,'Identity cards',1,'Create and maintain institution identity card templates',false,'Personal – Create / edit','4.1-T9'),
+ ('ID_CARD_REVOKE',287,'Identity cards',1,'Revoke an identity card issuance',true,'Personal – Correct','4.1-T9'),
+ ('CERTIFICATE_TEMPLATE_MANAGE',288,'Certificates',1,'Create and maintain official certificate templates',false,'Personal – Create / edit','4.1-T9'),
+ ('CERTIFICATE_REVOKE',289,'Certificates',1,'Revoke an issued official certificate',true,'Personal – Correct','4.1-T9'),
+ ('DISCIPLINARY_INCIDENT_VIEW',290,'Disciplinary',1,'View institution disciplinary incident records',false,'Personal – View','4.1-T9'),
+ ('DISCIPLINARY_INCIDENT_MANAGE',291,'Disciplinary',1,'Record and update institution disciplinary incidents',false,'Personal – Create / edit','4.1-T9'),
+ ('GRIEVANCE_CASE_SUBMIT',292,'Confidential grievances',1,'Submit a named or anonymous grievance without access to case records',false,'Personal – Create (confidential submission)','4.1-T9'),
+ ('GRIEVANCE_CASE_VIEW',293,'Confidential grievances',1,'View confidential ICC grievance cases under PO-T05',false,'Personal – View (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_CASE_ASSIGN',294,'Confidential grievances',1,'Assign a confidential grievance case to an investigator',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_HEARING_MANAGE',295,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_CASE_RESOLVE',296,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+ ('GRIEVANCE_EVIDENCE_VIEW',297,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
+ ('GRIEVANCE_EVIDENCE_UPLOAD',298,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9')
 ON CONFLICT (action_code) DO NOTHING;
 
 -- Only the ICC and the two Principal roles receive confidential case access or case-management
@@ -119,7 +119,7 @@ WHERE rd.role_origin='STANDARD'
   'CERTIFICATE_TEMPLATE_MANAGE','CERTIFICATE_REVOKE',
   'DISCIPLINARY_INCIDENT_VIEW','DISCIPLINARY_INCIDENT_MANAGE',
   'GRIEVANCE_CASE_SUBMIT','GRIEVANCE_CASE_VIEW','GRIEVANCE_CASE_ASSIGN',
-  'GRIEVANCE_HEARING_MANAGE','GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW'
+  'GRIEVANCE_HEARING_MANAGE','GRIEVANCE_CASE_RESOLVE','GRIEVANCE_EVIDENCE_VIEW','GRIEVANCE_EVIDENCE_UPLOAD'
  )
  AND NOT EXISTS (
   SELECT 1 FROM app.role_action existing
