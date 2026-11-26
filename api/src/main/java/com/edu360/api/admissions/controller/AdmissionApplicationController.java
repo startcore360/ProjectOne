@@ -38,7 +38,7 @@ public class AdmissionApplicationController {
         if("PHOTO".equalsIgnoreCase(documentType)&&!"image/jpeg".equalsIgnoreCase(mime)&&!"image/png".equalsIgnoreCase(mime))
             throw new com.edu360.api.exception.BusinessRuleViolationException("ADMISSION_PHOTO_TYPE_INVALID","Applicant photos must be JPG or PNG.");
         UUID institutionId=service.institutionForApplicant(actor,applicationId);
-        FileUploadResponse uploaded=files.upload(actor,file,"ADMISSION_DOCUMENT",institutionId);
+        FileUploadResponse uploaded=files.upload(actor,file,"ADMISSION_DOCUMENT",institutionId,null,null);
         service.attachDocument(actor,applicationId,uploaded.fileId(),documentType);
         return uploaded;
     }
