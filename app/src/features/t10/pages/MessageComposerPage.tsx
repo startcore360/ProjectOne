@@ -16,12 +16,15 @@ export default function MessageComposerPage() {
   const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? []);
   const [history, setHistory] = useState<Array<{ id: string; channel: string; status: string; failure_reason: string | null; sent_at: string | null; delivered_at: string | null; created_at: string }>>([]);
   const [historyError, setHistoryError] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const loadHistory = useCallback(async () => {
-    if (!tenant || !institution || !actions.includes("DELIVERY_FAILURES_VIEW")) return;
+    if (!tenant || !institution || !actions.includes("DELIVERY_FAILURES_VIEW")) { setHistoryLoading(false); return; }
+    setHistoryLoading(true);
     try { setHistory(await t10Api.dispatchHistory(tenant, institution)); setHistoryError(""); }
     catch { setHistoryError("Dispatch history could not be loaded."); }
+    finally { setHistoryLoading(false); }
   }, [tenant, institution, actions]);
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
@@ -72,8 +75,9 @@ export default function MessageComposerPage() {
     </section>
     {actions.includes("DELIVERY_FAILURES_VIEW") && <section className="app-panel">
       <h2>Dispatch history</h2>
+      {historyLoading && <p role="status">Loading dispatch history…</p>}
       {historyError && <p role="alert">{historyError}</p>}
-      {history.length === 0 && !historyError && <p>No dispatch attempts recorded for this institution.</p>}
+      {history.length === 0 && !historyError && !historyLoading && <p>No dispatch attempts recorded for this institution.</p>}
       {history.length > 0 && <div className="app-table-wrap"><table>
         <thead><tr><th>Channel</th><th>Status</th><th>Created</th><th>Sent</th><th>Delivered</th><th>Failure</th></tr></thead>
         <tbody>{history.map((item) => <tr key={item.id}>
