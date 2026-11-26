@@ -44,6 +44,6 @@ class IdCardRendererTest {
 
         byte[] pdf = renderer.toPdf(List.of(card), List.of("signed-token"));
 
-        assertThat(pdf).startsWith("%PDF".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        assertThat(new String(pdf, java.nio.charset.StandardCharsets.US_ASCII)).startsWith("%PDF");
     }
 }
