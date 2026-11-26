@@ -170,7 +170,7 @@ public class IdCardService {
 
     @Transactional
     public Replacement requestReplacement(TenantPrincipal principal, UUID issuanceId,
-            String reason, UUID feeReceiptFileId) {
+            String reason, UUID feeReceiptId) {
         Card original = card(principal.tenantId(), issuanceId);
         RbacTarget target = RbacTarget.of(original.userId());
         boolean ownRequest = principal.userAccountId().equals(original.userId());
@@ -179,14 +179,19 @@ public class IdCardService {
         if (reason == null || reason.isBlank() || reason.length() > 1000) {
             throw new BusinessRuleViolationException("REPLACEMENT_REASON_REQUIRED", "A replacement reason is required.");
         }
+        if (feeReceiptId == null) {
+            throw new BusinessRuleViolationException("REPLACEMENT_FEE_RECEIPT_REQUIRED",
+                    "A valid, issued fee receipt is required for an identity-card replacement.");
+        }
+        verifyReplacementFeeReceipt(principal.tenantId(), original.institutionId(), issuanceId, feeReceiptId);
         UUID id = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO app.id_card_replacement
                   (tenant_id,id_card_replacement_id,institution_id,original_issuance_id,reason,
-                   fee_receipt_file_id,status,created_by,updated_by)
+                   fee_receipt_id,status,created_by,updated_by)
                 VALUES (?,?,?,?,?,?,'REQUESTED',?,?)
                 """, principal.tenantId(), id, original.institutionId(), issuanceId, reason.trim(),
-                feeReceiptFileId, principal.userAccountId(), principal.userAccountId());
+                feeReceiptId, principal.userAccountId(), principal.userAccountId());
         audit.record(new AuditEntry(AuditEventType.CREATE,
                 ownRequest ? "ID_CARD_REPLACEMENT_REQUEST" : "ID_CARD_REPLACE",
                 "ID_CARD_REPLACEMENT", id, original.institutionId(), null,
@@ -212,7 +217,7 @@ public class IdCardService {
             boolean approve, String decisionNote) {
         Map<String, Object> row = jdbc.query("""
                 SELECT r.original_issuance_id,r.reason,r.status,i.institution_id,i.user_id,
-                       i.student_profile_id,i.staff_profile_id,i.template_id,i.expiry_date
+                       i.student_profile_id,i.staff_profile_id,i.template_id,i.expiry_date,r.fee_receipt_id
                   FROM app.id_card_replacement r
                   JOIN app.id_card_issuance i ON i.tenant_id=r.tenant_id
                    AND i.id_card_issuance_id=r.original_issuance_id
@@ -223,7 +228,8 @@ public class IdCardService {
                 "userId", rs.getObject(5, UUID.class), "studentId", rs.getObject(6, UUID.class) == null ? "" : rs.getObject(6, UUID.class).toString(),
                 "staffId", rs.getObject(7, UUID.class) == null ? "" : rs.getObject(7, UUID.class).toString(),
                 "templateId", rs.getObject(8, UUID.class),
-                "expiryDate", rs.getObject(9, LocalDate.class) == null ? "" : rs.getObject(9, LocalDate.class).toString()) : null,
+                "expiryDate", rs.getObject(9, LocalDate.class) == null ? "" : rs.getObject(9, LocalDate.class).toString(),
+                "feeReceiptId", rs.getObject(10, UUID.class).toString()) : null,
                 principal.tenantId(), replacementId);
         if (row == null) throw new ResourceNotFoundException("Replacement request not found.");
         if (!"REQUESTED".equals(row.get("status"))) throw new BusinessRuleViolationException("REPLACEMENT_ALREADY_DECIDED", "This replacement request has already been decided.");
@@ -236,6 +242,8 @@ public class IdCardService {
         UUID newIssuanceId = null;
         String status = "REJECTED";
         if (approve) {
+            verifyReplacementFeeReceipt(principal.tenantId(), institutionId,
+                    (UUID) row.get("originalId"), UUID.fromString((String) row.get("feeReceiptId")));
             UUID originalId = (UUID) row.get("originalId");
             Map<String, Object> subject = jdbc.query("""
                     SELECT student_profile_id,staff_profile_id FROM app.id_card_issuance
@@ -317,6 +325,33 @@ public class IdCardService {
                 Map.of("recordCount", cards.size()), cards.size(), "P", "SUCCESS"));
         return renderer.toPdf(cards.stream().map(this::cardData).toList(),
                 cards.stream().map(Card::qrToken).toList());
+    }
+
+    private void verifyReplacementFeeReceipt(UUID tenantId, UUID institutionId,
+            UUID issuanceId, UUID receiptId) {
+        Integer valid = jdbc.query("""
+                SELECT count(*)
+                  FROM app.receipt r
+                  JOIN app.payment p ON p.tenant_id=r.tenant_id AND p.payment_id=r.payment_id
+                  JOIN app.payment_allocation pa ON pa.tenant_id=p.tenant_id AND pa.payment_id=p.payment_id
+                  JOIN app.student_installment si ON si.tenant_id=pa.tenant_id
+                   AND si.student_installment_id=pa.student_installment_id
+                  JOIN app.student_fee_account sfa ON sfa.tenant_id=si.tenant_id
+                   AND sfa.student_fee_account_id=si.student_fee_account_id
+                  JOIN app.student_profile sp ON sp.tenant_id=sfa.tenant_id
+                   AND sp.student_profile_id=sfa.student_profile_id
+                  JOIN app.id_card_issuance card ON card.tenant_id=r.tenant_id
+                   AND card.id_card_issuance_id=?
+                 WHERE r.tenant_id=? AND r.receipt_id=? AND r.institution_id=?
+                   AND r.status='ISSUED' AND p.status='PAID'
+                   AND card.institution_id=r.institution_id
+                   AND (card.student_profile_id IS NULL OR card.student_profile_id=sp.student_profile_id)
+                """, rs -> rs.next() ? rs.getInt(1) : 0,
+                issuanceId, tenantId, receiptId, institutionId);
+        if (valid == null || valid == 0) {
+            throw new BusinessRuleViolationException("REPLACEMENT_FEE_RECEIPT_INVALID",
+                    "The receipt must be issued, non-void, paid and belong to the cardholder's institution and student account.");
+        }
     }
 
     private Card createIssuance(TenantPrincipal principal, UUID institutionId, Profile profile,
