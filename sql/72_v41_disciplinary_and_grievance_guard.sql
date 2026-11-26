@@ -162,15 +162,17 @@ CREATE TABLE app.disciplinary_incident (
 );
 CREATE TABLE app.grievance_case (
  tenant_id uuid NOT NULL,grievance_case_id uuid NOT NULL,institution_id uuid NOT NULL,
- complainant_user_id uuid,accused_user_id uuid,category text NOT NULL,case_number text NOT NULL,
+ complainant_user_id uuid,accused_user_id uuid,assigned_to_user_id uuid,category text NOT NULL,case_number text NOT NULL,
  details text NOT NULL,anonymous_submission boolean NOT NULL DEFAULT false,status text NOT NULL DEFAULT 'SUBMITTED',
+ next_hearing_at timestamptz,resolution_notes text,
  submitted_at timestamptz NOT NULL DEFAULT now(),created_at timestamptz NOT NULL DEFAULT now(),
  created_by uuid NOT NULL,updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid NOT NULL,row_version integer NOT NULL DEFAULT 1,
  PRIMARY KEY(tenant_id,grievance_case_id),
  CHECK(category IN ('HARASSMENT','DISCRIMINATION','ACADEMIC_MISCONDUCT','GENERAL')),
  CHECK(char_length(case_number) BETWEEN 6 AND 60),CHECK(char_length(details) BETWEEN 1 AND 10000),
  CHECK(NOT anonymous_submission OR complainant_user_id IS NULL),
- CHECK(status IN ('SUBMITTED','UNDER_INVESTIGATION','HEARING_SCHEDULED','RESOLVED','DISMISSED')),CHECK(row_version>=1)
+ CHECK(status IN ('SUBMITTED','UNDER_INVESTIGATION','HEARING_SCHEDULED','RESOLVED','DISMISSED')),
+ CHECK(resolution_notes IS NULL OR char_length(resolution_notes)<=5000),CHECK(row_version>=1)
 );
 CREATE UNIQUE INDEX uq_grievance_case_number ON app.grievance_case(tenant_id,case_number);
 CREATE INDEX ix_grievance_case_institution_status ON app.grievance_case(tenant_id,institution_id,status,submitted_at DESC);
