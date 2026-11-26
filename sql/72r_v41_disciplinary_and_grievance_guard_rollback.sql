@@ -6,6 +6,10 @@ DROP POLICY IF EXISTS p_disciplinary_evidence_select ON app.disciplinary_evidenc
 DROP POLICY IF EXISTS p_disciplinary_institution ON app.disciplinary_incident;
 DROP POLICY IF EXISTS p_grievance_action_insert ON app.grievance_action;
 DROP POLICY IF EXISTS p_grievance_evidence_insert ON app.grievance_evidence;
+DROP POLICY IF EXISTS p_grievance_hearing_update ON app.grievance_hearing;
+DROP POLICY IF EXISTS p_grievance_hearing_insert ON app.grievance_hearing;
+DROP POLICY IF EXISTS p_grievance_hearing_select ON app.grievance_hearing;
+DROP POLICY IF EXISTS p_tenant ON app.grievance_hearing;
 DROP POLICY IF EXISTS p_grievance_confidentiality_update ON app.grievance_case;
 DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_action;
 DROP POLICY IF EXISTS p_grievance_confidentiality ON app.grievance_evidence;
@@ -14,6 +18,7 @@ DROP FUNCTION IF EXISTS app.fn_complaint_guard(uuid,uuid,uuid);
 DROP TABLE IF EXISTS app.disciplinary_action;
 DROP TABLE IF EXISTS app.disciplinary_evidence;
 DROP TABLE IF EXISTS app.grievance_action;
+DROP TABLE IF EXISTS app.grievance_hearing;
 DROP TABLE IF EXISTS app.grievance_evidence;
 DROP TABLE IF EXISTS app.grievance_case;
 DROP TABLE IF EXISTS app.disciplinary_incident;
