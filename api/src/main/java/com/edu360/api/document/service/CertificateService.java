@@ -157,7 +157,7 @@ public class CertificateService {
         if (!clearance.clear()) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
             return new Request(requestId, row.institutionId(), row.studentId(), row.templateId(),
-                    row.reason(), "NO_DUES_PENDING", mapper.writeValueAsString(clearance.items()), null);
+                    row.reason(), "NO_DUES_PENDING", serializeDues(clearance), null);
         }
         jdbc.update("""
                 UPDATE app.certificate_request SET status='APPROVED',dues_json='[]'::jsonb,
@@ -288,6 +288,11 @@ public class CertificateService {
                  WHERE tenant_id=? AND student_profile_id=?
                 """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
                 TenantContext.currentTenantId(), studentId);
+    }
+
+    private String serializeDues(NoDuesVerificationService.ClearanceResult clearance) {
+        try { return mapper.writeValueAsString(clearance.items()); }
+        catch (JsonProcessingException ex) { throw new IllegalStateException("Could not serialize No-Dues result.", ex); }
     }
 
     private void updateDues(TenantPrincipal principal, UUID requestId,
