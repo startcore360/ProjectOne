@@ -406,7 +406,7 @@ public class OnlinePaymentCheckoutService {
         }
     }
 
-    private record Installment(UUID installmentId, UUID institutionId, BigDecimal netDue, String status) {}
-    private record PendingPayment(UUID paymentId, Instant expiresAt) {}
+    record Installment(UUID installmentId, UUID institutionId, BigDecimal netDue, String status) {}
+    record PendingPayment(UUID paymentId, Instant expiresAt) {}
     public record CheckoutRequest(UUID studentFeeAccountId, List<UUID> installmentIds, String provider, String requestKey) {}
 }
