@@ -43,6 +43,7 @@ export default function TransportRoutePage() {
 
   const loadStops = useCallback(async (routeId: string) => {
     if (!tenant || !institution || !routeId) { setStops([]); setSelectedStop(""); return; }
+    setStops([]); setSelectedStop("");
     try {
       const result = await t10Api.routeStops(tenant, institution, routeId);
       setStops(result);
