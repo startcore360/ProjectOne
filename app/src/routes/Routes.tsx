@@ -42,6 +42,10 @@ const SessionsPage = lazy(() => import("../features/sessions/pages/SessionsPage"
 const FeeStructureManagementPage = lazy(() => import("../features/finance/pages/FeeStructureManagementPage"));
 const StudentFeeInvoicesPage = lazy(() => import("../features/finance/pages/StudentFeeInvoicesPage"));
 const FeePaymentPortalPage = lazy(() => import("../features/finance/pages/FeePaymentPortalPage"));
+const IdCardManagementPage = lazy(() => import("../features/documents/pages/IdCardManagementPage"));
+const CertificateRequestPage = lazy(() => import("../features/documents/pages/CertificateRequestPage"));
+const GrievanceCaseManagementPage = lazy(() => import("../features/governance/pages/GrievanceCaseManagementPage"));
+const DisciplinaryIncidentManagementPage = lazy(() => import("../features/governance/pages/DisciplinaryIncidentManagementPage"));
 const TenantSupportPage = lazy(() => import("../features/institution-admin/pages/TenantSupportPage"));
 const StaffRecordsPage = lazy(() => import("../features/institution-admin/pages/StaffRecordsPage"));
 const StaffAppraisalPage = lazy(() => import("../features/staff/pages/StaffAppraisalPage"));
@@ -301,6 +305,11 @@ export default function AppRoutes() {
             <Route path="/finance/structures" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.financeConfiguration}><FeeStructureManagementPage /></ActionGate>} />
             <Route path="/finance/invoices" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.feeInvoices}><StudentFeeInvoicesPage /></ActionGate>} />
             <Route path="/finance/payments" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.feePayments}><FeePaymentPortalPage /></ActionGate>} />
+            <Route path="/documents/id-cards" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.identityCards} allowSupportSession={false}><IdCardManagementPage /></ActionGate>} />
+            <Route path="/documents/certificates" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.certificates} allowSupportSession={false}><CertificateRequestPage /></ActionGate>} />
+            <Route path="/governance/grievances/submit" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.grievanceSubmission} allowSupportSession={false}><GrievanceCaseManagementPage mode="submit" /></ActionGate>} />
+            <Route path="/governance/grievances" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.confidentialGrievances} allowSupportSession={false}><GrievanceCaseManagementPage mode="review" /></ActionGate>} />
+            <Route path="/governance/disciplinary" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.disciplinaryIncidents} allowSupportSession={false}><DisciplinaryIncidentManagementPage /></ActionGate>} />
           </Route>
         </Route>
       </Route>
