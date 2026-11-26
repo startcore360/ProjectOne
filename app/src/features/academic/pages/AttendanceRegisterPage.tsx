@@ -3,7 +3,7 @@ import type { FormEvent, KeyboardEvent } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 
-type Student = { enrollment_id:string; student_profile_id:string; student_code:string; full_name:string };
+type Student = { enrollment_id:string; student_profile_id:string; student_code:string; full_name:string; has_medical_exemption?:boolean };
 type Status = "PRESENT"|"ABSENT"|"ON_APPROVED_LEAVE"|"NOT_HELD"|"";
 type SessionKind = "DAILY"|"PERIOD"|"SCHOOL_FIRST_HALF"|"SCHOOL_SECOND_HALF";
 
@@ -19,14 +19,14 @@ export default function AttendanceRegisterPage(){
  const loadRoster=useCallback(async()=>{
   if(!tenantId||!institutionId||!sectionId)return;
   setBusy(true);setFeedback("");
-  try{const res=await api.get<Student[]>("/api/tenants/"+tenantId+"/attendance/sections/"+sectionId+"/roster",{params:{institutionId}});
+  try{const res=await api.get<Student[]>("/api/tenants/"+tenantId+"/academic/attendance/sections/"+sectionId+"/roster",{params:{institutionId,date}});
    setStudents(res.data);setMarks(Object.fromEntries(res.data.map(x=>[x.enrollment_id,""])));
   }catch(e){setFeedback(e instanceof Error?e.message:"Unable to load class roster.");}finally{setBusy(false);}
- },[tenantId,institutionId,sectionId]);
+ },[tenantId,institutionId,sectionId,date]);
  useEffect(()=>{void loadRoster();},[loadRoster]);
  useEffect(()=>{
   if(!tenantId||!institutionId)return;
-  void api.get("/api/tenants/"+tenantId+"/attendance/thresholds",{params:{institutionId,departmentId:departmentId||undefined}})
+  void api.get("/api/tenants/"+tenantId+"/academic/attendance/thresholds",{params:{institutionId,departmentId:departmentId||undefined}})
    .then(r=>setThreshold(String(r.data.minimum_attendance_percentage))).catch(()=>setThreshold(""));
  },[tenantId,institutionId,departmentId]);
 
@@ -41,7 +41,7 @@ export default function AttendanceRegisterPage(){
   event.preventDefault();if(!tenantId)return;setBusy(true);setFeedback("");
   try{
    const entries=students.map(s=>({enrollmentId:s.enrollment_id,status:notHeld?"NOT_HELD":marks[s.enrollment_id]}));
-   const response=await api.post("/api/tenants/"+tenantId+"/attendance/sessions",{
+   const response=await api.post("/api/tenants/"+tenantId+"/academic/attendance/sessions",{
     institutionId,sectionId,subjectGroupId:null,timetableSlotId:sessionKind==="PERIOD"?slotId:null,
     subjectAllocationId:sessionKind==="PERIOD"?subjectAllocationId:null,attendanceDate:date,sessionKind,notHeld,entries,
    });
@@ -50,7 +50,7 @@ export default function AttendanceRegisterPage(){
  }
  async function saveThreshold(event:FormEvent){
   event.preventDefault();if(!tenantId)return;setBusy(true);setFeedback("");
-  try{await api.put("/api/tenants/"+tenantId+"/attendance/thresholds",{institutionId,departmentId:departmentId||null,minimumAttendancePercentage:Number(threshold)});
+  try{await api.put("/api/tenants/"+tenantId+"/academic/attendance/thresholds",{institutionId,departmentId:departmentId||null,minimumAttendancePercentage:Number(threshold)});
    setFeedback("Attendance threshold settings saved.");
   }catch(e){setFeedback(e instanceof Error?e.message:"Unable to save attendance threshold.");}finally{setBusy(false);}
  }
@@ -80,7 +80,7 @@ export default function AttendanceRegisterPage(){
    <label><input type="checkbox" checked={notHeld} onChange={e=>setNotHeld(e.target.checked)}/> Session not held</label>
    <div style={{overflowX:"auto"}}><table><thead><tr><th>Student</th><th>Present</th><th>Absent</th><th>Approved leave</th></tr></thead><tbody>
     {students.map(student=><tr key={student.enrollment_id} tabIndex={0} onKeyDown={e=>keyboard(student.enrollment_id,e)}>
-     <td>{student.full_name} <small>({student.student_code})</small></td>
+     <td>{student.full_name} <small>({student.student_code})</small> {student.has_medical_exemption&&<span title="Approved medical exemption covers this date" aria-label="Approved medical exemption"> · Medical exemption</span>}</td>
      {(["PRESENT","ABSENT","ON_APPROVED_LEAVE"] as Status[]).map(status=><td key={status}>
       <input type="radio" name={student.enrollment_id} checked={notHeld?false:marks[student.enrollment_id]===status} disabled={notHeld}
        onChange={()=>setMark(student.enrollment_id,status)} aria-label={student.full_name+" "+status}/>

@@ -20,7 +20,7 @@ import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping({"/api/tenants/{tenantId}/attendance/medical-exemptions","/v1/tenants/{tenantId}/attendance/medical-exemptions"})
+@RequestMapping({"/api/tenants/{tenantId}/attendance/medical-exemptions","/v1/tenants/{tenantId}/attendance/medical-exemptions","/api/tenants/{tenantId}/academic/attendance/medical-exemptions","/v1/tenants/{tenantId}/academic/attendance/medical-exemptions"})
 @RequiredArgsConstructor
 public class MedicalExemptionController {
     private final MedicalExemptionService service;

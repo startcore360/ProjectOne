@@ -3,10 +3,20 @@ import java.time.Instant;import java.time.LocalDate;import java.util.List;import
 import org.springframework.http.HttpStatus;import org.springframework.http.ResponseEntity;import org.springframework.security.core.Authentication;import org.springframework.web.bind.annotation.*;
 import com.edu360.api.academic.service.TimetableService;import com.edu360.api.config.TenantPrincipal;import com.edu360.api.exception.ResourceNotFoundException;import com.edu360.api.exception.UnauthorizedException;
 import jakarta.validation.Valid;import jakarta.validation.constraints.*;import lombok.RequiredArgsConstructor;
-@RestController @RequestMapping({"/api/tenants/{tenantId}/timetable","/v1/tenants/{tenantId}/timetable"}) @RequiredArgsConstructor
+@RestController @RequestMapping({"/api/tenants/{tenantId}/timetable","/v1/tenants/{tenantId}/timetable","/api/tenants/{tenantId}/academic/timetable","/v1/tenants/{tenantId}/academic/timetable"}) @RequiredArgsConstructor
 public class TimetableController{
  private final TimetableService service;
  @GetMapping public List<Map<String,Object>> list(@PathVariable UUID tenantId,@RequestParam UUID institutionId,@RequestParam(required=false) UUID sectionId,@RequestParam(required=false) UUID subjectGroupId,@RequestParam(required=false) UUID academicSessionId,Authentication auth){return service.list(tenantId,principal(auth,tenantId),institutionId,sectionId,subjectGroupId,academicSessionId);}
+ @GetMapping("/slots") public List<Map<String,Object>> filteredSlots(@PathVariable UUID tenantId,@RequestParam UUID institutionId,
+  @RequestParam(required=false) UUID sectionId,@RequestParam(required=false) UUID subjectGroupId,@RequestParam(required=false) UUID academicSessionId,
+  @RequestParam(required=false) UUID teacherId,@RequestParam(required=false) UUID roomId,@RequestParam(required=false) LocalDate date,
+  @RequestParam(required=false) @Min(1) @Max(7) Integer dayOfWeek,Authentication auth){
+  return service.listFiltered(tenantId,principal(auth,tenantId),institutionId,sectionId,subjectGroupId,academicSessionId,teacherId,roomId,date,dayOfWeek);
+ }
+ @DeleteMapping("/slots/{slotId}") @ResponseStatus(HttpStatus.NO_CONTENT)
+ public void deleteSlot(@PathVariable UUID tenantId,@PathVariable UUID slotId,@RequestParam UUID institutionId,Authentication auth){
+  service.deleteSlot(tenantId,principal(auth,tenantId),institutionId,slotId);
+ }
  @GetMapping("/rooms") public List<Map<String,Object>> rooms(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth){return service.listRooms(tenantId,principal(auth,tenantId),institutionId);}
  @PostMapping("/rooms") public ResponseEntity<Map<String,Object>> createRoom(@PathVariable UUID tenantId,@Valid @RequestBody RoomRequest body,Authentication auth){return ResponseEntity.status(HttpStatus.CREATED).body(service.createRoom(tenantId,principal(auth,tenantId),body.institutionId(),body.roomNumber(),body.building(),body.capacity(),body.roomType()));}
  @PostMapping("/slots/{slotId}/publish") public Map<String,Object> publishSlot(@PathVariable UUID tenantId,@PathVariable UUID slotId,@RequestParam UUID institutionId,Authentication auth){return service.publishSlot(tenantId,principal(auth,tenantId),institutionId,slotId);}

@@ -16,6 +16,8 @@ export default function TimetableGridView(){
  const {canAny}=useTenantAccess();
  const canBuild=canAny(["TIMETABLE_BUILD"]);
  const [institutionId,setInstitutionId]=useState("");const [sessionId,setSessionId]=useState("");const [sectionId,setSectionId]=useState("");
+ const [viewMode,setViewMode]=useState<"SECTION"|"TEACHER"|"ROOM">("SECTION");
+ const [teacherFilter,setTeacherFilter]=useState("");const [roomFilter,setRoomFilter]=useState("");const [dateFilter,setDateFilter]=useState("");const [dayFilter,setDayFilter]=useState("");
  const [subjectAllocationId,setSubjectAllocationId]=useState("");const [periodNo,setPeriodNo]=useState("1");const [slots,setSlots]=useState<Slot[]>([]);
  const [roomId,setRoomId]=useState("");const [day,setDay]=useState("1");const [start,setStart]=useState("09:00");const [end,setEnd]=useState("10:00");
  const [validFrom,setValidFrom]=useState(new Date().toISOString().slice(0,10));const [validTo,setValidTo]=useState("");
@@ -28,9 +30,9 @@ export default function TimetableGridView(){
 
  const load=useCallback(async()=>{
   if(!tenantId||!institutionId)return;
-  try{const res=await api.get<Slot[]>("/api/tenants/"+tenantId+"/timetable",{params:{institutionId,sectionId:sectionId||undefined,academicSessionId:sessionId||undefined}});setSlots(res.data);}
+  try{const res=await api.get<Slot[]>("/api/tenants/"+tenantId+"/academic/timetable/slots",{params:{institutionId,sectionId:viewMode==="SECTION"?(sectionId||undefined):undefined,teacherId:viewMode==="TEACHER"?(teacherFilter||undefined):undefined,roomId:viewMode==="ROOM"?(roomFilter||undefined):undefined,academicSessionId:sessionId||undefined,date:dateFilter||undefined,dayOfWeek:dayFilter||undefined}});setSlots(res.data);}
   catch(e){setFeedback(e instanceof Error?e.message:"Unable to load timetable.");}
- },[tenantId,institutionId,sectionId,sessionId]);
+ },[tenantId,institutionId,sectionId,sessionId,viewMode,teacherFilter,roomFilter,dateFilter,dayFilter]);
  useEffect(()=>{void load();},[load]);
 
  async function createSlot(event:FormEvent){
@@ -103,7 +105,12 @@ export default function TimetableGridView(){
   <div className="form-grid">
    <label>Institution ID<input value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/></label>
    <label>Academic session ID (filter)<input value={sessionId} onChange={e=>setSessionId(e.target.value)}/></label>
-   <label>Section ID<input value={sectionId} onChange={e=>setSectionId(e.target.value)}/></label>
+   <label>View<select value={viewMode} onChange={e=>setViewMode(e.target.value as "SECTION"|"TEACHER"|"ROOM")}><option value="SECTION">Section view</option><option value="TEACHER">Teacher view</option><option value="ROOM">Room view</option></select></label>
+  {viewMode==="SECTION"&&<label>Section ID<input value={sectionId} onChange={e=>setSectionId(e.target.value)}/></label>}
+  {viewMode==="TEACHER"&&<label>Teacher ID<input value={teacherFilter} onChange={e=>setTeacherFilter(e.target.value)}/></label>}
+  {viewMode==="ROOM"&&<label>Room ID<input value={roomFilter} onChange={e=>setRoomFilter(e.target.value)}/></label>}
+  <label>Effective date<input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/></label>
+  <label>Day filter<select value={dayFilter} onChange={e=>setDayFilter(e.target.value)}><option value="">All days</option>{DAYS.map((d,i)=><option key={d} value={i+1}>{d}</option>)}</select></label>
    <button type="button" onClick={()=>void load()}>Refresh timetable</button>
   </div>
   <ClashWarningToast message={toast} onDismiss={()=>setToast("")}/>{feedback&&<p role="status">{feedback}</p>}

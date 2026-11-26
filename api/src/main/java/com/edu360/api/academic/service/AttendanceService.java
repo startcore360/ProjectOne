@@ -24,14 +24,47 @@ import com.edu360.api.rbac.PermissionEvaluatorService;import com.edu360.api.rbac
    """,tenant,UUID.randomUUID(),institution,id,item.enrollmentId(),year,notHeld?"NOT_HELD":item.status(),actor.userAccountId(),actor.userAccountId(),actor.userAccountId());
   return jdbc.queryForMap("SELECT attendance_session_id,institution_id,section_id,subject_group_id,session_kind,attendance_date,academic_year,held_status,submitted_at,row_version FROM app.attendance_session WHERE tenant_id=? AND attendance_session_id=?",tenant,id);
  }
+ @Transactional
+ public int recordEntries(UUID tenant,TenantPrincipal actor,UUID institution,UUID sessionId,List<AttendanceItem> entries){
+  Map<String,Object> session;
+  try{session=jdbc.queryForMap("SELECT section_id,subject_group_id,academic_year,held_status,submitted_at FROM app.attendance_session WHERE tenant_id=? AND institution_id=? AND attendance_session_id=?",tenant,institution,sessionId);}
+  catch(org.springframework.dao.EmptyResultDataAccessException ex){throw new ResourceNotFoundException("Attendance session not found.");}
+  UUID section=(UUID)session.get("section_id"),group=(UUID)session.get("subject_group_id");
+  UUID dept=section!=null?departmentForSection(tenant,institution,section):departmentForGroup(tenant,institution,group);
+  authorize(tenant,actor,"ATTENDANCE_MARK",institution,dept);
+  if(session.get("submitted_at")!=null)throw new com.edu360.api.exception.BusinessRuleViolationException("ATTENDANCE_ALREADY_SUBMITTED","Submitted attendance cannot be changed.");
+  if(entries==null||entries.isEmpty())throw new IllegalArgumentException("At least one attendance entry is required.");
+  if(entries.stream().map(AttendanceItem::enrollmentId).distinct().count()!=entries.size())throw new IllegalArgumentException("An enrollment may appear only once in a bulk attendance request.");
+  String held=String.valueOf(session.get("held_status"));short year=((Number)session.get("academic_year")).shortValue();
+  for(AttendanceItem item:entries){
+   if(item.enrollmentId()==null)throw new IllegalArgumentException("Enrollment ID is required.");
+   if(!List.of("PRESENT","ABSENT","ON_APPROVED_LEAVE","NOT_HELD").contains(item.status()))throw new IllegalArgumentException("Unsupported attendance status.");
+   if("NOT_HELD".equals(held)&&!"NOT_HELD".equals(item.status()))throw new IllegalArgumentException("A session marked not held only accepts NOT_HELD entries.");
+   if("HELD".equals(held)&&"NOT_HELD".equals(item.status()))throw new IllegalArgumentException("NOT_HELD entries require a session marked not held.");
+   jdbc.update("""
+    INSERT INTO app.attendance_entry(tenant_id,attendance_entry_id,institution_id,attendance_session_id,enrollment_id,academic_year,status,recorded_via,recorded_by_user_id,created_by,updated_by)
+    VALUES (?,?,?,?,?,?,?,'MANUAL',?,?,?)
+    ON CONFLICT (tenant_id,institution_id,attendance_session_id,enrollment_id,academic_year)
+    DO UPDATE SET status=EXCLUDED.status,recorded_via='MANUAL',recorded_by_user_id=EXCLUDED.recorded_by_user_id,updated_by=EXCLUDED.updated_by
+    """,tenant,UUID.randomUUID(),institution,sessionId,item.enrollmentId(),year,item.status(),actor.userAccountId(),actor.userAccountId(),actor.userAccountId());
+  }
+  return entries.size();
+ }
+
  @Transactional(readOnly=true) public List<Map<String,Object>> roster(UUID tenant,TenantPrincipal actor,UUID institution,UUID section){
+  return roster(tenant,actor,institution,section,LocalDate.now());
+ }
+ @Transactional(readOnly=true) public List<Map<String,Object>> roster(UUID tenant,TenantPrincipal actor,UUID institution,UUID section,LocalDate attendanceDate){
   authorize(tenant,actor,"ATTENDANCE_VIEW",institution,departmentForSection(tenant,institution,section));
   return jdbc.queryForList("""
-   SELECT e.enrollment_id,p.student_profile_id,p.student_code,p.full_name FROM app.student_enrollment e
+   SELECT e.enrollment_id,p.student_profile_id,p.student_code,p.full_name,
+    EXISTS(SELECT 1 FROM app.attendance_medical_exemption mx WHERE mx.tenant_id=e.tenant_id AND mx.institution_id=e.institution_id
+     AND mx.enrollment_id=e.enrollment_id AND mx.status='APPROVED' AND ? BETWEEN mx.start_date AND mx.end_date) AS has_medical_exemption
+   FROM app.student_enrollment e
    JOIN app.student_profile p ON p.tenant_id=e.tenant_id AND p.institution_id=e.institution_id AND p.student_profile_id=e.student_profile_id
    WHERE e.tenant_id=? AND e.institution_id=? AND e.section_id=? AND e.outcome='IN_PROGRESS' AND e.ended_on IS NULL AND p.status='ACTIVE'
    ORDER BY p.full_name,p.student_code
-   """,tenant,institution,section);
+   """,attendanceDate,tenant,institution,section);
  }
  @Transactional(readOnly=true) public List<Map<String,Object>> rosterForGroup(UUID tenant,TenantPrincipal actor,UUID institution,UUID group){
   authorize(tenant,actor,"ATTENDANCE_VIEW",institution,departmentForGroup(tenant,institution,group));

@@ -244,6 +244,31 @@ public class TimetableService {
         return jdbc.queryForList(sql,params.toArray());
     }
 
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> listFiltered(UUID tenantId,TenantPrincipal actor,UUID institutionId,UUID sectionId,
+            UUID subjectGroupId,UUID academicSessionId,UUID teacherId,UUID roomId,LocalDate date,Integer dayOfWeek) {
+        return list(tenantId,actor,institutionId,sectionId,subjectGroupId,academicSessionId).stream()
+            .filter(row -> teacherId==null || teacherId.equals(row.get("teacher_id")))
+            .filter(row -> roomId==null || roomId.equals(row.get("room_id")))
+            .filter(row -> dayOfWeek==null || dayOfWeek.equals(((Number)row.get("day_of_week")).intValue()))
+            .filter(row -> date==null || (!date.isBefore(asLocalDate(row.get("valid_from")))
+                && (row.get("valid_to")==null || !date.isAfter(asLocalDate(row.get("valid_to"))))))
+            .toList();
+    }
+
+    @Transactional
+    public void deleteSlot(UUID tenantId,TenantPrincipal actor,UUID institutionId,UUID slotId) {
+        Map<String,Object> row;
+        try { row=jdbc.queryForMap("SELECT section_id,subject_allocation_id,status FROM app.timetable_slot WHERE tenant_id=? AND institution_id=? AND timetable_slot_id=?",tenantId,institutionId,slotId); }
+        catch(org.springframework.dao.EmptyResultDataAccessException ex) { throw new ResourceNotFoundException("Timetable slot not found."); }
+        UUID section=(UUID)row.get("section_id"), allocation=(UUID)row.get("subject_allocation_id");
+        UUID department=section!=null?departmentForSection(tenantId,institutionId,section):departmentForAllocation(tenantId,institutionId,allocation);
+        authorize(tenantId,actor,"TIMETABLE_BUILD",institutionId,department);
+        if(!"DRAFT".equals(row.get("status"))) throw new BusinessRuleViolationException("PUBLISHED_SLOT_IMMUTABLE","Only draft slots can be removed; published slots must be superseded.");
+        int changed=jdbc.update("UPDATE app.timetable_slot SET status='SUPERSEDED',updated_by=? WHERE tenant_id=? AND institution_id=? AND timetable_slot_id=? AND status='DRAFT'",actor.userAccountId(),tenantId,institutionId,slotId);
+        if(changed==0) throw new BusinessRuleViolationException("TIMETABLE_SLOT_NOT_DRAFT","The timetable slot is no longer a draft.");
+    }
+
     @Transactional
     public Map<String,Object> createMeetingLink(UUID tenantId,TenantPrincipal actor,UUID institutionId,UUID slotId,
             LocalDate occurrenceDate,String provider,String joinUrl,String externalMeetingId,Instant expiresAt) {
