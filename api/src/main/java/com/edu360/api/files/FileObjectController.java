@@ -33,8 +33,11 @@ public class FileObjectController {
     public ResponseEntity<FileUploadResponse> upload(@PathVariable UUID tenantId,
             @RequestParam("file") MultipartFile file, @RequestParam("purpose") String purpose,
             @RequestParam(value = "institutionId", required = false) UUID institutionId,
+            @RequestParam(value = "recordType", required = false) String recordType,
+            @RequestParam(value = "recordId", required = false) UUID recordId,
             Authentication authentication) {
-        return ResponseEntity.status(201).body(fileService.upload(principal(authentication, tenantId), file, purpose, institutionId));
+        return ResponseEntity.status(201).body(fileService.upload(principal(authentication, tenantId),
+                file, purpose, institutionId, recordType, recordId));
     }
 
     @GetMapping("/{fileId}/download")
