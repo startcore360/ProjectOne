@@ -126,6 +126,7 @@ public class GrievanceService {
     public CaseView assign(TenantPrincipal principal, UUID caseId, UUID investigatorUserId, String notes) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_CASE_ASSIGN", RbacTarget.NONE);
+        ensureCaseOpen(current);
         if (investigatorUserId == null) throw new BusinessRuleViolationException("INVESTIGATOR_REQUIRED", "An investigator is required.");
         Integer exists = jdbc.query("""
                 SELECT count(*) FROM app.user_account WHERE tenant_id=? AND user_account_id=?
@@ -198,6 +199,7 @@ public class GrievanceService {
             OffsetDateTime hearingAt, String notes, UUID noticeFileId) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_HEARING_MANAGE", RbacTarget.NONE);
+        ensureCaseOpen(current);
         if (hearingAt == null || !hearingAt.isAfter(OffsetDateTime.now())
                 || notes == null || notes.isBlank() || notes.length() > 5000) {
             throw new BusinessRuleViolationException("HEARING_DETAILS_INVALID", "A future hearing time and notes are required.");
@@ -230,13 +232,13 @@ public class GrievanceService {
                    SET status='HELD',minutes_notes=?,minutes_file_id=?,updated_by=?,updated_at=now()
                  WHERE tenant_id=? AND grievance_hearing_id=(
                    SELECT grievance_hearing_id FROM app.grievance_hearing
-                    WHERE tenant_id=? AND grievance_case_id=? AND status='SCHEDULED'
+                    WHERE tenant_id=? AND grievance_case_id=? AND status='SCHEDULED' AND hearing_at<=now()
                     ORDER BY hearing_at DESC LIMIT 1)
                 """, notes.trim(), minutesFileId, principal.userAccountId(),
                 principal.tenantId(), principal.tenantId(), caseId);
         if (updated != 1) {
             throw new BusinessRuleViolationException("HEARING_NOT_SCHEDULED",
-                    "Schedule a hearing before recording its minutes.");
+                    "The scheduled hearing must have taken place before its minutes can be recorded.");
         }
         appendAction(principal, current, "MINUTES_RECORDED", notes, null, minutesFileId, null, OffsetDateTime.now());
     }
@@ -245,6 +247,7 @@ public class GrievanceService {
     public void issuePenalty(TenantPrincipal principal, UUID caseId, String penalty, String notes) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_CASE_RESOLVE", grievanceTarget(current));
+        ensureCaseOpen(current);
         if (penalty == null || penalty.isBlank() || penalty.length() > 2000
                 || notes == null || notes.isBlank() || notes.length() > 5000) {
             throw new BusinessRuleViolationException("PENALTY_DETAILS_INVALID", "Penalty and action notes are required.");
@@ -256,6 +259,7 @@ public class GrievanceService {
     public CaseView resolve(TenantPrincipal principal, UUID caseId, String outcome, String notes) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_CASE_RESOLVE", grievanceTarget(current));
+        ensureCaseOpen(current);
         if (!List.of("RESOLVED", "DISMISSED").contains(outcome)
                 || notes == null || notes.isBlank() || notes.length() > 5000) {
             throw new BusinessRuleViolationException("RESOLUTION_INVALID", "Choose RESOLVED or DISMISSED and provide a reason.");
@@ -362,6 +366,13 @@ public class GrievanceService {
         audit.record(new AuditEntry(AuditEventType.EDIT, actionCode(type),
                 "GRIEVANCE_CASE", current.grievanceCaseId(), current.institutionId(), null,
                 Map.of("actionType", type), 1, "H", "SUCCESS"));
+    }
+
+    private void ensureCaseOpen(CaseView current) {
+        if (List.of("RESOLVED", "DISMISSED").contains(current.status())) {
+            throw new BusinessRuleViolationException("GRIEVANCE_CASE_CLOSED",
+                    "A resolved or dismissed grievance cannot be changed.");
+        }
     }
 
     private String actionCode(String type) {
