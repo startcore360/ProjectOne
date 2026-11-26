@@ -61,7 +61,7 @@ export default function FeeStructureManagementPage() {
     try {
       const lines = JSON.parse(linesJson) as Array<{ feeHeadId: string; amount: number }>;
       const installments = JSON.parse(installmentsJson) as Array<{ installmentNo: number; dueDate: string; amount: number }>;
-      const validMoney = (value: number) => Number.isFinite(value) && /^\d+(?:\\.\d{1,2})?$/.test(String(value));
+      const validMoney = (value: number) => Number.isFinite(value) && /^\d+(?:\.\d{1,2})?$/.test(String(value));
       if (!institutionId.trim() || !academicSessionId.trim() || !feePolicyId.trim()) {
         throw new Error("Institution, academic session and fee policy are required.");
       }
