@@ -315,8 +315,9 @@ jobs:
         run: |
           createdb -h localhost -U postgres edu360_t10
           psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/01_schema.sql
-          psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/02_functions.sql
+          psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/02_rules.sql
           psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/03_bindings.sql
+          psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/03b_fk_indexes.sql
           psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/73_v41_notices_and_communications.sql
           psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/74_v41_library_and_transport_schema.sql
           # Reapply owned migrations to verify safe idempotency against populated schema.
