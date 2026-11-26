@@ -79,6 +79,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_attendance_threshold_scope_active
 CREATE INDEX IF NOT EXISTS ix_attendance_threshold_lookup
  ON app.attendance_threshold_policy(tenant_id,institution_id,department_id,effective_from DESC) WHERE is_active;
 
+CREATE OR REPLACE FUNCTION app.is_term_locked(
+ p_tenant_id uuid,p_institution_id uuid,p_academic_session_id uuid,p_semester_id uuid
+)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog,app AS $T6$
+ SELECT CASE
+  WHEN p_tenant_id IS NULL OR p_institution_id IS NULL OR p_academic_session_id IS NULL
+    OR NULLIF(current_setting('app.tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id
+   THEN true
+  ELSE COALESCE((
+   SELECT bool_or(app.is_term_locked(l.term_lock_id))
+    FROM app.term_lock l
+   WHERE l.tenant_id=p_tenant_id AND l.institution_id=p_institution_id
+    AND l.academic_session_id=p_academic_session_id
+    AND (l.semester_id IS NULL OR l.semester_id IS NOT DISTINCT FROM p_semester_id)
+  ),true)
+ END
+$T6$;
+REVOKE ALL ON FUNCTION app.is_term_locked(uuid,uuid,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.is_term_locked(uuid,uuid,uuid,uuid) TO edu_app,edu_report;
+
 CREATE OR REPLACE FUNCTION app.fn_attendance_session_scope_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
 DECLARE
@@ -146,15 +167,6 @@ BEGIN
    RAISE EXCEPTION 'ATTENDANCE_SCHOOL_HALF_SCOPE_INVALID' USING ERRCODE='23514';
   END IF;
  END IF;
- IF v_section IS NULL THEN
-  SELECT min(m.section_id::text)::uuid INTO v_section FROM app.subject_group g
-   JOIN app.course_offering co ON co.tenant_id=g.tenant_id AND co.course_offering_id=g.course_offering_id
-   JOIN app.section m ON m.tenant_id=co.tenant_id AND m.academic_session_id=co.academic_session_id
-   WHERE g.tenant_id=NEW.tenant_id AND g.subject_group_id=v_group;
- END IF;
- IF v_section IS NULL OR app.is_term_locked(NEW.tenant_id,v_section,NEW.attendance_date) THEN
-  RAISE EXCEPTION 'TERM_LOCKED: attendance cannot change while the term is locked' USING ERRCODE='P0001';
- END IF;
  RETURN NEW;
 END $$;
 
@@ -190,34 +202,69 @@ BEGIN
  RETURN NEW;
 END $$;
 
+CREATE OR REPLACE FUNCTION app.fn_attendance_scope_is_term_locked(
+ p_tenant_id uuid,p_institution_id uuid,p_section_id uuid,p_subject_group_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path=pg_catalog,app AS $T6$
+DECLARE v_session uuid; v_semester uuid;
+BEGIN
+ IF p_section_id IS NOT NULL THEN
+  SELECT academic_session_id,semester_id INTO v_session,v_semester FROM app.section
+   WHERE tenant_id=p_tenant_id AND institution_id=p_institution_id AND section_id=p_section_id;
+ ELSIF p_subject_group_id IS NOT NULL THEN
+  SELECT co.academic_session_id,co.semester_id INTO v_session,v_semester
+   FROM app.subject_group g JOIN app.course_offering co
+    ON co.tenant_id=g.tenant_id AND co.institution_id=g.institution_id AND co.course_offering_id=g.course_offering_id
+   WHERE g.tenant_id=p_tenant_id AND g.institution_id=p_institution_id AND g.subject_group_id=p_subject_group_id;
+ END IF;
+ IF v_session IS NULL THEN RETURN true; END IF;
+ RETURN app.is_term_locked(p_tenant_id,p_institution_id,v_session,v_semester);
+END
+$T6$;
+
 CREATE OR REPLACE FUNCTION app.fn_attendance_term_lock_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
-DECLARE v_tenant uuid; v_section uuid; v_group uuid; v_date date; v_enrollment uuid;
+DECLARE
+ v_tenant uuid; v_institution uuid; v_section uuid; v_group uuid;
+ v_enrollment uuid; v_session_id uuid; v_old_section uuid; v_old_group uuid; v_old_enrollment uuid;
 BEGIN
  IF TG_TABLE_NAME='attendance_session' THEN
   v_tenant:=CASE WHEN TG_OP='DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+  v_institution:=CASE WHEN TG_OP='DELETE' THEN OLD.institution_id ELSE NEW.institution_id END;
   v_section:=CASE WHEN TG_OP='DELETE' THEN OLD.section_id ELSE NEW.section_id END;
   v_group:=CASE WHEN TG_OP='DELETE' THEN OLD.subject_group_id ELSE NEW.subject_group_id END;
-  v_date:=CASE WHEN TG_OP='DELETE' THEN OLD.attendance_date ELSE NEW.attendance_date END;
+  IF TG_OP='UPDATE' AND app.fn_attendance_scope_is_term_locked(OLD.tenant_id,OLD.institution_id,OLD.section_id,OLD.subject_group_id) THEN
+   RAISE EXCEPTION 'TERM_LOCKED: attendance cannot change while the previous term is locked' USING ERRCODE='P0001';
+  END IF;
  ELSIF TG_TABLE_NAME='attendance_entry' THEN
-  v_tenant:=OLD.tenant_id; v_enrollment:=OLD.enrollment_id;
-  SELECT s.section_id,s.subject_group_id,s.attendance_date INTO v_section,v_group,v_date
-   FROM app.attendance_session s WHERE s.tenant_id=OLD.tenant_id
-    AND s.institution_id=OLD.institution_id AND s.attendance_session_id=OLD.attendance_session_id;
+  v_tenant:=CASE WHEN TG_OP='DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+  v_institution:=CASE WHEN TG_OP='DELETE' THEN OLD.institution_id ELSE NEW.institution_id END;
+  v_session_id:=CASE WHEN TG_OP='DELETE' THEN OLD.attendance_session_id ELSE NEW.attendance_session_id END;
+  SELECT section_id,subject_group_id INTO v_section,v_group FROM app.attendance_session
+   WHERE tenant_id=v_tenant AND institution_id=v_institution AND attendance_session_id=v_session_id;
+  IF TG_OP='UPDATE' THEN
+   SELECT section_id,subject_group_id INTO v_old_section,v_old_group FROM app.attendance_session
+    WHERE tenant_id=OLD.tenant_id AND institution_id=OLD.institution_id AND attendance_session_id=OLD.attendance_session_id;
+   IF app.fn_attendance_scope_is_term_locked(OLD.tenant_id,OLD.institution_id,v_old_section,v_old_group) THEN
+    RAISE EXCEPTION 'TERM_LOCKED: attendance cannot change while the previous term is locked' USING ERRCODE='P0001';
+   END IF;
+  END IF;
  ELSE
   v_tenant:=CASE WHEN TG_OP='DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+  v_institution:=CASE WHEN TG_OP='DELETE' THEN OLD.institution_id ELSE NEW.institution_id END;
   v_enrollment:=CASE WHEN TG_OP='DELETE' THEN OLD.enrollment_id ELSE NEW.enrollment_id END;
-  v_date:=CASE WHEN TG_OP='DELETE' THEN OLD.start_date ELSE NEW.start_date END;
   SELECT section_id INTO v_section FROM app.student_enrollment
-   WHERE tenant_id=v_tenant AND enrollment_id=v_enrollment;
+   WHERE tenant_id=v_tenant AND institution_id=v_institution AND enrollment_id=v_enrollment;
+  IF TG_OP='UPDATE' THEN
+   SELECT section_id INTO v_old_section FROM app.student_enrollment
+    WHERE tenant_id=OLD.tenant_id AND institution_id=OLD.institution_id AND enrollment_id=OLD.enrollment_id;
+   IF app.fn_attendance_scope_is_term_locked(OLD.tenant_id,OLD.institution_id,v_old_section,NULL) THEN
+    RAISE EXCEPTION 'TERM_LOCKED: medical exemption cannot change while the previous term is locked' USING ERRCODE='P0001';
+   END IF;
+  END IF;
  END IF;
- IF v_section IS NULL AND v_group IS NOT NULL THEN
-  SELECT min(m.section_id::text)::uuid INTO v_section FROM app.subject_group g
-   JOIN app.course_offering co ON co.tenant_id=g.tenant_id AND co.course_offering_id=g.course_offering_id
-   JOIN app.section m ON m.tenant_id=co.tenant_id AND m.academic_session_id=co.academic_session_id
-   WHERE g.tenant_id=v_tenant AND g.subject_group_id=v_group;
- END IF;
- IF v_section IS NULL OR app.is_term_locked(v_tenant,v_section,v_date) THEN
+ IF app.fn_attendance_scope_is_term_locked(v_tenant,v_institution,v_section,v_group) THEN
   RAISE EXCEPTION 'TERM_LOCKED: attendance cannot change while the term is locked' USING ERRCODE='P0001';
  END IF;
  IF TG_OP='DELETE' THEN RETURN OLD; END IF;
@@ -226,14 +273,14 @@ END $$;
 
 CREATE OR REPLACE FUNCTION app.fn_medical_exemption_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,app AS $$
-DECLARE v_student uuid; v_section uuid; v_started date; v_ended date; v_session_start date; v_session_end date;
+DECLARE v_student uuid; v_section uuid; v_academic_session uuid; v_semester uuid; v_started date; v_ended date; v_session_start date; v_session_end date;
  v_purpose text; v_scan text; v_file_status text; v_file_institution uuid; v_uploaded_by uuid;
 BEGIN
  IF TG_OP='UPDATE' AND OLD.status<>'PENDING' THEN
   RAISE EXCEPTION 'MEDICAL_EXEMPTION_FINAL' USING ERRCODE='55000';
  END IF;
- SELECT e.student_profile_id,e.section_id,e.started_on,e.ended_on,a.start_date,a.end_date
-  INTO v_student,v_section,v_started,v_ended,v_session_start,v_session_end
+ SELECT e.student_profile_id,e.section_id,s.academic_session_id,s.semester_id,e.started_on,e.ended_on,a.start_date,a.end_date
+  INTO v_student,v_section,v_academic_session,v_semester,v_started,v_ended,v_session_start,v_session_end
   FROM app.student_enrollment e JOIN app.section s
    ON s.tenant_id=e.tenant_id AND s.institution_id=e.institution_id AND s.section_id=e.section_id
   JOIN app.academic_session a ON a.tenant_id=s.tenant_id AND a.academic_session_id=s.academic_session_id
@@ -250,10 +297,6 @@ BEGIN
    OR v_file_status IS DISTINCT FROM 'ACTIVE' OR v_uploaded_by IS DISTINCT FROM NEW.created_by
    OR (v_file_institution IS NOT NULL AND v_file_institution<>NEW.institution_id) THEN
   RAISE EXCEPTION 'MEDICAL_EXEMPTION_DOCUMENT_NOT_AVAILABLE' USING ERRCODE='23514';
- END IF;
- IF app.is_term_locked(NEW.tenant_id,v_section,NEW.start_date)
-   OR app.is_term_locked(NEW.tenant_id,v_section,NEW.end_date) THEN
-  RAISE EXCEPTION 'TERM_LOCKED: medical exemption cannot change while the term is locked' USING ERRCODE='P0001';
  END IF;
  RETURN NEW;
 END $$;
@@ -284,19 +327,20 @@ DROP TRIGGER IF EXISTS trg_attendance_session_scope_guard ON app.attendance_sess
 CREATE TRIGGER trg_attendance_session_scope_guard BEFORE INSERT OR UPDATE ON app.attendance_session
  FOR EACH ROW EXECUTE FUNCTION app.fn_attendance_session_scope_guard();
 DROP TRIGGER IF EXISTS trg_check_term_lock_attendance ON app.attendance_session;
-CREATE TRIGGER trg_check_term_lock_attendance BEFORE DELETE ON app.attendance_session
+CREATE TRIGGER trg_check_term_lock_attendance BEFORE INSERT OR UPDATE OR DELETE ON app.attendance_session
  FOR EACH ROW EXECUTE FUNCTION app.fn_attendance_term_lock_guard();
 DROP TRIGGER IF EXISTS trg_attendance_entry_scope_guard ON app.attendance_entry;
 CREATE TRIGGER trg_attendance_entry_scope_guard BEFORE INSERT OR UPDATE ON app.attendance_entry
  FOR EACH ROW EXECUTE FUNCTION app.fn_attendance_entry_scope_guard();
 DROP TRIGGER IF EXISTS trg_check_term_lock_attendance_entry_delete ON app.attendance_entry;
-CREATE TRIGGER trg_check_term_lock_attendance_entry_delete BEFORE DELETE ON app.attendance_entry
+DROP TRIGGER IF EXISTS trg_check_term_lock_attendance_entry ON app.attendance_entry;
+CREATE TRIGGER trg_check_term_lock_attendance_entry BEFORE INSERT OR UPDATE OR DELETE ON app.attendance_entry
  FOR EACH ROW EXECUTE FUNCTION app.fn_attendance_term_lock_guard();
 DROP TRIGGER IF EXISTS trg_medical_exemption_guard ON app.attendance_medical_exemption;
 CREATE TRIGGER trg_medical_exemption_guard BEFORE INSERT OR UPDATE ON app.attendance_medical_exemption
  FOR EACH ROW EXECUTE FUNCTION app.fn_medical_exemption_guard();
 DROP TRIGGER IF EXISTS trg_check_term_lock_medical_exemption ON app.attendance_medical_exemption;
-CREATE TRIGGER trg_check_term_lock_medical_exemption BEFORE DELETE ON app.attendance_medical_exemption
+CREATE TRIGGER trg_check_term_lock_medical_exemption BEFORE INSERT OR UPDATE OR DELETE ON app.attendance_medical_exemption
  FOR EACH ROW EXECUTE FUNCTION app.fn_attendance_term_lock_guard();
 
 DROP TRIGGER IF EXISTS trg_seed_attendance_threshold_default ON app.institution;

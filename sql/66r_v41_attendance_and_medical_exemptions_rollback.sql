@@ -5,6 +5,7 @@ DROP TRIGGER IF EXISTS trg_attendance_session_scope_guard ON app.attendance_sess
 DROP TRIGGER IF EXISTS trg_check_term_lock_attendance ON app.attendance_session;
 DROP TRIGGER IF EXISTS trg_attendance_entry_scope_guard ON app.attendance_entry;
 DROP TRIGGER IF EXISTS trg_check_term_lock_attendance_entry_delete ON app.attendance_entry;
+DROP TRIGGER IF EXISTS trg_check_term_lock_attendance_entry ON app.attendance_entry;
 DROP TRIGGER IF EXISTS trg_medical_exemption_guard ON app.attendance_medical_exemption;
 DROP TRIGGER IF EXISTS trg_check_term_lock_medical_exemption ON app.attendance_medical_exemption;
 DROP TRIGGER IF EXISTS trg_seed_attendance_threshold_default ON app.institution;
@@ -16,6 +17,8 @@ DROP TABLE IF EXISTS app.attendance_medical_exemption CASCADE;
 DROP FUNCTION IF EXISTS app.fn_attendance_session_scope_guard();
 DROP FUNCTION IF EXISTS app.fn_attendance_entry_scope_guard();
 DROP FUNCTION IF EXISTS app.fn_attendance_term_lock_guard();
+DROP FUNCTION IF EXISTS app.fn_attendance_scope_is_term_locked(uuid,uuid,uuid,uuid);
+DROP FUNCTION IF EXISTS app.is_term_locked(uuid,uuid,uuid,uuid);
 DROP FUNCTION IF EXISTS app.fn_medical_exemption_guard();
 DROP FUNCTION IF EXISTS app.fn_seed_attendance_threshold_default();
 DROP FUNCTION IF EXISTS app.fn_attendance_threshold_department_guard();

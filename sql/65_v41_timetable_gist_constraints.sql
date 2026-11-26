@@ -37,14 +37,14 @@ DO $$ BEGIN
   ALTER TABLE app.timetable_slot ADD CONSTRAINT ex_timetable_teacher_no_overlap
    EXCLUDE USING gist (tenant_id WITH =,teacher_id WITH =,day_of_week WITH =,
     daterange(valid_from,valid_to,'[]') WITH &&,
-    tsrange(timestamp '2000-01-03'+start_time,timestamp '2000-01-03'+end_time,'[)') WITH &&)
+    tsrange(date '2000-01-03'+start_time,date '2000-01-03'+end_time,'[)') WITH &&)
    WHERE (status IN ('DRAFT','PUBLISHED') AND teacher_id IS NOT NULL);
  END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.timetable_slot'::regclass AND conname='ex_timetable_room_no_overlap') THEN
   ALTER TABLE app.timetable_slot ADD CONSTRAINT ex_timetable_room_no_overlap
    EXCLUDE USING gist (tenant_id WITH =,institution_id WITH =,room_id WITH =,day_of_week WITH =,
     daterange(valid_from,valid_to,'[]') WITH &&,
-    tsrange(timestamp '2000-01-03'+start_time,timestamp '2000-01-03'+end_time,'[)') WITH &&)
+    tsrange(date '2000-01-03'+start_time,date '2000-01-03'+end_time,'[)') WITH &&)
    WHERE (status IN ('DRAFT','PUBLISHED') AND room_id IS NOT NULL);
  END IF;
 END $$;

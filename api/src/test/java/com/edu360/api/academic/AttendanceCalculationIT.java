@@ -44,6 +44,26 @@ class AttendanceCalculationIT {
     }
 
     @Test
+    void termLockAdapterAndTriggersCoverEveryAttendanceMutation() {
+        Integer adapter = jdbc.queryForObject("""
+            SELECT count(*) FROM pg_proc
+             WHERE oid='app.is_term_locked(uuid,uuid,uuid,uuid)'::regprocedure
+            """, Integer.class);
+        assertThat(adapter).isEqualTo(1);
+        for (String[] trigger : new String[][]{
+                {"attendance_session", "trg_check_term_lock_attendance"},
+                {"attendance_entry", "trg_check_term_lock_attendance_entry"},
+                {"attendance_medical_exemption", "trg_check_term_lock_medical_exemption"}}) {
+            Integer guarded = jdbc.queryForObject("""
+                SELECT count(*) FROM pg_trigger
+                 WHERE tgrelid=to_regclass('app.'||?) AND tgname=? AND NOT tgisinternal
+                   AND (tgtype & 28)=28
+                """, Integer.class, trigger[0], trigger[1]);
+            assertThat(guarded).as(trigger[0] + " term-lock trigger covers INSERT/UPDATE/DELETE").isEqualTo(1);
+        }
+    }
+
+    @Test
     void thresholdPolicyExposesDefaultAndIsConfigurable() {
         String defaultValue = jdbc.queryForObject("""
             SELECT column_default FROM information_schema.columns
