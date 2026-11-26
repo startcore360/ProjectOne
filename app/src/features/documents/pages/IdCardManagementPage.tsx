@@ -210,7 +210,7 @@ export default function IdCardManagementPage() {
         </form>
       </Panel>}
 
-      {(canIssue || canRequestReplacement) && <Panel title="Issued cards" description="Cardholder details and status are scoped to this institution." action={canExport ? <Button size="sm" variant="secondary" onClick={() => void downloadBatch()} disabled={busy || selectedCount === 0}>Download PDF ({selectedCount})</Button> : undefined}>
+      {(canIssue || canRequestReplacement || canExport) && <Panel title="Issued cards" description="Cardholder details and status are scoped to this institution." action={canExport ? <Button size="sm" variant="secondary" onClick={() => void downloadBatch()} disabled={busy || selectedCount === 0}>Download PDF ({selectedCount})</Button> : undefined}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead><tr className="border-b border-slate-200 text-slate-600"><th className="p-2">Select</th><th className="p-2">Card number</th><th className="p-2">Cardholder</th><th className="p-2">Profile</th><th className="p-2">Status</th><th className="p-2">Expiry</th><th className="p-2">Actions</th></tr></thead>
