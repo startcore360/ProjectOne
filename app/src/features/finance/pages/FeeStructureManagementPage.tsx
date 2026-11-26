@@ -118,7 +118,7 @@ export default function FeeStructureManagementPage() {
     try {
       await api.post(`/tenants/${tenantId}/fee-structures/${id}/submit`);
       setNotice("Fee structure submitted for Principal approval.");
-      await load();
+      await load(institutionId);
     } catch {
       setError("Unable to submit this fee structure. Only an authorized Accountant can submit a draft.");
     } finally {
