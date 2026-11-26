@@ -53,7 +53,22 @@ CREATE INDEX IF NOT EXISTS ix_notice_ack_user ON app.notice_acknowledgment(tenan
 CREATE INDEX IF NOT EXISTS ix_dispatch_usage ON app.message_dispatch(tenant_id,created_at) WHERE channel='SMS' AND status IN ('SENT','DELIVERED');
 CREATE INDEX IF NOT EXISTS ix_dispatch_campaign ON app.message_dispatch(tenant_id,campaign_id,status,attempt_order);
 CREATE INDEX IF NOT EXISTS ix_dispatch_worker_claim ON app.message_dispatch(status,created_at,attempt_order) WHERE status IN ('QUEUED','PROCESSING');
-DO $$
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_notice_bulletin_scope ON app.notice_bulletin(tenant_id,institution_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_campaign_scope ON app.communication_campaign(tenant_id,institution_id,id);
+DO $
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.notice_target'::regclass AND conname='fk_notice_target_scope') THEN
+  ALTER TABLE app.notice_target ADD CONSTRAINT fk_notice_target_scope FOREIGN KEY(tenant_id,institution_id,notice_id) REFERENCES app.notice_bulletin(tenant_id,institution_id,id);
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.notice_acknowledgment'::regclass AND conname='fk_notice_ack_scope') THEN
+  ALTER TABLE app.notice_acknowledgment ADD CONSTRAINT fk_notice_ack_scope FOREIGN KEY(tenant_id,institution_id,notice_id) REFERENCES app.notice_bulletin(tenant_id,institution_id,id);
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.message_dispatch'::regclass AND conname='fk_dispatch_campaign_scope') THEN
+  ALTER TABLE app.message_dispatch ADD CONSTRAINT fk_dispatch_campaign_scope FOREIGN KEY(tenant_id,institution_id,campaign_id) REFERENCES app.communication_campaign(tenant_id,institution_id,id);
+ END IF;
+END $;
+DO $
 DECLARE t text;
 BEGIN
  FOREACH t IN ARRAY ARRAY['notice_bulletin','notice_target','notice_acknowledgment','communication_campaign','message_template','message_dispatch'] LOOP

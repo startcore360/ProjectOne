@@ -1,4 +1,5 @@
-DO $$
+DO $
+DECLARE t text;
 BEGIN
  IF to_regclass('app.library_fine_policy') IS NULL OR to_regclass('app.v_student_library_dues_flag') IS NULL
  OR to_regclass('app.transport_allocation') IS NULL OR to_regclass('app.library_catalog') IS NULL
@@ -11,8 +12,11 @@ BEGIN
  THEN RAISE EXCEPTION 'institution fine day basis missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='trg_transport_capacity_guard' AND NOT tgisinternal)
  THEN RAISE EXCEPTION 'transport capacity trigger missing'; END IF;
- IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid='app.book_circulation'::regclass)
- THEN RAISE EXCEPTION 'book_circulation RLS missing'; END IF;
+ FOREACH t IN ARRAY ARRAY['library_catalog','book_copy','library_fine_policy','book_circulation','library_fine','library_reservation','vehicle','transport_route','route_stop','transport_allocation','report_definition','report_execution'] LOOP
+  IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid=format('app.%I',t)::regclass) THEN RAISE EXCEPTION 'RLS missing on app.%',t; END IF;
+ END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.book_copy'::regclass AND conname='fk_book_copy_catalog_scope') THEN RAISE EXCEPTION 'book copy scope FK missing'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.transport_allocation'::regclass AND conname='fk_allocation_stop_scope') THEN RAISE EXCEPTION 'allocation stop scope FK missing'; END IF;
  IF NOT EXISTS (
    SELECT 1 FROM information_schema.columns WHERE table_schema='app'
     AND table_name='v_student_library_dues_flag' AND column_name='outstanding_fine_balance'

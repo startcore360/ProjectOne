@@ -123,17 +123,42 @@ CREATE TABLE IF NOT EXISTS app.transport_allocation (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_transport_active_passenger
  ON app.transport_allocation(tenant_id,institution_id,passenger_user_id) WHERE status='ACTIVE';
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_library_catalog_scope ON app.library_catalog(tenant_id,institution_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_book_copy_scope ON app.book_copy(tenant_id,institution_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_circulation_scope ON app.book_circulation(tenant_id,institution_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_vehicle_scope ON app.vehicle(tenant_id,institution_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_transport_route_scope ON app.transport_route(tenant_id,institution_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_route_stop_scope ON app.route_stop(tenant_id,institution_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_report_definition_scope ON app.report_definition(tenant_id,institution_id,id);
+DO $
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.book_copy'::regclass AND conname='fk_book_copy_catalog_scope') THEN ALTER TABLE app.book_copy ADD CONSTRAINT fk_book_copy_catalog_scope FOREIGN KEY(tenant_id,institution_id,book_id) REFERENCES app.library_catalog(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.book_circulation'::regclass AND conname='fk_circulation_catalog_scope') THEN ALTER TABLE app.book_circulation ADD CONSTRAINT fk_circulation_catalog_scope FOREIGN KEY(tenant_id,institution_id,book_id) REFERENCES app.library_catalog(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.book_circulation'::regclass AND conname='fk_circulation_copy_scope') THEN ALTER TABLE app.book_circulation ADD CONSTRAINT fk_circulation_copy_scope FOREIGN KEY(tenant_id,institution_id,copy_id) REFERENCES app.book_copy(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.library_fine'::regclass AND conname='fk_fine_circulation_scope') THEN ALTER TABLE app.library_fine ADD CONSTRAINT fk_fine_circulation_scope FOREIGN KEY(tenant_id,institution_id,circulation_id) REFERENCES app.book_circulation(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.library_reservation'::regclass AND conname='fk_reservation_catalog_scope') THEN ALTER TABLE app.library_reservation ADD CONSTRAINT fk_reservation_catalog_scope FOREIGN KEY(tenant_id,institution_id,book_id) REFERENCES app.library_catalog(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.transport_route'::regclass AND conname='fk_route_vehicle_scope') THEN ALTER TABLE app.transport_route ADD CONSTRAINT fk_route_vehicle_scope FOREIGN KEY(tenant_id,institution_id,vehicle_id) REFERENCES app.vehicle(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.route_stop'::regclass AND conname='fk_stop_route_scope') THEN ALTER TABLE app.route_stop ADD CONSTRAINT fk_stop_route_scope FOREIGN KEY(tenant_id,institution_id,route_id) REFERENCES app.transport_route(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.transport_allocation'::regclass AND conname='fk_allocation_route_scope') THEN ALTER TABLE app.transport_allocation ADD CONSTRAINT fk_allocation_route_scope FOREIGN KEY(tenant_id,institution_id,route_id) REFERENCES app.transport_route(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.transport_allocation'::regclass AND conname='fk_allocation_stop_scope') THEN ALTER TABLE app.transport_allocation ADD CONSTRAINT fk_allocation_stop_scope FOREIGN KEY(tenant_id,institution_id,stop_id) REFERENCES app.route_stop(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.report_execution'::regclass AND conname='fk_report_execution_definition_scope') THEN ALTER TABLE app.report_execution ADD CONSTRAINT fk_report_execution_definition_scope FOREIGN KEY(tenant_id,institution_id,report_definition_id) REFERENCES app.report_definition(tenant_id,institution_id,id); END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.library_fine_policy'::regclass AND conname='ck_library_working_days_values') THEN
+  ALTER TABLE app.library_fine_policy ADD CONSTRAINT ck_library_working_days_values CHECK(jsonb_typeof(working_days)='array' AND jsonb_array_length(working_days)>0 AND working_days <@ '[1,2,3,4,5,6,7]'::jsonb);
+ END IF;
+END $;
 CREATE OR REPLACE FUNCTION app.fn_transport_capacity_guard() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE cap integer; used integer;
+DECLARE cap integer; used integer; route_active boolean;
 BEGIN
  IF NEW.status<>'ACTIVE' THEN RETURN NEW; END IF;
- SELECT total_capacity INTO cap FROM app.transport_route
+ SELECT total_capacity,active INTO cap,route_active FROM app.transport_route
   WHERE id=NEW.route_id AND tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id FOR UPDATE;
  IF cap IS NULL THEN RAISE EXCEPTION 'TRANSPORT_ROUTE_NOT_FOUND'; END IF;
+ IF NOT route_active THEN RAISE EXCEPTION 'TRANSPORT_ROUTE_INACTIVE'; END IF;
  SELECT count(*) INTO used FROM app.transport_allocation
   WHERE tenant_id=NEW.tenant_id AND route_id=NEW.route_id AND status='ACTIVE' AND id<>COALESCE(NEW.id,'00000000-0000-0000-0000-000000000000'::uuid);
  IF used>=cap THEN RAISE EXCEPTION 'TRANSPORT_CAPACITY_EXCEEDED' USING ERRCODE='23514'; END IF;
- IF NOT EXISTS(SELECT 1 FROM app.route_stop WHERE id=NEW.stop_id AND route_id=NEW.route_id AND tenant_id=NEW.tenant_id) THEN
+ IF NOT EXISTS(SELECT 1 FROM app.route_stop WHERE id=NEW.stop_id AND route_id=NEW.route_id AND tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id) THEN
   RAISE EXCEPTION 'TRANSPORT_STOP_ROUTE_MISMATCH'; END IF;
  RETURN NEW;
 END $$;
