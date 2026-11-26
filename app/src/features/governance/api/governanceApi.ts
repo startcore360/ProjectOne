@@ -12,6 +12,10 @@ export type GovernanceAction = {
   actionId: string; actionType: string; actionNotes: string; actionAt: string;
   performedByUserId: string; noticeFileId: string | null; minutesFileId: string | null; penalty: string | null;
 };
+export type GrievanceHearing = {
+  hearingId: string; hearingAt: string; hearingNotes: string; noticeFileId: string | null;
+  minutesFileId: string | null; minutesNotes: string | null; status: string; updatedAt: string;
+};
 export type DisciplinaryIncident = {
   incidentId: string; institutionId: string; studentId: string; studentName: string;
   incidentDate: string; severity: string; description: string; actionTaken: string | null;
@@ -30,6 +34,8 @@ export const governanceApi = {
     api.get<GrievanceCase>(`${grievanceRoot(tenantId)}/cases/${caseId}`).then(r => r.data),
   grievanceActions: (tenantId: string, caseId: string) =>
     api.get<GovernanceAction[]>(`${grievanceRoot(tenantId)}/cases/${caseId}/actions`).then(r => r.data),
+  grievanceHearings: (tenantId: string, caseId: string) =>
+    api.get<GrievanceHearing[]>(`${grievanceRoot(tenantId)}/cases/${caseId}/hearings`).then(r => r.data),
   assignGrievance: (tenantId: string, caseId: string, body: object) =>
     api.post<GrievanceCase>(`${grievanceRoot(tenantId)}/cases/${caseId}/assign`, body).then(r => r.data),
   scheduleHearing: (tenantId: string, caseId: string, body: object) =>
