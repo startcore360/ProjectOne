@@ -2,6 +2,7 @@ package com.edu360.api.t10;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -53,6 +54,12 @@ class DispatchProviderTest {
         assertThat(first.providerMessageId()).isEqualTo(second.providerMessageId());
         verify(jdbc,org.mockito.Mockito.times(2)).update(any(String.class),any(Object[].class));
     }
+    @Test void missingGatewayConfigurationFailsClosed() {
+        HttpDispatchProvider provider=new HttpDispatchProvider(RestClient.builder().build(),"","","","","","");
+        DispatchMessage message=new DispatchMessage(UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),"SMS","+910000000000",null,"message");
+        assertThatThrownBy(() -> provider.send(message)).isInstanceOf(IllegalStateException.class).hasMessageContaining("not configured");
+    }
+
     @Test void missingGatewayConfigurationFailsClosed() {
         HttpDispatchProvider provider=new HttpDispatchProvider(RestClient.builder().build(),"","","","","","");
         DispatchMessage message=new DispatchMessage(UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),"SMS","+910000000000",null,"message");
