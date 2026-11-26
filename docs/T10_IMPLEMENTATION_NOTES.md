@@ -24,8 +24,8 @@ Underlying tables retain tenant and institution RLS. T9 should query this view u
 
 - `NoticeBulletinController`: publish/list notices and record required acknowledgments; role targets are persisted in `app.notice_target`.
 - `CommunicationDispatchController`: queue private multi-channel dispatches and expose dispatch history.
-- `LibraryController`: catalog, issue/return, reservations, per-institution fine policy and full fine payment.
-- `TransportController`: route/vehicle/stop creation, route listing and allocation; capacity is enforced by a database trigger.
+- `LibraryController`: catalog and individual copy add/withdraw, issue/return, reservations, per-institution fine policy and full fine payment.
+- `TransportController`: route/vehicle/stop creation, route listing, passenger allocation and cancellation; an atomic route-row seat counter and database trigger enforce capacity under concurrent requests.
 - `InstitutionalReportController` / `ExecutiveAnalyticsService`: dashboard metrics are read through the separate `edu_report` datasource. The report transaction sets tenant and institution RLS GUCs locally; OLTP stores only report definition/execution metadata.
 - React pages: Notice Bulletin, Message Composer, Library Catalog, Transport Routes and Executive Dashboard. Routes are guarded by tenant action codes.
 
