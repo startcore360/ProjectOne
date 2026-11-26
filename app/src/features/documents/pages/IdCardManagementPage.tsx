@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Button from "../../../design-system/components/Button";
 import PageHeader from "../../../design-system/components/PageHeader";
 import { Panel } from "../../../design-system/components/Panel";
@@ -72,7 +72,7 @@ export default function IdCardManagementPage() {
     setReplacements([]);
   }, [institutionId]);
 
-  async function createTemplate(event: React.FormEvent<HTMLFormElement>) {
+  async function createTemplate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tenantId) return;
     setBusy(true); setError(""); setNotice("");
@@ -87,7 +87,7 @@ export default function IdCardManagementPage() {
     finally { setBusy(false); }
   }
 
-  async function issueCard(event: React.FormEvent<HTMLFormElement>) {
+  async function issueCard(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tenantId) return;
     setBusy(true); setError(""); setNotice("");
@@ -170,7 +170,7 @@ export default function IdCardManagementPage() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
-  const selectedCount = useMemo(() => selectedIds.length, [selectedIds]);
+  const selectedCount = selectedIds.length;
 
   if (!tenantId) return <main className="page-container"><p>Loading account…</p></main>;
   return (
@@ -219,7 +219,7 @@ export default function IdCardManagementPage() {
               <td className="p-2 font-medium">{card.cardNumber}</td><td className="p-2">{card.fullName}</td><td className="p-2">{card.profileCode}</td><td className="p-2">{card.status}</td><td className="p-2">{card.expiryDate ?? "No expiry"}</td>
               <td className="p-2"><div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" onClick={() => void showCard(card)}>Preview</Button>
-                {canRequestReplacement && card.status === "ACTIVE" && <Button size="sm" variant="secondary" onClick={() => void requestReplacement(card)}>Request replacement</Button>}
+                {(canRequestReplacement || canProcessReplacement) && card.status === "ACTIVE" && <Button size="sm" variant="secondary" onClick={() => void requestReplacement(card)}>Request replacement</Button>}
                 {canRevoke && card.status === "ACTIVE" && <Button size="sm" variant="danger" onClick={() => void revoke(card)}>Revoke</Button>}
               </div></td>
             </tr>)}
