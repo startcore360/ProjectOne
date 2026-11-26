@@ -52,7 +52,7 @@ export default function LibraryCatalogPage() {
 
   const load = useCallback(async () => {
     if (!tenant || !institution) { setLoading(false); return; }
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setBooks([]); setCirculations([]); setReservations([]); setFines([]); setPolicy(null); setCopies([]); setManagedCopies([]);
     try {
       const catalog = await t10Api.catalog(tenant, institution, query);
       setBooks(catalog);
