@@ -192,6 +192,11 @@ BEGIN
  END IF;
 
  IF NEW.status='ACTIVE' AND NOT EXISTS(
+   SELECT 1 FROM app.transport_route WHERE id=NEW.route_id AND tenant_id=NEW.tenant_id
+    AND institution_id=NEW.institution_id AND active=true) THEN
+  RAISE EXCEPTION 'TRANSPORT_ROUTE_INACTIVE' USING ERRCODE='23514';
+ END IF;
+ IF NEW.status='ACTIVE' AND NOT EXISTS(
    SELECT 1 FROM app.route_stop WHERE id=NEW.stop_id AND route_id=NEW.route_id
     AND tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id) THEN
   RAISE EXCEPTION 'TRANSPORT_STOP_ROUTE_MISMATCH' USING ERRCODE='23514';
