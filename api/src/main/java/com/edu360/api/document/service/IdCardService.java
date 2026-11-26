@@ -141,7 +141,7 @@ public class IdCardService {
         return createIssuance(principal, institutionId, profile, templateId, expiryDate, "ID_CARD_ISSUE");
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Card> cards(TenantPrincipal principal, UUID institutionId) {
         RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
         RbacScope scope = permissions.targetScope(caller, institutionId, null);
@@ -160,7 +160,12 @@ public class IdCardService {
                     SELECT id_card_issuance_id FROM app.id_card_issuance
                      WHERE tenant_id=? AND institution_id=? AND user_id=? ORDER BY issue_date DESC
                     """, (rs, n) -> rs.getObject(1, UUID.class), principal.tenantId(), institutionId, principal.userAccountId());
-        return ids.stream().map(id -> card(principal.tenantId(), id)).toList();
+        List<Card> result = ids.stream().map(id -> card(principal.tenantId(), id)).toList();
+        String auditAction = canIssue ? "ID_CARD_ISSUE" : canExport ? "ID_CARD_EXPORT" : "ID_CARD_REPLACEMENT_REQUEST";
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, auditAction,
+                "ID_CARD_ISSUANCE", null, institutionId, null,
+                Map.of("recordCount", result.size()), result.size(), "P", "SUCCESS"));
+        return result;
     }
 
     @Transactional
