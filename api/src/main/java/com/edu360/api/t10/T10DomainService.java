@@ -289,6 +289,15 @@ public class T10DomainService {
     @Transactional
     public Map<String,Object> reserveBook(UUID tenant,TenantPrincipal p,LibraryController.ReservationRequest r) {
         allow(tenant,p.userAccountId(),"RESERVATION_MANAGE",r.institutionId());
+        Integer eligible=jdbc.queryForObject("""
+            SELECT count(*) FROM app.user_account u
+             WHERE u.tenant_id=? AND u.user_account_id=? AND u.status='ACTIVE'
+               AND (EXISTS(SELECT 1 FROM app.student_profile s WHERE s.tenant_id=u.tenant_id AND s.institution_id=? AND s.user_account_id=u.user_account_id AND s.status='ACTIVE')
+                 OR EXISTS(SELECT 1 FROM app.staff_profile p JOIN app.staff_assignment a ON a.tenant_id=p.tenant_id AND a.staff_profile_id=p.staff_profile_id
+                            WHERE p.tenant_id=u.tenant_id AND p.user_account_id=u.user_account_id AND p.employment_status='ACTIVE'
+                              AND a.institution_id=? AND a.status='ACTIVE' AND a.effective_from<=current_date AND (a.effective_to IS NULL OR a.effective_to>=current_date)))
+            """,Integer.class,tenant,r.borrowerUserId(),r.institutionId(),r.institutionId());
+        if(eligible==null||eligible==0) throw new BusinessRuleViolationException("BORROWER_OUT_OF_SCOPE","Reservation borrower must be an active student or staff member of this institution.");
         jdbc.queryForObject("SELECT id FROM app.library_catalog WHERE id=? AND tenant_id=? AND institution_id=? FOR UPDATE",UUID.class,r.bookId(),tenant,r.institutionId());
         Long next=jdbc.queryForObject("SELECT COALESCE(max(queue_position),0)+1 FROM app.library_reservation WHERE tenant_id=? AND institution_id=? AND book_id=? AND status='WAITING'",Long.class,tenant,r.institutionId(),r.bookId());
         UUID id=UUID.randomUUID();
