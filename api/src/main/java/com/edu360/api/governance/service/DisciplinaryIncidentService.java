@@ -143,17 +143,21 @@ public class DisciplinaryIncidentService {
         return uploaded;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Evidence> evidence(TenantPrincipal principal, UUID incidentId) {
         Incident incident = get(principal, incidentId);
         authorize(principal, incident.institutionId(), "DISCIPLINARY_INCIDENT_VIEW");
-        return jdbc.query("""
+        List<Evidence> result = jdbc.query("""
                 SELECT disciplinary_evidence_id,file_id,uploaded_by_user_id,created_at
                   FROM app.disciplinary_evidence
                  WHERE tenant_id=? AND disciplinary_incident_id=? ORDER BY created_at
                 """, (rs, n) -> new Evidence(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                 rs.getObject(3, UUID.class), rs.getObject(4, OffsetDateTime.class)),
                 principal.tenantId(), incidentId);
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "DISCIPLINARY_INCIDENT_VIEW",
+                "DISCIPLINARY_EVIDENCE", null, current.institutionId(), null,
+                Map.of("recordCount", result.size()), result.size(), "H", "SUCCESS"));
+        return result;
     }
 
     @Transactional
