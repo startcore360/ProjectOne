@@ -419,7 +419,7 @@ public class RoleAssignmentService {
                 .roleLevel(standard.getRoleLevel())
                 .baseStandardRole(roleCode)
                 .customScope(null)
-                .sensitiveRole(false)
+                .sensitiveRole(isSensitiveRole(roleCode))
                 .status(RoleDefinitionStatus.ACTIVE)
                 .createdBy(actorUserId)
                 .updatedBy(actorUserId)
