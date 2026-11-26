@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
-import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
 
 type Student = { enrollment_id:string; student_profile_id:string; student_code:string; full_name:string };
 type Status = "PRESENT"|"ABSENT"|"ON_APPROVED_LEAVE"|"NOT_HELD"|"";
@@ -10,8 +9,6 @@ type SessionKind = "DAILY"|"PERIOD"|"SCHOOL_FIRST_HALF"|"SCHOOL_SECOND_HALF";
 
 export default function AttendanceRegisterPage(){
  const tenantId=useAppSelector(s=>s.auth.user?.tenantId);
- const {canAny}=useTenantAccess();
- const canSetRules=canAny(["ATTENDANCE_RULES_SET"]);
  const [institutionId,setInstitutionId]=useState(""); const [departmentId,setDepartmentId]=useState("");
  const [sectionId,setSectionId]=useState(""); const [slotId,setSlotId]=useState(""); const [subjectAllocationId,setSubjectAllocationId]=useState("");
  const [date,setDate]=useState(new Date().toISOString().slice(0,10)); const [sessionKind,setSessionKind]=useState<SessionKind>("PERIOD");
@@ -73,11 +70,11 @@ export default function AttendanceRegisterPage(){
    </>}
    <button type="button" onClick={()=>void loadRoster()} disabled={busy||!institutionId||!sectionId}>Load class roster</button>
   </div>
-  {canSetRules&&<section><h2>Exam eligibility threshold (PO-T02)</h2><form onSubmit={saveThreshold} className="form-grid">
+  <section><h2>Exam eligibility threshold (PO-T02)</h2><form onSubmit={saveThreshold} className="form-grid">
    <label>Department ID (blank = institution default)<input value={departmentId} onChange={e=>setDepartmentId(e.target.value)}/></label>
    <label>Minimum attendance %<input type="number" min="0" max="100" step="0.01" required value={threshold} onChange={e=>setThreshold(e.target.value)}/></label>
    <button disabled={busy||!institutionId}>Save threshold</button>
-  </form></section>}
+  </form></section>
   <section><h2>Register summary</h2><p>Present: {counts.present} · Absent: {counts.absent} · On approved leave: {counts.leave} · Total: {students.length}</p></section>
   <form onSubmit={submit}>
    <label><input type="checkbox" checked={notHeld} onChange={e=>setNotHeld(e.target.checked)}/> Session not held</label>
