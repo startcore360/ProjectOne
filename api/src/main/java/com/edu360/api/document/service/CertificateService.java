@@ -94,8 +94,18 @@ public class CertificateService {
         if (name == null || name.isBlank() || name.length() > 100
                 || templateHtml == null || templateHtml.isBlank() || templateHtml.length() > 50000
                 || templateHtml.toLowerCase().contains("<script")
+                || templateHtml.toLowerCase().contains("<iframe")
+                || templateHtml.toLowerCase().contains("<object")
+                || templateHtml.toLowerCase().contains("<embed")
+                || templateHtml.toLowerCase().contains("<form")
+                || templateHtml.toLowerCase().contains("<link")
+                || templateHtml.toLowerCase().contains("<meta")
+                || templateHtml.toLowerCase().contains("<html")
+                || templateHtml.toLowerCase().contains("<head")
+                || templateHtml.toLowerCase().contains("<body")
                 || templateHtml.toLowerCase().contains("javascript:")
-                || templateHtml.matches("(?is).*\\son[a-z]+\\s*=.*")) {
+                || templateHtml.matches("(?is).*\\son[a-z]+\\s*=.*")
+                || templateHtml.matches("(?is).*\\s(?:src|href)\\s*=\\s*['\\\"]https?://.*")) {
             throw new BusinessRuleViolationException("CERTIFICATE_TEMPLATE_INVALID",
                     "Template name or HTML is invalid. Script, event-handler and javascript content is not permitted.");
         }
@@ -299,7 +309,11 @@ public class CertificateService {
         audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "CERTIFICATE_PREPARE",
                 "CERTIFICATE_ISSUANCE", issuanceId, (UUID) row.get("institutionId"), null,
                 Map.of("print", true, "revoked", row.get("revoked")), 1, "P", "SUCCESS"));
-        return html;
+        return """
+                <!doctype html><html><head><meta charset="utf-8">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">
+                </head><body>%s</body></html>
+                """.formatted(html);
     }
 
     @Transactional
@@ -372,7 +386,7 @@ public class CertificateService {
         String hash = sha256(code);
         return jdbc.query("""
                 SELECT verification_status,student_name,program_name,certificate_type,issued_at,institution_name
-                  FROM app.fn_public_certificate_verify(?)
+                  FROM app.fn_public_certificate_verify(?::char(64))
                 """, rs -> rs.next() ? new PublicVerification(rs.getString(1), rs.getString(2),
                 rs.getString(3), rs.getString(4), rs.getObject(5, OffsetDateTime.class), rs.getString(6)) : null,
                 hash);
