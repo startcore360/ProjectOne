@@ -25,6 +25,7 @@ CREATE TABLE app.id_card_issuance (
 );
 CREATE UNIQUE INDEX uq_id_card_number ON app.id_card_issuance(tenant_id,card_number);
 CREATE UNIQUE INDEX uq_id_card_qr_hash ON app.id_card_issuance(tenant_id,qr_hash);
+CREATE UNIQUE INDEX uq_id_card_active_user ON app.id_card_issuance(tenant_id,institution_id,user_id) WHERE status='ACTIVE';
 CREATE INDEX ix_id_card_user_status ON app.id_card_issuance(tenant_id,user_id,status);
 CREATE TABLE app.id_card_replacement (
  tenant_id uuid NOT NULL,id_card_replacement_id uuid NOT NULL,institution_id uuid NOT NULL,
@@ -91,9 +92,55 @@ BEGIN
  ALTER TABLE app.certificate_issuance FORCE ROW LEVEL SECURITY;
  CREATE POLICY p_tenant ON app.certificate_issuance USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
  CREATE POLICY p_institution ON app.certificate_issuance AS RESTRICTIVE USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[])) WITH CHECK(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL' OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]));
+ CREATE POLICY p_institution ON app.certificate_issuance AS RESTRICTIVE
+  USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL'
+    OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]))
+  WITH CHECK(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL'
+    OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]));
  GRANT SELECT,INSERT ON app.certificate_issuance TO edu_app;
+ GRANT UPDATE(revoked_at,revoked_by_user_id,revocation_reason) ON app.certificate_issuance TO edu_app;
  GRANT SELECT ON app.certificate_issuance TO edu_report;
 END $$;
+
+-- Public verification is a deliberate, code-possession disclosure of minimal certificate
+-- metadata. row_security=off makes this fail closed unless the migration/function owner has
+-- BYPASSRLS (or superuser) privileges; never broaden ordinary app.* table grants.
+CREATE OR REPLACE FUNCTION app.fn_public_certificate_verify(p_code_hash char(64))
+RETURNS TABLE (
+ verification_status text,
+ student_name text,
+ program_name text,
+ certificate_type text,
+ issued_at timestamptz,
+ institution_name text
+)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path=pg_catalog,app
+SET row_security=off
+AS $$
+ SELECT CASE WHEN ci.revoked_at IS NULL THEN 'VALID' ELSE 'REVOKED' END,
+        sp.full_name,
+        COALESCE(pr.program_name,'Not recorded'),
+        ct.type,
+        ci.issued_at,
+        inst.institution_name
+ FROM app.certificate_issuance ci
+ JOIN app.certificate_request cr ON cr.tenant_id=ci.tenant_id
+  AND cr.certificate_request_id=ci.certificate_request_id
+ JOIN app.student_profile sp ON sp.tenant_id=cr.tenant_id
+  AND sp.student_profile_id=cr.student_id
+ LEFT JOIN app.program pr ON pr.tenant_id=sp.tenant_id AND pr.program_id=sp.program_id
+ JOIN app.certificate_template ct ON ct.tenant_id=cr.tenant_id
+  AND ct.certificate_template_id=cr.template_id
+ JOIN app.institution inst ON inst.tenant_id=ci.tenant_id AND inst.institution_id=ci.institution_id
+ WHERE ci.verification_code_hash=p_code_hash
+ LIMIT 1
+$$;
+REVOKE ALL ON FUNCTION app.fn_public_certificate_verify(char(64)) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.fn_public_certificate_verify(char(64)) TO edu_app;
+COMMENT ON FUNCTION app.fn_public_certificate_verify(char(64)) IS
+ 'Unauthenticated certificate verification by possession of a high-entropy code; returns only certificate status, student name, program, type, issue date and institution. Function owner must have BYPASSRLS; row_security=off otherwise errors closed.';
+
 COMMENT ON TABLE app.id_card_issuance IS 'ID card issuance; qr_hash stores a digest of a signed identifier payload, never signing material.';
 COMMENT ON TABLE app.certificate_issuance IS 'Official certificate issuance and revocation ledger; verification code is stored only as a SHA-256 digest.';
 COMMIT;
