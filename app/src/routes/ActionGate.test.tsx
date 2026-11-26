@@ -49,6 +49,15 @@ describe("ActionGate", () => {
     access.support = false;
   });
 
+  it("never lets the default support-session bypass open a confidential grievance route", () => {
+    access.support = true;
+    access.canAny.mockReturnValue(true);
+    render(<ActionGate anyOf={["GRIEVANCE_CASE_VIEW"]}><p>Confidential cases</p></ActionGate>);
+    expect(screen.getByRole("heading", { name: "Access unavailable" })).toBeInTheDocument();
+    expect(screen.queryByText("Confidential cases")).not.toBeInTheDocument();
+    access.support = false;
+  });
+
   it("renders content when an allowed action is present", () => {
     access.loading = false;
     access.canAny.mockReturnValue(true);
