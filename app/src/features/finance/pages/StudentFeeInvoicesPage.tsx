@@ -98,7 +98,7 @@ export default function StudentFeeInvoicesPage() {
                 <td className="px-4 py-3 font-semibold tabular-nums">{money(invoice.outstandingAmount)}</td>
                 <td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{invoice.status}</span></td>
               </tr>)}
-              {!busy && invoices.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">{hasLoadedInvoices ? "No invoices were found for this fee account." : "Enter a fee account ID to view its invoices."}</td></tr>}
+              {!busy && !error && invoices.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">{hasLoadedInvoices ? "No invoices were found for this fee account." : "Enter a fee account ID to view its invoices."}</td></tr>}
             </tbody>
           </table>
         </div>
