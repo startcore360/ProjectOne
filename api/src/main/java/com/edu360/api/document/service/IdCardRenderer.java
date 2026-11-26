@@ -130,7 +130,7 @@ public class IdCardRenderer {
             }
             document.save(output);
             return output.toByteArray();
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             throw new IllegalStateException("Could not create the identity-card PDF.", ex);
         }
     }
