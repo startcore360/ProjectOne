@@ -92,12 +92,12 @@ export default function FeePaymentPortalPage() {
     try {
       const installmentIds = payable.map((invoice) => invoice.studentInstallmentId || invoice.invoiceId).sort();
       const fingerprint = [accountId.trim(), provider, ...installmentIds].join("|");
-      if (checkoutIntentRef.current?.fingerprint !== fingerprint) {
-        checkoutIntentRef.current = { fingerprint, requestKey: crypto.randomUUID() };
-      }
+      const requestKey = checkoutIntentRef.current?.fingerprint === fingerprint
+        ? checkoutIntentRef.current.requestKey
+        : crypto.randomUUID();
+      checkoutIntentRef.current = { fingerprint, requestKey };
       const response = await api.post<CheckoutSession & { checkoutUrl?: string; status?: string }>(`/tenants/${tenantId}/payments/checkout`, {
-        studentFeeAccountId: accountId.trim(), installmentIds, provider,
-        requestKey: checkoutIntentRef.current.requestKey,
+        studentFeeAccountId: accountId.trim(), installmentIds, provider, requestKey,
       });
       if (response.data.status && response.data.status !== "PENDING") {
         checkoutIntentRef.current = null;
@@ -146,6 +146,8 @@ export default function FeePaymentPortalPage() {
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <label className="block"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><div className="flex flex-col gap-2 sm:flex-row"><input className={inputClass} list="payment-fee-account-options" value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Choose an account or enter its UUID" /><datalist id="payment-fee-account-options">{accounts.map((account) => <option key={account.accountId} value={account.accountId}>{account.studentName} · {account.institutionName}</option>)}</datalist><button type="button" disabled={invoicesLoading || !accountId.trim()} onClick={() => void loadInvoices()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">{invoicesLoading ? "Refreshing…" : "Refresh"}</button></div></label>
       </section>
+      {accountsLoading && <p role="status" className="text-sm text-slate-500">Loading your fee accounts…</p>}
+      {!accountsLoading && !accountsError && accounts.length === 0 && <p className="text-sm text-slate-500">No fee accounts are available for this login.</p>}
       {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
       {accountsError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{accountsError}</div>}
       {notice && <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</div>}
