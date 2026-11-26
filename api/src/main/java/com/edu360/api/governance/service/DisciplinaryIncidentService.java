@@ -155,7 +155,7 @@ public class DisciplinaryIncidentService {
                 rs.getObject(3, UUID.class), rs.getObject(4, OffsetDateTime.class)),
                 principal.tenantId(), incidentId);
         audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "DISCIPLINARY_INCIDENT_VIEW",
-                "DISCIPLINARY_EVIDENCE", null, current.institutionId(), null,
+                "DISCIPLINARY_EVIDENCE", null, incident.institutionId(), null,
                 Map.of("recordCount", result.size()), result.size(), "H", "SUCCESS"));
         return result;
     }
