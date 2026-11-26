@@ -59,10 +59,5 @@ class DispatchProviderTest {
         assertThatThrownBy(() -> provider.send(message)).isInstanceOf(IllegalStateException.class).hasMessageContaining("not configured");
     }
 
-    @Test void missingGatewayConfigurationFailsClosed() {
-        HttpDispatchProvider provider=new HttpDispatchProvider(RestClient.builder().build(),"","","","","","");
-        DispatchMessage message=new DispatchMessage(UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),"SMS","+910000000000",null,"message");
-        assertThatThrownBy(() -> provider.send(message)).isInstanceOf(IllegalStateException.class).hasMessageContaining("not configured");
-    }
 
 }
