@@ -274,9 +274,10 @@ public class T10DomainService {
         List<Map<String,Object>> rows=jdbc.queryForList("SELECT book_id,copy_id,due_date,borrower_user_id FROM app.book_circulation WHERE id=? AND tenant_id=? AND institution_id=? AND returned_at IS NULL FOR UPDATE",circulation,tenant,institution);
         if(rows.isEmpty()) throw new BusinessRuleViolationException("CIRCULATION_NOT_OPEN","Open circulation not found.");
         Map<String,Object> row=rows.get(0);
-        jdbc.update("UPDATE app.book_circulation SET returned_at=now(),status='RETURNED' WHERE id=? AND tenant_id=?",circulation,tenant);
-        jdbc.update("UPDATE app.book_copy SET status='AVAILABLE' WHERE id=? AND tenant_id=?",row.get("copy_id"),tenant);
-        jdbc.update("UPDATE app.library_catalog SET available_copies=available_copies+1 WHERE id=? AND tenant_id=?",row.get("book_id"),tenant);
+        jdbc.update("UPDATE app.book_circulation SET returned_at=now(),status='RETURNED' WHERE id=? AND tenant_id=? AND institution_id=?",circulation,tenant,institution);
+        if(row.get("copy_id")!=null) jdbc.update("UPDATE app.book_copy SET status='AVAILABLE' WHERE id=? AND tenant_id=? AND institution_id=?",row.get("copy_id"),tenant,institution);
+        int catalogChanged=jdbc.update("UPDATE app.library_catalog SET available_copies=LEAST(total_copies,available_copies+1) WHERE id=? AND tenant_id=? AND institution_id=?",row.get("book_id"),tenant,institution);
+        if(catalogChanged!=1) throw new BusinessRuleViolationException("CATALOG_ITEM_NOT_FOUND","The circulation catalog item is no longer available.");
         BigDecimal fine=jdbc.queryForObject("SELECT app.fn_library_fine_amount(?,?,?)",BigDecimal.class,tenant,institution,row.get("due_date"));
         if(fine!=null&&fine.signum()>0) {
             UUID fineId=UUID.randomUUID();
@@ -398,9 +399,15 @@ public class T10DomainService {
         allow(tenant,p.userAccountId(),"TRANSPORT_MANAGE",r.institutionId());
         if(r.passengerUserId()==null||r.routeId()==null||r.stopId()==null)
             throw new BusinessRuleViolationException("INVALID_ALLOCATION","Route, stop and passenger are required.");
-        Integer activeUser=jdbc.queryForObject("SELECT count(*) FROM app.user_account WHERE tenant_id=? AND user_account_id=? AND status='ACTIVE'",
-            Integer.class,tenant,r.passengerUserId());
-        if(activeUser==null||activeUser==0) throw new BusinessRuleViolationException("PASSENGER_NOT_ACTIVE","Passenger must be an active tenant user.");
+        Integer activeUser=jdbc.queryForObject("""
+            SELECT count(*) FROM app.user_account u
+             WHERE u.tenant_id=? AND u.user_account_id=? AND u.status='ACTIVE'
+               AND (EXISTS(SELECT 1 FROM app.student_profile s WHERE s.tenant_id=u.tenant_id AND s.institution_id=? AND s.user_account_id=u.user_account_id AND s.status='ACTIVE')
+                 OR EXISTS(SELECT 1 FROM app.staff_profile p JOIN app.staff_assignment a ON a.tenant_id=p.tenant_id AND a.staff_profile_id=p.staff_profile_id
+                            WHERE p.tenant_id=u.tenant_id AND p.user_account_id=u.user_account_id AND p.employment_status='ACTIVE'
+                              AND a.institution_id=? AND a.status='ACTIVE' AND a.effective_from<=current_date AND (a.effective_to IS NULL OR a.effective_to>=current_date)))
+            """,Integer.class,tenant,r.passengerUserId(),r.institutionId(),r.institutionId());
+        if(activeUser==null||activeUser==0) throw new BusinessRuleViolationException("PASSENGER_OUT_OF_SCOPE","Passenger must be an active student or staff member of this institution.");
         UUID id=UUID.randomUUID();
         jdbc.update("INSERT INTO app.transport_allocation(id,tenant_id,institution_id,route_id,stop_id,passenger_user_id) VALUES (?,?,?,?,?,?)",
           id,tenant,r.institutionId(),r.routeId(),r.stopId(),r.passengerUserId());
