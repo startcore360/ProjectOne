@@ -6,6 +6,7 @@ import Spinner from "../design-system/components/Spinner";
 import { tenantPermissionsService } from "../features/profile/api/tenantPermissionsService";
 import { useTenantAccess } from "../features/profile/hooks/useTenantAccess";
 import { useSupportSession } from "../features/support/useSupportSession";
+import { TENANT_ROUTE_ACTIONS } from "./tenantRouteActions";
 
 type ActionGateProps = {
   anyOf: readonly string[];
@@ -17,8 +18,12 @@ type ActionGateProps = {
 export default function ActionGate({ anyOf, children, allowSupportSession = true }: ActionGateProps) {
   const { canAny, loading, error } = useTenantAccess();
   const { isSupportSession } = useSupportSession();
-  if (isSupportSession && allowSupportSession) return <>{children}</>;
-  if (isSupportSession && !allowSupportSession) {
+  const isConfidentialWorkflow = anyOf.some((action) =>
+    (TENANT_ROUTE_ACTIONS.confidentialGrievances as readonly string[]).includes(action),
+  );
+  const supportBypassAllowed = allowSupportSession && !isConfidentialWorkflow;
+  if (isSupportSession && supportBypassAllowed) return <>{children}</>;
+  if (isSupportSession && !supportBypassAllowed) {
     return (
       <div className="eds-access-denied" role="status" aria-live="polite">
         <EmptyState variant="page" icon="shield" title="Access unavailable" description="Support sessions cannot access this confidential tenant workflow." />
