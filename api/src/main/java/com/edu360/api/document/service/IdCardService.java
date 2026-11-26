@@ -285,7 +285,7 @@ public class IdCardService {
         return renderer.toSvg(cardData(card), card.qrToken());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public byte[] batchPdf(TenantPrincipal principal, UUID institutionId, List<UUID> issuanceIds) {
         if (issuanceIds == null || issuanceIds.isEmpty() || issuanceIds.size() > 50) {
             throw new BusinessRuleViolationException("ID_CARD_BATCH_LIMIT", "Select between 1 and 50 cards for a PDF batch.");
