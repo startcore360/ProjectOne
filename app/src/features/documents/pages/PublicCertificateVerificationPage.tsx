@@ -17,7 +17,13 @@ export default function PublicCertificateVerificationPage(){
   catch(e){setError((e as {response?:{data?:{message?:string}}})?.response?.data?.message??"Certificate could not be verified. Check the code or contact the issuing institution.");}
   finally{setBusy(false);}
  }
- useEffect(()=>{const initial=params.get("code");if(initial){setCode(initial);void verify(initial);}},[]);
+ useEffect(()=>{
+  const initial=params.get("code");if(!initial)return;
+  setCode(initial);setBusy(true);setError("");
+  documentsApi.verifyCertificate(initial).then(setResult)
+   .catch(e=>setError((e as {response?:{data?:{message?:string}}})?.response?.data?.message??"Certificate could not be verified."))
+   .finally(()=>setBusy(false));
+ },[params]);
  return <main className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
   <PageHeader title="Public certificate verification" description="Verify an official EDU 360 certificate using its signed verification code. No login is required."/>
   <Panel title="Verify certificate"><div className="space-y-3"><label className="block text-sm font-medium text-slate-700">Verification code<input className={field+" mt-1"} value={code} onChange={e=>setCode(e.target.value)} placeholder="Paste the certificate verification code"/></label><Button onClick={()=>void verify()} busy={busy} disabled={!code.trim()}>Verify certificate</Button></div></Panel>
