@@ -33,7 +33,7 @@ public class IdCardController {
             @NotBlank String layout, String backgroundImageRef, String fieldsConfigJson) { }
     public record IssueRequest(@NotNull UUID institutionId, @NotBlank String subjectType,
             @NotNull UUID profileId, @NotNull UUID templateId, LocalDate expiryDate) { }
-    public record ReplacementRequest(@NotBlank @Size(max=1000) String reason, UUID feeReceiptFileId) { }
+    public record ReplacementRequest(@NotBlank @Size(max=1000) String reason, @NotNull UUID feeReceiptId) { }
     public record ReplacementDecision(@NotNull Boolean approve, @NotBlank @Size(max=1000) String note) { }
     public record RevokeRequest(@NotBlank @Size(max=1000) String reason) { }
     public record BatchPrintRequest(@NotNull UUID institutionId, @NotNull List<UUID> issuanceIds) { }
@@ -79,7 +79,7 @@ public class IdCardController {
     @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     public IdCardService.Replacement requestReplacement(@PathVariable UUID tenantId,
             @PathVariable UUID issuanceId, @Valid @RequestBody ReplacementRequest body, Authentication auth) {
-        return cards.requestReplacement(principal(auth, tenantId), issuanceId, body.reason(), body.feeReceiptFileId());
+        return cards.requestReplacement(principal(auth, tenantId), issuanceId, body.reason(), body.feeReceiptId());
     }
 
     @GetMapping("/replacements")
