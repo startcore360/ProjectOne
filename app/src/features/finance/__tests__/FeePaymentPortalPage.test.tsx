@@ -83,7 +83,7 @@ describe("FeePaymentPortalPage", () => {
     const user = userEvent.setup();
     render(<FeePaymentPortalPage />);
     await user.type(screen.getByLabelText("Student fee account ID"), "account-123");
-    await waitFor(() => expect(mocks.get).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
     const paidRow = await screen.findByText("Installment #2");
     expect(paidRow.closest("label")?.querySelector("input")).toBeDisabled();
   });
