@@ -156,13 +156,16 @@ WITH pairs(role_code,action_code,limited_to) AS (
  ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
  ('PRINCIPAL_COLLEGE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
  ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
- ('STUDENT_COLLEGE','ID_CARD_REPLACEMENT_REQUEST','Own identity card'),
- ('STUDENT_SCHOOL','ID_CARD_REPLACEMENT_REQUEST','Own identity card')
 ), submitters AS (
  SELECT role_code,'GRIEVANCE_CASE_SUBMIT'::text AS action_code,
         'Submit own named or anonymous grievance only; no case-list or case-detail access'::text AS limited_to
  FROM ref.standard_role
  WHERE role_level IN ('TENANT','UNIVERSITY','COLLEGE','SCHOOL','EXTERNAL')
+ UNION ALL
+ SELECT role_code,'ID_CARD_REPLACEMENT_REQUEST'::text,
+        'Request replacement of own identity card only; processing requires ID_CARD_REPLACE'
+ FROM ref.standard_role
+ WHERE role_level IN ('TENANT','UNIVERSITY','COLLEGE','SCHOOL')
 ), all_pairs AS (
  SELECT * FROM pairs UNION ALL SELECT * FROM submitters
 ), missing AS (
