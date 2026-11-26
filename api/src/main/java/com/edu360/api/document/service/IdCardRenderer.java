@@ -41,8 +41,8 @@ public class IdCardRenderer {
             int qrY = landscape ? 160 : 430;
             StringBuilder path = new StringBuilder();
             if (showQr) {
-                BitMatrix qr = qr(qrToken, 260);
-                int scale = qrSize / qr.getWidth();
+                BitMatrix qr = qr(qrToken, qrSize);
+                int scale = 1;
                 for (int y = 0; y < qr.getHeight(); y++) {
                     for (int x = 0; x < qr.getWidth(); x++) {
                         if (qr.get(x, y)) {
