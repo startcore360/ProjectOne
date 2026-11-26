@@ -61,7 +61,7 @@ export default function FeeStructureManagementPage() {
     try {
       const lines = JSON.parse(linesJson) as Array<{ feeHeadId: string; amount: number }>;
       const installments = JSON.parse(installmentsJson) as Array<{ installmentNo: number; dueDate: string; amount: number }>;
-      const validMoney = (value: number) => Number.isFinite(value) && /^\\d+(?:\\.\\d{1,2})?$/.test(String(value));
+      const validMoney = (value: number) => Number.isFinite(value) && /^\d+(?:\\.\d{1,2})?$/.test(String(value));
       if (!institutionId.trim() || !academicSessionId.trim() || !feePolicyId.trim()) {
         throw new Error("Institution, academic session and fee policy are required.");
       }
@@ -80,7 +80,7 @@ export default function FeeStructureManagementPage() {
       for (const installment of installments) {
         const amount = Number(installment.amount);
         if (!Number.isInteger(installment.installmentNo) || installment.installmentNo <= previousNo
-          || !/^\\d{4}-\\d{2}-\\d{2}$/.test(installment.dueDate)
+          || !/^\d{4}-\d{2}-\d{2}$/.test(installment.dueDate)
           || !Number.isFinite(Date.parse(installment.dueDate)) || (previousDate && installment.dueDate <= previousDate)
           || !validMoney(amount) || amount <= 0) {
           throw new Error("Installments must have increasing numbers and dates, and positive amounts with at most two decimal places.");
