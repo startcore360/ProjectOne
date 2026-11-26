@@ -25,6 +25,7 @@ export default function LibraryCatalogPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -50,8 +51,8 @@ export default function LibraryCatalogPage() {
   const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
 
   const load = useCallback(async () => {
-    if (!tenant || !institution) return;
-    setError("");
+    if (!tenant || !institution) { setLoading(false); return; }
+    setLoading(true); setError("");
     try {
       const catalog = await t10Api.catalog(tenant, institution, query);
       setBooks(catalog);
@@ -71,7 +72,7 @@ export default function LibraryCatalogPage() {
       }
     } catch {
       setError("Library data could not be loaded. Check your institution access and try again.");
-    }
+    } finally { setLoading(false); }
   }, [tenant, institution, query, can]);
 
   useEffect(() => { void load(); }, [load]);
@@ -109,7 +110,8 @@ export default function LibraryCatalogPage() {
   const policyValue = policy;
   return <main className="app-page">
     <PageHeader title="Library Operations" description="Catalog, circulation, reservations and institution-configured overdue fines." />
-    {error && <p role="alert">{error}</p>}
+    {loading && <p role="status">Loading library data…</p>}
+    {error && <p role="alert">{error}</p>
     {notice && <p role="status">{notice}</p>}
 
     <section className="app-panel">
@@ -129,7 +131,7 @@ export default function LibraryCatalogPage() {
       <div className="app-table-wrap"><table><thead><tr><th>Title</th><th>Author</th><th>ISBN</th><th>Available</th><th>Total</th></tr></thead>
         <tbody>{books.map((book) => <tr key={book.id}><td>{book.title}</td><td>{book.author ?? "—"}</td><td>{book.isbn ?? "—"}</td><td>{book.available_copies}</td><td>{book.total_copies}</td></tr>)}</tbody>
       </table></div>
-      {books.length === 0 && <p>No catalog matches. Add a book if you have catalog permissions.</p>}
+      {!loading && books.length === 0 && <p>No catalog matches. Add a book if you have catalog permissions.</p>}
       {can("CATALOG_MANAGE") && <section className="app-subpanel">
         <h3>Manage individual copies</h3>
         <label>Catalog item <select value={manageBookId} onChange={(e) => setManageBookId(e.target.value)}>
