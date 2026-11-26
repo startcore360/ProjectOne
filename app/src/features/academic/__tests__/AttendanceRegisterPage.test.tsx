@@ -27,11 +27,14 @@ describe("AttendanceRegisterPage",()=>{
   await waitFor(()=>expect(screen.getByText("A Student")).toBeInTheDocument());
   fireEvent.click(screen.getByLabelText("A Student ABSENT"));
   fireEvent.click(screen.getByRole("button",{name:"Save attendance"}));
-  await waitFor(()=>expect(api.post).toHaveBeenCalled());
-  expect(api.post).toHaveBeenCalledWith("/api/tenants/tenant-1/attendance/sessions",expect.objectContaining({
+  await waitFor(()=>expect(api.post).toHaveBeenCalledTimes(2));
+  expect(api.post).toHaveBeenNthCalledWith(1,"/api/tenants/tenant-1/academic/attendance/sessions",expect.objectContaining({
    institutionId:"institution-1",sectionId:"section-1",subjectGroupId:null,timetableSlotId:null,subjectAllocationId:null,
-   sessionKind:"SCHOOL_FIRST_HALF",notHeld:false,entries:[{enrollmentId:"enrol-1",status:"ABSENT"}],
+   sessionKind:"SCHOOL_FIRST_HALF",notHeld:false,entries:[],
   }));
-  expect(await screen.findByText("Attendance session saved.")).toBeInTheDocument();
+  expect(api.post).toHaveBeenNthCalledWith(2,"/api/tenants/tenant-1/academic/attendance/entries",{
+   institutionId:"institution-1",attendanceSessionId:"session-1",entries:[{enrollmentId:"enrol-1",status:"ABSENT"}],
+  });
+  expect(await screen.findByText("Attendance session and entries saved.")).toBeInTheDocument();
  });
 });
