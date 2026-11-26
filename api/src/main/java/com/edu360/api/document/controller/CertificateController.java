@@ -9,7 +9,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -99,7 +98,7 @@ public class CertificateController {
             @PathVariable UUID issuanceId, Authentication auth) {
         String html = certificates.renderIssuance(principal(auth, tenantId), issuanceId);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_SECURITY_POLICY,
+                .header("Content-Security-Policy",
                         "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:")
                 .header("X-Content-Type-Options", "nosniff")
                 .contentType(MediaType.TEXT_HTML)
