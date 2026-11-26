@@ -30,7 +30,7 @@ export type FinePolicy = {
 export type TransportRoute = {
   id: string; route_name: string; vehicle_number: string; driver_name: string;
   driver_phone: string | null; total_capacity: number; allocated_seats: number;
-  transport_fee_code: string | null;
+  transport_fee_code: string | null; active: boolean;
 };
 export type RouteStop = {
   id: string; route_id: string; stop_name: string; pickup_time: string | null;
