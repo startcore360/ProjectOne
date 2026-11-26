@@ -155,7 +155,7 @@ WITH pairs(role_code,action_code,limited_to) AS (
  ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_VIEW','Own institution; PO-T05'),
  ('INTERNAL_COMPLAINTS_COMMITTEE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
  ('PRINCIPAL_COLLEGE','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
- ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05'),
+ ('SCHOOL_PRINCIPAL','GRIEVANCE_EVIDENCE_UPLOAD','Own institution; PO-T05')
 ), submitters AS (
  SELECT role_code,'GRIEVANCE_CASE_SUBMIT'::text AS action_code,
         'Submit own named or anonymous grievance only; no case-list or case-detail access'::text AS limited_to
