@@ -45,6 +45,18 @@ class NoDuesClearanceIT {
             SELECT pg_get_viewdef('app.v_fee_invoice'::regclass,true)
             """, String.class);
         assertThat(definition).contains("outstanding_amount", "student_profile_id");
+        Boolean securityInvoker = jdbc.queryForObject("""
+            SELECT COALESCE('security_invoker=true'=ANY(reloptions),false)
+              FROM pg_class WHERE oid='app.v_fee_invoice'::regclass
+            """, Boolean.class);
+        assertThat(securityInvoker).isTrue();
+        Boolean helperExists = jdbc.queryForObject(
+                "SELECT to_regprocedure('app.fn_no_dues_department_clearance(uuid,uuid,uuid)') IS NOT NULL", Boolean.class);
+        assertThat(helperExists).isTrue();
+        Long missingContextBlocker = jdbc.queryForObject(
+                "SELECT pending_departments FROM app.fn_no_dues_department_clearance(?,?,?)",
+                Long.class, java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID());
+        assertThat(missingContextBlocker).isEqualTo(1L);
         Boolean equipmentTable = jdbc.queryForObject(
                 "SELECT to_regclass('app.department_equipment_clearance') IS NOT NULL", Boolean.class);
         assertThat(equipmentTable).isTrue();
