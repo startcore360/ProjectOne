@@ -172,6 +172,19 @@ public class IdCardService {
         return new Replacement(id, issuanceId, reason.trim(), "REQUESTED", null);
     }
 
+    @Transactional(readOnly = true)
+    public List<Replacement> replacementRequests(TenantPrincipal principal, UUID institutionId) {
+        authorize(principal, institutionId, "ID_CARD_REPLACE", RbacTarget.NONE);
+        return jdbc.query("""
+                SELECT r.id_card_replacement_id,r.original_issuance_id,r.reason,r.status,r.replacement_issuance_id
+                  FROM app.id_card_replacement r
+                 WHERE r.tenant_id=? AND r.institution_id=?
+                 ORDER BY r.created_at DESC
+                """, (rs, n) -> new Replacement(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+                rs.getString(3), rs.getString(4), rs.getObject(5, UUID.class)),
+                principal.tenantId(), institutionId);
+    }
+
     @Transactional
     public Replacement decideReplacement(TenantPrincipal principal, UUID replacementId,
             boolean approve, String decisionNote) {
