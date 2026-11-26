@@ -37,7 +37,7 @@ export default function CertificateRequestPage() {
       const tasks:Promise<unknown>[]=[];
       if(canRequest||canApprove||canPrepare||canTemplate)tasks.push(documentsApi.certificateTemplates(tenantId,institutionId).then(setTemplates));
       if(canRequest||canApprove||canPrepare)tasks.push(documentsApi.certificateRequests(tenantId,institutionId).then(setRequests));
-      if(canPrepare)tasks.push(documentsApi.certificateIssuances(tenantId,institutionId).then(setIssuances));
+      if(canPrepare||canRevoke)tasks.push(documentsApi.certificateIssuances(tenantId,institutionId).then(setIssuances));
       await Promise.all(tasks);
     } catch(e){setError(messageOf(e,"Unable to load certificate records for this institution."));}
     finally{setBusy(false);}
@@ -119,9 +119,9 @@ export default function CertificateRequestPage() {
         </article>;
       })}{requests.length===0&&<p className="text-sm text-slate-500">No requests loaded.</p>}</div>
     </Panel>}
-    {canPrepare&&<Panel title="Issued certificates"><div className="space-y-2">{issuances.map(i=><div key={i.issuanceId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+    {(canPrepare||canRevoke)&&<Panel title="Issued certificates"><div className="space-y-2">{issuances.map(i=><div key={i.issuanceId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
       <div><p className="font-medium">{i.certificateNumber}</p><p className="text-sm text-slate-600">Issued {i.issuedAt} · {i.revokedAt?"REVOKED":"VALID"}</p></div>
-      <div className="flex gap-2"><Button size="sm" variant="secondary" onClick={()=>void print(i)} busy={busy}>Print</Button>{canRevoke&&!i.revokedAt&&<Button size="sm" variant="danger" onClick={()=>void revoke(i)} busy={busy}>Revoke</Button>}</div>
+      <div className="flex gap-2">{canPrepare&&<Button size="sm" variant="secondary" onClick={()=>void print(i)} busy={busy}>Print</Button>}{canRevoke&&!i.revokedAt&&<Button size="sm" variant="danger" onClick={()=>void revoke(i)} busy={busy}>Revoke</Button>}</div>
     </div>)}{issuances.length===0&&<p className="text-sm text-slate-500">No issued certificates loaded.</p>}</div></Panel>}
     {prepared&&<Panel title="Verification code"><p className="break-all rounded-lg bg-slate-50 p-3 font-mono text-sm">{prepared.verificationCode}</p><div className="mt-3 flex flex-wrap gap-3"><Button size="sm" variant="secondary" onClick={()=>void navigator.clipboard.writeText(prepared.verificationCode)}>Copy code</Button><a className="text-sm font-medium text-indigo-700 underline" href={prepared.verificationUrl} target="_blank" rel="noreferrer">Public verification</a></div></Panel>}
     {printHtml&&<PrintableCertificate html={printHtml} title={printTitle}/>}
