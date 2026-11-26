@@ -38,7 +38,7 @@ public class IdCardRenderer {
             int height = landscape ? 520 : 760;
             int qrSize = landscape ? 190 : 210;
             int qrX = landscape ? width - qrSize - 44 : (width - qrSize) / 2;
-            int qrY = landscape ? 160 : 430;
+            int qrY = landscape ? 160 : 500;
             StringBuilder path = new StringBuilder();
             if (showQr) {
                 BitMatrix qr = qr(qrToken, qrSize);
