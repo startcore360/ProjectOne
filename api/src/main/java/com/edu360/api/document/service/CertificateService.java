@@ -2,7 +2,6 @@ package com.edu360.api.document.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,12 +29,10 @@ import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
-import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.governance.service.NoDuesVerificationService;
 
 @Service
 public class CertificateService {
-    private static final SecureRandom RANDOM = new SecureRandom();
     private final JdbcTemplate jdbc;
     private final PermissionEvaluatorService permissions;
     private final NoDuesVerificationService noDues;
