@@ -129,7 +129,7 @@ public class AssignmentService {
         if (!Boolean.TRUE.equals(enrolledInSection)) {
             throw new ResourceNotFoundException("Student is not enrolled in the assignment section.");
         }
-        FileUploadResponse file = files.upload(student, upload, "ASSIGNMENT_SUBMISSION", (UUID) assignment.get("institution_id"));
+        FileUploadResponse file = files.upload(student, upload, "ASSIGNMENT_SUBMISSION", (UUID) assignment.get("institution_id"), null, null);
         if (!"CLEAN".equals(file.scanStatus()) || !"ACTIVE".equals(file.status())) {
             throw new BusinessRuleViolationException("SUBMISSION_FILE_NOT_CLEAN", "Submission was not accepted because the uploaded file did not pass malware scanning.");
         }
