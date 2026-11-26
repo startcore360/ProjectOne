@@ -32,16 +32,23 @@ public class MedicalExemptionService {
             ()->new com.edu360.api.exception.UnauthorizedException("An active student role is required."));
         permissions.authorize(rbac,"STUDENT_LEAVE_APPLY",PermissionEvaluatorService.scopeOf(active),RbacTarget.NONE);
         return jdbc.queryForList("""
+            WITH eligible_students AS (
+             SELECT p.student_profile_id FROM app.student_profile p
+              WHERE p.tenant_id=? AND p.user_account_id=? AND p.status='ACTIVE'
+             UNION
+             SELECT gl.student_profile_id FROM app.guardian_profile gp
+              JOIN app.student_guardian_link gl ON gl.tenant_id=gp.tenant_id
+               AND gl.guardian_profile_id=gp.guardian_profile_id
+              WHERE gp.tenant_id=? AND gp.user_account_id=? AND gl.status='ACTIVE' AND gl.is_primary
+            )
             SELECT e.enrollment_id,e.institution_id,e.academic_session_id,e.section_id,
                    s.section_name,a.academic_year
-              FROM app.student_profile p JOIN app.student_enrollment e
-                ON e.tenant_id=p.tenant_id AND e.institution_id=p.institution_id AND e.student_profile_id=p.student_profile_id
+              FROM eligible_students es JOIN app.student_enrollment e ON e.tenant_id=? AND e.student_profile_id=es.student_profile_id
               JOIN app.section s ON s.tenant_id=e.tenant_id AND s.institution_id=e.institution_id AND s.section_id=e.section_id
               JOIN app.academic_session a ON a.tenant_id=e.tenant_id AND a.academic_session_id=e.academic_session_id
-             WHERE p.tenant_id=? AND p.user_account_id=? AND p.status='ACTIVE'
-               AND e.outcome='IN_PROGRESS' AND e.ended_on IS NULL
+             WHERE e.outcome='IN_PROGRESS' AND e.ended_on IS NULL
              ORDER BY a.start_date DESC,s.section_name
-            """,tenantId,actor.userAccountId());
+            """,tenantId,actor.userAccountId(),tenantId,actor.userAccountId(),tenantId);
     }
 
     @Transactional
@@ -49,10 +56,20 @@ public class MedicalExemptionService {
             LocalDate startDate,LocalDate endDate,UUID documentRef){
         authorize(tenantId,actor,"STUDENT_LEAVE_APPLY",institutionId,departmentForEnrollment(tenantId,institutionId,enrollmentId));
         UUID studentId=jdbc.query("""
-            SELECT student_profile_id FROM app.student_profile
-             WHERE tenant_id=? AND institution_id=? AND user_account_id=? AND status='ACTIVE'
-            """,rs->rs.next()?rs.getObject(1,UUID.class):null,tenantId,institutionId,actor.userAccountId());
-        if(studentId==null)throw new ResourceNotFoundException("Student profile not found.");
+            SELECT e.student_profile_id FROM app.student_enrollment e
+              JOIN app.student_profile p ON p.tenant_id=e.tenant_id AND p.institution_id=e.institution_id
+               AND p.student_profile_id=e.student_profile_id
+             WHERE e.tenant_id=? AND e.institution_id=? AND e.enrollment_id=?
+              AND e.outcome='IN_PROGRESS' AND e.ended_on IS NULL
+              AND (p.user_account_id=? OR EXISTS(
+               SELECT 1 FROM app.guardian_profile gp
+                JOIN app.student_guardian_link gl ON gl.tenant_id=gp.tenant_id
+                 AND gl.guardian_profile_id=gp.guardian_profile_id
+                WHERE gp.tenant_id=e.tenant_id AND gp.user_account_id=?
+                 AND gl.student_profile_id=e.student_profile_id AND gl.status='ACTIVE' AND gl.is_primary
+              ))
+            """,rs->rs.next()?rs.getObject(1,UUID.class):null,tenantId,institutionId,enrollmentId,actor.userAccountId(),actor.userAccountId());
+        if(studentId==null)throw new ResourceNotFoundException("The enrolment is not an active enrolment for this student or primary guardian.");
         UUID id=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO app.attendance_medical_exemption(tenant_id,attendance_medical_exemption_id,institution_id,
@@ -68,8 +85,7 @@ public class MedicalExemptionService {
         if(!List.of("APPROVED","REJECTED").contains(decision))throw new IllegalArgumentException("Decision must be APPROVED or REJECTED.");
         Map<String,Object> row;
         try{row=jdbc.queryForMap("""
-            SELECT e.*,p.user_account_id AS requester_user_id,e.enrollment_id AS request_enrollment_id FROM app.attendance_medical_exemption e
-              JOIN app.student_profile p ON p.tenant_id=e.tenant_id AND p.student_profile_id=e.student_profile_id
+            SELECT e.*,e.created_by AS requester_user_id,e.enrollment_id AS request_enrollment_id FROM app.attendance_medical_exemption e
              WHERE e.tenant_id=? AND e.institution_id=? AND e.attendance_medical_exemption_id=?
             """,tenantId,institutionId,exemptionId);}
         catch(org.springframework.dao.EmptyResultDataAccessException ex){throw new ResourceNotFoundException("Medical exemption request not found.");}
@@ -85,15 +101,24 @@ public class MedicalExemptionService {
     }
 
     @Transactional(readOnly=true)
-    public List<Map<String,Object>> list(UUID tenantId,TenantPrincipal actor,UUID institutionId,UUID enrollmentId){
-        authorize(tenantId,actor,"ATTENDANCE_VIEW",institutionId,enrollmentId==null?null:departmentForEnrollment(tenantId,institutionId,enrollmentId));
+    public List<Map<String,Object>> list(UUID tenantId,TenantPrincipal actor,UUID institutionId,UUID enrollmentId,UUID departmentId){
+        UUID scopeDepartment=departmentId!=null?departmentId:enrollmentId==null?null:departmentForEnrollment(tenantId,institutionId,enrollmentId);
+        authorize(tenantId,actor,"ATTENDANCE_VIEW",institutionId,scopeDepartment);
         return jdbc.queryForList("""
-            SELECT attendance_medical_exemption_id,enrollment_id,student_profile_id,start_date,end_date,
-                   document_ref,status,requested_at,approved_by_user_id,decided_at,decision_note
-              FROM app.attendance_medical_exemption WHERE tenant_id=? AND institution_id=?
-               AND (?::uuid IS NULL OR enrollment_id=?)
-             ORDER BY requested_at DESC
-            """,tenantId,institutionId,enrollmentId,enrollmentId);
+            SELECT x.attendance_medical_exemption_id,x.enrollment_id,x.student_profile_id,x.start_date,x.end_date,
+                   x.document_ref,x.status,x.requested_at,x.approved_by_user_id,x.decided_at,x.decision_note,
+                   e.section_id,s.section_name,pr.department_id
+              FROM app.attendance_medical_exemption x
+              JOIN app.student_enrollment e ON e.tenant_id=x.tenant_id AND e.institution_id=x.institution_id AND e.enrollment_id=x.enrollment_id
+              JOIN app.section s ON s.tenant_id=e.tenant_id AND s.institution_id=e.institution_id AND s.section_id=e.section_id
+              LEFT JOIN app.semester sm ON sm.tenant_id=s.tenant_id AND sm.semester_id=s.semester_id
+              LEFT JOIN app.program_year py ON py.tenant_id=sm.tenant_id AND py.program_year_id=sm.program_year_id
+              LEFT JOIN app.program pr ON pr.tenant_id=py.tenant_id AND pr.program_id=py.program_id
+             WHERE x.tenant_id=? AND x.institution_id=?
+               AND (?::uuid IS NULL OR x.enrollment_id=?)
+               AND (?::uuid IS NULL OR pr.department_id=?)
+             ORDER BY x.requested_at DESC
+            """,tenantId,institutionId,enrollmentId,enrollmentId,scopeDepartment,scopeDepartment);
     }
 
     private void authorize(UUID tenantId,TenantPrincipal actor,String action,UUID institutionId,UUID departmentId){

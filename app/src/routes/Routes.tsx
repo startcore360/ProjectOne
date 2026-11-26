@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
 import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
@@ -80,6 +80,7 @@ const ExamSchedulePage = lazy(() => import("../features/academic/pages/ExamSched
 const TimetableGridView = lazy(() => import("../features/academic/pages/TimetableGridView"));
 const AttendanceRegisterPage = lazy(() => import("../features/academic/pages/AttendanceRegisterPage"));
 const StudentMedicalExemptionPage = lazy(() => import("../features/academic/pages/StudentMedicalExemptionPage"));
+const MedicalExemptionReviewPage = lazy(() => import("../features/academic/pages/MedicalExemptionReviewPage"));
 const MarksEntrySheetPage = lazy(() => import("../features/academic/pages/MarksEntrySheetPage"));
 const ReportCardViewerPage = lazy(() => import("../features/academic/pages/ReportCardViewerPage"));
 
@@ -159,7 +160,8 @@ function RootEntry() {
 // The backend enforces each endpoint independently via PermissionEvaluatorService.
 function UniversityAdminRoute() {
   const userType = useAppSelector((s) => s.auth.user?.userType);
-  if (userType === "STUDENT" || userType === "GUARDIAN") {
+  const location = useLocation();
+  if ((userType === "STUDENT" || userType === "GUARDIAN") && location.pathname !== "/student/medical-exemptions") {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;
@@ -211,6 +213,7 @@ export default function AppRoutes() {
               <Route path="/academic/timetable" element={<ActionGate anyOf={["TIMETABLE_VIEW", "TIMETABLE_BUILD"]}><TimetableGridView /></ActionGate>} />
               <Route path="/academic/attendance" element={<ActionGate anyOf={["ATTENDANCE_VIEW", "ATTENDANCE_MARK"]}><AttendanceRegisterPage /></ActionGate>} />
               <Route path="/student/medical-exemptions" element={<ActionGate anyOf={["STUDENT_LEAVE_APPLY"]}><StudentMedicalExemptionPage /></ActionGate>} />
+              <Route path="/academic/medical-exemptions/review" element={<ActionGate anyOf={["ATTENDANCE_CORRECTION_APPROVE"]}><MedicalExemptionReviewPage /></ActionGate>} />
               <Route path="/academic/marks" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.marks}><MarksEntrySheetPage /></ActionGate>} />
               <Route path="/academic/report-cards" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.reportCards}><ReportCardViewerPage /></ActionGate>} />
               <Route path="/tenants/users" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.users}><UserListPage /></ActionGate>} />

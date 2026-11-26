@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
-import MedicalExemptionModal from "../components/MedicalExemptionModal";
 
 type Student = { enrollment_id:string; student_profile_id:string; student_code:string; full_name:string };
 type Status = "PRESENT"|"ABSENT"|"ON_APPROVED_LEAVE"|"NOT_HELD"|"";
@@ -15,7 +14,7 @@ export default function AttendanceRegisterPage(){
  const [date,setDate]=useState(new Date().toISOString().slice(0,10)); const [sessionKind,setSessionKind]=useState<SessionKind>("PERIOD");
  const [students,setStudents]=useState<Student[]>([]); const [marks,setMarks]=useState<Record<string,Status>>({});
  const [notHeld,setNotHeld]=useState(false); const [busy,setBusy]=useState(false); const [feedback,setFeedback]=useState("");
- const [sessionId,setSessionId]=useState(""); const [threshold,setThreshold]=useState(""); const [medicalFor,setMedicalFor]=useState<string|null>(null);
+ const [sessionId,setSessionId]=useState(""); const [threshold,setThreshold]=useState("");
 
  const loadRoster=useCallback(async()=>{
   if(!tenantId||!institutionId||!sectionId)return;
@@ -79,14 +78,13 @@ export default function AttendanceRegisterPage(){
   <section><h2>Register summary</h2><p>Present: {counts.present} · Absent: {counts.absent} · On approved leave: {counts.leave} · Total: {students.length}</p></section>
   <form onSubmit={submit}>
    <label><input type="checkbox" checked={notHeld} onChange={e=>setNotHeld(e.target.checked)}/> Session not held</label>
-   <div style={{overflowX:"auto"}}><table><thead><tr><th>Student</th><th>Present</th><th>Absent</th><th>Approved leave</th><th>Medical exemption</th></tr></thead><tbody>
+   <div style={{overflowX:"auto"}}><table><thead><tr><th>Student</th><th>Present</th><th>Absent</th><th>Approved leave</th></tr></thead><tbody>
     {students.map(student=><tr key={student.enrollment_id} tabIndex={0} onKeyDown={e=>keyboard(student.enrollment_id,e)}>
      <td>{student.full_name} <small>({student.student_code})</small></td>
      {(["PRESENT","ABSENT","ON_APPROVED_LEAVE"] as Status[]).map(status=><td key={status}>
       <input type="radio" name={student.enrollment_id} checked={notHeld?false:marks[student.enrollment_id]===status} disabled={notHeld}
        onChange={()=>setMark(student.enrollment_id,status)} aria-label={student.full_name+" "+status}/>
      </td>)}
-     <td><button type="button" onClick={()=>setMedicalFor(student.enrollment_id)}>Request</button></td>
     </tr>)}
    </tbody></table></div>
    <button disabled={busy||students.length===0||!institutionId||!sectionId||periodIncomplete||(!notHeld&&students.some(s=>!marks[s.enrollment_id]))}>
@@ -94,7 +92,6 @@ export default function AttendanceRegisterPage(){
    </button>
   </form>
   {feedback&&<p role="status">{feedback} {sessionId&&<small>Session: {sessionId}</small>}</p>}
-  {medicalFor&&tenantId&&<MedicalExemptionModal tenantId={tenantId} institutionId={institutionId} enrollmentId={medicalFor}
-   onClose={()=>setMedicalFor(null)} onSubmitted={()=>setFeedback("Medical exemption request submitted for approval.")}/>}
+  <p>Students and primary guardians submit medical certificates from the student portal. Authorized approvers review requests in the medical exemption review workspace.</p>
  </main>;
 }

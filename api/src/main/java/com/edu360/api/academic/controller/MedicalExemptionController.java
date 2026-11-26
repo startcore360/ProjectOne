@@ -44,8 +44,8 @@ public class MedicalExemptionController {
 
     @GetMapping
     public List<Map<String,Object>> list(@PathVariable UUID tenantId,@RequestParam UUID institutionId,
-            @RequestParam(required=false) UUID enrollmentId,Authentication auth){
-        return service.list(tenantId,principal(auth,tenantId),institutionId,enrollmentId);
+            @RequestParam(required=false) UUID enrollmentId,@RequestParam(required=false) UUID departmentId,Authentication auth){
+        return service.list(tenantId,principal(auth,tenantId),institutionId,enrollmentId,departmentId);
     }
 
     public record Request(@NotNull UUID institutionId,@NotNull UUID enrollmentId,@NotNull LocalDate startDate,

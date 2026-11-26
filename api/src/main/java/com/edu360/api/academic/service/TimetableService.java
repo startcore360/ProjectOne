@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -108,25 +109,130 @@ public class TimetableService {
         return slot(tenantId,slotId);
     }
 
+    @Transactional
+    public Map<String,Object> publishSlot(UUID tenantId,TenantPrincipal actor,UUID institutionId,UUID slotId) {
+        Map<String,Object> existing;
+        try{existing=jdbc.queryForMap("""
+            SELECT section_id,subject_group_id,subject_allocation_id,status,is_online
+              FROM app.timetable_slot WHERE tenant_id=? AND institution_id=? AND timetable_slot_id=?
+            """,tenantId,institutionId,slotId);}
+        catch(org.springframework.dao.EmptyResultDataAccessException ex){throw new ResourceNotFoundException("Timetable slot not found.");}
+        UUID sectionId=(UUID)existing.get("section_id");
+        UUID allocationId=(UUID)existing.get("subject_allocation_id");
+        UUID departmentId=sectionId!=null?departmentForSection(tenantId,institutionId,sectionId)
+            :departmentForAllocation(tenantId,institutionId,allocationId);
+        authorize(tenantId,actor,"TIMETABLE_BUILD",institutionId,departmentId);
+        if(!"DRAFT".equals(existing.get("status")))
+            throw new BusinessRuleViolationException("TIMETABLE_SLOT_NOT_DRAFT","Only draft timetable slots can be published.");
+        if(Boolean.TRUE.equals(existing.get("is_online"))){
+            Integer links=jdbc.queryForObject("""
+                SELECT count(*) FROM app.meeting_link WHERE tenant_id=? AND institution_id=? AND timetable_slot_id=?
+                 AND status='CREATED' AND access_token_hash IS NOT NULL AND token_expires_at>now()
+                """,Integer.class,tenantId,institutionId,slotId);
+            if(links==null||links==0)
+                throw new BusinessRuleViolationException("ONLINE_MEETING_LINK_REQUIRED","An active online meeting link is required before publishing this slot.");
+        }
+        int updated=jdbc.update("""
+            UPDATE app.timetable_slot SET status='PUBLISHED',updated_by=?
+             WHERE tenant_id=? AND institution_id=? AND timetable_slot_id=? AND status='DRAFT'
+            """,actor.userAccountId(),tenantId,institutionId,slotId);
+        if(updated==0)throw new BusinessRuleViolationException("TIMETABLE_SLOT_NOT_DRAFT","The timetable slot is no longer a draft.");
+        return slot(tenantId,slotId);
+    }
+
     @Transactional(readOnly=true)
     public List<Map<String,Object>> list(UUID tenantId,TenantPrincipal actor,UUID institutionId,UUID sectionId,
             UUID subjectGroupId,UUID academicSessionId) {
+        UserRoleAssignment active=permissions.activeAssignment(rbac(tenantId,actor))
+            .orElseThrow(()->new UnauthorizedException("An active role is required for timetable access."));
+        String roleCode=jdbc.queryForObject("SELECT role_code FROM app.role_definition WHERE tenant_id=? AND role_definition_id=?",
+            String.class,tenantId,active.getRoleDefinitionId());
+        if(active.getScopeType().name().equals("DEPARTMENT")&&(sectionId==null&&subjectGroupId==null))
+            throw new UnauthorizedException("Select a section or subject group within your assigned department.");
         UUID departmentId=sectionId!=null?departmentForSection(tenantId,institutionId,sectionId)
             :subjectGroupId!=null?departmentForGroup(tenantId,institutionId,subjectGroupId):null;
+        if(active.getScopeType().name().equals("DEPARTMENT")&&departmentId==null)
+            throw new UnauthorizedException("The selected section or subject group is outside your department scope.");
         authorize(tenantId,actor,"TIMETABLE_VIEW",institutionId,departmentId);
-        return jdbc.queryForList("""
+
+        String visibilitySql="";
+        List<Object> params=new ArrayList<>();
+        params.add(tenantId);params.add(institutionId);
+        params.add(sectionId);params.add(sectionId);params.add(subjectGroupId);params.add(subjectGroupId);
+        params.add(academicSessionId);params.add(academicSessionId);
+        boolean buildView=List.of("COLLEGE_ADMIN","SCHOOL_ADMIN","HEAD_OF_DEPARTMENT","DEPARTMENT_COORDINATOR").contains(roleCode);
+        switch(roleCode){
+            case "STUDENT_COLLEGE","STUDENT_SCHOOL" -> {
+                
+                visibilitySql="""
+                  AND EXISTS (
+                   SELECT 1 FROM app.student_profile p
+                    JOIN app.student_enrollment e ON e.tenant_id=p.tenant_id AND e.institution_id=p.institution_id
+                     AND e.student_profile_id=p.student_profile_id
+                   WHERE p.tenant_id=ts.tenant_id AND p.institution_id=ts.institution_id
+                    AND p.user_account_id=? AND p.status='ACTIVE' AND e.outcome='IN_PROGRESS' AND e.ended_on IS NULL
+                    AND (e.section_id=ts.section_id OR (ts.subject_group_id IS NOT NULL AND EXISTS(
+                     SELECT 1 FROM app.subject_group_member gm WHERE gm.tenant_id=e.tenant_id
+                      AND gm.institution_id=e.institution_id AND gm.enrollment_id=e.enrollment_id
+                      AND gm.subject_group_id=ts.subject_group_id)))
+                  )
+                """;
+                params.add(actor.userAccountId());
+            }
+            case "PARENT_COLLEGE","PARENT_SCHOOL" -> {
+                
+                visibilitySql="""
+                  AND EXISTS (
+                   SELECT 1 FROM app.guardian_profile gp
+                    JOIN app.student_guardian_link gl ON gl.tenant_id=gp.tenant_id
+                     AND gl.guardian_profile_id=gp.guardian_profile_id AND gl.status='ACTIVE'
+                    JOIN app.student_enrollment e ON e.tenant_id=gl.tenant_id AND e.student_profile_id=gl.student_profile_id
+                     AND e.outcome='IN_PROGRESS' AND e.ended_on IS NULL
+                   WHERE gp.tenant_id=ts.tenant_id AND gp.user_account_id=?
+                    AND ((e.institution_id=ts.institution_id AND e.section_id=ts.section_id)
+                     OR (e.institution_id=ts.institution_id AND ts.subject_group_id IS NOT NULL AND EXISTS(
+                      SELECT 1 FROM app.subject_group_member gm WHERE gm.tenant_id=e.tenant_id
+                       AND gm.institution_id=e.institution_id AND gm.enrollment_id=e.enrollment_id
+                       AND gm.subject_group_id=ts.subject_group_id)))
+                  )
+                """;
+                params.add(actor.userAccountId());
+            }
+            case "PROFESSOR","ASSOCIATE_PROFESSOR","ASSISTANT_PROFESSOR","SUBJECT_TEACHER" -> {
+                
+                visibilitySql="""
+                  AND EXISTS (SELECT 1 FROM app.staff_profile p WHERE p.tenant_id=ts.tenant_id
+                   AND p.user_account_id=? AND p.staff_profile_id=ts.teacher_id AND p.employment_status='ACTIVE')
+                """;
+                params.add(actor.userAccountId());
+            }
+            case "CLASS_TEACHER" -> {
+                
+                visibilitySql="""
+                  AND (EXISTS (SELECT 1 FROM app.staff_profile p WHERE p.tenant_id=ts.tenant_id
+                    AND p.user_account_id=? AND p.staff_profile_id=ts.teacher_id AND p.employment_status='ACTIVE')
+                   OR EXISTS (SELECT 1 FROM app.section s WHERE s.tenant_id=ts.tenant_id
+                    AND s.institution_id=ts.institution_id AND s.section_id=ts.section_id
+                    AND s.class_teacher_user_id=?))
+                """;
+                params.add(actor.userAccountId());params.add(actor.userAccountId());
+            }
+            default -> { }
+        }
+        String statusFilter=buildView?"AND ts.status IN ('DRAFT','PUBLISHED')":"AND ts.status='PUBLISHED'";
+        String sql="""
             SELECT ts.timetable_slot_id,ts.institution_id,ts.academic_session_id,ts.section_id,ts.subject_group_id,
                    ts.subject_allocation_id,ts.period_no,ts.teacher_id,sp.full_name AS teacher_name,
                    sa.course_offering_id,ts.room_id,r.room_number,r.building,ts.day_of_week,ts.start_time,ts.end_time,
                    ts.is_online,ts.valid_from,ts.valid_to,ts.status,ts.row_version,
-                   ml.meeting_link_id,ml.provider,ml.join_url,ml.occurrence_date,ml.status AS meeting_status
+                   ml.meeting_link_id,ml.provider,ml.occurrence_date,ml.status AS meeting_status
               FROM app.timetable_slot ts
               JOIN app.subject_allocation sa ON sa.tenant_id=ts.tenant_id AND sa.institution_id=ts.institution_id
                AND sa.subject_allocation_id=ts.subject_allocation_id
               LEFT JOIN app.staff_profile sp ON sp.tenant_id=ts.tenant_id AND sp.staff_profile_id=ts.teacher_id
               LEFT JOIN app.room r ON r.tenant_id=ts.tenant_id AND r.institution_id=ts.institution_id AND r.room_id=ts.room_id
               LEFT JOIN LATERAL (
-                SELECT m.meeting_link_id,m.provider,m.join_url,m.occurrence_date,m.status
+                SELECT m.meeting_link_id,m.provider,m.occurrence_date,m.status
                   FROM app.meeting_link m WHERE m.tenant_id=ts.tenant_id AND m.institution_id=ts.institution_id
                    AND m.timetable_slot_id=ts.timetable_slot_id ORDER BY m.occurrence_date DESC LIMIT 1
               ) ml ON true
@@ -134,9 +240,8 @@ public class TimetableService {
                AND (?::uuid IS NULL OR ts.section_id=?)
                AND (?::uuid IS NULL OR ts.subject_group_id=?)
                AND (?::uuid IS NULL OR ts.academic_session_id=?)
-               AND ts.status IN ('DRAFT','PUBLISHED')
-             ORDER BY ts.day_of_week,ts.start_time,ts.period_no
-            """,tenantId,institutionId,sectionId,sectionId,subjectGroupId,subjectGroupId,academicSessionId,academicSessionId);
+        """+statusFilter+" "+visibilitySql+" ORDER BY ts.day_of_week,ts.start_time,ts.period_no";
+        return jdbc.queryForList(sql,params.toArray());
     }
 
     @Transactional

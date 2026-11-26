@@ -3,6 +3,7 @@ import type { FormEvent,DragEvent } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 import ClashWarningToast from "../components/ClashWarningToast";
+import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
 
 type Slot={timetable_slot_id:string;section_id:string|null;subject_group_id:string|null;subject_allocation_id:string;
  course_offering_id:string;teacher_id:string|null;teacher_name?:string;room_id:string|null;room_number?:string;
@@ -12,6 +13,8 @@ const TIMES=Array.from({length:20},(_,i)=>String(8+Math.floor(i/2)).padStart(2,"
 
 export default function TimetableGridView(){
  const tenantId=useAppSelector(s=>s.auth.user?.tenantId);
+ const {canAny}=useTenantAccess();
+ const canBuild=canAny(["TIMETABLE_BUILD"]);
  const [institutionId,setInstitutionId]=useState("");const [sessionId,setSessionId]=useState("");const [sectionId,setSectionId]=useState("");
  const [subjectAllocationId,setSubjectAllocationId]=useState("");const [periodNo,setPeriodNo]=useState("1");const [slots,setSlots]=useState<Slot[]>([]);
  const [roomId,setRoomId]=useState("");const [day,setDay]=useState("1");const [start,setStart]=useState("09:00");const [end,setEnd]=useState("10:00");
@@ -21,6 +24,7 @@ export default function TimetableGridView(){
  const [occurrenceDate,setOccurrenceDate]=useState(new Date().toISOString().slice(0,10));
  const [tokenExpiry,setTokenExpiry]=useState(()=>new Date(Date.now()+7*86400000).toISOString().slice(0,16));
  const [dragged,setDragged]=useState<Slot|null>(null);const [toast,setToast]=useState("");const [feedback,setFeedback]=useState("");const [busy,setBusy]=useState(false);
+ const [studentAccessToken,setStudentAccessToken]=useState("");const [accessUrl,setAccessUrl]=useState("");
 
  const load=useCallback(async()=>{
   if(!tenantId||!institutionId)return;
@@ -49,6 +53,18 @@ export default function TimetableGridView(){
     :code.includes("ROOM_OCCUPIED")?"Room is already occupied at this time."
     :failure.response?.data?.message??(e instanceof Error?e.message:"Unable to create timetable slot."));
   }finally{setBusy(false);}
+ }
+ async function publishSlot(slot:Slot){
+  if(!tenantId)return;setBusy(true);setFeedback("");setToast("");
+  try{await api.post("/api/tenants/"+tenantId+"/timetable/slots/"+slot.timetable_slot_id+"/publish",{}, {params:{institutionId}});
+   setFeedback("Timetable slot published.");await load();
+  }catch(e){setToast(e instanceof Error?e.message:"Unable to publish timetable slot.");}finally{setBusy(false);}
+ }
+ async function accessMeeting(event:FormEvent){
+  event.preventDefault();if(!tenantId)return;setBusy(true);setFeedback("");setAccessUrl("");
+  try{const response=await api.post("/api/tenants/"+tenantId+"/timetable/meeting-link-access",{accessToken:studentAccessToken});
+   setAccessUrl(response.data.meetingUrl);setFeedback("Online meeting access verified.");
+  }catch(e){setFeedback(e instanceof Error?e.message:"Unable to verify online meeting access.");}finally{setBusy(false);}
  }
  async function createRoom(event:FormEvent){
   event.preventDefault();if(!tenantId)return;setBusy(true);setFeedback("");
@@ -91,6 +107,7 @@ export default function TimetableGridView(){
    <button type="button" onClick={()=>void load()}>Refresh timetable</button>
   </div>
   <ClashWarningToast message={toast} onDismiss={()=>setToast("")}/>{feedback&&<p role="status">{feedback}</p>}
+  {canBuild&&<>
   <section><h2>Create timetable slot</h2><form onSubmit={createSlot} className="form-grid">
    <label>Subject allocation ID<input required value={subjectAllocationId} onChange={e=>setSubjectAllocationId(e.target.value)}/></label>
    <label>Period number<input type="number" min="1" max="20" required value={periodNo} onChange={e=>setPeriodNo(e.target.value)}/></label>
@@ -115,6 +132,7 @@ export default function TimetableGridView(){
    <label>Room type<select value={roomType} onChange={e=>setRoomType(e.target.value)}><option value="LECTURE_HALL">Lecture hall</option><option value="LAB">Lab</option><option value="AUDITORIUM">Auditorium</option></select></label>
    <button disabled={busy||!institutionId}>Create room</button>
   </form></section>
+  </>}
   <h2>Weekly grid</h2><div style={{overflowX:"auto"}}><table><thead><tr><th>Time</th>{DAYS.map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>
    {TIMES.map(time=><tr key={time}><th>{time}</th>{DAYS.map((d,index)=>{const cell=byCell.get((index+1)+"-"+time)??[];return <td key={d} onDragOver={e=>e.preventDefault()} onDrop={e=>dropOn(index+1,time,e)} style={{minWidth:130,verticalAlign:"top"}}>
     {cell.map(slot=><div key={slot.timetable_slot_id} draggable={slot.status==="DRAFT"} onDragStart={()=>setDragged(slot)}
@@ -122,8 +140,13 @@ export default function TimetableGridView(){
      <strong>{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</strong><br/>
      <small>{slot.course_offering_id.slice(0,8)} · {slot.teacher_name??slot.teacher_id?.slice(0,8)??"Teacher pending"} · {slot.room_number??slot.room_id?.slice(0,8)??"Online"}</small><br/>
      <small>{slot.status}{slot.is_online?" · Online":""}</small>
+     {canBuild&&slot.status==="DRAFT"&&<button type="button" disabled={busy} onClick={()=>void publishSlot(slot)}>Publish slot</button>}
     </div>)}
    </td>;})}</tr>)}
   </tbody></table></div>
+  <section><h2>Join an online meeting</h2><form onSubmit={accessMeeting} className="form-grid">
+   <label>Student access token<input required value={studentAccessToken} onChange={e=>setStudentAccessToken(e.target.value)}/></label>
+   <button disabled={busy||!studentAccessToken}>Verify and open meeting</button>
+  </form>{accessUrl&&<p><a href={accessUrl} target="_blank" rel="noopener noreferrer">Open verified meeting link</a></p>}</section>
  </main>;
 }
