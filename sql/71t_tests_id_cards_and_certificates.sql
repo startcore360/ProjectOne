@@ -8,6 +8,9 @@ BEGIN
  END LOOP;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='id_card_issuance_qr_hash_check') THEN RAISE EXCEPTION 'T9_DB_71 QR digest constraint missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='certificate_issuance_verification_code_hash_key') THEN RAISE EXCEPTION 'T9_DB_71 unique certificate verification digest missing'; END IF;
+ IF to_regprocedure('app.fn_no_dues_department_clearance(uuid,uuid,uuid)') IS NULL THEN
+  RAISE EXCEPTION 'T9_DB_71 tenant-bound departmental No-Dues helper missing';
+ END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename='department_equipment_clearance' AND policyname='p_institution' AND permissive='RESTRICTIVE') THEN
   RAISE EXCEPTION 'T9_DB_71 department clearance institution isolation policy missing';
  END IF;
