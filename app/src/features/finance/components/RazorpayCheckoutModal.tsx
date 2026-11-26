@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -28,18 +28,30 @@ const RAZORPAY_SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
 export default function RazorpayCheckoutModal({ session, onClose, onSubmitted }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const checkoutOpenRef = useRef(false);
 
   useEffect(() => {
     if (session.provider !== "RAZORPAY" || window.Razorpay) return;
+    if (document.querySelector('script[data-edu360-gateway="razorpay"]')) return;
     const script = document.createElement("script");
     script.src = RAZORPAY_SCRIPT;
     script.async = true;
     script.dataset.edu360Gateway = "razorpay";
-    script.onerror = () => setError("The payment provider could not be loaded. Please try again.");
+    script.onerror = () => {
+      script.remove();
+      setError("The payment provider could not be loaded. Please try again.");
+    };
     document.body.appendChild(script);
   }, [session.provider]);
 
+  function closeCheckout() {
+    checkoutOpenRef.current = false;
+    setLoading(false);
+    onClose();
+  }
+
   async function openCheckout() {
+    if (checkoutOpenRef.current) return;
     setError("");
     if (session.provider === "STRIPE") {
       if (!session.checkoutUrl) {
@@ -57,6 +69,7 @@ export default function RazorpayCheckoutModal({ session, onClose, onSubmitted }:
       setError("The payment provider is still loading. Please retry in a moment.");
       return;
     }
+    checkoutOpenRef.current = true;
     setLoading(true);
     try {
       const checkout = new window.Razorpay({
@@ -66,7 +79,7 @@ export default function RazorpayCheckoutModal({ session, onClose, onSubmitted }:
         currency: session.currency,
         name: "EDU 360",
         description: session.description || "Student fee payment",
-        modal: { ondismiss: onClose },
+        modal: { ondismiss: closeCheckout },
         handler: () => {
           // Browser callback is not proof of payment. Only the verified server webhook reconciles it.
           onSubmitted();
@@ -74,8 +87,8 @@ export default function RazorpayCheckoutModal({ session, onClose, onSubmitted }:
       });
       checkout.open();
     } catch {
+      checkoutOpenRef.current = false;
       setError("Unable to open the secure checkout window.");
-    } finally {
       setLoading(false);
     }
   }
@@ -88,7 +101,7 @@ export default function RazorpayCheckoutModal({ session, onClose, onSubmitted }:
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Secure payment</p>
             <h2 id="checkout-title" className="mt-1 text-xl font-semibold text-slate-900">{session.provider === "RAZORPAY" ? "Razorpay checkout" : "Stripe checkout"}</h2>
           </div>
-          <button type="button" aria-label="Close checkout" onClick={onClose} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">✕</button>
+          <button type="button" aria-label="Close checkout" onClick={closeCheckout} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">✕</button>
         </div>
         <div className="my-5 rounded-xl bg-slate-50 p-4">
           <p className="text-sm text-slate-500">Amount payable</p>
@@ -98,8 +111,8 @@ export default function RazorpayCheckoutModal({ session, onClose, onSubmitted }:
         {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <p className="mb-4 text-xs leading-5 text-slate-500">Payment status is confirmed only after the provider's signed server notification is verified. Do not close or refresh this page until the provider opens.</p>
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Cancel</button>
-          <button type="button" disabled={loading} onClick={() => void openCheckout()} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{loading ? "Opening…" : session.provider === "RAZORPAY" ? "Pay securely" : "Continue to Stripe"}</button>
+          <button type="button" onClick={closeCheckout} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Cancel</button>
+          <button type="button" disabled={loading} onClick={() => void openCheckout()} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{loading ? "Checkout open…" : session.provider === "RAZORPAY" ? "Pay securely" : "Continue to Stripe"}</button>
         </div>
       </section>
     </div>
