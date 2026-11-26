@@ -57,6 +57,7 @@ public class T10DomainService {
             Set.of("PROFESSOR","ASSOCIATE_PROFESSOR","ASSISTANT_PROFESSOR","HEAD_OF_DEPARTMENT","CLASS_TEACHER","SUBJECT_TEACHER","DEPARTMENT_COORDINATOR").contains(role)
                 ?"NOTICE_PUBLISH_CLASS_DEPT":"NOTICE_PUBLISH_INSTITUTION";
         allow(tenant,p.userAccountId(),action,r.institutionId());
+        if(r.urgent()) allow(tenant,p.userAccountId(),"NOTICE_EMERGENCY",r.institutionId());
         UUID id=UUID.randomUUID();
         String targetRolesJson;
         try {
