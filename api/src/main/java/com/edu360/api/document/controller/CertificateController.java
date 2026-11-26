@@ -1,7 +1,6 @@
 package com.edu360.api.document.controller;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -10,6 +9,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +19,6 @@ import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.document.service.CertificateService;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.exception.UnauthorizedException;
-import com.edu360.api.governance.service.NoDuesVerificationService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -26,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CertificateController {
     private final CertificateService certificates;
-    private final NoDuesVerificationService noDues;
 
     public record CreateTemplateRequest(@NotBlank String type, @NotBlank @Size(max=100) String name,
             @NotBlank @Size(max=50000) String templateHtml) { }
@@ -79,6 +79,24 @@ public class CertificateController {
     public void override(@PathVariable UUID tenantId, @PathVariable UUID requestId,
             @Valid @RequestBody DecisionRequest body, Authentication auth) {
         certificates.overrideNoDues(principal(auth, tenantId), requestId, body.reason());
+    }
+
+    @GetMapping("/issuances")
+    public List<CertificateService.IssuanceSummary> issuances(@PathVariable UUID tenantId,
+            @RequestParam UUID institutionId, Authentication auth) {
+        return certificates.issuances(principal(auth, tenantId), institutionId);
+    }
+
+    @GetMapping(value = "/issuances/{issuanceId}/print", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> print(@PathVariable UUID tenantId,
+            @PathVariable UUID issuanceId, Authentication auth) {
+        String html = certificates.renderIssuance(principal(auth, tenantId), issuanceId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_SECURITY_POLICY,
+                        "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:")
+                .header("X-Content-Type-Options", "nosniff")
+                .contentType(MediaType.TEXT_HTML)
+                .body(html);
     }
 
     @PostMapping("/issuances/{issuanceId}/revoke")
