@@ -1,6 +1,24 @@
 DO $$
 DECLARE t text; def text;
 BEGIN
+ IF EXISTS (
+  SELECT 1 FROM (VALUES
+   ('ID_CARD_ISSUE',284),('ID_CARD_REPLACE',285),('ID_CARD_TEMPLATE_MANAGE',286),('ID_CARD_REVOKE',287),
+   ('CERTIFICATE_TEMPLATE_MANAGE',288),('CERTIFICATE_REVOKE',289),
+   ('DISCIPLINARY_INCIDENT_VIEW',290),('DISCIPLINARY_INCIDENT_MANAGE',291),
+   ('GRIEVANCE_CASE_SUBMIT',292),('GRIEVANCE_CASE_VIEW',293),('GRIEVANCE_CASE_ASSIGN',294),
+   ('GRIEVANCE_HEARING_MANAGE',295),('GRIEVANCE_CASE_RESOLVE',296),('GRIEVANCE_EVIDENCE_VIEW',297),
+   ('GRIEVANCE_EVIDENCE_UPLOAD',298)
+  ) AS expected(code,action_no)
+  LEFT JOIN ref.action_catalog a ON a.action_code=expected.code AND a.action_no=expected.action_no
+  WHERE a.action_code IS NULL
+ ) THEN RAISE EXCEPTION 'T9_DB_72 action codes or numbers do not match the catalog extension'; END IF;
+ IF EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no BETWEEN 284 AND 298 GROUP BY action_no HAVING count(*)>1) THEN
+  RAISE EXCEPTION 'T9_DB_72 action number collision';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no=283 AND action_code='LANDING_CMS_MANAGE') THEN
+  RAISE EXCEPTION 'T9_DB_72 must preserve seeded action number 283';
+ END IF;
  IF NOT EXISTS(SELECT 1 FROM ref.standard_role WHERE role_code='INTERNAL_COMPLAINTS_COMMITTEE' AND role_level='COLLEGE') THEN
   RAISE EXCEPTION 'T9_DB_72 institution-level ICC standard role missing';
  END IF;
