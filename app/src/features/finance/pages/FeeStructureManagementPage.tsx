@@ -28,14 +28,14 @@ export default function FeeStructureManagementPage() {
   const [installmentsJson, setInstallmentsJson] = useState('[{"installmentNo":1,"dueDate":"","amount":0}]');
   const [structures, setStructures] = useState<FeeStructure[]>([]);
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(tenantId));
   const [error, setError] = useState("");
   const busyRef = useRef(false);
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async (institutionFilter?: string) => {
     if (!tenantId) return;
-    setLoading(true);
+    if (institutionFilter !== undefined) setLoading(true);
     try {
       const response = await api.get<FeeStructure[]>(`/tenants/${tenantId}/fee-structures`, {
         params: institutionFilter?.trim() ? { institutionId: institutionFilter.trim() } : undefined,
