@@ -37,6 +37,18 @@ class IdCardRendererTest {
     }
 
     @Test
+    void svgContainsVisibleQrModulesWhenEnabled() {
+        IdCardRenderer.CardData card = new IdCardRenderer.CardData(
+                "EDU-87654321", "Ravi Kumar", "STU-02", "Example College",
+                "2026-11-26", null, "LANDSCAPE", "{\"showQr\":true}");
+
+        String svg = renderer.toSvg(card, "signed-token");
+
+        assertThat(svg).contains("<path d=\"M")
+                .contains("Scan to verify identity");
+    }
+
+    @Test
     void pdfRendererCreatesAValidPdfForAConfiguredCard() {
         IdCardRenderer.CardData card = new IdCardRenderer.CardData(
                 "EDU-12345678", "Asha Rao", "STU-01", "Example College",
