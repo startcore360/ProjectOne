@@ -307,7 +307,7 @@ public class GrievanceService {
         return result;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Hearing> hearings(TenantPrincipal principal, UUID caseId) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_CASE_VIEW", RbacTarget.NONE);
