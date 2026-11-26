@@ -263,11 +263,11 @@ public class GrievanceService {
         return uploaded;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Evidence> evidence(TenantPrincipal principal, UUID caseId) {
         CaseView current = get(principal, caseId);
         authorize(principal, current.institutionId(), "GRIEVANCE_EVIDENCE_VIEW", RbacTarget.NONE);
-        return jdbc.query("""
+        List<Evidence> result = jdbc.query("""
                 SELECT grievance_evidence_id,file_id,uploaded_by_user_id,created_at
                   FROM app.grievance_evidence
                  WHERE tenant_id=? AND grievance_case_id=?
@@ -275,6 +275,10 @@ public class GrievanceService {
                 """, (rs, n) -> new Evidence(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                 rs.getObject(3, UUID.class), rs.getObject(4, OffsetDateTime.class)),
                 principal.tenantId(), caseId);
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "GRIEVANCE_EVIDENCE_VIEW",
+                "GRIEVANCE_EVIDENCE", null, current.institutionId(), null,
+                Map.of("recordCount", result.size()), result.size(), "H", "SUCCESS"));
+        return result;
     }
 
     private void appendAction(TenantPrincipal principal, CaseView current, String type, String notes,
