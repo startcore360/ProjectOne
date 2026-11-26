@@ -324,7 +324,7 @@ jobs:
           psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/74t_tests_library_and_transport_schema.sql
           psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -c "ALTER ROLE edu_app PASSWORD 't10-ci-only'; ALTER ROLE edu_report PASSWORD 'report-ci-only'; GRANT CONNECT ON DATABASE edu360_t10 TO edu_app, edu_report; GRANT SELECT ON ALL TABLES IN SCHEMA app TO edu_report;"
       - name: Run opt-in T10 PostgreSQL and provider tests
-        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml -Dtest=DispatchProviderTest,DispatchWorkerIT,LibraryOverdueFineIT,ExecutiveAnalyticsReportIT test
+        run: mvn --batch-mode --no-transfer-progress -f api/pom.xml -Dtest=DispatchProviderTest,DispatchWorkerIT,LibraryOverdueFineIT,TransportCapacityIT,ExecutiveAnalyticsReportIT test
       - name: Verify T10 rollback scripts
         if: always()
         run: |
