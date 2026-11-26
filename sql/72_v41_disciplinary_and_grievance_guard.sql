@@ -7,11 +7,14 @@ ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_purpose CHECK (purpose
  'MESSAGE_ATTACHMENT','ASSIGNMENT_SUBMISSION','STUDY_MATERIAL','STAFF_DOCUMENT','POLICY','DEPARTMENT_DOCUMENT',
  'ACCREDITATION','COMPLIANCE','LEAVE_DOCUMENT','HALL_TICKET','COMMUNITY_MEDIA','IMPORT_SOURCE','EXPORT',
  'PROFILE_PHOTO','BRANDING','ATTENDANCE_UPLOAD','ATTENDANCE_MEDICAL_EXEMPTION','MARKS_SOURCE','SYLLABUS',
- 'CERTIFICATE','CONSENT_FORM','SERVICE_RECORD','GRIEVANCE_EVIDENCE'
+ 'CERTIFICATE','CONSENT_FORM','SERVICE_RECORD','GRIEVANCE_EVIDENCE','DISCIPLINARY_EVIDENCE'
 ));
 ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_grievance_evidence_type;
 ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_grievance_evidence_type
  CHECK (purpose<>'GRIEVANCE_EVIDENCE' OR content_type IN ('application/pdf','image/jpeg','image/png'));
+ALTER TABLE app.file_object DROP CONSTRAINT IF EXISTS ck_file_object_disciplinary_evidence_type;
+ALTER TABLE app.file_object ADD CONSTRAINT ck_file_object_disciplinary_evidence_type
+ CHECK (purpose<>'DISCIPLINARY_EVIDENCE' OR content_type IN ('application/pdf','image/jpeg','image/png'));
 
 UPDATE app.role_definition SET is_sensitive_role=true,updated_at=now(),row_version=row_version+1
 WHERE role_origin='STANDARD' AND role_code IN
@@ -192,6 +195,26 @@ CREATE TABLE app.grievance_action (
  CHECK(char_length(action_notes) BETWEEN 1 AND 5000),CHECK(penalty IS NULL OR char_length(penalty)<=2000)
 );
 
+CREATE TABLE app.disciplinary_evidence (
+ tenant_id uuid NOT NULL,disciplinary_evidence_id uuid NOT NULL,disciplinary_incident_id uuid NOT NULL,
+ file_id uuid NOT NULL,uploaded_by_user_id uuid NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),
+ created_by uuid NOT NULL,PRIMARY KEY(tenant_id,disciplinary_evidence_id),
+ FOREIGN KEY(tenant_id,disciplinary_incident_id) REFERENCES app.disciplinary_incident(tenant_id,disciplinary_incident_id),
+ FOREIGN KEY(tenant_id,file_id) REFERENCES app.file_object(tenant_id,file_id)
+);
+CREATE TABLE app.disciplinary_action (
+ tenant_id uuid NOT NULL,disciplinary_action_id uuid NOT NULL,disciplinary_incident_id uuid NOT NULL,
+ action_type text NOT NULL,action_notes text NOT NULL,action_at timestamptz NOT NULL DEFAULT now(),
+ performed_by_user_id uuid NOT NULL,notice_file_id uuid,minutes_file_id uuid,penalty text,
+ created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,
+ PRIMARY KEY(tenant_id,disciplinary_action_id),
+ FOREIGN KEY(tenant_id,disciplinary_incident_id) REFERENCES app.disciplinary_incident(tenant_id,disciplinary_incident_id),
+ FOREIGN KEY(tenant_id,notice_file_id) REFERENCES app.file_object(tenant_id,file_id),
+ FOREIGN KEY(tenant_id,minutes_file_id) REFERENCES app.file_object(tenant_id,file_id),
+ CHECK(action_type IN ('HEARING_NOTICE','MINUTES_RECORDED','PENALTY_ISSUED','FOLLOW_UP','CLOSED')),
+ CHECK(char_length(action_notes) BETWEEN 1 AND 5000),CHECK(penalty IS NULL OR char_length(penalty)<=2000)
+);
+
 -- A separate overload for SELECT authorization; does not alter the existing trigger signature.
 -- Active-role selection is taken from app.user_active_role (HI-15), never unioned across assignments.
 CREATE OR REPLACE FUNCTION app.fn_complaint_guard(p_tenant_id uuid,p_accused_user_id uuid,p_institution_id uuid)
@@ -241,7 +264,7 @@ $$;
 DO $$
 DECLARE t text;
 BEGIN
- FOREACH t IN ARRAY ARRAY['disciplinary_incident','grievance_case','grievance_evidence'] LOOP
+ FOREACH t IN ARRAY ARRAY['disciplinary_incident','grievance_case'] LOOP
   EXECUTE format('CREATE TRIGGER trg_touch BEFORE UPDATE ON app.%I FOR EACH ROW EXECUTE FUNCTION app.fn_touch()',t);
   EXECUTE format('ALTER TABLE app.%I ENABLE ROW LEVEL SECURITY',t);
   EXECUTE format('ALTER TABLE app.%I FORCE ROW LEVEL SECURITY',t);
@@ -249,6 +272,20 @@ BEGIN
   EXECUTE format('GRANT SELECT,INSERT,UPDATE ON app.%I TO edu_app',t);
   EXECUTE format('GRANT SELECT ON app.%I TO edu_report',t);
  END LOOP;
+ -- Evidence and action ledgers are append-only; no UPDATE or DELETE privilege.
+ FOREACH t IN ARRAY ARRAY['grievance_evidence','disciplinary_evidence'] LOOP
+  EXECUTE format('ALTER TABLE app.%I ENABLE ROW LEVEL SECURITY',t);
+  EXECUTE format('ALTER TABLE app.%I FORCE ROW LEVEL SECURITY',t);
+  EXECUTE format('CREATE POLICY p_tenant ON app.%I USING (tenant_id=NULLIF(current_setting(''app.tenant_id'',true),'''')::uuid) WITH CHECK (tenant_id=NULLIF(current_setting(''app.tenant_id'',true),'''')::uuid)',t);
+  EXECUTE format('GRANT SELECT,INSERT ON app.%I TO edu_app',t);
+  EXECUTE format('GRANT SELECT ON app.%I TO edu_report',t);
+ END LOOP;
+ ALTER TABLE app.disciplinary_action ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE app.disciplinary_action FORCE ROW LEVEL SECURITY;
+ CREATE POLICY p_tenant ON app.disciplinary_action USING(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid) WITH CHECK(tenant_id=NULLIF(current_setting('app.tenant_id',true),'')::uuid);
+ CREATE TRIGGER trg_disc_action_append_only BEFORE UPDATE OR DELETE ON app.disciplinary_action FOR EACH ROW EXECUTE FUNCTION app.fn_append_only();
+ GRANT SELECT,INSERT ON app.disciplinary_action TO edu_app;
+ GRANT SELECT ON app.disciplinary_action TO edu_report;
  CREATE TRIGGER trg_append_only BEFORE UPDATE OR DELETE ON app.grievance_action FOR EACH ROW EXECUTE FUNCTION app.fn_append_only();
  ALTER TABLE app.grievance_action ENABLE ROW LEVEL SECURITY;
  ALTER TABLE app.grievance_action FORCE ROW LEVEL SECURITY;
@@ -256,6 +293,23 @@ BEGIN
  GRANT SELECT,INSERT ON app.grievance_action TO edu_app;
  GRANT SELECT ON app.grievance_action TO edu_report;
 END $$;
+CREATE POLICY p_disciplinary_institution ON app.disciplinary_incident AS RESTRICTIVE
+ USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL'
+  OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]))
+ WITH CHECK(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL'
+  OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]));
+CREATE POLICY p_disciplinary_evidence_select ON app.disciplinary_evidence AS RESTRICTIVE FOR SELECT
+ USING(EXISTS(SELECT 1 FROM app.disciplinary_incident di WHERE di.tenant_id=disciplinary_evidence.tenant_id
+  AND di.disciplinary_incident_id=disciplinary_evidence.disciplinary_incident_id));
+CREATE POLICY p_disciplinary_evidence_insert ON app.disciplinary_evidence AS RESTRICTIVE FOR INSERT
+ WITH CHECK(EXISTS(SELECT 1 FROM app.disciplinary_incident di WHERE di.tenant_id=disciplinary_evidence.tenant_id
+  AND di.disciplinary_incident_id=disciplinary_evidence.disciplinary_incident_id));
+CREATE POLICY p_disciplinary_action_select ON app.disciplinary_action AS RESTRICTIVE FOR SELECT
+ USING(EXISTS(SELECT 1 FROM app.disciplinary_incident di WHERE di.tenant_id=disciplinary_action.tenant_id
+  AND di.disciplinary_incident_id=disciplinary_action.disciplinary_incident_id));
+CREATE POLICY p_disciplinary_action_insert ON app.disciplinary_action AS RESTRICTIVE FOR INSERT
+ WITH CHECK(EXISTS(SELECT 1 FROM app.disciplinary_incident di WHERE di.tenant_id=disciplinary_action.tenant_id
+  AND di.disciplinary_incident_id=disciplinary_action.disciplinary_incident_id));
 CREATE POLICY p_grievance_confidentiality ON app.grievance_case AS RESTRICTIVE FOR SELECT
  USING(app.fn_complaint_guard(tenant_id,accused_user_id,institution_id));
 CREATE POLICY p_grievance_confidentiality ON app.grievance_evidence AS RESTRICTIVE FOR SELECT
