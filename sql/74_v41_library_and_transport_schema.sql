@@ -107,7 +107,8 @@ CREATE TABLE IF NOT EXISTS app.transport_route (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
  route_name text NOT NULL, vehicle_id uuid REFERENCES app.vehicle(id) ON DELETE RESTRICT, vehicle_number text NOT NULL, driver_name text NOT NULL,
  driver_phone text, total_capacity integer NOT NULL, transport_fee_code text,
- active boolean NOT NULL DEFAULT true, CHECK(total_capacity>0)
+ active boolean NOT NULL DEFAULT true, allocated_seats integer NOT NULL DEFAULT 0,
+ CHECK(total_capacity>0), CHECK(allocated_seats>=0 AND allocated_seats<=total_capacity)
 );
 CREATE TABLE IF NOT EXISTS app.route_stop (
  id uuid PRIMARY KEY, tenant_id uuid NOT NULL, institution_id uuid NOT NULL,
@@ -140,6 +141,21 @@ CREATE TABLE IF NOT EXISTS app.transport_allocation (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_transport_active_passenger
  ON app.transport_allocation(tenant_id,institution_id,passenger_user_id) WHERE status='ACTIVE';
 
+
+-- Keep an atomic seat counter on the locked route row. A COUNT(*) in a trigger can
+-- observe a stale statement snapshot after waiting for a row lock; the guarded UPDATE
+-- below rechecks capacity atomically and therefore serializes concurrent allocations.
+ALTER TABLE app.transport_route ADD COLUMN IF NOT EXISTS allocated_seats integer NOT NULL DEFAULT 0;
+UPDATE app.transport_route r SET allocated_seats=(
+ SELECT count(*) FROM app.transport_allocation a
+  WHERE a.tenant_id=r.tenant_id AND a.institution_id=r.institution_id
+    AND a.route_id=r.id AND a.status='ACTIVE');
+DO $
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.transport_route'::regclass AND conname='ck_transport_allocated_seats') THEN
+  ALTER TABLE app.transport_route ADD CONSTRAINT ck_transport_allocated_seats CHECK(allocated_seats>=0 AND allocated_seats<=total_capacity);
+ END IF;
+END $;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_library_catalog_scope ON app.library_catalog(tenant_id,institution_id,id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_book_copy_scope ON app.book_copy(tenant_id,institution_id,id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_circulation_scope ON app.book_circulation(tenant_id,institution_id,id);
@@ -163,24 +179,49 @@ BEGIN
   ALTER TABLE app.library_fine_policy ADD CONSTRAINT ck_library_working_days_values CHECK(jsonb_typeof(working_days)='array' AND jsonb_array_length(working_days)>0 AND working_days <@ '[1,2,3,4,5,6,7]'::jsonb);
  END IF;
 END $$;
-CREATE OR REPLACE FUNCTION app.fn_transport_capacity_guard() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE cap integer; used integer; route_active boolean;
+CREATE OR REPLACE FUNCTION app.fn_transport_capacity_guard()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE should_increment boolean := false;
 BEGIN
- IF NEW.status<>'ACTIVE' THEN RETURN NEW; END IF;
- SELECT total_capacity,active INTO cap,route_active FROM app.transport_route
-  WHERE id=NEW.route_id AND tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id FOR UPDATE;
- IF cap IS NULL THEN RAISE EXCEPTION 'TRANSPORT_ROUTE_NOT_FOUND'; END IF;
- IF NOT route_active THEN RAISE EXCEPTION 'TRANSPORT_ROUTE_INACTIVE'; END IF;
- SELECT count(*) INTO used FROM app.transport_allocation
-  WHERE tenant_id=NEW.tenant_id AND route_id=NEW.route_id AND status='ACTIVE' AND id<>COALESCE(NEW.id,'00000000-0000-0000-0000-000000000000'::uuid);
- IF used>=cap THEN RAISE EXCEPTION 'TRANSPORT_CAPACITY_EXCEEDED' USING ERRCODE='23514'; END IF;
- IF NOT EXISTS(SELECT 1 FROM app.route_stop WHERE id=NEW.stop_id AND route_id=NEW.route_id AND tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id) THEN
-  RAISE EXCEPTION 'TRANSPORT_STOP_ROUTE_MISMATCH'; END IF;
+ IF TG_OP='DELETE' THEN
+  IF OLD.status='ACTIVE' THEN
+   UPDATE app.transport_route SET allocated_seats=GREATEST(0,allocated_seats-1)
+    WHERE id=OLD.route_id AND tenant_id=OLD.tenant_id AND institution_id=OLD.institution_id;
+  END IF;
+  RETURN OLD;
+ END IF;
+
+ IF NEW.status='ACTIVE' AND NOT EXISTS(
+   SELECT 1 FROM app.route_stop WHERE id=NEW.stop_id AND route_id=NEW.route_id
+    AND tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id) THEN
+  RAISE EXCEPTION 'TRANSPORT_STOP_ROUTE_MISMATCH' USING ERRCODE='23514';
+ END IF;
+
+ IF TG_OP='INSERT' THEN
+  should_increment := NEW.status='ACTIVE';
+ ELSE
+  IF OLD.status='ACTIVE' AND (NEW.status<>'ACTIVE' OR NEW.route_id<>OLD.route_id) THEN
+   UPDATE app.transport_route SET allocated_seats=GREATEST(0,allocated_seats-1)
+    WHERE id=OLD.route_id AND tenant_id=OLD.tenant_id AND institution_id=OLD.institution_id;
+  END IF;
+  should_increment := NEW.status='ACTIVE' AND (OLD.status<>'ACTIVE' OR NEW.route_id<>OLD.route_id);
+ END IF;
+
+ IF should_increment THEN
+  UPDATE app.transport_route
+     SET allocated_seats=allocated_seats+1
+   WHERE id=NEW.route_id AND tenant_id=NEW.tenant_id AND institution_id=NEW.institution_id
+     AND active=true AND allocated_seats<total_capacity;
+  IF NOT FOUND THEN
+   RAISE EXCEPTION 'TRANSPORT_CAPACITY_EXCEEDED_OR_ROUTE_INACTIVE' USING ERRCODE='23514';
+  END IF;
+ END IF;
  RETURN NEW;
 END $$;
 DROP TRIGGER IF EXISTS trg_transport_capacity_guard ON app.transport_allocation;
-CREATE TRIGGER trg_transport_capacity_guard BEFORE INSERT OR UPDATE OF route_id,stop_id,status
- ON app.transport_allocation FOR EACH ROW EXECUTE FUNCTION app.fn_transport_capacity_guard();
+CREATE TRIGGER trg_transport_capacity_guard
+ BEFORE INSERT OR UPDATE OR DELETE ON app.transport_allocation
+ FOR EACH ROW EXECUTE FUNCTION app.fn_transport_capacity_guard();
 -- T9 contract: one row for each student with library activity. No row means no library dues.
 CREATE OR REPLACE VIEW app.v_student_library_dues_flag WITH (security_invoker=true) AS
  SELECT c.tenant_id,c.institution_id,c.borrower_user_id AS student_id,
