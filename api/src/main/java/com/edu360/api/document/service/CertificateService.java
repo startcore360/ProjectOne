@@ -242,7 +242,7 @@ public class CertificateService {
                 "CERTIFICATE_ISSUANCE", issuanceId, row.institutionId(), null,
                 Map.of("certificateNumber", number, "requestId", requestId.toString()), 1, "P", "SUCCESS"));
         return new Issuance(issuanceId, number, code,
-                "/api/public/certificates/verify/" + code, OffsetDateTime.now());
+                "/verify/certificate?code=" + code, OffsetDateTime.now());
     }
 
     @Transactional(readOnly = true)
@@ -301,7 +301,7 @@ public class CertificateService {
                 .replace("{{certificateType}}", html((String) row.get("type")))
                 .replace("{{institutionName}}", html((String) row.get("institutionName")))
                 .replace("{{issueDate}}", html(row.get("issuedAt").toString()))
-                .replace("{{verificationUrl}}", html("/api/public/certificates/verify/" + code))
+                .replace("{{verificationUrl}}", html("/verify/certificate?code=" + code))
                 .replace("{{verificationCode}}", html(code));
         if (Boolean.TRUE.equals(row.get("revoked"))) {
             html = "<div role='alert'>REVOKED CERTIFICATE</div>" + html;
