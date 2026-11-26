@@ -79,6 +79,8 @@ export const documentsApi = {
     api.post(`${root(tenantId)}/certificates/issuances/${issuanceId}/revoke`, { reason }),
   printCertificate: (tenantId: string, issuanceId: string) =>
     api.get<string>(`${root(tenantId)}/certificates/issuances/${issuanceId}/print`).then(r => r.data),
+  recordDepartmentClearance: (tenantId: string, body: object) =>
+    api.put(`/tenants/${tenantId}/governance/department-equipment-clearances`, body).then(r => r.data),
   verifyCertificate: (code: string) =>
     api.get<CertificateVerification>(`/public/certificates/verify/${code}`).then(r => r.data),
 };
