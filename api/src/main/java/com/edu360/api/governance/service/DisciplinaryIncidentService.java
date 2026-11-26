@@ -68,7 +68,12 @@ public class DisciplinaryIncidentService {
         audit.record(new AuditEntry(AuditEventType.CREATE, "DISCIPLINARY_INCIDENT_MANAGE",
                 "DISCIPLINARY_INCIDENT", id, institutionId, null,
                 Map.of("severity", severity, "incidentDate", incidentDate.toString()), 1, "P", "SUCCESS"));
-        return get(principal, id);
+        String studentName = jdbc.query("""
+                SELECT full_name FROM app.student_profile
+                 WHERE tenant_id=? AND student_profile_id=?
+                """, rs -> rs.next() ? rs.getString(1) : null, principal.tenantId(), studentId);
+        return new Incident(id, institutionId, studentId, studentName, incidentDate,
+                severity, description.trim(), null, "RECORDED", OffsetDateTime.now());
     }
 
     @Transactional
@@ -110,8 +115,7 @@ public class DisciplinaryIncidentService {
     @Transactional
     public Incident update(TenantPrincipal principal, UUID incidentId, String actionTaken,
             String status, String notes) {
-        Incident current = get(principal, incidentId);
-        authorize(principal, current.institutionId(), "DISCIPLINARY_INCIDENT_MANAGE");
+        Incident current = incidentForAction(principal, incidentId, "DISCIPLINARY_INCIDENT_MANAGE");
         if (!List.of("RECORDED", "UNDER_REVIEW", "CLOSED").contains(status)
                 || (actionTaken != null && actionTaken.length() > 5000)) {
             throw new BusinessRuleViolationException("DISCIPLINARY_UPDATE_INVALID", "Invalid status or action details.");
@@ -125,13 +129,14 @@ public class DisciplinaryIncidentService {
         audit.record(new AuditEntry(AuditEventType.EDIT, "DISCIPLINARY_INCIDENT_MANAGE",
                 "DISCIPLINARY_INCIDENT", incidentId, current.institutionId(),
                 Map.of("status", current.status()), Map.of("status", status), 1, "P", "SUCCESS"));
-        return get(principal, incidentId);
+        return new Incident(current.incidentId(), current.institutionId(), current.studentId(),
+                current.studentName(), current.incidentDate(), current.severity(), current.description(),
+                actionTaken, status, current.createdAt());
     }
 
     @Transactional
     public FileUploadResponse uploadEvidence(TenantPrincipal principal, UUID incidentId, MultipartFile file) {
-        Incident incident = get(principal, incidentId);
-        authorize(principal, incident.institutionId(), "DISCIPLINARY_INCIDENT_MANAGE");
+        Incident incident = incidentForAction(principal, incidentId, "DISCIPLINARY_INCIDENT_MANAGE");
         FileUploadResponse uploaded = files.upload(principal, file, "DISCIPLINARY_EVIDENCE",
                 incident.institutionId(), "DISCIPLINARY_INCIDENT", incidentId);
         jdbc.update("""
@@ -187,8 +192,7 @@ public class DisciplinaryIncidentService {
     @Transactional
     public void action(TenantPrincipal principal, UUID incidentId, String type,
             String notes, UUID noticeFileId, UUID minutesFileId, String penalty) {
-        Incident incident = get(principal, incidentId);
-        authorize(principal, incident.institutionId(), "DISCIPLINARY_INCIDENT_MANAGE");
+        Incident incident = incidentForAction(principal, incidentId, "DISCIPLINARY_INCIDENT_MANAGE");
         if (!List.of("HEARING_NOTICE", "MINUTES_RECORDED", "PENALTY_ISSUED", "FOLLOW_UP", "CLOSED").contains(type)
                 || notes == null || notes.isBlank() || notes.length() > 5000
                 || (penalty != null && penalty.length() > 2000)) {
@@ -209,6 +213,20 @@ public class DisciplinaryIncidentService {
         audit.record(new AuditEntry(AuditEventType.EDIT, "DISCIPLINARY_INCIDENT_MANAGE",
                 "DISCIPLINARY_INCIDENT", incident.incidentId(), incident.institutionId(), null,
                 Map.of("actionType", type), 1, "P", "SUCCESS"));
+    }
+
+    private Incident incidentForAction(TenantPrincipal principal, UUID incidentId, String action) {
+        Incident row = jdbc.query("""
+                SELECT di.disciplinary_incident_id,di.institution_id,di.student_id,sp.full_name,
+                       di.incident_date,di.severity,di.description,di.action_taken,di.status,di.created_at
+                  FROM app.disciplinary_incident di
+                  JOIN app.student_profile sp ON sp.tenant_id=di.tenant_id
+                   AND sp.student_profile_id=di.student_id
+                 WHERE di.tenant_id=? AND di.disciplinary_incident_id=?
+                """, rs -> rs.next() ? mapIncident(rs, 0) : null, principal.tenantId(), incidentId);
+        if (row == null) throw new ResourceNotFoundException("Disciplinary incident not found.");
+        authorize(principal, row.institutionId(), action);
+        return row;
     }
 
     private UUID studentInstitution(UUID tenantId, UUID studentId) {
