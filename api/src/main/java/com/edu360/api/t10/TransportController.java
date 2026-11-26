@@ -25,6 +25,9 @@ public class TransportController {
     @PostMapping("/routes") public Map<String,Object> createRoute(@PathVariable UUID tenantId,@RequestBody RouteRequest r,Authentication auth) {
         return service.createRoute(tenantId,principal(auth,tenantId),r);
     }
+    @PostMapping("/routes/{routeId}/cancel") public Map<String,Object> cancelRoute(@PathVariable UUID tenantId,@PathVariable UUID routeId,@RequestParam UUID institutionId,Authentication auth) {
+        return service.cancelTransportRoute(tenantId,principal(auth,tenantId),institutionId,routeId);
+    }
     @GetMapping("/allocations") public List<Map<String,Object>> allocations(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
         return service.transportAllocations(tenantId,principal(auth,tenantId),institutionId);
     }
