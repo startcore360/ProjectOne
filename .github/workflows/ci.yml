@@ -192,7 +192,7 @@ jobs:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           # Read the key from the environment without placing its value in Maven arguments.
-          mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:12.2.2:check -DfailBuildOnCVSS=7 -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
+          mvn --batch-mode --no-transfer-progress -f api/pom.xml org.owasp:dependency-check-maven:12.2.2:check -DnvdApiKey="$NVD_API_KEY" -DfailBuildOnCVSS=7 -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
       # gitleaks CLI instead of gitleaks/gitleaks-action@v2: the action builds its own range
       # ("<first PR commit>^..<last PR commit>" from the GitHub API), which failed with
       # "ambiguous argument ... unknown revision" and exit code 1 without scanning anything.
