@@ -54,7 +54,7 @@ public class CertificateService {
     public record Template(UUID certificateTemplateId, UUID institutionId, String type,
             String name, String templateHtml, String status, Integer rowVersion) { }
     public record Request(UUID certificateRequestId, UUID institutionId, UUID studentId,
-            UUID templateId, String reason, String status, String duesJson, OffsetDateTime createdAt) { }
+            UUID templateId, String reason, String status, String duesJson, OffsetDateTime createdAt, String rejectionReason) { }
     public record Issuance(UUID certificateIssuanceId, String certificateNumber,
             String verificationCode, String verificationUrl, OffsetDateTime issuedAt) { }
     public record PublicVerification(String status, String studentName, String programName,
@@ -183,7 +183,7 @@ public class CertificateService {
                     principal.tenantId(), institutionId)
                 : jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                     rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
-                    rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
+                    rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class), rs.getString(9)),
                     principal.tenantId(), institutionId, principal.userAccountId());
         String auditAction = canPrepare ? "CERTIFICATE_PREPARE"
                 : canApprove ? "CERTIFICATE_APPROVE"
