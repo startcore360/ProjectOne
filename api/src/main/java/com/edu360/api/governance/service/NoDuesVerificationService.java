@@ -72,54 +72,24 @@ public class NoDuesVerificationService {
                     0, BigDecimal.ZERO, true));
         }
 
-        if (!exists("app.book_circulation") || !exists("app.library_fine")) {
-            items.add(new DuesItem("LIBRARY", "INTEGRATION_UNAVAILABLE",
-                    "The T10 circulation/fine records are unavailable; clearance cannot be confirmed.",
-                    0, BigDecimal.ZERO, true));
-        } else if (userId == null) {
+        if (userId == null) {
             items.add(new DuesItem("LIBRARY", "LIBRARY_ACCOUNT_UNLINKED",
                     "The student has no linked library borrower account; clearance cannot be confirmed.",
                     0, BigDecimal.ZERO, true));
         } else {
-            Long unreturned = jdbc.queryForObject("""
-                    SELECT count(*) FROM app.book_circulation
-                     WHERE tenant_id=? AND institution_id=? AND borrower_user_id=?
-                       AND returned_at IS NULL AND status IN ('ISSUED','OVERDUE','LOST')
-                    """, Long.class, tenantId, institutionId, userId);
-            BigDecimal fines = jdbc.queryForObject("""
-                    SELECT COALESCE(sum(GREATEST(amount-amount_paid,0)),0)::numeric(14,2)
-                      FROM app.library_fine
-                     WHERE tenant_id=? AND institution_id=? AND status='OUTSTANDING'
-                       AND amount>amount_paid
-                       AND circulation_id IN (
-                         SELECT id FROM app.book_circulation
-                          WHERE tenant_id=? AND institution_id=? AND borrower_user_id=?
-                       )
-                    """, BigDecimal.class, tenantId, institutionId, tenantId, institutionId, userId);
-            if (unreturned != null && unreturned > 0) {
-                items.add(new DuesItem("LIBRARY", "UNRETURNED_BOOKS",
-                        "Books or copies have not been returned", unreturned, BigDecimal.ZERO, true));
-            }
-            if (fines != null && fines.signum() > 0) {
-                items.add(new DuesItem("LIBRARY", "OUTSTANDING_LIBRARY_FINE",
-                        "Outstanding library fines", 1, fines, true));
-            }
-        }
-
-        if (!exists("app.department_equipment_clearance")) {
-            items.add(new DuesItem("DEPARTMENT", "INTEGRATION_UNAVAILABLE",
-                    "Departmental equipment clearance is not configured; clearance cannot be confirmed.",
-                    0, BigDecimal.ZERO, true));
-        } else {
-            Map<String, Object> departmentCheck = jdbc.queryForMap(
-                    "SELECT * FROM app.fn_no_dues_department_clearance(?,?,?)",
-                    tenantId, institutionId, studentId);
-            long pendingDepartments = ((Number) departmentCheck.get("pending_departments")).longValue();
-            long outstandingItems = ((Number) departmentCheck.get("outstanding_items")).longValue();
-            if (pendingDepartments > 0) {
-                items.add(new DuesItem("DEPARTMENT", "EQUIPMENT_NOT_CLEARED",
-                        "One or more active departments have missing clearance or outstanding equipment.",
-                        pendingDepartments, BigDecimal.valueOf(outstandingItems), true));
+            List<Map<String,Object>> libraryDues = jdbc.queryForList("""
+                    SELECT tenant_id,institution_id,student_id,has_library_dues,outstanding_fine_balance
+                      FROM app.v_student_library_dues_flag
+                     WHERE tenant_id=? AND institution_id=? AND student_id=?
+                    """, tenantId, institutionId, userId);
+            if (!libraryDues.isEmpty()) {
+                Map<String,Object> row=libraryDues.getFirst();
+                if (Boolean.TRUE.equals(row.get("has_library_dues"))) {
+                    BigDecimal amount=(BigDecimal)row.get("outstanding_fine_balance");
+                    items.add(new DuesItem("LIBRARY", "LIBRARY_DUES",
+                            "Unreturned library circulation or outstanding fines",
+                            1, amount == null ? BigDecimal.ZERO : amount, true));
+                }
             }
         }
 
