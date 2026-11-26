@@ -227,15 +227,18 @@ public class IdCardService {
                   JOIN app.id_card_issuance i ON i.tenant_id=r.tenant_id
                    AND i.id_card_issuance_id=r.original_issuance_id
                  WHERE r.tenant_id=? AND r.id_card_replacement_id=?
-                """, rs -> rs.next() ? Map.of(
-                "originalId", rs.getObject(1, UUID.class), "reason", rs.getString(2),
-                "status", rs.getString(3), "institutionId", rs.getObject(4, UUID.class),
-                "userId", rs.getObject(5, UUID.class), "studentId", rs.getObject(6, UUID.class) == null ? "" : rs.getObject(6, UUID.class).toString(),
-                "staffId", rs.getObject(7, UUID.class) == null ? "" : rs.getObject(7, UUID.class).toString(),
-                "templateId", rs.getObject(8, UUID.class),
-                "expiryDate", rs.getObject(9, LocalDate.class) == null ? "" : rs.getObject(9, LocalDate.class).toString(),
-                "originalStatus", rs.getString(10),
-                "feeReceiptId", rs.getObject(11, UUID.class).toString()) : null,
+                """, rs -> rs.next() ? Map.ofEntries(
+                Map.entry("originalId", rs.getObject(1, UUID.class)),
+                Map.entry("reason", rs.getString(2)),
+                Map.entry("status", rs.getString(3)),
+                Map.entry("institutionId", rs.getObject(4, UUID.class)),
+                Map.entry("userId", rs.getObject(5, UUID.class)),
+                Map.entry("studentId", rs.getObject(6, UUID.class) == null ? "" : rs.getObject(6, UUID.class).toString()),
+                Map.entry("staffId", rs.getObject(7, UUID.class) == null ? "" : rs.getObject(7, UUID.class).toString()),
+                Map.entry("templateId", rs.getObject(8, UUID.class)),
+                Map.entry("expiryDate", rs.getObject(9, LocalDate.class) == null ? "" : rs.getObject(9, LocalDate.class).toString()),
+                Map.entry("originalStatus", rs.getString(10)),
+                Map.entry("feeReceiptId", rs.getObject(11, UUID.class).toString())) : null,
                 principal.tenantId(), replacementId);
         if (row == null) throw new ResourceNotFoundException("Replacement request not found.");
         if (!"REQUESTED".equals(row.get("status"))) throw new BusinessRuleViolationException("REPLACEMENT_ALREADY_DECIDED", "This replacement request has already been decided.");
