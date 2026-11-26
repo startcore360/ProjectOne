@@ -124,7 +124,7 @@ CREATE TABLE app.department_equipment_clearance (
  CHECK(clearance_status IN ('OUTSTANDING','CLEARED')),
  CHECK(outstanding_items>=0),
  CHECK((clearance_status='CLEARED' AND outstanding_items=0 AND cleared_at IS NOT NULL AND cleared_by_user_id IS NOT NULL)
-    OR clearance_status='OUTSTANDING'),
+    OR (clearance_status='OUTSTANDING' AND cleared_at IS NULL AND cleared_by_user_id IS NULL)),
  CHECK(notes IS NULL OR char_length(notes)<=2000),CHECK(row_version>=1)
 );
 CREATE INDEX ix_department_equipment_clearance_student
