@@ -32,7 +32,7 @@ export default function TransportRoutePage() {
 
   const load = useCallback(async () => {
     if (!tenant || !institution) { setLoading(false); return; }
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setRoutes([]); setAllocations([]); setStops([]);
     try {
       setRoutes(await t10Api.routes(tenant, institution));
       if (canManage) setAllocations(await t10Api.allocations(tenant, institution));
