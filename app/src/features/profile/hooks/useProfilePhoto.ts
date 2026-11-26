@@ -5,11 +5,17 @@ interface PhotoCacheEntry {
   key: string;
   objectUrl: string;
 }
+interface PendingPhotoFetch {
+  key: string;
+  promise: Promise<string | null>;
+}
 
 let cachedPhoto: PhotoCacheEntry | null = null;
-let pendingPhotoFetch: Promise<string | null> | null = null;
+let pendingPhotoFetch: PendingPhotoFetch | null = null;
+let requestVersion = 0;
 
 export function clearProfilePhotoCache() {
+  requestVersion += 1;
   if (cachedPhoto) {
     try {
       URL.revokeObjectURL(cachedPhoto.objectUrl);
@@ -21,68 +27,51 @@ export function clearProfilePhotoCache() {
   pendingPhotoFetch = null;
 }
 
-async function fetchPhoto(cacheKey: string): Promise<string | null> {
+async function fetchPhoto(cacheKey: string, version: number): Promise<string | null> {
   try {
     const { data } = await profileService.getPhoto();
     const url = URL.createObjectURL(data);
-    if (cachedPhoto && cachedPhoto.key !== cacheKey) {
-      try {
-        URL.revokeObjectURL(cachedPhoto.objectUrl);
-      } catch {
-        /* ignore */
+    if (version === requestVersion) {
+      if (cachedPhoto && cachedPhoto.key !== cacheKey) {
+        try {
+          URL.revokeObjectURL(cachedPhoto.objectUrl);
+        } catch {
+          /* ignore */
+        }
       }
+      cachedPhoto = { key: cacheKey, objectUrl: url };
+    } else {
+      URL.revokeObjectURL(url);
     }
-    cachedPhoto = { key: cacheKey, objectUrl: url };
-    return url;
+    return version === requestVersion ? url : null;
   } catch {
     return null;
-  } finally {
-    pendingPhotoFetch = null;
   }
 }
 
-// Read-only version of the blob-fetch pattern ProfilePage.tsx uses for its own (editable) photo
-// section - this app authenticates with a bearer header (services/axios.ts), not cookies, so a
-// plain <img src="/me/profile/photo"> can never carry it; the bytes have to come through axios
-// and get turned into an object URL. Used by the sidebar, where the photo is display-only.
-//
-// photoUrl is the signal, not the fetch target itself: non-null just means "this user has a
-// photo, go fetch it" (see ProfileResponse.photoUrl's own comment) - it is always exactly
-// "/me/profile/photo" today, but the hook re-fetches whenever its identity changes rather than
-// assuming that, so it stays correct if that ever becomes per-photo.
-//
-// revision: bumped by the profile page after each upload (AuthUser.photoRevision). The path
-// stays identical when a photo is replaced, so without it the avatar kept the old picture.
-//
-// Cached per session keyed by `${photoUrl}:${revision}` so remounting does not refetch.
+// Read-only version of the blob-fetch pattern ProfilePage.tsx uses for its own (editable) photo.
+// Bytes are fetched through the authenticated axios client and exposed as an object URL.
+// Cache entries are keyed by photo URL and revision so remounts do not refetch.
 export function useProfilePhoto(photoUrl: string | null | undefined, revision = 0): string | null {
   const cacheKey = photoUrl ? `${photoUrl}:${revision}` : null;
-
-  const [objectUrl, setObjectUrl] = useState<string | null>(() => {
-    if (!cacheKey) return null;
-    return cachedPhoto?.key === cacheKey ? cachedPhoto.objectUrl : null;
-  });
+  const [loaded, setLoaded] = useState<{ key: string; url: string | null } | null>(null);
 
   useEffect(() => {
-    if (!cacheKey) {
-      void Promise.resolve().then(() => setObjectUrl(null));
-      return;
-    }
+    if (!cacheKey || cachedPhoto?.key === cacheKey) return;
 
     let active = true;
-
-    if (cachedPhoto?.key === cacheKey) {
-      setObjectUrl(cachedPhoto.objectUrl);
-      return;
+    let request = pendingPhotoFetch?.key === cacheKey ? pendingPhotoFetch.promise : null;
+    if (!request) {
+      const version = ++requestVersion;
+      request = fetchPhoto(cacheKey, version);
+      pendingPhotoFetch = { key: cacheKey, promise: request };
+      void request.finally(() => {
+        if (pendingPhotoFetch?.promise === request) pendingPhotoFetch = null;
+      });
     }
 
-    if (!pendingPhotoFetch) {
-      pendingPhotoFetch = fetchPhoto(cacheKey);
-    }
-
-    pendingPhotoFetch.then((url) => {
-      if (!active) return;
-      setObjectUrl(url);
+    request.then((url) => {
+      if (active) setLoaded({ key: cacheKey, url });
     });
 
     return () => {
@@ -90,5 +79,7 @@ export function useProfilePhoto(photoUrl: string | null | undefined, revision = 
     };
   }, [cacheKey]);
 
-  return objectUrl;
+  if (!cacheKey) return null;
+  if (cachedPhoto?.key === cacheKey) return cachedPhoto.objectUrl;
+  return loaded?.key === cacheKey ? loaded.url : null;
 }
