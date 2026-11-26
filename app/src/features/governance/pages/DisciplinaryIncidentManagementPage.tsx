@@ -1,0 +1,47 @@
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Button from "../../../design-system/components/Button";
+import PageHeader from "../../../design-system/components/PageHeader";
+import { Panel } from "../../../design-system/components/Panel";
+import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { useAppSelector } from "../../../store/hooks";
+import { governanceApi, type DisciplinaryIncident, type Evidence } from "../api/governanceApi";
+import api from "../../../services/axios";
+
+const field="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm";
+export default function DisciplinaryIncidentManagementPage(){
+ const tenantId=useAppSelector(s=>s.auth.user?.tenantId),{can}=useTenantAccess();
+ const canView=can("DISCIPLINARY_INCIDENT_VIEW"),canManage=can("DISCIPLINARY_INCIDENT_MANAGE");
+ const [institutionId,setInstitutionId]=useState(""),[studentId,setStudentId]=useState(""),[incidentDate,setIncidentDate]=useState("");
+ const [severity,setSeverity]=useState("LOW"),[description,setDescription]=useState("");
+ const [rows,setRows]=useState<DisciplinaryIncident[]>([]),[selected,setSelected]=useState<DisciplinaryIncident|null>(null);
+ const [status,setStatus]=useState("UNDER_REVIEW"),[actionTaken,setActionTaken]=useState(""),[notes,setNotes]=useState("");
+ const [file,setFile]=useState<File|null>(null),[evidence,setEvidence]=useState<Evidence[]>([]);
+ const [actionType,setActionType]=useState("HEARING_NOTICE"),[penalty,setPenalty]=useState("");
+ const [error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
+ const load=useCallback(async()=>{if(!tenantId||!institutionId.trim())return;setBusy(true);setError("");try{setRows(await governanceApi.incidents(tenantId,institutionId));setSelected(null);setEvidence([]);}catch(e){setError(msg(e,"Unable to load incidents for this institution."));}finally{setBusy(false);}},[tenantId,institutionId]);
+ useEffect(()=>{setRows([]);setSelected(null);setEvidence([]);},[institutionId]);
+ async function create(e:FormEvent){e.preventDefault();if(!tenantId)return;setBusy(true);setError("");try{await governanceApi.createIncident(tenantId,{studentId,incidentDate,severity,description});setNotice("Disciplinary incident recorded.");setStudentId("");setDescription("");await load();}catch(e){setError(msg(e,"Unable to record incident."));}finally{setBusy(false);}}
+ async function open(row:DisciplinaryIncident){if(!tenantId)return;setBusy(true);setError("");try{const x=await governanceApi.incident(tenantId,row.incidentId);setSelected(x);setStatus(x.status);setActionTaken(x.actionTaken??"");setEvidence(await governanceApi.incidentEvidence(tenantId,x.incidentId));}catch(e){setError(msg(e,"Incident not found or access denied."));}finally{setBusy(false);}}
+ async function save(){if(!tenantId||!selected)return;setBusy(true);setError("");try{const x=await governanceApi.updateIncident(tenantId,selected.incidentId,{status,actionTaken,notes});setSelected(x);setNotice("Incident update saved and audited.");await load();}catch(e){setError(msg(e,"Unable to update incident."));}finally{setBusy(false);}}
+ async function upload(){if(!tenantId||!selected||!file)return;setBusy(true);setError("");try{await governanceApi.uploadIncidentEvidence(tenantId,selected.incidentId,file);setEvidence(await governanceApi.incidentEvidence(tenantId,selected.incidentId));setFile(null);setNotice("Evidence uploaded. Downloads require incident-view permission and a clean scan.");}catch(e){setError(msg(e,"Evidence upload denied or file validation failed."));}finally{setBusy(false);}}
+ async function addAction(){if(!tenantId||!selected)return;setBusy(true);setError("");try{await governanceApi.incidentAction(tenantId,selected.incidentId,{type:actionType,notes,penalty:actionType==="PENALTY_ISSUED"?penalty:null});setNotice("Hearing / minutes / penalty action added to the append-only ledger.");}catch(e){setError(msg(e,"Unable to record incident action."));}finally{setBusy(false);}}
+ async function download(id:string){if(!tenantId)return;setBusy(true);try{const r=await api.get<Blob>(`/tenants/${tenantId}/files/${id}/download`,{responseType:"blob"});const url=URL.createObjectURL(r.data);const a=document.createElement("a");a.href=url;a.download=`disciplinary-evidence-${id}`;a.click();URL.revokeObjectURL(url);}catch(e){setError(msg(e,"Evidence download denied."));}finally{setBusy(false);}}
+ if(!tenantId)return <main className="page-container">Loading account…</main>;
+ return <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-6"><PageHeader title="Disciplinary incident management" description="Record incidents, maintain evidence, issue hearing notices, record minutes and penalties, and track outcomes."/>
+ {error&&<p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}{notice&&<p role="status" className="rounded bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+ <Panel title="Institution scope"><div className="flex flex-wrap items-end gap-2"><label className="min-w-[260px] flex-1 text-sm">Institution ID<input className={field+" mt-1"} value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/></label><Button onClick={()=>void load()} busy={busy} disabled={!institutionId.trim()}>Load incidents</Button></div></Panel>
+ {canManage&&<Panel title="Record incident"><form className="grid gap-3 md:grid-cols-2" onSubmit={create}>
+ <label className="text-sm">Student profile ID<input className={field+" mt-1"} required value={studentId} onChange={e=>setStudentId(e.target.value)}/></label>
+ <label className="text-sm">Incident date<input className={field+" mt-1"} type="date" required value={incidentDate} onChange={e=>setIncidentDate(e.target.value)}/></label>
+ <label className="text-sm">Severity<select className={field+" mt-1"} value={severity} onChange={e=>setSeverity(e.target.value)}><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label>
+ <label className="text-sm md:col-span-2">Description<textarea className={field+" mt-1 min-h-28"} required maxLength={5000} value={description} onChange={e=>setDescription(e.target.value)}/></label>
+ <div><Button type="submit" busy={busy} disabled={!institutionId.trim()}>Record incident</Button></div></form></Panel>}
+ {canView&&<Panel title="Incident register"><div className="space-y-2">{rows.map(row=><button type="button" key={row.incidentId} onClick={()=>void open(row)} className="block w-full rounded-lg border p-3 text-left hover:bg-slate-50"><b>{row.studentName}</b><span className="ml-3 text-xs uppercase">{row.severity} · {row.status}</span><p className="text-sm text-slate-600">{row.incidentDate} · {row.description}</p></button>)}{rows.length===0&&<p className="text-sm text-slate-500">No incidents loaded.</p>}</div></Panel>}
+ {selected&&<Panel title={`Incident · ${selected.studentName}`}><p className="text-sm text-slate-600">{selected.incidentDate} · {selected.severity}</p><p className="mt-2 whitespace-pre-wrap text-sm">{selected.description}</p>
+ {canManage&&<section className="mt-4 space-y-2 border-t pt-3"><h3 className="font-semibold">Update status and action taken</h3><select className={field} value={status} onChange={e=>setStatus(e.target.value)}><option>RECORDED</option><option>UNDER_REVIEW</option><option>CLOSED</option></select><textarea className={field} placeholder="Action taken" value={actionTaken} onChange={e=>setActionTaken(e.target.value)}/><Button size="sm" onClick={()=>void save()} busy={busy}>Save update</Button></section>}
+ {canManage&&<section className="mt-4 space-y-2 border-t pt-3"><h3 className="font-semibold">Evidence management</h3><input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={e=>setFile(e.target.files?.[0]??null)}/><Button size="sm" onClick={()=>void upload()} busy={busy} disabled={!file}>Upload evidence</Button></section>}
+ {canView&&<section className="mt-4 border-t pt-3"><h3 className="font-semibold">Evidence files</h3>{evidence.map(e=><div key={e.fileId} className="flex justify-between py-1 text-sm"><span>{e.fileId}</span><Button size="sm" variant="secondary" onClick={()=>void download(e.fileId)} busy={busy}>Download</Button></div>)}</section>}
+ {canManage&&<section className="mt-4 space-y-2 border-t pt-3"><h3 className="font-semibold">Hearing, minutes and penalty ledger</h3><select className={field} value={actionType} onChange={e=>setActionType(e.target.value)}><option value="HEARING_NOTICE">Hearing notice</option><option value="MINUTES_RECORDED">Minutes recorded</option><option value="PENALTY_ISSUED">Penalty issued</option><option value="FOLLOW_UP">Follow-up</option><option value="CLOSED">Closed</option></select>{actionType==="PENALTY_ISSUED"&&<input className={field} placeholder="Penalty" value={penalty} onChange={e=>setPenalty(e.target.value)}/>}<textarea className={field} placeholder="Action notes" value={notes} onChange={e=>setNotes(e.target.value)}/><Button size="sm" onClick={()=>void addAction()} busy={busy}>Record action</Button></section>}
+ </Panel>}</main>;
+}
+function msg(e:unknown,fallback:string){return (e as {response?:{data?:{message?:string}}})?.response?.data?.message??fallback;}
