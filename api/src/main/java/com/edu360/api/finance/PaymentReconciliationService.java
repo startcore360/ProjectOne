@@ -113,6 +113,11 @@ public class PaymentReconciliationService {
                 ? verifier.verifyRazorpay(rawBody, signature, credentials.razorpayWebhookSecret())
                 : verifier.verifyStripe(rawBody, signature, credentials.stripeWebhookSecret(), java.time.Instant.now());
 
+        if (!signatureValid) {
+            // Do not reserve an untrusted provider event ID: an attacker could otherwise
+            // pre-empt the provider's later valid delivery and suppress reconciliation.
+            return new WebhookResult("REJECTED_SIGNATURE", paymentId, null);
+        }
         UUID systemActorId = findSystemActor(tenantId);
         String safePayload = safePayload(eventId, eventType, providerOrderId, providerPaymentId, amountMinor, currency);
         UUID eventRowId = UUID.randomUUID();
@@ -135,12 +140,6 @@ public class PaymentReconciliationService {
                     .addValue("outcome", signatureValid ? "NO_CHANGE" : "REJECTED_SIGNATURE")
                     .addValue("actorId", systemActorId),
                     insertedExtractor);
-        if (!signatureValid) {
-            if (inserted) {
-                finishEvent(tenantId, eventRowId, institutionId, null, null, "REJECTED_SIGNATURE", systemActorId);
-            }
-            return new WebhookResult("REJECTED_SIGNATURE", paymentId, null);
-        }
         if (!inserted) return new WebhookResult("IGNORED_DUPLICATE", paymentId, null);
         if (order == null || paymentId == null || providerPaymentId == null) {
             createReconciliationCase(tenantId, institutionId, paymentId, eventRowId,
