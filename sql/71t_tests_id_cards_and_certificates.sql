@@ -7,6 +7,18 @@ BEGIN
   IF NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='app' AND tablename=t AND policyname='p_tenant') THEN RAISE EXCEPTION 'T9_DB_71 tenant policy missing: %',t; END IF;
  END LOOP;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.id_card_issuance'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%qr_hash%') THEN RAISE EXCEPTION 'T9_DB_71 QR digest constraint missing'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.id_card_replacement'::regclass
+   AND conname='id_card_replacement_tenant_id_institution_id_fee_receipt_id_fkey') THEN
+  RAISE EXCEPTION 'T9_DB_71 replacement requests must reference an institution-bound fee receipt';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM pg_indexes WHERE schemaname='app'
+   AND indexname='uq_id_card_replacement_receipt') THEN
+  RAISE EXCEPTION 'T9_DB_71 a fee receipt must not be reused across replacement requests';
+ END IF;
+ IF (SELECT count(*) FROM pg_policies WHERE schemaname='app'
+   AND tablename='certificate_issuance' AND policyname='p_institution')<>1 THEN
+  RAISE EXCEPTION 'T9_DB_71 certificate issuance must have exactly one institution policy';
+ END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='certificate_issuance_verification_code_hash_key') THEN RAISE EXCEPTION 'T9_DB_71 unique certificate verification digest missing'; END IF;
  IF to_regprocedure('app.fn_no_dues_department_clearance(uuid,uuid,uuid)') IS NULL THEN
   RAISE EXCEPTION 'T9_DB_71 tenant-bound departmental No-Dues helper missing';
