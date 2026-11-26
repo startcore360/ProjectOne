@@ -75,7 +75,7 @@ public class GrievanceService {
         return new SubmissionReceipt(caseNumber, "SUBMITTED", OffsetDateTime.now());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<CaseView> list(TenantPrincipal principal, UUID institutionId) {
         if (!can(principal, institutionId, "GRIEVANCE_CASE_VIEW")) return List.of();
         List<CaseView> rows = jdbc.query("""
@@ -91,7 +91,7 @@ public class GrievanceService {
         return rows;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public CaseView get(TenantPrincipal principal, UUID caseId) {
         Map<String, Object> scopeRow = jdbc.query("""
                 SELECT institution_id FROM app.grievance_case
