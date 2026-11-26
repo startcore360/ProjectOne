@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 import RazorpayCheckoutModal, { type CheckoutSession } from "../components/RazorpayCheckoutModal";
@@ -29,32 +29,51 @@ export default function FeePaymentPortalPage() {
   const [receipt, setReceipt] = useState<FeeReceiptDetails | null>(null);
   const [receiptPaymentId, setReceiptPaymentId] = useState(() => new URLSearchParams(window.location.search).get("paymentId") || "");
   const [busy, setBusy] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [accountsError, setAccountsError] = useState("");
   const [notice, setNotice] = useState(() => new URLSearchParams(window.location.search).get("checkout") === "success"
     ? "Stripe checkout returned. Payment status is pending until the signed provider webhook is reconciled."
     : "");
   const [error, setError] = useState("");
+  const checkoutIntentRef = useRef<{ fingerprint: string; requestKey: string } | null>(null);
+  const checkoutInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!tenantId) return;
+    let active = true;
+    setAccountsLoading(true);
+    setAccountsError("");
     void api.get<FeeAccountOption[]>(`/tenants/${tenantId}/me/student-fee-accounts`)
-      .then((response) => setAccounts(response.data))
-      .catch(() => setAccounts([]));
+      .then((response) => { if (active) setAccounts(response.data); })
+      .catch(() => { if (active) setAccountsError("Unable to load your fee accounts. Check your access and retry."); })
+      .finally(() => { if (active) setAccountsLoading(false); });
+    return () => { active = false; };
   }, [tenantId]);
 
   const loadInvoices = useCallback(async () => {
-    if (!tenantId || !accountId) return;
+    if (!tenantId || !accountId.trim()) return;
+    setInvoicesLoading(true);
     try {
-      const response = await api.get<Invoice[]>(`/tenants/${tenantId}/student-fee-accounts/${accountId}/invoices`);
+      const response = await api.get<Invoice[]>(`/tenants/${tenantId}/student-fee-accounts/${accountId.trim()}/invoices`);
       setInvoices(response.data);
       setSelected((current) => current.filter((id) => response.data.some((invoice) => invoice.invoiceId === id && invoice.outstandingAmount > 0)));
       setError("");
     } catch {
       setInvoices([]);
+      setSelected([]);
       setError("Unable to load this fee account. Verify the account ID and access.");
+    } finally {
+      setInvoicesLoading(false);
     }
   }, [tenantId, accountId]);
 
-  useEffect(() => { if (accountId) void loadInvoices(); }, [accountId, loadInvoices]);
+  useEffect(() => {
+    setInvoices([]);
+    setSelected([]);
+    setError("");
+    if (accountId.trim()) void loadInvoices();
+  }, [accountId, loadInvoices]);
 
   const payable = useMemo(() => invoices.filter((invoice) => selected.includes(invoice.invoiceId) && invoice.outstandingAmount > 0), [invoices, selected]);
   const total = payable.reduce((sum, invoice) => sum + Number(invoice.outstandingAmount), 0);
@@ -65,18 +84,23 @@ export default function FeePaymentPortalPage() {
   }
 
   async function startCheckout() {
-    if (!tenantId || !accountId || payable.length === 0) return;
+    if (!tenantId || !accountId.trim() || payable.length === 0 || checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
     setBusy(true);
     setError("");
     setNotice("");
     try {
+      const installmentIds = payable.map((invoice) => invoice.studentInstallmentId || invoice.invoiceId).sort();
+      const fingerprint = [accountId.trim(), provider, ...installmentIds].join("|");
+      if (checkoutIntentRef.current?.fingerprint !== fingerprint) {
+        checkoutIntentRef.current = { fingerprint, requestKey: crypto.randomUUID() };
+      }
       const response = await api.post<CheckoutSession & { checkoutUrl?: string; status?: string }>(`/tenants/${tenantId}/payments/checkout`, {
-        studentFeeAccountId: accountId,
-        installmentIds: payable.map((invoice) => invoice.studentInstallmentId || invoice.invoiceId),
-        provider,
-        requestKey: crypto.randomUUID(),
+        studentFeeAccountId: accountId.trim(), installmentIds, provider,
+        requestKey: checkoutIntentRef.current.requestKey,
       });
       if (response.data.status && response.data.status !== "PENDING") {
+        checkoutIntentRef.current = null;
         setNotice(`This payment attempt is already ${response.data.status.toLowerCase()}.`);
         void loadInvoices();
       } else {
@@ -86,11 +110,13 @@ export default function FeePaymentPortalPage() {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
       setError(message || "Unable to start checkout. Please refresh the invoices and retry.");
     } finally {
+      checkoutInFlightRef.current = false;
       setBusy(false);
     }
   }
 
   function paymentSubmitted() {
+    checkoutIntentRef.current = null;
     if (session) setReceiptPaymentId(session.paymentId);
     setSession(null);
     setNotice("Payment submitted. The account will update after the provider's signed server notification is verified.");
@@ -118,14 +144,16 @@ export default function FeePaymentPortalPage() {
         <p className="mt-2 text-sm text-slate-600">Select outstanding installments and pay the exact amount due through the configured secure gateway.</p>
       </header>
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <label className="block"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><div className="flex flex-col gap-2 sm:flex-row"><input className={inputClass} list="payment-fee-account-options" value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Choose an account or enter its UUID" /><datalist id="payment-fee-account-options">{accounts.map((account) => <option key={account.accountId} value={account.accountId}>{account.studentName} · {account.institutionName}</option>)}</datalist><button type="button" onClick={() => void loadInvoices()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Refresh</button></div></label>
+        <label className="block"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><div className="flex flex-col gap-2 sm:flex-row"><input className={inputClass} list="payment-fee-account-options" value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Choose an account or enter its UUID" /><datalist id="payment-fee-account-options">{accounts.map((account) => <option key={account.accountId} value={account.accountId}>{account.studentName} · {account.institutionName}</option>)}</datalist><button type="button" disabled={invoicesLoading || !accountId.trim()} onClick={() => void loadInvoices()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">{invoicesLoading ? "Refreshing…" : "Refresh"}</button></div></label>
       </section>
       {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {accountsError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{accountsError}</div>}
       {notice && <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</div>}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-4 py-3"><h2 className="font-semibold text-slate-900">Outstanding installments</h2></div>
         <div className="divide-y divide-slate-100">
-          {invoices.map((invoice) => {
+          {invoicesLoading && <p role="status" className="px-4 py-8 text-center text-sm text-slate-500">Loading installment balances…</p>}
+          {!invoicesLoading && invoices.map((invoice) => {
             const due = Number(invoice.outstandingAmount);
             const canPay = due > 0 && invoice.status !== "PAID" && invoice.status !== "CANCELLED";
             return <label key={invoice.invoiceId} className={`flex items-center gap-3 px-4 py-4 ${canPay ? "cursor-pointer hover:bg-slate-50" : "opacity-60"}`}>
@@ -134,7 +162,8 @@ export default function FeePaymentPortalPage() {
               <span className="font-semibold tabular-nums text-slate-900">{money(due)}</span>
             </label>;
           })}
-          {invoices.length === 0 && <p className="px-4 py-8 text-center text-sm text-slate-500">Enter a fee account ID to load outstanding installments.</p>}
+          {!invoicesLoading && invoices.length === 0 && <p className="px-4 py-8 text-center text-sm text-slate-500">{accountId.trim() ? "No invoices were found for this fee account." : "Enter a fee account ID to load outstanding installments."}</p>}
+          {!invoicesLoading && invoices.length > 0 && payable.length === 0 && selected.length === 0 && invoices.every((invoice) => Number(invoice.outstandingAmount) <= 0) && <p className="px-4 py-6 text-center text-sm text-emerald-700">There are no outstanding installments. This fee account is up to date.</p>}
         </div>
       </section>
       {invoices.length > 0 && <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-6">
