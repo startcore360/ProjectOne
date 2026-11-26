@@ -125,6 +125,57 @@ public class GrievanceService {
                 SELECT count(*) FROM app.user_account WHERE tenant_id=? AND user_account_id=?
                 """, rs -> rs.next() ? rs.getInt(1) : 0, principal.tenantId(), investigatorUserId);
         if (exists == 0) throw new ResourceNotFoundException("Investigator not found.");
+        if (investigatorUserId.equals(current.accusedUserId())) {
+            throw new BusinessRuleViolationException("INVESTIGATOR_CONFLICT", "The accused party cannot be assigned to investigate this case.");
+        }
+        Integer authorizedInvestigator = jdbc.query("""
+                SELECT count(*) FROM app.user_active_role active
+                JOIN app.user_role_assignment ura ON ura.tenant_id=active.tenant_id
+                 AND ura.user_account_id=active.user_account_id
+                 AND ura.user_role_assignment_id=active.user_role_assignment_id
+                JOIN app.role_definition rd ON rd.tenant_id=ura.tenant_id
+                 AND rd.role_definition_id=ura.role_definition_id
+                WHERE active.tenant_id=? AND active.user_account_id=?
+                  AND ura.scope_type='INSTITUTION' AND ura.institution_id=?
+                  AND ura.status='ACTIVE' AND ura.effective_from<=now()
+                  AND (ura.effective_to IS NULL OR ura.effective_to>now())
+                  AND rd.status='ACTIVE' AND rd.role_origin='STANDARD'
+                  AND rd.base_standard_role=rd.role_code
+                  AND rd.role_code IN ('INTERNAL_COMPLAINTS_COMMITTEE','PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL')
+                """, rs -> rs.next() ? rs.getInt(1) : 0,
+                principal.tenantId(), investigatorUserId, current.institutionId());
+        if (authorizedInvestigator == 0) {
+            throw new BusinessRuleViolationException("INVESTIGATOR_NOT_AUTHORIZED",
+                    "The investigator must hold an active institution-scoped ICC or Principal role.");
+        }
+        Boolean immediateHod = jdbc.queryForObject("""
+                SELECT EXISTS(
+                  SELECT 1
+                    FROM app.staff_profile accused_sp
+                    JOIN app.staff_assignment accused_sa ON accused_sa.tenant_id=accused_sp.tenant_id
+                     AND accused_sa.staff_profile_id=accused_sp.staff_profile_id
+                    JOIN app.department d ON d.tenant_id=accused_sa.tenant_id
+                     AND d.institution_id=accused_sa.institution_id
+                     AND d.department_id=accused_sa.department_id
+                    JOIN app.staff_assignment hod_sa ON hod_sa.tenant_id=d.tenant_id
+                     AND hod_sa.staff_assignment_id=d.hod_staff_assignment_id
+                    JOIN app.staff_profile hod_sp ON hod_sp.tenant_id=hod_sa.tenant_id
+                     AND hod_sp.staff_profile_id=hod_sa.staff_profile_id
+                   WHERE accused_sp.tenant_id=? AND accused_sp.user_account_id=?
+                     AND hod_sp.user_account_id=?
+                     AND accused_sa.institution_id=? AND accused_sa.status='ACTIVE'
+                     AND hod_sa.status='ACTIVE'
+                     AND accused_sa.effective_from<=current_date
+                     AND (accused_sa.effective_to IS NULL OR accused_sa.effective_to>=current_date)
+                     AND hod_sa.effective_from<=current_date
+                     AND (hod_sa.effective_to IS NULL OR hod_sa.effective_to>=current_date)
+                )
+                """, Boolean.class, principal.tenantId(), current.accusedUserId(),
+                investigatorUserId, current.institutionId());
+        if (Boolean.TRUE.equals(immediateHod)) {
+            throw new BusinessRuleViolationException("INVESTIGATOR_CONFLICT",
+                    "The accused party's immediate Head of Department cannot investigate this case.");
+        }
         jdbc.update("""
                 UPDATE app.grievance_case SET assigned_to_user_id=?,status='UNDER_INVESTIGATION',
                        updated_by=?,updated_at=now()
@@ -167,7 +218,7 @@ public class GrievanceService {
     @Transactional
     public void issuePenalty(TenantPrincipal principal, UUID caseId, String penalty, String notes) {
         CaseView current = get(principal, caseId);
-        authorize(principal, current.institutionId(), "GRIEVANCE_CASE_RESOLVE", RbacTarget.NONE);
+        authorize(principal, current.institutionId(), "GRIEVANCE_CASE_RESOLVE", grievanceTarget(current));
         if (penalty == null || penalty.isBlank() || penalty.length() > 2000
                 || notes == null || notes.isBlank() || notes.length() > 5000) {
             throw new BusinessRuleViolationException("PENALTY_DETAILS_INVALID", "Penalty and action notes are required.");
@@ -178,7 +229,7 @@ public class GrievanceService {
     @Transactional
     public CaseView resolve(TenantPrincipal principal, UUID caseId, String outcome, String notes) {
         CaseView current = get(principal, caseId);
-        authorize(principal, current.institutionId(), "GRIEVANCE_CASE_RESOLVE", RbacTarget.NONE);
+        authorize(principal, current.institutionId(), "GRIEVANCE_CASE_RESOLVE", grievanceTarget(current));
         if (!List.of("RESOLVED", "DISMISSED").contains(outcome)
                 || notes == null || notes.isBlank() || notes.length() > 5000) {
             throw new BusinessRuleViolationException("RESOLUTION_INVALID", "Choose RESOLVED or DISMISSED and provide a reason.");
@@ -255,6 +306,10 @@ public class GrievanceService {
         RbacScope scope = permissions.targetScope(caller, institutionId, null);
         PermissionDecision decision = permissions.can(caller, action, scope, RbacTarget.NONE);
         return decision != null && decision.allowed();
+    }
+
+    private RbacTarget grievanceTarget(CaseView current) {
+        return current.accusedUserId() == null ? RbacTarget.NONE : RbacTarget.of(current.accusedUserId());
     }
 
     private void authorize(TenantPrincipal principal, UUID institutionId, String action, RbacTarget target) {
