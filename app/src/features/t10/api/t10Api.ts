@@ -52,6 +52,10 @@ export const t10Api = {
     (await api.get<CatalogBook[]>(`/tenants/${tenant}/library/catalog`, { params: { institutionId: institution, q } })).data,
   addBook: async (tenant: string, body: { institutionId: string; isbn: string; title: string; author: string; category: string; copies: number }) =>
     (await api.post(`/tenants/${tenant}/library/catalog`, body)).data,
+  addCopy: async (tenant: string, bookId: string, body: { institutionId: string; accessionNumber: string }) =>
+    (await api.post(`/tenants/${tenant}/library/catalog/${bookId}/copies`, body)).data,
+  withdrawCopy: async (tenant: string, institution: string, copyId: string) =>
+    (await api.post(`/tenants/${tenant}/library/copies/${copyId}/withdraw`, null, { params: { institutionId: institution } })).data,
   copies: async (tenant: string, institution: string, bookId: string) =>
     (await api.get<BookCopy[]>(`/tenants/${tenant}/library/catalog/${bookId}/copies`, { params: { institutionId: institution } })).data,
   circulations: async (tenant: string, institution: string) =>
