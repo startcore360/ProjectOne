@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 
@@ -26,27 +26,41 @@ export default function StudentFeeInvoicesPage() {
   const [accounts, setAccounts] = useState<FeeAccountOption[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [busy, setBusy] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsError, setAccountsError] = useState("");
+  const [hasLoadedInvoices, setHasLoadedInvoices] = useState(false);
   const [error, setError] = useState("");
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     if (!tenantId) return;
+    let active = true;
+    setAccountsLoading(true);
+    setAccountsError("");
     void api.get<FeeAccountOption[]>(`/tenants/${tenantId}/me/student-fee-accounts`)
-      .then((response) => setAccounts(response.data))
-      .catch(() => setAccounts([]));
+      .then((response) => { if (active) setAccounts(response.data); })
+      .catch(() => { if (active) setAccountsError("Unable to load your fee accounts. Check your access and retry."); })
+      .finally(() => { if (active) setAccountsLoading(false); });
+    return () => { active = false; };
   }, [tenantId]);
 
   async function loadInvoices(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!tenantId) return;
+    if (!tenantId || !accountId.trim() || loadingRef.current) return;
+    loadingRef.current = true;
     setBusy(true);
+    setHasLoadedInvoices(false);
     setError("");
     try {
-      const response = await api.get<Invoice[]>(`/tenants/${tenantId}/student-fee-accounts/${accountId}/invoices`);
+      const response = await api.get<Invoice[]>(`/tenants/${tenantId}/student-fee-accounts/${accountId.trim()}/invoices`);
       setInvoices(response.data);
+      setHasLoadedInvoices(true);
     } catch {
       setError("Unable to retrieve invoices. Confirm the fee account and your access permissions.");
       setInvoices([]);
+      setHasLoadedInvoices(false);
     } finally {
+      loadingRef.current = false;
       setBusy(false);
     }
   }
@@ -61,9 +75,11 @@ export default function StudentFeeInvoicesPage() {
         <p className="mt-2 text-sm text-slate-600">Review installment invoices, concessions, scholarships, late fees, payments and outstanding balances.</p>
       </header>
       <form onSubmit={loadInvoices} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
-        <label className="flex-1"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><input className={inputClass} required list="fee-account-options" value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Choose an account or enter its UUID" /><datalist id="fee-account-options">{accounts.map((account) => <option key={account.accountId} value={account.accountId}>{account.studentName} · {account.institutionName}</option>)}</datalist></label>
+        <label className="flex-1"><span className="mb-1 block text-sm font-medium text-slate-700">Student fee account ID</span><input className={inputClass} required list="fee-account-options" value={accountId} onChange={(e) => { setAccountId(e.target.value); setInvoices([]); setHasLoadedInvoices(false); setError(""); }} placeholder="Choose an account or enter its UUID" /><datalist id="fee-account-options">{accounts.map((account) => <option key={account.accountId} value={account.accountId}>{account.studentName} · {account.institutionName}</option>)}</datalist></label>
         <button disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Loading…" : "Load invoices"}</button>
       </form>
+      {accountsLoading && <p role="status" className="text-sm text-slate-500">Loading your fee accounts…</p>}
+      {accountsError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{accountsError}</div>}
       {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-4 py-3"><h2 className="font-semibold text-slate-900">Installment schedule</h2></div>
@@ -71,7 +87,8 @@ export default function StudentFeeInvoicesPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Installment</th><th className="px-4 py-3">Due date</th><th className="px-4 py-3">Base</th><th className="px-4 py-3">Concession / scholarship</th><th className="px-4 py-3">Late fee</th><th className="px-4 py-3">Paid</th><th className="px-4 py-3">Outstanding</th><th className="px-4 py-3">Status</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {invoices.map((invoice) => <tr key={invoice.invoiceId}>
+              {busy && <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">Loading invoices…</td></tr>}
+              {!busy && invoices.map((invoice) => <tr key={invoice.invoiceId}>
                 <td className="px-4 py-3">#{invoice.installmentNumber}</td>
                 <td className="px-4 py-3">{invoice.dueDate}</td>
                 <td className="px-4 py-3 tabular-nums">{money(invoice.baseAmount)}</td>
@@ -81,7 +98,7 @@ export default function StudentFeeInvoicesPage() {
                 <td className="px-4 py-3 font-semibold tabular-nums">{money(invoice.outstandingAmount)}</td>
                 <td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{invoice.status}</span></td>
               </tr>)}
-              {invoices.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">Enter a fee account ID to view its invoices.</td></tr>}
+              {!busy && invoices.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">{hasLoadedInvoices ? "No invoices were found for this fee account." : "Enter a fee account ID to view its invoices."}</td></tr>}
             </tbody>
           </table>
         </div>
