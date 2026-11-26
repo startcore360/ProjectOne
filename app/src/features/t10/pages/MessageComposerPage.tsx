@@ -21,7 +21,7 @@ export default function MessageComposerPage() {
 
   const loadHistory = useCallback(async () => {
     if (!tenant || !institution || !actions.includes("DELIVERY_FAILURES_VIEW")) { setHistoryLoading(false); return; }
-    setHistoryLoading(true);
+    setHistoryLoading(true); setHistory([]); setHistoryError("");
     try { setHistory(await t10Api.dispatchHistory(tenant, institution)); setHistoryError(""); }
     catch { setHistoryError("Dispatch history could not be loaded."); }
     finally { setHistoryLoading(false); }
