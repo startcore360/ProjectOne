@@ -325,6 +325,12 @@ jobs:
           psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -c "ALTER ROLE edu_app PASSWORD 't10-ci-only'; ALTER ROLE edu_report PASSWORD 'report-ci-only'; GRANT CONNECT ON DATABASE edu360_t10 TO edu_app, edu_report; GRANT SELECT ON ALL TABLES IN SCHEMA app TO edu_report;"
       - name: Run opt-in T10 PostgreSQL and provider tests
         run: mvn --batch-mode --no-transfer-progress -f api/pom.xml -Dtest=DispatchProviderTest,DispatchWorkerIT,LibraryOverdueFineIT,ExecutiveAnalyticsReportIT test
+      - name: Verify T10 rollback scripts
+        if: always()
+        run: |
+          psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/74r_v41_library_and_transport_schema_rollback.sql
+          psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -f sql/73r_v41_notices_and_communications_rollback.sql
+          psql -h localhost -U postgres -d edu360_t10 -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF to_regclass('app.notice_bulletin') IS NOT NULL OR to_regclass('app.library_catalog') IS NOT NULL OR to_regclass('app.v_student_library_dues_flag') IS NOT NULL THEN RAISE EXCEPTION 'T10 rollback left owned objects behind'; END IF; END \$\$;"
 
   database-migration-validation:
     name: PostgreSQL migration validation
