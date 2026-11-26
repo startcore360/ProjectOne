@@ -122,13 +122,13 @@ export function PlatformUsersView() {
   const [statusBusy, setStatusBusy] = useState(false);
   const [unlockTarget, setUnlockTarget] = useState<PlatformUserItem | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
-  const [actionNotice, setActionNotice] = useState("");
   const [passwordTarget, setPasswordTarget] = useState<PlatformUserItem | null>(null);
   const [passwordBusy, setPasswordBusy] = useState(false);
   // MFA-01 / E8-S4: reset a staff member's two-step login (never your own).
   const [mfaTarget, setMfaTarget] = useState<PlatformUserItem | null>(null);
   const [mfaBusy, setMfaBusy] = useState(false);
   const [mfaError, setMfaError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const resetMfa = async (reason: string) => {
     if (!mfaTarget) return;
@@ -222,11 +222,9 @@ export function PlatformUsersView() {
     setUnlockBusy(true);
     try {
       await platformUserService.unlockPlatformUser(unlockTarget.platformUserId);
-      setActionNotice(unlockTarget.fullName + "'s sign-in lockout was cleared.");
-      toast.success(
-        "Account unlocked",
-        `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`
-      );
+      const msg = `${unlockTarget.fullName}'s sign-in lockout was cleared. Their password and account settings were not changed.`;
+      setNotice(msg);
+      toast.success("Account unlocked", msg);
       setUnlockTarget(null);
     } catch (err) {
       toast.error("Unlock failed", readErrorMessage(err, "Could not unlock this account."));
@@ -276,7 +274,11 @@ export function PlatformUsersView() {
           </Button>
         }
       />
-      {actionNotice && <Notice tone="success">{actionNotice}</Notice>}
+      {notice && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <Notice tone="success" onDismiss={() => setNotice("")}>{notice}</Notice>
+        </div>
+      )}
       <CreatedCredentialsModal
         isOpen={!!createdUser}
         onClose={() => setCreatedUser(null)}

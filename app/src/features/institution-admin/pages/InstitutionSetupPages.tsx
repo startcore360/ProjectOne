@@ -751,6 +751,7 @@ export function CalendarEventsPage() {
       void loadSessions();
       void loadMasterEvents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   const loadSessions = async () => {
@@ -1592,6 +1593,7 @@ export function AcademicStructurePage() {
         }
       })
       .catch((err) => setError(getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   if (!tenantId) return <NoTenantNotice />;

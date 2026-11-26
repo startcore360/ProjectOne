@@ -50,6 +50,13 @@ vi.mock("../../../landing/api/landingApi", async (importOriginal) => {
         state: "ACTIVE",
         listedInDirectory: true,
       }),
+      updateConfig: vi.fn().mockImplementation((payload, rowVersion) =>
+        Promise.resolve({
+          configId: "cfg-1",
+          ...payload,
+          rowVersion: (rowVersion ?? 1) + 1,
+        }),
+      ),
     },
   };
 });
@@ -71,5 +78,37 @@ describe("PlatformLandingCmsPage", () => {
     await waitFor(() => {
       expect(landingApi.toggleDirectory).toHaveBeenCalledWith("t-1", true);
     });
+  });
+
+  it("resets landing page copy and media to defaults when confirmed", async () => {
+    render(<PlatformLandingCmsPage />);
+
+    expect(await screen.findByLabelText(/hero headline/i)).toHaveValue("Title");
+
+    const resetButtons = screen.getAllByRole("button", { name: /reset to default/i });
+    expect(resetButtons.length).toBeGreaterThan(0);
+    fireEvent.click(resetButtons[0]);
+
+    expect(await screen.findByText(/reset landing page to default\?/i)).toBeInTheDocument();
+
+    const dialogConfirmBtn = screen.getByRole("button", { name: "Reset to Default" });
+    fireEvent.click(dialogConfirmBtn);
+
+    await waitFor(() => {
+      expect(landingApi.updateConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          heroTitle: "Bring your entire institution into sync.",
+          heroEyebrow: "A connected education management platform",
+          heroNote: "Designed for Schools · Colleges · Universities",
+          heroLightMediaId: null,
+          heroDarkMediaId: null,
+        }),
+        1,
+      );
+    });
+
+    expect(screen.getByLabelText(/hero headline/i)).toHaveValue(
+      "Bring your entire institution into sync.",
+    );
   });
 });

@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 import {
   Badge,
   Button,
+  ConfirmDialog,
   DataTable,
   MetricCard,
   Modal,
@@ -26,6 +27,25 @@ import {
 } from "../../../landing/api/landingApi";
 
 type CmsTab = "content" | "testimonials" | "directory" | "enquiries";
+
+const DEFAULT_LANDING_CONFIG = {
+  heroEyebrow: "A connected education management platform",
+  heroTitle: "Bring your entire institution into sync.",
+  heroSubtitle:
+    "From academic administration, governance, and fee management to parent communication and student workflows—EDU 360 connects the work that keeps education moving.",
+  heroNote: "Designed for Schools · Colleges · Universities",
+  trustLabel: "One connected platform for every stakeholder in your institution",
+  contactEmail: "hello@edu360.example",
+  footerTagline: "One Platform. Every Institution. One Connected Ecosystem.",
+  whyChooseJson: "[]",
+  roleBenefitsJson: "[]",
+  solutionsJson: "[]",
+  stepsJson: "[]",
+  heroLightMediaId: null as string | null,
+  heroDarkMediaId: null as string | null,
+  showcaseLightMediaId: null as string | null,
+  showcaseDarkMediaId: null as string | null,
+};
 
 const EMPTY_TESTIMONIAL = {
   kind: "TEXT" as "TEXT" | "VIDEO",
@@ -241,6 +261,8 @@ export function PlatformLandingCmsPage() {
   const [showcaseLightMediaId, setShowcaseLightMediaId] = useState<string | null>(null);
   const [showcaseDarkMediaId, setShowcaseDarkMediaId] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resettingDefaults, setResettingDefaults] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
 
   // Testimonial modal state
@@ -329,6 +351,52 @@ export function PlatformLandingCmsPage() {
       toast.error("Could not save landing page configuration.");
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  const handleResetToDefault = async () => {
+    if (!cms) return;
+    setResettingDefaults(true);
+    try {
+      const updated = await landingApi.updateConfig(
+        {
+          heroEyebrow: DEFAULT_LANDING_CONFIG.heroEyebrow,
+          heroTitle: DEFAULT_LANDING_CONFIG.heroTitle,
+          heroSubtitle: DEFAULT_LANDING_CONFIG.heroSubtitle,
+          heroNote: DEFAULT_LANDING_CONFIG.heroNote,
+          trustLabel: DEFAULT_LANDING_CONFIG.trustLabel,
+          whyChooseJson: DEFAULT_LANDING_CONFIG.whyChooseJson,
+          roleBenefitsJson: DEFAULT_LANDING_CONFIG.roleBenefitsJson,
+          solutionsJson: DEFAULT_LANDING_CONFIG.solutionsJson,
+          stepsJson: DEFAULT_LANDING_CONFIG.stepsJson,
+          contactEmail: DEFAULT_LANDING_CONFIG.contactEmail,
+          footerTagline: DEFAULT_LANDING_CONFIG.footerTagline,
+          heroLightMediaId: DEFAULT_LANDING_CONFIG.heroLightMediaId,
+          heroDarkMediaId: DEFAULT_LANDING_CONFIG.heroDarkMediaId,
+          showcaseLightMediaId: DEFAULT_LANDING_CONFIG.showcaseLightMediaId,
+          showcaseDarkMediaId: DEFAULT_LANDING_CONFIG.showcaseDarkMediaId,
+        },
+        cms.config.rowVersion,
+      );
+
+      setCms((prev) => (prev ? { ...prev, config: updated } : prev));
+      setHeroEyebrow(updated.heroEyebrow);
+      setHeroTitle(updated.heroTitle);
+      setHeroSubtitle(updated.heroSubtitle);
+      setHeroNote(updated.heroNote);
+      setTrustLabel(updated.trustLabel);
+      setContactEmail(updated.contactEmail);
+      setFooterTagline(updated.footerTagline);
+      setHeroLightMediaId(updated.heroLightMediaId);
+      setHeroDarkMediaId(updated.heroDarkMediaId);
+      setShowcaseLightMediaId(updated.showcaseLightMediaId);
+      setShowcaseDarkMediaId(updated.showcaseDarkMediaId);
+      setResetDialogOpen(false);
+      toast.success("Landing page reset to default configuration.");
+    } catch {
+      toast.error("Could not reset landing page to defaults.");
+    } finally {
+      setResettingDefaults(false);
     }
   };
 
@@ -581,9 +649,18 @@ export function PlatformLandingCmsPage() {
         title="Landing Page & Enquiries"
         description="Customize public marketing copy, manage text & video testimonials, opt institutions into the sign-in dropdown, and review quotation & demo leads."
         actions={
-          <Button variant="secondary" onClick={() => void loadAll()} disabled={loading}>
-            Refresh
-          </Button>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <Button
+              variant="secondary"
+              onClick={() => setResetDialogOpen(true)}
+              disabled={loading || savingConfig || resettingDefaults}
+            >
+              Reset to default
+            </Button>
+            <Button variant="secondary" onClick={() => void loadAll()} disabled={loading}>
+              Refresh
+            </Button>
+          </div>
         }
       />
 
@@ -879,8 +956,26 @@ export function PlatformLandingCmsPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--color-border-divider)", paddingTop: "var(--space-4)" }}>
-              <Button type="submit" busy={savingConfig}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderTop: "1px solid var(--color-border-divider)",
+                paddingTop: "var(--space-4)",
+                gap: "var(--space-2)",
+                flexWrap: "wrap",
+              }}
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setResetDialogOpen(true)}
+                disabled={savingConfig || resettingDefaults}
+              >
+                Reset to default
+              </Button>
+              <Button type="submit" busy={savingConfig} disabled={resettingDefaults}>
                 {savingConfig ? "Saving…" : "Save page content"}
               </Button>
             </div>
@@ -1764,6 +1859,19 @@ export function PlatformLandingCmsPage() {
           </div>
         )}
       </Modal>
+
+      {/* Reset To Default Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={resetDialogOpen}
+        onClose={() => setResetDialogOpen(false)}
+        onConfirm={() => void handleResetToDefault()}
+        title="Reset Landing Page to Default?"
+        message="This will restore all hero marketing copy, audience notes, trust labels, footers, and default platform illustrations to their original production defaults. Custom media uploads will be detached from the public landing page."
+        kicker="RESET TO DEFAULT"
+        confirmLabel="Reset to Default"
+        confirmTone="primary"
+        busy={resettingDefaults}
+      />
     </div>
   );
 }
