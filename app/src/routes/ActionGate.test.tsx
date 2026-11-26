@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ActionGate from "./ActionGate";
 
-const access = vi.hoisted(() => ({ canAny: vi.fn(), loading: false, error: null as string | null }));
+const access = vi.hoisted(() => ({ canAny: vi.fn(), loading: false, error: null as string | null, support: false }));
 vi.mock("../features/profile/hooks/useTenantAccess", () => ({
   useTenantAccess: () => access,
 }));
+vi.mock("../features/support/useSupportSession", () => ({ useSupportSession: () => ({ isSupportSession: access.support }) }));
 vi.mock("../features/profile/api/tenantPermissionsService", () => ({
   tenantPermissionsService: { reload: vi.fn() },
 }));
@@ -37,6 +38,15 @@ describe("ActionGate", () => {
     expect(screen.getByRole("heading", { name: "Access unavailable" })).toBeInTheDocument();
     expect(screen.getByText(/current role does not have permission/i)).toBeInTheDocument();
     expect(screen.queryByText("Protected page")).not.toBeInTheDocument();
+  });
+
+  it("does not allow a support session to open a T9 confidential route", () => {
+    access.support = true;
+    access.canAny.mockReturnValue(true);
+    render(<ActionGate anyOf={["GRIEVANCE_CASE_VIEW"]} allowSupportSession={false}><p>Confidential cases</p></ActionGate>);
+    expect(screen.getByRole("heading", { name: "Access unavailable" })).toBeInTheDocument();
+    expect(screen.queryByText("Confidential cases")).not.toBeInTheDocument();
+    access.support = false;
   });
 
   it("renders content when an allowed action is present", () => {
