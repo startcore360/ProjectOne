@@ -150,12 +150,12 @@ UPDATE app.transport_route r SET allocated_seats=(
  SELECT count(*) FROM app.transport_allocation a
   WHERE a.tenant_id=r.tenant_id AND a.institution_id=r.institution_id
     AND a.route_id=r.id AND a.status='ACTIVE');
-DO $
+DO $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.transport_route'::regclass AND conname='ck_transport_allocated_seats') THEN
   ALTER TABLE app.transport_route ADD CONSTRAINT ck_transport_allocated_seats CHECK(allocated_seats>=0 AND allocated_seats<=total_capacity);
  END IF;
-END $;
+END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_library_catalog_scope ON app.library_catalog(tenant_id,institution_id,id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_book_copy_scope ON app.book_copy(tenant_id,institution_id,id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_circulation_scope ON app.book_circulation(tenant_id,institution_id,id);
