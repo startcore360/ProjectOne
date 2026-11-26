@@ -76,6 +76,10 @@ public class NoDuesVerificationService {
             items.add(new DuesItem("LIBRARY", "LIBRARY_ACCOUNT_UNLINKED",
                     "The student has no linked library borrower account; clearance cannot be confirmed.",
                     0, BigDecimal.ZERO, true));
+        } else if (!exists("app.v_student_library_dues_flag")) {
+            items.add(new DuesItem("LIBRARY", "INTEGRATION_UNAVAILABLE",
+                    "The T10 library dues read model is unavailable; clearance cannot be confirmed.",
+                    0, BigDecimal.ZERO, true));
         } else {
             List<Map<String,Object>> libraryDues = jdbc.queryForList("""
                     SELECT tenant_id,institution_id,student_id,has_library_dues,outstanding_fine_balance
@@ -90,6 +94,24 @@ public class NoDuesVerificationService {
                             "Unreturned library circulation or outstanding fines",
                             1, amount == null ? BigDecimal.ZERO : amount, true));
                 }
+            }
+        }
+
+        if (!exists("app.department_equipment_clearance")
+                || !exists("app.fn_no_dues_department_clearance")) {
+            items.add(new DuesItem("DEPARTMENT", "INTEGRATION_UNAVAILABLE",
+                    "Departmental equipment clearance is not configured; clearance cannot be confirmed.",
+                    0, BigDecimal.ZERO, true));
+        } else {
+            Map<String,Object> departmentCheck = jdbc.queryForMap(
+                    "SELECT * FROM app.fn_no_dues_department_clearance(?,?,?)",
+                    tenantId, institutionId, studentId);
+            long pendingDepartments = ((Number) departmentCheck.get("pending_departments")).longValue();
+            long outstandingItems = ((Number) departmentCheck.get("outstanding_items")).longValue();
+            if (pendingDepartments > 0) {
+                items.add(new DuesItem("DEPARTMENT", "EQUIPMENT_NOT_CLEARED",
+                        "One or more active departments have missing clearance or outstanding equipment.",
+                        pendingDepartments, BigDecimal.valueOf(outstandingItems), true));
             }
         }
 
