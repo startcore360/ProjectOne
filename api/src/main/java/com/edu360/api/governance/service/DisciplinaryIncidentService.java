@@ -43,6 +43,9 @@ public class DisciplinaryIncidentService {
             LocalDate incidentDate, String severity, String description, String actionTaken,
             String status, OffsetDateTime createdAt) { }
     public record Evidence(UUID evidenceId, UUID fileId, UUID uploadedByUserId, OffsetDateTime createdAt) { }
+    public record Action(UUID actionId, String actionType, String actionNotes,
+            OffsetDateTime actionAt, UUID performedByUserId, UUID noticeFileId,
+            UUID minutesFileId, String penalty) { }
 
     @Transactional
     public Incident create(TenantPrincipal principal, UUID studentId, LocalDate incidentDate,
@@ -157,6 +160,27 @@ public class DisciplinaryIncidentService {
         audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "DISCIPLINARY_INCIDENT_VIEW",
                 "DISCIPLINARY_EVIDENCE", null, incident.institutionId(), null,
                 Map.of("recordCount", result.size()), result.size(), "H", "SUCCESS"));
+        return result;
+    }
+
+    @Transactional
+    public List<Action> actions(TenantPrincipal principal, UUID incidentId) {
+        Incident incident = get(principal, incidentId);
+        authorize(principal, incident.institutionId(), "DISCIPLINARY_INCIDENT_VIEW");
+        List<Action> result = jdbc.query("""
+                SELECT disciplinary_action_id,action_type,action_notes,action_at,performed_by_user_id,
+                       notice_file_id,minutes_file_id,penalty
+                  FROM app.disciplinary_action
+                 WHERE tenant_id=? AND disciplinary_incident_id=?
+                 ORDER BY action_at,created_at
+                """, (rs, n) -> new Action(rs.getObject(1, UUID.class), rs.getString(2),
+                rs.getString(3), rs.getObject(4, OffsetDateTime.class), rs.getObject(5, UUID.class),
+                rs.getObject(6, UUID.class), rs.getObject(7, UUID.class), rs.getString(8)),
+                principal.tenantId(), incidentId);
+        audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "DISCIPLINARY_INCIDENT_VIEW",
+                "DISCIPLINARY_ACTION", null, incident.institutionId(), null,
+                Map.of("incidentId", incidentId.toString(), "recordCount", result.size()),
+                result.size(), "H", "SUCCESS"));
         return result;
     }
 
