@@ -172,6 +172,11 @@ public class IdCardService {
     public Replacement requestReplacement(TenantPrincipal principal, UUID issuanceId,
             String reason, UUID feeReceiptId) {
         Card original = card(principal.tenantId(), issuanceId);
+        if (!"ACTIVE".equals(original.status())
+                || (original.expiryDate() != null && original.expiryDate().isBefore(LocalDate.now()))) {
+            throw new BusinessRuleViolationException("ID_CARD_NOT_REPLACEABLE",
+                    "Only an active, unexpired identity card can be submitted for replacement.");
+        }
         RbacTarget target = RbacTarget.of(original.userId());
         boolean ownRequest = principal.userAccountId().equals(original.userId());
         authorize(principal, original.institutionId(),
@@ -229,7 +234,8 @@ public class IdCardService {
                 "staffId", rs.getObject(7, UUID.class) == null ? "" : rs.getObject(7, UUID.class).toString(),
                 "templateId", rs.getObject(8, UUID.class),
                 "expiryDate", rs.getObject(9, LocalDate.class) == null ? "" : rs.getObject(9, LocalDate.class).toString(),
-                "feeReceiptId", rs.getObject(10, UUID.class).toString()) : null,
+                "originalStatus", rs.getString(10),
+                "feeReceiptId", rs.getObject(11, UUID.class).toString()) : null,
                 principal.tenantId(), replacementId);
         if (row == null) throw new ResourceNotFoundException("Replacement request not found.");
         if (!"REQUESTED".equals(row.get("status"))) throw new BusinessRuleViolationException("REPLACEMENT_ALREADY_DECIDED", "This replacement request has already been decided.");
@@ -242,6 +248,10 @@ public class IdCardService {
         UUID newIssuanceId = null;
         String status = "REJECTED";
         if (approve) {
+            if (!"ACTIVE".equals(row.get("originalStatus"))) {
+                throw new BusinessRuleViolationException("ID_CARD_NOT_REPLACEABLE",
+                        "The original card is no longer active and cannot be replaced.");
+            }
             verifyReplacementFeeReceipt(principal.tenantId(), institutionId,
                     (UUID) row.get("originalId"), UUID.fromString((String) row.get("feeReceiptId")));
             UUID originalId = (UUID) row.get("originalId");
@@ -303,6 +313,11 @@ public class IdCardService {
         if (!canExport && !canViewOwn) {
             throw new com.edu360.api.exception.UnauthorizedException("Identity-card print access is not granted.");
         }
+        if (!"ACTIVE".equals(card.status())
+                || (card.expiryDate() != null && card.expiryDate().isBefore(LocalDate.now()))) {
+            throw new BusinessRuleViolationException("ID_CARD_NOT_PRINTABLE",
+                    "Only active, unexpired identity cards can be printed.");
+        }
         audit.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW,
                 canExport ? "ID_CARD_EXPORT" : "ID_CARD_REPLACEMENT_REQUEST",
                 "ID_CARD_ISSUANCE", issuanceId, card.institutionId(), null,
@@ -319,6 +334,11 @@ public class IdCardService {
         List<Card> cards = issuanceIds.stream().map(id -> card(principal.tenantId(), id)).toList();
         if (cards.stream().anyMatch(card -> !institutionId.equals(card.institutionId()))) {
             throw new ResourceNotFoundException("One or more identity cards were not found.");
+        }
+        if (cards.stream().anyMatch(card -> !"ACTIVE".equals(card.status())
+                || (card.expiryDate() != null && card.expiryDate().isBefore(LocalDate.now())))) {
+            throw new BusinessRuleViolationException("ID_CARD_BATCH_CONTAINS_INACTIVE",
+                    "A batch can contain only active, unexpired identity cards.");
         }
         audit.record(new AuditEntry(AuditEventType.EXPORT, "ID_CARD_EXPORT",
                 "ID_CARD_ISSUANCE", cards.getFirst().issuanceId(), institutionId, null,
