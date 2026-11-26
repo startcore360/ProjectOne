@@ -200,6 +200,10 @@ public class CertificateService {
         UUID targetUser = studentUser(principal.tenantId(), row.studentId());
         authorize(principal, row.institutionId(), "CERTIFICATE_APPROVE",
                 targetUser == null ? RbacTarget.NONE : RbacTarget.of(targetUser));
+        if (!List.of("REQUESTED", "NO_DUES_PENDING").contains(row.status())) {
+            throw new BusinessRuleViolationException("CERTIFICATE_APPROVAL_NOT_APPLICABLE",
+                    "Only a pending certificate request can be approved.");
+        }
         NoDuesVerificationService.ClearanceResult clearance = verifyClearanceForType(row.studentId(), row.institutionId(), row.type());
         if (!clearance.clear()) {
             updateDues(principal, requestId, clearance, "NO_DUES_PENDING");
