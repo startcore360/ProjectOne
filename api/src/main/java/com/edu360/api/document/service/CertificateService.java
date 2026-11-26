@@ -151,8 +151,9 @@ public class CertificateService {
         RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
         RbacScope scope = permissions.targetScope(caller, institutionId, null);
         boolean canPrepare = permissions.can(caller, "CERTIFICATE_PREPARE", scope, RbacTarget.NONE).allowed();
+        boolean canApprove = permissions.can(caller, "CERTIFICATE_APPROVE", scope, RbacTarget.NONE).allowed();
         boolean canRequest = permissions.can(caller, "CERTIFICATE_REQUEST", scope, RbacTarget.NONE).allowed();
-        if (!canPrepare && !canRequest) {
+        if (!canPrepare && !canApprove && !canRequest) {
             throw new com.edu360.api.exception.UnauthorizedException("Certificate request access is not granted.");
         }
         String sql = """
@@ -160,7 +161,7 @@ public class CertificateService {
                        cr.dues_json::text,cr.created_at
                   FROM app.certificate_request cr
                  WHERE cr.tenant_id=? AND cr.institution_id=?
-                """ + (canPrepare ? "" : """
+                """ + ((canPrepare || canApprove) ? "" : """
                   AND EXISTS (SELECT 1 FROM app.student_profile sp
                                WHERE sp.tenant_id=cr.tenant_id AND sp.student_profile_id=cr.student_id
                                  AND sp.user_account_id=?)
@@ -236,7 +237,12 @@ public class CertificateService {
 
     @Transactional(readOnly = true)
     public List<IssuanceSummary> issuances(TenantPrincipal principal, UUID institutionId) {
-        authorize(principal, institutionId, "CERTIFICATE_PREPARE", RbacTarget.NONE);
+        RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        RbacScope scope = permissions.targetScope(caller, institutionId, null);
+        if (!permissions.can(caller, "CERTIFICATE_PREPARE", scope, RbacTarget.NONE).allowed()
+                && !permissions.can(caller, "CERTIFICATE_REVOKE", scope, RbacTarget.NONE).allowed()) {
+            throw new com.edu360.api.exception.UnauthorizedException("Certificate issuance access is not granted.");
+        }
         return jdbc.query("""
                 SELECT certificate_issuance_id,certificate_request_id,certificate_number,issued_at,revoked_at
                   FROM app.certificate_issuance
