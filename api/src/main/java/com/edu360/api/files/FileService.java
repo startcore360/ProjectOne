@@ -55,7 +55,8 @@ public class FileService {
     }
 
     @Transactional
-    public FileUploadResponse upload(TenantPrincipal principal, MultipartFile upload, String purposeValue, UUID requestedInstitutionId) {
+    public FileUploadResponse upload(TenantPrincipal principal, MultipartFile upload, String purposeValue,
+            UUID requestedInstitutionId, String recordType, UUID recordId) {
         if (upload == null || upload.isEmpty()) throw new IllegalArgumentException("A non-empty file is required.");
         if (upload.getSize() > MAX_BYTES) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "Files may not exceed 10 MiB.");
         FilePurpose purpose = FilePurpose.parse(purposeValue);
@@ -94,14 +95,20 @@ public class FileService {
         FileScanner.ScanResult scan = scanner.scan(content);
         UUID fileId = UUID.randomUUID();
         String checksum = sha256(content);
-        String storageKey = storage.store(principal.tenantId(), fileId, new ByteArrayInputStream(content));
-        FileObject file = FileObject.builder().id(new FileObjectId(principal.tenantId(), fileId))
-                .institutionId(institutionId).purpose(purpose.name()).storageKey(storageKey).originalFilename(filename)
-                .contentType(contentType).sizeBytes(content.length).sha256(checksum)
+        FileObject candidate = FileObject.builder().id(new FileObjectId(principal.tenantId(), fileId))
+                .institutionId(institutionId).purpose(purpose.name()).storageKey("pending")
+                .originalFilename(filename).contentType(contentType).sizeBytes(content.length).sha256(checksum)
                 .scanStatus(scan.name()).status(scan == FileScanner.ScanResult.INFECTED ? "QUARANTINED" : "ACTIVE")
                 .uploadedBy(principal.userAccountId()).createdBy(principal.userAccountId())
                 .updatedBy(principal.userAccountId()).build();
-        FileObject saved = repository.save(file);
+        if (purpose == FilePurpose.GRIEVANCE_EVIDENCE
+                && (!"GRIEVANCE_CASE".equals(recordType) || recordId == null
+                    || !accessPolicy.canAttach(candidate, principal, recordType, recordId))) {
+            throw new ResourceNotFoundException("Grievance case not found.");
+        }
+        String storageKey = storage.store(principal.tenantId(), fileId, new ByteArrayInputStream(content));
+        candidate.setStorageKey(storageKey);
+        FileObject saved = repository.save(candidate);
 
         // Audit persisted metadata only. Never write the original filename or file bytes to audit.
         auditLog.record(new AuditEntry(AuditEventType.FILE_UPLOADED, purpose.actionCode(), "FILE_OBJECT",
@@ -167,11 +174,18 @@ public class FileService {
                     throw new UnauthorizedException("The active role cannot view attendance imports.");
                 }
             }
+            case GRIEVANCE_EVIDENCE -> permissions.authorize(caller,
+                    "GRIEVANCE_EVIDENCE_VIEW", scope, RbacTarget.NONE);
         }
         if (FilePurpose.STAFF_DOCUMENT.name().equals(file.getPurpose())) {
             auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
                     "FILE_OBJECT", fileId, file.getInstitutionId(), null,
                     Map.of("purpose", FilePurpose.STAFF_DOCUMENT.name()), 1, "P", "SUCCESS"));
+        }
+        if (FilePurpose.GRIEVANCE_EVIDENCE.name().equals(file.getPurpose())) {
+            auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "GRIEVANCE_EVIDENCE_VIEW",
+                    "FILE_OBJECT", fileId, file.getInstitutionId(), null,
+                    Map.of("purpose", FilePurpose.GRIEVANCE_EVIDENCE.name()), 1, "P", "SUCCESS"));
         }
         return new StoredFile(storage.openRead(file.getStorageKey()), file.getOriginalFilename(), file.getContentType());
     }
