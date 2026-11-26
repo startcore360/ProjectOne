@@ -62,6 +62,12 @@ export default function CertificateRequestPage() {
     try{const result=await documentsApi.approveCertificate(tenantId,r.certificateRequestId);setNotice(result.status==="NO_DUES_PENDING"?"Approval blocked by unresolved No-Dues items.":"Certificate request approved.");await load();}
     catch(e){setError(messageOf(e,"Unable to approve request."));}finally{setBusy(false);}
   }
+  async function reject(r:CertificateRequest){
+    if(!tenantId)return;const why=window.prompt("Reason for rejecting this certificate request:");if(!why?.trim())return;
+    setBusy(true);setError("");setNotice("");
+    try{await documentsApi.rejectCertificate(tenantId,r.certificateRequestId,why.trim());setNotice("Certificate request rejected and reason recorded.");await load();}
+    catch(e){setError(messageOf(e,"Unable to reject certificate request."));}finally{setBusy(false);}
+  }
   async function prepare(r:CertificateRequest){
     if(!tenantId)return;setBusy(true);setError("");setNotice("");
     try{const result=await documentsApi.prepareCertificate(tenantId,r.certificateRequestId);setPrepared(result);setVerificationCode(result.verificationCode);setNotice(`Issued ${result.certificateNumber}; retain the verification code.`);const html=await documentsApi.printCertificate(tenantId,result.certificateIssuanceId);setPrintHtml(html);setPrintTitle(result.certificateNumber);await load();}
@@ -136,8 +142,9 @@ export default function CertificateRequestPage() {
         let blockers:Array<{source?:string;code?:string;description?:string}>=[];
         try{blockers=JSON.parse(r.duesJson) as typeof blockers;}catch{/* show request status only */}
         return <article key={r.certificateRequestId} className="rounded-lg border border-slate-200 p-3"><div className="flex flex-wrap items-start justify-between gap-3">
-          <div><p className="font-semibold">{r.certificateRequestId}</p><p className="text-sm text-slate-600">{r.reason}</p><p className="mt-1 text-xs font-semibold uppercase">{r.status}</p></div>
-          <div className="flex flex-wrap gap-2">{canApprove&&r.status!=="ISSUED"&&<Button size="sm" onClick={()=>void approve(r)} busy={busy}>Approve</Button>}
+          <div><p className="font-semibold">{r.certificateRequestId}</p><p className="text-sm text-slate-600">{r.reason}</p><p className="mt-1 text-xs font-semibold uppercase">{r.status}</p>{r.rejectionReason&&<p className="mt-1 text-sm text-red-700">Rejection reason: {r.rejectionReason}</p>}</div>
+          <div className="flex flex-wrap gap-2">{canApprove&&["REQUESTED","NO_DUES_PENDING"].includes(r.status)&&<Button size="sm" onClick={()=>void approve(r)} busy={busy}>Approve</Button>}
+            {canApprove&&["REQUESTED","NO_DUES_PENDING","APPROVED"].includes(r.status)&&<Button size="sm" variant="danger" onClick={()=>void reject(r)} busy={busy}>Reject</Button>}
             {canOverride&&r.status==="NO_DUES_PENDING"&&<Button size="sm" variant="secondary" onClick={()=>void override(r)} busy={busy}>Override No-Dues</Button>}
             {canPrepare&&r.status==="APPROVED"&&<Button size="sm" onClick={()=>void prepare(r)} busy={busy}>Prepare / issue</Button>}</div></div>
           {blockers.length>0&&<ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-800">{blockers.map((x,i)=><li key={i}>{x.source}: {x.description} ({x.code})</li>)}</ul>}
