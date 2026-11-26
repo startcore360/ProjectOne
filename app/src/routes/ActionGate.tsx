@@ -10,12 +10,21 @@ import { useSupportSession } from "../features/support/useSupportSession";
 type ActionGateProps = {
   anyOf: readonly string[];
   children: ReactNode;
+  /** Confidential tenant workflows must not inherit the support-session UI bypass. */
+  allowSupportSession?: boolean;
 };
 
-export default function ActionGate({ anyOf, children }: ActionGateProps) {
+export default function ActionGate({ anyOf, children, allowSupportSession = true }: ActionGateProps) {
   const { canAny, loading, error } = useTenantAccess();
   const { isSupportSession } = useSupportSession();
-  if (isSupportSession) return <>{children}</>;
+  if (isSupportSession && allowSupportSession) return <>{children}</>;
+  if (isSupportSession && !allowSupportSession) {
+    return (
+      <div className="eds-access-denied" role="status" aria-live="polite">
+        <EmptyState variant="page" icon="shield" title="Access unavailable" description="Support sessions cannot access this confidential tenant workflow." />
+      </div>
+    );
+  }
   if (loading) return <Spinner label="Checking access…" />;
 
   if (error) {
