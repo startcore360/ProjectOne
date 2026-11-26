@@ -230,6 +230,25 @@ public class T10DomainService {
         return Map.of("bookId",id,"copies",r.copies());
     }
     @Transactional
+    public Map<String,Object> addBookCopy(UUID tenant,TenantPrincipal p,UUID institution,UUID bookId,String accessionNumber) {
+        allow(tenant,p.userAccountId(),"CATALOG_MANAGE",institution);
+        if(accessionNumber==null||accessionNumber.isBlank()||accessionNumber.length()>80) throw new BusinessRuleViolationException("INVALID_ACCESSION","A unique accession number is required.");
+        jdbc.queryForObject("SELECT id FROM app.library_catalog WHERE id=? AND tenant_id=? AND institution_id=? FOR UPDATE",UUID.class,bookId,tenant,institution);
+        UUID copy=UUID.randomUUID();
+        jdbc.update("INSERT INTO app.book_copy(id,tenant_id,institution_id,book_id,accession_number,status) VALUES (?,?,?,?,?,'AVAILABLE')",copy,tenant,institution,bookId,accessionNumber.trim());
+        jdbc.update("UPDATE app.library_catalog SET total_copies=total_copies+1,available_copies=available_copies+1 WHERE id=? AND tenant_id=? AND institution_id=?",bookId,tenant,institution);
+        return Map.of("copyId",copy,"status","AVAILABLE");
+    }
+    @Transactional
+    public Map<String,Object> withdrawBookCopy(UUID tenant,TenantPrincipal p,UUID institution,UUID copyId) {
+        allow(tenant,p.userAccountId(),"CATALOG_MANAGE",institution);
+        Map<String,Object> copy=jdbc.queryForMap("SELECT book_id FROM app.book_copy WHERE id=? AND tenant_id=? AND institution_id=? AND status='AVAILABLE' FOR UPDATE",copyId,tenant,institution);
+        int changed=jdbc.update("UPDATE app.book_copy SET status='WITHDRAWN' WHERE id=? AND tenant_id=? AND institution_id=? AND status='AVAILABLE'",copyId,tenant,institution);
+        if(changed!=1) throw new BusinessRuleViolationException("COPY_NOT_AVAILABLE","Only an available copy can be withdrawn.");
+        jdbc.update("UPDATE app.library_catalog SET total_copies=total_copies-1,available_copies=available_copies-1 WHERE id=? AND tenant_id=? AND institution_id=? AND total_copies>0 AND available_copies>0",copy.get("book_id"),tenant,institution);
+        return Map.of("copyId",copyId,"status","WITHDRAWN");
+    }
+    @Transactional
     public Map<String,Object> issueBook(UUID tenant,TenantPrincipal p,LibraryController.IssueRequest r) {
         allow(tenant,p.userAccountId(),"BOOK_ISSUE_RETURN",r.institutionId());
         String borrowerType=jdbc.queryForObject("SELECT user_type FROM app.user_account WHERE tenant_id=? AND user_account_id=? AND status='ACTIVE' FOR UPDATE",String.class,tenant,r.borrowerUserId());
