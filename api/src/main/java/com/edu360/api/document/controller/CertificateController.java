@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import org.springframework.http.HttpStatus;
@@ -29,7 +30,7 @@ public class CertificateController {
 
     public record CreateTemplateRequest(@NotBlank String type, @NotBlank @Size(max=100) String name,
             @NotBlank @Size(max=50000) String templateHtml) { }
-    public record CreateRequest(@NotBlank UUID studentId, @NotBlank UUID templateId,
+    public record CreateRequest(@NotNull UUID studentId, @NotNull UUID templateId,
             @NotBlank @Size(max=1000) String reason) { }
     public record DecisionRequest(@NotBlank @Size(max=1000) String reason) { }
 
@@ -90,10 +91,8 @@ public class CertificateController {
     @GetMapping("/students/{studentId}/no-dues")
     public NoDuesVerificationService.ClearanceResult noDues(@PathVariable UUID tenantId,
             @PathVariable UUID studentId, Authentication auth) {
-        // The No-Dues result is not a public student lookup. The request action is checked by
-        // the caller before this diagnostic endpoint returns any clearance details.
         TenantPrincipal principal = principal(auth, tenantId);
-        return noDues.verifyClearance(studentId);
+        return certificates.verifyNoDues(principal, studentId);
     }
 
     private static TenantPrincipal principal(Authentication auth, UUID tenantId) {
