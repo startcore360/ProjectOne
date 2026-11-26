@@ -132,6 +132,7 @@ class GrievanceComplaintGuardIT {
 
     private void setTenant() {
         jdbc.queryForObject("SELECT set_config('app.tenant_id',?,true)", String.class, tenant.toString());
+        jdbc.queryForObject("SELECT set_config('app.institution_scope','ALL',true)", String.class);
     }
 
     private void setUser(UUID user) {
