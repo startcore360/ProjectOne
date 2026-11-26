@@ -60,6 +60,12 @@ public class GrievanceCaseController {
         return grievances.get(principal(auth, tenantId), caseId);
     }
 
+    @GetMapping("/cases/{caseId}/actions")
+    public List<GrievanceService.CaseAction> actions(@PathVariable UUID tenantId,
+            @PathVariable UUID caseId, Authentication auth) {
+        return grievances.actions(principal(auth, tenantId), caseId);
+    }
+
     @PostMapping("/cases/{caseId}/assign")
     public GrievanceService.CaseView assign(@PathVariable UUID tenantId,
             @PathVariable UUID caseId, @Valid @RequestBody AssignRequest body, Authentication auth) {
