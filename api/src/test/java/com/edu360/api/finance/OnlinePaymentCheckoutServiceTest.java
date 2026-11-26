@@ -18,7 +18,6 @@ import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
 import java.math.BigDecimal;
-import java.sql.ResultSet;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -61,18 +60,6 @@ class OnlinePaymentCheckoutServiceTest {
             if (sql.contains("FROM app.payment WHERE")) return null;
             throw new AssertionError("Unexpected result-set query: " + sql);
         }).when(jdbc).query(anyString(), any(MapSqlParameterSource.class), any(ResultSetExtractor.class));
-        doAnswer(invocation -> {
-            String sql = invocation.getArgument(0);
-            if (sql.contains("FROM app.student_installment")) {
-                return List.of(new OnlinePaymentCheckoutService.Installment(
-                        installmentId, institutionId, new BigDecimal("1200.00"), "UNPAID"));
-            }
-            if (sql.contains("FROM app.payment p")) {
-                return List.of(new OnlinePaymentCheckoutService.PendingPayment(
-                        UUID.randomUUID(), (Instant) invocation.getArgument(3)));
-            }
-            throw new AssertionError("Unexpected row-mapper query: " + sql);
-        }).when(jdbc).query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class));
     }
 
     @Test
@@ -91,7 +78,7 @@ class OnlinePaymentCheckoutServiceTest {
         }).when(jdbc).query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class));
 
         OnlinePaymentCheckoutService service = new OnlinePaymentCheckoutService(
-                jdbc, permissions, credentialsResolver, audit, "", "");
+                jdbc, permissions, credentialsResolver, audit);
         OnlinePaymentCheckoutService.CheckoutRequest request = new OnlinePaymentCheckoutService.CheckoutRequest(
                 accountId, List.of(installmentId), "RAZORPAY", "request-key-123");
 
