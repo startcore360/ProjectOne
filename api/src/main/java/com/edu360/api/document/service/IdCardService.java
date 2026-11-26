@@ -398,7 +398,10 @@ public class IdCardService {
         UUID id = UUID.randomUUID();
         LocalDate issueDate = LocalDate.now();
         String cardNumber = "EDU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        String token = qrToken(principal.tenantId(), institutionId, profile.userId(), cardNumber, issueDate, expiryDate);
+        UUID profileId = profile.studentProfileId() != null ? profile.studentProfileId() : profile.staffProfileId();
+        String subjectType = profile.studentProfileId() != null ? "STUDENT" : "STAFF";
+        String token = qrToken(principal.tenantId(), institutionId, profileId, subjectType,
+                profile.userId(), cardNumber, issueDate, expiryDate);
         String hash = sha256(token);
         jdbc.update("""
                 INSERT INTO app.id_card_issuance
@@ -410,8 +413,6 @@ public class IdCardService {
                 principal.userAccountId(), principal.userAccountId());
         audit.record(new AuditEntry(AuditEventType.CREATE, actionCode, "ID_CARD_ISSUANCE",
                 id, institutionId, null, Map.of("cardNumber", cardNumber), 1, "P", "SUCCESS"));
-        UUID profileId = profile.studentProfileId() != null ? profile.studentProfileId() : profile.staffProfileId();
-        String subjectType = profile.studentProfileId() != null ? "STUDENT" : "STAFF";
         return new Card(id, institutionId, profile.userId(), profileId, subjectType,
                 cardNumber, issueDate, expiryDate, "ACTIVE", token, profile.fullName(), profile.profileCode(),
                 institutionName(principal.tenantId(), institutionId), template.layout(), template.fieldsConfigJson());
