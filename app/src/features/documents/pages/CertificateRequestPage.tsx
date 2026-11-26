@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Button from "../../../design-system/components/Button";
 import PageHeader from "../../../design-system/components/PageHeader";
 import { Panel } from "../../../design-system/components/Panel";
