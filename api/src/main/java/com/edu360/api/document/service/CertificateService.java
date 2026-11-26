@@ -166,7 +166,7 @@ public class CertificateService {
                                WHERE sp.tenant_id=cr.tenant_id AND sp.student_profile_id=cr.student_id
                                  AND sp.user_account_id=?)
                 """) + " ORDER BY cr.created_at DESC";
-        return canPrepare
+        return (canPrepare || canApprove)
                 ? jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                     rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
                     rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
