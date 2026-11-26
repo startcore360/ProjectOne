@@ -162,8 +162,9 @@ public class CertificateService {
         RbacScope scope = permissions.targetScope(caller, institutionId, null);
         boolean canPrepare = permissions.can(caller, "CERTIFICATE_PREPARE", scope, RbacTarget.NONE).allowed();
         boolean canApprove = permissions.can(caller, "CERTIFICATE_APPROVE", scope, RbacTarget.NONE).allowed();
+        boolean canOverride = permissions.can(caller, "NO_DUES_OVERRIDE", scope, RbacTarget.NONE).allowed();
         boolean canRequest = permissions.can(caller, "CERTIFICATE_REQUEST", scope, RbacTarget.NONE).allowed();
-        if (!canPrepare && !canApprove && !canRequest) {
+        if (!canPrepare && !canApprove && !canOverride && !canRequest) {
             throw new com.edu360.api.exception.UnauthorizedException("Certificate request access is not granted.");
         }
         String sql = """
@@ -171,12 +172,12 @@ public class CertificateService {
                        cr.dues_json::text,cr.created_at
                   FROM app.certificate_request cr
                  WHERE cr.tenant_id=? AND cr.institution_id=?
-                """ + ((canPrepare || canApprove) ? "" : """
+                """ + ((canPrepare || canApprove || canOverride) ? "" : """
                   AND EXISTS (SELECT 1 FROM app.student_profile sp
                                WHERE sp.tenant_id=cr.tenant_id AND sp.student_profile_id=cr.student_id
                                  AND sp.user_account_id=?)
                 """) + " ORDER BY cr.created_at DESC";
-        return (canPrepare || canApprove)
+        return (canPrepare || canApprove || canOverride)
                 ? jdbc.query(sql, (rs, n) -> new Request(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                     rs.getObject(3, UUID.class), rs.getObject(4, UUID.class), rs.getString(5),
                     rs.getString(6), rs.getString(7), rs.getObject(8, OffsetDateTime.class)),
