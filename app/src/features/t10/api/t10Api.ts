@@ -83,6 +83,8 @@ export const t10Api = {
     institutionId: string; routeName: string; vehicleNumber: string; driverName: string; driverPhone: string;
     capacity: number; transportFeeCode: string; stops: { name: string; pickupTime: string; dropTime: string; feeAmount: number; order: number }[];
   }) => (await api.post(`/tenants/${tenant}/transport/routes`, body)).data,
+  cancelRoute: async (tenant: string, institution: string, routeId: string) =>
+    (await api.post(`/tenants/${tenant}/transport/routes/${routeId}/cancel`, null, { params: { institutionId: institution } })).data,
   allocations: async (tenant: string, institution: string) =>
     (await api.get<TransportAllocation[]>(`/tenants/${tenant}/transport/allocations`, { params: { institutionId: institution } })).data,
   allocate: async (tenant: string, body: { institutionId: string; routeId: string; stopId: string; passengerUserId: string }) =>
