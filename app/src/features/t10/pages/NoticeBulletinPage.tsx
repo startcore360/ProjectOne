@@ -6,6 +6,9 @@ import { t10Api, type Notice } from "../api/t10Api";
 export default function NoticeBulletinPage() {
   const tenant = useAppSelector((s) => s.auth.user?.tenantId ?? "");
   const institution = useAppSelector((s) => s.tenantPermissions.current?.institutionId ?? "");
+  const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? []);
+  const canPublish = ["NOTICE_PUBLISH_INSTITUTION","NOTICE_PUBLISH_CLASS_DEPT","NOTICE_PUBLISH_UNIVERSITY"].some((action) => actions.includes(action));
+  const canPublishUrgent = actions.includes("NOTICE_EMERGENCY");
   const [items, setItems] = useState<Notice[]>([]);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
@@ -46,7 +49,7 @@ export default function NoticeBulletinPage() {
   return <main className="app-page">
     <PageHeader title="Notice Board & Circulars" description="Publish role-targeted circulars, urgent alerts and notices requiring acknowledgment." />
     {error && <p role="alert">{error}</p>}
-    <section className="app-card">
+    {canPublish && <section className="app-card">
       <h2>Publish a notice</h2>
       <label>Title <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} required /></label>
       <label>Message <textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={4000} required /></label>
@@ -58,12 +61,12 @@ export default function NoticeBulletinPage() {
       <label>Target role codes (comma-separated; blank targets all roles)
         <input value={targetRolesText} onChange={(event) => setTargetRolesText(event.target.value)} placeholder="STUDENT, CLASS_TEACHER, PRINCIPAL_COLLEGE" />
       </label>
-      <label><input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} /> Urgent alert</label>
+      {canPublishUrgent && <label><input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} /> Urgent alert</label>}
       <label><input type="checkbox" checked={requiresAcknowledgment} onChange={(event) => setRequiresAcknowledgment(event.target.checked)} /> Require read acknowledgment</label>
       <Button onClick={publish} disabled={busy || !title.trim() || !body.trim() || !institution}>
         {busy ? "Publishing…" : "Publish notice"}
       </Button>
-    </section>
+    </section>}
     <section className="app-stack" aria-label="Published notices">
       {items.length === 0 ? <EmptyState title="No published notices" description="Published notices will appear here." /> :
         items.map((notice) => <article className="app-card" key={notice.notice_id}>
