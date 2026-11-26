@@ -36,6 +36,22 @@ CREATE TABLE IF NOT EXISTS app.library_fine_policy (
 INSERT INTO app.library_fine_policy(id,tenant_id,institution_id)
  SELECT gen_random_uuid(),tenant_id,institution_id FROM app.institution
  ON CONFLICT DO NOTHING;
+
+-- Automatically provision the editable placeholder policy for institutions created
+-- after this migration. The security-definer body is deliberately narrow and fixed-path.
+CREATE OR REPLACE FUNCTION app.fn_seed_library_fine_policy()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=app,pg_temp AS $
+BEGIN
+ INSERT INTO app.library_fine_policy(id,tenant_id,institution_id)
+ VALUES (gen_random_uuid(),NEW.tenant_id,NEW.institution_id)
+ ON CONFLICT(tenant_id,institution_id) DO NOTHING;
+ RETURN NEW;
+END $;
+DROP TRIGGER IF EXISTS trg_seed_library_fine_policy ON app.institution;
+CREATE TRIGGER trg_seed_library_fine_policy
+ AFTER INSERT ON app.institution
+ FOR EACH ROW EXECUTE FUNCTION app.fn_seed_library_fine_policy();
+
 CREATE OR REPLACE FUNCTION app.fn_library_fine_amount(p_tenant uuid,p_institution uuid,p_due_date date)
 RETURNS numeric(12,2) LANGUAGE plpgsql STABLE AS $$
 DECLARE pol app.library_fine_policy%ROWTYPE; days_late integer; billable_days integer;
