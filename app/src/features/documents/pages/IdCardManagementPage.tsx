@@ -219,7 +219,7 @@ export default function IdCardManagementPage() {
           <table className="w-full text-left text-sm">
             <thead><tr className="border-b border-slate-200 text-slate-600"><th className="p-2">Select</th><th className="p-2">Card number</th><th className="p-2">Cardholder</th><th className="p-2">Profile</th><th className="p-2">Status</th><th className="p-2">Expiry</th><th className="p-2">Actions</th></tr></thead>
             <tbody>{cards.map(card => <tr key={card.issuanceId} className="border-b border-slate-100">
-              <td className="p-2"><input aria-label={`Select ${card.cardNumber}`} type="checkbox" checked={selectedIds.includes(card.issuanceId)} onChange={e => setSelectedIds(ids => e.target.checked ? [...ids, card.issuanceId] : ids.filter(id => id !== card.issuanceId))} /></td>
+              <td className="p-2"><input aria-label={`Select ${card.cardNumber}`} type="checkbox" disabled={card.status!=="ACTIVE" || (!!card.expiryDate && card.expiryDate < new Date().toISOString().slice(0,10))} checked={selectedIds.includes(card.issuanceId)} onChange={e => setSelectedIds(ids => e.target.checked ? [...ids, card.issuanceId] : ids.filter(id => id !== card.issuanceId))} /></td>
               <td className="p-2 font-medium">{card.cardNumber}</td><td className="p-2">{card.fullName}</td><td className="p-2">{card.profileCode}</td><td className="p-2">{card.status}</td><td className="p-2">{card.expiryDate ?? "No expiry"}</td>
               <td className="p-2"><div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" onClick={() => void showCard(card)}>Preview</Button>
