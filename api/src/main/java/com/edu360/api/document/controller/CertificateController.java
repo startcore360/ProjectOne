@@ -69,6 +69,12 @@ public class CertificateController {
         return certificates.approve(principal(auth, tenantId), requestId);
     }
 
+    @PostMapping("/requests/{requestId}/reject")
+    public CertificateService.Request reject(@PathVariable UUID tenantId,
+            @PathVariable UUID requestId, @Valid @RequestBody DecisionRequest body, Authentication auth) {
+        return certificates.reject(principal(auth, tenantId), requestId, body.reason());
+    }
+
     @PostMapping("/requests/{requestId}/prepare")
     public CertificateService.Issuance prepare(@PathVariable UUID tenantId,
             @PathVariable UUID requestId, Authentication auth) {
