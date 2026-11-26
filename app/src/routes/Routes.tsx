@@ -176,7 +176,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<RootEntry />} />
-      <Route path="/verify/certificate" element={<LazyRouteView><PublicCertificateVerificationPage /></LazyRouteView>} />
+      <Route element={<LazyRouteView />}><Route path="/verify/certificate" element={<PublicCertificateVerificationPage />} /></Route>
       <Route element={<PublicRoute />}>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
