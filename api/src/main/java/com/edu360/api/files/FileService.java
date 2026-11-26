@@ -106,6 +106,11 @@ public class FileService {
                     || !accessPolicy.canAttach(candidate, principal, recordType, recordId))) {
             throw new ResourceNotFoundException("Grievance case not found.");
         }
+        if (purpose == FilePurpose.DISCIPLINARY_EVIDENCE
+                && (!"DISCIPLINARY_INCIDENT".equals(recordType) || recordId == null
+                    || !accessPolicy.canAttach(candidate, principal, recordType, recordId))) {
+            throw new ResourceNotFoundException("Disciplinary incident not found.");
+        }
         String storageKey = storage.store(principal.tenantId(), fileId, new ByteArrayInputStream(content));
         candidate.setStorageKey(storageKey);
         FileObject saved = repository.save(candidate);
@@ -176,6 +181,8 @@ public class FileService {
             }
             case GRIEVANCE_EVIDENCE -> permissions.authorize(caller,
                     "GRIEVANCE_EVIDENCE_VIEW", scope, RbacTarget.NONE);
+            case DISCIPLINARY_EVIDENCE -> permissions.authorize(caller,
+                    "DISCIPLINARY_INCIDENT_VIEW", scope, RbacTarget.NONE);
         }
         if (FilePurpose.STAFF_DOCUMENT.name().equals(file.getPurpose())) {
             auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",
@@ -186,6 +193,11 @@ public class FileService {
             auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "GRIEVANCE_EVIDENCE_VIEW",
                     "FILE_OBJECT", fileId, file.getInstitutionId(), null,
                     Map.of("purpose", FilePurpose.GRIEVANCE_EVIDENCE.name()), 1, "P", "SUCCESS"));
+        }
+        if (FilePurpose.DISCIPLINARY_EVIDENCE.name().equals(file.getPurpose())) {
+            auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "DISCIPLINARY_INCIDENT_VIEW",
+                    "FILE_OBJECT", fileId, file.getInstitutionId(), null,
+                    Map.of("purpose", FilePurpose.DISCIPLINARY_EVIDENCE.name()), 1, "P", "SUCCESS"));
         }
         return new StoredFile(storage.openRead(file.getStorageKey()), file.getOriginalFilename(), file.getContentType());
     }
