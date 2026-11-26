@@ -60,6 +60,12 @@ public class GrievanceCaseController {
         return grievances.get(principal(auth, tenantId), caseId);
     }
 
+    @GetMapping("/cases/{caseId}/hearings")
+    public List<GrievanceService.Hearing> hearings(@PathVariable UUID tenantId,
+            @PathVariable UUID caseId, Authentication auth) {
+        return grievances.hearings(principal(auth, tenantId), caseId);
+    }
+
     @GetMapping("/cases/{caseId}/actions")
     public List<GrievanceService.CaseAction> actions(@PathVariable UUID tenantId,
             @PathVariable UUID caseId, Authentication auth) {
