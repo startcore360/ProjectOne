@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.document.service.CertificateService;
+import com.edu360.api.governance.service.NoDuesVerificationService;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
