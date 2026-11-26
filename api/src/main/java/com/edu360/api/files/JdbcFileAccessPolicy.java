@@ -198,14 +198,19 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                     || canVerifyAdmissionDocument(file, principal);
             case GRIEVANCE_EVIDENCE -> exists("""
                     SELECT EXISTS (
-                      SELECT 1
-                      FROM app.grievance_evidence ge
-                      JOIN app.grievance_case gc
-                        ON gc.tenant_id=ge.tenant_id
+                      SELECT 1 FROM app.grievance_evidence ge
+                      JOIN app.grievance_case gc ON gc.tenant_id=ge.tenant_id
                        AND gc.grievance_case_id=ge.grievance_case_id
-                      WHERE ge.tenant_id=? AND ge.file_id=?
-                        AND gc.institution_id=?
+                      WHERE ge.tenant_id=? AND ge.file_id=? AND gc.institution_id=?
                         AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)
+                    )
+                    """, tenantId, fileId, file.getInstitutionId());
+            case DISCIPLINARY_EVIDENCE -> exists("""
+                    SELECT EXISTS (
+                      SELECT 1 FROM app.disciplinary_evidence de
+                      JOIN app.disciplinary_incident di ON di.tenant_id=de.tenant_id
+                       AND di.disciplinary_incident_id=de.disciplinary_incident_id
+                      WHERE de.tenant_id=? AND de.file_id=? AND di.institution_id=?
                     )
                     """, tenantId, fileId, file.getInstitutionId());
         };
@@ -227,6 +232,17 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                       WHERE gc.tenant_id=? AND gc.grievance_case_id=?
                         AND gc.institution_id=?
                         AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)
+                    )
+                    """, principal.tenantId(), recordId, file.getInstitutionId());
+        }
+        if ("DISCIPLINARY_INCIDENT".equals(recordType)
+                && "DISCIPLINARY_EVIDENCE".equals(file.getPurpose())
+                && file.getInstitutionId() != null) {
+            return exists("""
+                    SELECT EXISTS (
+                      SELECT 1 FROM app.disciplinary_incident di
+                      WHERE di.tenant_id=? AND di.disciplinary_incident_id=?
+                        AND di.institution_id=?
                     )
                     """, principal.tenantId(), recordId, file.getInstitutionId());
         }
