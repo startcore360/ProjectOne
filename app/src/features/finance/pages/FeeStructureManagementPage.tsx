@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 
@@ -28,11 +28,14 @@ export default function FeeStructureManagementPage() {
   const [installmentsJson, setInstallmentsJson] = useState('[{"installmentNo":1,"dueDate":"","amount":0}]');
   const [structures, setStructures] = useState<FeeStructure[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const busyRef = useRef(false);
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     if (!tenantId) return;
+    setLoading(true);
     try {
       const response = await api.get<FeeStructure[]>(`/tenants/${tenantId}/fee-structures`, {
         params: institutionId ? { institutionId } : undefined,
@@ -41,6 +44,8 @@ export default function FeeStructureManagementPage() {
       setError("");
     } catch {
       setError("Unable to load fee structures. Check your role and institution scope.");
+    } finally {
+      setLoading(false);
     }
   }, [tenantId, institutionId]);
 
@@ -48,13 +53,46 @@ export default function FeeStructureManagementPage() {
 
   async function createStructure(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!tenantId) return;
+    if (!tenantId || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     setNotice("");
     try {
       const lines = JSON.parse(linesJson) as Array<{ feeHeadId: string; amount: number }>;
       const installments = JSON.parse(installmentsJson) as Array<{ installmentNo: number; dueDate: string; amount: number }>;
+      if (!institutionId.trim() || !academicSessionId.trim() || !feePolicyId.trim()) {
+        throw new Error("Institution, academic session and fee policy are required.");
+      }
+      if ((Boolean(programYearId.trim())) === (Boolean(classId.trim()))) {
+        throw new Error("Provide exactly one of Program year ID or Class ID.");
+      }
+      if (!Array.isArray(lines) || lines.length === 0 || lines.some((line) =>
+        !line.feeHeadId?.trim() || !Number.isFinite(Number(line.amount)) || Number(line.amount) < 0
+        || !Number.isInteger(Number(line.amount) * 100))) {
+        throw new Error("Fee lines must contain a fee-head ID and a non-negative amount with at most two decimal places.");
+      }
+      if (!Array.isArray(installments) || installments.length === 0) {
+        throw new Error("At least one installment is required.");
+      }
+      let previousNo = 0;
+      let previousDate = "";
+      for (const installment of installments) {
+        const amount = Number(installment.amount);
+        if (!Number.isInteger(installment.installmentNo) || installment.installmentNo <= previousNo
+          || !/^\\d{4}-\\d{2}-\\d{2}$/.test(installment.dueDate)
+          || !Number.isFinite(Date.parse(installment.dueDate)) || (previousDate && installment.dueDate <= previousDate)
+          || !Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount * 100)) {
+          throw new Error("Installments must have increasing numbers and dates, and positive amounts with at most two decimal places.");
+        }
+        previousNo = installment.installmentNo;
+        previousDate = installment.dueDate;
+      }
+      const lineTotalCents = lines.reduce((sum, line) => sum + Math.round(Number(line.amount) * 100), 0);
+      const installmentTotalCents = installments.reduce((sum, item) => sum + Math.round(Number(item.amount) * 100), 0);
+      if (lineTotalCents !== installmentTotalCents) {
+        throw new Error("The sum of fee lines must equal the sum of installment amounts.");
+      }
       await api.post(`/tenants/${tenantId}/fee-structures`, {
         institutionId, academicSessionId, programYearId: programYearId || null,
         classId: classId || null, feePolicyId, appliesFromDate: appliesFromDate || null,
@@ -66,12 +104,14 @@ export default function FeeStructureManagementPage() {
       const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
       setError(message || "Could not create the fee structure. Check the JSON and required identifiers.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
 
   async function submitForApproval(id: string) {
-    if (!tenantId) return;
+    if (!tenantId || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     setNotice("");
@@ -82,6 +122,7 @@ export default function FeeStructureManagementPage() {
     } catch {
       setError("Unable to submit this fee structure. Only an authorized Accountant can submit a draft.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -119,13 +160,14 @@ export default function FeeStructureManagementPage() {
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 md:px-6">
           <h2 className="font-semibold text-slate-900">Existing fee structures</h2>
-          <button onClick={() => void load()} className="text-sm font-medium text-indigo-700 hover:underline">Refresh</button>
+          <button disabled={loading} onClick={() => void load()} className="text-sm font-medium text-indigo-700 hover:underline disabled:opacity-50">{loading ? "Refreshing…" : "Refresh"}</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Structure</th><th className="px-4 py-3">Version</th><th className="px-4 py-3">Total (INR)</th><th className="px-4 py-3">Installments</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {structures.map((item) => <tr key={item.feeStructureId}>
+              {loading && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">Loading fee structures…</td></tr>}
+              {!loading && structures.map((item) => <tr key={item.feeStructureId}>
                 <td className="max-w-48 truncate px-4 py-3 font-mono text-xs">{item.feeStructureId}</td>
                 <td className="px-4 py-3">{item.versionNo}</td>
                 <td className="px-4 py-3 tabular-nums">{Number(item.totalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
@@ -133,7 +175,7 @@ export default function FeeStructureManagementPage() {
                 <td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{item.status}</span></td>
                 <td className="px-4 py-3">{item.status === "DRAFT" ? <button disabled={busy} onClick={() => void submitForApproval(item.feeStructureId)} className="font-medium text-indigo-700 hover:underline disabled:opacity-50">Submit for approval</button> : "—"}</td>
               </tr>)}
-              {structures.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">No fee structures found for this scope.</td></tr>}
+              {!loading && !error && structures.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">No fee structures found for this scope.</td></tr>}
             </tbody>
           </table>
         </div>
