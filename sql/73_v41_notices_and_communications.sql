@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS ix_dispatch_worker_claim ON app.message_dispatch(stat
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_notice_bulletin_scope ON app.notice_bulletin(tenant_id,institution_id,id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_campaign_scope ON app.communication_campaign(tenant_id,institution_id,id);
-DO $
+DO $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.notice_target'::regclass AND conname='fk_notice_target_scope') THEN
   ALTER TABLE app.notice_target ADD CONSTRAINT fk_notice_target_scope FOREIGN KEY(tenant_id,institution_id,notice_id) REFERENCES app.notice_bulletin(tenant_id,institution_id,id);
@@ -67,8 +67,8 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='app.message_dispatch'::regclass AND conname='fk_dispatch_campaign_scope') THEN
   ALTER TABLE app.message_dispatch ADD CONSTRAINT fk_dispatch_campaign_scope FOREIGN KEY(tenant_id,institution_id,campaign_id) REFERENCES app.communication_campaign(tenant_id,institution_id,id);
  END IF;
-END $;
-DO $
+END $$;
+DO $$
 DECLARE t text;
 BEGIN
  FOREACH t IN ARRAY ARRAY['notice_bulletin','notice_target','notice_acknowledgment','communication_campaign','message_template','message_dispatch'] LOOP
