@@ -9,7 +9,7 @@ vi.mock("../../api/userManagementService", () => ({
 }));
 
 vi.mock("../../../institution-admin/api/institutionService", () => ({
-  institutionService: { listSections: vi.fn(), listAcademicSessions: vi.fn() },
+  institutionService: { listInstitutions: vi.fn(), listSections: vi.fn(), listAcademicSessions: vi.fn() },
 }));
 
 const tenantId = "11111111-1111-1111-1111-111111111111";
@@ -20,6 +20,9 @@ const academicSessionId = "44444444-4444-4444-4444-444444444444";
 describe("CreateStudentModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(institutionService.listInstitutions).mockResolvedValue({ items: [{
+      institutionId, institutionName: "Northbridge College", institutionCode: "NBC",
+    }] } as never);
     vi.mocked(institutionService.listSections).mockResolvedValue([]);
     vi.mocked(institutionService.listAcademicSessions).mockResolvedValue([]);
   });
@@ -47,8 +50,8 @@ describe("CreateStudentModal", () => {
     }]);
     render(<CreateStudentModal tenantId={tenantId} isOpen onClose={vi.fn()} onCreated={onCreated} />);
     fireEvent.change(screen.getByLabelText(/Student full name/i), { target: { value: "Asha Rao" } });
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
-    fireEvent.click(screen.getByRole("button", { name: /Load sessions and sections/i }));
+    await waitFor(() => expect(institutionService.listInstitutions).toHaveBeenCalledWith(tenantId));
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: institutionId } });
     await waitFor(() => expect(institutionService.listSections).toHaveBeenCalledWith(tenantId, institutionId));
     fireEvent.change(screen.getByLabelText(/Academic session/i), { target: { value: academicSessionId } });
     fireEvent.change(screen.getByLabelText(/Section/i), { target: { value: sectionId } });
@@ -69,49 +72,29 @@ describe("CreateStudentModal", () => {
     });
   });
 
-  it("keeps a validated manual-ID path when academic lookups are unavailable", async () => {
-    const student: StudentProfileResponse = {
-      id: "66666666-6666-6666-6666-666666666666",
-      userAccountId: null,
-      institutionId,
-      studentCode: "STU-2026-002",
-      fullName: "Asha Rao",
-      status: "ACTIVE",
-      temporaryPassword: null,
-    };
+  it("does not expose manual identifiers when academic lookups fail", async () => {
     vi.mocked(institutionService.listSections).mockRejectedValue(new Error("Academic directory temporarily unavailable"));
     vi.mocked(institutionService.listAcademicSessions).mockRejectedValue(new Error("Academic directory temporarily unavailable"));
-    vi.mocked(userManagementService.createStudentProfile).mockResolvedValue({ data: student } as never);
-
-    render(<CreateStudentModal tenantId={tenantId} isOpen onClose={vi.fn()} onCreated={vi.fn()} />);
+    const onCreated = vi.fn();
+    render(<CreateStudentModal tenantId={tenantId} isOpen onClose={vi.fn()} onCreated={onCreated} />);
+    await waitFor(() => expect(institutionService.listInstitutions).toHaveBeenCalledWith(tenantId));
     fireEvent.change(screen.getByLabelText(/Student full name/i), { target: { value: "Asha Rao" } });
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
-    fireEvent.click(screen.getByRole("button", { name: /Load sessions and sections/i }));
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: institutionId } });
 
     expect(await screen.findByText(/Academic directory temporarily unavailable/i)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/Academic session ID/i), { target: { value: academicSessionId } });
-    fireEvent.change(screen.getByLabelText(/Section ID/i), { target: { value: sectionId } });
+    expect(screen.queryByLabelText(/UUID|Institution ID|Session ID|Section ID/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Create student profile" }));
-
-    await waitFor(() => {
-      expect(userManagementService.createStudentProfile).toHaveBeenCalledWith(tenantId, expect.objectContaining({
-        institutionId,
-        fullName: "Asha Rao",
-        sectionId,
-        academicSessionId,
-      }));
-    });
+    expect(userManagementService.createStudentProfile).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
   });
 
-  it("rejects malformed UUIDs before sending a request", () => {
+  it("requires selections from the authorized institution and academic lists", async () => {
     render(<CreateStudentModal tenantId={tenantId} isOpen onClose={vi.fn()} onCreated={vi.fn()} />);
+    await waitFor(() => expect(institutionService.listInstitutions).toHaveBeenCalledWith(tenantId));
     fireEvent.change(screen.getByLabelText(/Student full name/i), { target: { value: "Asha Rao" } });
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: "not-a-uuid" } });
-    fireEvent.change(screen.getByLabelText(/Section ID/i), { target: { value: sectionId } });
-    fireEvent.change(screen.getByLabelText(/Academic session ID/i), { target: { value: academicSessionId } });
     fireEvent.click(screen.getByRole("button", { name: "Create student profile" }));
 
-    expect(screen.getByText("Enter a valid UUID.")).toBeInTheDocument();
+    expect(screen.getByText("Choose an institution from the list.")).toBeInTheDocument();
     expect(userManagementService.createStudentProfile).not.toHaveBeenCalled();
   });
 });
