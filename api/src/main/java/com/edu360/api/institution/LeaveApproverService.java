@@ -223,6 +223,49 @@ public class LeaveApproverService {
         return LeaveApproverSettingResponse.fromEntity(saved);
     }
 
+    /** Returns currently assigned accounts eligible to approve one institution Principal's leave. */
+    @Transactional(readOnly = true)
+    public List<LeaveApproverCandidateResponse> listPrincipalApproverCandidates(
+            UUID tenantId, UUID institutionId, String approverKind) {
+        Institution institution = institutionRepository.findById(new InstitutionId(tenantId, institutionId))
+                .orElseThrow(() -> new ResourceNotFoundException("Institution not found: " + institutionId));
+        String roleCode = approverKind == null ? "" : approverKind.trim().toUpperCase();
+        if (!List.of("MANAGEMENT", "GOVERNING_BODY_APPROVER", "VICE_CHANCELLOR", "REGISTRAR").contains(roleCode)) {
+            throw new BusinessRuleViolationException("APPROVER_KIND_MISMATCH", "Unsupported Principal leave approver role");
+        }
+        if (!institution.isUnderUniversity() && List.of("VICE_CHANCELLOR", "REGISTRAR").contains(roleCode)) {
+            throw new BusinessRuleViolationException("APPROVER_KIND_MISMATCH",
+                    "Standalone institutions can only choose Management or Governing Body Approver [Rule C6]");
+        }
+        RoleDefinition role = roleDefinitionRepository.findByIdTenantIdAndRoleCode(tenantId, roleCode)
+                .filter(item -> item.getStatus() == RoleDefinitionStatus.ACTIVE).orElse(null);
+        if (role == null) return List.of();
+        Instant now = Instant.now();
+        return userRoleAssignmentRepository.findByIdTenantIdAndRoleDefinitionIdAndStatus(
+                        tenantId, role.getId().getRoleDefinitionId(), AssignmentStatus.ACTIVE)
+                .stream()
+                .filter(a -> a.getScopeType() == ScopeType.TENANT)
+                .filter(a -> a.getEffectiveFrom() == null || !a.getEffectiveFrom().isAfter(now))
+                .filter(a -> a.getEffectiveTo() == null || a.getEffectiveTo().isAfter(now))
+                .map(a -> userAccountRepository.findById(new UserAccountId(tenantId, a.getUserAccountId())).orElse(null))
+                .filter(account -> account != null && account.getStatus() != UserAccountStatus.DEACTIVATED)
+                .filter(account -> (List.of("MANAGEMENT", "GOVERNING_BODY_APPROVER").contains(roleCode)
+                        ? account.getUserType() == UserType.GOVERNANCE : account.getUserType() == UserType.STAFF))
+                .filter(account -> userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndStatus(
+                        tenantId, account.getId().getUserAccountId(), AssignmentStatus.ACTIVE).stream()
+                        .noneMatch(a -> institutionId.equals(a.getInstitutionId())
+                                && roleDefinitionRepository.findById(new RoleDefinitionId(tenantId, a.getRoleDefinitionId()))
+                                .map(r -> "PRINCIPAL_COLLEGE".equalsIgnoreCase(r.getRoleCode())
+                                        || "SCHOOL_PRINCIPAL".equalsIgnoreCase(r.getRoleCode())).orElse(false)))
+                .collect(java.util.stream.Collectors.toMap(
+                        account -> account.getId().getUserAccountId(),
+                        account -> new LeaveApproverCandidateResponse(account.getId().getUserAccountId(),
+                                account.getDisplayName(), account.getEmail()), (first, ignored) -> first))
+                .values().stream()
+                .sorted(java.util.Comparator.comparing(LeaveApproverCandidateResponse::displayName,
+                        String.CASE_INSENSITIVE_ORDER)).toList();
+    }
+
     /**
      * Returns only tenant-wide, currently effective holders of the selected governance role.
      * The UUID remains an API value for the existing leave-approver write contract; the UI
