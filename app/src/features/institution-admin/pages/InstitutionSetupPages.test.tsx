@@ -201,20 +201,22 @@ describe("Institution setup action screens", () => {
   });
 
   it("lists weekly-off rules returned by the API with the configured day labels", async () => {
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: [
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: INST_ID, institutionName: "Manoj College", institutionCode: "MNC", institutionType: "COLLEGE" }] } });
+      if (url.endsWith("/weekly-off-rules")) return Promise.resolve({ data: [
         {
           weeklyOffRuleId: "44444444-4444-4444-4444-444444444444",
-          institutionId: DEPT_ID,
+          institutionId: INST_ID,
           dayOfWeek: 7,
           occurrence: "ALL",
           effectiveFrom: "2026-01-01",
           effectiveTo: null,
         },
-      ],
+      ] });
+      return Promise.resolve({ data: [] });
     });
     renderWithTenant(<WeeklyOffRulesPage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: DEPT_ID } });
+    fireEvent.change(await screen.findByLabelText(/Institution/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load rules/i }));
 
     await waitFor(() =>
