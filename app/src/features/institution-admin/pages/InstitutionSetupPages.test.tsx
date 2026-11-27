@@ -926,7 +926,18 @@ describe("Institution setup action screens", () => {
   });
 
   it("submits grading scheme, subject allocation, and promotion run (Stories #34, #36, #39, #40)", async () => {
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: "inst-1", institutionName: "Northbridge College", institutionCode: "NBC", institutionType: "COLLEGE" }] } });
+      if (url.endsWith("/academic-sessions")) return Promise.resolve({ data: [
+        { academicSessionId: "sess-1", tenantId: TENANT_ID, institutionId: "inst-1", sessionLabel: "2025–26", startDate: "2025-06-01", endDate: "2026-03-31", academicYear: 2025, status: "ACTIVE", rowVersion: 1 },
+        { academicSessionId: "sess-2", tenantId: TENANT_ID, institutionId: "inst-1", sessionLabel: "2026–27", startDate: "2026-06-01", endDate: "2027-03-31", academicYear: 2026, status: "ACTIVE", rowVersion: 1 },
+      ] });
+      if (url.endsWith("/subjects")) return Promise.resolve({ data: [{ subjectId: "sub-1", institutionId: "inst-1", subjectCode: "MATH", subjectName: "Mathematics", credits: 4, isElective: false, status: "ACTIVE" }] });
+      if (url.endsWith("/course-offerings")) return Promise.resolve({ data: [{ courseOfferingId: "off-1", institutionId: "inst-1", subjectId: "sub-1", academicSessionId: "sess-1", semesterId: null, classId: null }] });
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{ staffProfileId: "profile-1", staffAssignmentId: "staff-1", staffCode: "ST-01", fullName: "Asha Rao", designation: "Professor", departmentId: null, departmentName: "Mathematics" }] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.post as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         data: {
