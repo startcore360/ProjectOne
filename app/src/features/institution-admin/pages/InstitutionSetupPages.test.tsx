@@ -167,6 +167,10 @@ describe("Institution setup action screens", () => {
   });
 
   it("loads a school and class by name before saving student-login state", async () => {
+    vi.mocked(institutionService.listInstitutions).mockResolvedValue({
+      items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 1 },
+    } as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
     (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }] } });
       if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [{ classId: DEPT_ID, className: "Grade 8", status: "ACTIVE" }] });
