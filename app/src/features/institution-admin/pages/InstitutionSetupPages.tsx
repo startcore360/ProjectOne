@@ -2018,7 +2018,6 @@ export function AcademicStructurePage() {
                 ))}
               </SelectField>
             </div>
-          )}
           <div style={{ marginTop: "var(--space-3)" }}>
             <div className="app-inline-actions">
               <Button type="button" onClick={() => void loadStructure()} busy={loading} disabled={!institutionId}>
