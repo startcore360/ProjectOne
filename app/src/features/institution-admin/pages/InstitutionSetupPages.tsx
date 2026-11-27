@@ -2635,7 +2635,6 @@ export function TermLockPage() {
   const [academicSessions, setAcademicSessions] = useState<AcademicSessionItem[]>([]);
   const [sessionsLoadError, setSessionsLoadError] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const [semesterId, setSemesterId] = useState("");
   const [lockNotes, setLockNotes] = useState("");
   const [locks, setLocks] = useState<TermLockItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -2757,27 +2756,27 @@ export function TermLockPage() {
 
       <Panel title="Lock academic term" description="Authorized principals can lock a term after final marks and attendance have been submitted.">
         <form onSubmit={handleLockSubmit} className="app-form" noValidate>
-          {institutions.length > 0 && (
-            <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
-              <SelectField
-                id="quick-lock-inst-select"
-                label="Choose registered institution"
-                value={institutionId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setInstitutionId(val);
-                  if (isValidUuid(val)) fetchLocks(val);
-                  else { setLocks([]); setLockLoadError(""); }
-                }}
-              >
-                <option value="">-- Select an institution --</option>
-                {institutions.map((inst, idx) => (
-                  <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
-                    {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
-                  </option>
-                ))}
-              </SelectField>
-            </div>
+          <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+            <SelectField
+              id="quick-lock-inst-select"
+              label="Choose registered institution *"
+              required
+              value={institutionId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInstitutionId(val);
+                setSessionId("");
+                if (isValidUuid(val)) fetchLocks(val);
+                else { setLocks([]); setLockLoadError(""); }
+              }}
+            >
+              <option value="">-- Select an institution --</option>
+              {institutions.map((inst) => (
+                <option key={inst.institutionId} value={inst.institutionId}>
+                  {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
+                </option>
+              ))}
+            </SelectField>
           </div>
           <div className="app-form-grid" style={{ marginBottom: "var(--space-3)" }}>
             <SelectField
@@ -2839,7 +2838,7 @@ export function TermLockPage() {
                     <td>
                       <code>{lock.academicSessionId}</code>
                     </td>
-                    <td>{lock.semesterId ? <code>{lock.semesterId}</code> : "Whole Session"}</td>
+                    <td>{lock.semesterId ? "Semester-level" : "Whole session"}</td>
                     <td>
                       <Badge tone={lock.lockState === "LOCKED" ? "danger" : "warning"}>
                         {lock.lockState === "LOCKED" ? "Locked" : "Temporarily unlocked"}
