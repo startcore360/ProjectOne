@@ -87,6 +87,12 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
   }
 
   const className = `role-switcher role-switcher--${layout}`;
+  const contextLabel = (role: UserRoleOption) =>
+    [role.institutionName, role.departmentName].filter(Boolean).join(" · ");
+  const scopeLabel = (role: UserRoleOption) => {
+    const context = contextLabel(role);
+    return context || role.scopeType.toLowerCase().replaceAll("_", " ");
+  };
 
   if (roles.length > 1) {
     return (
@@ -108,7 +114,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
           )}
           {roles.map((r) => (
             <option key={r.userRoleAssignmentId} value={r.userRoleAssignmentId}>
-              {r.roleName} ({r.scopeType})
+              {r.roleName} · {scopeLabel(r)}
             </option>
           ))}
         </select>
@@ -151,13 +157,21 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
   }
 
   const roleLabel = roleName || roleCode || userType || "Member";
+  const activeRole = roles.find((role) => role.userRoleAssignmentId === currentId) || roles[0];
+  const activeContext = activeRole ? contextLabel(activeRole) : "";
   if (layout === "stacked") {
     return (
       <div className={className}>
         <span className="role-switcher__label">Role</span>
         <Badge tone="neutral">{roleLabel}</Badge>
+        {activeContext && <span className="role-switcher__context">{activeContext}</span>}
       </div>
     );
   }
-  return <Badge tone="neutral">{roleLabel}</Badge>;
+  return (
+    <div className={className}>
+      <Badge tone="neutral">{roleLabel}</Badge>
+      {activeContext && <span className="role-switcher__context">{activeContext}</span>}
+    </div>
+  );
 }
