@@ -465,7 +465,7 @@ export default function AppLayout() {
       ? <button key={item.label} type="button" disabled className="app-nav__link is-disabled" aria-label={`${item.label} — coming soon`}><Icon name={item.icon} size={size}/><span>{item.label} <small>Coming soon</small></span></button>
       : <NavLink key={item.to} to={item.to} end={item.to === "/" || item.to === "/dashboard" || item.to === "/platform"} title={item.label} onClick={() => setMoreOpen(false)} className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}><Icon name={item.icon} size={size}/><span>{item.label}</span></NavLink>;
 
-  return <div className="app-shell">
+  return <div className={`app-shell ${isPlatformConsole ? "app-shell--platform" : "app-shell--tenant"}`}>
     {/* Matches D10's .side-card: a grouped nav list with the signed-in identity and sign-out
         at the bottom of the sidebar itself, not in a separate top bar. Full list, never
         truncated - D10's sidebar never shows a "More" affordance, only its mobile bottom bar does. */}
