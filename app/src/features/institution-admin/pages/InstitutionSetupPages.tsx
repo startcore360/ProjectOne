@@ -750,7 +750,7 @@ export function CalendarEventsPage() {
   const [masterEventModalError, setMasterEventModalError] = useState("");
 
   useEffect(() => {
-    if (!tenantId || import.meta.env.MODE === "test") return;
+    if (!tenantId) return;
     institutionService.listInstitutions(tenantId)
       .then((res) => setInstitutions(res.items ?? []))
       .catch((err) => setInstitutionOptionsError(getApiErrorMessage(err)));
@@ -1200,7 +1200,7 @@ export function WeeklyOffRulesPage() {
   const [fieldErrors, setFieldErrors] = useState<{ institutionId?: string; effectiveFrom?: string; effectiveTo?: string }>({});
 
   useEffect(() => {
-    if (!tenantId || import.meta.env.MODE === "test") return;
+    if (!tenantId) return;
     institutionService.listInstitutions(tenantId)
       .then((res) => setInstitutions(res.items ?? []))
       .catch((err) => setInstitutionOptionsError(getApiErrorMessage(err)));
@@ -1591,7 +1591,7 @@ export function AcademicStructurePage() {
   const [archiveError, setArchiveError] = useState("");
 
   useEffect(() => {
-    if (!tenantId || import.meta.env.MODE === "test") return;
+    if (!tenantId) return;
     institutionService
       .listInstitutions(tenantId)
       .then((res) => {
@@ -2649,7 +2649,7 @@ export function TermLockPage() {
   }, [tenantId]);
 
   useEffect(() => {
-    if (!tenantId || import.meta.env.MODE === "test") return;
+    if (!tenantId) return;
     institutionService
       .listInstitutions(tenantId)
       .then((res) => {
