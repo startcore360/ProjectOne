@@ -29,7 +29,9 @@ import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.identity.UserAccount;
 import com.edu360.api.identity.UserAccountId;
+import com.edu360.api.identity.UserAccountStatus;
 import com.edu360.api.identity.UserAccountRepository;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.dto.GoLiveCheckResponse;
@@ -42,6 +44,8 @@ import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RoleDefinition;
 import com.edu360.api.rbac.RoleDefinitionId;
 import com.edu360.api.rbac.RoleDefinitionRepository;
+import com.edu360.api.rbac.RoleDefinitionStatus;
+import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.rbac.RoleOrigin;
 import com.edu360.api.rbac.UserRoleAssignment;
 import com.edu360.api.rbac.UserRoleAssignmentRepository;
@@ -329,6 +333,48 @@ class LeaveApproverControllerTest {
                         TENANT_ID, reqBody, authentication, request));
 
         assertThat(ex.getErrorCode()).isEqualTo("APPROVER_KIND_MISMATCH");
+    }
+
+    @Test
+    @DisplayName("ACT-VC_LEAVE_APPROVER_SET-LOOKUP: only active tenant governance role holders are returned")
+    void listVcApproverCandidates_returnsEligibleGovernanceAccount() {
+        mockPrincipal(TENANT_ID);
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).tenantType("UNIVERSITY_GROUP").state(TenantState.TRIAL).build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        UUID roleDefinitionId = UUID.randomUUID();
+        RoleDefinition role = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, roleDefinitionId))
+                .roleCode("GOVERNING_BODY_APPROVER")
+                .status(RoleDefinitionStatus.ACTIVE)
+                .build();
+        when(roleDefinitionRepository.findByIdTenantIdAndRoleCode(TENANT_ID, "GOVERNING_BODY_APPROVER"))
+                .thenReturn(Optional.of(role));
+        UserRoleAssignment assignment = UserRoleAssignment.builder()
+                .userAccountId(APPROVER_ID)
+                .roleDefinitionId(roleDefinitionId)
+                .scopeType(ScopeType.TENANT)
+                .effectiveFrom(java.time.Instant.now().minusSeconds(60))
+                .status(AssignmentStatus.ACTIVE)
+                .build();
+        when(userRoleAssignmentRepository.findByIdTenantIdAndRoleDefinitionIdAndStatus(
+                TENANT_ID, roleDefinitionId, AssignmentStatus.ACTIVE)).thenReturn(List.of(assignment));
+        UserAccount account = UserAccount.builder()
+                .id(new UserAccountId(TENANT_ID, APPROVER_ID))
+                .userType(UserType.GOVERNANCE)
+                .displayName("Governing Body Approver")
+                .email("approver@example.edu")
+                .status(UserAccountStatus.PENDING_ACTIVATION)
+                .build();
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, APPROVER_ID)))
+                .thenReturn(Optional.of(account));
+
+        ResponseEntity<List<com.edu360.api.institution.dto.LeaveApproverCandidateResponse>> response =
+                leaveApproverController.listVcApproverCandidates(TENANT_ID, "GOVERNING_BODY_APPROVER", authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().get(0).displayName()).isEqualTo("Governing Body Approver");
+        assertThat(response.getBody().get(0).email()).isEqualTo("approver@example.edu");
     }
 
     @Test

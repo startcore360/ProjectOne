@@ -7,6 +7,12 @@ export type LeaveApproverSetPayload = {
   approverUserId: string;
 };
 
+export type LeaveApproverCandidate = {
+  userAccountId: string;
+  displayName: string;
+  email: string;
+};
+
 export type LeaveApproverSettingItem = {
   leaveApproverSettingId: string;
   tenantId: string;
@@ -48,6 +54,14 @@ export const leaveApproverService = {
   ): Promise<LeaveApproverSettingItem> {
     const res = await api.get<LeaveApproverSettingItem>(
       `/api/tenants/${tenantId}/institutions/${institutionId}/principal-leave-approver`
+    );
+    return res.data;
+  },
+
+  async listVcApproverCandidates(tenantId: string, approverKind: ApproverKind): Promise<LeaveApproverCandidate[]> {
+    const res = await api.get<LeaveApproverCandidate[]>(
+      `/api/tenants/${tenantId}/vc-leave-approver/eligible-users`,
+      { params: { approverKind } }
     );
     return res.data;
   },
