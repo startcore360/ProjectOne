@@ -342,7 +342,7 @@ export function InstitutionHierarchyPage() {
             description="Choose an active faculty assignment in this department. The server validates institution and department scope."
             size="md"
           >
-            <form className="app-form" onSubmit={submitHodAssignment}>
+            <form onSubmit={submitHodAssignment}>
               <PersonPicker
                 label="Faculty member"
                 value={hodStaffAssignmentId}
