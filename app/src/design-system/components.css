@@ -3551,3 +3551,79 @@ button:not(:disabled):active,
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Dialogs are portalled to document.body, so tenant scope is detected on the
+   active application shell rather than by a DOM ancestor of the dialog. */
+html:has(.app-shell--tenant) .app-modal form :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  font: var(--fw-regular) var(--fs-input)/1.4 var(--font-body);
+  box-shadow: none;
+}
+
+html:has(.app-shell--tenant) .app-modal form select {
+  padding-right: var(--space-8);
+}
+
+html:has(.app-shell--tenant) .app-modal form textarea {
+  min-height: 104px;
+  padding: var(--space-3);
+  line-height: var(--lh-body);
+  resize: vertical;
+}
+
+html:has(.app-shell--tenant) .app-modal form :is(input, select, textarea):focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+  border-color: var(--color-focus);
+}
+
+html:has(.app-shell--tenant) .app-modal form :is(input, select, textarea):disabled,
+html:has(.app-shell--tenant) .app-modal form :is(input, select, textarea)[readonly] {
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+html:has(.app-shell--tenant) .app-modal form input[type="checkbox"],
+html:has(.app-shell--tenant) .app-modal form input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-action-primary);
+  flex: 0 0 18px;
+}
+
+html:has(.app-shell--tenant) .app-modal form :is(.platform-form-field, .app-form-field) {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  margin-block: 0;
+  color: var(--color-text);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  line-height: 1.4;
+}
+
+@media (max-width: 760px) {
+  html:has(.app-shell--tenant) .app-modal form :is(.app-form-grid, .platform-form-grid) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
