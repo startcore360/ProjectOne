@@ -511,6 +511,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     });
 
     const approverInput = await screen.findByLabelText(/Select Approver/i);
+    fireEvent.change(approverInput, { target: { value: "00000000-0000-0000-0000-000000000010" } });
     fireEvent.change(approverInput, { target: { value: "00000000-0000-0000-0000-000000000009" } });
 
     const submitBtn = screen.getByRole("button", { name: /Save VC Approver/i });
