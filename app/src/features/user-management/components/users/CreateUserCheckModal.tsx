@@ -39,7 +39,7 @@ export function CreateUserCheckModal({ tenantId, isOpen, onClose }: CreateUserCh
       description="This only checks whether you are authorized to create a user in the chosen scope. It does not create an account - the backend endpoint behind this check is a proof-of-integration authorization check only."
     >
       <form onSubmit={runCheck}>
-        <ScopeFields scope={scope} onChange={setScope} idPrefix="create-check" />
+        <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="create-check" />
         {result && (
           <div style={{ marginTop: "12px" }}>
             <Notice tone={result.ok ? "success" : "danger"}>
