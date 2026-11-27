@@ -3555,7 +3555,7 @@ button:not(:disabled):active,
 
 /* Dialogs are portalled to document.body, so tenant scope is detected on the
    active application shell rather than by a DOM ancestor of the dialog. */
-html:has(.app-shell--tenant) .app-modal form :is(
+html:has(.app-shell--tenant) .app-modal :is(
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="range"]):not([type="color"]),
   select,
   textarea
@@ -3574,32 +3574,32 @@ html:has(.app-shell--tenant) .app-modal form :is(
   box-shadow: none;
 }
 
-html:has(.app-shell--tenant) .app-modal form select {
+html:has(.app-shell--tenant) .app-modal select {
   padding-right: var(--space-8);
 }
 
-html:has(.app-shell--tenant) .app-modal form textarea {
+html:has(.app-shell--tenant) .app-modal textarea {
   min-height: 104px;
   padding: var(--space-3);
   line-height: var(--lh-body);
   resize: vertical;
 }
 
-html:has(.app-shell--tenant) .app-modal form :is(input, select, textarea):focus-visible {
+html:has(.app-shell--tenant) .app-modal :is(input, select, textarea):focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: var(--focus-ring-offset);
   border-color: var(--color-focus);
 }
 
-html:has(.app-shell--tenant) .app-modal form :is(input, select, textarea):disabled,
-html:has(.app-shell--tenant) .app-modal form :is(input, select, textarea)[readonly] {
+html:has(.app-shell--tenant) .app-modal :is(input, select, textarea):disabled,
+html:has(.app-shell--tenant) .app-modal :is(input, select, textarea)[readonly] {
   background: var(--color-bg-disabled);
   color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 
-html:has(.app-shell--tenant) .app-modal form input[type="checkbox"],
-html:has(.app-shell--tenant) .app-modal form input[type="radio"] {
+html:has(.app-shell--tenant) .app-modal input[type="checkbox"],
+html:has(.app-shell--tenant) .app-modal input[type="radio"] {
   width: 18px;
   height: 18px;
   min-width: 18px;
@@ -3610,7 +3610,7 @@ html:has(.app-shell--tenant) .app-modal form input[type="radio"] {
   flex: 0 0 18px;
 }
 
-html:has(.app-shell--tenant) .app-modal form :is(.platform-form-field, .app-form-field) {
+html:has(.app-shell--tenant) .app-modal :is(.platform-form-field, .app-form-field) {
   display: grid;
   min-width: 0;
   gap: var(--space-2);
@@ -3622,7 +3622,7 @@ html:has(.app-shell--tenant) .app-modal form :is(.platform-form-field, .app-form
 }
 
 @media (max-width: 760px) {
-  html:has(.app-shell--tenant) .app-modal form :is(.app-form-grid, .platform-form-grid) {
+  html:has(.app-shell--tenant) .app-modal :is(.app-form-grid, .platform-form-grid) {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
   }
