@@ -79,6 +79,23 @@ public class ApprovalDelegationService {
         this.approvalInboxService = Objects.requireNonNull(approvalInboxService);
     }
 
+    /** Lists only active accounts that satisfy the same tenant/scope checks used by createDelegation. */
+    @Transactional(readOnly = true)
+    public List<EligibleDelegateResponse> listEligibleDelegates(UUID tenantId, TenantPrincipal principal) {
+        RbacPrincipal delegator = new RbacPrincipal(tenantId, principal.userAccountId());
+        RbacScope scope = ownScope(delegator);
+        permissionEvaluatorService.authorize(delegator, "APPROVAL_DELEGATE", scope, RbacTarget.NONE);
+        return userAccountRepository.findByIdTenantId(tenantId).stream()
+                .filter(account -> account.getStatus() == UserAccountStatus.ACTIVE)
+                .filter(account -> !account.getId().getUserAccountId().equals(principal.userAccountId()))
+                .filter(account -> inScope(tenantId, account.getId().getUserAccountId(), scope))
+                .map(account -> new EligibleDelegateResponse(
+                        account.getId().getUserAccountId(), account.getDisplayName(), account.getEmail()))
+                .sorted(java.util.Comparator.comparing(EligibleDelegateResponse::displayName,
+                        String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<DelegationResponse> listDelegations(UUID tenantId, UUID currentUserId) {
         return delegationRepository.findByIdTenantIdAndDelegatorUserId(tenantId, currentUserId)
