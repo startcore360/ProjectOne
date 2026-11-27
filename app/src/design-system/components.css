@@ -3362,7 +3362,7 @@ button:not(:disabled):active,
   min-width: 0;
 }
 
-.app-shell--tenant .app-content form :is(
+.app-shell--tenant .app-content :is(
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="range"]):not([type="color"]),
   select,
   textarea
@@ -3381,18 +3381,18 @@ button:not(:disabled):active,
   box-shadow: none;
 }
 
-.app-shell--tenant .app-content form select {
+.app-shell--tenant .app-content select {
   padding-right: var(--space-8);
 }
 
-.app-shell--tenant .app-content form textarea {
+.app-shell--tenant .app-content textarea {
   min-height: 104px;
   padding: var(--space-3);
   line-height: var(--lh-body);
   resize: vertical;
 }
 
-.app-shell--tenant .app-content form input[type="file"] {
+.app-shell--tenant .app-content input[type="file"] {
   box-sizing: border-box;
   width: 100%;
   min-height: var(--target-min);
@@ -3404,25 +3404,25 @@ button:not(:disabled):active,
   font: var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body);
 }
 
-.app-shell--tenant .app-content form :is(input, select, textarea):focus-visible {
+.app-shell--tenant .app-content :is(input, select, textarea):focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus);
   outline-offset: var(--focus-ring-offset);
   border-color: var(--color-focus);
 }
 
-.app-shell--tenant .app-content form :is(input, select, textarea):disabled,
-.app-shell--tenant .app-content form :is(input, select, textarea)[readonly] {
+.app-shell--tenant .app-content :is(input, select, textarea):disabled,
+.app-shell--tenant .app-content :is(input, select, textarea)[readonly] {
   background: var(--color-bg-disabled);
   color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 
-.app-shell--tenant .app-content form :is(input, select, textarea)[aria-invalid="true"] {
+.app-shell--tenant .app-content :is(input, select, textarea)[aria-invalid="true"] {
   border-color: var(--color-status-danger-border);
 }
 
-.app-shell--tenant .app-content form input[type="checkbox"],
-.app-shell--tenant .app-content form input[type="radio"] {
+.app-shell--tenant .app-content input[type="checkbox"],
+.app-shell--tenant .app-content input[type="radio"] {
   width: 18px;
   height: 18px;
   min-width: 18px;
@@ -3433,8 +3433,8 @@ button:not(:disabled):active,
   flex: 0 0 18px;
 }
 
-.app-shell--tenant .app-content form label:has(> input[type="checkbox"]),
-.app-shell--tenant .app-content form label:has(> input[type="radio"]) {
+.app-shell--tenant .app-content label:has(> input[type="checkbox"]),
+.app-shell--tenant .app-content label:has(> input[type="radio"]) {
   display: flex;
   min-height: var(--target-min);
   align-items: center;
