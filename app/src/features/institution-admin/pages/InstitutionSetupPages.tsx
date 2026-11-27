@@ -2942,13 +2942,16 @@ export function DelegationsApprovalsPage() {
 
   // New delegation state
   const [delegateUserId, setDelegateUserId] = useState("");
+  const [eligibleDelegates, setEligibleDelegates] = useState<EligibleDelegate[]>([]);
+  const [eligibleDelegatesError, setEligibleDelegatesError] = useState("");
+  const [eligibleDelegatesLoading, setEligibleDelegatesLoading] = useState(false);
   const [delegationBasis, setDelegationBasis] = useState<"SAME_OR_HIGHER" | "DESIGNATED_DEPUTY">("SAME_OR_HIGHER");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [creating, setCreating] = useState(false);
 
   // Bulk approvals state
-  const [bulkIds, setBulkIds] = useState("");
+  const [selectedApprovalIds, setSelectedApprovalIds] = useState<string[]>([]);
   const [bulkDecision, setBulkDecision] = useState<"APPROVED" | "REJECTED">("APPROVED");
   const [bulkComment, setBulkComment] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
@@ -2980,6 +2983,18 @@ export function DelegationsApprovalsPage() {
       .then((items) => setInboxItems(items || []))
       .catch((err) => setInboxError(getApiErrorMessage(err)))
       .finally(() => setInboxLoading(false));
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    setEligibleDelegatesLoading(true);
+    setEligibleDelegatesError("");
+    approvalDelegationService.listEligibleDelegates(tenantId)
+      .then((items) => { if (!cancelled) setEligibleDelegates(items); })
+      .catch((error: unknown) => { if (!cancelled) { setEligibleDelegates([]); setEligibleDelegatesError(getApiErrorMessage(error)); } })
+      .finally(() => { if (!cancelled) setEligibleDelegatesLoading(false); });
+    return () => { cancelled = true; };
   }, [tenantId]);
 
   useEffect(() => {
@@ -3016,8 +3031,8 @@ export function DelegationsApprovalsPage() {
     e.preventDefault();
     clearDelegAll();
     let invalid = false;
-    if (!isValidUuid(delegateUserId)) {
-      setDelegFieldError("delegateUserId", "Enter a valid user account UUID.");
+    if (!eligibleDelegates.some((user) => user.userAccountId === delegateUserId)) {
+      setDelegFieldError("delegateUserId", "Choose an eligible colleague from the list.");
       invalid = true;
     }
     if (!startsAt) {
@@ -3036,7 +3051,7 @@ export function DelegationsApprovalsPage() {
     setCreating(true);
     try {
       const res = await approvalDelegationService.createDelegation(tenantId, {
-        delegateUserId: delegateUserId.trim(),
+        delegateUserId,
         delegationBasis,
         startsAt: new Date(startsAt).toISOString(),
         endsAt: new Date(endsAt).toISOString(),
@@ -3076,18 +3091,10 @@ export function DelegationsApprovalsPage() {
   const handleBulkDecision = async (e: FormEvent) => {
     e.preventDefault();
     clearBulkAll();
-    const rawIds = bulkIds.split(",").map((value) => value.trim()).filter(Boolean);
-    const ids = [...new Set(rawIds)];
-    if (rawIds.length === 0) {
-      setBulkFieldError("approvalRequestIds", "Enter at least one approval request UUID.");
-      return;
-    }
-    if (rawIds.some((value) => !isValidUuid(value))) {
-      setBulkFieldError("approvalRequestIds", "Every approval request ID must be a valid UUID. Remove or correct invalid entries.");
-      return;
-    }
-    if (ids.length !== rawIds.length) {
-      setBulkFieldError("approvalRequestIds", "Remove duplicate approval request IDs before continuing.");
+    const availableIds = new Set(inboxItems.map((item) => item.approvalRequestId).filter((id): id is string => Boolean(id)));
+    const ids = [...new Set(selectedApprovalIds)].filter((id) => availableIds.has(id));
+    if (ids.length === 0) {
+      setBulkFieldError("approvalRequestIds", "Select at least one request from your pending approval inbox.");
       return;
     }
 
@@ -3104,7 +3111,7 @@ export function DelegationsApprovalsPage() {
         message: msg,
       });
       toast.success("Bulk decision applied", `${res.succeeded} items processed successfully.`);
-      setBulkIds("");
+      setSelectedApprovalIds([]);
       setBulkComment("");
     } catch (err: unknown) {
       handleBulkApiError(err);
@@ -3140,16 +3147,20 @@ export function DelegationsApprovalsPage() {
         description="Hand over your approval responsibilities to an eligible colleague for a defined period."
       >
         <form onSubmit={handleCreateDelegation} className="app-form" noValidate>
-          <TextField
-            id="delegate-user-id"
-            label="Delegate User Account ID (UUID) *"
+          <SelectField
+            id="delegate-user"
+            label="Choose eligible colleague *"
             required
-            placeholder="Paste delegate user account UUID"
             value={delegateUserId}
+            disabled={eligibleDelegatesLoading || eligibleDelegates.length === 0}
             onChange={(e) => { setDelegateUserId(e.target.value); clearDelegFieldError("delegateUserId"); }}
-            style={{ fontFamily: "monospace" }}
             error={delegFieldErrors.delegateUserId}
-          />
+          >
+            <option value="">{eligibleDelegatesLoading ? "Loading eligible colleagues…" : "Choose a colleague"}</option>
+            {eligibleDelegates.map((user) => <option key={user.userAccountId} value={user.userAccountId}>{user.displayName} · {user.email}</option>)}
+          </SelectField>
+          {eligibleDelegatesError && <Notice tone="danger">{eligibleDelegatesError}</Notice>}
+          {!eligibleDelegatesLoading && !eligibleDelegatesError && eligibleDelegates.length === 0 && <Notice tone="warning">No active colleagues are eligible for delegation within your current scope.</Notice>}
 
           <SelectField
             id="delegation-basis"
@@ -3187,7 +3198,7 @@ export function DelegationsApprovalsPage() {
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={creating}>
+            <Button type="submit" disabled={creating || eligibleDelegatesLoading || !delegateUserId}>
               {creating ? "Delegating…" : "Create delegation"}
             </Button>
           </div>
@@ -3200,17 +3211,27 @@ export function DelegationsApprovalsPage() {
         description="Review and decide several eligible requests together, with an optional comment."
       >
         <form onSubmit={handleBulkDecision} className="app-form" noValidate>
-          <TextAreaField
-            id="bulk-request-ids"
-            label="Approval Request IDs (comma-separated UUIDs) *"
-            rows={3}
-            required
-            placeholder="UUID1, UUID2, UUID3..."
-            value={bulkIds}
-            onChange={(e) => { setBulkIds(e.target.value); clearBulkFieldError("approvalRequestIds"); }}
-            style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
-            error={bulkFieldErrors.approvalRequestIds}
-          />
+          <fieldset className="app-form-fieldset">
+            <legend>Select pending requests from your inbox *</legend>
+            {inboxItems.filter((item) => item.approvalRequestId).length === 0 ? (
+              <p className="app-empty-inline">There are no pending requests available for bulk selection. Review your inbox below.</p>
+            ) : inboxItems.filter((item) => item.approvalRequestId).map((item, index) => {
+              const requestId = item.approvalRequestId as string;
+              const checked = selectedApprovalIds.includes(requestId);
+              return (
+                <label key={`${requestId}-${item.stepNo}-${index}`} className="app-checkbox-row">
+                  <input type="checkbox" checked={checked} onChange={(event) => {
+                    setSelectedApprovalIds((current) => event.target.checked
+                      ? [...new Set([...current, requestId])]
+                      : current.filter((id) => id !== requestId));
+                    clearBulkFieldError("approvalRequestIds");
+                  }} />
+                  <span>Request awaiting {formatStatusLabel(item.approverRoleCode)} · Step {item.stepNo}</span>
+                </label>
+              );
+            })}
+            {bulkFieldErrors.approvalRequestIds && <p className="app-field-error">{bulkFieldErrors.approvalRequestIds}</p>}
+          </fieldset>
 
           <div className="app-form-grid">
             <SelectField
@@ -3240,7 +3261,7 @@ export function DelegationsApprovalsPage() {
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={bulkSubmitting}>
+            <Button type="submit" disabled={bulkSubmitting || selectedApprovalIds.length === 0}>
               {bulkSubmitting ? "Processing…" : "Apply bulk decision"}
             </Button>
           </div>
@@ -3320,7 +3341,7 @@ export function DelegationsApprovalsPage() {
               <table className="app-table">
                 <thead>
                   <tr>
-                    <th>Delegate User ID</th>
+                    <th>Delegate</th>
                     <th>Basis</th>
                     <th>Starts At</th>
                     <th>Ends At</th>
@@ -3331,9 +3352,7 @@ export function DelegationsApprovalsPage() {
                 <tbody>
                   {delegations.map((d) => (
                     <tr key={d.delegationId}>
-                      <td>
-                        <code>{d.delegateUserId}</code>
-                      </td>
+                      <td>{eligibleDelegates.find((user) => user.userAccountId === d.delegateUserId)?.displayName ?? "Account not available"}<br /><small>{eligibleDelegates.find((user) => user.userAccountId === d.delegateUserId)?.email ?? ""}</small></td>
                       <td>{d.delegationBasis}</td>
                       <td>{d.startsAt ? new Date(d.startsAt).toLocaleString() : "—"}</td>
                       <td>{d.endsAt ? new Date(d.endsAt).toLocaleString() : "—"}</td>
