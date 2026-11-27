@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Button } from "./Button";
 import TextField from "./TextField";
 import SelectField from "./SelectField";
@@ -46,6 +47,7 @@ interface NodeEditorProps {
 }
 
 function NodeEditor({ label, value, onChange, onRemove, onRename, depth = 0 }: NodeEditorProps) {
+  const nodeId = useId();
   const kind = kindOf(value);
   const updateKind = (nextKind: ValueKind) => onChange(emptyValue(nextKind));
 
@@ -54,19 +56,19 @@ function NodeEditor({ label, value, onChange, onRemove, onRename, depth = 0 }: N
     <div style={{ border: "1px solid var(--border-subtle, #d7dee8)", borderRadius: "10px", padding: "0.75rem", marginTop: "0.6rem", marginLeft: depth ? "0.75rem" : 0 }}>
       <div style={{ display: "grid", gridTemplateColumns: onRename ? "minmax(100px, 1fr) minmax(120px, 0.8fr) auto" : "minmax(120px, 1fr) auto", gap: "0.5rem", alignItems: "end" }}>
         {onRename ? (
-          <TextField id={`document-key-${label.replace(/[^a-z0-9]/gi, "-")}`} label="Field name" value={label}
-            onChange={(event) => onRename(event.target.value)} />
+          <TextField id={`document-key-${nodeId}`} label="Field name" defaultValue={label}
+            onBlur={(event) => onRename(event.currentTarget.value)} />
         ) : <strong style={{ paddingBottom: "0.6rem" }}>{label}</strong>}
-        <SelectField id={`document-type-${label.replace(/[^a-z0-9]/gi, "-")}`} label="Value type" value={kind}
+        <SelectField id={`document-type-${nodeId}`} label="Value type" value={kind}
           onChange={(event) => updateKind(event.target.value as ValueKind)}>
           <option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes / No</option>
           <option value="object">Group of fields</option><option value="array">List</option><option value="null">Not set</option>
         </SelectField>
-        {onRemove && <Button type="button" variant="ghost" size="sm" onClick={onRemove}>Remove</Button>}
+        {onRemove && <Button type="button" variant="tertiary" size="sm" onClick={onRemove}>Remove</Button>}
       </div>
 
-      {kind === "text" && <TextField id={`document-value-${label.replace(/[^a-z0-9]/gi, "-")}`} label="Value" value={value as string} onChange={(event) => onChange(event.target.value)} />}
-      {kind === "number" && <TextField id={`document-value-${label.replace(/[^a-z0-9]/gi, "-")}`} label="Value" type="number" value={String(value)}
+      {kind === "text" && <TextField id={`document-value-${nodeId}`} label="Value" value={value as string} onChange={(event) => onChange(event.target.value)} />}
+      {kind === "number" && <TextField id={`document-value-${nodeId}`} label="Value" type="number" value={String(value)}
         onChange={(event) => onChange(event.target.value === "" ? 0 : Number(event.target.value))} />}
       {kind === "boolean" && <SelectField id={`document-value-${label.replace(/[^a-z0-9]/gi, "-")}`} label="Value" value={String(value)}
         onChange={(event) => onChange(event.target.value === "true")}><option value="true">Yes</option><option value="false">No</option></SelectField>}
