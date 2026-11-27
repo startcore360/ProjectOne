@@ -130,7 +130,7 @@ export function ViceChancellorModal({
           >
             Cancel
           </Button>
-          <Button type="submit" busy={saving}>
+          <Button type="submit" busy={saving} disabled={saving || loadingCandidates || !approverUserId}>
             Save VC Approver
           </Button>
         </div>
