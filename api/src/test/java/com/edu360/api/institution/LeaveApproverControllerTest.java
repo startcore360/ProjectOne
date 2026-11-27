@@ -339,6 +339,8 @@ class LeaveApproverControllerTest {
     @DisplayName("ACT-VC_LEAVE_APPROVER_SET-LOOKUP: only active tenant governance role holders are returned")
     void listVcApproverCandidates_returnsEligibleGovernanceAccount() {
         mockPrincipal(TENANT_ID);
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).tenantType("UNIVERSITY_GROUP").state(TenantState.TRIAL).build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
         UUID roleDefinitionId = UUID.randomUUID();
         RoleDefinition role = RoleDefinition.builder()
                 .id(new RoleDefinitionId(TENANT_ID, roleDefinitionId))
