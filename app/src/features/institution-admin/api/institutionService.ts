@@ -490,6 +490,13 @@ export const institutionService = {
     return res.data;
   },
 
+  async listSchoolClasses(tenantId: string, institutionId: string): Promise<SchoolClassItem[]> {
+    const res = await api.get<SchoolClassItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/classes`
+    );
+    return res.data;
+  },
+
   async listSubjects(tenantId: string, institutionId: string): Promise<SubjectItem[]> {
     const res = await api.get<SubjectItem[]>(
       `/api/tenants/${tenantId}/institutions/${institutionId}/subjects`
