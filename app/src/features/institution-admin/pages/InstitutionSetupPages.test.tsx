@@ -161,17 +161,20 @@ describe("Institution setup action screens", () => {
     expect(screen.getByLabelText(/New Class Teacher/i)).toBeInTheDocument();
   });
 
-  it("sends the enabled flag with the loaded class ETag for STUDENT_LOGIN_SWITCH", async () => {
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: { classId: DEPT_ID, studentLoginEnabled: false, rowVersion: 4 },
+  it("loads a school and class by name before saving student-login state", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }] } });
+      if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [{ classId: DEPT_ID, className: "Grade 8", status: "ACTIVE" }] });
+      if (url.endsWith(`/classes/${DEPT_ID}`)) return Promise.resolve({ data: { classId: DEPT_ID, studentLoginEnabled: false, rowVersion: 4 } });
+      return Promise.resolve({ data: [] });
     });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: { classId: DEPT_ID, studentLoginEnabled: true, rowVersion: 5 },
     });
     renderWithTenant(<StudentLoginSwitchPage />);
-    fireEvent.change(screen.getByLabelText(/Class ID/i), { target: { value: DEPT_ID } });
-    fireEvent.click(screen.getByRole("button", { name: /load class/i }));
-    expect(await screen.findByText(/Loaded current class version 4/i)).toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText(/Institution/i), { target: { value: INST_ID } });
+    fireEvent.change(await screen.findByLabelText(/Class or grade/i), { target: { value: DEPT_ID } });
+    expect(await screen.findByText(/Current setting loaded for the selected class/i)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText(/Enable view-only student login/i));
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
@@ -191,7 +194,7 @@ describe("Institution setup action screens", () => {
     renderWithTenant(<WeeklyOffRulesPage />);
     fireEvent.click(screen.getByRole("button", { name: /add rule/i }));
 
-    expect(screen.getByText("Enter a valid institution ID.")).toBeInTheDocument();
+    expect(screen.getByText("Choose a registered institution.")).toBeInTheDocument();
     expect(screen.getByText("Choose an effective-from date.")).toBeInTheDocument();
     expect(screen.queryByText("Institution ID and effective-from date are required.")).not.toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalled();
@@ -636,8 +639,8 @@ describe("Institution setup action screens", () => {
     renderWithTenant(<TermLockPage />);
     fireEvent.click(screen.getByRole("button", { name: /Lock term/i }));
 
-    expect(screen.getByText("Enter a valid institution UUID.")).toBeInTheDocument();
-    expect(screen.getByText("Enter a valid academic session UUID.")).toBeInTheDocument();
+    expect(screen.getByText("Choose a registered institution.")).toBeInTheDocument();
+    expect(screen.getByText("Choose an academic session for the selected institution.")).toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalled();
   });
 
@@ -745,11 +748,11 @@ describe("Institution setup action screens", () => {
     });
   });
 
-  it("shows delegation field errors beside invalid IDs and dates", () => {
+  it("requires an eligible colleague and effective dates before creating a delegation", () => {
     renderWithTenant(<DelegationsApprovalsPage />);
     fireEvent.click(screen.getByRole("button", { name: /Create delegation/i }));
 
-    expect(screen.getByText("Enter a valid user account UUID.")).toBeInTheDocument();
+    expect(screen.getByText("Choose an eligible colleague from the list.")).toBeInTheDocument();
     expect(screen.getByText("Choose when the delegation begins.")).toBeInTheDocument();
     expect(screen.getByText("Choose when the delegation ends.")).toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalled();
@@ -757,7 +760,11 @@ describe("Institution setup action screens", () => {
 
   it("creates time-bounded delegation (Story #20: APPROVAL_DELEGATE / Rule 11)", async () => {
     const delegateId = "44444444-4444-4444-4444-444444444444";
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/delegations/eligible-users")) return Promise.resolve({ data: [{ userAccountId: delegateId, displayName: "Asha Rao", email: "asha@example.edu" }] });
+      if (url.endsWith("/approvals/inbox")) return Promise.resolve({ data: { items: [] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: {
         delegationId: "del-1",
@@ -797,12 +804,11 @@ describe("Institution setup action screens", () => {
     });
   });
 
-  it("rejects mixed valid and invalid request IDs beside the bulk ID field", () => {
+  it("requires selecting pending requests from the inbox for bulk decisions", () => {
     renderWithTenant(<DelegationsApprovalsPage />);
-    fireEvent.change(screen.getByLabelText(/Approval Request IDs/i), { target: { value: "55555555-5555-5555-5555-555555555555, invalid" } });
     fireEvent.click(screen.getByRole("button", { name: /Apply bulk decision/i }));
 
-    expect(screen.getByText(/Every approval request ID must be a valid UUID/i)).toBeInTheDocument();
+    expect(screen.getByText(/Select at least one request from your pending approval inbox/i)).toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalled();
   });
 
