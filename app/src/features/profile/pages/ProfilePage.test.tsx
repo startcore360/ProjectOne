@@ -80,6 +80,14 @@ const platformProfile = {
   photoUrl: null,
 };
 
+const guardianProfile = {
+  ...tenantProfile,
+  userType: "GUARDIAN",
+  displayName: "Taylor Parent",
+  email: "taylor@example.edu",
+  mobile: "+15551234567",
+};
+
 afterEach(() => {
   vi.clearAllMocks();
   toastRegistry.clear();
@@ -142,6 +150,29 @@ describe("ProfilePage", () => {
     expect(toastRegistry.get()).toEqual(
       expect.arrayContaining([expect.objectContaining({ title: "Profile updated", variant: "success" })]),
     );
+  });
+
+  it("does not offer unsupported guardian mobile edits that the API rejects under WF-30", async () => {
+    vi.mocked(profileService.get).mockResolvedValueOnce({ data: guardianProfile } as never);
+    vi.mocked(profileService.update).mockResolvedValueOnce({
+      data: { ...guardianProfile, displayName: "Taylor Parent Lee" },
+    } as never);
+    renderWithStore();
+
+    await screen.findByRole("heading", { name: "Taylor Parent" });
+    fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+    expect(screen.queryByRole("textbox", { name: /mobile/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/phone verification.*not available yet/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("textbox", { name: /display name/i }), {
+      target: { value: "Taylor Parent Lee" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(profileService.update).toHaveBeenCalledWith({ displayName: "Taylor Parent Lee" });
+    });
   });
 
   it("shows a validation error when the display name is cleared", async () => {
