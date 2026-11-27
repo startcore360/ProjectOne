@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Kicker, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { useFormErrors } from "../../../../hooks";
 import {
   userManagementService,
@@ -67,10 +67,10 @@ export function CreateUserModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="USER_CREATE"
+      kicker="USER ACCOUNT"
       title="Create user account"
       titleId="create-user-title"
-      description="Provision an identity and create a tenant user account with Keycloak single sign-on."
+      description="Create a sign-in account and choose the organisation access for this person."
       size="lg"
     >
       <form onSubmit={handleSubmit}>
@@ -127,7 +127,7 @@ export function CreateUserModal({
           />
           <TextField
             id="create-initial-role"
-            label="Initial role code (optional)"
+            label="Initial role (optional)"\n            hint="Enter a role code supplied by your institution administrator."
             value={initialRoleCode}
             onChange={(e) => { setInitialRoleCode(e.target.value); clearFieldError("initialRoleCode"); }}
             placeholder="e.g. TEACHER, STUDENT, REGISTRAR"
@@ -161,7 +161,7 @@ export function CreateUserModal({
           </div>
         )}
 
-        <footer style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+        <footer className="app-modal__footer">
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
