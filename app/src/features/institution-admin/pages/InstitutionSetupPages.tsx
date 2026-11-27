@@ -625,72 +625,101 @@ export function ClassTeacherAssignmentPage() {
 }
 export function StudentLoginSwitchPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionId, setInstitutionId] = useState("");
+  const [classes, setClasses] = useState<SchoolClassItem[]>([]);
   const [classId, setClassId] = useState("");
   const [enabled, setEnabled] = useState(false);
   const [rowVersion, setRowVersion] = useState<number | null>(null);
-  const [loadingClass, setLoadingClass] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const { status, message, run } = useAction<{ classId: string; studentLoginEnabled: boolean; rowVersion: number }>();
 
-  const loadClass = async () => {
-    if (!tenantId || !isValidUuid(classId)) {
-      setLoadError("Enter a valid class ID before loading its current version.");
-      return;
-    }
-    setLoadingClass(true);
-    setLoadError("");
-    try {
-      const response = await api.get<{ classId: string; studentLoginEnabled: boolean; rowVersion: number }>(
-        `/tenants/${tenantId}/classes/${classId.trim()}`
-      );
-      setEnabled(response.data.studentLoginEnabled);
-      setRowVersion(response.data.rowVersion);
-    } catch (cause) {
-      setRowVersion(null);
-      setLoadError(getApiErrorMessage(cause));
-    } finally {
-      setLoadingClass(false);
-    }
-  };
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    institutionService.listInstitutions(tenantId)
+      .then((response) => { if (!cancelled) setInstitutions(response.items ?? []); })
+      .catch((cause: unknown) => { if (!cancelled) setLoadError(getApiErrorMessage(cause)); });
+    return () => { cancelled = true; };
+  }, [tenantId]);
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const invalid = !isValidUuid(classId) ? "Class ID must be a valid ID."
-      : rowVersion === null ? "Load the class first to obtain its current row version."
-      : null;
+  useEffect(() => {
+    if (!tenantId || !institutionId) { setClasses([]); setClassId(""); return; }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+    setClasses([]);
+    setClassId("");
+    setRowVersion(null);
+    institutionService.listSchoolClasses(tenantId, institutionId)
+      .then((items) => { if (!cancelled) setClasses(items.filter((item) => item.status === "ACTIVE")); })
+      .catch((cause: unknown) => { if (!cancelled) setLoadError(getApiErrorMessage(cause)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !classId) { setRowVersion(null); return; }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+    api.get<{ classId: string; studentLoginEnabled: boolean; rowVersion: number }>(`/tenants/${tenantId}/classes/${classId}`)
+      .then((response) => {
+        if (!cancelled) {
+          setEnabled(response.data.studentLoginEnabled);
+          setRowVersion(response.data.rowVersion);
+        }
+      })
+      .catch((cause: unknown) => { if (!cancelled) { setRowVersion(null); setLoadError(getApiErrorMessage(cause)); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, classId]);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !classId || rowVersion === null) return;
     void run(
-      invalid,
-      () => api.put(`/tenants/${tenantId}/classes/${classId.trim()}/student-login`, { enabled },
+      null,
+      () => api.put(`/tenants/${tenantId}/classes/${classId}/student-login`, { enabled },
         { headers: { "If-Match": `"${rowVersion}"` } }),
       (data) => {
         setRowVersion(data.rowVersion);
-        return `Student view-only login for class ${data.classId} is now ${data.studentLoginEnabled ? "ON" : "OFF"}.`;
+        return `Student view-only login for ${classes.find((item) => item.classId === data.classId)?.className ?? "selected class"} is now ${data.studentLoginEnabled ? "ON" : "OFF"}.`;
       },
     );
   };
 
   return (
     <div className="app-page">
-      <PageHeader
-        title="Student login switch"
-        description="Enable or disable view-only student access for a school class. Load the class first so updates use its current If-Match version."
-      />
+      <PageHeader title="Student login switch" description="Enable or disable view-only student access for a school class." />
       {!tenantId ? <NoTenantNotice /> : (
-        <Panel title="Class student-login" description="Load the class to read its current state and ETag before changing the switch.">
+        <Panel title="Class student-login" description="Choose the school and class. EDU 360 loads the current setting automatically.">
           <form onSubmit={submit} noValidate>
-            <IdField id="class-id" label="Class ID" value={classId} onChange={(value) => { setClassId(value); setRowVersion(null); }} />
-            <div className="app-inline-actions">
-              <Button type="button" variant="secondary" busy={loadingClass} onClick={() => void loadClass()}>Load class</Button>
-            </div>
-            {rowVersion !== null && <Notice tone="success">Loaded current class version {rowVersion}.</Notice>}
+            <SelectField id="student-login-institution" label="Institution *" required value={institutionId}
+              disabled={institutions.length === 0}
+              onChange={(event) => { setInstitutionId(event.target.value); setClassId(""); }}>
+              <option value="">Choose a school</option>
+              {institutions.filter((item) => item.institutionType === "SCHOOL").map((item) => (
+                <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>
+              ))}
+            </SelectField>
+            <SelectField id="student-login-class" label="Class or grade *" required value={classId}
+              disabled={!institutionId || loading || classes.length === 0}
+              onChange={(event) => setClassId(event.target.value)}>
+              <option value="">{loading ? "Loading classes…" : "Choose a class"}</option>
+              {classes.map((item) => <option key={item.classId} value={item.classId}>{item.className}</option>)}
+            </SelectField>
             {loadError && <Notice tone="danger">{loadError}</Notice>}
+            {institutionId && !loading && classes.length === 0 && !loadError && <Notice tone="warning">No active classes found for this school. Create a class first in Academic Structure.</Notice>}
+            {rowVersion !== null && <Notice tone="info">Current setting loaded for the selected class.</Notice>}
             <label className="app-form-field" style={{ marginTop: "var(--space-3)" }}>
-              <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)}
+              <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)}
                 style={{ marginRight: "var(--space-2)" }} />
               Enable view-only student login for this class
             </label>
             <ResultBanner status={status} message={message} />
-            <Button type="submit" busy={status === "busy"} disabled={rowVersion === null}>
+            <Button type="submit" busy={status === "busy"} disabled={loading || rowVersion === null}>
               {status === "busy" ? "Saving…" : "Save"}
             </Button>
           </form>
