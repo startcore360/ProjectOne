@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#214a40">
+<title>EDU 360 — End-to-End Platform & Screen Guide</title>
+<style>
+:root{--canvas:#f3f6f3;--surface:#fff;--surface2:#eaf0ec;--ink:#1c302d;--muted:#596b63;--line:#dde6e0;--brand:#2d6154;--brand2:#214a40;--gold:#e7c08c;--success:#245a3a;--successbg:#e5f2e8;--warn:#684a12;--warnbg:#f6eedb;--danger:#9b4038;--dangerbg:#f7e6e3;--info:#234b61;--infobg:#dde9f2;--shadow:0 10px 30px rgba(28,48,45,.07);--radius:16px}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.58 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--brand);text-decoration:none}a:hover{text-decoration:underline}button,input,select{font:inherit}button{cursor:pointer}.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;padding:12px 22px}.brand{font-weight:800;letter-spacing:.02em;white-space:nowrap}.brand small{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}.searchbox{margin-left:auto;max-width:440px;flex:1;position:relative}.searchbox input{width:100%;padding:10px 14px 10px 38px;border:1px solid var(--line);border-radius:999px;background:var(--canvas);outline-offset:2px}.searchbox span{position:absolute;left:14px;top:8px;color:var(--muted)}.top-actions{display:flex;gap:8px}.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 12px;font-weight:650}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.shell{display:grid;grid-template-columns:248px minmax(0,1fr);max-width:1600px;margin:0 auto}.sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow:auto;padding:22px 14px;border-right:1px solid var(--line);background:rgba(243,246,243,.75)}.sidebar .navtitle{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:14px 10px 6px}.sidebar a{display:block;padding:8px 10px;border-radius:9px;color:var(--muted);font-size:13px}.sidebar a:hover{background:#fff;color:var(--brand);text-decoration:none}.content{min-width:0;padding:28px clamp(18px,3vw,46px) 80px}.hero{background:linear-gradient(135deg,#214a40,#2d6154);color:#fff;border-radius:24px;padding:34px;box-shadow:var(--shadow);position:relative;overflow:hidden}.hero:after{content:"";position:absolute;width:380px;height:380px;border:1px solid rgba(255,255,255,.18);border-radius:50%;right:-100px;top:-170px;box-shadow:0 0 0 36px rgba(255,255,255,.04),0 0 0 78px rgba(255,255,255,.03)}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#d6e9dc}.hero h1{font-size:clamp(30px,4vw,48px);line-height:1.08;max-width:850px;margin:10px 0 14px;letter-spacing:-.035em}.hero p{color:#e1eae4;max-width:850px}.meta{font-size:12px;color:#d6e9dc;margin-top:20px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px;position:relative;z-index:1}.stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:13px;padding:13px}.stat strong{display:block;font-size:24px}.stat span{font-size:11px;color:#e1eae4}.section{margin-top:32px}.section-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:14px}.section h2{font-size:25px;line-height:1.2;letter-spacing:-.025em;margin:0}.section h3{font-size:17px;margin:20px 0 8px}.lead{color:var(--muted);margin:7px 0 0;max-width:900px}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin:12px 0;box-shadow:0 3px 12px rgba(28,48,45,.025)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:var(--surface2);color:var(--muted);white-space:nowrap}.pill.ok{background:var(--successbg);color:var(--success)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--dangerbg);color:var(--danger)}.pill.info{background:var(--infobg);color:var(--info)}.callout{border-left:4px solid var(--brand);background:#fff;padding:14px 16px;border-radius:0 12px 12px 0;margin:14px 0}.callout.warn{border-color:#b69a5d;background:#fffaf0}.callout.bad{border-color:var(--danger);background:#fff7f5}.callout p:last-child{margin-bottom:0}.muted{color:var(--muted)}.small{font-size:12px}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}table{width:100%;border-collapse:collapse;font-size:13px;min-width:680px}th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}th{background:#f7faf7;color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;position:sticky;top:0}tr:last-child td{border-bottom:0}code,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;overflow-wrap:anywhere}.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0}.node{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:130px;flex:1}.node strong{display:block;font-size:13px}.node span{font-size:11px;color:var(--muted)}.arrow{font-size:20px;color:var(--brand);font-weight:800}.details{border:1px solid var(--line);border-radius:12px;background:#fff;margin:10px 0}.details summary{padding:13px 16px;cursor:pointer;font-weight:750;list-style:none}.details summary:after{content:"＋";float:right;color:var(--brand)}.details[open] summary:after{content:"−"}.details .inside{padding:0 16px 16px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}.toolbar input,.toolbar select{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}.toolbar input{min-width:220px;flex:1}.role-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.role{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px}.role strong{display:block;font-size:12px}.role code{color:var(--muted);font-size:10px}.route-status{white-space:nowrap}.taglist{display:flex;gap:6px;flex-wrap:wrap}.tag{background:#f3f6f3;border:1px solid var(--line);border-radius:7px;padding:4px 7px;font-size:11px;color:var(--muted)}.source-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.source-list a{display:block;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12px}.footer{margin-top:40px;padding:22px 0;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.hide{display:none!important}.target{border-left:3px solid #779eb4;padding-left:12px}.implemented{border-left:3px solid #7ba88a;padding-left:12px}.blocker{border-left:3px solid #b5473c;padding-left:12px}.nowrap{white-space:nowrap}
+@media(max-width:1050px){.shell{grid-template-columns:210px minmax(0,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.role-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.topbar{padding:10px 12px;flex-wrap:wrap}.brand{font-size:14px}.searchbox{order:3;max-width:none;flex-basis:100%}.top-actions{margin-left:auto}.shell{display:block}.sidebar{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);display:flex;gap:4px;overflow:auto;padding:8px}.sidebar .navtitle{display:none}.sidebar a{white-space:nowrap}.content{padding:18px 13px 60px}.hero{padding:24px 18px}.stats{grid-template-columns:repeat(2,1fr)}.grid2,.grid3{grid-template-columns:1fr}.role-grid{grid-template-columns:1fr}.source-list{grid-template-columns:1fr}.section h2{font-size:22px}}
+@media print{.topbar,.sidebar,.toolbar,.top-actions{display:none!important}.shell{display:block}.content{padding:0}.hero{background:#214a40!important;print-color-adjust:exact}.card,.details{break-inside:avoid;box-shadow:none}.details .inside{display:block!important}.section{break-before:auto}.tablewrap{overflow:visible}table{min-width:0;font-size:10px}th,td{padding:6px}.route-row.hide,.role.hide{display:table-row!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">EDU 360 <small>Platform reference</small></div>
+  <div class="searchbox"><span>⌕</span><input id="globalSearch" type="search" placeholder="Search screens, role codes, API paths, workflows…" aria-label="Search guide"></div>
+  <div class="top-actions"><button class="btn" id="expandAll">Expand all</button><button class="btn" id="printBtn">Print / PDF</button></div>
+</header>
+<div class="shell">
+<aside class="sidebar" aria-label="Guide navigation">
+  <div class="navtitle">Guide</div>
+  <a href="#overview">Overview</a><a href="#architecture">Architecture</a><a href="#entry">Landing & routing</a><a href="#auth">Authentication</a><a href="#roles">Roles & permissions</a><a href="#routes">All routes</a><a href="#platform">Platform console</a><a href="#setup">Tenant setup</a><a href="#users">Users & students</a><a href="#admissions">Admissions</a><a href="#academics">Academic operations</a><a href="#finance">Finance</a><a href="#people">Staff & self-service</a><a href="#governance">Documents & governance</a><a href="#t10">T10 services</a><a href="#workflows">End-to-end workflows</a><a href="#security">Security model</a><a href="#design">UI / design system</a><a href="#qa">QA & known blockers</a><a href="#discrepancies">Source discrepancies</a><a href="#sources">Source index</a>
+</aside>
+<main class="content">
+<section class="hero" id="overview">
+  <div class="eyebrow">Code audit · sprint-3-development</div>
+  <h1>EDU 360 — End-to-End Platform & Screen Guide</h1>
+  <p>A source-grounded map of the public entry point, platform control plane, tenant onboarding, authentication, role and scope enforcement, institutional modules, user screens, API families, database boundaries and documented workflows.</p>
+  <div class="meta">Audited 27 November 2026 · Repository <strong>startcore360/ProjectOne</strong> · Commit <code>a949f0d6f877b46378807514fdb46a03642e783d</code> · Read-only inspection before this guide was created</div>
+  <div class="stats">
+    <div class="stat"><strong>87</strong><span>route declarations in Routes.tsx</span></div>
+    <div class="stat"><strong>71</strong><span>frontend role-dashboard catalogue entries</span></div>
+    <div class="stat"><strong>47</strong><span>feature page-source files</span></div>
+    <div class="stat"><strong>438</strong><span>frontend source files under app/src</span></div>
+    <div class="stat"><strong>868</strong><span>Java source files under api/src/main</span></div>
+    <div class="stat"><strong>73</strong><span>numbered SQL migration / test / rollback artifacts</span></div>
+    <div class="stat"><strong>30</strong><span>frontend API service modules counted in app/src</span></div>
+    <div class="stat"><strong>236</strong><span>distinct API path references across those service modules</span></div>
+  </div>
+</section>
+
+<section class="section" id="method">
+  <div class="section-head"><div><h2>How to read this guide</h2><p class="lead">The labels below prevent planned functionality, route declarations and live behavior from being confused.</p></div></div>
+  <div class="grid3">
+    <div class="card"><span class="pill ok">Code present</span><h3>Implemented in source</h3><p class="muted">A component, handler, API client or backend service is present in the inspected branch. This does not by itself prove a successful end-to-end runtime path.</p></div>
+    <div class="card"><span class="pill info">Target specification</span><h3>Normative / intended behavior</h3><p class="muted">A rule or workflow is described in the V4.0 deliverables. It is not presented as implemented unless the current code supports it.</p></div>
+    <div class="card"><span class="pill bad">Build / test blocker</span><h3>Not currently verified</h3><p class="muted">The current branch CI evidence has failures. Screens behind broken imports or a failing build cannot be called working.</p></div>
+  </div>
+  <div class="callout warn"><strong>Scope and evidence boundary.</strong> This is a static code-and-document audit at the commit shown above, supplemented by the recorded GitHub Actions run. No production account, tenant data, deployed browser session or live payment provider was accessed. I did not run a local build or change application code. A route in the inventory means it is declared in the router, not that it passed runtime acceptance.</div>
+</section>
+
+<section class="section" id="architecture">
+  <h2>1. System architecture and actual deployment shape</h2>
+  <p class="lead">The implemented application is a React SPA plus a Spring modular monolith and PostgreSQL. The V4.0 source pack describes target boundaries that should not be mistaken for currently deployed microservices.</p>
+  <div class="flow">
+    <div class="node"><strong>Browser / React 19</strong><span>Vite · TypeScript · Redux · React Router</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Shared Axios client</strong><span>Bearer token · API base path · refresh/error handling</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Spring Boot API</strong><span>Java 21 · modular monolith · domain packages</span></div><div class="arrow">→</div>
+    <div class="node"><strong>PostgreSQL 16</strong><span>platform / app / ref / audit schemas · RLS</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Identity and tenancy</h3><ul><li>Keycloak validates credentials and issues JWTs.</li><li>The API resolves platform versus tenant identity from the verified issuer / host context.</li><li>Tenant and active role assignment are carried into request context.</li><li>Tenant-scoped access is enforced by the server and PostgreSQL RLS.</li></ul></div>
+    <div class="card"><h3>Data and integrations</h3><ul><li>PostgreSQL is the database engine in the current engineering plan.</li><li>SQL scripts under <code>sql/</code> include base schema, rules, RLS bindings, reference data, tests, migrations and rollbacks.</li><li>Keycloak, file storage, Razorpay / Stripe checkout, email/SMS/push dispatch and ClamAV appear in the code or specifications; production configuration and operational readiness are separate verification items.</li></ul></div>
+  </div>
+  <div class="tablewrap"><table><thead><tr><th>Dimension</th><th>Current code evidence</th><th>V4.0 target / limitation</th></tr></thead><tbody>
+  <tr><td>Deployment</td><td>One Spring API application and one React SPA.</td><td>V4.0 aspirational microservice boundaries are not proof of deployed independent services.</td></tr>
+  <tr><td>Database tenancy</td><td>Shared PostgreSQL pool with tenant/institution GUCs; routing class also contains isolated-pool support.</td><td>Platform plan PD-8 says new tenants are SHARED; ISOLATED provisioning is deferred until optional E10-S9. Do not promise per-tenant database provisioning as generally available.</td></tr>
+  <tr><td>Identity</td><td>Tenant and platform principals are separate types; tenant context is populated after verified JWT authentication.</td><td>Some role-specific login variants and external identity integrations remain unverified.</td></tr>
+  <tr><td>Authorization</td><td>Tenant action checks are centralized in <code>PermissionEvaluatorService</code>; platform actions in <code>PlatformPermissionService</code>.</td><td>Presence of an endpoint or UI gate is not proof that every D2 action / D6 acceptance test is complete.</td></tr>
+  </tbody></table></div>
+</section>
+
+<section class="section" id="entry">
+  <h2>2. Public landing page, institution discovery and tenant routing</h2>
+  <div class="card">
+    <h3>Public entry sequence</h3>
+    <div class="flow">
+      <div class="node"><strong>Open EDU 360</strong><span>RootEntry inspects hostname</span></div><div class="arrow">→</div>
+      <div class="node"><strong>Shared landing host</strong><span>Product overview, enquiry / demo, institution directory</span></div><div class="arrow">or</div>
+      <div class="node"><strong>Tenant host</strong><span>Resolve tenant from subdomain / host and route to login</span></div>
+    </div>
+    <p class="muted">The landing client calls public landing and institution-directory APIs. The institution selector supports searching the directory and entering an institution code / subdomain manually; the resolved tenant host is then used for sign-in. The public certificate verification page is a separate public route.</p>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Public landing and enquiry UI</h3><p>Code evidence: <code>LandingPage.tsx</code>, <code>landingApi.ts</code>, <code>InstitutionSelectorModal.tsx</code>.</p><div class="taglist"><span class="tag">Product / plan overview</span><span class="tag">Institution directory</span><span class="tag">Demo request</span><span class="tag">Quotation / enquiry</span><span class="tag">Tenant CMS</span></div><p class="small muted">The CMS has platform-side configuration, testimonials, media, directory listing and enquiry management endpoints.</p></div>
+    <div class="card"><h3>Fields visible in the public lead flow</h3><p>Contact name, email, phone, institution name and type, student range / expected scale, campus / institution counts, selected modules, billing-cycle preference, migration support, training mode and free-text notes. Conditional fields vary with enquiry type and selected institution profile.</p><p class="small muted">The exact field list is taken from the landing page state and form components; requiredness and conditional display are controlled in the component.</p></div>
+  </div>
+  <div class="callout"><strong>Public API family:</strong> <code>GET /public/landing</code>, <code>GET /public/institutions</code>, <code>POST /public/enquiries</code>. Platform CMS uses <code>/platform/landing/*</code>. These are client path references, not a promise that the external domain or production DNS is configured.</div>
+</section>
+
+<section class="section" id="auth">
+  <h2>3. Authentication, MFA, password change and sessions</h2>
+  <div class="flow">
+    <div class="node"><strong>Email + password</strong><span>Optional TOTP or recovery code</span></div><div class="arrow">→</div>
+    <div class="node"><strong>API / Keycloak</strong><span>Tenant resolved from host / issuer</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Identity response</strong><span>Tenant identity OR platform identity</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Permissions loaded</strong><span>/me · /me/permissions or platform equivalent</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Dashboard</strong><span>Active role and scope</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Login form</h3><ul><li>Email address</li><li>Password</li><li>Authenticator TOTP when required</li><li>Recovery code path for backup-code login</li></ul><p class="small muted">Frontend service: <code>authService.login(email, password, totp?)</code> → <code>POST /auth/login</code>.</p></div>
+    <div class="card"><h3>MFA enrollment / recovery</h3><ul><li>Email and password are re-sent to prove the user before enrollment.</li><li>Enrollment ID and authenticator code are submitted.</li><li>Backup / recovery codes can be issued and used once.</li><li>Login can return an enrollment-required state before tokens are issued.</li></ul><p class="small muted">Endpoints: <code>/auth/mfa/enrol</code>, <code>/auth/mfa/recovery-codes</code>.</p></div>
+    <div class="card"><h3>Forced password change</h3><p>Users flagged <code>mustChangePassword</code> are routed to <code>/change-password</code>. The client route is a UX guard; the backend <code>MustChangePasswordFilter</code> is the security boundary.</p><p class="small muted">Fields: current password, new password, confirmation / policy feedback. Endpoint: <code>POST /auth/change-password</code>.</p></div>
+    <div class="card"><h3>Session management</h3><p>The client sends an <code>X-Browser-Id</code> during login. The session page lists the current browser and other sessions, and supports revoking the current session or another of the caller's own sessions.</p><p class="small muted">Endpoints: <code>GET /me/sessions</code>, <code>DELETE /me/sessions/current</code>, <code>DELETE /me/sessions/{sessionId}</code>.</p></div>
+  </div>
+  <div class="callout warn"><strong>Storage note:</strong> access and refresh tokens are stored in browser <code>sessionStorage</code> by the current frontend. The MFA continuation draft also retains the password in session storage for a limited interval. Same-origin JavaScript can read session storage; this is not an XSS protection. Review CSP, script supply-chain and XSS controls before production sign-off.</div>
+  <div class="callout"><strong>Applicant login limitation:</strong> <code>APPLICANT</code> exists as a tenant user type and the applicant portal route exists, but the inspected configuration sets applicant / parent OTP login as disabled. Do not document applicant OTP as a working sign-in flow without a separate verified implementation.</div>
+</section>
+
+<section class="section" id="roles">
+  <h2>4. Roles, assignments, active scope and permissions</h2>
+  <p class="lead">The frontend role catalogue contains 71 source-defined dashboard personas. The catalogue is not itself an assignment list or an authorization grant.</p>
+  <div class="grid2">
+    <div class="card"><h3>Platform roles (6)</h3><p>Product Owner, Platform Admin, Billing Manager, Support Manager, Release Manager, Data Protection Officer.</p><p class="small muted">Platform console entry checks for one of these six platform role codes. The server loads <code>/platform/me/permissions</code>; navigation filters by action codes.</p></div>
+    <div class="card"><h3>Tenant / institutional levels (65)</h3><p>3 tenant-wide roles, 13 university roles, 33 college roles, 15 school roles and 1 external Applicant role.</p><p class="small muted">A tenant user can hold multiple assignments, but one active assignment is used in a request. Scope is tenant, institution or department.</p></div>
+  </div>
+  <div class="callout"><strong>Active-role switch:</strong> <code>GET /me</code> returns the user's role assignments and current assignment. <code>POST /me/active-role</code> selects one assignment. The frontend then reloads <code>/me/permissions</code>. The code does not union permissions from multiple assignments.</div>
+  <div class="toolbar"><input id="roleSearch" type="search" placeholder="Filter by role name or code"><select id="roleLevel"><option value="">All levels</option><option>Platform</option><option>Tenant</option><option>University</option><option>College</option><option>School</option><option>External</option></select><span id="roleCount" class="pill">71 roles</span></div>
+  <div class="role-grid" id="roleGrid"></div>
+  <div class="callout warn"><strong>Role preview warning:</strong> <code>/role-previews</code> and <code>/role-preview/:roleCode</code> are development-only visual previews. The page says explicitly that the role is not activated, the signed-in user is not switched, and preview metrics / work queues are placeholders. Role templates are not effective role assignments.</div>
+  <h3>Server-side decision sequence (verified in PermissionEvaluatorService)</h3>
+  <ol>
+    <li>Action code must exist in <code>ref.action_catalog</code>; unknown codes are denied.</li>
+    <li>A verified caller must exist; no principal means deny.</li>
+    <li>Approval against the caller's own record is denied before role lookup.</li>
+    <li>Only the selected active role assignment is considered. Multiple active assignments without a selected one can return <code>409 ACTIVE_ROLE_REQUIRED</code>.</li>
+    <li>The assignment scope must match the requested scope, subject to documented top-post coverage rules.</li>
+    <li>The role definition must be ACTIVE and the role must hold the action in <code>app.role_action</code>.</li>
+  </ol>
+  <p class="small muted">Platform actions are evaluated separately by <code>PlatformPermissionService</code>. Platform users do not receive tenant roles. DPO approvals for tenant export, deletion and retention changes remain separate named actions.</p>
+</section>
+
+<section class="section" id="routes">
+  <h2>5. Complete route inventory (87 declarations)</h2>
+  <p class="lead">This table is generated from the current <code>app/src/routes/Routes.tsx</code>. Filter by path or component. “Declared” is not a runtime pass.</p>
+  <div class="toolbar"><input id="routeSearch" type="search" placeholder="Filter path or component"><select id="routeGroup"><option value="">All route groups</option><option>Public / root</option><option>Tenant administration</option><option>Academic</option><option>Student / SIS</option><option>Platform console</option><option>Admissions</option><option>Self-service / workspace</option><option>Finance</option><option>Documents / governance</option><option>Development preview</option><option>Fallback</option></select><span id="routeCount" class="pill">87 routes</span></div>
+  <div class="tablewrap"><table id="routeTable"><thead><tr><th>Path</th><th>Page component</th><th>Route family / gate</th><th>Source status</th></tr></thead><tbody id="routeRows"></tbody></table></div>
+  <div class="callout bad"><strong>Known route build blocker:</strong> six names imported by <code>Routes.tsx</code> from <code>InstitutionSetupPages.tsx</code> are not exported by that file: <code>AcademicStructurePage</code>, <code>CalendarEventsPage</code>, <code>ClassTeacherAssignmentPage</code>, <code>MentorAssignmentPage</code>, <code>StudentLoginSwitchPage</code> and <code>WeeklyOffRulesPage</code>. These correspond to routes <code>/university/setup/structure</code>, <code>/university/setup/calendar-events</code>, <code>/university/setup/weekly-off</code>, <code>/university/setup/mentor</code>, <code>/university/setup/class-teacher</code> and <code>/university/setup/student-login</code>. The branch CI TypeScript build reports these missing exports.</div>
+</section>
+
+<section class="section" id="platform">
+  <h2>6. Platform control plane</h2>
+  <p class="lead">The platform console is separate from tenant workspaces. Its six platform roles receive different action sets and landing pages.</p>
+  <div class="grid3">
+    <div class="card"><h3>Product Owner</h3><p>Tenant and plan governance, pricing, feature control, billing oversight, platform users, security policy, platform reports and requests for data-protection actions.</p></div>
+    <div class="card"><h3>Platform Admin</h3><p>Day-to-day tenant operations, settings, feature toggles, integration types, platform audit, usage, backup status, support tickets and releases within its action set.</p></div>
+    <div class="card"><h3>Billing Manager</h3><p>Invoices, overdue follow-up and billing reports.</p></div>
+    <div class="card"><h3>Support Manager</h3><p>Support tickets, escalations and controlled support access.</p></div>
+    <div class="card"><h3>Release Manager</h3><p>Release schedule, deployment and rollback actions.</p></div>
+    <div class="card"><h3>Data Protection Officer</h3><p>Separate approval authority for tenant exports, deletion and retention changes.</p></div>
+  </div>
+  <h3>Platform screens declared in the router</h3>
+  <div class="taglist"><span class="tag">Overview</span><span class="tag">Tenants</span><span class="tag">Plans / subscription catalogue</span><span class="tag">Invoices</span><span class="tag">Releases</span><span class="tag">Reports</span><span class="tag">Security policy</span><span class="tag">Tickets</span><span class="tag">Platform users</span><span class="tag">Roles</span><span class="tag">Role templates</span><span class="tag">Support access</span><span class="tag">Audit log</span><span class="tag">Usage counts</span><span class="tag">Backup status</span><span class="tag">Integration types</span><span class="tag">Data protection</span><span class="tag">Landing CMS</span></div>
+  <div class="grid2">
+    <div class="card"><h3>Create tenant / trial tenant</h3><ul><li>Institution name</li><li>Assigned subdomain</li><li>Institution type</li><li>Subscription plan</li><li>Data retention months</li><li>Backup retention days</li><li>Primary administrator full name and email</li><li>Primary contact mobile</li><li>National ID last four digits</li></ul><p class="small muted">Current create modal does not offer an ISOLATED choice. PD-8 in the platform completion plan sets new tenants to SHARED until the optional isolated-provisioning epic is delivered.</p></div>
+    <div class="card"><h3>Activation / lifecycle</h3><ul><li>Activation: payment / transaction reference and activation note.</li><li>Suspension: mandatory reason.</li><li>Archival: mandatory reason.</li><li>Settings: tenant configuration, branding, retention, usage and provisioning views.</li><li>Reactivation and plan change are separate platform operations.</li></ul></div>
+  </div>
+  <h3>Platform API families referenced by the frontend</h3>
+  <div class="tablewrap"><table><thead><tr><th>Area</th><th>Representative client paths</th><th>Action boundary</th></tr></thead><tbody>
+  <tr><td>Tenant lifecycle</td><td><code>/platform/tenants</code>, <code>/platform/tenants/{id}/activation</code>, <code>/suspension</code>, <code>/archive</code>, <code>/reactivation</code>, <code>/settings</code>, <code>/provisioning</code></td><td>TENANT_CREATE, TENANT_ACTIVATE, TENANT_SETTINGS, TENANT_SUSPEND_ARCHIVE</td></tr>
+  <tr><td>Plans / catalogue</td><td><code>/platform/plans</code>, <code>/platform/subscriptions/catalog</code>, <code>/platform/subscriptions/quote</code></td><td>PLAN_MANAGE and related billing / tenant actions</td></tr>
+  <tr><td>Billing</td><td><code>/platform/invoices</code>, <code>/billing-cycles</code>, invoice approval, send, discounts, record-payment, overdue flags</td><td>INVOICE_MANAGE, DISCOUNT_APPLY, OVERDUE_FLAG</td></tr>
+  <tr><td>Support</td><td><code>/platform/support-tickets</code>, <code>/platform/support-sessions</code>, <code>/platform/support-access-grants</code></td><td>SUPPORT_TICKET_MANAGE, SUPPORT_ACCESS_USE</td></tr>
+  <tr><td>Data protection</td><td><code>/platform/export-requests</code>, <code>/platform/deletion-requests</code>, <code>/platform/retention-change-requests</code></td><td>Request and approval actions are separated; DPO approvals are not granted to the requester.</td></tr>
+  <tr><td>Governance / operations</td><td><code>/platform/roles</code>, <code>/platform/role-templates</code>, <code>/platform/audit-logs</code>, <code>/platform/usage-counts</code>, <code>/platform/backup-status</code>, <code>/platform/security-policy</code>, <code>/platform/releases</code></td><td>Role-specific action set loaded from <code>/platform/me/permissions</code>.</td></tr>
+  </tbody></table></div>
+  <div class="callout warn"><strong>Dashboard reality:</strong> the platform overview dispatches by platform role, but current dashboard files and CI evidence must be checked before treating every tile as live. The tenant role workspace explicitly renders “—” and “Awaiting backend integration” for metrics not connected to live data.</div>
+</section>
+
+<section class="section" id="setup">
+  <h2>7. Tenant onboarding, institution hierarchy and academic setup</h2>
+  <div class="flow">
+    <div class="node"><strong>Tenant provisioned</strong><span>Platform role creates tenant</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Tenant admin signs in</strong><span>Tenant identity / active role</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Institution draft</strong><span>University / college / school</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Academic structure</strong><span>Sessions, departments, programs, classes, sections</span></div><div class="arrow">→</div>
+    <div class="node"><strong>People and assignments</strong><span>Users, roles, HOD, teachers</span></div>
+  </div>
+  <div class="card"><h3>Register institution (Draft) — modal fields</h3><div class="taglist"><span class="tag">Institution kind</span><span class="tag">Institution code</span><span class="tag">Institution name</span><span class="tag">Student ID format</span><span class="tag">Staff ID format (optional)</span><span class="tag">Primary address</span><span class="tag">City</span><span class="tag">State</span><span class="tag">Postal code</span><span class="tag">Principal / Head email</span><span class="tag">External university affiliation mode</span></div><p class="small muted">Institution creation is draft-first. Activation is a separate governed action; university-level activation is associated with the Vice-Chancellor in the V4.0 workflow.</p></div>
+  <div class="grid2">
+    <div class="card"><h3>Academic session</h3><p>Session label, academic year, status, start date, end date.</p></div>
+    <div class="card"><h3>Department</h3><p>Department code and department name.</p></div>
+    <div class="card"><h3>Program</h3><p>Owning department, program code, program name, duration in years and semesters per year.</p></div>
+    <div class="card"><h3>Subject allocation</h3><p>Institution, course offering, optional section and teacher.</p></div>
+    <div class="card"><h3>Promotion run</h3><p>Institution, promote students from and promote students to.</p></div>
+    <div class="card"><h3>Program rules / grading</h3><p>Effective date plus structured programme requirements; grading scheme name and effective-from date.</p></div>
+  </div>
+  <h3>Institution administration service paths</h3>
+  <p><code>/api/tenants/{tenantId}/institutions</code>, institution hierarchy, activation and block requests; departments; programs; curriculum versions; program years; semesters; school classes; sections; subjects; course offerings; academic sessions; master calendar events; HOD / principal / VC approvers; term locks; role assignments; delegations; roll-down maps and overrides.</p>
+  <div class="callout bad"><strong>Current build blocker in academic setup:</strong> <code>InstitutionSetupPages.tsx</code> has only four exported pages (<code>InstitutionHierarchyPage</code>, <code>TermLockPage</code>, <code>DelegationsApprovalsPage</code>, <code>AcademicGovernancePage</code>) while six other names are imported by the router. The CI TypeScript build also reports unresolved identifiers in that module. Do not treat the six missing route pages as working screens.</div>
+</section>
+
+<section class="section" id="users">
+  <h2>8. User directory, role assignment, student records and guardians</h2>
+  <div class="grid2">
+    <div class="card"><h3>Create user account</h3><p>Full name, user type, email address, mobile number, National ID last four digits and optional initial role code. The service requires a scope type (TENANT / INSTITUTION / DEPARTMENT) with relevant institution / department IDs.</p><p class="small muted">A successful create may return a temporary password for one-time display. Do not persist or log it.</p></div>
+    <div class="card"><h3>Create student profile</h3><p>Student full name, institution, academic session, section, optional roll number, optional date of birth and optional admission date. Login provisioning follows institution / class settings.</p></div>
+    <div class="card"><h3>Bulk upload users</h3><p>Upload CSV file or paste CSV text; optional institution for university-wide uploads. The UI describes pre-validation and row-level error tracking. It explicitly does not create student profiles or enrolments; student CSV admission is not available in this screen.</p></div>
+    <div class="card"><h3>Guardian management</h3><p>Full name, mobile (E.164), email, relationship, primary guardian, authorized for contact and emergency contact. The UI states up to three non-blocked guardians and exactly one primary guardian.</p></div>
+  </div>
+  <h3>Student directory and subrecords</h3>
+  <p>The route family includes student search / directory, student detail, guardian-link detail, immutable-note detail and legal-hold detail. The client service references student profile, status changes, guardian links, guardian preferences, notes and legal holds. These are distinct subrecords, not one generic edit form.</p>
+  <div class="tablewrap"><table><thead><tr><th>Operation</th><th>API family</th><th>Important behavior in source</th></tr></thead><tbody>
+  <tr><td>List / view users</td><td><code>/tenants/{tenantId}/users</code>, <code>/users/{userId}</code></td><td>Caller states acting scope explicitly; list/detail are permission-gated.</td></tr>
+  <tr><td>Edit / deactivate</td><td><code>PATCH /users/{userId}</code>, <code>POST /users/{userId}/deactivation</code></td><td>Deactivation is soft lifecycle; no reactivation operation is described in the service type.</td></tr>
+  <tr><td>Password reset / unlock</td><td><code>/users/{userId}/password-reset</code>, <code>/unlock</code></td><td>Temporary password is one-time output; unlock is a separate action.</td></tr>
+  <tr><td>Role assignment</td><td><code>/users/{userId}/role-assignments</code>, <code>/role-assignments/{assignmentId}/end</code></td><td>Self-role change is denied; non-sensitive IT assigners are institution-scoped and cannot assign sensitive roles.</td></tr>
+  <tr><td>Imports</td><td><code>/user-imports</code>, <code>/imports/{jobId}</code>, <code>/imports/{jobId}/errors</code>, <code>/imports/{jobId}/start</code></td><td>Import lifecycle includes uploaded, validating, validated, importing, completed, failed and cancelled states.</td></tr>
+  </tbody></table></div>
+</section>
+
+<section class="section" id="admissions">
+  <h2>9. Admissions, scrutiny, merit and enrollment</h2>
+  <div class="flow">
+    <div class="node"><strong>Admission cycle</strong><span>Program, dates, seats, quotas, fee</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Applicant submits</strong><span>Profile and supporting documents</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Scrutiny</strong><span>Verify / correction / reject</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Merit list</strong><span>Generate provisional ranking and approve</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Seat allotment</strong><span>Offer decision, fee confirmation, conversion</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Admission cycle fields</h3><p>Institution ID, academic session ID, program ID, cycle name, application open / close dates, total seats, application fee, General / Merit / Sports / Management quota seat counts. Quota capacities must be non-negative and not exceed total seats.</p></div>
+    <div class="card"><h3>Applicant portal fields</h3><p>Institution ID, admission cycle, full name, email, phone, date of birth, qualifying marks percentage, quota category, application status, supporting documents and seat offers.</p></div>
+    <div class="card"><h3>Application scrutiny</h3><p>Institution scope / ID, applicant queue, document download, defect notes, verified payment reference. Decisions in the page: Verify, Request correction, Reject; application-fee confirmation is a separate action.</p></div>
+    <div class="card"><h3>Merit and seat allocation</h3><p>Admission cycle ID, round, provisional ranking, master merit-list approval, seat allotments, verified admission-fee reference and application conversion.</p></div>
+  </div>
+  <p class="small muted">API families include <code>/admissions/cycles</code>, <code>/admissions/applications</code>, <code>/admissions/scrutiny</code>, <code>/admissions/merit-lists</code>, <code>/admissions/seat-allotments</code> and conversion. The applicant portal uses tenant-scoped endpoints; the public applicant OTP journey is not enabled by the inspected login configuration.</p>
+</section>
+
+<section class="section" id="academics">
+  <h2>10. Academic operations: timetable, attendance, assignments, exams and results</h2>
+  <div class="grid2">
+    <div class="card"><h3>Timetable</h3><p>Routes exist for timetable view and grid. The T6 track and V4.0 schema define teacher / room conflict constraints, slot management and published timetable behavior. The grid route is declared, but the current build failure prevents a blanket working-status claim.</p></div>
+    <div class="card"><h3>Attendance register</h3><p>Fields: institution ID, section ID, attendance date, session kind, published timetable slot ID, subject allocation ID; roster and attendance entries. Summary shows Present, Absent, On approved leave and total students; a session-not-held action exists. Exam-eligibility threshold and department default are also present in the page.</p></div>
+    <div class="card"><h3>Assignments & homework</h3><p>Fields: institution ID, section ID, course offering ID, title, maximum marks, due date/time, allow late submissions and late penalty percentage per day. Create saves a DRAFT; Publish moves the assignment to published; Close stops further submissions.</p></div>
+    <div class="card"><h3>Exam schedule</h3><p>API client paths cover exam cycles, schedules, cycle schedules and invigilator assignment. The page is a scheduling surface; do not infer hall-ticket generation or a complete examination lifecycle from the route alone.</p></div>
+    <div class="card"><h3>Marks entry and moderation</h3><p>Fields: exam schedule ID, student profile ID, marks obtained, external examiner user ID, absent flag. The page submits marks, offers course-teacher approval, then external moderation with moderated marks, APPROVED / REJECTED decision and examiner comment.</p></div>
+    <div class="card"><h3>Report cards</h3><p>A report-card viewer route exists. V4.0 target rules require result publication after the relevant approval and support withdrawal by request. The current page route alone does not prove all publishing controls are complete.</p></div>
+  </div>
+  <div class="callout"><strong>V4.0 target attendance statuses:</strong> Present (P), Absent (A), On approved leave and Not held. Term lock, submitted-register immutability and correction approvals are target controls described in D7; they should be validated against the running service before being advertised as fully operational.</div>
+</section>
+
+<section class="section" id="finance">
+  <h2>11. Finance: fee structure, invoices, online payment and receipts</h2>
+  <div class="flow">
+    <div class="node"><strong>Fee structure</strong><span>Fee heads + installment plan</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Student fee account</strong><span>Account and invoice read model</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Checkout session</strong><span>Razorpay or Stripe</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Verified webhook</strong><span>Server reconciliation</span></div><div class="arrow">→</div>
+    <div class="node"><strong>Receipt</strong><span>Printable receipt and allocations</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Fee structure form</h3><p>Institution ID, academic session ID, fee policy ID, applies-from date, JSON fee-head lines and JSON installment schedule. Exactly one of Program Year ID or Class ID must be supplied. Fee lines require fee-head IDs and non-negative money values; installment numbering and due dates are validated.</p></div>
+    <div class="card"><h3>Student invoices</h3><p>Student fee account ID is selected from the user's accounts or entered as a UUID. Invoice view includes installment number, due date, base amount, concession, scholarship, late fee, paid amount, net due, outstanding amount and status.</p></div>
+    <div class="card"><h3>Payment portal</h3><p>Student fee account, selected outstanding invoices and provider (Razorpay or Stripe). Checkout session includes payment ID, provider order ID, amount and INR currency; receipt lookup uses payment ID.</p></div>
+    <div class="card"><h3>Receipt</h3><p>Receipt label, payment ID, student and institution, paid-at timestamp, payment method, amount, currency and installment allocations. Receipt is printable.</p></div>
+  </div>
+  <div class="callout warn"><strong>Payment safety:</strong> the Razorpay browser callback is explicitly not proof of payment. The UI waits for server-side signed provider webhook reconciliation. The Stripe return notice also says payment remains pending until the signed webhook is reconciled. Do not tell users that a browser redirect alone confirms payment.</div>
+  <p class="small muted">V4.0 D7 target rules include no partial payment, one open online payment, immutable receipts and locked accounting periods. Treat these as target constraints until the current DB/API path and CI tests pass.</p>
+</section>
+
+<section class="section" id="people">
+  <h2>12. Staff, HR, appraisals, profile and self-service</h2>
+  <div class="grid2">
+    <div class="card"><h3>Staff directory / record</h3><p>Staff code, full name, personal email, personal mobile (E.164), date of birth, National ID last four digits, employment status, joined / left dates, institution and department assignments, designation, staff documents, qualification details, verification note and service-history events.</p></div>
+    <div class="card"><h3>Staff appraisals</h3><p>Academic year ID, cycle name, start and end dates; self-evaluation score (0–100), peer feedback, HOD KPI score and qualitative review, Principal score and qualitative review, promotion-readiness review and appraisal report.</p></div>
+    <div class="card"><h3>Profile</h3><p>Profile page uses the current-user and profile APIs for identity, contact details and photo. Tenant permission data is a separate service and must not be inferred from the profile fields.</p></div>
+    <div class="card"><h3>Self-service</h3><p>Current self-service API exposes own leave balances, leave requests, notices and notice acknowledgements. The student dashboard reads notices and leave balances; timetable, attendance, CGPA, fees and assignments are shown as placeholders where the source says those data are not connected.</p></div>
+    <div class="card"><h3>Notifications</h3><p>Bell API lists up to 50 notifications, unread summary, mark-one-read and mark-all-read. Pending approval count is separately derived from the approval inbox.</p></div>
+    <div class="card"><h3>Sessions</h3><p>Session page lists device type/name, IP, issue time, last active time, current session and revocation capability. Unknown device details are explicitly represented as UNKNOWN for older sessions.</p></div>
+  </div>
+</section>
+
+<section class="section" id="governance">
+  <h2>13. Documents, ID cards, certificates, grievances and discipline</h2>
+  <div class="grid2">
+    <div class="card"><h3>ID card management</h3><p>Institution UUID scope, card template management, card issue, issued-card list and replacement request queue. The router explicitly disables support-session access for this route.</p></div>
+    <div class="card"><h3>Certificates</h3><p>Certificate template management, department equipment clearance, certificate request queue, issued certificates, verification code and public verification route. Public verification is <code>/verify/certificate</code>.</p></div>
+    <div class="card"><h3>Grievance submission / case management</h3><p>Confidential submission, submission receipt, ICC case queue, investigator user UUID, assignment notes and hearing notice / notes. The router disables support-session access for both submission and confidential review.</p></div>
+    <div class="card"><h3>Disciplinary incidents</h3><p>Institution scope, incident register, action taken, penalty and action notes; evidence file download is referenced. Support-session access is disabled.</p></div>
+    <div class="card"><h3>Tenant data protection</h3><p>Tenant-side data protection route supports requests / privacy workflow entry points. Platform-side DPO workspace separately manages tenant export, deletion and retention approval actions.</p></div>
+    <div class="card"><h3>Support access</h3><p>Tenant support page and platform support console exist. Platform support access is designed as ticket-bound, read-only and time-boxed; confidential tenant workflows are excluded from support-session bypass.</p></div>
+  </div>
+</section>
+
+<section class="section" id="t10">
+  <h2>14. T10: notices, messaging, library, transport and executive reporting</h2>
+  <div class="grid2">
+    <div class="card"><h3>Notice bulletin</h3><p>Title, message body, target scope, target role codes (comma-separated), urgent alert flag and require-read-acknowledgement flag. Recipients can acknowledge. The API exposes institution-scoped notices and acknowledgements.</p></div>
+    <div class="card"><h3>Communications composer</h3><p>Recipient user ID (tenant user UUID), message text and dispatch history. The T10 service exposes dispatch and dispatch-history endpoints; delivery channels and provider configuration must be validated in the deployment environment.</p></div>
+    <div class="card"><h3>Library catalogue / circulation</h3><p>Book fields include ISBN, title, author, category and total copies. Copy accession number and status; issue / return with borrower and due date; reservations; fines; fine policy (grace days, flat daily amount, calendar / working days, cap and working days).</p></div>
+    <div class="card"><h3>Transport</h3><p>Route name, vehicle number, driver name and phone, capacity, fee code, ordered stops, pickup / drop times, stop fee and passenger allocations. Route and allocation cancellation are separate operations.</p></div>
+    <div class="card"><h3>Executive dashboard</h3><p>Route exists for institutional indicators. It is a reporting view, not proof that every KPI is populated, reconciled or production-ready.</p></div>
+    <div class="card"><h3>API family</h3><p><code>/notice-bulletins</code>, <code>/communications/dispatch</code>, <code>/library/catalog</code>, <code>/library/circulations</code>, <code>/library/reservations</code>, <code>/library/fines</code>, <code>/transport/routes</code>, <code>/transport/allocations</code>, <code>/institutional-reports/executive-dashboard</code>.</p></div>
+  </div>
+</section>
+
+<section class="section" id="workflows">
+  <h2>15. End-to-end workflow map</h2>
+  <p class="lead">Deliverable 7's workflow index defines 13 cross-domain WF-V4 journeys. These are normative target journeys; the D6 QA workbook labels its cross-cutting E2E scenarios “Not executed / Planned”.</p>
+  <div class="tablewrap"><table><thead><tr><th>ID</th><th>Journey</th><th>Actors</th><th>Key guard</th><th>Current code evidence / limit</th></tr></thead><tbody>
+  <tr><td>WF-V4-01</td><td>Tenant onboarding and go-live</td><td>Product Owner / Platform Admin; Tenant Admin</td><td>Leave approvers set before go-live; GO_LIVE_BLOCKED otherwise.</td><td>Tenant create / activation / go-live-check service paths and forms exist; end-to-end go-live not demonstrated in this audit.</td></tr>
+  <tr><td>WF-V4-02</td><td>Institution and academic set-up</td><td>University / College / School Admin; Vice-Chancellor</td><td>Draft institution activated by the correct authority.</td><td>Hierarchy, session, department, program and section paths exist; six setup route exports are missing and block the frontend build.</td></tr>
+  <tr><td>WF-V4-03</td><td>Users, roles and assignment</td><td>Tenant / institution admins; IT roles</td><td>Template is not assignment; no self-elevation; one active role per request.</td><td>User, role, scope and active-role services exist; server evaluator enforces active assignment and scope; tests currently fail.</td></tr>
+  <tr><td>WF-V4-04</td><td>Timetable, syllabus, assignments</td><td>Admin, HOD, coordinator, teachers</td><td>Teachers act on assigned classes only; conflicts refused; versioned publication.</td><td>Assignment create / publish / close and timetable routes exist; full timetable and syllabus acceptance is not proven.</td></tr>
+  <tr><td>WF-V4-05</td><td>Attendance marking and correction</td><td>Teachers; HOD / Principal / VP</td><td>Defined statuses, term lock, correction controls.</td><td>Attendance register and medical exemption screens exist; current frontend attendance tests include failures.</td></tr>
+  <tr><td>WF-V4-06</td><td>Marks, results and publication</td><td>Teachers, Class Teacher, HOD, Principal, Controller / Admin</td><td>Publish only after final approval; withdrawal by request.</td><td>Marks entry has course-teacher approval then external moderation; result publication acceptance still needs verification.</td></tr>
+  <tr><td>WF-V4-07</td><td>Fee set-up, payment and receipt</td><td>Accountants, Principal, Finance Director / Management; students / parents</td><td>No partial payment; one open online payment; immutable receipts.</td><td>Fee structure, invoice, checkout and printable receipt UI exist; signed webhook is authoritative for payment confirmation.</td></tr>
+  <tr><td>WF-V4-08</td><td>Leave request and approval</td><td>Staff, students, parents; mentor / HOD / HR / Principal / Registrar / Management / GBA</td><td>No self-approval; approver never the subject.</td><td>Self-service reads leave requests and balances; complete leave request creation and all approval chains are not verified here.</td></tr>
+  <tr><td>WF-V4-09</td><td>Notices, messages, community, complaints</td><td>Publishers, teachers, parents, students, Admin</td><td>Recipient scope enforced by server.</td><td>Notice and dispatch screens exist; grievance routes exist; a community-post route was not found in the current router.</td></tr>
+  <tr><td>WF-V4-10</td><td>Reports, search and export</td><td>Report users per Reports letter</td><td>Scope and sensitive fields checked before export; generation logged.</td><td>Student search, executive dashboard, platform reports and data-protection APIs exist; export manifest drift test fails.</td></tr>
+  <tr><td>WF-V4-11</td><td>Support access</td><td>Tenant Admin grants; Support Manager uses</td><td>≤24 h, read-only, one ticket.</td><td>Platform support session / grant and tenant support components exist; confidential workflows explicitly block support access.</td></tr>
+  <tr><td>WF-V4-12</td><td>Privacy request, incident, retention, tenant export / deletion</td><td>Users, DPC, DPO, Product Owner</td><td>DPO approvals are separate and individual; legal hold may block.</td><td>Tenant and platform data-protection endpoints exist; current export manifest test is failing for four app tables.</td></tr>
+  <tr><td>WF-V4-13</td><td>Missing roles (role roll-down)</td><td>Management / GBA; VC / University Admin; admins</td><td>Approvals move to next eligible authority; never to student, parent or platform role; show “Acting for …”.</td><td>Roll-down map / override services, missing-role route and server context fields exist; full workflow proof remains incomplete.</td></tr>
+  </tbody></table></div>
+  <h3>T1–T10 tenant implementation tracks</h3>
+  <div class="tablewrap"><table><thead><tr><th>Track</th><th>Scope</th><th>Dependency</th><th>Migration range</th></tr></thead><tbody>
+  <tr><td>T1</td><td>Foundation, term lock and roll-down</td><td>First</td><td>55–56</td></tr><tr><td>T2</td><td>Academic hierarchy and departments</td><td>T1</td><td>57–58</td></tr><tr><td>T3</td><td>Staff HR, leaves and appraisals</td><td>T2</td><td>59–60</td></tr><tr><td>T4</td><td>Student information system</td><td>T2</td><td>61–62</td></tr><tr><td>T5</td><td>Admissions, merit and enrollment</td><td>T2 + T4</td><td>63–64</td></tr><tr><td>T6</td><td>Timetable and attendance</td><td>T2 + T4</td><td>65–66</td></tr><tr><td>T7</td><td>Assignments, exams and grading</td><td>T6 + T4</td><td>67–68</td></tr><tr><td>T8</td><td>Fees, invoicing and payments</td><td>T4 + T2</td><td>69–70</td></tr><tr><td>T9</td><td>ID cards, certificates and grievances</td><td>T4 + T8 + T10</td><td>71–72</td></tr><tr><td>T10</td><td>Communications, library, transport and analytics</td><td>T4 + T8</td><td>73–74</td></tr>
+  </tbody></table></div>
+  <div class="callout warn"><strong>Track status caution:</strong> the README defines ownership and dependency order; it is not a current completion certificate. Migration files now extend beyond 74, and the current CI migration run has a failure in the 67-series assignment schema step.</div>
+</section>
+
+<section class="section" id="security">
+  <h2>16. Security, authorization, tenant isolation and audit</h2>
+  <div class="grid2">
+    <div class="card"><h3>TenantContext</h3><p>After JWT verification, request context carries tenant ID, isolation mode, institution scope (<code>ALL</code>, <code>LIST</code> or <code>NONE</code>), institution IDs, active role code, scope type, active assignment ID and active-role-required state. Context is cleared at request end.</p></div>
+    <div class="card"><h3>PostgreSQL RLS</h3><p><code>TenantRoutingDataSource</code> applies tenant and institution GUCs to the connection before it is handed to Hibernate. A request with no tenant context leaves tenant scope unset; RLS should then expose no <code>app.*</code> rows. Institution IDs default to an empty set, not “all institutions”.</p></div>
+    <div class="card"><h3>Platform separation</h3><p>Platform principal is not a tenant principal. Platform staff do not receive blanket tenant data access. Support access is a deliberate exception that requires tenant grant and ticket-bound session controls.</p></div>
+    <div class="card"><h3>Confidential workflows</h3><p>ID cards, certificates, grievance submission/review and disciplinary routes set <code>allowSupportSession=false</code> or are identified as confidential. Support sessions cannot use those route bypasses.</p></div>
+  </div>
+  <h3>V4.0 approval / roll-down safety rules</h3>
+  <ul><li>No self-approval; preparer is not approver.</li><li>Duplicate consecutive steps for the same person collapse to one recorded decision.</li><li>Own-leave approvers are not rolled down.</li><li>Students, parents, applicants, GBA and platform roles are not stand-ins.</li><li>Stand-in decisions display and log “Acting for …”.</li><li>Authority returns to the appointed role holder when the role is filled.</li><li>Locked actions include payroll totals / individual salary access and DPO-only export, deletion and retention approvals.</li></ul>
+  <p class="small muted">These are source-specified guardrails. The current branch contains server evaluator and role-assignment implementations; the latest CI failures mean the whole security acceptance set is not currently green.</p>
+</section>
+
+<section class="section" id="design">
+  <h2>17. UI state contract and design system</h2>
+  <p class="lead">The frontend uses the Stillwater design tokens and shared components. The V4.0 UX specification says every screen should account for these seven states:</p>
+  <div class="grid3">
+    <div class="card"><span class="pill info">1 · Loading</span><p>Skeleton state; no fake data presented as live.</p></div>
+    <div class="card"><span class="pill">2 · Empty</span><p>Useful empty state with the next available action.</p></div>
+    <div class="card"><span class="pill bad">3 · Validation error</span><p>Summary plus field-level messages.</p></div>
+    <div class="card"><span class="pill bad">4 · Server error</span><p>Safe error and correlation ID; never stack traces.</p></div>
+    <div class="card"><span class="pill warn">5 · Permission denied</span><p>Explain lack of access; server remains authoritative.</p></div>
+    <div class="card"><span class="pill">6 · Read-only</span><p>Trial ended, locked period / term, published or decided record.</p></div>
+    <div class="card"><span class="pill ok">7 · Success</span><p>Toast and visible resulting state.</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Current tokens</h3><p>Canvas <code>#f3f6f3</code>, surface <code>#ffffff</code>, text <code>#1c302d</code>, brand green <code>#2d6154</code>, strong green <code>#214a40</code>, gold accent <code>#e7c08c</code>. Dark-mode primitives are also defined.</p></div>
+    <div class="card"><h3>Shared components</h3><p>Button variants, TextField, SelectField, DateField, DateTimeField, Modal (focus trap / Escape / focus restore), DataTable (loading skeleton / pagination / mobile cards), StatusBadge, EmptyState, ErrorState, Notice, Toast, Tabs and Pagination.</p></div>
+  </div>
+  <p class="small muted">The D8 validation report records 52/52 design token pairs meeting WCAG 2.2 AA in the design package. This is the package's recorded contrast result, not a fresh accessibility audit of every current app screen.</p>
+</section>
+
+<section class="section" id="qa">
+  <h2>18. Current branch verification and known blockers</h2>
+  <p class="lead">GitHub Actions run <a href="https://github.com/startcore360/ProjectOne/actions/runs/45980474529" target="_blank" rel="noopener">#45980474529</a> is associated with the audited commit and was updated 27 November 2026.</p>
+  <div class="callout bad"><strong>Overall CI result: failure.</strong> The guide therefore does not mark the platform as fully buildable or end-to-end accepted.</div>
+  <div class="tablewrap"><table><thead><tr><th>Gate</th><th>Recorded result</th><th>Evidence / interpretation</th></tr></thead><tbody>
+  <tr><td>Frontend lint</td><td><span class="pill bad">Failed</span></td><td>20 errors and 9 warnings in the recorded run.</td></tr>
+  <tr><td>Frontend Vitest</td><td><span class="pill bad">Failed</span></td><td>5 failing test files; 37 failing tests; 500 tests passed (537 total in the run summary).</td></tr>
+  <tr><td>Frontend TypeScript / build</td><td><span class="pill bad">Failed</span></td><td>Unresolved identifiers in <code>InstitutionSetupPages.tsx</code>; six missing named page exports from the same module; duplicate <code>listSchoolClasses</code> declaration in <code>institutionService.ts</code>.</td></tr>
+  <tr><td>Backend Maven tests</td><td><span class="pill bad">Failed</span></td><td>1,277 tests reported; 1 failure and 4 errors. <code>ExportManifestDriftTest</code> reports four missing app tables: <code>disciplinary_evidence</code>, <code>disciplinary_action</code>, <code>department_equipment_clearance</code>, <code>grievance_hearing</code>. Mockito strict-stubbing errors appear in <code>PermissionEvaluatorServiceTest</code> and <code>FileObjectControllerTest</code>.</td></tr>
+  <tr><td>SQL migration validation</td><td><span class="pill bad">Failed</span></td><td>Migration runner stops in the 67-series assignment schema step because relation <code>assignment</code> already exists.</td></tr>
+  <tr><td>CodeQL autobuild</td><td><span class="pill bad">Failed</span></td><td>Autobuild could not fetch the Maven wrapper distribution in the CI environment; treat this as an environment / dependency-download blocker, not proof of a source-code vulnerability.</td></tr>
+  <tr><td>Dependency / secret checks</td><td><span class="pill ok">Passed</span></td><td>Recorded workflow metadata shows dependency review and secret scanning passed.</td></tr>
+  </tbody></table></div>
+  <div class="callout warn"><strong>Historical validation is separate.</strong> The V4.0 D8 workbook reports 97/97 database tests passing on PostgreSQL 16.15 for the release package. The D6 workbook records planned E2E cases as “Not executed”. Those historical package results do not override the failing CI run for this current repository commit.</div>
+  <p class="small muted">This audit reviewed the workflow run and source; it did not rerun Maven, Vitest, lint, SQL migrations or browser UAT locally.</p>
+</section>
+
+<section class="section" id="discrepancies">
+  <h2>19. Source discrepancies and decisions that must remain visible</h2>
+  <div class="tablewrap"><table><thead><tr><th>Topic</th><th>Source statements</th><th>Guide treatment</th></tr></thead><tbody>
+  <tr><td>Module count</td><td>D8 says 29 modules; D6 traceability summary refers to 30 Action List modules.</td><td>Keep both source counts with their source labels; do not silently normalize.</td></tr>
+  <tr><td>Database table count</td><td>D4 / D8 materials contain 206 and 208 table counts in different summaries.</td><td>Do not publish one as a reconciled current database count.</td></tr>
+  <tr><td>OpenAPI count</td><td>D6 traceability summary records 404 operations / 310 paths; D8 verification records 408 operations / 313 paths.</td><td>Use the later D8 figure only when explicitly labelled as D8 validation; preserve the D6 discrepancy.</td></tr>
+  <tr><td>Database tests</td><td>D6 source references 59 tests in an earlier test-results record; D8 reports 97/97 on PostgreSQL 16.15.</td><td>Current branch CI is reported separately and currently fails in migration validation.</td></tr>
+  <tr><td>Workflow index</td><td>D7 contains 13 WF-V4 cross-domain journeys; tenant completion planning refers to an F01–F18 set.</td><td>These may be different groupings; do not assume a one-to-one mapping.</td></tr>
+  <tr><td>Historical implementation status</td><td>Governance log and role addendum dated 4 Nov say institution context / role model were not implemented. Current branch now contains institution scope and IDs, active role context, permission evaluator and role assignment service.</td><td>Those dated status paragraphs are historical snapshots; the inspected branch code is the current implementation evidence. Do not erase the historical decision record.</td></tr>
+  <tr><td>Tenant isolation mode</td><td>TenantRoutingDataSource contains isolated-pool routing; platform plan PD-8 says create tenants as SHARED and reject ISOLATED until E10-S9.</td><td>Separate capability in routing code from availability in tenant onboarding.</td></tr>
+  <tr><td>Authentication policy</td><td>T1 prompt and D2 differ on lockout duration, password minimum and concurrent-device model.</td><td>Preserve the conflicting values pending explicit Product Owner resolution; do not infer which governs.</td></tr>
+  <tr><td>T2 action numbering / schema</td><td>T2 prompt story mapping differs from D2 action numbering and V4.0 physical schema names.</td><td>Keep story references and canonical action codes separate; map concepts to existing schema without creating parallel tables.</td></tr>
+  <tr><td>Room allocation</td><td>T2 asks for room allocation; V4.0 OD-20 leaves room entity vs free text open.</td><td>Do not invent a room table or allocation lifecycle pending the decision.</td></tr>
+  </tbody></table></div>
+  <div class="callout"><strong>Role-management addendum:</strong> the 4 Nov addendum records 18 critical rules for the next revision (hierarchical role ownership, approved action list, delegated authority, assignment separation, no self-elevation / self-approval, server-side checks, lifecycle and audit). It explicitly says the full prose of its 12 sections was not supplied and that the addendum is not retroactive V3.3 functionality. Use only the supplied rules; do not reconstruct missing prose.</div>
+</section>
+
+<section class="section" id="sources">
+  <h2>20. Source index</h2>
+  <p class="lead">Repository links below point to the audited branch. V4.0 deliverables are target specifications; current code paths are implementation evidence.</p>
+  <div class="source-list">
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/CLAUDE.md" target="_blank" rel="noopener"><strong>CLAUDE.md</strong><br><span class="muted">Repository workflow and engineering rules</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/routes/Routes.tsx" target="_blank" rel="noopener"><strong>Routes.tsx</strong><br><span class="muted">87 route declarations and route composition</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/routes/tenantRouteActions.ts" target="_blank" rel="noopener"><strong>tenantRouteActions.ts</strong><br><span class="muted">Tenant route action-code gates</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/platform/platformAccess.ts" target="_blank" rel="noopener"><strong>platformAccess.ts</strong><br><span class="muted">Platform role and action catalogue / permissions loading</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/role-previews/roleDashboardCatalog.ts" target="_blank" rel="noopener"><strong>roleDashboardCatalog.ts</strong><br><span class="muted">71 frontend role-dashboard catalogue entries</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/auth/pages/LoginPage.tsx" target="_blank" rel="noopener"><strong>LoginPage.tsx</strong><br><span class="muted">Login and MFA UI</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/services/modules/authService.tsx" target="_blank" rel="noopener"><strong>authService.tsx</strong><br><span class="muted">Auth API client contract</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/services/axios.ts" target="_blank" rel="noopener"><strong>axios.ts</strong><br><span class="muted">Shared API client</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/profile/api/meService.ts" target="_blank" rel="noopener"><strong>meService.ts</strong><br><span class="muted">Active role assignments and switching</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/profile/api/tenantPermissionsService.ts" target="_blank" rel="noopener"><strong>tenantPermissionsService.ts</strong><br><span class="muted">Server-loaded tenant action permissions</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/institution-admin/pages/InstitutionSetupPages.tsx" target="_blank" rel="noopener"><strong>InstitutionSetupPages.tsx</strong><br><span class="muted">Hierarchy, term lock, delegation and academic governance screens</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/user-management/api/userManagementService.ts" target="_blank" rel="noopener"><strong>userManagementService.ts</strong><br><span class="muted">User, student and import API client</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/admissions/pages/AdmissionCyclesPage.tsx" target="_blank" rel="noopener"><strong>AdmissionCyclesPage.tsx</strong><br><span class="muted">Admission-cycle fields and validations</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/academic/pages/AttendanceRegisterPage.tsx" target="_blank" rel="noopener"><strong>AttendanceRegisterPage.tsx</strong><br><span class="muted">Attendance register and session controls</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/academic/pages/AssignmentManagementPage.tsx" target="_blank" rel="noopener"><strong>AssignmentManagementPage.tsx</strong><br><span class="muted">Draft, publish and close assignment lifecycle</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/academic/pages/MarksEntrySheetPage.tsx" target="_blank" rel="noopener"><strong>MarksEntrySheetPage.tsx</strong><br><span class="muted">Marks entry and external moderation</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/finance/pages/FeeStructureManagementPage.tsx" target="_blank" rel="noopener"><strong>FeeStructureManagementPage.tsx</strong><br><span class="muted">Fee structure and installment validation</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/finance/pages/FeePaymentPortalPage.tsx" target="_blank" rel="noopener"><strong>FeePaymentPortalPage.tsx</strong><br><span class="muted">Checkout and receipt lifecycle</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/app/src/features/t10/api/t10Api.ts" target="_blank" rel="noopener"><strong>t10Api.ts</strong><br><span class="muted">Notice, library, communications and transport API client</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/api/src/main/java/com/edu360/api/rbac/PermissionEvaluatorService.java" target="_blank" rel="noopener"><strong>PermissionEvaluatorService.java</strong><br><span class="muted">Tenant server-side authorization algorithm</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/api/src/main/java/com/edu360/api/tenant/TenantContext.java" target="_blank" rel="noopener"><strong>TenantContext.java</strong><br><span class="muted">Tenant, institution, active-role and scope context</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/api/src/main/java/com/edu360/api/tenant/TenantRoutingDataSource.java" target="_blank" rel="noopener"><strong>TenantRoutingDataSource.java</strong><br><span class="muted">Shared / isolated datasource routing and RLS GUCs</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/sql/run_all.sh" target="_blank" rel="noopener"><strong>sql/run_all.sh</strong><br><span class="muted">SQL migration and test runner</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/TENANT_COMPLETION_PLAN.md" target="_blank" rel="noopener"><strong>TENANT_COMPLETION_PLAN.md</strong><br><span class="muted">Tenant scope, module map, T1–T10 implementation plan and known discrepancies</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/PLATFORM_COMPLETION_PLAN.md" target="_blank" rel="noopener"><strong>PLATFORM_COMPLETION_PLAN.md</strong><br><span class="muted">Platform epics, governance decisions and platform workflows</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/GOVERNANCE_DECISION_LOG.md" target="_blank" rel="noopener"><strong>GOVERNANCE_DECISION_LOG.md</strong><br><span class="muted">Dated Product Owner decisions and status history</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/ROLE_PERMISSION_MANAGEMENT_RULES_ADDENDUM.md" target="_blank" rel="noopener"><strong>ROLE_PERMISSION_MANAGEMENT_RULES_ADDENDUM.md</strong><br><span class="muted">Approved next-revision critical role-management rules</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/EDU360_V4.0_Final/01_Master_Product_Specification/EDU360_V4.0_01_Master_Product_Specification.md" target="_blank" rel="noopener"><strong>V4.0 Master Product Specification</strong><br><span class="muted">Normative target behavior and functional scope</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/EDU360_V4.0_Final/07_UX_and_Unified_Workflow/EDU360_V4.0_07_Unified_Workflow_and_UX_Specification.html" target="_blank" rel="noopener"><strong>V4.0 Unified Workflow / UX</strong><br><span class="muted">13 WF-V4 journeys and seven screen states</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/EDU360_V4.0_Final/09_Master_Design_System/EDU360_V4.0_09_Master_Design_System.html" target="_blank" rel="noopener"><strong>V4.0 Master Design System</strong><br><span class="muted">Design tokens and component patterns</span></a>
+    <a href="https://github.com/startcore360/ProjectOne/blob/sprint-3-development/docs/EDU360_V4.0_Final/10_Interactive_Prototype/EDU360_V4.0_10_Interactive_Prototype.html" target="_blank" rel="noopener"><strong>V4.0 Interactive Prototype</strong><br><span class="muted">Design reference; not the production application</span></a>
+  </div>
+</section>
+
+<footer class="footer">
+  <strong>EDU 360 · End-to-End Platform & Screen Guide</strong><br>
+  Audit snapshot: 27 November 2026 · Branch: <code>sprint-3-development</code> · Commit: <code>a949f0d6f877b46378807514fdb46a03642e783d</code>.<br>
+  This document records source-backed findings and evidence limits. It does not certify production readiness, legal compliance, payment settlement, security penetration testing or completion of every V4.0 requirement.
+</footer>
+</main>
+</div>
+<script>
+const roles = [["PRODUCT_OWNER","Product Owner","Platform"],["PLATFORM_ADMIN","Platform Admin","Platform"],["BILLING_MANAGER","Billing Manager","Platform"],["SUPPORT_MANAGER","Support Manager","Platform"],["RELEASE_MANAGER","Release Manager","Platform"],["DATA_PROTECTION_OFFICER","Data Protection Officer","Platform"],["MANAGEMENT","Management","Tenant"],["DATA_PROTECTION_CONTACT","Data Protection Contact","Tenant"],["GOVERNING_BODY_APPROVER","Governing Body Approver","Tenant"],["VICE_CHANCELLOR","Vice Chancellor","University"],["REGISTRAR","Registrar","University"],["FINANCE_DIRECTOR","Finance Director","University"],["CONTROLLER_OF_EXAMINATIONS","Controller of Examinations","University"],["UNIVERSITY_ADMIN","University Admin","University"],["UNIVERSITY_ACCOUNTANT","University Accountant","University"],["UNIVERSITY_HR_MANAGER","University HR Manager","University"],["RESEARCH_COORDINATOR","Research Coordinator","University"],["AUDIT_OFFICER","Audit Officer","University"],["COMPLIANCE_OFFICER","Compliance Officer","University"],["ACCREDITATION_COORDINATOR_UNIVERSITY","Accreditation Coordinator (University)","University"],["QUALITY_ASSURANCE_OFFICER","Quality Assurance Officer","University"],["LEGAL_OFFICER","Legal Officer","University"],["PRINCIPAL_COLLEGE","Principal (College)","College"],["VICE_PRINCIPAL_COLLEGE","Vice Principal (College)","College"],["COLLEGE_ADMIN","College Admin","College"],["COLLEGE_ACCOUNTANT","College Accountant","College"],["COLLEGE_AUDIT_OFFICER","College Audit Officer","College"],["ACCREDITATION_COORDINATOR_COLLEGE","Accreditation Coordinator (College)","College"],["HEAD_OF_DEPARTMENT","Head of Department","College"],["PROFESSOR","Professor","College"],["ASSOCIATE_PROFESSOR","Associate Professor","College"],["ASSISTANT_PROFESSOR","Assistant Professor","College"],["LAB_ASSISTANT","Lab Assistant","College"],["RESEARCH_ASSISTANT","Research Assistant","College"],["DEPARTMENT_COORDINATOR","Department Coordinator","College"],["OFFICE_STAFF","Office Staff","College"],["ADMISSION_OFFICER","Admission Officer","College"],["EXAMINATION_CLERK","Examination Clerk","College"],["RECORDS_OFFICER","Records Officer","College"],["LIBRARIAN","Librarian","College"],["LIBRARY_ASSISTANT","Library Assistant","College"],["IT_ADMINISTRATOR","IT Administrator","College"],["SYSTEM_OPERATOR","System Operator","College"],["HR_MANAGER","HR Manager","College"],["HR_EXECUTIVE","HR Executive","College"],["PAYROLL_OFFICER","Payroll Officer","College"],["PLACEMENT_OFFICER","Placement Officer","College"],["ALUMNI_COORDINATOR","Alumni Coordinator","College"],["HOSTEL_WARDEN","Hostel Warden","College"],["TRANSPORT_MANAGER","Transport Manager","College"],["DRIVER","Driver","College"],["SECURITY_SUPERVISOR","Security Supervisor","College"],["HOUSEKEEPING_SUPERVISOR","Housekeeping Supervisor","College"],["STUDENT_COLLEGE","Student (College)","College"],["PARENT_COLLEGE","Parent (College)","College"],["SCHOOL_PRINCIPAL","School Principal","School"],["VICE_PRINCIPAL_SCHOOL","Vice Principal (School)","School"],["SCHOOL_ADMIN","School Admin","School"],["SCHOOL_ACCOUNTANT","School Accountant","School"],["CLASS_TEACHER","Class Teacher","School"],["SUBJECT_TEACHER","Subject Teacher","School"],["STUDENT_SCHOOL","Student (School)","School"],["SCHOOL_OFFICE_STAFF","School Office Staff","School"],["SCHOOL_LIBRARIAN","School Librarian","School"],["SCHOOL_LAB_ASSISTANT","School Lab Assistant","School"],["SCHOOL_IT_SUPPORT","School IT Support","School"],["TRANSPORT_STAFF","Transport Staff","School"],["HOSTEL_STAFF","Hostel Staff","School"],["SECURITY_STAFF","Security Staff","School"],["PARENT_SCHOOL","Parent (School)","School"],["APPLICANT","Applicant","External"]];
+const routes = [["/","RootEntry"],["/verify/certificate","PublicCertificateVerificationPage"],["/login","LoginPage"],["/change-password","ChangePasswordPage"],["/university/institutions","InstitutionsPage"],["/university/setup/hierarchy","InstitutionHierarchyPage"],["/university/institutions/:institutionId","InstitutionDetailPage"],["/university/setup/structure/:institutionId/departments/:departmentId","DepartmentDetailPage"],["/university/setup/structure/:institutionId/programs/:programId","ProgramDetailPage"],["/university/setup/structure/:institutionId/sections/:sectionId","SectionDetailPage"],["/university/setup/structure/:institutionId/academic-sessions/:academicSessionId","AcademicSessionDetailPage"],["/university/staff/:staffId","StaffRecordsPage"],["/university/staff","StaffRecordsPage"],["/university/institutions/:institutionId/appraisals","StaffAppraisalPage"],["/university/users","UserListPage"],["/university/roles","RolesPermissionsPage"],["/university/missing-roles","MissingRolesPage"],["/university/setup/mentor","MentorAssignmentPage"],["/university/setup/class-teacher","ClassTeacherAssignmentPage"],["/university/setup/student-login","StudentLoginSwitchPage"],["/university/setup/calendar-events","CalendarEventsPage"],["/university/setup/weekly-off","WeeklyOffRulesPage"],["/university/setup/structure","AcademicStructurePage"],["/university/setup/term-lock","TermLockPage"],["/university/setup/delegations","DelegationsApprovalsPage"],["/university/setup/academic-governance","AcademicGovernancePage"],["/academic/assignments","AssignmentManagementPage"],["/academic/exams","ExamSchedulePage"],["/academic/timetable","TimetableGridView"],["/academic/timetable/grid","TimetableGridPage"],["/academic/attendance","AttendanceRegisterPage"],["/academic/attendance/daily","DailyAttendanceSheetPage"],["/student/medical-exemptions","StudentMedicalExemptionPage"],["/academic/medical-exemptions/review","MedicalExemptionReviewPage"],["/academic/marks","MarksEntrySheetPage"],["/academic/report-cards","ReportCardViewerPage"],["/tenants/users","UserListPage"],["/tenants/users/:userId","UserDetailPage"],["/tenants/students","StudentDirectoryPage"],["/tenants/students/:studentId","StudentDetailPage"],["/tenants/students/:studentId/guardians/:recordId","StudentSubrecordDetailPage"],["/tenants/students/:studentId/notes/:recordId","StudentSubrecordDetailPage"],["/tenants/students/:studentId/legal-holds/:recordId","StudentSubrecordDetailPage"],["/tenant/data-protection","TenantDataProtectionPage"],["/platform","PlatformOverviewPage"],["/platform/tenants","TenantsPage"],["/platform/plans","PlansPage"],["/platform/invoices","InvoicesPage"],["/platform/releases","ReleasesPage"],["/platform/reports","ReportsPage"],["/platform/security-policy","SecurityPolicyPage"],["/platform/tickets","TicketsPage"],["/platform/users","PlatformUsersPage"],["/platform/roles","PlatformRolesPage"],["/platform/role-templates","PlatformRoleTemplatesPage"],["/platform/support","SupportAccessPage"],["/platform/audit","AuditLogPage"],["/platform/usage-counts","UsageCountsPage"],["/platform/backup-status","BackupStatusPage"],["/platform/integration-types","IntegrationTypesPage"],["/platform/data-protection","DataProtectionWorkspacePage"],["/platform/landing","PlatformLandingCmsPage"],["/dashboard","DashboardPage"],["/admissions/apply","ApplicantPortalPage"],["/admissions/cycles","AdmissionCyclesPage"],["/admissions/scrutiny","ApplicationScrutinyPage"],["/admissions/merit","MeritListGenerationPage"],["/support","TenantSupportPage"],["/role-previews","RoleDashboardPage"],["/role-preview/:roleCode","RoleDashboardPage"],["/profile","ProfilePage"],["/self-service","SelfServicePage"],["/notices","NoticeBulletinPage"],["/communications","MessageComposerPage"],["/library","LibraryCatalogPage"],["/transport","TransportRoutePage"],["/executive-dashboard","ExecutiveDashboardPage"],["/sessions","SessionsPage"],["/finance/structures","FeeStructureManagementPage"],["/finance/invoices","StudentFeeInvoicesPage"],["/finance/payments","FeePaymentPortalPage"],["/documents/id-cards","IdCardManagementPage"],["/documents/certificates","CertificateRequestPage"],["/governance/grievances/submit","GrievanceCaseManagementPage"],["/governance/grievances","GrievanceCaseManagementPage"],["/governance/disciplinary","DisciplinaryIncidentManagementPage"],["*","Navigate"]];
+const roleGrid=document.getElementById("roleGrid");
+const roleSearch=document.getElementById("roleSearch");
+const roleLevel=document.getElementById("roleLevel");
+function renderRoles(){
+ const q=(roleSearch.value||"").toLowerCase();
+ const level=roleLevel.value;
+ const list=roles.filter(r=>(!level||r[2]===level)&&(!q||r[0].toLowerCase().includes(q)||r[1].toLowerCase().includes(q)));
+ roleGrid.innerHTML=list.map(r=>'<article class="role"><strong>'+r[1]+'</strong><code>'+r[0]+'</code><div><span class="pill">'+r[2]+'</span></div></article>').join("");
+ document.getElementById("roleCount").textContent=list.length+" / "+roles.length+" roles";
+}
+roleSearch.addEventListener("input",renderRoles);roleLevel.addEventListener("change",renderRoles);renderRoles();
+function routeGroup(path){
+ if(path==="*")return "Fallback";
+ if(path==="/"||path==="/login"||path==="/verify/certificate"||path==="/change-password")return "Public / root";
+ if(path.startsWith("/platform"))return "Platform console";
+ if(path.startsWith("/role-preview"))return "Development preview";
+ if(path.startsWith("/university"))return "Tenant administration";
+ if(path.startsWith("/academic"))return "Academic";
+ if(path.startsWith("/student/")||path.startsWith("/tenants/students")||path==="/tenant/data-protection")return "Student / SIS";
+ if(path.startsWith("/admissions"))return "Admissions";
+ if(path.startsWith("/finance"))return "Finance";
+ if(path.startsWith("/documents")||path.startsWith("/governance"))return "Documents / governance";
+ return "Self-service / workspace";
+}
+function routeGate(path){
+ if(path==="/")return "RootEntry · host / tenant resolver";
+ if(path==="/login")return "PublicRoute";
+ if(path==="/verify/certificate")return "Public";
+ if(path==="/change-password")return "PrivateRoute · forced reset";
+ if(path.startsWith("/platform"))return path==="/platform"?"PrivateRoute → PlatformConsoleRoute":"PrivateRoute → PlatformConsoleRoute → PlatformPageGate";
+ if(path.startsWith("/role-preview"))return "PrivateRoute · DEV-only preview";
+ if(path.startsWith("/university")||path.startsWith("/academic")||path.startsWith("/student/")||path.startsWith("/tenants/")||path==="/tenant/data-protection"||path.startsWith("/admissions")||path==="/support"||path==="/notices"||path==="/communications"||path==="/library"||path==="/transport"||path==="/executive-dashboard"||path.startsWith("/finance")||path.startsWith("/documents")||path.startsWith("/governance"))return "PrivateRoute → AppLayout → ActionGate";
+ if(path==="/self-service")return "PrivateRoute → TenantUserRoute";
+ return "PrivateRoute → AppLayout";
+}
+const missing=new Set(["AcademicStructurePage","CalendarEventsPage","ClassTeacherAssignmentPage","MentorAssignmentPage","StudentLoginSwitchPage","WeeklyOffRulesPage"]);
+const routeRows=document.getElementById("routeRows");
+const routeSearch=document.getElementById("routeSearch");
+const routeGroupSelect=document.getElementById("routeGroup");
+function renderRoutes(){
+ const q=(routeSearch.value||"").toLowerCase(),g=routeGroupSelect.value;
+ const list=routes.filter(r=>(!g||routeGroup(r[0])===g)&&(!q||r[0].toLowerCase().includes(q)||r[1].toLowerCase().includes(q)));
+ routeRows.innerHTML=list.map(r=>{
+  const broken=missing.has(r[1]);
+  const status=broken?'<span class="pill bad">Compile blocker</span>':'<span class="pill info">Declared · runtime not certified</span>';
+  return '<tr class="route-row"><td><code>'+r[0]+'</code></td><td><code>'+r[1]+'</code></td><td><span class="small">'+routeGroup(r[0])+'</span><br><span class="small muted">'+routeGate(r[0])+'</span></td><td class="route-status">'+status+'</td></tr>';
+ }).join("");
+ document.getElementById("routeCount").textContent=list.length+" / "+routes.length+" routes";
+}
+routeSearch.addEventListener("input",renderRoutes);routeGroupSelect.addEventListener("change",renderRoutes);renderRoutes();
+document.getElementById("printBtn").addEventListener("click",()=>window.print());
+document.getElementById("expandAll").addEventListener("click",()=>{
+ const details=[...document.querySelectorAll("details")];
+ const open=details.some(d=>!d.open);
+ details.forEach(d=>d.open=open);
+ document.getElementById("expandAll").textContent=open?"Collapse all":"Expand all";
+});
+document.getElementById("globalSearch").addEventListener("keydown",e=>{
+ if(e.key==="Enter"){
+  const q=e.currentTarget.value.trim().toLowerCase();
+  if(!q)return;
+  const hit=[...document.querySelectorAll(".section, .card, .details, tr, .role")].find(el=>el.textContent.toLowerCase().includes(q));
+  if(hit){hit.scrollIntoView({behavior:"smooth",block:"center"});hit.style.outline="2px solid #e7c08c";setTimeout(()=>hit.style.outline="",1800);}
+ }
+});
+</script>
+</body>
+</html>
