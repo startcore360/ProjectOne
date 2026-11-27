@@ -128,7 +128,7 @@ export function JsonDocumentBuilder({ value, onChange, title = "Structured detai
         <NodeEditor key={key} label={key} value={child}
           onChange={(next) => onChange({ ...value, [key]: next })}
           onRename={(nextKeyName) => {
-            if (nextKeyName === key || !nextKeyName.trim()) return;
+            if (nextKeyName === key || !nextKeyName.trim() || Object.prototype.hasOwnProperty.call(value, nextKeyName.trim())) return;
             const next = { ...value };
             delete next[key];
             next[nextKeyName.trim()] = child;
