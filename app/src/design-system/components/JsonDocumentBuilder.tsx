@@ -33,8 +33,8 @@ function emptyValue(kind: ValueKind): DocumentValue {
 
 function nextKey(record: Record<string, DocumentValue>): string {
   let index = Object.keys(record).length + 1;
-  while (record[`field${index}`] !== undefined) index += 1;
-  return `field${index}`;
+  while (record[`New field ${index}`] !== undefined) index += 1;
+  return `New field ${index}`;
 }
 
 interface NodeEditorProps {
@@ -80,8 +80,9 @@ function NodeEditor({ label, value, onChange, onRemove, onRename, depth = 0 }: N
               onRename={(nextKeyName) => {
                 const next = { ...(value as Record<string, DocumentValue>) };
                 if (nextKeyName === key || !nextKeyName.trim()) return;
-                const entries = Object.entries(next).filter(([entryKey]) => entryKey !== key);
-                onChange(Object.fromEntries([...entries, [nextKeyName.trim(), child]]));
+                delete next[key];
+                next[nextKeyName.trim()] = child;
+                onChange(next);
               }}
               onRemove={() => { const next = { ...(value as Record<string, DocumentValue>) }; delete next[key]; onChange(next); }}
               depth={depth + 1} />
@@ -128,8 +129,10 @@ export function JsonDocumentBuilder({ value, onChange, title = "Structured detai
           onChange={(next) => onChange({ ...value, [key]: next })}
           onRename={(nextKeyName) => {
             if (nextKeyName === key || !nextKeyName.trim()) return;
-            const entries = Object.entries(value).filter(([entryKey]) => entryKey !== key);
-            onChange(Object.fromEntries([...entries, [nextKeyName.trim(), child]]));
+            const next = { ...value };
+            delete next[key];
+            next[nextKeyName.trim()] = child;
+            onChange(next);
           }}
           onRemove={() => { const next = { ...value }; delete next[key]; onChange(next); }} />
       ))}
