@@ -130,6 +130,25 @@ export type SectionItem = {
   rowVersion?: number;
 };
 
+export type SubjectItem = {
+  subjectId: string;
+  institutionId: string;
+  subjectCode: string;
+  subjectName: string;
+  credits: number;
+  isElective: boolean;
+  status: string;
+};
+
+export type CourseOfferingItem = {
+  courseOfferingId: string;
+  institutionId: string;
+  subjectId: string;
+  academicSessionId: string;
+  semesterId: string | null;
+  classId: string | null;
+};
+
 export type CreateSchoolClassPayload = { className: string; displayOrder: number };
 export type CreateSectionPayload = { academicSessionId: string; classId?: string | null; semesterId?: string | null; sectionName: string; capacity?: number };
 
@@ -462,6 +481,28 @@ export const institutionService = {
   async archiveSection(tenantId: string, institutionId: string, sectionId: string, rowVersion: number): Promise<void> {
     await api.delete(`/api/tenants/${tenantId}/institutions/${institutionId}/sections/${sectionId}`,
       { headers: { "If-Match": `"${rowVersion}"` } });
+  },
+
+  async listSchoolClasses(tenantId: string, institutionId: string): Promise<SchoolClassItem[]> {
+    const res = await api.get<SchoolClassItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/classes`
+    );
+    return res.data;
+  },
+
+  async listSubjects(tenantId: string, institutionId: string): Promise<SubjectItem[]> {
+    const res = await api.get<SubjectItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/subjects`
+    );
+    return res.data;
+  },
+
+  async listCourseOfferings(tenantId: string, institutionId: string, academicSessionId?: string): Promise<CourseOfferingItem[]> {
+    const res = await api.get<CourseOfferingItem[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/course-offerings`,
+      { params: academicSessionId ? { academicSessionId } : {} }
+    );
+    return res.data;
   },
 
   async listSections(tenantId: string, institutionId: string): Promise<SectionItem[]> {
