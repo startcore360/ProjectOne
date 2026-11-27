@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Button, { type ButtonVariant, type ButtonSize } from "./Button";
 
 export interface ShareMenuProps {
   /** Plain-text message sent to WhatsApp/Telegram/email and copied to the clipboard. */
@@ -10,6 +11,11 @@ export interface ShareMenuProps {
   emailTo?: string;
   /** Accessible label and tooltip for the trigger icon. */
   label?: string;
+  /** Whether to render as an EDS Button component instead of a round icon button. */
+  asButton?: boolean;
+  buttonText?: string;
+  buttonVariant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
 const ICON_BUTTON_SIZE = 28;
@@ -61,7 +67,17 @@ function MenuItem({ onClick, label, swatch, children }: { onClick: () => void; l
 
 // A single "where do you want to send this" icon: click opens a small destination menu
 // (WhatsApp, Telegram, email, copy, device share) instead of a row of separate buttons.
-export function ShareMenu({ text, title, emailSubject, emailTo, label = "Share" }: ShareMenuProps) {
+export function ShareMenu({
+  text,
+  title,
+  emailSubject,
+  emailTo,
+  label = "Share",
+  asButton = false,
+  buttonText,
+  buttonVariant = "secondary",
+  size = "default",
+}: ShareMenuProps) {
   const [open, setOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy to clipboard");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -136,35 +152,58 @@ export function ShareMenu({ text, title, emailSubject, emailTo, label = "Share" 
 
   return (
     <div ref={rootRef} style={{ position: "relative", display: "inline-block" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={label}
-        title={label}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: `${ICON_BUTTON_SIZE}px`,
-          height: `${ICON_BUTTON_SIZE}px`,
-          borderRadius: "var(--radius-pill)",
-          border: "1px solid var(--color-border-divider)",
-          background: "var(--color-bg-surface)",
-          color: "var(--color-text)",
-          cursor: "pointer",
-          padding: 0,
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="18" cy="5" r="3" />
-          <circle cx="6" cy="12" r="3" />
-          <circle cx="18" cy="19" r="3" />
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-        </svg>
-      </button>
+      {asButton ? (
+        <Button
+          type="button"
+          variant={buttonVariant}
+          size={size}
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={label}
+          title={label}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          <span>{buttonText || label || "Share"}</span>
+        </Button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={label}
+          title={label}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: `${ICON_BUTTON_SIZE}px`,
+            height: `${ICON_BUTTON_SIZE}px`,
+            borderRadius: "var(--radius-pill)",
+            border: "1px solid var(--color-border-divider)",
+            background: "var(--color-bg-surface)",
+            color: "var(--color-text)",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+        </button>
+      )}
 
       {open && (
         <div

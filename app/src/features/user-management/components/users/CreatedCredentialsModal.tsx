@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Modal } from "../../../../design-system/components";
+import { Button, Modal, ShareMenu } from "../../../../design-system/components";
 
 export interface ProvisionedUserCredentials {
   displayName: string;
@@ -109,6 +109,16 @@ export function CreatedCredentialsModal({
               >
                 {copied ? "Copied!" : "Copy"}
               </Button>
+              <ShareMenu
+                text={`Your EDU360 login credentials:\nAccount: ${user.displayName}${user.email ? ` (${user.email})` : ""}\nTemporary Password: ${user.temporaryPassword}\n\nPlease sign in and choose a new password.`}
+                title="EDU360 Credentials"
+                emailSubject="Your EDU360 Temporary Credentials"
+                emailTo={user.email}
+                label="Share temporary credentials"
+                asButton
+                buttonText="Share"
+                buttonVariant="secondary"
+              />
             </div>
             <p style={{ marginTop: "8px", marginBottom: 0, fontSize: "0.8rem", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
               This temporary password will not be shown again. Securely share it with the user. They will be prompted to choose a new password on first sign-in.
