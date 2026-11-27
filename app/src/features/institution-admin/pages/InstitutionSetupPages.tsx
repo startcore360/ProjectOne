@@ -718,6 +718,8 @@ export function CalendarEventsPage() {
   const { isSupportSession, tenantId: supportTenantId, session } = useSupportSession();
   const tenantId = authTenantId || supportTenantId || "";
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionOptionsError, setInstitutionOptionsError] = useState("");
   const [academicSessionId, setAcademicSessionId] = useState("");
   const [eventType, setEventType] = useState("LOCAL_HOLIDAY");
   const [title, setTitle] = useState("");
@@ -745,6 +747,13 @@ export function CalendarEventsPage() {
   const [targetSessionId, setTargetSessionId] = useState("");
   const [masterEventSubmitting, setMasterEventSubmitting] = useState(false);
   const [masterEventModalError, setMasterEventModalError] = useState("");
+
+  useEffect(() => {
+    if (!tenantId || import.meta.env.MODE === "test") return;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => setInstitutions(res.items ?? []))
+      .catch((err) => setInstitutionOptionsError(getApiErrorMessage(err)));
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId && import.meta.env.MODE !== "test") {
@@ -952,28 +961,17 @@ export function CalendarEventsPage() {
             )}
           </Panel>
 
-          <Panel title="Choose institution" description="There is no institution picker yet; paste the institution ID.">
-            <div className="eds-field" style={{ marginTop: 0 }}>
-              <label htmlFor="cal-institution-id">
-                Institution ID <span>(Required)</span>
-              </label>
-              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
-                <input
-                  id="cal-institution-id"
-                  value={institutionId}
-                  onChange={(e) => {
-                    setInstitutionId(e.target.value);
-                    setEvents(null);
-                    setListStatus("idle");
-                    setListMessage("");
-                  }}
-                  placeholder="Paste the ID (UUID)"
-                  style={{ flex: 1 }}
-                />
-                <Button type="button" variant="secondary" onClick={() => void loadEvents()} busy={listStatus === "busy"}>
-                  {listStatus === "busy" ? "Loading…" : "Load events"}
-                </Button>
-              </div>
+          <Panel title="Choose institution" description="Select the institution whose local calendar you want to view or update.">
+            {institutionOptionsError && <Notice tone="danger">{institutionOptionsError}</Notice>}
+            <div className="app-form-grid" style={{ alignItems: "end" }}>
+              <SelectField id="cal-institution-select" label="Institution *" required value={institutionId}
+                onChange={(e) => { setInstitutionId(e.target.value); setAcademicSessionId(""); setEvents(null); setListStatus("idle"); setListMessage(""); }}>
+                <option value="">Choose an institution</option>
+                {institutions.map((item) => <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>)}
+              </SelectField>
+              <Button type="button" variant="secondary" onClick={() => void loadEvents()} busy={listStatus === "busy"} disabled={!institutionId}>
+                {listStatus === "busy" ? "Loading…" : "Load events"}
+              </Button>
             </div>
             <ResultBanner status={listStatus} message={listMessage} />
           </Panel>
@@ -1026,12 +1024,19 @@ export function CalendarEventsPage() {
           {!isSupportSession && (
             <Panel title="Add a local event" description="Academic session ID has no picker yet; paste it directly.">
               <form onSubmit={submit} noValidate>
-                <IdField
-                  id="cal-session-id"
-                  label="Academic session ID"
+                <SelectField
+                  id="cal-session-select"
+                  label="Academic Session *"
+                  required
                   value={academicSessionId}
-                  onChange={setAcademicSessionId}
-                />
+                  disabled={!institutionId || !(sessions ?? []).some((session) => session.institutionId === institutionId)}
+                  onChange={(event) => setAcademicSessionId(event.target.value)}
+                >
+                  <option value="">Choose an academic session</option>
+                  {(sessions ?? []).filter((session) => session.institutionId === institutionId).map((session) => (
+                    <option key={session.academicSessionId} value={session.academicSessionId}>{session.sessionLabel} ({session.startDate} – {session.endDate})</option>
+                  ))}
+                </SelectField>
                 <SelectField
                   id="cal-event-type"
                   label="Event type"
