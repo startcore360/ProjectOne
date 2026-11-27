@@ -526,7 +526,12 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
             >
               Request a demo
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setSelectorOpen(true)}>
+            <Button
+              variant="primary"
+              size="sm"
+              className="landing-nav__signin-btn"
+              onClick={() => setSelectorOpen(true)}
+            >
               Sign in ↗
             </Button>
             <button

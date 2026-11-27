@@ -38,7 +38,7 @@ CREATE TABLE app.assignment (
     CONSTRAINT ck_assignment_updated CHECK (updated_at >= created_at)
 );
 CREATE OR REPLACE FUNCTION app.fn_assignment_scope_guard()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE v_section record; v_offering record;
 BEGIN
     SELECT institution_id, academic_session_id, semester_id, class_id
@@ -58,7 +58,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER trg_assignment_scope_guard
     BEFORE INSERT OR UPDATE ON app.assignment
     FOR EACH ROW EXECUTE FUNCTION app.fn_assignment_scope_guard();
@@ -149,7 +149,7 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS p_tenant ON app.%I', t);
     EXECUTE format('CREATE POLICY p_tenant ON app.%I USING (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid) WITH CHECK (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid)', t);
   END LOOP;
-END $;
+END $$;
 
 -- Institution scope is enforced in PostgreSQL as well as by service authorization.
 CREATE POLICY p_institution ON app.assignment AS RESTRICTIVE

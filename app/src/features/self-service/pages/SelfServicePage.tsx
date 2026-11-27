@@ -143,8 +143,8 @@ export default function SelfServicePage() {
                 <div className="app-card__header">
                   <h3 className="app-card__title">{n.title}</h3>
                   <div className="app-card__badges">
-                    <Badge tone="info">{n.noticeKind.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</Badge>
-                    <Badge tone="neutral">{n.noticeLevel.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</Badge>
+                    <Badge tone="info">{(n.noticeKind ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) || "General"}</Badge>
+                    <Badge tone="neutral">{(n.noticeLevel ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) || "Campus"}</Badge>
                   </div>
                 </div>
                 <p className="app-card__body">{n.body}</p>
@@ -296,7 +296,7 @@ export default function SelfServicePage() {
                     </div>
                   </div>
                   <Badge tone={n.priorityClass === "EMERGENCY" ? "danger" : "neutral"}>
-                    {n.priorityClass.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {(n.priorityClass ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) || "Normal"}
                   </Badge>
                 </div>
               );

@@ -2012,3 +2012,358 @@ html[data-theme="light"] .landing-page .landing-summary-box strong { color:#1823
 html[data-theme="light"] .landing-page .landing-form-heading p,
 html[data-theme="light"] .landing-page .landing-form-section-heading small,
 html[data-theme="light"] .landing-page .landing-summary-box small { color:#4e5e55 !important; }
+
+/* ── Landing Navigation & Sign-in Button Alignment ──────────────────────── */
+.landing-nav {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1320px, calc(100% - 48px));
+  margin-inline: auto;
+  gap: var(--space-4, 16px);
+}
+
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  text-decoration: none;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.landing-brand__logo {
+  display: block;
+  height: 50px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* Tagline is already rendered in the Edu360Logo SVG; hide duplicate text in the navbar */
+.landing-nav .landing-brand__tagline {
+  display: none !important;
+}
+
+.landing-nav__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.landing-nav__actions .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ensure Sign in button never wraps and aligns properly */
+.landing-nav__signin-btn,
+.landing-nav__actions .eds-button--primary {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+  height: 40px !important;
+  padding: 0 18px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  border-radius: 12px !important;
+  box-sizing: border-box !important;
+}
+
+.landing-menu-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: none;
+  place-items: center;
+  border: 1px solid var(--color-border-control);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  padding: 0;
+}
+
+@media (max-width: 960px) {
+  .landing-nav {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 66px !important;
+    width: calc(100% - 32px) !important;
+    gap: 12px !important;
+  }
+
+  .landing-navlinks,
+  .landing-nav__demo-link {
+    display: none !important;
+  }
+
+  .landing-nav .landing-brand__descriptor,
+  .landing-nav .landing-brand__tagline {
+    display: none !important;
+  }
+
+  .landing-brand {
+    flex-shrink: 0 !important;
+  }
+
+  .landing-brand__logo {
+    height: 44px !important;
+    max-width: 120px !important;
+  }
+
+  .landing-nav__actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .landing-nav__actions .theme-toggle {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+  }
+
+  .landing-nav__signin-btn,
+  .landing-nav__actions .eds-button--primary {
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+  }
+
+  .landing-menu-btn {
+    display: grid !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    border-radius: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-nav {
+    min-height: 60px !important;
+    width: calc(100% - 24px) !important;
+    gap: 8px !important;
+  }
+
+  .landing-brand__logo {
+    height: 38px !important;
+    max-width: 105px !important;
+  }
+
+  .landing-nav__actions {
+    gap: 6px !important;
+  }
+
+  .landing-nav__actions .theme-toggle {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+
+  .landing-nav__signin-btn,
+  .landing-nav__actions .eds-button--primary {
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 12.5px !important;
+    border-radius: 10px !important;
+  }
+
+  .landing-menu-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* ── Senior UI/UX Polish: Hero, Proof Badges, Tabs & Mobile Ergonomics ── */
+
+/* Hero container padding fix (overrides legacy 0px horizontal padding on mobile) */
+.landing-page .landing-hero {
+  padding: clamp(32px, 5vw, 64px) clamp(20px, 4vw, 56px) !important;
+  border-radius: clamp(20px, 3vw, 32px) !important;
+  overflow: hidden !important;
+}
+
+/* Hero action buttons: matching heights, radii, and full-width stacking on mobile */
+.landing-page .landing-hero__actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-top: 4px !important;
+}
+
+.landing-page .landing-hero__actions .eds-button,
+.landing-page .landing-hero__ghost-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 48px !important;
+  height: 48px !important;
+  padding: 0 24px !important;
+  border-radius: 14px !important;
+  font-size: 14.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  text-decoration: none !important;
+  box-sizing: border-box !important;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@media (max-width: 640px) {
+  .landing-page .landing-hero__actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
+  .landing-page .landing-hero__actions .eds-button,
+  .landing-page .landing-hero__ghost-btn {
+    width: 100% !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* Hero proof badges: clean pills with circular checks, no text clipping */
+.landing-page .landing-hero__proof {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px 12px !important;
+  margin-top: 22px !important;
+}
+
+.landing-page .landing-hero__proof span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 5px 12px !important;
+  border-radius: var(--radius-pill, 9999px) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.005em !important;
+  white-space: nowrap !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.landing-page .landing-hero__proof i {
+  display: grid !important;
+  place-items: center !important;
+  width: 17px !important;
+  height: 17px !important;
+  min-width: 17px !important;
+  min-height: 17px !important;
+  border-radius: 50% !important;
+  background: #34d399 !important;
+  color: #064e3b !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  font-style: normal !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
+}
+
+html[data-theme="light"] .landing-page .landing-hero__proof span {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+/* Role benefits tabs: horizontal swipe on mobile, active pill indicator */
+.landing-page .landing-roles-tabs {
+  display: flex !important;
+  gap: 10px !important;
+  overflow-x: auto !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 24px !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.landing-page .landing-roles-tabs::-webkit-scrollbar {
+  display: none !important;
+}
+
+.landing-page .landing-role-tab {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  border-radius: var(--radius-pill, 9999px) !important;
+  padding: 10px 20px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  transition: all 160ms ease !important;
+}
+
+/* Mobile drawer polish */
+.landing-mobile-drawer {
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent) !important;
+  backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid var(--color-border-divider) !important;
+  padding: 16px 20px 24px !important;
+}
+
+.landing-mobile-drawer a {
+  padding: 12px 16px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+}
+
+/* Interactive quotation layout responsiveness */
+@media (max-width: 900px) {
+  .landing-page .landing-quote-layout {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+
+  .landing-page .landing-quote-intro {
+    position: static !important;
+    top: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-page .landing-quote-form .landing-form-row {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .landing-page .landing-module-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

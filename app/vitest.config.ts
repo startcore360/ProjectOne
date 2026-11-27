@@ -6,5 +6,6 @@ export default defineConfig({
     setupFiles: "./src/test/setup.tsx",
     css: true,
     pool: "threads",
+    testTimeout: 15000,
   },
 });

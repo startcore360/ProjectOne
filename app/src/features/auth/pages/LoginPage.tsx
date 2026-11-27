@@ -53,7 +53,9 @@ function saveLoginDraft(draft: Partial<LoginDraft>) {
 function clearLoginDraft() {
   try {
     sessionStorage.removeItem(LOGIN_DRAFT_KEY);
-  } catch { /* sessionStorage may be unavailable in restricted browsing contexts. */ }
+  } catch {
+    // sessionStorage may be unavailable in restricted browsing contexts.
+  }
 }
 
 // The sign-in screen. Posts straight to this app's own /api/auth/login - Keycloak verifies

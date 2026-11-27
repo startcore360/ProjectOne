@@ -12,6 +12,7 @@ import {
   Panel,
   SearchBox,
   SelectField,
+  ShareMenu,
   SkeletonCard,
   SkeletonTable,
   SkeletonText,
@@ -969,6 +970,14 @@ export function UserDetailPage() {
             <Button variant="secondary" onClick={() => void copyTempPassword()}>
               Copy to clipboard
             </Button>
+            <ShareMenu
+              text={`Your temporary password for EDU360 is:\n${temporaryPassword ?? ""}\n\nPlease sign in and set a new password.`}
+              title="Temporary Password"
+              label="Share temporary password"
+              asButton
+              buttonText="Share"
+              buttonVariant="secondary"
+            />
             <Button
               onClick={() => {
                 setActionBanner({

@@ -439,7 +439,7 @@ public class CertificateService {
             String reason, String status, OffsetDateTime noDuesOverrideAt) { }
 
     private RequestRow requestRow(UUID tenantId, UUID requestId) {
-        return jdbc.query("""
+        RequestRow row = jdbc.query("""
                 SELECT cr.institution_id,cr.student_id,cr.template_id,ct.type,cr.reason,cr.status,cr.no_dues_override_at
                   FROM app.certificate_request cr
                   JOIN app.certificate_template ct ON ct.tenant_id=cr.tenant_id
@@ -448,6 +448,10 @@ public class CertificateService {
                 """, rs -> rs.next() ? new RequestRow(rs.getObject(1, UUID.class),
                 rs.getObject(2, UUID.class), rs.getObject(3, UUID.class), rs.getString(4),
                 rs.getString(5), rs.getString(6), rs.getObject(7, OffsetDateTime.class)) : null, tenantId, requestId);
+        if (row == null) {
+            throw new ResourceNotFoundException("Certificate request " + requestId + " was not found.");
+        }
+        return row;
     }
 
     private UUID studentUser(UUID tenantId, UUID studentId) {

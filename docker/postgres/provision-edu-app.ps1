@@ -62,7 +62,37 @@ function Run-Sql($file) {
     # Copy the file in and run it with psql -f, instead of piping it through PowerShell: Windows
     # PowerShell 5.1 re-encodes piped text to native programs, which turned every non-ASCII
     # character of the bundle (e.g. the '<=3.2' (U+2264) version labels in 05_ref_data.sql) into '?'.
+        if ($file -eq "67_v41_assignment_and_submission_schema.sql") {
+        $has67 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.assignment') IS NOT NULL"
+        if ($has67.Trim() -eq "t") { return }
+    }
+    if ($file -eq "68_v41_exam_cycle_marks_and_report_cards.sql") {
+        $has68 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.exam_cycle') IS NOT NULL"
+        if ($has68.Trim() -eq "t") { return }
+    }
+    if ($file -eq "69_v41_fee_read_models_and_dues.sql") {
+        $has69 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regprocedure('app.fn_fee_balance(uuid, uuid)') IS NOT NULL"
+        if ($has69.Trim() -eq "t") { return }
+    }
+    if ($file -eq "70_v41_fee_concession_and_payment_idempotency.sql") {
+        $has70 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT count(*) >= 2 FROM ref.standard_role_action WHERE action_code = 'CONCESSION_APPROVE'"
+        if ($has70.Trim() -eq "t") { return }
+    }
+    if ($file -eq "71_v41_id_cards_and_certificates.sql") {
+        $has71 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.id_card_template') IS NOT NULL"
+        if ($has71.Trim() -eq "t") { return }
+    }
+    if ($file -eq "72_v41_disciplinary_and_grievance_guard.sql") {
+        $has72 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.disciplinary_incident') IS NOT NULL"
+        if ($has72.Trim() -eq "t") { return }
+    }
     $target = "/tmp/edu360_provision_$file"
+    if ($file -eq "67_v41_assignment_and_submission_schema.sql") {
+        $has67 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.assignment') IS NOT NULL"
+        if ($has67.Trim() -eq "t") {
+            return
+        }
+    }
     docker cp (Join-Path $root "sql\$file") "${container}:$target" | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Copying sql\$file into the Postgres container failed (docker exit code $LASTEXITCODE)."
@@ -125,7 +155,12 @@ foreach ($f in @("12d_v41_platform_role_templates.sql", "14_v41_audit_foundation
                  "59_v41_staff_qualification_and_leave_indexes.sql", "60_v41_leave_delegation.sql",
                  "61_v41_student_profile_and_guardians.sql", "62_v41_student_notes_and_legal_holds.sql",
                  "63_v41_admission_cycles_and_applications.sql", "64_v41_merit_list_and_seat_allocation.sql",
-                 "65_v41_landing_cms_and_enquiries.sql")) {
+                 "65_v41_timetable_gist_constraints.sql", "66_v41_attendance_and_medical_exemptions.sql",
+                 "67_v41_assignment_and_submission_schema.sql", "68_v41_exam_cycle_marks_and_report_cards.sql",
+                 "69_v41_fee_read_models_and_dues.sql", "70_v41_fee_concession_and_payment_idempotency.sql",
+                 "71_v41_id_cards_and_certificates.sql", "72_v41_disciplinary_and_grievance_guard.sql",
+                 "73_v41_notices_and_communications.sql", "74_v41_library_and_transport_schema.sql",
+                 "75_v41_landing_cms_and_enquiries.sql")) {
     Run-Sql $f
 }
 Write-Host "V4.1 migrations applied (including the term lock and permanent roll-down revocation engines)."

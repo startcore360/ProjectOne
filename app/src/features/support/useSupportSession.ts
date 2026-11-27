@@ -4,7 +4,7 @@ import {
   SUPPORT_SESSION_PLATFORM_ORIGIN_KEY,
   SUPPORT_SESSION_TICKET_KEY,
   SUPPORT_SESSION_TOKEN_KEY,
-} from "../../services/axios";
+} from "./supportSessionKeys";
 
 export type SupportSessionState = {
   token: string;

@@ -751,6 +751,7 @@ export function CalendarEventsPage() {
       void loadSessions();
       void loadMasterEvents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   const loadSessions = async () => {
@@ -1171,13 +1172,14 @@ function dayLabel(dayOfWeek: number): string {
   return DAY_OPTIONS.find((d) => d.value === dayOfWeek)?.label ?? String(dayOfWeek);
 }
 
-function formatStatusLabel(value: string): string {
+function formatStatusLabel(value?: string | null): string {
+  if (!value) return "—";
   const known: Record<string, string> = {
     ACTIVE: "Active", DRAFT: "Draft", APPROVED: "Approved", PENDING_APPROVAL: "Pending approval",
     REJECTED: "Rejected", CANCELLED: "Cancelled", EXAM_DAY: "Exam day", SEMESTER_DATES: "Semester dates",
     LOCAL_HOLIDAY: "Local holiday", LOCAL_EVENT: "Local event", UNIVERSITY: "University", COLLEGE: "College", SCHOOL: "School",
   };
-  return known[value] ?? value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return known[value] ?? String(value).replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function WeeklyOffRulesPage() {
@@ -1592,6 +1594,7 @@ export function AcademicStructurePage() {
         }
       })
       .catch((err) => setError(getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   if (!tenantId) return <NoTenantNotice />;
@@ -2626,8 +2629,9 @@ export function AcademicStructurePage() {
 // ============================================================================
 export function TermLockPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
+  const activeInstitutionId = useAppSelector((state) => state.tenantPermissions.current?.institutionId ?? "");
   const { can } = useTenantAccess();
-  const [institutionId, setInstitutionId] = useState("");
+  const [institutionId, setInstitutionId] = useState(activeInstitutionId);
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [semesterId, setSemesterId] = useState("");
@@ -2640,23 +2644,7 @@ export function TermLockPage() {
   const [institutionLoadError, setInstitutionLoadError] = useState("");
   const { fieldErrors, formError: lockFormError, setFieldError: setLockFieldError, handleApiError: handleLockApiError, clearFieldError: clearLockFieldError, clearAll: clearLockAll } = useFormErrors();
 
-  useEffect(() => {
-    if (!tenantId || import.meta.env.MODE === "test") return;
-    institutionService
-      .listInstitutions(tenantId)
-      .then((res) => {
-        if (res?.items?.length) {
-          setInstitutions(res.items);
-        }
-      })
-      .catch((err) => setInstitutionLoadError(getApiErrorMessage(err)));
-  }, [tenantId]);
-
-  // Unlock modal state
-  const [unlockModalItem, setUnlockModalItem] = useState<TermLockItem | null>(null);
-  const [unlocking, setUnlocking] = useState(false);
-
-  const fetchLocks = (instId: string) => {
+  const fetchLocks = useCallback((instId: string) => {
     if (!tenantId || !isValidUuid(instId)) return;
     setLoading(true);
     setLockLoadError("");
@@ -2665,7 +2653,34 @@ export function TermLockPage() {
       .then((data) => setLocks(data || []))
       .catch((err) => setLockLoadError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId || import.meta.env.MODE === "test") return;
+    institutionService
+      .listInstitutions(tenantId)
+      .then((res) => {
+        if (res?.items?.length) {
+          setInstitutions(res.items);
+          if (!institutionId && res.items[0]?.institutionId) {
+            setInstitutionId(res.items[0].institutionId);
+            fetchLocks(res.items[0].institutionId);
+          }
+        }
+      })
+      .catch((err) => setInstitutionLoadError(getApiErrorMessage(err)));
+  }, [tenantId, institutionId, fetchLocks]);
+
+  useEffect(() => {
+    if (activeInstitutionId && isValidUuid(activeInstitutionId)) {
+      if (!institutionId) setInstitutionId(activeInstitutionId);
+      fetchLocks(activeInstitutionId);
+    }
+  }, [activeInstitutionId, fetchLocks]);
+
+  // Unlock modal state
+  const [unlockModalItem, setUnlockModalItem] = useState<TermLockItem | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
 
   const handleLockSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -2878,7 +2893,9 @@ export function TermLockPage() {
           if (!tenantId || !unlockModalItem) return;
           setUnlocking(true);
           try {
-            const res = await termLockService.unlockTerm(tenantId, unlockModalItem.institutionId, unlockModalItem.termLockId, {
+            const targetInstId = unlockModalItem.institutionId || institutionId;
+            const targetLockId = unlockModalItem.termLockId || (unlockModalItem as { id?: string }).id || "";
+            const res = await termLockService.unlockTerm(tenantId, targetInstId, targetLockId, {
               reason: reason.trim(),
               unlockDurationHours: Number(hours) || 72,
             });
@@ -3306,8 +3323,8 @@ export function DelegationsApprovalsPage() {
                         <code>{d.delegateUserId}</code>
                       </td>
                       <td>{d.delegationBasis}</td>
-                      <td>{new Date(d.startsAt).toLocaleString()}</td>
-                      <td>{new Date(d.endsAt).toLocaleString()}</td>
+                      <td>{d.startsAt ? new Date(d.startsAt).toLocaleString() : "—"}</td>
+                      <td>{d.endsAt ? new Date(d.endsAt).toLocaleString() : "—"}</td>
                       <td>
                         <Badge tone={d.status === "ACTIVE" ? "success" : "neutral"}>
                           {d.status}

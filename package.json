@@ -1,5 +1,6 @@
 {
   "devDependencies": {
-    "@playwright/test": "^1.65.1"
+    "@playwright/test": "^1.65.1",
+    "docx": "^9.16.1"
   }
 }
