@@ -230,7 +230,7 @@ export function InstitutionsPage() {
               <li key={idx}>
                 {b.blocker === "VC_LEAVE_APPROVER_MISSING"
                   ? "Vice-Chancellor leave approver has not been configured for this university."
-                  : `Principal leave approver has not been configured for institution ${b.institutionId || "unknown"}.`}
+                  : `Principal leave approver has not been configured for ${institutions.find((item) => item.institutionId === b.institutionId)?.institutionName ?? "one institution"}.`}
               </li>
             ))}
           </ul>
