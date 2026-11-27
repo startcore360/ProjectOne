@@ -1,5 +1,6 @@
 import { Button } from "./Button";
-import { TextField, SelectField } from "./FormFields";
+import TextField from "./TextField";
+import SelectField from "./SelectField";
 
 export type DocumentValue = string | number | boolean | null | DocumentValue[] | { [key: string]: DocumentValue };
 
@@ -47,12 +48,7 @@ interface NodeEditorProps {
 function NodeEditor({ label, value, onChange, onRemove, onRename, depth = 0 }: NodeEditorProps) {
   const kind = kindOf(value);
   const updateKind = (nextKind: ValueKind) => onChange(emptyValue(nextKind));
-  const controlStyle: React.CSSProperties = {
-    width: "100%", minWidth: 0, padding: "0.55rem 0.7rem",
-    border: "1px solid var(--border-default, #64748b)", borderRadius: "8px",
-    background: "var(--surface-input, #fff)", color: "var(--text-primary, #172033)",
-    font: "inherit",
-  };
+
 
   return (
     <div style={{ border: "1px solid var(--border-subtle, #d7dee8)", borderRadius: "10px", padding: "0.75rem", marginTop: "0.6rem", marginLeft: depth ? "0.75rem" : 0 }}>
