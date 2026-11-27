@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">EDU 360 <small>Platform reference</small></div>
   <div class="searchbox"><span>⌕</span><input id="globalSearch" type="search" placeholder="Search screens, role codes, API paths, workflows…" aria-label="Search guide"></div>
-  <div class="top-actions"><button class="btn" id="expandAll">Expand all</button><button class="btn" id="printBtn">Print / PDF</button></div>
+  <div class="top-actions"><button class="btn" id="topBtn">Back to top</button><button class="btn" id="printBtn">Print / PDF</button></div>
 </header>
 <div class="shell">
 <aside class="sidebar" aria-label="Guide navigation">
@@ -488,12 +488,7 @@ function renderRoutes(){
 }
 routeSearch.addEventListener("input",renderRoutes);routeGroupSelect.addEventListener("change",renderRoutes);renderRoutes();
 document.getElementById("printBtn").addEventListener("click",()=>window.print());
-document.getElementById("expandAll").addEventListener("click",()=>{
- const details=[...document.querySelectorAll("details")];
- const open=details.some(d=>!d.open);
- details.forEach(d=>d.open=open);
- document.getElementById("expandAll").textContent=open?"Collapse all":"Expand all";
-});
+document.getElementById("topBtn").addEventListener("click",()=>window.scrollTo({top:0,behavior:"smooth"}));
 document.getElementById("globalSearch").addEventListener("keydown",e=>{
  if(e.key==="Enter"){
   const q=e.currentTarget.value.trim().toLowerCase();
