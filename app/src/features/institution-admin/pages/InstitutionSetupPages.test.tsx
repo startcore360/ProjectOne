@@ -427,9 +427,18 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /load curriculum history/i }));
     await screen.findByText("Version 1");
 
-    fireEvent.change(screen.getByLabelText(/Curriculum JSON/i), {
-      target: { value: '{"courses":[{"code":"CS101","credits":4}]}' },
-    });
+    fireEvent.click(screen.getByRole("button", { name: /Add item/i }));
+    const itemType = screen.getAllByLabelText("Value type")[1];
+    fireEvent.change(itemType, { target: { value: "object" } });
+    fireEvent.click(screen.getAllByRole("button", { name: /Add field/i }).at(-1)!);
+    const fieldNames = screen.getAllByLabelText("Field name");
+    fireEvent.change(fieldNames[0], { target: { value: "code" } });
+    fireEvent.change(screen.getAllByLabelText("Value")[0], { target: { value: "CS101" } });
+    fireEvent.click(screen.getAllByRole("button", { name: /Add field/i }).at(-1)!);
+    const updatedFieldNames = screen.getAllByLabelText("Field name");
+    fireEvent.change(updatedFieldNames[1], { target: { value: "credits" } });
+    fireEvent.change(screen.getAllByLabelText("Value type")[2], { target: { value: "number" } });
+    fireEvent.change(screen.getAllByLabelText("Value")[1], { target: { value: "4" } });
     fireEvent.change(screen.getByLabelText(/Effective from/i), { target: { value: "2026-07-01" } });
     fireEvent.click(screen.getByRole("button", { name: /create immutable version/i }));
 
