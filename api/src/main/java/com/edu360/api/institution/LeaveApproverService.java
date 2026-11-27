@@ -19,6 +19,12 @@ import com.edu360.api.institution.dto.GoLiveCheckResponse;
 import com.edu360.api.institution.dto.GoLiveCheckResponse.GoLiveBlockerItem;
 import com.edu360.api.institution.dto.LeaveApproverSetRequest;
 import com.edu360.api.institution.dto.LeaveApproverSettingResponse;
+import com.edu360.api.institution.dto.LeaveApproverCandidateResponse;
+import com.edu360.api.identity.UserAccount;
+import com.edu360.api.identity.UserAccountStatus;
+import com.edu360.api.identity.UserType;
+import com.edu360.api.rbac.RoleDefinitionStatus;
+import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.rbac.AssignmentStatus;
 import com.edu360.api.rbac.RoleDefinition;
 import com.edu360.api.rbac.RoleDefinitionId;
@@ -215,6 +221,48 @@ public class LeaveApproverService {
                 tenantId, request.approverUserId(), kind);
 
         return LeaveApproverSettingResponse.fromEntity(saved);
+    }
+
+    /**
+     * Returns only tenant-wide, currently effective holders of the selected governance role.
+     * The UUID remains an API value for the existing leave-approver write contract; the UI
+     * presents displayName/email and never asks an administrator to type it.
+     */
+    @Transactional(readOnly = true)
+    public List<LeaveApproverCandidateResponse> listVcApproverCandidates(UUID tenantId, String approverKind) {
+        String roleCode = approverKind == null ? "" : approverKind.trim().toUpperCase();
+        if (!"MANAGEMENT".equals(roleCode) && !"GOVERNING_BODY_APPROVER".equals(roleCode)) {
+            throw new BusinessRuleViolationException(
+                    "APPROVER_KIND_MISMATCH",
+                    "Vice-Chancellor leave approver must be MANAGEMENT or GOVERNING_BODY_APPROVER [Rule C6]");
+        }
+
+        RoleDefinition role = roleDefinitionRepository.findByIdTenantIdAndRoleCode(tenantId, roleCode)
+                .filter(item -> item.getStatus() == RoleDefinitionStatus.ACTIVE)
+                .orElse(null);
+        if (role == null) return List.of();
+
+        Instant now = Instant.now();
+        return userRoleAssignmentRepository
+                .findByIdTenantIdAndRoleDefinitionIdAndStatus(tenantId, role.getId().getRoleDefinitionId(), AssignmentStatus.ACTIVE)
+                .stream()
+                .filter(assignment -> assignment.getScopeType() == ScopeType.TENANT)
+                .filter(assignment -> assignment.getEffectiveFrom() == null || !assignment.getEffectiveFrom().isAfter(now))
+                .filter(assignment -> assignment.getEffectiveTo() == null || assignment.getEffectiveTo().isAfter(now))
+                .map(assignment -> userAccountRepository.findById(
+                        new UserAccountId(tenantId, assignment.getUserAccountId())).orElse(null))
+                .filter(account -> account != null
+                        && account.getUserType() == UserType.GOVERNANCE
+                        && account.getStatus() != UserAccountStatus.DEACTIVATED)
+                .collect(java.util.stream.Collectors.toMap(
+                        account -> account.getId().getUserAccountId(),
+                        account -> new LeaveApproverCandidateResponse(
+                                account.getId().getUserAccountId(), account.getDisplayName(), account.getEmail()),
+                        (first, ignored) -> first))
+                .values().stream()
+                .sorted(java.util.Comparator.comparing(LeaveApproverCandidateResponse::displayName,
+                        String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     @Transactional(readOnly = true)
