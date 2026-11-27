@@ -1,6 +1,7 @@
 package com.edu360.api.institution;
 
 import java.util.UUID;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.config.TenantPrincipal;
@@ -16,6 +18,7 @@ import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.GoLiveCheckResponse;
 import com.edu360.api.institution.dto.LeaveApproverSetRequest;
+import com.edu360.api.institution.dto.LeaveApproverCandidateResponse;
 import com.edu360.api.institution.dto.LeaveApproverSettingResponse;
 import com.edu360.api.rbac.PermissionDecision;
 import com.edu360.api.rbac.PermissionEvaluatorService;
@@ -92,6 +95,21 @@ public class LeaveApproverController {
         return leaveApproverService.getPrincipalLeaveApprover(tenantId, institutionId)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResourceNotFoundException("No active Principal leave approver set for institution: " + institutionId));
+    }
+
+    @GetMapping({
+            "/v1/tenants/{tenantId}/vc-leave-approver/eligible-users",
+            "/api/tenants/{tenantId}/vc-leave-approver/eligible-users"
+    })
+    @Operation(summary = "List eligible Management or Governing Body Approver accounts for VC leave")
+    public ResponseEntity<List<LeaveApproverCandidateResponse>> listVcApproverCandidates(
+            @PathVariable UUID tenantId,
+            @RequestParam String approverKind,
+            Authentication authentication) {
+        RbacPrincipal principal = tenantPrincipal(tenantId, authentication);
+        permissionEvaluatorService.authorize(
+                principal, "VC_LEAVE_APPROVER_SET", RbacScope.tenant(), RbacTarget.NONE);
+        return ResponseEntity.ok(leaveApproverService.listVcApproverCandidates(tenantId, approverKind));
     }
 
     @PutMapping({
