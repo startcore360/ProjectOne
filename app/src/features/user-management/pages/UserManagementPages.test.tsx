@@ -400,6 +400,7 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Reset password$/i }));
@@ -421,6 +422,7 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Deactivate user$/i }));
@@ -443,6 +445,7 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
     fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Unlock account$/i }));
