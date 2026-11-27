@@ -3327,3 +3327,227 @@ button:not(:disabled):active,
 .app-form-single-column > .eds-field { margin-top: 0; }
 .app-form-section { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-4); border-top: var(--border-width) solid var(--color-border-divider); }
 .app-form-section > h3 { margin: 0; font-size: var(--fs-h4); line-height: var(--lh-h4); }
+
+
+/* --------------------------------------------------------------------------
+   Tenant workspace presentation layer
+   Keeps the platform console untouched while bringing tenant-owned screens
+   onto the Stillwater v2.1 field, spacing, table and responsive standards.
+   -------------------------------------------------------------------------- */
+.app-shell--tenant .app-content {
+  min-width: 0;
+}
+
+.app-shell--tenant .app-content :is(.app-form-grid, .platform-form-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4) var(--space-5);
+  min-width: 0;
+}
+
+.app-shell--tenant .app-content :is(.platform-form-field, .app-form-field) {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  margin-block: 0;
+  color: var(--color-text);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  line-height: 1.4;
+}
+
+.app-shell--tenant .app-content :is(.platform-form-field, .app-form-field) > :is(input, select, textarea) {
+  width: 100%;
+  min-width: 0;
+}
+
+.app-shell--tenant .app-content form :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  font: var(--fw-regular) var(--fs-input)/1.4 var(--font-body);
+  box-shadow: none;
+}
+
+.app-shell--tenant .app-content form select {
+  padding-right: var(--space-8);
+}
+
+.app-shell--tenant .app-content form textarea {
+  min-height: 104px;
+  padding: var(--space-3);
+  line-height: var(--lh-body);
+  resize: vertical;
+}
+
+.app-shell--tenant .app-content form input[type="file"] {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) dashed var(--color-border-control);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+  font: var(--fw-regular) var(--fs-body-sm)/1.4 var(--font-body);
+}
+
+.app-shell--tenant .app-content form :is(input, select, textarea):focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+  border-color: var(--color-focus);
+}
+
+.app-shell--tenant .app-content form :is(input, select, textarea):disabled,
+.app-shell--tenant .app-content form :is(input, select, textarea)[readonly] {
+  background: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.app-shell--tenant .app-content form :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--color-status-danger-border);
+}
+
+.app-shell--tenant .app-content form input[type="checkbox"],
+.app-shell--tenant .app-content form input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-action-primary);
+  flex: 0 0 18px;
+}
+
+.app-shell--tenant .app-content form label:has(> input[type="checkbox"]),
+.app-shell--tenant .app-content form label:has(> input[type="radio"]) {
+  display: flex;
+  min-height: var(--target-min);
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-body);
+  cursor: pointer;
+}
+
+.app-shell--tenant .app-content .eds-field {
+  min-width: 0;
+  margin-top: var(--space-4);
+}
+
+.app-shell--tenant .app-content .eds-field:first-child,
+.app-shell--tenant .app-content .app-form-grid .eds-field,
+.app-shell--tenant .app-content .platform-form-grid .eds-field {
+  margin-top: 0;
+}
+
+.app-shell--tenant .app-content .eds-field label {
+  margin-bottom: var(--space-2);
+  line-height: 1.4;
+}
+
+.app-shell--tenant .app-content .eds-field__hint,
+.app-shell--tenant .app-content .eds-field__error,
+.app-shell--tenant .app-content .eds-field__error-placeholder {
+  margin-top: var(--space-1);
+  line-height: 1.45;
+}
+
+.app-shell--tenant .app-content .app-table th {
+  padding: var(--space-3) var(--space-4);
+}
+
+.app-shell--tenant .app-content .app-table td {
+  padding: var(--space-4);
+}
+
+.app-shell--tenant .app-content .app-toolbar {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.app-shell--tenant .app-content .app-panel,
+.app-shell--tenant .app-content .app-card,
+.app-shell--tenant .app-content .app-modal {
+  min-width: 0;
+}
+
+.app-shell--tenant .app-content :is(.app-inline-notice, .app-note) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .app-shell--tenant .app-content :is(.app-form-grid, .platform-form-grid, .app-two-col) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .app-shell--tenant .app-content .app-panel__header {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .app-shell--tenant .app-content .app-toolbar {
+    padding-inline: var(--space-4);
+  }
+
+  .app-shell--tenant .app-content .app-table th,
+  .app-shell--tenant .app-content .app-table td {
+    padding: var(--space-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell--tenant .app-content .app-modal {
+    width: 100%;
+    max-height: calc(100dvh - var(--space-6));
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .app-shell--tenant .app-content .app-modal__footer {
+    margin-inline: calc(-1 * var(--space-4));
+    margin-bottom: calc(-1 * var(--space-4));
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .app-shell--tenant .app-content .app-modal__footer > * {
+    flex: 1 1 auto;
+  }
+}
+
+@media (pointer: coarse) {
+  .app-shell--tenant .app-content :is(button, a, [role="button"]):not(.app-icon-button) {
+    min-height: var(--target-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--tenant .app-content *,
+  .app-shell--tenant .app-content *::before,
+  .app-shell--tenant .app-content *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
