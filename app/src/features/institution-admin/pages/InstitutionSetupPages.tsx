@@ -442,7 +442,7 @@ export function HodAssignmentPage() {
     void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/departments/${departmentId}/hod`, {
       staffAssignmentId,
     }, { headers: { "If-Match": `"${selectedDepartment?.rowVersion ?? 1}"` } }),
-    (data) => `HOD assignment recorded for department ${data.departmentId}.`);
+    () => "HOD assignment recorded successfully.");
   };
 
   return (
@@ -506,7 +506,7 @@ export function MentorAssignmentPage() {
     void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/mentor`, {
       staffAssignmentId,
     }, { headers: { "If-Match": `"${selectedSection?.rowVersion ?? 1}"` } }),
-    (data) => `Mentor assigned to section ${data.sectionId}.`);
+    () => "Mentor assigned successfully.");
   };
 
   return (
@@ -568,7 +568,7 @@ export function ClassTeacherAssignmentPage() {
     void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/class-teacher`, {
       staffAssignmentId,
     }, { headers: { "If-Match": `"${selectedSection?.rowVersion ?? 1}"` } }),
-    (data) => `Class Teacher assigned to section ${data.sectionId}.`);
+    () => "Class Teacher assigned successfully.");
   };
 
   return (
@@ -3490,7 +3490,7 @@ export function AcademicGovernancePage() {
             <table className="app-table">
               <thead>
                 <tr>
-                  <th>Rule Set ID</th>
+                  <th>Rule set</th>
                   <th>Version</th>
                   <th>Effective From</th>
                   <th>Status</th>
@@ -3499,11 +3499,10 @@ export function AcademicGovernancePage() {
               </thead>
               <tbody>
                 {rules.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: "center", padding: "var(--space-4)" }}>No program rule sets defined.</td></tr>
+                  <tr><td colSpan={4} style={{ textAlign: "center", padding: "var(--space-4)" }}>No program rule sets defined.</td></tr>
                 ) : (
                   rules.map((r) => (
                     <tr key={r.programRuleSetId}>
-                      <td><code>{r.programRuleSetId}</code></td>
                       <td>v{r.versionNo}</td>
                       <td>{r.effectiveFrom}</td>
                       <td><Badge tone={r.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(r.status)}</Badge></td>
@@ -3558,9 +3557,9 @@ export function AcademicGovernancePage() {
             <table className="app-table">
               <thead>
                 <tr>
-                  <th>Offering ID</th>
+                  <th>Course offering</th>
                   <th>Section / Group</th>
-                  <th>Teacher Assignment ID</th>
+                  <th>Teacher</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -3570,9 +3569,9 @@ export function AcademicGovernancePage() {
                 ) : (
                   allocations.map((a) => (
                     <tr key={a.subjectAllocationId}>
-                      <td><code>{a.courseOfferingId}</code></td>
-                      <td><code>{a.sectionId || a.subjectGroupId}</code></td>
-                      <td><code>{a.staffAssignmentId}</code></td>
+                      <td>Course offering selected</td>
+                      <td>{a.sectionId ? "Section selected" : a.subjectGroupId ? "Subject group selected" : "—"}</td>
+                      <td>Teacher assigned</td>
                       <td><Badge tone={a.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(a.status)}</Badge></td>
                     </tr>
                   ))
@@ -3603,8 +3602,8 @@ export function AcademicGovernancePage() {
                 ) : (
                   promotionRuns.map((p) => (
                     <tr key={p.promotionRunId}>
-                      <td><code>{p.fromSessionId}</code></td>
-                      <td><code>{p.toSessionId}</code></td>
+                      <td>Previous academic session</td>
+                      <td>Next academic session</td>
                       <td><Badge tone={p.status === "APPROVED" ? "success" : "neutral"}>{formatStatusLabel(p.status)}</Badge></td>
                       <td>
                         {p.status === "DRAFT" && canTenantAction("PROMOTION_RUN") && (
