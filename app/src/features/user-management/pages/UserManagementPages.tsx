@@ -345,7 +345,7 @@ export function UserListPage() {
             void load();
           }}
         >
-          <ScopeFields scope={scope} onChange={setScope} idPrefix="list" />
+          <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="list" />
           <div>
             <Button type="submit" busy={state === "loading"}>
               Load users
@@ -711,7 +711,7 @@ export function UserDetailPage() {
             style={{ flexDirection: "column", alignItems: "stretch" }}
             onSubmit={submitScope}
           >
-            <ScopeFields scope={scope} onChange={setScope} idPrefix="detail" />
+            <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="detail" />
             <div>
               <Button type="submit">Load user</Button>
             </div>
