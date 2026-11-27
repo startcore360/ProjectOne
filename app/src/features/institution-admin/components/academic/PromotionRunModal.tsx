@@ -77,9 +77,9 @@ export function PromotionRunModal({ tenantId, isOpen, onClose, onSubmit, saving 
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} kicker="YEAR-END PROMOTION" title="Initiate Promotion Run" titleId="prom-modal-title" size="sm">
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }} noValidate>
-        {modalError && <div style={{ marginBottom: "var(--space-3)" }}><Notice tone="danger">{modalError}</Notice></div>}
-        {lookupError && <div style={{ marginBottom: "var(--space-3)" }}><Notice tone="danger">{lookupError}</Notice></div>}
+      <form onSubmit={handleSubmit} className="app-form" noValidate>
+        {modalError && <Notice tone="danger">{modalError}</Notice>}
+        {lookupError && <Notice tone="danger">{lookupError}</Notice>}
         <SelectField id="prom-institution" label="Institution *" required value={institutionId} disabled={loading || institutions.length === 0}
           onChange={(event) => setInstitutionId(event.target.value)}>
           <option value="">{loading ? "Loading institutions…" : "Choose an institution"}</option>
@@ -98,10 +98,10 @@ export function PromotionRunModal({ tenantId, isOpen, onClose, onSubmit, saving 
           {sessions.filter((item) => item.academicSessionId !== fromSessionId).map((item) => <option key={item.academicSessionId} value={item.academicSessionId}>{item.sessionLabel} ({item.startDate} – {item.endDate})</option>)}
         </SelectField>
         {!loading && !lookupError && institutionId && sessions.length < 2 && <Notice tone="warning">At least two academic sessions are needed to start a promotion run.</Notice>}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+        <footer className="app-modal__footer">
           <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>Cancel</Button>
           <Button type="submit" disabled={saving || loading || !institutionId || !fromSessionId || !toSessionId}>{saving ? "Saving…" : "Create Run"}</Button>
-        </div>
+        </footer>
       </form>
     </Modal>
   );
