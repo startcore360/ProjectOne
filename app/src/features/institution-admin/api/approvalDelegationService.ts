@@ -15,6 +15,12 @@ export type DelegationItem = {
   rowVersion: number;
 };
 
+export type EligibleDelegate = {
+  userAccountId: string;
+  displayName: string;
+  email: string;
+};
+
 export type CreateDelegationRequest = {
   delegateUserId: string;
   delegationBasis: "SAME_OR_HIGHER" | "DESIGNATED_DEPUTY";
@@ -67,6 +73,11 @@ export const approvalDelegationService = {
       decision,
       remark: remark || (decision === "REJECTED" ? "Rejected by approver" : undefined),
     });
+    return res.data;
+  },
+
+  async listEligibleDelegates(tenantId: string): Promise<EligibleDelegate[]> {
+    const res = await api.get<EligibleDelegate[]>(`/api/tenants/${tenantId}/delegations/eligible-users`);
     return res.data;
   },
 
