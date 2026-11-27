@@ -117,9 +117,9 @@ export function AllocateSubjectModal({ tenantId, isOpen, onClose, onSubmit, savi
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} kicker="ACADEMIC SETUP" title="Allocate Subject to Teacher" titleId="alloc-modal-title" size="sm">
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }} noValidate>
-        {modalError && <div style={{ marginBottom: "var(--space-3)" }}><Notice tone="danger">{modalError}</Notice></div>}
-        {lookupError && <div style={{ marginBottom: "var(--space-3)" }}><Notice tone="danger">{lookupError}</Notice></div>}
+      <form onSubmit={handleSubmit} className="app-form" noValidate>
+        {modalError && <Notice tone="danger">{modalError}</Notice>}
+        {lookupError && <Notice tone="danger">{lookupError}</Notice>}
         <SelectField id="alloc-institution" label="Institution *" required value={institutionId} disabled={loading || institutions.length === 0}
           onChange={(event) => setInstitutionId(event.target.value)}>
           <option value="">{loading ? "Loading institutions…" : "Choose an institution"}</option>
@@ -144,10 +144,10 @@ export function AllocateSubjectModal({ tenantId, isOpen, onClose, onSubmit, savi
         </SelectField>
         {!loading && !lookupError && institutionId && offeringOptions.length === 0 && <Notice tone="warning">No course offerings are available for this institution yet.</Notice>}
         {!loading && !lookupError && institutionId && teachers.length === 0 && <Notice tone="warning">No eligible teaching staff are available for subject allocation.</Notice>}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+        <footer className="app-modal__footer">
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
           <Button type="submit" disabled={saving || loading || !institutionId || !courseOfferingId || !staffAssignmentId}>{saving ? "Allocating…" : "Allocate Subject"}</Button>
-        </div>
+        </footer>
       </form>
     </Modal>
   );
