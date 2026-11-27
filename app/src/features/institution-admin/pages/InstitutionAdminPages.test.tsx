@@ -465,10 +465,8 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
       ).toBeInTheDocument();
     });
 
-    const userIdInput = screen.getByLabelText(/Approver User Account ID \(UUID\) \*/i);
-    fireEvent.change(userIdInput, {
-      target: { value: "00000000-0000-0000-0000-000000000009" },
-    });
+    const approverInput = await screen.findByLabelText(/Select Approver/i);
+    fireEvent.change(approverInput, { target: { value: "00000000-0000-0000-0000-000000000009" } });
 
     const submitBtn = screen.getByRole("button", { name: /Save Approver/i });
     fireEvent.click(submitBtn);
@@ -512,10 +510,8 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
       ).toBeInTheDocument();
     });
 
-    const userIdInput = screen.getByLabelText(/Approver User Account ID \(UUID\) \*/i);
-    fireEvent.change(userIdInput, {
-      target: { value: "00000000-0000-0000-0000-000000000010" },
-    });
+    const approverInput = await screen.findByLabelText(/Select Approver/i);
+    fireEvent.change(approverInput, { target: { value: "00000000-0000-0000-0000-000000000009" } });
 
     const submitBtn = screen.getByRole("button", { name: /Save VC Approver/i });
     fireEvent.click(submitBtn);
