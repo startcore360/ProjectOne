@@ -314,7 +314,7 @@ export function InstitutionHierarchyPage() {
           {error && <ErrorState title="Unable to load institution hierarchy" message={error} action={<Button variant="secondary" onClick={() => void load()}>Retry</Button>} />}
           {loading && !hierarchy && <SkeletonPage />}
           {hierarchy && (
-            <Panel title={hierarchy.tenantName} description={`University-group / tenant root · ${hierarchy.tenantType} · ${hierarchy.tenantId}`}>
+            <Panel title={hierarchy.tenantName} description={`University-group / tenant root · ${hierarchy.tenantType}`}>
               <div className="app-hierarchy-tree" role="tree" aria-label="Institution hierarchy">
                 <div className="app-hierarchy-root" role="treeitem" aria-level={1}>
                   <strong>{hierarchy.tenantName}</strong>
@@ -1009,7 +1009,7 @@ export function CalendarEventsPage() {
             {events === null ? (
               <EmptyState
                 title="No events loaded yet"
-                description="Enter an institution ID above and choose Load events."
+                description="Choose an institution above and choose Load events."
                 icon="calendar"
               />
             ) : events.length === 0 ? (
@@ -1343,7 +1343,7 @@ export function WeeklyOffRulesPage() {
             ) : rules === null ? (
               <EmptyState
                 title="No rules loaded yet"
-                description="Enter an institution ID above and choose Load rules."
+                description="Choose an institution above and choose Load rules."
                 icon="clock"
               />
             ) : rules.length === 0 ? (
@@ -2018,7 +2018,7 @@ export function AcademicStructurePage() {
         </div>
       )}
 
-      <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
+      <Panel title="Select institution" description="Choose a registered institution to view and manage its academic hierarchy.">
         <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
           <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
               <SelectField
@@ -2047,32 +2047,15 @@ export function AcademicStructurePage() {
               </SelectField>
             </div>
           )}
-          <div style={{ marginTop: institutions.length > 0 ? "var(--space-3)" : 0 }}>
-            <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  id="structure-institution-id"
-                  label="Institution ID *"
-                  value={institutionId}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setInstitutionId(val);
-                    setDepartments([]);
-                    setPrograms([]);
-                    setSchoolClasses([]);
-                    setSchoolSections([]);
-                    setSchoolSessions([]);
-                  }}
-                  placeholder="Paste the ID (UUID)"
-                  hint="UUID of the college or school"
-                />
-              </div>
-              <div style={{ paddingTop: "1.75rem" }}>
-                <Button type="button" onClick={() => void loadStructure()} busy={loading}>
-                  {loading ? "Loading…" : "Load structure"}
-                </Button>
-              </div>
+          <div style={{ marginTop: "var(--space-3)" }}>
+            <div className="app-inline-actions">
+              <Button type="button" onClick={() => void loadStructure()} busy={loading} disabled={!institutionId}>
+                {loading ? "Loading…" : "Load structure"}
+              </Button>
             </div>
+            {institutions.length === 0 && !institutionOptionsError && (
+              <Notice tone="warning">No institutions are available in this tenant yet. Create an institution before managing its academic structure.</Notice>
+            )}
           </div>
           {error && (
             <div style={{ marginTop: "var(--space-4)" }}>
