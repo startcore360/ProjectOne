@@ -433,10 +433,12 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /Add field/i }).at(-1)!);
     const fieldNames = screen.getAllByLabelText("Field name");
     fireEvent.change(fieldNames.at(-1)!, { target: { value: "code" } });
+    fireEvent.blur(fieldNames.at(-1)!);
     fireEvent.change(screen.getAllByLabelText("Value")[0], { target: { value: "CS101" } });
     fireEvent.click(screen.getAllByRole("button", { name: /Add field/i }).at(-1)!);
     const updatedFieldNames = screen.getAllByLabelText("Field name");
     fireEvent.change(updatedFieldNames.at(-1)!, { target: { value: "credits" } });
+    fireEvent.blur(updatedFieldNames.at(-1)!);
     fireEvent.change(screen.getAllByLabelText("Value type")[3], { target: { value: "number" } });
     fireEvent.change(screen.getAllByLabelText("Value")[1], { target: { value: "4" } });
     fireEvent.change(screen.getByLabelText(/Effective from/i), { target: { value: "2026-07-01" } });
