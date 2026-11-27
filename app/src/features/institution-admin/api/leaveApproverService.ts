@@ -48,6 +48,14 @@ export const leaveApproverService = {
     return res.data;
   },
 
+  async listPrincipalApproverCandidates(tenantId: string, institutionId: string, approverKind: ApproverKind): Promise<LeaveApproverCandidate[]> {
+    const res = await api.get<LeaveApproverCandidate[]>(
+      `/api/tenants/${tenantId}/institutions/${institutionId}/principal-leave-approver/eligible-users`,
+      { params: { approverKind } }
+    );
+    return res.data;
+  },
+
   async getPrincipalLeaveApprover(
     tenantId: string,
     institutionId: string
