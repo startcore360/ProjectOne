@@ -781,7 +781,7 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<DelegationsApprovalsPage />);
 
-    const delegateInput = screen.getByLabelText(/Delegate User Account ID \(UUID\) \*/i);
+    const delegateInput = await screen.findByLabelText(/Choose eligible colleague/i);
     const startInput = screen.getByLabelText(/Effective From \*/i);
     const endInput = screen.getByLabelText(/Effective Until \*/i);
 
@@ -993,9 +993,9 @@ describe("Institution setup action screens", () => {
     // Test subject allocation tab
     fireEvent.click(screen.getByRole("tab", { name: /Subject allocations/i }));
     fireEvent.click(screen.getByRole("button", { name: "+ Allocate Subject" }));
-    fireEvent.change(screen.getByLabelText(/Institution UUID \*/i), { target: { value: "inst-1" } });
-    fireEvent.change(screen.getByLabelText(/Course Offering UUID \*/i), { target: { value: "off-1" } });
-    fireEvent.change(screen.getByLabelText(/Teacher Staff Assignment UUID \*/i), { target: { value: "staff-1" } });
+    fireEvent.change(await screen.findByLabelText(/Institution \\*/i), { target: { value: "inst-1" } });
+    fireEvent.change(await screen.findByLabelText(/Course offering \\*/i), { target: { value: "off-1" } });
+    fireEvent.change(await screen.findByLabelText(/Teacher \\*/i), { target: { value: "staff-1" } });
     fireEvent.click(screen.getByRole("button", { name: "Allocate Subject" }));
 
     await waitFor(() => {
@@ -1005,9 +1005,9 @@ describe("Institution setup action screens", () => {
     // Test year-end promotions tab
     fireEvent.click(screen.getByRole("tab", { name: /Year-end promotions/i }));
     fireEvent.click(screen.getByRole("button", { name: /\+ New Promotion Run/i }));
-    fireEvent.change(screen.getByLabelText(/Institution UUID \*/i), { target: { value: "inst-1" } });
-    fireEvent.change(screen.getByLabelText(/From Session UUID \*/i), { target: { value: "sess-1" } });
-    fireEvent.change(screen.getByLabelText(/To Session UUID \*/i), { target: { value: "sess-2" } });
+    fireEvent.change(await screen.findByLabelText(/Institution \\*/i), { target: { value: "inst-1" } });
+    fireEvent.change(await screen.findByLabelText(/Promote students from \\*/i), { target: { value: "sess-1" } });
+    fireEvent.change(await screen.findByLabelText(/Promote students to \\*/i), { target: { value: "sess-2" } });
     fireEvent.click(screen.getByRole("button", { name: /Create Run/i }));
 
     await waitFor(() => {
