@@ -282,12 +282,12 @@ export function UserListPage() {
   const load = async () => {
     if (scope.scopeType !== "TENANT" && !scope.institutionId) {
       setState("error");
-      setErrorMessage("Enter an institution ID for this scope before loading users.");
+      setErrorMessage("Choose an institution for this scope before loading users.");
       return;
     }
     if (scope.scopeType === "DEPARTMENT" && !scope.departmentId) {
       setState("error");
-      setErrorMessage("Enter a department ID for this scope before loading users.");
+      setErrorMessage("Choose a department for this scope before loading users.");
       return;
     }
     setState("loading");
