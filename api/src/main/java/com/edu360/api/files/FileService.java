@@ -56,6 +56,12 @@ public class FileService {
 
     @Transactional
     public FileUploadResponse upload(TenantPrincipal principal, MultipartFile upload, String purposeValue,
+            UUID requestedInstitutionId) {
+        return upload(principal, upload, purposeValue, requestedInstitutionId, null, null);
+    }
+
+    @Transactional
+    public FileUploadResponse upload(TenantPrincipal principal, MultipartFile upload, String purposeValue,
             UUID requestedInstitutionId, String recordType, UUID recordId) {
         if (upload == null || upload.isEmpty()) throw new IllegalArgumentException("A non-empty file is required.");
         if (upload.getSize() > MAX_BYTES) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "Files may not exceed 10 MiB.");
