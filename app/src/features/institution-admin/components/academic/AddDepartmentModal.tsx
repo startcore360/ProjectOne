@@ -39,33 +39,25 @@ export function AddDepartmentModal({
       description="Create an academic department for this college."
       size="sm"
     >
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
-        {error && (
-          <div style={{ marginBottom: "1rem" }}>
-            <Notice tone="danger">{error}</Notice>
-          </div>
-        )}
-        <div style={{ marginBottom: "1rem" }}>
-          <TextField
-            id="dept-code-input"
-            label="Department Code"
-            required
-            value={deptCode}
-            onChange={(e) => setDeptCode(e.target.value)}
-            placeholder="e.g. CSE"
-          />
-        </div>
-        <div style={{ marginBottom: "1rem" }}>
-          <TextField
-            id="dept-name-input"
-            label="Department Name"
-            required
-            value={deptName}
-            onChange={(e) => setDeptName(e.target.value)}
-            placeholder="e.g. Computer Science and Engineering"
-          />
-        </div>
-        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+      <form onSubmit={handleSubmit} className="app-form">
+        {error && <Notice tone="danger">{error}</Notice>}
+        <TextField
+          id="dept-code-input"
+          label="Department Code"
+          required
+          value={deptCode}
+          onChange={(e) => setDeptCode(e.target.value)}
+          placeholder="e.g. CSE"
+        />
+        <TextField
+          id="dept-name-input"
+          label="Department Name"
+          required
+          value={deptName}
+          onChange={(e) => setDeptName(e.target.value)}
+          placeholder="e.g. Computer Science and Engineering"
+        />
+        <footer className="app-modal__footer">
           <Button
             type="button"
             variant="secondary"
