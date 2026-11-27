@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import { useFormErrors } from "../../../../hooks";
 import {
   institutionService,
   type AcademicSessionItem,
+  type InstitutionItem,
   type SectionItem,
 } from "../../../institution-admin/api/institutionService";
 import {
@@ -12,12 +13,6 @@ import {
   type StudentCreatePayload,
   type StudentProfileResponse,
 } from "../../api/userManagementService";
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isUuid(value: string): boolean {
-  return UUID_PATTERN.test(value.trim());
-}
 
 function isActive(value: string): boolean {
   return value.toUpperCase() === "ACTIVE";
@@ -33,6 +28,9 @@ export interface CreateStudentModalProps {
 export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: CreateStudentModalProps) {
   const [fullName, setFullName] = useState("");
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionsLoading, setInstitutionsLoading] = useState(false);
+  const [institutionsError, setInstitutionsError] = useState("");
   const [sectionId, setSectionId] = useState("");
   const [academicSessionId, setAcademicSessionId] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -46,6 +44,27 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
   const [submitting, setSubmitting] = useState(false);
   const { fieldErrors, formError, handleApiError, clearFieldError, clearAll, setFieldError } = useFormErrors();
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    setInstitutionsLoading(true);
+    setInstitutionsError("");
+    institutionService.listInstitutions(tenantId)
+      .then((response) => {
+        if (active) setInstitutions(response.items ?? []);
+      })
+      .catch((error) => {
+        if (active) {
+          setInstitutions([]);
+          setInstitutionsError(getApiErrorMessage(error) || "Institutions could not be loaded.");
+        }
+      })
+      .finally(() => {
+        if (active) setInstitutionsLoading(false);
+      });
+    return () => { active = false; };
+  }, [tenantId, isOpen]);
+
   const activeSessions = sessions.filter((session) =>
     isActive(session.status) && Boolean(session.startDate) && Boolean(session.endDate)
   );
@@ -53,17 +72,9 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
     isActive(section.status) && section.academicSessionId === academicSessionId
   );
   const hasCurrentOptions = optionsLoadedFor === institutionId.trim();
-  const canChooseSession = hasCurrentOptions && activeSessions.length > 0;
-  const canChooseSection = hasCurrentOptions && activeSectionsForSession.length > 0;
 
-  const loadAcademicOptions = async () => {
-    const selectedInstitutionId = institutionId.trim();
+  const loadAcademicOptions = async (selectedInstitutionId: string) => {
     setOptionsError("");
-    if (!isUuid(selectedInstitutionId)) {
-      setFieldError("institutionId", "Enter a valid institution UUID before loading academic options.");
-      setOptionsLoadedFor("");
-      return;
-    }
     setOptionsLoading(true);
     setOptionsLoadedFor("");
     setSections([]);
@@ -80,9 +91,9 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
       setSessions(Array.isArray(sessionRows) ? sessionRows : []);
       setOptionsLoadedFor(selectedInstitutionId);
       if (!sessionRows.some((session) => isActive(session.status) && session.startDate && session.endDate)) {
-        setOptionsError("No active academic sessions with start and end dates were returned. You can enter a known session UUID manually.");
+        setOptionsError("No active academic sessions with start and end dates are available for this institution.");
       } else if (!sectionRows.some((section) => isActive(section.status))) {
-        setOptionsError("No active sections were returned for this institution. You can enter a known section UUID manually.");
+        setOptionsError("No active sections are available for this institution.");
       }
     } catch (error) {
       setOptionsLoadedFor(selectedInstitutionId);
@@ -103,37 +114,31 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
     clearFieldError("institutionId");
     clearFieldError("sectionId");
     clearFieldError("academicSessionId");
+    if (value) void loadAcademicOptions(value);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     clearAll();
-    const requiredIds: Array<[keyof StudentCreatePayload, string]> = [
-      ["institutionId", institutionId],
-      ["sectionId", sectionId],
-      ["academicSessionId", academicSessionId],
-    ];
     let invalid = false;
-    for (const [field, value] of requiredIds) {
-      if (!isUuid(value)) {
-        setFieldError(field, "Enter a valid UUID.");
-        invalid = true;
-      }
+    if (!institutions.some((institution) => institution.institutionId === institutionId)) {
+      setFieldError("institutionId", "Choose an institution from the list.");
+      invalid = true;
+    }
+    if (!academicSessionId || !activeSessions.some((session) => session.academicSessionId === academicSessionId)) {
+      setFieldError("academicSessionId", "Choose an active academic session.");
+      invalid = true;
+    }
+    if (!sectionId || !activeSectionsForSession.some((section) => section.sectionId === sectionId)) {
+      setFieldError("sectionId", "Choose an active section in the selected session.");
+      invalid = true;
     }
     if (!fullName.trim()) {
       setFieldError("fullName", "Enter the student's full name.");
       invalid = true;
     }
-    if (isUuid(institutionId) && optionsLoadedFor !== institutionId.trim() && !optionsError) {
-      setFieldError("institutionId", "Load the institution's active sessions and sections before continuing.");
-      invalid = true;
-    }
-    if (canChooseSession && !activeSessions.some((session) => session.academicSessionId === academicSessionId)) {
-      setFieldError("academicSessionId", "Choose an active academic session.");
-      invalid = true;
-    }
-    if (canChooseSection && !activeSectionsForSession.some((section) => section.sectionId === sectionId)) {
-      setFieldError("sectionId", "Choose an active section in the selected session.");
+    if (!hasCurrentOptions || optionsLoading || optionsError) {
+      setFieldError("institutionId", "The institution's academic options must load successfully before continuing.");
       invalid = true;
     }
     if (invalid) return;
@@ -153,6 +158,7 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
       const { data } = await userManagementService.createStudentProfile(tenantId, payload);
       setFullName("");
       setInstitutionId("");
+      setInstitutions([]);
       setSectionId("");
       setAcademicSessionId("");
       setDateOfBirth("");
@@ -193,86 +199,61 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
             placeholder="Enter the student's legal name"
             error={fieldErrors.fullName}
           />
-          <div className="student-academic-lookup">
-            <TextField
-              id="student-institution-id"
-              label="Institution ID (UUID)"
-              required
-              value={institutionId}
-              onChange={(event) => handleInstitutionChange(event.target.value)}
-              placeholder="Paste institution UUID"
-              hint="Enter the institution ID supplied by your academic administrator."
-              error={fieldErrors.institutionId}
-            />
-            <div className="app-inline-actions">
-              <Button type="button" variant="secondary" size="sm" onClick={() => void loadAcademicOptions()} busy={optionsLoading} disabled={optionsLoading || !isUuid(institutionId)}>
-                {optionsLoading ? "Loading options…" : "Load sessions and sections"}
-              </Button>
-            </div>
-          </div>
+          <SelectField
+            id="student-institution"
+            label="Institution"
+            required
+            value={institutionId}
+            disabled={institutionsLoading || institutions.length === 0}
+            onChange={(event) => handleInstitutionChange(event.target.value)}
+            error={fieldErrors.institutionId}
+          >
+            <option value="">{institutionsLoading ? "Loading institutions…" : "Choose an institution"}</option>
+            {institutions.map((institution) => (
+              <option key={institution.institutionId} value={institution.institutionId}>
+                {institution.institutionName} · {institution.institutionCode}
+              </option>
+            ))}
+          </SelectField>
 
-          {canChooseSession ? (
-            <SelectField
-              id="student-session-id"
-              label="Academic session"
-              required
-              value={academicSessionId}
-              onChange={(event) => {
-                setAcademicSessionId(event.target.value);
-                setSectionId("");
-                clearFieldError("academicSessionId");
-                clearFieldError("sectionId");
-              }}
-              error={fieldErrors.academicSessionId}
-            >
-              <option value="">Choose an active session</option>
-              {activeSessions.map((session) => (
-                <option key={session.academicSessionId} value={session.academicSessionId}>
-                  {session.sessionLabel} ({session.startDate} – {session.endDate})
-                </option>
-              ))}
-            </SelectField>
-          ) : (
-            <TextField
-              id="student-session-id"
-              label="Academic session ID (UUID)"
-              required
-              value={academicSessionId}
-              onChange={(event) => { setAcademicSessionId(event.target.value); clearFieldError("academicSessionId"); }}
-              placeholder="Paste active academic session UUID"
-              hint="Use a session ID from your academic calendar."
-              error={fieldErrors.academicSessionId}
-            />
-          )}
+          <SelectField
+            id="student-session-id"
+            label="Academic session"
+            required
+            value={academicSessionId}
+            disabled={!hasCurrentOptions || optionsLoading || activeSessions.length === 0}
+            onChange={(event) => {
+              setAcademicSessionId(event.target.value);
+              setSectionId("");
+              clearFieldError("academicSessionId");
+              clearFieldError("sectionId");
+            }}
+            error={fieldErrors.academicSessionId}
+          >
+            <option value="">{optionsLoading ? "Loading sessions…" : "Choose an active session"}</option>
+            {activeSessions.map((session) => (
+              <option key={session.academicSessionId} value={session.academicSessionId}>
+                {session.sessionLabel} ({session.startDate} – {session.endDate})
+              </option>
+            ))}
+          </SelectField>
 
-          {canChooseSection ? (
-            <SelectField
-              id="app-section-id"
-              label="Section"
-              required
-              value={sectionId}
-              onChange={(event) => { setSectionId(event.target.value); clearFieldError("sectionId"); }}
-              error={fieldErrors.sectionId}
-            >
-              <option value="">Choose an active section</option>
-              {activeSectionsForSession.map((section) => (
-                <option key={section.sectionId} value={section.sectionId}>
-                  Section {section.sectionName}
-                </option>
-              ))}
-            </SelectField>
-          ) : (
-            <TextField
-              id="app-section-id"
-              label="Section ID (UUID)"
-              required
-              value={sectionId}
-              onChange={(event) => { setSectionId(event.target.value); clearFieldError("sectionId"); }}
-              placeholder="Paste active section UUID"
-              hint="Use a section ID from the selected academic session."
-              error={fieldErrors.sectionId}
-            />
-          )}
+          <SelectField
+            id="app-section-id"
+            label="Section"
+            required
+            value={sectionId}
+            disabled={!academicSessionId || optionsLoading || activeSectionsForSession.length === 0}
+            onChange={(event) => { setSectionId(event.target.value); clearFieldError("sectionId"); }}
+            error={fieldErrors.sectionId}
+          >
+            <option value="">{optionsLoading ? "Loading sections…" : "Choose an active section"}</option>
+            {activeSectionsForSession.map((section) => (
+              <option key={section.sectionId} value={section.sectionId}>
+                Section {section.sectionName}
+              </option>
+            ))}
+          </SelectField>
 
           <TextField
             id="student-roll-number"
@@ -300,16 +281,31 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
             error={fieldErrors.admissionDate}
           />
         </div>
+        {institutionsError && (
+          <Notice tone="warning">
+            <div className="app-feedback-row">
+              <span>{institutionsError}</span>
+              <Button type="button" variant="secondary" size="sm" onClick={() => {
+                setInstitutionsError("");
+                setInstitutionsLoading(true);
+                institutionService.listInstitutions(tenantId)
+                  .then((response) => setInstitutions(response.items ?? []))
+                  .catch((error) => setInstitutionsError(getApiErrorMessage(error) || "Institutions could not be loaded."))
+                  .finally(() => setInstitutionsLoading(false));
+              }} disabled={institutionsLoading} busy={institutionsLoading}>Retry</Button>
+            </div>
+          </Notice>
+        )}
         {optionsError && (
           <Notice tone="warning">
             <div className="app-feedback-row">
-              <span>{optionsError} You may enter known UUIDs manually, but the server will verify the institution, session and section are active and belong together.</span>
-              <Button type="button" variant="secondary" size="sm" onClick={() => void loadAcademicOptions()} disabled={optionsLoading} busy={optionsLoading}>Retry</Button>
+              <span>{optionsError} Choose an institution with an active session and section, or ask your academic administrator to configure them.</span>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void loadAcademicOptions(institutionId)} disabled={optionsLoading || !institutionId} busy={optionsLoading}>Retry</Button>
             </div>
           </Notice>
         )}
         {optionsLoadedFor && !optionsError && activeSessions.length > 0 && activeSectionsForSession.length === 0 && academicSessionId && (
-          <Notice tone="warning">No active sections were returned for this session. Enter a known section UUID if one has already been created.</Notice>
+          <Notice tone="warning">No active sections are available in the selected session.</Notice>
         )}
         <p className="app-note">
           The institution and academic session must be active, and the section must belong to both. Student profiles are created separately from general user accounts; login provisioning follows institution and class settings.

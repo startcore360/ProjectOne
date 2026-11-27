@@ -11,6 +11,7 @@ import {
   PageHeader,
   Panel,
   SearchBox,
+  SelectField,
   SkeletonCard,
   SkeletonTable,
   SkeletonText,
@@ -21,6 +22,7 @@ import { useAppSelector } from "../../../store/hooks";
 import { MfaResetDialog } from "../../auth/components/MfaResetDialog";
 import { serverMessage } from "../../auth/serverMessage";
 import { UserLimitBanner } from "../components/users/UserLimitBanner";
+import { institutionService, type InstitutionItem } from "../../institution-admin/api/institutionService";
 import { getApiErrorMessage, type ApiError } from "../../../services/apiHelper";
 import {
   userManagementService,
@@ -280,12 +282,12 @@ export function UserListPage() {
   const load = async () => {
     if (scope.scopeType !== "TENANT" && !scope.institutionId) {
       setState("error");
-      setErrorMessage("Enter an institution ID for this scope before loading users.");
+      setErrorMessage("Choose an institution for this scope before loading users.");
       return;
     }
     if (scope.scopeType === "DEPARTMENT" && !scope.departmentId) {
       setState("error");
-      setErrorMessage("Enter a department ID for this scope before loading users.");
+      setErrorMessage("Choose a department for this scope before loading users.");
       return;
     }
     setState("loading");
@@ -345,7 +347,7 @@ export function UserListPage() {
             void load();
           }}
         >
-          <ScopeFields scope={scope} onChange={setScope} idPrefix="list" />
+          <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="list" />
           <div>
             <Button type="submit" busy={state === "loading"}>
               Load users
@@ -531,6 +533,9 @@ export function UserDetailPage() {
   const [saveBanner, setSaveBanner] = useState<ActionBanner>(null);
 
   const [actionInstitutionId, setActionInstitutionId] = useState(scope.institutionId ?? "");
+  const [actionInstitutions, setActionInstitutions] = useState<InstitutionItem[]>([]);
+  const [actionInstitutionsLoading, setActionInstitutionsLoading] = useState(false);
+  const [actionInstitutionsError, setActionInstitutionsError] = useState("");
   const [confirming, setConfirming] = useState<"deactivate" | "reset" | "unlock" | "mfa" | null>(null);
   const [mfaError, setMfaError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
@@ -539,6 +544,27 @@ export function UserDetailPage() {
   const [copyNotice, setCopyNotice] = useState("");
   const latestUserIdRef = useRef<string | undefined>(userId);
   latestUserIdRef.current = userId;
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let active = true;
+    setActionInstitutionsLoading(true);
+    setActionInstitutionsError("");
+    institutionService.listInstitutions(tenantId)
+      .then((response) => {
+        if (active) setActionInstitutions(response.items ?? []);
+      })
+      .catch((error) => {
+        if (active) {
+          setActionInstitutions([]);
+          setActionInstitutionsError(getApiErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (active) setActionInstitutionsLoading(false);
+      });
+    return () => { active = false; };
+  }, [tenantId]);
 
   const load = async (scopeToUse: ActingScope, targetUserId = userId) => {
     if (!tenantId || !targetUserId) return;
@@ -711,7 +737,7 @@ export function UserDetailPage() {
             style={{ flexDirection: "column", alignItems: "stretch" }}
             onSubmit={submitScope}
           >
-            <ScopeFields scope={scope} onChange={setScope} idPrefix="detail" />
+            <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="detail" />
             <div>
               <Button type="submit">Load user</Button>
             </div>
@@ -799,14 +825,22 @@ export function UserDetailPage() {
             description="Account deactivation and password recovery are always checked against your own institution scope."
           >
             <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-              <TextField
-                id="action-institution-id"
-                label="Institution ID"
+              <SelectField
+                id="action-institution"
+                label="Institution"
                 required
                 value={actionInstitutionId}
+                disabled={actionInstitutionsLoading || actionInstitutions.length === 0}
                 onChange={(e) => setActionInstitutionId(e.target.value)}
-                placeholder="UUID of your institution"
-              />
+              >
+                <option value="">{actionInstitutionsLoading ? "Loading institutions…" : "Choose an institution"}</option>
+                {actionInstitutions.map((institution) => (
+                  <option key={institution.institutionId} value={institution.institutionId}>
+                    {institution.institutionName} · {institution.institutionCode}
+                  </option>
+                ))}
+              </SelectField>
+              {actionInstitutionsError && <p className="app-note" role="alert">{actionInstitutionsError}</p>}
               <div
                 style={{
                   display: "flex",

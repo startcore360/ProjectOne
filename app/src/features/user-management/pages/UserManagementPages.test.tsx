@@ -2,12 +2,20 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
 import { userManagementService } from "../api/userManagementService";
 import { GuardianManagementPanel, StudentStatusPanel, UserDetailPage, UserListPage } from "./UserManagementPages";
 import { academicService } from "../../institution-admin/api/academicService";
 import { guardianService } from "../api/guardianService";
+import { institutionService } from "../../institution-admin/api/institutionService";
+
+vi.mock("../../institution-admin/api/institutionService", () => ({
+  institutionService: {
+    listInstitutions: vi.fn(),
+    listDepartments: vi.fn(),
+  },
+}));
 
 vi.mock("../../institution-admin/api/academicService", () => ({
   academicService: {
@@ -349,6 +357,14 @@ describe("UserListPage", () => {
 });
 
 describe("UserDetailPage", () => {
+  beforeEach(() => {
+    vi.mocked(institutionService.listInstitutions).mockResolvedValue({ items: [{
+      institutionId: "inst-1",
+      institutionName: "Northbridge College",
+      institutionCode: "NBC",
+    }] } as never);
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -384,8 +400,9 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: "inst-1" } });
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Reset password$/i }));
 
     const confirmDialog = screen.getByRole("dialog", { name: /Reset this user's password\?/i });
@@ -405,8 +422,9 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: "inst-1" } });
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Deactivate user$/i }));
 
     const confirmDialog = screen.getByRole("dialog", { name: /Deactivate this user\?/i });
@@ -427,8 +445,9 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: "inst-1" } });
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Unlock account$/i }));
 
     const confirmDialog = screen.getByRole("dialog", { name: /Unlock this user's account\?/i });

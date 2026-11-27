@@ -140,7 +140,7 @@ export function CreateUserModal({
 
         <div style={{ marginTop: "1rem" }}>
           <Kicker>ACCESS SCOPE</Kicker>
-          <ScopeFields scope={scope} onChange={setScope} idPrefix="create-user" />
+          <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="create-user" />
         </div>
 
         <div
