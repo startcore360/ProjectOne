@@ -430,7 +430,7 @@ describe("Institution setup action screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /Add item/i }));
     const itemType = screen.getAllByLabelText("Value type")[1];
     fireEvent.change(itemType, { target: { value: "object" } });
-    fireEvent.click(screen.getAllByRole("button", { name: /Add field/i }).at(-1)!);
+    fireEvent.click(screen.getAllByRole("button", { name: /Add field/i })[0]);
     const fieldNames = screen.getAllByLabelText("Field name");
     fireEvent.change(fieldNames.at(-1)!, { target: { value: "code" } });
     fireEvent.blur(fieldNames.at(-1)!);
