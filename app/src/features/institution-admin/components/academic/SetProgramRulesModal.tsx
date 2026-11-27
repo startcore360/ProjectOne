@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextAreaField, DateField } from "../../../../design-system/components";
+import { Button, Modal, Notice, DateField } from "../../../../design-system/components";
+import { JsonDocumentBuilder, type DocumentValue } from "../../../../design-system/components/JsonDocumentBuilder";
 import { getLocalDateString } from "../../../../utils/dateUtils";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 
@@ -16,7 +17,7 @@ export function SetProgramRulesModal({
   onSubmit,
   saving,
 }: SetProgramRulesModalProps) {
-  const [ruleJson, setRuleJson] = useState('{\n  "minCredits": 160,\n  "maxYears": 6\n}');
+  const [ruleDocument, setRuleDocument] = useState<Record<string, DocumentValue>>({ minCredits: 160, maxYears: 6 });
   const [ruleEffectiveFrom, setRuleEffectiveFrom] = useState(getLocalDateString());
   const [modalError, setModalError] = useState("");
 
@@ -29,7 +30,7 @@ export function SetProgramRulesModal({
     e.preventDefault();
     setModalError("");
     try {
-      await onSubmit(ruleJson, ruleEffectiveFrom);
+      await onSubmit(JSON.stringify(ruleDocument), ruleEffectiveFrom);
       handleClose();
     } catch (err: unknown) {
       setModalError(getApiErrorMessage(err));
@@ -52,14 +53,11 @@ export function SetProgramRulesModal({
           </div>
         )}
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <TextAreaField
-            id="rule-json"
-            label="Rules JSON"
-            rows={4}
-            value={ruleJson}
-            onChange={(e) => setRuleJson(e.target.value)}
-            required
-            style={{ fontFamily: "monospace" }}
+          <JsonDocumentBuilder
+            title="Programme requirements"
+            description="Add the requirements that apply to this programme. You can use numbers, text, yes/no values, groups and lists."
+            value={ruleDocument}
+            onChange={setRuleDocument}
           />
         </div>
         <div style={{ marginBottom: "var(--space-4)" }}>
