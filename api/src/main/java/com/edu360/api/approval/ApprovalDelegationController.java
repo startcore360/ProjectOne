@@ -31,6 +31,15 @@ public class ApprovalDelegationController {
 
     private final ApprovalDelegationService delegationService;
 
+    @GetMapping({"/v1/tenants/{tenantId}/delegations/eligible-users", "/api/tenants/{tenantId}/delegations/eligible-users"})
+    @Operation(summary = "List active, in-scope accounts eligible to receive delegated approvals")
+    public ResponseEntity<List<EligibleDelegateResponse>> listEligibleDelegates(
+            @PathVariable UUID tenantId,
+            Authentication authentication) {
+        TenantPrincipal principal = extractPrincipal(authentication, tenantId);
+        return ResponseEntity.ok(delegationService.listEligibleDelegates(tenantId, principal));
+    }
+
     @GetMapping({"/v1/tenants/{tenantId}/delegations", "/api/tenants/{tenantId}/delegations"})
     @Operation(summary = "List approval delegations for the current authenticated user")
     public ResponseEntity<List<DelegationResponse>> listDelegations(
