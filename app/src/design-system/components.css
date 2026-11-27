@@ -3627,3 +3627,41 @@ html:has(.app-shell--tenant) .app-modal form :is(.platform-form-field, .app-form
     gap: var(--space-4);
   }
 }
+
+
+/* Tenant dialog rhythm: a predictable vertical form stack; the modal body owns
+   outer padding, while field groups own their internal spacing. */
+html:has(.app-shell--tenant) .app-modal__body > form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+html:has(.app-shell--tenant) .app-modal__body > form > div[style*="margin"] {
+  margin: 0 !important;
+  min-width: 0;
+}
+
+html:has(.app-shell--tenant) .app-modal__body > form .eds-field {
+  margin-top: 0;
+}
+
+html:has(.app-shell--tenant) .app-modal__body > form .app-form-grid,
+html:has(.app-shell--tenant) .app-modal__body > form .platform-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+html:has(.app-shell--tenant) .app-modal__body > form > footer {
+  margin-top: 0;
+  gap: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  html:has(.app-shell--tenant) .app-modal__body > form .app-form-grid,
+  html:has(.app-shell--tenant) .app-modal__body > form .platform-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
