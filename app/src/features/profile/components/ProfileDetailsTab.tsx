@@ -48,8 +48,12 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Guardian mobile changes are intentionally unavailable until phone verification is connected.
+  // The API enforces WF-30 with PHONE_VERIFICATION_UNAVAILABLE; do not present an editable field
+  // that the server is guaranteed to reject.
+  const isGuardian = profile.userType === "GUARDIAN";
   const dirty =
-    editing && (displayName !== profile.displayName || (!isPlatform && mobile !== (profile.mobile ?? "")));
+    editing && (displayName !== profile.displayName || (!isPlatform && !isGuardian && mobile !== (profile.mobile ?? "")));
 
   useEffect(() => {
     onDirtyChange(dirty);
@@ -73,7 +77,7 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
   const validate = (): FieldErrors => {
     const errors: FieldErrors = {};
     if (!displayName.trim()) errors.displayName = "Display name must not be blank";
-    if (!isPlatform && mobile && !/^\+?[1-9]\d{6,14}$/.test(mobile)) {
+    if (!isPlatform && !isGuardian && mobile && !/^\+?[1-9]\d{6,14}$/.test(mobile)) {
       errors.mobile = "Mobile must be a valid E.164-style number";
     }
     return errors;
@@ -172,7 +176,7 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
               onChange={(e) => setDisplayName(e.target.value)}
               error={fieldErrors.displayName}
             />
-            {!isPlatform && (
+            {!isPlatform && !isGuardian && (
               <TextField
                 id="profile-mobile"
                 label="Mobile"
@@ -184,8 +188,20 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
               />
             )}
           </div>
-          <dl className="app-profile-fields app-profile-fields--locked">{lockedRows}</dl>
-          <p className="app-hint">Email and role are managed by your administrator.</p>
+          <dl className="app-profile-fields app-profile-fields--locked">
+            {!isPlatform && isGuardian && (
+              <div className="app-profile-field">
+                <dt>Mobile <span className="app-profile-lock" title="Phone verification is required"><LockIcon /></span></dt>
+                <dd>{profile.mobile || <span className="app-profile-empty">Not added</span>}</dd>
+              </div>
+            )}
+            {lockedRows}
+          </dl>
+          <p className="app-hint">
+            {isGuardian
+              ? "Mobile updates for guardian accounts require phone verification, which is not available yet. Contact your school office to change this number. Email and role are managed by your administrator."
+              : "Email and role are managed by your administrator."}
+          </p>
           <div className="app-profile-actions">
             <Button type="button" variant="tertiary" onClick={cancel} disabled={saving}>
               Cancel
