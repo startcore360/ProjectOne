@@ -42,6 +42,8 @@ vi.mock("../api/institutionService", () => ({
 vi.mock("../api/leaveApproverService", () => ({
   leaveApproverService: {
     getGoLiveCheck: vi.fn(),
+    listPrincipalApproverCandidates: vi.fn(),
+    listVcApproverCandidates: vi.fn(),
     setPrincipalLeaveApprover: vi.fn(),
     getPrincipalLeaveApprover: vi.fn(),
     setVcLeaveApprover: vi.fn(),
@@ -430,11 +432,12 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     await waitFor(() => {
       expect(screen.getByText(/Go-live readiness warning:/i)).toBeInTheDocument();
       expect(screen.getByText(/Vice-Chancellor leave approver has not been configured for this university/i)).toBeInTheDocument();
-      expect(screen.getByText(/Principal leave approver has not been configured for institution inst-2/i)).toBeInTheDocument();
+      expect(screen.getByText(/Principal leave approver has not been configured for Northbridge School of Commerce/i)).toBeInTheDocument();
     });
   });
 
   it("opens modal and configures Principal leave approver (Story #45: PRINCIPAL_LEAVE_APPROVER_SET)", async () => {
+    vi.mocked(leaveApproverService.listPrincipalApproverCandidates).mockResolvedValue([{ userAccountId: "00000000-0000-0000-0000-000000000009", displayName: "Asha Rao", email: "asha@example.edu" }]);
     vi.mocked(leaveApproverService.setPrincipalLeaveApprover).mockResolvedValue({
       leaveApproverSettingId: "setting-1",
       tenantId: "tenant-1",
@@ -486,6 +489,7 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
   });
 
   it("opens modal and configures Vice-Chancellor leave approver (Story #46: VC_LEAVE_APPROVER_SET)", async () => {
+    vi.mocked(leaveApproverService.listVcApproverCandidates).mockResolvedValue([{ userAccountId: "00000000-0000-0000-0000-000000000010", displayName: "Ravi Menon", email: "ravi@example.edu" }]);
     vi.mocked(leaveApproverService.setVcLeaveApprover).mockResolvedValue({
       leaveApproverSettingId: "setting-vc",
       tenantId: "tenant-1",
