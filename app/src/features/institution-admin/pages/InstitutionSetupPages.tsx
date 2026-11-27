@@ -1567,7 +1567,7 @@ export function AcademicStructurePage() {
   const [catalogBusy, setCatalogBusy] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [curriculumVersions, setCurriculumVersions] = useState<CurriculumVersionItem[]>([]);
-  const [curriculumJsonDraft, setCurriculumJsonDraft] = useState("{\n  \"courses\": []\n}");
+  const [curriculumDocument, setCurriculumDocument] = useState<Record<string, DocumentValue>>({ courses: [] });
   const [curriculumEffectiveFrom, setCurriculumEffectiveFrom] = useState("");
   const [curriculumEffectiveTo, setCurriculumEffectiveTo] = useState("");
   const [curriculumBusy, setCurriculumBusy] = useState(false);
