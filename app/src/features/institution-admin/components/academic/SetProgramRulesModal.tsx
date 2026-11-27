@@ -47,12 +47,8 @@ export function SetProgramRulesModal({
       size="lg"
     >
       <form onSubmit={handleSubmit} className="app-form" noValidate>
-        {modalError && (
-          <div style={{ marginBottom: "var(--space-3)" }}>
-            <Notice tone="danger">{modalError}</Notice>
-          </div>
-        )}
-        <div style={{ marginBottom: "var(--space-3)" }}>
+        {modalError && <Notice tone="danger">{modalError}</Notice>}
+        <div>
           <JsonDocumentBuilder
             title="Programme requirements"
             description="Add the requirements that apply to this programme. You can use numbers, text, yes/no values, groups and lists."
@@ -76,7 +72,7 @@ export function SetProgramRulesModal({
           <Button type="submit" busy={saving}>
             {saving ? "Saving..." : "Save Rules"}
           </Button>
-        </div>
+        </footer>
       </form>
     </Modal>
   );
