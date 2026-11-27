@@ -3319,3 +3319,10 @@ button:not(:disabled):active,
   .eds-document-node__remove { justify-self: start; }
   .eds-document-node__children { padding-inline-start: var(--space-2); }
 }
+
+
+/* Single-column, sectioned forms follow the EDU 360 product-form pattern. */
+.app-form-single-column { display: grid; gap: var(--space-4); min-width: 0; }
+.app-form-single-column > .eds-field { margin-top: 0; }
+.app-form-section { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-4); border-top: var(--border-width) solid var(--color-border-divider); }
+.app-form-section > h3 { margin: 0; font-size: var(--fs-h4); line-height: var(--lh-h4); }
