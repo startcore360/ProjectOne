@@ -1612,7 +1612,7 @@ export function AcademicStructurePage() {
 
   const loadStructureFor = async (id: string) => {
     if (!isValidUuid(id)) {
-      setError("Please enter a valid institution UUID.");
+      setError("Choose a registered institution.");
       return;
     }
     const target = institutions.find((institution) => institution.institutionId === id);
