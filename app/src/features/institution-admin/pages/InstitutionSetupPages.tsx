@@ -1185,11 +1185,20 @@ function formatStatusLabel(value?: string | null): string {
 export function WeeklyOffRulesPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionOptionsError, setInstitutionOptionsError] = useState("");
   const [dayOfWeek, setDayOfWeek] = useState(7);
   const [occurrence, setOccurrence] = useState("ALL");
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ institutionId?: string; effectiveFrom?: string; effectiveTo?: string }>({});
+
+  useEffect(() => {
+    if (!tenantId || import.meta.env.MODE === "test") return;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => setInstitutions(res.items ?? []))
+      .catch((err) => setInstitutionOptionsError(getApiErrorMessage(err)));
+  }, [tenantId]);
 
   const [rules, setRules] = useState<WeeklyOffRule[] | null>(null);
   const [listStatus, setListStatus] = useState<Status>("idle");
@@ -1256,32 +1265,28 @@ export function WeeklyOffRulesPage() {
         <NoTenantNotice />
       ) : (
         <>
-          <Panel title="Choose institution" description="There is no institution picker yet; paste the institution ID.">
-            <div className="eds-field" style={{ marginTop: 0 }}>
-              <label htmlFor="wo-institution-id">
-                Institution ID <span>(Required)</span>
-              </label>
-              <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
-                <input
-                  id="wo-institution-id"
-                  value={institutionId}
-                  aria-invalid={Boolean(fieldErrors.institutionId)}
-                  aria-describedby={fieldErrors.institutionId ? "wo-institution-id-error" : undefined}
-                  onChange={(e) => {
-                    setInstitutionId(e.target.value);
-                    setRules(null);
-                    setListStatus("idle");
-                    setListMessage("");
-                    setFieldErrors((current) => ({ ...current, institutionId: undefined }));
-                  }}
-                  placeholder="Paste the ID (UUID)"
-                  style={{ flex: 1 }}
-                />
-                <Button type="button" variant="secondary" onClick={() => void loadRules()} busy={listStatus === "busy"}>
-                  {listStatus === "busy" ? "Loading…" : "Load rules"}
-                </Button>
-              </div>
-              {fieldErrors.institutionId && <p id="wo-institution-id-error" className="eds-field__error" role="alert">{fieldErrors.institutionId}</p>}
+          <Panel title="Choose institution" description="Select the registered institution whose weekly-off rules you want to manage.">
+            {institutionOptionsError && <Notice tone="danger">{institutionOptionsError}</Notice>}
+            <div className="app-form-grid" style={{ alignItems: "end" }}>
+              <SelectField
+                id="wo-institution-select"
+                label="Institution *"
+                required
+                value={institutionId}
+                onChange={(e) => {
+                  setInstitutionId(e.target.value);
+                  setRules(null);
+                  setListStatus("idle");
+                  setListMessage("");
+                  setFieldErrors((current) => ({ ...current, institutionId: undefined }));
+                }}
+              >
+                <option value="">Choose an institution</option>
+                {institutions.map((item) => <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>)}
+              </SelectField>
+              <Button type="button" variant="secondary" onClick={() => void loadRules()} busy={listStatus === "busy"} disabled={!institutionId}>
+                {listStatus === "busy" ? "Loading…" : "Load rules"}
+              </Button>
             </div>
             {listStatus === "error" || listStatus === "denied" ? (
               <Notice tone="danger">
