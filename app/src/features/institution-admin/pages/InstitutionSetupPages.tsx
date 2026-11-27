@@ -55,6 +55,7 @@ import {
   type SemesterItem,
   type CurriculumVersionItem,
 } from "../api/institutionService";
+import { JsonDocumentBuilder, type DocumentValue } from "../../../design-system/components/JsonDocumentBuilder";
 import { termLockService, type TermLockItem } from "../api/termLockService";
 import {
   approvalDelegationService,
@@ -1534,6 +1535,20 @@ function EditStructureRecordModal({
   );
 }
 
+type DocumentSummaryEntry = { path: string; value: string };
+
+function describeDocument(value: unknown, prefix = ""): DocumentSummaryEntry[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => describeDocument(item, prefix ? `${prefix} · Item ${index + 1}` : `Item ${index + 1}`));
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+      describeDocument(child, prefix ? `${prefix} · ${key}` : key)
+    );
+  }
+  return [{ path: prefix || "Value", value: value === null || value === undefined ? "Not set" : String(value) }];
+}
+
 export function AcademicStructurePage() {
   const authTenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
@@ -1745,15 +1760,7 @@ export function AcademicStructurePage() {
       setCurriculumError("Choose a program and effective-from date.");
       return;
     }
-    let curriculumJson: Record<string, unknown>;
-    try {
-      const parsed: unknown = JSON.parse(curriculumJsonDraft);
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("JSON root must be an object");
-      curriculumJson = parsed as Record<string, unknown>;
-    } catch {
-      setCurriculumError("Curriculum must be valid JSON with an object at the root.");
-      return;
-    }
+    const curriculumJson = curriculumDocument as Record<string, unknown>;
     if (curriculumEffectiveTo && curriculumEffectiveTo < curriculumEffectiveFrom) {
       setCurriculumError("Effective-to date must be on or after effective-from date.");
       return;
@@ -2360,8 +2367,12 @@ export function AcademicStructurePage() {
               </div>
               {!isSupportSession && (
                 <form onSubmit={createCurriculumVersion}>
-                  <TextAreaField id="curriculum-json" label="Curriculum JSON" required rows={8}
-                    value={curriculumJsonDraft} onChange={(event) => setCurriculumJsonDraft(event.target.value)} />
+                  <JsonDocumentBuilder
+                    title="Curriculum details"
+                    description="Build the curriculum snapshot using courses, groups and other structured fields. The application saves the document in the required format."
+                    value={curriculumDocument}
+                    onChange={setCurriculumDocument}
+                  />
                   <div className="app-form-grid">
                     <TextField id="curriculum-effective-from" label="Effective from" type="date" required
                       value={curriculumEffectiveFrom} onChange={(event) => setCurriculumEffectiveFrom(event.target.value)} />
@@ -2384,8 +2395,15 @@ export function AcademicStructurePage() {
                         <div>{version.effectiveFrom} – {version.effectiveTo ?? "Open-ended"}</div>
                       </div>
                       <details>
-                        <summary>View snapshot</summary>
-                        <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(version.curriculumJson, null, 2)}</pre>
+                        <summary>View curriculum details</summary>
+                        <div className="app-stack" style={{ marginTop: "var(--space-2)" }}>
+                          {describeDocument(version.curriculumJson).map((entry) => (
+                            <div key={entry.path} className="app-list-row">
+                              <span>{entry.path}</span>
+                              <strong>{entry.value}</strong>
+                            </div>
+                          ))}
+                        </div>
                       </details>
                     </div>
                   ))}
@@ -3489,11 +3507,10 @@ export function AcademicGovernancePage() {
             <table className="app-table">
               <thead>
                 <tr>
-                  <th>Rule set</th>
                   <th>Version</th>
-                  <th>Effective From</th>
+                  <th>Effective from</th>
                   <th>Status</th>
-                  <th>Rules (JSON)</th>
+                  <th>Programme requirements</th>
                 </tr>
               </thead>
               <tbody>
@@ -3505,7 +3522,7 @@ export function AcademicGovernancePage() {
                       <td>v{r.versionNo}</td>
                       <td>{r.effectiveFrom}</td>
                       <td><Badge tone={r.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(r.status)}</Badge></td>
-                      <td><code style={{ fontSize: "0.8rem" }}>{r.rules}</code></td>
+                      <td>{describeDocument(r.rules).map((entry) => `${entry.path}: ${entry.value}`).join(" · ") || "No requirements recorded"}</td>
                     </tr>
                   ))
                 )}
