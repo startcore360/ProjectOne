@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
-import { Badge, Button, DataTable, Modal, Notice, TextAreaField, TextField } from "../../../../design-system/components";
+import { useEffect, useState, type FormEvent } from "react";
+import { Badge, Button, DataTable, Modal, Notice, SelectField, TextAreaField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
+import { institutionService, type InstitutionItem } from "../../../institution-admin/api/institutionService";
 import {
   userManagementService,
   type ImportJobResponse,
@@ -22,6 +23,8 @@ export function BulkUploadModal({
 }: BulkUploadModalProps) {
   const [csvContent, setCsvContent] = useState("");
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionsError, setInstitutionsError] = useState("");
   const [validating, setValidating] = useState(false);
   const [starting, setStarting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
@@ -29,6 +32,16 @@ export function BulkUploadModal({
   const [job, setJob] = useState<ImportJobResponse | null>(null);
   const [rowErrors, setRowErrors] = useState<ImportRowErrorResponse[]>([]);
   const [completedMessage, setCompletedMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setInstitutionsError("");
+    institutionService.listInstitutions(tenantId)
+      .then((response) => { if (!cancelled) setInstitutions(response.items ?? []); })
+      .catch((cause: unknown) => { if (!cancelled) setInstitutionsError(getApiErrorMessage(cause)); });
+    return () => { cancelled = true; };
+  }, [tenantId, isOpen]);
 
   const handleDownloadTemplate = async () => {
     setDownloadingTemplate(true);
@@ -184,13 +197,19 @@ export function BulkUploadModal({
           </div>
 
           <div style={{ marginBottom: "1rem" }}>
-            <TextField
-              id="bulk-institution-id"
-              label="Institution ID (Optional for college/school scoped uploads)"
+            <SelectField
+              id="bulk-institution"
+              label="Institution (Optional for university-wide uploads)"
               value={institutionId}
               onChange={(e) => setInstitutionId(e.target.value)}
-              placeholder="UUID of the institution, or leave empty for university scope"
-            />
+              disabled={institutions.length === 0}
+            >
+              <option value="">All institutions / university-wide</option>
+              {institutions.map((item) => (
+                <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>
+              ))}
+            </SelectField>
+            {institutionsError && <Notice tone="danger">{institutionsError}</Notice>}
           </div>
 
           {error && (
