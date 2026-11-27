@@ -3278,3 +3278,20 @@ button:not(:disabled):active,
   transform: scale(0.975);
   transition: transform 0.12s cubic-bezier(0.25, 1, 0.5, 1);
 }
+
+
+/* Role and organisation context in the workspace switcher. */
+.role-switcher__context {
+  display: block;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-tight);
+  overflow-wrap: anywhere;
+}
+.role-switcher--inline .role-switcher__context {
+  max-width: 24ch;
+}
+.role-switcher--stacked .role-switcher__context {
+  margin-top: var(--space-1);
+}
