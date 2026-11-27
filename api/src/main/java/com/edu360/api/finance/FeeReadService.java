@@ -53,7 +53,7 @@ public class FeeReadService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listFeeStructures(UUID tenantId, TenantPrincipal actor, UUID institutionId) {
         authorize(actor, tenantId, institutionId);
-        return jdbc.queryForList("""
+        String sql = """
             SELECT fs.fee_structure_id AS "feeStructureId", fs.institution_id AS "institutionId",
                    fs.academic_session_id AS "academicSessionId", fs.program_year_id AS "programYearId",
                    fs.class_id AS "classId", fs.fee_policy_id AS "feePolicyId", fs.version_no AS "versionNo",
@@ -70,9 +70,12 @@ public class FeeReadService {
                  WHERE i.tenant_id=fs.tenant_id AND i.fee_structure_id=fs.fee_structure_id
               ) inst ON true
              WHERE fs.tenant_id=:tenantId
-               AND (:institutionId IS NULL OR fs.institution_id=:institutionId)
+            """ + (institutionId != null ? "   AND fs.institution_id=:institutionId\n" : "") + """
              ORDER BY fs.institution_id, fs.created_at DESC, fs.version_no DESC
-            """, new MapSqlParameterSource().addValue("tenantId", tenantId).addValue("institutionId", institutionId));
+            """;
+        MapSqlParameterSource params = new MapSqlParameterSource("tenantId", tenantId);
+        if (institutionId != null) params.addValue("institutionId", institutionId);
+        return jdbc.queryForList(sql, params);
     }
 
     @Transactional(readOnly = true)

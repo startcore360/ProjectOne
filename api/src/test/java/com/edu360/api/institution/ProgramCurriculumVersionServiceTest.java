@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,7 +47,7 @@ class ProgramCurriculumVersionServiceTest {
     @BeforeEach
     void setUp() {
         service = new ProgramCurriculumVersionService(versionRepository, programRepository,
-                permissionEvaluatorService, auditLogService);
+                permissionEvaluatorService, auditLogService, mapper);
     }
 
     @Test
@@ -57,8 +58,9 @@ class ProgramCurriculumVersionServiceTest {
         when(versionRepository.findMaxVersionNumber(TENANT, PROGRAM)).thenReturn(2);
         when(versionRepository.save(any(ProgramCurriculumVersion.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        Map<String, Object> jsonMap = Map.of("courses", List.of(Map.of("code", "CS101", "credits", 4)));
         var request = new CreateCurriculumVersionRequest(
-                mapper.readTree("{\"courses\":[{\"code\":\"CS101\",\"credits\":4}]}"),
+                jsonMap,
                 LocalDate.parse("2026-07-01"), null);
         var response = service.create(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM, request);
 
@@ -95,8 +97,8 @@ class ProgramCurriculumVersionServiceTest {
     }
 
     @Test
-    void create_rejectsNonObjectJsonBeforeWriting() throws Exception {
-        var request = new CreateCurriculumVersionRequest(mapper.readTree("[1,2,3]"),
+    void create_rejectsEmptyJsonBeforeWriting() {
+        var request = new CreateCurriculumVersionRequest(Map.of(),
                 LocalDate.parse("2026-07-01"), null);
         assertThatThrownBy(() -> service.create(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM, request))
                 .isInstanceOf(BusinessRuleViolationException.class)
@@ -104,8 +106,8 @@ class ProgramCurriculumVersionServiceTest {
     }
 
     @Test
-    void create_rejectsEndDateBeforeStartDate() throws Exception {
-        var request = new CreateCurriculumVersionRequest(mapper.readTree("{\"courses\":[]}"),
+    void create_rejectsEndDateBeforeStartDate() {
+        var request = new CreateCurriculumVersionRequest(Map.of("courses", List.of()),
                 LocalDate.parse("2026-07-01"), LocalDate.parse("2026-06-30"));
         assertThatThrownBy(() -> service.create(new RbacPrincipal(TENANT, USER), INSTITUTION, PROGRAM, request))
                 .isInstanceOf(BusinessRuleViolationException.class)

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PageHeader, MetricCard } from "../../../design-system/components";
+import { PageHeader, MetricCard, Notice, Spinner, Panel } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { t10Api } from "../api/t10Api";
 
@@ -18,26 +18,60 @@ export default function ExecutiveDashboardPage() {
 
   useEffect(() => {
     if (tenant && institution) {
-      t10Api.dashboard(tenant, institution)
+      t10Api
+        .dashboard(tenant, institution)
         .then((metrics) => setResult({ key, data: metrics }))
-        .catch(() => setFailure({ key, message: "Dashboard is unavailable. Ensure the read-only edu_report connection is configured." }));
+        .catch(() =>
+          setFailure({
+            key,
+            message: "Dashboard is unavailable. Ensure the read-only reporting connection (edu_report) is configured.",
+          })
+        );
     }
   }, [tenant, institution, key]);
 
-  const labels: Record<string, string> = {
-    activeStudents: "Active students",
-    activeStaff: "Active staff",
-    libraryOutstandingFines: "Outstanding library fines",
-    openLibraryCirculations: "Open circulations",
-    transportAllocations: "Transport allocations",
-    smsSent: "SMS sent",
+  const labels: Record<string, { label: string; unit?: string }> = {
+    activeStudents: { label: "Active students", unit: "enrolled" },
+    activeStaff: { label: "Active staff", unit: "members" },
+    libraryOutstandingFines: { label: "Outstanding library fines", unit: "INR" },
+    openLibraryCirculations: { label: "Open circulations", unit: "books" },
+    transportAllocations: { label: "Transport allocations", unit: "seats" },
+    smsSent: { label: "SMS sent", unit: "messages" },
   };
-  return <main className="app-page">
-    <PageHeader title="Executive Dashboard" description="Institutional indicators from the isolated, read-only reporting connection." />
-    {loading && <p role="status">Loading executive metrics…</p>}
-    {error && <p role="alert">{error}</p>}
-    <div className="app-grid">{Object.entries(labels).map(([metric, label]) =>
-      <MetricCard key={metric} label={label} value={data[metric] === undefined ? "—" : String(data[metric])} />)}
-    </div>
-  </main>;
+
+  return (
+    <main className="app-page">
+      <PageHeader
+        title="Executive Dashboard"
+        description="Institutional indicators from the isolated, read-only reporting connection."
+      />
+
+      {!institution && (
+        <Notice tone="info">
+          No active institution scope is linked to your current role. Indicators will populate when an institution context is selected.
+        </Notice>
+      )}
+
+      {loading && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-6)" }}>
+          <Spinner />
+        </div>
+      )}
+
+      {error && <Notice tone="danger">{error}</Notice>}
+
+      <Panel title="Institutional indicators" description="Key performance metrics updated in near real-time.">
+        <div className="kpi-grid">
+          {Object.entries(labels).map(([metric, config]) => (
+            <MetricCard
+              key={metric}
+              label={config.label}
+              value={data[metric] === undefined ? "—" : String(data[metric])}
+              unit={data[metric] !== undefined ? config.unit : undefined}
+            />
+          ))}
+        </div>
+      </Panel>
+    </main>
+  );
 }

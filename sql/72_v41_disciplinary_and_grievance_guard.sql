@@ -29,27 +29,32 @@ INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_versi
 VALUES ('INTERNAL_COMPLAINTS_COMMITTEE','Internal Complaints Committee','COLLEGE','4.1-T9',true,true)
 ON CONFLICT (role_code) DO NOTHING;
 
-INSERT INTO ref.action_catalog
- (action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in)
-VALUES
- ('ID_CARD_ISSUE',284,'Identity cards',1,'Issue a student or staff identity card',false,'Personal – Create / edit','4.1-T9'),
- ('ID_CARD_REPLACE',285,'Identity cards',1,'Review and process a lost or damaged identity card replacement',false,'Personal – Correct','4.1-T9'),
- ('ID_CARD_TEMPLATE_MANAGE',286,'Identity cards',1,'Create and maintain institution identity card templates',false,'Personal – Create / edit','4.1-T9'),
- ('ID_CARD_REVOKE',287,'Identity cards',1,'Revoke an identity card issuance',true,'Personal – Correct','4.1-T9'),
- ('CERTIFICATE_TEMPLATE_MANAGE',288,'Certificates',1,'Create and maintain official certificate templates',false,'Personal – Create / edit','4.1-T9'),
- ('CERTIFICATE_REVOKE',289,'Certificates',1,'Revoke an issued official certificate',true,'Personal – Correct','4.1-T9'),
- ('DISCIPLINARY_INCIDENT_VIEW',290,'Disciplinary',1,'View institution disciplinary incident records',false,'Personal – View','4.1-T9'),
- ('DISCIPLINARY_INCIDENT_MANAGE',291,'Disciplinary',1,'Record and update institution disciplinary incidents',false,'Personal – Create / edit','4.1-T9'),
- ('GRIEVANCE_CASE_SUBMIT',292,'Confidential grievances',1,'Submit a named or anonymous grievance without access to case records',false,'Personal – Create (confidential submission)','4.1-T9'),
- ('GRIEVANCE_CASE_VIEW',293,'Confidential grievances',1,'View confidential ICC grievance cases under PO-T05',false,'Personal – View (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_CASE_ASSIGN',294,'Confidential grievances',1,'Assign a confidential grievance case to an investigator',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_HEARING_MANAGE',295,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_CASE_RESOLVE',296,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
- ('GRIEVANCE_EVIDENCE_VIEW',297,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
- ('GRIEVANCE_EVIDENCE_UPLOAD',298,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9'),
- ('ID_CARD_REPLACEMENT_REQUEST',299,'Identity cards',1,'Request replacement of own lost or damaged identity card',false,'Personal – Create (own identity card replacement)','4.1-T9'),
- ('DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE',300,'Certificates',1,'Record departmental equipment clearance for student No-Dues verification',false,'Personal – Correct','4.1-T9')
-ON CONFLICT (action_code) DO NOTHING;
+DO $$
+DECLARE next_action_no integer;
+BEGIN
+ SELECT COALESCE(MAX(action_no),0)+1 INTO next_action_no FROM ref.action_catalog;
+ INSERT INTO ref.action_catalog
+  (action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in)
+ VALUES
+  ('ID_CARD_ISSUE',next_action_no,'Identity cards',1,'Issue a student or staff identity card',false,'Personal – Create / edit','4.1-T9'),
+  ('ID_CARD_REPLACE',next_action_no+1,'Identity cards',1,'Review and process a lost or damaged identity card replacement',false,'Personal – Correct','4.1-T9'),
+  ('ID_CARD_TEMPLATE_MANAGE',next_action_no+2,'Identity cards',1,'Create and maintain institution identity card templates',false,'Personal – Create / edit','4.1-T9'),
+  ('ID_CARD_REVOKE',next_action_no+3,'Identity cards',1,'Revoke an identity card issuance',true,'Personal – Correct','4.1-T9'),
+  ('CERTIFICATE_TEMPLATE_MANAGE',next_action_no+4,'Certificates',1,'Create and maintain official certificate templates',false,'Personal – Create / edit','4.1-T9'),
+  ('CERTIFICATE_REVOKE',next_action_no+5,'Certificates',1,'Revoke an issued official certificate',true,'Personal – Correct','4.1-T9'),
+  ('DISCIPLINARY_INCIDENT_VIEW',next_action_no+6,'Disciplinary',1,'View institution disciplinary incident records',false,'Personal – View','4.1-T9'),
+  ('DISCIPLINARY_INCIDENT_MANAGE',next_action_no+7,'Disciplinary',1,'Record and update institution disciplinary incidents',false,'Personal – Create / edit','4.1-T9'),
+  ('GRIEVANCE_CASE_SUBMIT',next_action_no+8,'Confidential grievances',1,'Submit a named or anonymous grievance without access to case records',false,'Personal – Create (confidential submission)','4.1-T9'),
+  ('GRIEVANCE_CASE_VIEW',next_action_no+9,'Confidential grievances',1,'View confidential ICC grievance cases under PO-T05',false,'Personal – View (confidential grievance cases)','4.1-T9'),
+  ('GRIEVANCE_CASE_ASSIGN',next_action_no+10,'Confidential grievances',1,'Assign a confidential grievance case to an investigator',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+  ('GRIEVANCE_HEARING_MANAGE',next_action_no+11,'Confidential grievances',1,'Schedule hearings and record confidential hearing minutes',false,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+  ('GRIEVANCE_CASE_RESOLVE',next_action_no+12,'Confidential grievances',1,'Resolve or dismiss a confidential grievance case',true,'Personal – Correct (confidential grievance cases)','4.1-T9'),
+  ('GRIEVANCE_EVIDENCE_VIEW',next_action_no+13,'Confidential grievances',1,'View scanned evidence attached to a confidential grievance case',false,'Personal – View (confidential grievance evidence)','4.1-T9'),
+  ('GRIEVANCE_EVIDENCE_UPLOAD',next_action_no+14,'Confidential grievances',1,'Upload scanned evidence to a confidential grievance case',false,'Personal – Create (confidential grievance evidence)','4.1-T9'),
+  ('ID_CARD_REPLACEMENT_REQUEST',next_action_no+15,'Identity cards',1,'Request replacement of own lost or damaged identity card',false,'Personal – Create (own identity card replacement)','4.1-T9'),
+  ('DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE',next_action_no+16,'Certificates',1,'Record departmental equipment clearance for student No-Dues verification',false,'Personal – Correct','4.1-T9')
+ ON CONFLICT (action_code) DO NOTHING;
+END $$;
 UPDATE ref.action_catalog SET is_approval_action=true WHERE action_code='ID_CARD_REPLACE';
 
 
@@ -349,7 +354,7 @@ BEGIN
    AND app.fn_complaint_guard(gc.tenant_id,gc.accused_user_id,gc.institution_id)));
  GRANT SELECT,INSERT,UPDATE ON app.grievance_hearing TO edu_app;
  GRANT SELECT ON app.grievance_hearing TO edu_report;
-END $;
+END $$;
 CREATE POLICY p_disciplinary_institution ON app.disciplinary_incident AS RESTRICTIVE
  USING(institution_id IS NULL OR current_setting('app.institution_scope',true)='ALL'
   OR institution_id=ANY(string_to_array(NULLIF(current_setting('app.institution_ids',true),''),',')::uuid[]))

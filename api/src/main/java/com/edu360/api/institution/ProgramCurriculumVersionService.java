@@ -17,6 +17,7 @@ import com.edu360.api.institution.dto.CurriculumVersionResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class ProgramCurriculumVersionService {
@@ -24,23 +25,26 @@ public class ProgramCurriculumVersionService {
     private final ProgramRepository programRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
 
     public ProgramCurriculumVersionService(
             ProgramCurriculumVersionRepository versionRepository,
             ProgramRepository programRepository,
             PermissionEvaluatorService permissionEvaluatorService,
-            AuditLogService auditLogService) {
+            AuditLogService auditLogService,
+            ObjectMapper objectMapper) {
         this.versionRepository = versionRepository;
         this.programRepository = programRepository;
         this.permissionEvaluatorService = permissionEvaluatorService;
         this.auditLogService = auditLogService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
     public CurriculumVersionResponse create(RbacPrincipal principal, UUID institutionId, UUID programId,
             CreateCurriculumVersionRequest request) {
         authorize(principal, institutionId);
-        if (request.curriculumJson() == null || !request.curriculumJson().isObject()) {
+        if (request.curriculumJson() == null || request.curriculumJson().isEmpty()) {
             throw new BusinessRuleViolationException("INVALID_CURRICULUM_JSON", "curriculumJson must be a JSON object.");
         }
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
@@ -61,7 +65,7 @@ public class ProgramCurriculumVersionService {
                 .institutionId(institutionId)
                 .programId(programId)
                 .versionNumber(nextVersion)
-                .curriculumJson(request.curriculumJson())
+                .curriculumJson(objectMapper.valueToTree(request.curriculumJson()))
                 .effectiveFrom(request.effectiveFrom())
                 .effectiveTo(request.effectiveTo())
                 .createdBy(principal.userAccountId())

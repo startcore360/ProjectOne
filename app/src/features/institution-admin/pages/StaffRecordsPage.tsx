@@ -325,6 +325,7 @@ export default function StaffRecordsPage() {
           <div className="app-toolbar">
             <SearchBox value={query} onChange={setQuery} placeholder="Search staff name or code" />
             <Button variant="secondary" size="sm" onClick={() => { setDirectoryPage(1); void loadDirectory(query); }} busy={state === "loading"}>Search</Button>
+            <Button variant="secondary" size="sm" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh</Button>
           </div>
           {state === "loading" && <SkeletonCard><SkeletonText height="1rem" width="55%" /><SkeletonText lines={5} /></SkeletonCard>}
           {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
@@ -367,7 +368,7 @@ export default function StaffRecordsPage() {
               )}
             </>
           )}
-          <div className="app-inline-actions"><Button size="sm" variant="tertiary" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh directory</Button></div>
+
         </Panel>}
 
         <div className="staff-record-detail">

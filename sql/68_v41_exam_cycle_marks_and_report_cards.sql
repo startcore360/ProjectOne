@@ -62,7 +62,7 @@ CREATE TABLE app.exam_schedule (
 CREATE INDEX ix_exam_schedule_date ON app.exam_schedule(tenant_id, exam_cycle_id, exam_date, start_time);
 
 CREATE OR REPLACE FUNCTION app.fn_exam_schedule_scope_guard()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE v_institution_id uuid; v_semester_id uuid; v_start date; v_end date;
 BEGIN
     SELECT institution_id, semester_id, start_date, end_date
@@ -86,13 +86,13 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER trg_exam_schedule_scope_guard
     BEFORE INSERT OR UPDATE ON app.exam_schedule
     FOR EACH ROW EXECUTE FUNCTION app.fn_exam_schedule_scope_guard();
 
 -- Room collisions are rejected transactionally, independently of UI validation.
-DO $
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'app.exam_schedule'::regclass
                     AND conname = 'ex_exam_schedule_room_no_overlap') THEN
@@ -110,7 +110,7 @@ BEGIN
         ALTER TABLE app.exam_schedule ADD CONSTRAINT fk_exam_schedule_room
           FOREIGN KEY (tenant_id, room_id) REFERENCES app.room(tenant_id, room_id) ON DELETE RESTRICT;
     END IF;
-END $;
+END $$;
 
 CREATE TABLE app.exam_invigilator (
     tenant_id uuid NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE app.exam_invigilator (
 );
 
 CREATE OR REPLACE FUNCTION app.fn_exam_invigilator_conflict_guard()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF EXISTS (
         SELECT 1
@@ -149,7 +149,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$;
+$$;
 CREATE TRIGGER trg_exam_invigilator_conflict
     BEFORE INSERT OR UPDATE ON app.exam_invigilator
     FOR EACH ROW EXECUTE FUNCTION app.fn_exam_invigilator_conflict_guard();
@@ -385,7 +385,7 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS p_tenant ON app.%I', t);
     EXECUTE format('CREATE POLICY p_tenant ON app.%I USING (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid) WITH CHECK (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::uuid)', t);
   END LOOP;
-END $;
+END $$;
 
 -- Institution scope is independently enforced for all examination and results records.
 CREATE POLICY p_institution ON app.exam_cycle AS RESTRICTIVE
