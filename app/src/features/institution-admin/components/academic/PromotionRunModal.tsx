@@ -1,110 +1,109 @@
-import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { useEffect, useState, type FormEvent } from "react";
+import { Button, Modal, Notice, SelectField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
+import { institutionService, type InstitutionItem, type AcademicSessionItem } from "../../api/institutionService";
 
 export interface PromotionRunModalProps {
+  tenantId: string;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: {
-    institutionId: string;
-    fromSessionId: string;
-    toSessionId: string;
-  }) => Promise<void>;
+  onSubmit: (data: { institutionId: string; fromSessionId: string; toSessionId: string }) => Promise<void>;
   saving: boolean;
 }
 
-export function PromotionRunModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  saving,
-}: PromotionRunModalProps) {
-  const [promInstId, setPromInstId] = useState("");
-  const [promFromSessionId, setPromFromSessionId] = useState("");
-  const [promToSessionId, setPromToSessionId] = useState("");
+export function PromotionRunModal({ tenantId, isOpen, onClose, onSubmit, saving }: PromotionRunModalProps) {
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionId, setInstitutionId] = useState("");
+  const [sessions, setSessions] = useState<AcademicSessionItem[]>([]);
+  const [fromSessionId, setFromSessionId] = useState("");
+  const [toSessionId, setToSessionId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
   const [modalError, setModalError] = useState("");
 
-  const handleClose = () => {
-    setModalError("");
-    onClose();
-  };
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoading(true);
+    setLookupError("");
+    institutionService.listInstitutions(tenantId)
+      .then((response) => {
+        if (!cancelled) {
+          setInstitutions(response.items ?? []);
+          setInstitutionId((current) => current || response.items?.[0]?.institutionId || "");
+        }
+      })
+      .catch((error: unknown) => { if (!cancelled) setLookupError(getApiErrorMessage(error)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, isOpen]);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!isOpen || !institutionId) {
+      setSessions([]); setFromSessionId(""); setToSessionId("");
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setLookupError("");
+    setFromSessionId(""); setToSessionId("");
+    institutionService.listAcademicSessions(tenantId, institutionId)
+      .then((items) => { if (!cancelled) setSessions(items.filter((item) => item.status !== "ARCHIVED")); })
+      .catch((error: unknown) => { if (!cancelled) { setSessions([]); setLookupError(getApiErrorMessage(error)); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, isOpen, institutionId]);
+
+  const handleClose = () => { setModalError(""); onClose(); };
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     setModalError("");
+    if (!institutionId || !fromSessionId || !toSessionId) {
+      setModalError("Choose an institution and both academic sessions.");
+      return;
+    }
+    if (fromSessionId === toSessionId) {
+      setModalError("Choose two different academic sessions.");
+      return;
+    }
     try {
-      await onSubmit({
-        institutionId: promInstId.trim(),
-        fromSessionId: promFromSessionId.trim(),
-        toSessionId: promToSessionId.trim(),
-      });
-      setPromFromSessionId("");
-      setPromToSessionId("");
+      await onSubmit({ institutionId, fromSessionId, toSessionId });
+      setFromSessionId(""); setToSessionId("");
       handleClose();
-    } catch (err: unknown) {
-      setModalError(getApiErrorMessage(err));
+    } catch (error: unknown) {
+      setModalError(getApiErrorMessage(error));
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      kicker="YEAR-END PROMOTION"
-      title="Initiate Promotion Run"
-      titleId="prom-modal-title"
-      size="sm"
-    >
+    <Modal isOpen={isOpen} onClose={handleClose} kicker="YEAR-END PROMOTION" title="Initiate Promotion Run" titleId="prom-modal-title" size="sm">
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }} noValidate>
-        {modalError && (
-          <div style={{ marginBottom: "var(--space-3)" }}>
-            <Notice tone="danger">{modalError}</Notice>
-          </div>
-        )}
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <TextField
-            id="prom-inst-id"
-            label="Institution UUID *"
-            type="text"
-            value={promInstId}
-            onChange={(e) => setPromInstId(e.target.value)}
-            required
-            style={{ fontFamily: "monospace" }}
-          />
-        </div>
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <TextField
-            id="prom-from-session-id"
-            label="From Session UUID *"
-            type="text"
-            value={promFromSessionId}
-            onChange={(e) => setPromFromSessionId(e.target.value)}
-            required
-            style={{ fontFamily: "monospace" }}
-          />
-        </div>
-        <div style={{ marginBottom: "var(--space-4)" }}>
-          <TextField
-            id="prom-to-session-id"
-            label="To Session UUID *"
-            type="text"
-            value={promToSessionId}
-            onChange={(e) => setPromToSessionId(e.target.value)}
-            required
-            style={{ fontFamily: "monospace" }}
-          />
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Create Run"}
-          </Button>
+        {modalError && <div style={{ marginBottom: "var(--space-3)" }}><Notice tone="danger">{modalError}</Notice></div>}
+        {lookupError && <div style={{ marginBottom: "var(--space-3)" }}><Notice tone="danger">{lookupError}</Notice></div>}
+        <SelectField id="prom-institution" label="Institution *" required value={institutionId} disabled={loading || institutions.length === 0}
+          onChange={(event) => setInstitutionId(event.target.value)}>
+          <option value="">{loading ? "Loading institutions…" : "Choose an institution"}</option>
+          {institutions.map((item) => <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>)}
+        </SelectField>
+        <SelectField id="prom-from-session" label="Promote students from *" required value={fromSessionId}
+          disabled={loading || !institutionId || sessions.length === 0}
+          onChange={(event) => setFromSessionId(event.target.value)}>
+          <option value="">{loading ? "Loading sessions…" : "Choose current academic session"}</option>
+          {sessions.map((item) => <option key={item.academicSessionId} value={item.academicSessionId}>{item.sessionLabel} ({item.startDate} – {item.endDate})</option>)}
+        </SelectField>
+        <SelectField id="prom-to-session" label="Promote students to *" required value={toSessionId}
+          disabled={loading || !institutionId || sessions.length === 0}
+          onChange={(event) => setToSessionId(event.target.value)}>
+          <option value="">{loading ? "Loading sessions…" : "Choose next academic session"}</option>
+          {sessions.filter((item) => item.academicSessionId !== fromSessionId).map((item) => <option key={item.academicSessionId} value={item.academicSessionId}>{item.sessionLabel} ({item.startDate} – {item.endDate})</option>)}
+        </SelectField>
+        {!loading && !lookupError && institutionId && sessions.length < 2 && <Notice tone="warning">At least two academic sessions are needed to start a promotion run.</Notice>}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>Cancel</Button>
+          <Button type="submit" disabled={saving || loading || !institutionId || !fromSessionId || !toSessionId}>{saving ? "Saving…" : "Create Run"}</Button>
         </div>
       </form>
     </Modal>
   );
 }
-
 export default PromotionRunModal;
