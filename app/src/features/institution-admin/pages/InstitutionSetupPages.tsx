@@ -88,35 +88,6 @@ function isValidUuid(value: string): boolean {
   return UUID_PATTERN.test(value.trim());
 }
 
-function IdField({
-  id,
-  label,
-  value,
-  onChange,
-  hint,
-  error,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  hint?: string;
-  error?: string;
-}) {
-  return (
-    <TextField
-      id={id}
-      label={label}
-      required
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Paste the ID (UUID)"
-      hint={hint ?? "There is no list or picker for this yet — paste the ID directly."}
-      error={error}
-    />
-  );
-}
-
 /** Shows the no-tenant-identity denial state shared by every screen in this file. */
 function NoTenantNotice() {
   return (
@@ -828,7 +799,7 @@ export function CalendarEventsPage() {
   const loadEvents = async () => {
     if (!isValidUuid(institutionId)) {
       setListStatus("error");
-      setListMessage("Institution ID must be a valid ID before events can be listed.");
+      setListMessage("Choose an institution before loading local events.");
       return;
     }
     setListStatus("busy");
@@ -854,7 +825,7 @@ export function CalendarEventsPage() {
     e.preventDefault();
     const invalid =
       !isValidUuid(institutionId) || !isValidUuid(academicSessionId) || !title.trim() || !startDate || !endDate
-        ? "Institution ID, academic session ID, title, start date and end date are all required."
+        ? "Choose an institution and academic session, then enter the event title and dates."
         : endDate < startDate
           ? "End date must not be before start date."
           : null;
@@ -1051,7 +1022,7 @@ export function CalendarEventsPage() {
           </Panel>
 
           {!isSupportSession && (
-            <Panel title="Add a local event" description="Academic session ID has no picker yet; paste it directly.">
+            <Panel title="Add a local event" description="Choose an academic session for the selected institution.">
               <form onSubmit={submit} noValidate>
                 <SelectField
                   id="cal-session-select"
@@ -1241,7 +1212,7 @@ export function WeeklyOffRulesPage() {
 
   const loadRules = async () => {
     if (!isValidUuid(institutionId)) {
-      setFieldErrors((current) => ({ ...current, institutionId: "Enter a valid institution ID." }));
+      setFieldErrors((current) => ({ ...current, institutionId: "Choose a registered institution." }));
       return;
     }
     setFieldErrors((current) => ({ ...current, institutionId: undefined }));
@@ -2725,7 +2696,7 @@ export function TermLockPage() {
     clearLockAll();
     let invalid = false;
     if (!isValidUuid(institutionId)) {
-      setLockFieldError("institutionId", "Enter a valid institution UUID.");
+      setLockFieldError("institutionId", "Choose a registered institution.");
       invalid = true;
     }
     if (!academicSessions.some((session) => session.academicSessionId === sessionId)) {
@@ -2847,7 +2818,7 @@ export function TermLockPage() {
             <table className="app-table">
               <thead>
                 <tr>
-                  <th>Session ID</th>
+                  <th>Academic session</th>
                   <th>Semester</th>
                   <th>Status</th>
                   <th>Unlock Until</th>
@@ -2858,7 +2829,7 @@ export function TermLockPage() {
                 {locks.map((lock) => (
                   <tr key={lock.termLockId}>
                     <td>
-                      <code>{lock.academicSessionId}</code>
+                      {academicSessions.find((session) => session.academicSessionId === lock.academicSessionId)?.sessionLabel ?? "Academic session"}
                     </td>
                     <td>{lock.semesterId ? "Semester-level" : "Whole session"}</td>
                     <td>
