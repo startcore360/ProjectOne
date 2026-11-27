@@ -73,8 +73,8 @@ export function CreateUserModal({
       description="Create a sign-in account and choose the organisation access for this person."
       size="lg"
     >
-      <form onSubmit={handleSubmit}>
-        <div className="app-form-grid">
+      <form onSubmit={handleSubmit} className="app-form">
+        <section className="app-form-single-column" aria-label="Account details">
           <TextField
             id="create-display-name"
             label="Full name"
@@ -109,7 +109,10 @@ export function CreateUserModal({
           />
           <TextField
             id="create-mobile"
-            label="Mobile number (E.164)"
+            label="Mobile number"
+            type="tel"
+            inputMode="tel"
+            hint="Include the country code, for example +919876543210."
             required
             value={mobile}
             onChange={(e) => { setMobile(e.target.value); clearFieldError("mobile"); }}
@@ -127,39 +130,29 @@ export function CreateUserModal({
           />
           <TextField
             id="create-initial-role"
-            label="Initial role (optional)"\n            hint="Enter a role code supplied by your institution administrator."
+            label="Initial role (optional)"
+            hint="Enter a role code supplied by your institution administrator."
             value={initialRoleCode}
             onChange={(e) => { setInitialRoleCode(e.target.value); clearFieldError("initialRoleCode"); }}
             placeholder="e.g. TEACHER, STUDENT, REGISTRAR"
             error={fieldErrors.initialRoleCode}
           />
-        </div>
+        </section>
         <p className="app-note">
           This form provisions a general user account. For admissions, student profile creation and section enrolment, use the separate Create student profile workflow.
         </p>
 
-        <div style={{ marginTop: "1rem" }}>
-          <Kicker>ACCESS SCOPE</Kicker>
+        <section className="app-form-section" aria-labelledby="create-user-scope-title">
+          <h3 id="create-user-scope-title">Access scope</h3>
           <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="create-user" />
-        </div>
+        </section>
 
-        <div
-          className="app-note"
-          style={{
-            marginTop: "0.75rem",
-            fontSize: "0.8rem",
-            color: "var(--color-text-secondary, #64748b)",
-          }}
-        >
+        <div className="app-note">
           Statutory Notice: Indian DPDP Act 2023 &amp; UIDAI Guidelines [R2-34] prohibit storing full
           Aadhaar numbers. Only the last 4 digits are accepted for identity masking.
         </div>
 
-        {formError && (
-          <div style={{ marginTop: "0.75rem" }}>
-            <Notice tone="danger">{formError}</Notice>
-          </div>
-        )}
+        {formError && <Notice tone="danger">{formError}</Notice>}
 
         <footer className="app-modal__footer">
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
