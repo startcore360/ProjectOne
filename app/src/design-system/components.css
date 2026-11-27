@@ -3295,3 +3295,27 @@ button:not(:disabled):active,
 .role-switcher--stacked .role-switcher__context {
   margin-top: var(--space-1);
 }
+
+
+/* Structured document editor — composed from canonical Stillwater fields, buttons and tokens. */
+.eds-document-builder { display: grid; gap: var(--space-4); min-width: 0; }
+.eds-document-builder__intro { display: grid; gap: var(--space-1); }
+.eds-document-builder__intro h3 { margin: 0; font-size: var(--fs-h4); line-height: var(--lh-h4); }
+.eds-document-builder__intro p { margin: 0; max-width: var(--reading-max); color: var(--color-text-muted); font-size: var(--fs-body-sm); }
+.eds-document-builder__fields { display: grid; gap: var(--space-3); min-width: 0; }
+.eds-document-builder__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.eds-document-node { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border: var(--border-width) solid var(--color-border-divider); border-radius: var(--radius-lg); background: var(--color-bg-surface); }
+.eds-document-node[data-depth="1"] { background: var(--color-bg-canvas); }
+.eds-document-node[data-depth="2"], .eds-document-node[data-depth="3"], .eds-document-node[data-depth="4"] { background: var(--color-bg-subtle); }
+.eds-document-node__header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr) auto; align-items: end; gap: var(--space-3); min-width: 0; }
+.eds-document-node__header > .eds-field { margin-top: 0; }
+.eds-document-node__title { align-self: center; min-width: 0; overflow-wrap: anywhere; color: var(--color-text); font-size: var(--fs-body); }
+.eds-document-node__remove { align-self: end; }
+.eds-document-node__children { display: grid; gap: var(--space-3); min-width: 0; padding-inline-start: var(--space-4); border-inline-start: 2px solid var(--color-border-divider); }
+.eds-document-node__empty { margin: 0; color: var(--color-text-muted); font-size: var(--fs-body-sm); }
+@media (max-width: 640px) {
+  .eds-document-node { padding: var(--space-3); }
+  .eds-document-node__header { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .eds-document-node__remove { justify-self: start; }
+  .eds-document-node__children { padding-inline-start: var(--space-2); }
+}
