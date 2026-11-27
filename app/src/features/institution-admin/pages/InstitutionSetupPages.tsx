@@ -60,6 +60,7 @@ import {
   approvalDelegationService,
   type DelegationItem,
   type ApprovalStepItem,
+  type EligibleDelegate,
 } from "../api/approvalDelegationService";
 import {
   academicService,
