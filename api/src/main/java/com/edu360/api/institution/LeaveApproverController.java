@@ -98,6 +98,29 @@ public class LeaveApproverController {
     }
 
     @GetMapping({
+            "/v1/tenants/{tenantId}/institutions/{institutionId}/principal-leave-approver/eligible-users",
+            "/api/tenants/{tenantId}/institutions/{institutionId}/principal-leave-approver/eligible-users"
+    })
+    @Operation(summary = "List eligible approver accounts for an institution Principal")
+    public ResponseEntity<List<LeaveApproverCandidateResponse>> listPrincipalApproverCandidates(
+            @PathVariable UUID tenantId,
+            @PathVariable UUID institutionId,
+            @RequestParam String approverKind,
+            Authentication authentication) {
+        RbacPrincipal principal = tenantPrincipal(tenantId, authentication);
+        PermissionDecision decision = permissionEvaluatorService.can(
+                principal, "PRINCIPAL_LEAVE_APPROVER_SET", RbacScope.institution(institutionId), RbacTarget.NONE);
+        boolean allowed = decision != null && decision.allowed();
+        if (!allowed) {
+            PermissionDecision tenantDecision = permissionEvaluatorService.can(
+                    principal, "PRINCIPAL_LEAVE_APPROVER_SET", RbacScope.tenant(), RbacTarget.NONE);
+            allowed = tenantDecision != null && tenantDecision.allowed();
+        }
+        if (!allowed) throw new UnauthorizedException("PRINCIPAL_LEAVE_APPROVER_SET not granted for this scope");
+        return ResponseEntity.ok(leaveApproverService.listPrincipalApproverCandidates(tenantId, institutionId, approverKind));
+    }
+
+    @GetMapping({
             "/v1/tenants/{tenantId}/vc-leave-approver/eligible-users",
             "/api/tenants/{tenantId}/vc-leave-approver/eligible-users"
     })
