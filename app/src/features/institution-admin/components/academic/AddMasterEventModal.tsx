@@ -78,16 +78,7 @@ export function AddMasterEventModal({
             ))}
           </SelectField>
         ) : (
-          <div style={{ marginBottom: "1rem" }}>
-            <TextField
-              id="master-event-session-input"
-              label="Academic Session ID"
-              required
-              value={targetSessionId}
-              onChange={(e) => setTargetSessionId(e.target.value)}
-              placeholder="Enter academic session UUID"
-            />
-          </div>
+          <Notice tone="warning">No academic sessions are available yet. Create an academic session first, then return to add a master calendar event.</Notice>
         )}
         <SelectField
           id="master-event-type-select"
@@ -131,7 +122,7 @@ export function AddMasterEventModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" busy={submitting}>
+          <Button type="submit" variant="primary" busy={submitting} disabled={submitting || sessions.length === 0}>
             Add Master Event
           </Button>
         </footer>
