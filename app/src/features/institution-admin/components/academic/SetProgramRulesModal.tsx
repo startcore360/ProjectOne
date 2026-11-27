@@ -17,7 +17,7 @@ export function SetProgramRulesModal({
   onSubmit,
   saving,
 }: SetProgramRulesModalProps) {
-  const [ruleDocument, setRuleDocument] = useState<Record<string, DocumentValue>>({ minCredits: 160, maxYears: 6 });
+  const [ruleDocument, setRuleDocument] = useState<Record<string, DocumentValue>>({});
   const [ruleEffectiveFrom, setRuleEffectiveFrom] = useState(getLocalDateString());
   const [modalError, setModalError] = useState("");
 
@@ -44,9 +44,9 @@ export function SetProgramRulesModal({
       kicker="ACADEMIC GOVERNANCE"
       title="Set Curriculum Rules"
       titleId="rules-modal-title"
-      size="sm"
+      size="lg"
     >
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }} noValidate>
+      <form onSubmit={handleSubmit} className="app-form" noValidate>
         {modalError && (
           <div style={{ marginBottom: "var(--space-3)" }}>
             <Notice tone="danger">{modalError}</Notice>
@@ -60,20 +60,20 @@ export function SetProgramRulesModal({
             onChange={setRuleDocument}
           />
         </div>
-        <div style={{ marginBottom: "var(--space-4)" }}>
+        <div>
           <DateField
             id="rule-effective-from"
-            label="Effective From"
+            label="Effective from"
             value={ruleEffectiveFrom}
             onChange={(e) => setRuleEffectiveFrom(e.target.value)}
             required
           />
         </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
+        <footer className="app-modal__footer">
           <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" busy={saving}>
             {saving ? "Saving..." : "Save Rules"}
           </Button>
         </div>
