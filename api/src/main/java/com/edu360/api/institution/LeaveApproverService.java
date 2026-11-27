@@ -230,6 +230,14 @@ public class LeaveApproverService {
      */
     @Transactional(readOnly = true)
     public List<LeaveApproverCandidateResponse> listVcApproverCandidates(UUID tenantId, String approverKind) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
+        if (!"UNIVERSITY_GROUP".equalsIgnoreCase(tenant.getTenantType())) {
+            throw new BusinessRuleViolationException(
+                    "INVALID_TENANT_TYPE",
+                    "Vice-Chancellor leave approver is only applicable to university groups [Rule C6]");
+        }
+
         String roleCode = approverKind == null ? "" : approverKind.trim().toUpperCase();
         if (!"MANAGEMENT".equals(roleCode) && !"GOVERNING_BODY_APPROVER".equals(roleCode)) {
             throw new BusinessRuleViolationException(
