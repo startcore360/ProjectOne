@@ -1981,8 +1981,7 @@ export function AcademicStructurePage() {
 
       <Panel title="Select institution" description="Select a registered institution or enter its ID to view and manage its academic hierarchy.">
         <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-          {institutions.length > 0 && (
-            <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+          <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
               <SelectField
                 id="quick-inst-select"
                 label="Choose from registered institutions"
@@ -2633,6 +2632,8 @@ export function TermLockPage() {
   const { can } = useTenantAccess();
   const [institutionId, setInstitutionId] = useState(activeInstitutionId);
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [academicSessions, setAcademicSessions] = useState<AcademicSessionItem[]>([]);
+  const [sessionsLoadError, setSessionsLoadError] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [semesterId, setSemesterId] = useState("");
   const [lockNotes, setLockNotes] = useState("");
@@ -2672,6 +2673,21 @@ export function TermLockPage() {
   }, [tenantId, institutionId, fetchLocks]);
 
   useEffect(() => {
+    if (!tenantId || !institutionId || !isValidUuid(institutionId)) {
+      setAcademicSessions([]);
+      setSessionId("");
+      return;
+    }
+    let cancelled = false;
+    setSessionsLoadError("");
+    setSessionId("");
+    institutionService.listAcademicSessions(tenantId, institutionId)
+      .then((items) => { if (!cancelled) setAcademicSessions(items); })
+      .catch((err) => { if (!cancelled) { setAcademicSessions([]); setSessionsLoadError(getApiErrorMessage(err)); } });
+    return () => { cancelled = true; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
     if (activeInstitutionId && isValidUuid(activeInstitutionId)) {
       if (!institutionId) setInstitutionId(activeInstitutionId);
       fetchLocks(activeInstitutionId);
@@ -2691,12 +2707,8 @@ export function TermLockPage() {
       setLockFieldError("institutionId", "Enter a valid institution UUID.");
       invalid = true;
     }
-    if (!isValidUuid(sessionId)) {
-      setLockFieldError("academicSessionId", "Enter a valid academic session UUID.");
-      invalid = true;
-    }
-    if (semesterId.trim() && !isValidUuid(semesterId)) {
-      setLockFieldError("semesterId", "Enter a valid semester UUID or leave this field empty.");
+    if (!academicSessions.some((session) => session.academicSessionId === sessionId)) {
+      setLockFieldError("academicSessionId", "Choose an academic session for the selected institution.");
       invalid = true;
     }
     if (invalid) return;
@@ -2705,7 +2717,6 @@ export function TermLockPage() {
     try {
       const res = await termLockService.lockTerm(tenantId, institutionId.trim(), {
         academicSessionId: sessionId.trim(),
-        semesterId: semesterId.trim() ? semesterId.trim() : undefined,
         notes: lockNotes.trim() || undefined,
       });
       const msg = "Term locked successfully. Attendance and marks can no longer be changed for this term.";
@@ -2732,7 +2743,8 @@ export function TermLockPage() {
         description="Lock academic terms to protect marks and attendance records. Temporary unlocks require justification and expire automatically."
       />
 
-      {institutionLoadError && <Notice tone="warning">{institutionLoadError} You can enter a known institution UUID manually.</Notice>}
+      {institutionLoadError && <Notice tone="danger">{institutionLoadError}</Notice>}
+      {sessionsLoadError && <Notice tone="danger">{sessionsLoadError}</Notice>}
       {lockFormError && <Notice tone="danger">{lockFormError}</Notice>}
       {feedback && (
         <Notice tone={feedback.tone} className="mb-4">
@@ -2766,40 +2778,19 @@ export function TermLockPage() {
                 ))}
               </SelectField>
             </div>
-          )}
-          <div className="app-form-grid" style={{ marginBottom: "var(--space-3)" }}>
-            <IdField
-              id="term-lock-inst-id"
-              label="Institution ID"
-              value={institutionId}
-              onChange={(val) => {
-                setInstitutionId(val);
-                clearLockFieldError("institutionId");
-                if (isValidUuid(val)) fetchLocks(val);
-                else { setLocks([]); setLockLoadError(""); }
-              }}
-              hint="Paste college or school UUID"
-              error={fieldErrors.institutionId}
-            />
-            <IdField
-              id="term-lock-session-id"
-              label="Academic Session ID"
-              value={sessionId}
-              onChange={(val) => { setSessionId(val); clearLockFieldError("academicSessionId"); }}
-              hint="Paste academic session UUID"
-              error={fieldErrors.academicSessionId}
-            />
           </div>
           <div className="app-form-grid" style={{ marginBottom: "var(--space-3)" }}>
-            <TextField
-              id="term-lock-sem-id"
-              label="Semester ID (Optional)"
-              value={semesterId}
-              onChange={(e) => { setSemesterId(e.target.value); clearLockFieldError("semesterId"); }}
-              placeholder="Optional semester UUID for colleges"
-              hint="Optional semester UUID for colleges"
-              error={fieldErrors.semesterId}
-            />
+            <SelectField
+              id="term-lock-session-select"
+              label="Academic Session *"
+              required
+              value={sessionId}
+              disabled={!institutionId || academicSessions.length === 0}
+              onChange={(event) => { setSessionId(event.target.value); clearLockFieldError("academicSessionId"); }}
+            >
+              <option value="">{sessionsLoadError ? "Sessions unavailable" : academicSessions.length ? "Choose an academic session" : "No sessions available"}</option>
+              {academicSessions.map((session) => <option key={session.academicSessionId} value={session.academicSessionId}>{session.sessionLabel} ({session.startDate} – {session.endDate})</option>)}
+            </SelectField>
             <TextField
               id="term-lock-notes"
               label="Lock Notes / Justification"
@@ -2823,7 +2814,7 @@ export function TermLockPage() {
         {lockLoadError ? (
           <Notice tone="danger">{lockLoadError} <Button variant="secondary" size="sm" onClick={() => fetchLocks(institutionId)}>Retry</Button></Notice>
         ) : !isValidUuid(institutionId) ? (
-          <EmptyState title="Choose an institution" description="Select an institution or enter its UUID to load term locks." />
+          <EmptyState title="Choose an institution" description="Select a registered institution to load its term locks." />
         ) : locks.length === 0 && !loading ? (
           <EmptyState
             title="No active term locks"
