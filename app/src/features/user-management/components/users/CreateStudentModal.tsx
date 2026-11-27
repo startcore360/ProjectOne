@@ -72,8 +72,6 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
     isActive(section.status) && section.academicSessionId === academicSessionId
   );
   const hasCurrentOptions = optionsLoadedFor === institutionId.trim();
-  const canChooseSession = hasCurrentOptions && activeSessions.length > 0;
-  const canChooseSection = hasCurrentOptions && activeSectionsForSession.length > 0;
 
   const loadAcademicOptions = async (selectedInstitutionId: string) => {
     setOptionsError("");
@@ -298,7 +296,14 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
             </div>
           </Notice>
         )}
-        {optionsError && <Notice tone="warning">{optionsError} Choose an institution with an active session and section, or ask your academic administrator to configure them.</Notice>}
+        {optionsError && (
+          <Notice tone="warning">
+            <div className="app-feedback-row">
+              <span>{optionsError} Choose an institution with an active session and section, or ask your academic administrator to configure them.</span>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void loadAcademicOptions(institutionId)} disabled={optionsLoading || !institutionId} busy={optionsLoading}>Retry</Button>
+            </div>
+          </Notice>
+        )}
         {optionsLoadedFor && !optionsError && activeSessions.length > 0 && activeSectionsForSession.length === 0 && academicSessionId && (
           <Notice tone="warning">No active sections are available in the selected session.</Notice>
         )}
