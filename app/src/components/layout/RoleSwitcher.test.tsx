@@ -87,6 +87,7 @@ describe("RoleSwitcher component (Story #6: ROLE_SWITCH)", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Professor")).toBeInTheDocument();
+      expect(screen.getByText("Northbridge College of Science")).toBeInTheDocument();
     });
   });
 
@@ -138,6 +139,8 @@ describe("RoleSwitcher component (Story #6: ROLE_SWITCH)", () => {
 
     const select = screen.getByLabelText("Switch active role") as HTMLSelectElement;
     expect(select.options.length).toBe(2);
+    expect(select.options[0].textContent).toContain("Northbridge College of Science");
+    expect(select.options[1].textContent).toContain("Physics");
 
     // Switch to Head of Department
     fireEvent.change(select, { target: { value: "as-2" } });
