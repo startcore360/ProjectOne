@@ -1535,6 +1535,11 @@ function EditStructureRecordModal({
   );
 }
 
+function parseDocument(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try { return JSON.parse(value) as unknown; } catch { return value; }
+}
+
 type DocumentSummaryEntry = { path: string; value: string };
 
 function describeDocument(value: unknown, prefix = ""): DocumentSummaryEntry[] {
@@ -3522,7 +3527,7 @@ export function AcademicGovernancePage() {
                       <td>v{r.versionNo}</td>
                       <td>{r.effectiveFrom}</td>
                       <td><Badge tone={r.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(r.status)}</Badge></td>
-                      <td>{describeDocument(r.rules).map((entry) => `${entry.path}: ${entry.value}`).join(" · ") || "No requirements recorded"}</td>
+                      <td>{describeDocument(parseDocument(r.rules)).map((entry) => `${entry.path}: ${entry.value}`).join(" · ") || "No requirements recorded"}</td>
                     </tr>
                   ))
                 )}
