@@ -816,7 +816,14 @@ describe("Institution setup action screens", () => {
     const req1 = "55555555-5555-5555-5555-555555555555";
     const req2 = "66666666-6666-6666-6666-666666666666";
 
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/approvals/inbox")) return Promise.resolve({ data: { items: [
+        { approvalRequestId: req1, stepNo: 1, approverRoleCode: "PRINCIPAL", decision: "PENDING" },
+        { approvalRequestId: req2, stepNo: 2, approverRoleCode: "DEAN", decision: "PENDING" },
+      ] } });
+      if (url.endsWith("/delegations/eligible-users")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: {
         batchId: "batch-1",
@@ -829,10 +836,12 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<DelegationsApprovalsPage />);
 
-    const idsInput = screen.getByLabelText(/Approval Request IDs/i);
+    const firstRequest = await screen.findByLabelText(/Request awaiting Principal · Step 1/i);
+    const secondRequest = await screen.findByLabelText(/Request awaiting Dean · Step 2/i);
     const commentInput = screen.getByLabelText(/Batch Comment/i);
 
-    fireEvent.change(idsInput, { target: { value: `${req1}, ${req2}` } });
+    fireEvent.click(firstRequest);
+    fireEvent.click(secondRequest);
     fireEvent.change(commentInput, { target: { value: "Batch review approved" } });
 
     const submitBtn = screen.getByRole("button", { name: /Apply bulk decision/i });
