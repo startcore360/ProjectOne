@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ReactElement } from "react";
 import api from "../../../services/axios";
+import { institutionService } from "../api/institutionService";
 import authReducer from "../../../store/slices/authSlice";
 import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
 import {
@@ -87,6 +88,10 @@ describe("Institution setup action screens", () => {
     (api.post as ReturnType<typeof vi.fn>).mockReset();
     (api.put as ReturnType<typeof vi.fn>).mockReset();
     (api.delete as ReturnType<typeof vi.fn>).mockReset();
+    vi.spyOn(institutionService, "listInstitutions").mockResolvedValue({
+      items: [{ institutionId: INST_ID, institutionName: "Manoj College", institutionCode: "MNC", institutionType: "COLLEGE" }],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 1 },
+    } as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
   });
 
   it("shows the permission-denied state when there is no tenant identity", () => {
@@ -339,7 +344,7 @@ describe("Institution setup action screens", () => {
       });
 
     renderWithTenant(<AcademicStructurePage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), {
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), {
       target: { value: "55555555-5555-5555-5555-555555555555" },
     });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
@@ -371,7 +376,7 @@ describe("Institution setup action screens", () => {
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { departmentId: DEPT_ID, hodStaffAssignmentId: staffAssignmentId } });
 
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "COLLEGE_ADMIN");
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("Computer Science");
     expect(screen.getByText("5")).toBeInTheDocument();
@@ -410,7 +415,7 @@ describe("Institution setup action screens", () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: version });
 
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "COLLEGE_ADMIN");
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByRole("link", { name: "B.Tech" });
 
@@ -452,7 +457,7 @@ describe("Institution setup action screens", () => {
     });
 
     renderWithTenant(<AcademicStructurePage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByRole("link", { name: "B.Tech" });
 
@@ -487,7 +492,7 @@ describe("Institution setup action screens", () => {
     });
 
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
 
     expect((await screen.findAllByText("Grade 8")).length).toBeGreaterThan(0);
@@ -517,7 +522,7 @@ describe("Institution setup action screens", () => {
     });
 
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: institutionId } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findAllByText("Grade 8");
 
@@ -559,7 +564,7 @@ describe("Institution setup action screens", () => {
     });
 
     renderWithTenant(<AcademicStructurePage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), {
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), {
       target: { value: "55555555-5555-5555-5555-555555555555" },
     });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
@@ -664,8 +669,8 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<TermLockPage />);
 
-    const instInput = screen.getByLabelText(/Institution ID/i);
-    const sessionInput = screen.getByLabelText(/Academic Session ID/i);
+    const instInput = screen.getByLabelText(/Institution|registered institutions/i);
+    const sessionInput = screen.getByLabelText(/Academic session/i);
 
     fireEvent.change(instInput, { target: { value: instId } });
     fireEvent.change(sessionInput, { target: { value: sessionId } });
@@ -717,7 +722,7 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<TermLockPage />);
 
-    const instInput = screen.getByLabelText(/Institution ID/i);
+    const instInput = screen.getByLabelText(/Institution|registered institutions/i);
     fireEvent.change(instInput, { target: { value: instId } });
 
     await waitFor(() => {
@@ -1053,7 +1058,7 @@ describe("Institution setup action screens", () => {
     });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...department, departmentName: "Computer Science and Engineering", rowVersion: 3 } });
     renderWithTenant(<AcademicStructurePage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("Computer Science");
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -1080,7 +1085,7 @@ describe("Institution setup action screens", () => {
     });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...program, programName: "B.Tech Computer Science", rowVersion: 4 } });
     renderWithTenant(<AcademicStructurePage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByRole("link", { name: "B.Tech" });
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
@@ -1104,7 +1109,7 @@ describe("Institution setup action screens", () => {
     });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...schoolClass, className: "Grade 9", rowVersion: 5 } });
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("Grade 8");
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -1135,7 +1140,7 @@ describe("Institution setup action screens", () => {
     });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...section, sectionName: "B", capacity: 72, rowVersion: 7 } });
     renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: INST_ID } });
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
     await screen.findByText("Section A");
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
