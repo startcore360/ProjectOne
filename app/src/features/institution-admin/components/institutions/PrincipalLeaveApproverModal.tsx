@@ -3,7 +3,8 @@ import { Button, Modal, Notice, SelectField } from "../../../../design-system/co
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   leaveApproverService,
-  type ApproverKind,\n  type LeaveApproverCandidate,
+  type ApproverKind,
+  type LeaveApproverCandidate,
 } from "../../api/leaveApproverService";
 import type { InstitutionItem } from "../../api/institutionService";
 
@@ -21,7 +22,10 @@ export function PrincipalLeaveApproverModal({
   onSaved,
 }: PrincipalLeaveApproverModalProps) {
   const [approverKind, setApproverKind] = useState<ApproverKind>("MANAGEMENT");
-  const [approverUserId, setApproverUserId] = useState("");\n  const [candidates, setCandidates] = useState<LeaveApproverCandidate[]>([]);\n  const [loadingCandidates, setLoadingCandidates] = useState(false);\n  const [candidateError, setCandidateError] = useState<string | null>(null);
+  const [approverUserId, setApproverUserId] = useState("");
+  const [candidates, setCandidates] = useState<LeaveApproverCandidate[]>([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
