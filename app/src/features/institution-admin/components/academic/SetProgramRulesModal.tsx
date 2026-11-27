@@ -29,6 +29,14 @@ export function SetProgramRulesModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setModalError("");
+    if (Object.keys(ruleDocument).length === 0) {
+      setModalError("Add at least one programme requirement before saving.");
+      return;
+    }
+    if (!ruleEffectiveFrom) {
+      setModalError("Choose when these requirements take effect.");
+      return;
+    }
     try {
       await onSubmit(JSON.stringify(ruleDocument), ruleEffectiveFrom);
       handleClose();
