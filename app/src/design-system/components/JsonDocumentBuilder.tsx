@@ -4,7 +4,6 @@ import TextField from "./TextField";
 import SelectField from "./SelectField";
 
 export type DocumentValue = string | number | boolean | null | DocumentValue[] | { [key: string]: DocumentValue };
-
 type ValueKind = "text" | "number" | "boolean" | "object" | "array" | "null";
 
 function isObject(value: DocumentValue): value is { [key: string]: DocumentValue } {
@@ -51,62 +50,92 @@ function NodeEditor({ label, value, onChange, onRemove, onRename, depth = 0 }: N
   const kind = kindOf(value);
   const updateKind = (nextKind: ValueKind) => onChange(emptyValue(nextKind));
 
+  const rename = (nextName: string) => {
+    const normalized = nextName.trim();
+    if (!onRename || !normalized || normalized === label) return;
+    onRename(normalized);
+  };
 
   return (
-    <div style={{ border: "1px solid var(--border-subtle, #d7dee8)", borderRadius: "10px", padding: "0.75rem", marginTop: "0.6rem", marginLeft: depth ? "0.75rem" : 0 }}>
-      <div style={{ display: "grid", gridTemplateColumns: onRename ? "minmax(100px, 1fr) minmax(120px, 0.8fr) auto" : "minmax(120px, 1fr) auto", gap: "0.5rem", alignItems: "end" }}>
+    <section className="eds-document-node" data-depth={Math.min(depth, 4)}>
+      <div className="eds-document-node__header">
         {onRename ? (
           <TextField id={`document-key-${nodeId}`} label="Field name" defaultValue={label}
-            onBlur={(event) => onRename(event.currentTarget.value)} />
-        ) : <strong style={{ paddingBottom: "0.6rem" }}>{label}</strong>}
+            onBlur={(event) => rename(event.currentTarget.value)} />
+        ) : <strong className="eds-document-node__title">{label}</strong>}
         <SelectField id={`document-type-${nodeId}`} label="Value type" value={kind}
           onChange={(event) => updateKind(event.target.value as ValueKind)}>
-          <option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes / No</option>
-          <option value="object">Group of fields</option><option value="array">List</option><option value="null">Not set</option>
+          <option value="text">Text</option>
+          <option value="number">Number</option>
+          <option value="boolean">Yes / No</option>
+          <option value="object">Group of fields</option>
+          <option value="array">List</option>
+          <option value="null">Not set</option>
         </SelectField>
-        {onRemove && <Button type="button" variant="tertiary" size="sm" onClick={onRemove}>Remove</Button>}
+        {onRemove && (
+          <Button type="button" variant="tertiary" size="sm" className="eds-document-node__remove" onClick={onRemove}>
+            Remove
+          </Button>
+        )}
       </div>
 
-      {kind === "text" && <TextField id={`document-value-${nodeId}`} label="Value" value={value as string} onChange={(event) => onChange(event.target.value)} />}
-      {kind === "number" && <TextField id={`document-value-${nodeId}`} label="Value" type="number" value={String(value)}
-        onChange={(event) => onChange(event.target.value === "" ? 0 : Number(event.target.value))} />}
-      {kind === "boolean" && <SelectField id={`document-value-${label.replace(/[^a-z0-9]/gi, "-")}`} label="Value" value={String(value)}
-        onChange={(event) => onChange(event.target.value === "true")}><option value="true">Yes</option><option value="false">No</option></SelectField>}
+      {kind === "text" && (
+        <TextField id={`document-value-${nodeId}`} label="Value" value={value as string}
+          onChange={(event) => onChange(event.target.value)} />
+      )}
+      {kind === "number" && (
+        <TextField id={`document-value-${nodeId}`} label="Value" type="number" value={String(value)}
+          onChange={(event) => onChange(event.target.value === "" ? 0 : Number(event.target.value))} />
+      )}
+      {kind === "boolean" && (
+        <SelectField id={`document-value-${nodeId}`} label="Value" value={String(value)}
+          onChange={(event) => onChange(event.target.value === "true")}>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </SelectField>
+      )}
       {kind === "object" && (
-        <div style={{ marginTop: "0.4rem" }}>
+        <div className="eds-document-node__children">
           {Object.entries(value as Record<string, DocumentValue>).map(([key, child]) => (
             <NodeEditor key={key} label={key} value={child}
               onChange={(next) => onChange({ ...(value as Record<string, DocumentValue>), [key]: next })}
-              onRename={(nextKeyName) => {
-                const next = { ...(value as Record<string, DocumentValue>) };
-                if (nextKeyName === key || !nextKeyName.trim()) return;
+              onRename={(nextName) => {
+                const normalized = nextName.trim();
+                const record = value as Record<string, DocumentValue>;
+                if (!normalized || normalized === key || Object.prototype.hasOwnProperty.call(record, normalized)) return;
+                const next = { ...record };
                 delete next[key];
-                next[nextKeyName.trim()] = child;
+                next[normalized] = child;
                 onChange(next);
               }}
-              onRemove={() => { const next = { ...(value as Record<string, DocumentValue>) }; delete next[key]; onChange(next); }}
+              onRemove={() => {
+                const next = { ...(value as Record<string, DocumentValue>) };
+                delete next[key];
+                onChange(next);
+              }}
               depth={depth + 1} />
           ))}
-          <div style={{ marginTop: "0.6rem" }}>
-            <Button type="button" variant="secondary" size="sm" onClick={() => onChange({ ...(value as Record<string, DocumentValue>), [nextKey(value as Record<string, DocumentValue>)]: "" })}>Add field</Button>
-          </div>
+          <Button type="button" variant="secondary" size="sm"
+            onClick={() => onChange({ ...(value as Record<string, DocumentValue>), [nextKey(value as Record<string, DocumentValue>)]: "" })}>
+            Add field
+          </Button>
         </div>
       )}
       {kind === "array" && (
-        <div style={{ marginTop: "0.4rem" }}>
+        <div className="eds-document-node__children">
           {(value as DocumentValue[]).map((child, index) => (
             <NodeEditor key={index} label={`Item ${index + 1}`} value={child}
               onChange={(next) => onChange((value as DocumentValue[]).map((item, itemIndex) => itemIndex === index ? next : item))}
               onRemove={() => onChange((value as DocumentValue[]).filter((_, itemIndex) => itemIndex !== index))}
               depth={depth + 1} />
           ))}
-          <div style={{ marginTop: "0.6rem" }}>
-            <Button type="button" variant="secondary" size="sm" onClick={() => onChange([...(value as DocumentValue[]), ""])}>Add item</Button>
-          </div>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onChange([...(value as DocumentValue[]), ""])}>
+            Add item
+          </Button>
         </div>
       )}
-      {kind === "null" && <p style={{ color: "var(--text-muted)", margin: "0.4rem 0 0" }}>No value is currently set.</p>}
-    </div>
+      {kind === "null" && <p className="eds-document-node__empty">No value is currently set.</p>}
+    </section>
   );
 }
 
@@ -117,27 +146,41 @@ export interface JsonDocumentBuilderProps {
   description?: string;
 }
 
-export function JsonDocumentBuilder({ value, onChange, title = "Structured details", description = "Add fields and choose the appropriate value type. The system stores these details automatically." }: JsonDocumentBuilderProps) {
+export function JsonDocumentBuilder({
+  value,
+  onChange,
+  title = "Structured details",
+  description = "Add details using the controls below. The application saves them in the required format.",
+}: JsonDocumentBuilderProps) {
   return (
-    <section aria-label={title}>
-      <div style={{ marginBottom: "0.75rem" }}>
-        <strong>{title}</strong>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>{description}</p>
+    <section className="eds-document-builder" aria-label={title}>
+      <header className="eds-document-builder__intro">
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </header>
+      <div className="eds-document-builder__fields">
+        {Object.entries(value).map(([key, child]) => (
+          <NodeEditor key={key} label={key} value={child}
+            onChange={(next) => onChange({ ...value, [key]: next })}
+            onRename={(nextName) => {
+              const normalized = nextName.trim();
+              if (!normalized || normalized === key || Object.prototype.hasOwnProperty.call(value, normalized)) return;
+              const next = { ...value };
+              delete next[key];
+              next[normalized] = child;
+              onChange(next);
+            }}
+            onRemove={() => {
+              const next = { ...value };
+              delete next[key];
+              onChange(next);
+            }} />
+        ))}
       </div>
-      {Object.entries(value).map(([key, child]) => (
-        <NodeEditor key={key} label={key} value={child}
-          onChange={(next) => onChange({ ...value, [key]: next })}
-          onRename={(nextKeyName) => {
-            if (nextKeyName === key || !nextKeyName.trim() || Object.prototype.hasOwnProperty.call(value, nextKeyName.trim())) return;
-            const next = { ...value };
-            delete next[key];
-            next[nextKeyName.trim()] = child;
-            onChange(next);
-          }}
-          onRemove={() => { const next = { ...value }; delete next[key]; onChange(next); }} />
-      ))}
-      <div style={{ marginTop: "0.75rem" }}>
-        <Button type="button" variant="secondary" onClick={() => onChange({ ...value, [nextKey(value)]: "" })}>Add field</Button>
+      <div className="eds-document-builder__actions">
+        <Button type="button" variant="secondary" onClick={() => onChange({ ...value, [nextKey(value)]: "" })}>
+          Add field
+        </Button>
       </div>
     </section>
   );
