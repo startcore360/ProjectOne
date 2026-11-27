@@ -26,8 +26,17 @@ export function ViceChancellorModal({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!approverUserId.trim()) {
-      setError("Enter the approver user account ID.");
+    const normalizedApproverUserId = approverUserId.trim();
+    if (!normalizedApproverUserId) {
+      setError("Choose an approver user account.");
+      return;
+    }
+    // The API DTO deserializes this field directly as java.util.UUID. Reject
+    // malformed values here instead of sending a request that the API reports
+    // as a generic "Malformed JSON request body" error.
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(normalizedApproverUserId)) {
+      setError("Enter a valid user account ID. The value must be a UUID.");
       return;
     }
     setSaving(true);
@@ -35,7 +44,7 @@ export function ViceChancellorModal({
     try {
       await leaveApproverService.setVcLeaveApprover(tenantId, {
         approverKind,
-        approverUserId: approverUserId.trim(),
+        approverUserId: normalizedApproverUserId,
       });
       onSaved("Vice-Chancellor leave approver configured successfully.");
       setApproverUserId("");
