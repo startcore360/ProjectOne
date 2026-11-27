@@ -4,12 +4,57 @@ export type ApiErrorResponse = {
   message?: string;
   error?: string;
   details?: string;
+  code?: string;
+  /** Present on a 403 whose action the backend could identify (ActionCatalog.description). */
+  actionCode?: string;
+  actionDescription?: string;
+  /** At most 2 role names, highest organisational priority first; never present for a
+   * sensitive/locked action - see PermissionEvaluatorService.heldByRoleNames. */
+  heldBy?: string[];
   errors?: Record<string, string>;
   /** Spring @Valid field-level errors: { fieldName: "error message" } */
   fieldErrors?: Record<string, string>;
 };
 
 export type ApiError = AxiosError<ApiErrorResponse>;
+
+/** The structured shape a Permission Denied screen state renders - see PermissionDeniedState. */
+export type PermissionDenialDetails = {
+  reasonCode: string | null;
+  actionCode: string | null;
+  actionDescription: string | null;
+  /** At most 2 names. Empty when the backend withheld them (sensitive action) or none apply. */
+  heldBy: string[];
+  message: string;
+};
+
+function forbiddenMessage(data: ApiErrorResponse | undefined): string {
+  if (data?.actionDescription) {
+    return data.heldBy && data.heldBy.length > 0
+      ? `You don't have permission to ${data.actionDescription}. Ask a ${data.heldBy.join(" or ")} to do this, or switch to a role that can.`
+      : `You don't have permission to ${data.actionDescription}. Ask your administrator to review your access.`;
+  }
+  return "You do not have permission to perform this action. Ask your administrator to review your access.";
+}
+
+/**
+ * Reads the structured 403 body GlobalExceptionHandler.handleUnauthorized now sends, for a
+ * Permission Denied screen state to render. Returns null for anything that isn't a 403, so
+ * callers can tell "not a permission error" apart from "a permission error with no detail".
+ */
+export function getPermissionDenialDetails(error: unknown): PermissionDenialDetails | null {
+  if (!error || typeof error !== "object" || !("isAxiosError" in error)) return null;
+  const apiError = error as ApiError;
+  if (apiError.response?.status !== 403) return null;
+  const data = apiError.response.data;
+  return {
+    reasonCode: data?.code ?? null,
+    actionCode: data?.actionCode ?? null,
+    actionDescription: data?.actionDescription ?? null,
+    heldBy: data?.heldBy ?? [],
+    message: forbiddenMessage(data),
+  };
+}
 
 // Small shared helpers for talking to the backend API: building URLs,
 // turning a failed request into a friendly on-screen message, and turning
@@ -58,7 +103,7 @@ export class ApiHelper {
       const apiError = error as ApiError;
       const status = apiError.response?.status;
       if (status === 401) return "Your session has expired. Please sign in again.";
-      if (status === 403) return "You do not have permission to perform this action.";
+      if (status === 403) return forbiddenMessage(apiError.response?.data);
       if (status === 404) return "The requested record could not be found.";
       if (status === 409 || status === 412) return "This record has changed. Refresh it and try again.";
       if (status && status >= 500) return "The server encountered an error. Please try again later.";

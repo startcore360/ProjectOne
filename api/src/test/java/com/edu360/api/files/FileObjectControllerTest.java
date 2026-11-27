@@ -44,7 +44,7 @@ class FileObjectControllerTest {
     @Test
     void uploadReturnsCreatedMetadataWithoutStorageKey() throws Exception {
         UUID fileId = UUID.randomUUID();
-        when(fileService.upload(eq(principal), any(), eq("STUDY_MATERIAL"), eq(null)))
+        when(fileService.upload(eq(principal), any(), eq("STUDY_MATERIAL"), eq(null), eq(null), eq(null)))
                 .thenReturn(new FileUploadResponse(fileId, "lesson.pdf", "application/pdf", 8, "sha", "PENDING", "ACTIVE", null));
         MockMultipartFile upload = new MockMultipartFile("file", "lesson.pdf", "application/pdf", "%PDF-1.7".getBytes());
         mvc.perform(multipart("/v1/tenants/{tenantId}/files", tenantId).file(upload)

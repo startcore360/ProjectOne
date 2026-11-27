@@ -17,7 +17,7 @@ export function SetProgramRulesModal({
   onSubmit,
   saving,
 }: SetProgramRulesModalProps) {
-  const [ruleDocument, setRuleDocument] = useState<Record<string, DocumentValue>>({});
+  const [ruleDocument, setRuleDocument] = useState<Record<string, DocumentValue>>({ minCredits: 160 });
   const [ruleEffectiveFrom, setRuleEffectiveFrom] = useState(getLocalDateString());
   const [modalError, setModalError] = useState("");
 

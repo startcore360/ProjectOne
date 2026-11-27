@@ -106,7 +106,24 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage(), request);
+        String code = ex.getReasonCode() != null ? ex.getReasonCode() : "FORBIDDEN";
+        ResponseEntity<Map<String, Object>> base = buildResponse(HttpStatus.FORBIDDEN, code, ex.getMessage(), request);
+        if (ex.getActionCode() == null && ex.getHeldByRoleNames().isEmpty()) {
+            return base;
+        }
+        Map<String, Object> body = new HashMap<>(base.getBody());
+        if (ex.getActionCode() != null) {
+            body.put("actionCode", ex.getActionCode());
+        }
+        if (ex.getActionDescription() != null) {
+            body.put("actionDescription", ex.getActionDescription());
+        }
+        // Deliberately never a long list (CLAUDE.md UI/UX standard): at most the 2 highest-
+        // priority roles, and only for a non-sensitive denial - see PermissionEvaluatorService.
+        if (!ex.getHeldByRoleNames().isEmpty()) {
+            body.put("heldBy", ex.getHeldByRoleNames());
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
     /** A-02: several active roles and none chosen - 409, the screen sends the user to the role switcher. */

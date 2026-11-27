@@ -67,9 +67,10 @@ export default function StaffRecordsPage() {
   const { staffId } = useParams<{ staffId: string }>();
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const userId = useAppSelector((state) => state.auth.user?.id);
-  const { can } = useTenantAccess();
-  const canManage = can("STAFF_RECORD_MANAGE");
-  const canVerify = can("STAFF_DOCUMENT_VERIFY");
+  const { can, permissions } = useTenantAccess();
+  const isAdminRole = ["COLLEGE_ADMIN", "UNIVERSITY_ADMIN", "TENANT_ADMIN"].includes(permissions?.activeRoleCode ?? "");
+  const canManage = can("STAFF_RECORD_MANAGE") || isAdminRole;
+  const canVerify = can("STAFF_DOCUMENT_VERIFY") || isAdminRole;
   const [query, setQuery] = useState("");
   const [directoryPage, setDirectoryPage] = useState(1);
   const [directoryPageSize, setDirectoryPageSize] = useState(10);
@@ -329,12 +330,14 @@ export default function StaffRecordsPage() {
           </div>
           {state === "loading" && <SkeletonCard><SkeletonText height="1rem" width="55%" /><SkeletonText lines={5} /></SkeletonCard>}
           {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
-          {state === "loaded" && staff.length === 0 && <div className="">
-            <EmptyState title={query ? "No matching staff records" : "Your staff directory is empty"}
+          {state === "loaded" && staff.length === 0 && (
+            <EmptyState
+              title={query ? "No matching staff records" : "Your staff directory is empty"}
               description={query ? "Try a different name or staff code, or clear your search." : "Staff profiles within your active role scope will appear here. Create the first staff profile to begin building the directory."}
               icon="users"
-              action={!query && canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : undefined} />
-          </div>}
+              action={!query && canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : undefined}
+            />
+          )}
           {state === "loaded" && staff.length > 0 && (
             <>
               <div className="app-list-summary">

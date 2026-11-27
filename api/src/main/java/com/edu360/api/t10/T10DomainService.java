@@ -47,7 +47,7 @@ public class T10DomainService {
                    EXISTS(SELECT 1 FROM app.notice_acknowledgment a WHERE a.tenant_id=n.tenant_id AND a.notice_id=n.id AND a.user_id=?) AS acknowledged
               FROM app.notice_bulletin n WHERE n.tenant_id=? AND n.institution_id=? AND n.status='PUBLISHED'
                AND (n.expires_at IS NULL OR n.expires_at>now())
-               AND (n.target_roles_json='[]'::jsonb OR n.target_roles_json ? ?)
+               AND (n.target_roles_json='[]'::jsonb OR jsonb_exists(n.target_roles_json, ?))
              ORDER BY n.is_urgent DESC,n.published_at DESC
             """,p.userAccountId(),tenant,institution,Objects.toString(com.edu360.api.tenant.TenantContext.currentActiveRoleCode(),""));
     }

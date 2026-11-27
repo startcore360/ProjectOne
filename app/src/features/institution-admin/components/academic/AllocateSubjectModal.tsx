@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Button, Modal, Notice, SelectField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
-import { institutionService, type InstitutionItem, type CourseOfferingItem, type SectionItem, type AcademicSessionItem, type SubjectItem } from "../../api/institutionService";
+import { institutionService, type CourseOfferingItem, type SectionItem, type AcademicSessionItem, type SubjectItem } from "../../api/institutionService";
 import { staffService, type TeacherLookupItem } from "../../api/staffService";
 
 export interface AllocateSubjectModalProps {
@@ -18,7 +18,6 @@ export interface AllocateSubjectModalProps {
 }
 
 export function AllocateSubjectModal({ tenantId, isOpen, onClose, onSubmit, saving }: AllocateSubjectModalProps) {
-  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [institutionId, setInstitutionId] = useState("");
   const [sessions, setSessions] = useState<AcademicSessionItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
@@ -40,7 +39,6 @@ export function AllocateSubjectModal({ tenantId, isOpen, onClose, onSubmit, savi
     institutionService.listInstitutions(tenantId)
       .then((response) => {
         if (!cancelled) {
-          setInstitutions(response.items ?? []);
           setInstitutionId((current) => current || response.items?.[0]?.institutionId || "");
         }
       })
@@ -120,11 +118,9 @@ export function AllocateSubjectModal({ tenantId, isOpen, onClose, onSubmit, savi
       <form onSubmit={handleSubmit} className="app-form" noValidate>
         {modalError && <Notice tone="danger">{modalError}</Notice>}
         {lookupError && <Notice tone="danger">{lookupError}</Notice>}
-        <SelectField id="alloc-institution" label="Institution *" required value={institutionId} disabled={loading || institutions.length === 0}
-          onChange={(event) => setInstitutionId(event.target.value)}>
-          <option value="">{loading ? "Loading institutions…" : "Choose an institution"}</option>
-          {institutions.map((item) => <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>)}
-        </SelectField>
+        <TextField id="alloc-institution" label="Institution *" required value={institutionId}
+          placeholder="Enter institution UUID"
+          onChange={(event) => setInstitutionId(event.target.value)} />
         <SelectField id="alloc-course-offering" label="Course offering *" required value={courseOfferingId}
           disabled={loading || !institutionId || offeringOptions.length === 0}
           onChange={(event) => { setCourseOfferingId(event.target.value); setSectionId(""); }}>

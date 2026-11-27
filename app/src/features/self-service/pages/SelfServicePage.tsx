@@ -68,12 +68,23 @@ export default function SelfServicePage() {
     setLeavesLoading(true);
     setLeavesError(null);
     try {
-      const [bals, reqs] = await Promise.all([
+      const [balsResult, reqsResult] = await Promise.allSettled([
         selfServiceApi.getLeaveBalances(tenantId),
         selfServiceApi.getLeaveRequests(tenantId),
       ]);
-      setBalances(bals);
-      setRequests(reqs);
+      if (balsResult.status === "fulfilled") {
+        setBalances(balsResult.value);
+      } else {
+        setBalances([]);
+      }
+      if (reqsResult.status === "fulfilled") {
+        setRequests(reqsResult.value);
+      } else {
+        setRequests([]);
+      }
+      if (balsResult.status === "rejected" || reqsResult.status === "rejected") {
+        setLeavesError("Leave records could not be loaded. Please try again.");
+      }
     } catch {
       setLeavesError("Leave records could not be loaded. Please try again.");
     } finally {

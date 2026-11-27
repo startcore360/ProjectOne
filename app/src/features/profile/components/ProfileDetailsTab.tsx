@@ -94,7 +94,7 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
     try {
       const { data } = await profileService.update({
         displayName: displayName.trim(),
-        ...(isPlatform ? {} : { mobile: mobile || undefined }),
+        ...(isPlatform || isGuardian ? {} : { mobile: mobile || undefined }),
       });
       onSaved(data);
       setEditing(false);

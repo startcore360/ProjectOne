@@ -169,7 +169,7 @@ public class IdCardRenderer {
     private static void drawText(PDPageContentStream stream, String value, float x, float y,
             float size, boolean bold, int red, int green, int blue) throws Exception {
         stream.beginText();
-        stream.setNonStrokingColor(red, green, blue);
+        stream.setNonStrokingColor(red / 255f, green / 255f, blue / 255f);
         stream.setFont(new PDType1Font(bold
                 ? Standard14Fonts.FontName.HELVETICA_BOLD : Standard14Fonts.FontName.HELVETICA), size);
         stream.newLineAtOffset(x, y);

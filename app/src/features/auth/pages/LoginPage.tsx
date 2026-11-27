@@ -9,6 +9,17 @@ import { authService } from "../../../services/modules/authService";
 import { AuthenticatorSetup, type PendingEnrolment } from "../components/AuthenticatorSetup";
 import { BackupCodes } from "../components/BackupCodes";
 import { buildSharedLandingUrl, isSharedLandingHost, isTunnelHost } from "../../../lib/tenantHost";
+import { canOpenPlatformConsole, platformLandingPath } from "../../platform/platformAccess";
+import type { AuthUser } from "../../../store/slices/authSlice";
+
+// Mirrors RoleHomeRedirect (routes/Routes.tsx) so a successful sign-in can navigate straight to
+// the real destination instead of through "/" -> RootEntry -> RoleHomeRedirect, which cost an
+// extra render pass (and a visible flicker) on every login.
+function homePathFor(user: AuthUser): string {
+  if (user.mustChangePassword) return "/change-password";
+  if (canOpenPlatformConsole(user.platformRole)) return platformLandingPath(user.platformRole);
+  return "/dashboard";
+}
 
 const LOGIN_DRAFT_KEY = "edu360_login_draft";
 
@@ -100,6 +111,11 @@ export default function LoginPage() {
       setError("Enter a backup code, like K7QD4-9MXRT.");
       return;
     }
+    // Start fetching the post-login landing page's chunk now, in parallel with the sign-in
+    // request below, instead of only starting once navigate() runs - the most common
+    // destination is /dashboard, and this is a small, idempotent prefetch even when the
+    // caller turns out to be a platform user and it goes unused.
+    void import("../../dashboard/pages/DashboardPage");
     setBusy(true);
     try {
       if (step === "backup") {
@@ -110,7 +126,7 @@ export default function LoginPage() {
       }
       const user = await login(email.trim(), password, step === "code" ? code : undefined);
       clearLoginDraft();
-      navigate(user.mustChangePassword ? "/change-password" : "/");
+      navigate(homePathFor(user), { replace: true });
     } catch (err) {
       const body = axios.isAxiosError<{
         code?: string;

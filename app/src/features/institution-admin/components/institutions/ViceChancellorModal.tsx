@@ -116,7 +116,13 @@ export function ViceChancellorModal({
               </option>
             ))}
           </SelectField>
-          {candidateError && <Notice tone="danger">{candidateError}</Notice>}
+          {candidateError && (
+            <Notice tone={candidateError.includes("INVALID_TENANT_TYPE") || candidateError.toLowerCase().includes("university group") ? "warning" : "danger"}>
+              {candidateError.includes("INVALID_TENANT_TYPE") || candidateError.toLowerCase().includes("university group")
+                ? "Vice-Chancellor leave approval only applies to University Group tenants [Rule C6]. Individual colleges and schools configure Principal leave approvers instead."
+                : candidateError}
+            </Notice>
+          )}
           {!loadingCandidates && !candidateError && candidates.length === 0 && (
             <p className="app-empty-inline">No eligible accounts found. Create a Management or Governing Body Approver account first in Users &amp; Roles.</p>
           )}

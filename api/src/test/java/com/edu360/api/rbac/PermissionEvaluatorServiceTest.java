@@ -183,6 +183,69 @@ class PermissionEvaluatorServiceTest {
                 evaluator.authorize(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID), USER_CREATE, RbacScope.tenant(), RbacTarget.NONE));
     }
 
+    @Test
+    void authorize_namesUpToTwoHighestPriorityRolesThatHoldTheActionWhenDeniedByActionNotGranted() {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        UUID collegeRoleId = UUID.randomUUID();
+        UUID schoolRoleId = UUID.randomUUID();
+        UUID universityRoleId = UUID.randomUUID();
+        when(actionCatalogRepository.findById(USER_CREATE)).thenReturn(Optional.of(action(USER_CREATE, false)));
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, ScopeType.TENANT, null, null, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(activeAssignment(null)));
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(RoleDefinition.builder()
+                        .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)).roleCode("TEACHER").roleName("Teacher")
+                        .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.SCHOOL).status(RoleDefinitionStatus.ACTIVE).build()));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(TENANT_ID, ROLE_DEFINITION_ID, USER_CREATE))
+                .thenReturn(false);
+        when(roleActionRepository.findByIdTenantIdAndActionCode(TENANT_ID, USER_CREATE)).thenReturn(List.of(
+                RoleAction.builder().id(new RoleActionId(TENANT_ID, UUID.randomUUID())).roleDefinitionId(universityRoleId).actionCode(USER_CREATE).build(),
+                RoleAction.builder().id(new RoleActionId(TENANT_ID, UUID.randomUUID())).roleDefinitionId(collegeRoleId).actionCode(USER_CREATE).build(),
+                RoleAction.builder().id(new RoleActionId(TENANT_ID, UUID.randomUUID())).roleDefinitionId(schoolRoleId).actionCode(USER_CREATE).build()));
+        when(roleDefinitionRepository.findByIdTenantId(TENANT_ID)).thenReturn(List.of(
+                RoleDefinition.builder().id(new RoleDefinitionId(TENANT_ID, universityRoleId)).roleCode("UNIVERSITY_ADMIN").roleName("University Admin")
+                        .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.UNIVERSITY).status(RoleDefinitionStatus.ACTIVE).build(),
+                RoleDefinition.builder().id(new RoleDefinitionId(TENANT_ID, collegeRoleId)).roleCode("COLLEGE_PRINCIPAL").roleName("College Principal")
+                        .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.COLLEGE).status(RoleDefinitionStatus.ACTIVE).build(),
+                RoleDefinition.builder().id(new RoleDefinitionId(TENANT_ID, schoolRoleId)).roleCode("SCHOOL_PRINCIPAL").roleName("School Principal")
+                        .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.SCHOOL).status(RoleDefinitionStatus.ACTIVE).build()));
+
+        UnauthorizedException ex = org.junit.jupiter.api.Assertions.assertThrows(UnauthorizedException.class, () ->
+                evaluator.authorize(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID), USER_CREATE, RbacScope.tenant(), RbacTarget.NONE));
+
+        assertThat(ex.getReasonCode()).isEqualTo("ACTION_NOT_GRANTED");
+        assertThat(ex.getActionCode()).isEqualTo(USER_CREATE);
+        // Highest organisational priority first (UNIVERSITY before COLLEGE), and never more
+        // than 2 even though 3 roles hold the action - this is a short hint, not a role list.
+        assertThat(ex.getHeldByRoleNames()).containsExactly("University Admin", "College Principal");
+    }
+
+    @Test
+    void authorize_neverNamesRolesForALockedOrSensitiveAction_evenWhenSomeRoleHoldsIt() {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        String lockedAction = "SALARY_INDIVIDUAL_VIEW";
+        when(actionCatalogRepository.findById(lockedAction)).thenReturn(Optional.of(action(lockedAction, false)));
+        when(userRoleAssignmentRepository.findByIdTenantIdAndUserAccountIdAndScopeTypeAndInstitutionIdAndDepartmentIdAndStatus(
+                TENANT_ID, USER_ACCOUNT_ID, ScopeType.TENANT, null, null, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(activeAssignment(null)));
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(RoleDefinition.builder()
+                        .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)).roleCode("TEACHER").roleName("Teacher")
+                        .roleOrigin(RoleOrigin.STANDARD).roleLevel(RoleLevel.SCHOOL).status(RoleDefinitionStatus.ACTIVE).build()));
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(TENANT_ID, ROLE_DEFINITION_ID, lockedAction))
+                .thenReturn(false);
+        // isSensitiveAction() short-circuits on LOCKED_ACTIONS before any role lookup runs -
+        // findByIdTenantIdAndActionCode is deliberately never stubbed/called here.
+
+        UnauthorizedException ex = org.junit.jupiter.api.Assertions.assertThrows(UnauthorizedException.class, () ->
+                evaluator.authorize(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID), lockedAction, RbacScope.tenant(), RbacTarget.NONE));
+
+        assertThat(ex.getHeldByRoleNames()).isEmpty();
+    }
+
     // ------------------------------------------------------------------------------- SCOPE
 
     @Test
@@ -388,7 +451,9 @@ class PermissionEvaluatorServiceTest {
 
     @Test
     void idCardReplacementApprovalRejectsSelfApproval() {
-        configureGrantedAction("ID_CARD_REPLACE", true, "RECORDS_OFFICER", false);
+        init();
+        when(actionCatalogRepository.findById("ID_CARD_REPLACE"))
+                .thenReturn(Optional.of(action("ID_CARD_REPLACE", true)));
         PermissionDecision denied = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
                 "ID_CARD_REPLACE", RbacScope.institution(INSTITUTION_ID), RbacTarget.of(USER_ACCOUNT_ID));
         assertThat(denied.allowed()).isFalse();
@@ -405,7 +470,9 @@ class PermissionEvaluatorServiceTest {
 
     @Test
     void certificateApprovalRejectsTheApplicantAsApprover() {
-        configureGrantedAction("CERTIFICATE_APPROVE", true, "PRINCIPAL_COLLEGE", false);
+        init();
+        when(actionCatalogRepository.findById("CERTIFICATE_APPROVE"))
+                .thenReturn(Optional.of(action("CERTIFICATE_APPROVE", true)));
         PermissionDecision denied = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
                 "CERTIFICATE_APPROVE", RbacScope.institution(INSTITUTION_ID), RbacTarget.of(USER_ACCOUNT_ID));
         assertThat(denied.allowed()).isFalse();

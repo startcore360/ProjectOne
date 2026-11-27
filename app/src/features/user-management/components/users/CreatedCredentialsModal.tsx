@@ -132,7 +132,19 @@ export function CreatedCredentialsModal({
           </div>
         )}
 
-        <footer style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+        <footer style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
+          {user.temporaryPassword && (
+            <ShareMenu
+              text={`Your EDU360 login credentials:\nAccount: ${user.displayName}${user.email ? ` (${user.email})` : ""}\nTemporary Password: ${user.temporaryPassword}\n\nPlease sign in and choose a new password.`}
+              title="EDU360 Credentials"
+              emailSubject="Your EDU360 Temporary Credentials"
+              emailTo={user.email}
+              label="Share temporary credentials"
+              asButton
+              buttonText="Share credentials"
+              buttonVariant="secondary"
+            />
+          )}
           <Button type="button" variant="primary" onClick={onClose}>
             I've copied it, close
           </Button>

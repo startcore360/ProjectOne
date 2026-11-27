@@ -206,6 +206,8 @@ describe("UserListPage", () => {
   });
 
   it("opens bulk upload modal, downloads template, pre-validates CSV with errors, and allows good rows import (Story #10: USER_BULK_UPLOAD)", async () => {
+    vi.mocked(institutionService.listInstitutions).mockResolvedValue({ items: [], total: 0 });
+
     vi.mocked(userManagementService.getImportTemplate).mockResolvedValueOnce({
       data: {
         importKind: "USERS",

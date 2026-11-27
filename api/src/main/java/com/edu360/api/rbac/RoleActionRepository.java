@@ -19,4 +19,9 @@ public interface RoleActionRepository extends JpaRepository<RoleAction, RoleActi
     List<RoleAction> findByIdTenantIdAndRoleDefinitionId(UUID tenantId, UUID roleDefinitionId);
 
     void deleteByIdTenantIdAndRoleDefinitionId(UUID tenantId, UUID roleDefinitionId);
+
+    /** Every role in the tenant that currently holds this action - used only to tell a denied
+     * caller which role(s) they'd need (PermissionEvaluatorService caps and filters this list;
+     * never surfaced for a sensitive/locked action). */
+    List<RoleAction> findByIdTenantIdAndActionCode(UUID tenantId, String actionCode);
 }

@@ -144,6 +144,7 @@ export interface JsonDocumentBuilderProps {
   onChange: (value: Record<string, DocumentValue>) => void;
   title?: string;
   description?: string;
+  hideAddField?: boolean;
 }
 
 export function JsonDocumentBuilder({
@@ -151,6 +152,7 @@ export function JsonDocumentBuilder({
   onChange,
   title = "Structured details",
   description = "Add details using the controls below. The application saves them in the required format.",
+  hideAddField = false,
 }: JsonDocumentBuilderProps) {
   return (
     <section className="eds-document-builder" aria-label={title}>
@@ -177,11 +179,13 @@ export function JsonDocumentBuilder({
             }} />
         ))}
       </div>
-      <div className="eds-document-builder__actions">
-        <Button type="button" variant="secondary" onClick={() => onChange({ ...value, [nextKey(value)]: "" })}>
-          Add field
-        </Button>
-      </div>
+      {!hideAddField && (
+        <div className="eds-document-builder__actions">
+          <Button type="button" variant="secondary" onClick={() => onChange({ ...value, [nextKey(value)]: "" })}>
+            Add field
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

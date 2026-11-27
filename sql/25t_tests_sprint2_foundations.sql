@@ -29,22 +29,39 @@ SELECT public.expect_ok('S2-DB-03','DEC-14 syllabus view grants',$q$
  END $d$
 $q$);
 
+-- DB-48 (04_tests.sql) permanently locks the term for institution 201 / academic_session 301,
+-- which section 504 belongs to. These two tests temporarily unlock that term (via the normal
+-- 72-hour term_unlock_log protocol from migration 55) around their own inserts and always
+-- restore it to LOCKED before returning, success or failure, so later tests see it locked again.
 SELECT public.expect_ok('S2-DB-04','HOD requester may self-approve only their own marked attendance session',$q$
  DO $d$ DECLARE t uuid:='a0000000-0000-0000-0000-000000000000'; u uuid:='a0000000-0000-0000-0000-000000000101';
  i uuid:='a0000000-0000-0000-0000-000000000201'; ses uuid:='a0000000-0000-0000-0000-000000000c31';
  corr uuid:='a0000000-0000-0000-0000-000000000d31'; req uuid:='a0000000-0000-0000-0000-000000000e31';
- step uuid:='a0000000-0000-0000-0000-000000000f31';
+ step uuid:='a0000000-0000-0000-0000-000000000f31'; term uuid:='a0000000-0000-0000-0000-000000000c03';
+ unl uuid:=gen_random_uuid(); ts timestamptz:=now();
  BEGIN
-  INSERT INTO app.attendance_session(tenant_id,attendance_session_id,institution_id,section_id,session_kind,attendance_date,academic_year,marked_by_user_id,marked_as,created_by,updated_by)
-  VALUES(t,ses,i,'a0000000-0000-0000-0000-000000000504','PERIOD','2026-10-22',2026,u,'ASSIGNED',u,u);
-  INSERT INTO app.approval_request(tenant_id,approval_request_id,institution_id,process_code,subject_type,subject_id,requested_by_user_id,requester_active_role,created_by,updated_by)
-  VALUES(t,req,i,'ATTENDANCE_CORRECTION_COLLEGE','ATTENDANCE_CORRECTION_REQUEST',corr,u,'HEAD_OF_DEPARTMENT',u,u);
-  INSERT INTO app.attendance_correction_request(tenant_id,attendance_correction_request_id,institution_id,attendance_session_id,requested_by_user_id,reason,approval_request_id,status,created_by,updated_by)
-  VALUES(t,corr,i,ses,u,'S2 own marked session',req,'REQUESTED',u,u);
-  INSERT INTO app.approval_step(tenant_id,approval_step_id,approval_request_id,step_no,approver_role_code,created_by,updated_by)
-  VALUES(t,step,req,1,'HEAD_OF_DEPARTMENT',u,u);
-  UPDATE app.approval_step SET decision='APPROVED',acted_by_user_id=u,acted_active_role='HEAD_OF_DEPARTMENT',decided_at=now()
-   WHERE tenant_id=t AND approval_step_id=step;
+  INSERT INTO app.term_unlock_log(tenant_id,id,term_id,unlocked_by_user_id,reason,unlocked_at,created_by,updated_by)
+  VALUES(t,unl,term,u,'S2-DB-04 test fixture: temporary unlock',ts,u,u);
+  UPDATE app.term_lock SET lock_state='TEMP_UNLOCKED',unlock_until=ts+interval '72 hours' WHERE tenant_id=t AND term_lock_id=term;
+  BEGIN
+   UPDATE app.section SET class_teacher_user_id=u WHERE tenant_id=t AND section_id='a0000000-0000-0000-0000-000000000504';
+   INSERT INTO app.attendance_session(tenant_id,attendance_session_id,institution_id,section_id,session_kind,attendance_date,academic_year,marked_by_user_id,marked_as,created_by,updated_by)
+   VALUES(t,ses,i,'a0000000-0000-0000-0000-000000000504','DAILY','2026-10-22',2026,u,'ASSIGNED',u,u);
+   INSERT INTO app.approval_request(tenant_id,approval_request_id,institution_id,process_code,subject_type,subject_id,requested_by_user_id,requester_active_role,created_by,updated_by)
+   VALUES(t,req,i,'ATTENDANCE_CORRECTION_COLLEGE','ATTENDANCE_CORRECTION_REQUEST',corr,u,'HEAD_OF_DEPARTMENT',u,u);
+   INSERT INTO app.attendance_correction_request(tenant_id,attendance_correction_request_id,institution_id,attendance_session_id,requested_by_user_id,reason,approval_request_id,status,created_by,updated_by)
+   VALUES(t,corr,i,ses,u,'S2 own marked session',req,'REQUESTED',u,u);
+   INSERT INTO app.approval_step(tenant_id,approval_step_id,approval_request_id,step_no,approver_role_code,created_by,updated_by)
+   VALUES(t,step,req,1,'HEAD_OF_DEPARTMENT',u,u);
+   UPDATE app.approval_step SET decision='APPROVED',acted_by_user_id=u,acted_active_role='HEAD_OF_DEPARTMENT',decided_at=now()
+    WHERE tenant_id=t AND approval_step_id=step;
+  EXCEPTION WHEN OTHERS THEN
+   UPDATE app.term_unlock_log SET relocked_at=now() WHERE tenant_id=t AND id=unl;
+   UPDATE app.term_lock SET lock_state='LOCKED',unlock_until=NULL WHERE tenant_id=t AND term_lock_id=term;
+   RAISE;
+  END;
+  UPDATE app.term_unlock_log SET relocked_at=now() WHERE tenant_id=t AND id=unl;
+  UPDATE app.term_lock SET lock_state='LOCKED',unlock_until=NULL WHERE tenant_id=t AND term_lock_id=term;
  END $d$
 $q$);
 
@@ -52,18 +69,31 @@ SELECT public.expect_fail('S2-DB-05','HOD cannot self-approve a session marked b
  DO $d$ DECLARE t uuid:='a0000000-0000-0000-0000-000000000000'; u uuid:='a0000000-0000-0000-0000-000000000101';
  i uuid:='a0000000-0000-0000-0000-000000000201'; ses uuid:='a0000000-0000-0000-0000-000000000c32';
  corr uuid:='a0000000-0000-0000-0000-000000000d32'; req uuid:='a0000000-0000-0000-0000-000000000e32';
- step uuid:='a0000000-0000-0000-0000-000000000f32';
+ step uuid:='a0000000-0000-0000-0000-000000000f32'; term uuid:='a0000000-0000-0000-0000-000000000c03';
+ unl uuid:=gen_random_uuid(); ts timestamptz:=now();
  BEGIN
-  INSERT INTO app.attendance_session(tenant_id,attendance_session_id,institution_id,section_id,session_kind,attendance_date,academic_year,marked_by_user_id,marked_as,created_by,updated_by)
-  VALUES(t,ses,i,'a0000000-0000-0000-0000-000000000504','PERIOD','2026-10-23',2026,'a0000000-0000-0000-0000-000000000102','ASSIGNED',u,u);
-  INSERT INTO app.approval_request(tenant_id,approval_request_id,institution_id,process_code,subject_type,subject_id,requested_by_user_id,requester_active_role,created_by,updated_by)
-  VALUES(t,req,i,'ATTENDANCE_CORRECTION_COLLEGE','ATTENDANCE_CORRECTION_REQUEST',corr,u,'HEAD_OF_DEPARTMENT',u,u);
-  INSERT INTO app.attendance_correction_request(tenant_id,attendance_correction_request_id,institution_id,attendance_session_id,requested_by_user_id,reason,approval_request_id,status,created_by,updated_by)
-  VALUES(t,corr,i,ses,u,'S2 other teacher session',req,'REQUESTED',u,u);
-  INSERT INTO app.approval_step(tenant_id,approval_step_id,approval_request_id,step_no,approver_role_code,created_by,updated_by)
-  VALUES(t,step,req,1,'HEAD_OF_DEPARTMENT',u,u);
-  UPDATE app.approval_step SET decision='APPROVED',acted_by_user_id=u,acted_active_role='HEAD_OF_DEPARTMENT',decided_at=now()
-   WHERE tenant_id=t AND approval_step_id=step;
+  INSERT INTO app.term_unlock_log(tenant_id,id,term_id,unlocked_by_user_id,reason,unlocked_at,created_by,updated_by)
+  VALUES(t,unl,term,u,'S2-DB-05 test fixture: temporary unlock',ts,u,u);
+  UPDATE app.term_lock SET lock_state='TEMP_UNLOCKED',unlock_until=ts+interval '72 hours' WHERE tenant_id=t AND term_lock_id=term;
+  BEGIN
+   UPDATE app.section SET class_teacher_user_id='a0000000-0000-0000-0000-000000000102' WHERE tenant_id=t AND section_id='a0000000-0000-0000-0000-000000000504';
+   INSERT INTO app.attendance_session(tenant_id,attendance_session_id,institution_id,section_id,session_kind,attendance_date,academic_year,marked_by_user_id,marked_as,created_by,updated_by)
+   VALUES(t,ses,i,'a0000000-0000-0000-0000-000000000504','DAILY','2026-10-23',2026,'a0000000-0000-0000-0000-000000000102','ASSIGNED',u,u);
+   INSERT INTO app.approval_request(tenant_id,approval_request_id,institution_id,process_code,subject_type,subject_id,requested_by_user_id,requester_active_role,created_by,updated_by)
+   VALUES(t,req,i,'ATTENDANCE_CORRECTION_COLLEGE','ATTENDANCE_CORRECTION_REQUEST',corr,u,'HEAD_OF_DEPARTMENT',u,u);
+   INSERT INTO app.attendance_correction_request(tenant_id,attendance_correction_request_id,institution_id,attendance_session_id,requested_by_user_id,reason,approval_request_id,status,created_by,updated_by)
+   VALUES(t,corr,i,ses,u,'S2 other teacher session',req,'REQUESTED',u,u);
+   INSERT INTO app.approval_step(tenant_id,approval_step_id,approval_request_id,step_no,approver_role_code,created_by,updated_by)
+   VALUES(t,step,req,1,'HEAD_OF_DEPARTMENT',u,u);
+   UPDATE app.approval_step SET decision='APPROVED',acted_by_user_id=u,acted_active_role='HEAD_OF_DEPARTMENT',decided_at=now()
+    WHERE tenant_id=t AND approval_step_id=step;
+  EXCEPTION WHEN OTHERS THEN
+   UPDATE app.term_unlock_log SET relocked_at=now() WHERE tenant_id=t AND id=unl;
+   UPDATE app.term_lock SET lock_state='LOCKED',unlock_until=NULL WHERE tenant_id=t AND term_lock_id=term;
+   RAISE;
+  END;
+  UPDATE app.term_unlock_log SET relocked_at=now() WHERE tenant_id=t AND id=unl;
+  UPDATE app.term_lock SET lock_state='LOCKED',unlock_until=NULL WHERE tenant_id=t AND term_lock_id=term;
  END $d$
 $q$,'SELF_APPROVAL');
 

@@ -54,8 +54,8 @@ $PSQL -q -d edu360_v4_test -f "$D/66t_tests_attendance_and_medical_exemptions.sq
 run edu360_v4_test 67_v41_assignment_and_submission_schema.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/67t_tests_assignment_and_submission_schema.sql" > /dev/null
 run edu360_v4_test 68_v41_exam_cycle_marks_and_report_cards.sql > /dev/null
-$PSQL -q -d edu360_v4_test -f "$D/68t_tests_exam_cycle_marks_and_report_cards.sql" > /dev/null
 run edu360_v4_test 69_v41_fee_read_models_and_dues.sql > /dev/null
+$PSQL -q -d edu360_v4_test -f "$D/68t_tests_exam_cycle_marks_and_report_cards.sql" > /dev/null  # needs T8's app.fn_fee_balance (69), so runs after 69
 $PSQL -q -d edu360_v4_test -f "$D/69t_tests_fee_read_models_and_dues.sql" > /dev/null
 run edu360_v4_test 70_v41_fee_concession_and_payment_idempotency.sql > /dev/null
 $PSQL -q -d edu360_v4_test -f "$D/70t_tests_fee_concession_and_payment_idempotency.sql" > /dev/null

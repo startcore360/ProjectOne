@@ -14,11 +14,19 @@ import {
 } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { t10Api, type Notice as NoticeType } from "../api/t10Api";
+import {
+  institutionService,
+  type InstitutionItem,
+} from "../../institution-admin/api/institutionService";
 
 export default function NoticeBulletinPage() {
   const tenant = useAppSelector((s) => s.auth.user?.tenantId ?? "");
-  const institution = useAppSelector((s) => s.tenantPermissions.current?.institutionId ?? "");
-  const actions = useAppSelector((s) => s.tenantPermissions.current?.allowedActions ?? []);
+  const activeInstitution = useAppSelector(
+    (s) => s.tenantPermissions.current?.institutionId ?? ""
+  );
+  const actions = useAppSelector(
+    (s) => s.tenantPermissions.current?.allowedActions ?? []
+  );
   const canPublish = [
     "NOTICE_PUBLISH_INSTITUTION",
     "NOTICE_PUBLISH_CLASS_DEPT",
@@ -26,6 +34,8 @@ export default function NoticeBulletinPage() {
   ].some((action) => actions.includes(action));
   const canPublishUrgent = actions.includes("NOTICE_EMERGENCY");
 
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [selectedInstitution, setSelectedInstitution] = useState(activeInstitution);
   const [items, setItems] = useState<NoticeType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,8 +48,24 @@ export default function NoticeBulletinPage() {
   const [busy, setBusy] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
+  useEffect(() => {
+    if (!tenant) return;
+    void institutionService
+      .listInstitutions(tenant)
+      .then((res) => {
+        const list = res?.items ?? [];
+        setInstitutions(list);
+        if (!selectedInstitution && list.length > 0) {
+          setSelectedInstitution(activeInstitution || list[0].institutionId);
+        }
+      })
+      .catch(() => {});
+  }, [tenant, activeInstitution, selectedInstitution]);
+
+  const effectiveInstitution = selectedInstitution || activeInstitution;
+
   const load = useCallback(async () => {
-    if (!tenant || !institution) {
+    if (!tenant || !effectiveInstitution) {
       setLoading(false);
       return;
     }
@@ -47,20 +73,20 @@ export default function NoticeBulletinPage() {
     setError("");
     setItems([]);
     try {
-      setItems(await t10Api.notices(tenant, institution));
+      setItems(await t10Api.notices(tenant, effectiveInstitution));
     } catch {
-      setError("Notices could not be loaded.");
+      setError("Notices could not be loaded for this institution.");
     } finally {
       setLoading(false);
     }
-  }, [tenant, institution]);
+  }, [tenant, effectiveInstitution]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const publish = async () => {
-    if (!tenant || !institution || !title.trim() || !body.trim()) return;
+    if (!tenant || !effectiveInstitution || !title.trim() || !body.trim()) return;
     setBusy(true);
     setError("");
     setSuccessMsg("");
@@ -70,12 +96,12 @@ export default function NoticeBulletinPage() {
         .map((role) => role.trim().toUpperCase())
         .filter(Boolean);
       await t10Api.publishNotice(tenant, {
-        institutionId: institution,
+        institutionId: effectiveInstitution,
         title: title.trim(),
         body: body.trim(),
         targetRoles,
         targetKind,
-        targetId: targetKind === "INSTITUTION" ? institution : null,
+        targetId: targetKind === "INSTITUTION" ? effectiveInstitution : null,
         urgent,
         requiresAcknowledgment,
       });
@@ -87,7 +113,9 @@ export default function NoticeBulletinPage() {
       setSuccessMsg("Notice published successfully.");
       await load();
     } catch {
-      setError("Notice could not be published. Check your permission, target roles and institution scope.");
+      setError(
+        "Notice could not be published. Check your permission, target roles and institution scope."
+      );
     } finally {
       setBusy(false);
     }
@@ -98,15 +126,49 @@ export default function NoticeBulletinPage() {
       <PageHeader
         title="Notice Board & Circulars"
         description="Publish role-targeted circulars, urgent alerts and notices requiring acknowledgment."
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void load()}
+            disabled={loading || !effectiveInstitution}
+          >
+            Refresh notices
+          </Button>
+        }
       />
+
+      {institutions.length > 1 && (
+        <Panel
+          title="Institution Context"
+          description="Select an institution to filter circulars and notices."
+        >
+          <div style={{ maxWidth: "420px" }}>
+            <SelectField
+              id="notice-inst-select"
+              label="Selected Institution"
+              value={effectiveInstitution}
+              onChange={(e) => setSelectedInstitution(e.target.value)}
+              options={institutions.map((i) => ({
+                value: i.institutionId,
+                label: i.institutionName,
+              }))}
+            />
+          </div>
+        </Panel>
+      )}
 
       {error && <Notice tone="danger">{error}</Notice>}
       {successMsg && <Notice tone="success">{successMsg}</Notice>}
 
       {canPublish && (
-        <Panel title="Publish a notice" description="Draft and distribute a formal circular or urgent alert to target roles.">
+        <Panel
+          title="Publish a notice"
+          description="Draft and distribute a formal circular or urgent alert to target roles."
+        >
           <form
             className="app-form"
+            style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}
             onSubmit={(e) => {
               e.preventDefault();
               void publish();
@@ -136,7 +198,9 @@ export default function NoticeBulletinPage() {
                 id="notice-target-kind"
                 label="Target scope"
                 value={targetKind}
-                onChange={(event) => setTargetKind(event.target.value as "ROLE" | "INSTITUTION")}
+                onChange={(event) =>
+                  setTargetKind(event.target.value as "ROLE" | "INSTITUTION")
+                }
                 options={[
                   { value: "ROLE", label: "Role-scoped" },
                   { value: "INSTITUTION", label: "Entire institution" },
@@ -150,7 +214,14 @@ export default function NoticeBulletinPage() {
                 placeholder="STUDENT, CLASS_TEACHER, PRINCIPAL_COLLEGE"
               />
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)", margin: "var(--space-2) 0" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "var(--space-4)",
+                margin: "var(--space-2) 0",
+              }}
+            >
               {canPublishUrgent && (
                 <CheckboxField
                   id="notice-urgent"
@@ -169,7 +240,9 @@ export default function NoticeBulletinPage() {
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <Button
                 type="submit"
-                disabled={busy || !title.trim() || !body.trim() || !institution}
+                disabled={
+                  busy || !title.trim() || !body.trim() || !effectiveInstitution
+                }
                 busy={busy}
               >
                 Publish notice
@@ -179,9 +252,18 @@ export default function NoticeBulletinPage() {
         </Panel>
       )}
 
-      <Panel title="Published notices" description="Active circulars and bulletins for this institution.">
+      <Panel
+        title="Published notices"
+        description="Active circulars and bulletins for this institution."
+      >
         {loading ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-6)" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              padding: "var(--space-6)",
+            }}
+          >
             <Spinner />
           </div>
         ) : items.length === 0 ? (
@@ -193,12 +275,27 @@ export default function NoticeBulletinPage() {
         ) : (
           <div className="app-stack">
             {items.map((notice) => (
-              <article className="app-card app-card--notice" key={notice.notice_id}>
-                <div className="app-card__header">
-                  <h3 className="app-card__title">
+              <article
+                className="app-card app-card--notice"
+                key={notice.notice_id}
+                style={{ padding: "var(--space-4)", marginBottom: "var(--space-3)" }}
+              >
+                <div
+                  className="app-card__header"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "var(--space-2)",
+                  }}
+                >
+                  <h3 className="app-card__title" style={{ margin: 0 }}>
                     {notice.title}
                   </h3>
-                  <div className="app-card__badges">
+                  <div
+                    className="app-card__badges"
+                    style={{ display: "flex", gap: "var(--space-2)" }}
+                  >
                     {notice.is_urgent && <Badge tone="danger">Urgent</Badge>}
                     {notice.published_at && (
                       <Badge tone="neutral">
@@ -207,7 +304,16 @@ export default function NoticeBulletinPage() {
                     )}
                   </div>
                 </div>
-                <p className="app-card__body">{notice.body}</p>
+                <p
+                  className="app-card__body"
+                  style={{
+                    margin: "0 0 var(--space-3) 0",
+                    color: "var(--color-text)",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {notice.body}
+                </p>
                 {notice.requires_acknowledgment && !notice.acknowledged && (
                   <div style={{ marginTop: "var(--space-2)" }}>
                     <Button
@@ -215,10 +321,16 @@ export default function NoticeBulletinPage() {
                       variant="secondary"
                       onClick={async () => {
                         try {
-                          await t10Api.acknowledge(tenant, institution, notice.notice_id);
+                          await t10Api.acknowledge(
+                            tenant,
+                            effectiveInstitution,
+                            notice.notice_id
+                          );
                           await load();
                         } catch {
-                          setError("Notice acknowledgment could not be saved. Please try again.");
+                          setError(
+                            "Notice acknowledgment could not be saved. Please try again."
+                          );
                         }
                       }}
                     >

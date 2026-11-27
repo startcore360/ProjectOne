@@ -49,23 +49,17 @@
         --initial-bg: #f3f6f3;
         --initial-text: #1c302d;
         --initial-brand: #2d6154;
-        --initial-spinner-track: rgba(45, 97, 84, 0.15);
-        --initial-spinner-ring: #2d6154;
       }
       [data-theme="dark"] {
         --initial-bg: #141d1b;
         --initial-text: #edf4ef;
         --initial-brand: #a7d0ba;
-        --initial-spinner-track: rgba(167, 208, 186, 0.15);
-        --initial-spinner-ring: #a7d0ba;
       }
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) {
           --initial-bg: #141d1b;
           --initial-text: #edf4ef;
           --initial-brand: #a7d0ba;
-          --initial-spinner-track: rgba(167, 208, 186, 0.15);
-          --initial-spinner-ring: #a7d0ba;
         }
       }
       html, body {
@@ -89,9 +83,7 @@
         justify-content: center;
         min-height: 100vh;
         width: 100%;
-        background: color-mix(in srgb, var(--initial-bg) 82%, transparent);
-        -webkit-backdrop-filter: blur(6px);
-        backdrop-filter: blur(6px);
+        background: var(--initial-bg);
         box-sizing: border-box;
         padding: 24px;
       }
@@ -100,14 +92,7 @@
         flex-direction: column;
         align-items: center;
         text-align: center;
-        gap: 16px;
-        min-width: 260px;
         max-width: calc(100vw - 32px);
-        padding: 20px 24px;
-        border: 1px solid rgba(45, 97, 84, 0.14);
-        border-radius: 18px;
-        background: #ffffff;
-        box-shadow: 0 16px 48px rgba(28, 48, 45, 0.18);
         box-sizing: border-box;
       }
       .edu360-initial-logo {
@@ -116,6 +101,7 @@
         max-width: 100%;
         height: auto;
         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.05));
+        animation: initial-logo-pulse 2.2s ease-in-out infinite;
       }
       .edu360-initial-logo .crescent { fill: url(#init-greenCrescent); }
       .edu360-initial-logo .word-main { fill: url(#init-wordGreen); }
@@ -147,46 +133,13 @@
       [data-theme="dark"] .edu360-initial-logo .word-gradient-start { stop-color: #edf4ef; }
       [data-theme="dark"] .edu360-initial-logo .word-gradient-mid { stop-color: #a7d0ba; }
       [data-theme="dark"] .edu360-initial-logo .word-gradient-end { stop-color: #63a57d; }
-      [data-theme="dark"] .initial-loader-content {
-        border-color: rgba(167, 208, 186, 0.16);
-        background: #1a2522;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
-      }
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) .initial-loader-content {
-          border-color: rgba(167, 208, 186, 0.16);
-          background: #1a2522;
-          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
-        }
-      }
-
-      .initial-loader-spinner-bar {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .initial-loader-spinner {
-        width: 22px;
-        height: 22px;
-        border: 2.5px solid var(--initial-spinner-track);
-        border-top-color: var(--initial-spinner-ring);
-        border-radius: 50%;
-        animation: initial-spin 0.8s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
-      }
-      .initial-loader-label {
-        font-size: 13px;
-        font-weight: 500;
-        letter-spacing: 0.02em;
-        color: var(--initial-text);
-        opacity: 0.85;
-      }
-      @keyframes initial-spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+      @keyframes initial-logo-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.72; transform: scale(0.97); }
       }
       @media (prefers-reduced-motion: reduce) {
-        .initial-loader-spinner {
-          animation-duration: 1.8s;
+        .edu360-initial-logo {
+          animation: none;
         }
       }
     </style>
@@ -332,10 +285,6 @@
               </text>
             </g>
           </svg>
-          <div class="initial-loader-spinner-bar">
-            <div class="initial-loader-spinner" aria-hidden="true"></div>
-            <div class="initial-loader-label">Loading EDU 360...</div>
-          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,16 @@
 -- EDU 360 V4.1 / T7 — assignment lifecycle and submissions.
 -- Additive only. Tenant isolation is enforced with forced RLS and composite tenant keys.
+--
+-- app.assignment and app.assignment_submission were first defined as unreferenced Phase-1
+-- placeholder tables in 01_schema.sql, predating any application code against them. This
+-- migration replaces both with the real T7 shape below (FKs to section, course_offering and
+-- user_account; RLS; scope-guard triggers). The old stub tables are dropped first; CASCADE only
+-- drops the now-orphaned FK constraints on the still-unused 01_schema.sql stub tables
+-- (assignment_submission_file, assignment_feedback, homework_status), never the tables.
 BEGIN;
+
+DROP TABLE IF EXISTS app.assignment_submission CASCADE;
+DROP TABLE IF EXISTS app.assignment CASCADE;
 
 CREATE TABLE app.assignment (
     tenant_id uuid NOT NULL,

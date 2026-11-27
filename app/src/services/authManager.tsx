@@ -23,7 +23,9 @@ export const login = async (email: string, password: string, totp?: string) => {
   const user = toAuthUser(data.user);
   store.dispatch(setUser(user));
   store.dispatch(clearTenantPermissions());
-  if (user.tenantId && !user.platformRole) await tenantPermissionsService.reload();
+  // Not awaited - see the matching note in hydrateAuth(). Waiting on this here just delayed
+  // navigate() after a successful sign-in for no benefit; ActionGate covers the gap.
+  if (user.tenantId && !user.platformRole) void tenantPermissionsService.reload();
   if (typeof window !== "undefined") {
     rememberInstitutionOnLoginSuccess(window.location, typeof document !== "undefined" ? document.cookie : "");
   }
@@ -55,7 +57,11 @@ export const hydrateAuth = async () => {
     const user = toAuthUser(data);
     store.dispatch(setUser(user));
     store.dispatch(clearTenantPermissions());
-    if (user.tenantId && !user.platformRole) await tenantPermissionsService.reload();
+    // Deliberately not awaited: bootstrapAuth blocks the app's first render on hydrateAuth(),
+    // and this second call isn't needed before that - tenantPermissionsSlice already has its
+    // own loading state, and ActionGate already renders a spinner while it's in flight. Awaiting
+    // it here used to delay first paint by a second full round trip for no reason.
+    if (user.tenantId && !user.platformRole) void tenantPermissionsService.reload();
     return user;
   } catch {
     clearTokens();
@@ -85,7 +91,8 @@ export const changePassword = async (currentPassword: string, newPassword: strin
   const user = toAuthUser(data);
   store.dispatch(setUser(user));
   store.dispatch(clearTenantPermissions());
-  if (user.tenantId && !user.platformRole) await tenantPermissionsService.reload();
+  // Not awaited - see the matching note in hydrateAuth().
+  if (user.tenantId && !user.platformRole) void tenantPermissionsService.reload();
   if (typeof window !== "undefined") {
     rememberInstitutionOnLoginSuccess(window.location, typeof document !== "undefined" ? document.cookie : "");
   }

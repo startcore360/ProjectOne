@@ -90,8 +90,8 @@ describe("Institution setup action screens", () => {
     (api.delete as ReturnType<typeof vi.fn>).mockReset();
     vi.spyOn(institutionService, "listInstitutions").mockResolvedValue({
       items: [{ institutionId: INST_ID, institutionName: "Manoj College", institutionCode: "MNC", institutionType: "COLLEGE" }],
-      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 1 },
-    } as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
+      total: 1,
+    } as unknown as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
   });
 
   it("shows the permission-denied state when there is no tenant identity", () => {
@@ -167,10 +167,10 @@ describe("Institution setup action screens", () => {
   });
 
   it("loads a school and class by name before saving student-login state", async () => {
-    vi.mocked(institutionService.listInstitutions).mockResolvedValue({
+    vi.spyOn(institutionService, "listInstitutions").mockResolvedValue({
       items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }],
-      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 1 },
-    } as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
+      total: 1,
+    } as unknown as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
     (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }] } });
       if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [{ classId: DEPT_ID, className: "Grade 8", status: "ACTIVE" }] });
@@ -230,7 +230,7 @@ describe("Institution setup action screens", () => {
 
     await waitFor(() =>
       expect(api.get).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/weekly-off-rules`, {
-        params: { institutionId: DEPT_ID },
+        params: { institutionId: INST_ID },
       }),
     );
     await waitFor(() => expect(screen.getAllByText("Sunday").length).toBeGreaterThan(0));
@@ -710,8 +710,8 @@ describe("Institution setup action screens", () => {
     const instId = "11111111-2222-3333-4444-555555555555";
     const sessionId = "22222222-3333-4444-5555-666666666666";
 
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: [
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/term-locks")) return Promise.resolve({ data: [
         {
           termLockId: "lock-1",
           tenantId: TENANT_ID,
@@ -720,7 +720,9 @@ describe("Institution setup action screens", () => {
           lockState: "LOCKED",
           rowVersion: 1,
         },
-      ],
+      ] });
+      if (url.endsWith("/academic-sessions")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
     });
 
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({

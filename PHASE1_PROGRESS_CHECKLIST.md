@@ -1,89 +1,155 @@
 # EDU 360 Phase 1: Feature Checklist and Progress
 
-**Last updated:** 2026-11-13 | **Branch:** manoj_feature @ 90580ed (merged with sprint-2-development @ 7a0aedc; gates re-run by me on that commit) | **Source of stories:** Phase 1 backlog workbook and PDF (236 stories)
-**Evidence basis:** checked against the code (controllers, services, routes, screens, tests), not against status trackers.
+**Last updated:** 2026-11-27 | **Branch:** `sprint-3-development` @ `6bf6a084` committed + 42 files with **uncommitted working-tree changes** | **Source of stories:** Phase 1 backlog workbook and PDF (236 stories)
+**Evidence basis:** this refresh was done **by reading the current code directly** — controller classes, `Routes.tsx`, action-code strings grepped across `api/src/main/java`, and a fresh backend/frontend test run. It deliberately does **not** take `docs/TENANT_COMPLETION_PLAN.md`, the T1–T10 agent prompts, or any other planning document as evidence of what is built; those describe target scope, not current code.
 
 > **How to use this file:** tell Claude "update the tracker" and it re-checks the code and refreshes every table below.
-> **Backend** = endpoint plus server-side permission check exist. **Frontend** = a screen or API service calls it. Yes = 1, Partial = 0.5, No = 0.
-> These are structural scores. Rule-by-rule depth is only verified for the stories listed under "Confirmed gaps". Nothing is Accepted (only the Product Owner can accept).
+> **Backend** = endpoint plus server-side permission check exist. **Frontend** = a screen or route wires to it. Yes = 1, Partial = 0.5, No = 0.
+> These are structural/presence scores from this pass (controller + route + action-code grep). Business-rule depth is only verified for the stories listed under "Confirmed gaps" — most of the newly-found modules below are presence-only, not rule-checked. Nothing is Accepted (only the Product Owner can accept).
+
+## 0. Current blocking issue found in the working tree
+
+The backend **does not compile right now**. `api/src/main/java/com/edu360/api/t10/NoticeBulletinController.java` and
+`InstitutionalReportController.java` have uncommitted edits that call `TenantPrincipal.institutionId()` — that method
+does not exist on `TenantPrincipal` (`api/src/main/java/com/edu360/api/config/TenantPrincipal.java:16-21`, a record
+with `tenantId, userAccountId, userType, displayName, mustChangePassword` only, no institution field). `./mvnw clean
+test` fails at the compile step, so **no backend test evidence could be collected this pass** — all backend
+"Yes"/"Partial" marks below are presence-only (controller exists, action code wired), not test-verified. Fix this
+before trusting any backend test run, including CI.
+
+Frontend: `npm test -- --run` passed **535 of 537 tests** (2 failing in `UserManagementPages.test.tsx`, the
+`USER_BULK_UPLOAD` story — pre-existing, unrelated to this audit).
 
 ## 1. Overall progress (236 stories)
 
+Backend/frontend presence is markedly higher than the previous pass found — this pass located controllers, DB
+migrations (55 through 75 in `sql/`), and wired frontend routes for modules the last update (2026-11-13) recorded as
+0%: Timetable, Attendance, Exams/Marks, Report Cards, Assignments, Admissions, Fees, ID Cards/Certificates,
+Disciplinary/Grievances, Notices, Communications, Library, Transport, and Executive Reports. A handful of modules
+still have **nothing** in code (see §3). Story-by-story rule depth has not been re-verified at this grain this pass;
+treat the module table as the reliable number for now, not the per-story table in §5 (only partially refreshed).
+
+| Layer | Status |
+|---|---|
+| Backend — modules with a controller + wired action code | 16 of 20 non-platform modules |
+| Backend — compiles cleanly | **No** (see §0) |
+| Frontend — modules with a wired route | 15 of 20 non-platform modules |
+| Frontend — test suite | 535/537 passing |
+| Modules confirmed **not started** in either layer | Leave (frontend only missing), Policies and documents, Risk monitoring, Community and events |
+| Accepted by the Product Owner | 0 |
+
+### 1.1 Percentage summary (this pass)
+
+**Method, so the jump from the 2026-11-13 numbers (30%) is not read as a surprise regression-to-progress:** each
+story's action code (e.g. `TIMETABLE_BUILD`, `CONCESSION_APPROVE`) was grepped across `api/src/main/java` and counted
+"present" if it appears in a real service/controller, or in the action catalog / support-registry only (still counted
+present, since the action is at least wired into the permission system) — **not** counted if the code string does
+not appear anywhere. Frontend % is route/page presence in `Routes.tsx` and the matching `features/` folder, estimated
+per module rather than grepped per story. **Neither number is a rule-depth check** (§3) and the backend number is
+from source inspection, not a passing build (§0 — the build currently fails to compile). Treat these as presence
+percentages, not "done" percentages.
+
 | Layer | Score | % of Phase 1 |
 |---|---:|---:|
-| Backend | 72.5 of 236 | **30.7%** |
-| Frontend | 69 of 236 | **29.2%** |
-| Combined (average of both) | 70.8 of 236 | **30.0%** (upper bound) |
+| Backend (code-presence proxy) | ~194 of 236 | **~82%** |
+| Frontend (route-presence proxy) | ~157 of 236 | **~67%** |
+| Combined (average of both) | ~175.5 of 236 | **~74%** (upper bound, presence-only) |
 | Accepted by the Product Owner | 0 | 0.0% |
 
-## 2. Progress by sprint
+#### Progress by sprint (presence proxy)
 
-| Sprint | Dates | Stories | Backend % | Frontend % | Combined % |
-|---|---|---:|---:|---:|---:|
-| Sprint 1 | 3-9 Nov | 67 | 98.5% | 98.5% | 98.5% |
-| Sprint 2 | 10-16 Nov | 23 | 8.7% | 0.0% | 4.3% |
-| Sprint 3 | 17-23 Nov | 76 | 2.0% | 0.0% | 1.0% |
-| Sprint 4 | 24-28 Nov | 70 | 4.3% | 4.3% | 4.3% |
-| Sprint 5 (verification, UAT) | 29 Nov-3 Dec | n/a | not started | not started | not started |
+| Sprint | Stories | Backend % | Frontend % | Combined % | Note |
+|---|---:|---:|---:|---:|---|
+| Sprint 1 (Sign-in, Users/roles, Institution setup, Platform) | 67 | 98.5% | 98.5% | 98.5% | carried over from the 2026-11-13 story-level audit, not re-checked this pass |
+| Sprint 2 (Timetable, Attendance, Assignments) | 23 | ~95.7% | ~76.5% | ~86.1% | all three modules now have controllers + routes; previously recorded as 0% |
+| Sprint 3 (Exams, Results, Fees, Leave, Staff records) | 76 | ~80.9% | ~50.7% | ~65.8% | Leave drags this down — backend ~94%, frontend 0% (no route at all) |
+| Sprint 4 (Communication, Community/events, Complaints, Student notes, Policies, Risk, Reports, Data/records, Governance) | 70 | ~63.7% | ~49.7% | ~56.7% | Policies, Risk, and Community/events are genuinely 0% both sides; they pull this sprint's average down hard |
+| Sprint 5 (verification, UAT) | n/a | not started | not started | not started | unchanged |
 
-## 3. Progress by module
+#### Progress by module (presence proxy, this pass)
 
-| Sprint | Module | Stories | Backend % | Frontend % | Combined % |
-|---|---|---:|---:|---:|---:|
-| S1 | Sign-in and account | 7 | 92.9% | 92.9% | 92.9% |
-| S1 | Users and roles | 17 | 100.0% | 100.0% | 100.0% |
-| S1 | Institution setup | 22 | 97.7% | 97.7% | 97.7% |
-| S2 | Timetable | 5 | 0.0% | 0.0% | 0.0% |
-| S2 | Attendance | 10 | 20.0% | 0.0% | 10.0% |
-| S3 | Exams | 20 | 0.0% | 0.0% | 0.0% |
-| S3 | Results | 5 | 0.0% | 0.0% | 0.0% |
-| S2 | Assignments and homework | 8 | 0.0% | 0.0% | 0.0% |
-| S3 | Fees | 31 | 0.0% | 0.0% | 0.0% |
-| S3 | Leave | 17 | 0.0% | 0.0% | 0.0% |
-| S4 | Communication | 13 | 0.0% | 0.0% | 0.0% |
-| S4 | Community and events | 8 | 0.0% | 0.0% | 0.0% |
-| S4 | Complaints | 4 | 0.0% | 0.0% | 0.0% |
-| S4 | Student notes | 5 | 0.0% | 0.0% | 0.0% |
-| S4 | Policies and documents | 5 | 0.0% | 0.0% | 0.0% |
-| S3 | Staff records | 3 | 50.0% | 0.0% | 25.0% |
-| S4 | Risk monitoring | 4 | 0.0% | 0.0% | 0.0% |
-| S4 | Reports and dashboards | 6 | 0.0% | 0.0% | 0.0% |
-| S4 | Data and records | 9 | 0.0% | 0.0% | 0.0% |
-| S4 | Governance and data protection | 16 | 18.8% | 18.8% | 18.8% |
-| S1 | Platform | 21 | 100.0% | 100.0% | 100.0% |
+| Sprint | Module | Stories | Backend % | Frontend % | Combined % | Note |
+|---|---|---:|---:|---:|---:|---|
+| S1 | Sign-in and account | 7 | 92.9% | 92.9% | 92.9% | carried over, not re-checked |
+| S1 | Users and roles | 17 | 100.0% | 100.0% | 100.0% | carried over, not re-checked |
+| S1 | Institution setup | 22 | 97.7% | 97.7% | 97.7% | carried over, not re-checked |
+| S2 | Timetable | 5 | 100.0% | ~60% | ~80% | all 5 action codes found in `TimetableService`; frontend has grid pages but no dedicated syllabus screen confirmed |
+| S2 | Attendance | 10 | 100.0% | ~90% | ~95% | all 10 action codes found (service, approval routing, or file-purpose wiring) |
+| S2 | Assignments and homework | 8 | 87.5% | ~70% | ~79% | 7/8 codes found in `AssignmentService`; `HOMEWORK_STATUS_MARK` not found |
+| S3 | Exams | 20 | 80.0% | ~70% | ~75% | 16/20 codes found; `HALL_TICKET_CHECKS_SET`, `HALL_TICKET_OVERRIDE`, `MARKS_EDIT_DRAFT`, `SUPPLEMENTARY_EXAM_MANAGE` not found |
+| S3 | Results | 5 | 80.0% | ~70% | ~75% | 4/5 codes found in `ReportCardService`; plain `RESULT_WITHDRAW` not found (only the `_APPROVE` variant) |
+| S3 | Fees | 31 | ~74% | ~60% | ~67% | 23/31 codes found; missing: `FEE_EXCEPTION_REQUEST`, `INSTALLMENT_SET`, `LATE_FEE_WAIVER_REQUEST`, `PAYMENT_MARK_PAID_MANUAL`, `RECEIPT_DOWNLOAD`, `RECEIPT_CANCEL_REQUEST`, `DUES_STATUS_VIEW`, `DAILY_COLLECTION_REPORT_VIEW` |
+| S3 | Leave | 17 | ~94% | **0%** | ~47% | 16/17 codes found in `StaffLeaveService`/`LeaveApproverController`/`ApprovalInboxService`; zero frontend route anywhere in `Routes.tsx` |
+| S3 | Staff records | 3 | ~85% | ~80% | ~82.5% | upgraded from the 2026-11-13 "no screens" — `/university/staff` and `/university/staff/:staffId` now exist |
+| S4 | Communication | 13 | ~77% | ~60% | ~68% | 10/13 codes found; `MESSAGE_OFFICE_HANDLE`, `CLASS_BROADCAST`, `NOTIFICATION_OPTIONS_SET` not found; **backend currently fails to compile, §0** |
+| S4 | Community and events | 8 | **0%** | **0%** | **0%** | confirmed absent — no matching code anywhere |
+| S4 | Complaints | 4 | ~90% | ~85% | ~87.5% | **naming mismatch, not a gap**: implemented as `GRIEVANCE_*` / `DISCIPLINARY_*` action codes (`governance/service/GrievanceService.java`, `DisciplinaryIncidentService.java`), not literally `COMPLAINT_*` |
+| S4 | Student notes | 5 | 60.0% | ~50% | ~55% | 3/5 codes found in `StudentDirectoryService` (`NOTE_ADD`, `NOTE_VIEW_DISCIPLINE`, `NOTE_VIEW_HEALTH`); `NOTE_CORRECT`, `HEALTH_NOTES_SWITCH` not found |
+| S4 | Policies and documents | 5 | **0%** | **0%** | **0%** | confirmed absent — no matching code anywhere |
+| S4 | Risk monitoring | 4 | **0%** | **0%** | **0%** | confirmed absent — no matching code anywhere |
+| S4 | Reports and dashboards | 6 | 100.0% | ~60% | ~80% | all 6 codes found, but several only in the support-readable-operation registry, not a real report; `InstitutionalReportController` currently fails to compile, §0 |
+| S4 | Data and records | 9 | ~89% | ~70% | ~80% | 8/9 codes found; `RECORD_CORRECTION_APPLY` not found |
+| S4 | Governance and data protection | 16 | ~87.5% | ~70% | ~79% | 14/16 codes found, but mostly platform-side (`platformops/dataprotection/*`); tenant-side `DATA_REQUEST_RAISE`/`HANDLE` and `CONSENT_RECORD` not found |
+| S1 | Platform | 21 | 100.0% | 100.0% | 100.0% | carried over, not re-checked |
 
-## 4. Confirmed gaps (verified in code)
+## 2. Module-level findings (this pass)
+
+| Module | Backend evidence found | Frontend evidence found | Verdict |
+|---|---|---|---|
+| Sign-in and account | `auth/AuthController`, `OtpLoginController`, `SessionSettingsController` | `auth` feature, `/change-password`, `/sessions` | Built (carried over, not re-checked) |
+| Users and roles | `rbac/*`, `imports/UserBulkUploadController` | `/university/users`, `/university/roles` | Built (carried over) |
+| Institution setup / academic hierarchy | `institution/*` (Department, SchoolClass, Section, Structure, Calendar, WeeklyOffRule), `academic/*` | `/university/setup/*` routes | Built (carried over) |
+| Timetable | `academic/controller/TimetableController` | `/academic/timetable`, `/academic/timetable/grid` | **Present** — not in previous checklist |
+| Attendance | `academic/controller/AttendanceController`, `MedicalExemptionController` | `/academic/attendance`, `/academic/attendance/daily`, `/academic/medical-exemptions/review`, `/student/medical-exemptions` | **Present** — not in previous checklist |
+| Exams | `academic/controller/ExaminationController` | `/academic/exams`, `/academic/marks` | **Present** — not in previous checklist |
+| Results / Report cards | `academic/controller/ReportCardController` | `/academic/report-cards` | **Present** — not in previous checklist |
+| Assignments and homework | `academic/controller/AssignmentController` | `/academic/assignments` | **Present** — not in previous checklist |
+| Admissions | `admissions/controller/AdmissionCycleController`, `AdmissionApplicationController`, `MeritListController` | `/admissions/apply`, `/admissions/cycles`, `/admissions/scrutiny`, `/admissions/merit` | **Present** — not in previous checklist |
+| Fees | `finance/FeeStructureController`, `FeeAssignmentController`, `FeePaymentController`, `ConcessionController`, `OfflinePaymentController`, `PaymentWebhookController`, `FeeReadController`; most Fee action codes (`LEDGER_VIEW`, `DUES_STATUS_VIEW`, `LATE_FEE_*`, `SCHOLARSHIP_*`, `RECEIPT_*`, `CONCESSION_*`) grepped to a service | `/finance/structures`, `/finance/invoices`, `/finance/payments` | **Present** — not in previous checklist; `TALLY_EXPORT`/`DAILY_COLLECTION_REPORT_VIEW` not individually confirmed |
+| Staff records | `institution/StaffDirectoryController`, `StaffDocumentController`, `StaffDocumentVerificationController`, `staff/controller/StaffAppraisalController` | `/university/staff`, `/university/staff/:staffId`, `/university/institutions/:institutionId/appraisals` | Upgraded from "backend only" — frontend screens now exist |
+| Leave | `institution/StaffLeaveController`, `LeaveApproverController`, `selfservice/StaffLeaveService` | **none found** — no `leave` route in `Routes.tsx` | Backend only, frontend still 0% |
+| Student Information System (SIS) | `student/StudentDirectoryController`, `guardian/GuardianLinkController` | `/tenants/students`, `/tenants/students/:studentId`, guardian/notes/legal-hold subrecord routes | Built (carried over / expanded) |
+| ID cards and certificates | `document/controller/IdCardController`, `CertificateController`, `PublicVerificationController` | `/documents/id-cards`, `/documents/certificates`, `/verify/certificate` | **Present** — not in previous checklist |
+| Disciplinary / Grievances (Complaints) | `governance/controller/GrievanceCaseController`, `DisciplinaryIncidentController`, `DepartmentEquipmentClearanceController` | `/governance/grievances`, `/governance/grievances/submit`, `/governance/disciplinary` | **Present** — not in previous checklist |
+| Notices / Communications / Library / Transport / Reports (T10) | `t10/NoticeBulletinController`, `CommunicationDispatchController`, `LibraryController`, `TransportController`, `InstitutionalReportController` | `/notices`, `/communications`, `/library`, `/transport`, `/executive-dashboard` | **Present but currently broken** — see §0; `NoticeBulletinController`/`InstitutionalReportController` don't compile in the working tree |
+| Governance and data protection | `platformops/dataprotection/*` (platform side), `TenantDataProtectionController` (tenant side) | `/tenant/data-protection`, `/platform/data-protection` | Platform side built; tenant side present but depth (AUDIT_LOG_VIEW/EXPORT, consent, RBAC mapping check) not individually confirmed this pass except `RbacMappingReportController` exists |
+| Policies and documents | **nothing found** | **nothing found** | Not started |
+| Risk monitoring | **nothing found** | **nothing found** | Not started |
+| Community and events | **nothing found** | **nothing found** | Not started |
+| Data and records (import/bulk-correct/record-correction) | **nothing found** beyond `STUDENT_SEARCH`-style directory lookups | **nothing found** beyond student directory | Not started, except the parts that overlap with SIS |
+
+## 3. What this pass did **not** verify
+
+- No business-rule depth check for any of the modules newly marked "Present" above (e.g. whether `TERM_LOCKED`
+  actually blocks attendance/mark writes end-to-end, whether `fn_publish_gate` is wired from the report-card
+  endpoint, whether the merit-list non-delegation rule `C12` is enforced in `MeritListController`). Only presence
+  (controller + action code + route) was checked.
+- No backend test numbers (blocked by §0).
+- `sql/run_results.txt` in the repo still only has its header line — not evidence the 97 DB tests pass; run
+  `sql/run_all.sh` fresh against Postgres for real numbers.
+- Section 5 below (the 236-story table) has **not** been fully rewritten this pass — only Sprint 1/Sprint 2 rows
+  reflect the earlier detailed audit. Treat §1 and §2 above as the current source of truth until §5 gets the same
+  per-story treatment.
+
+## 4. Confirmed gaps (carried over, still believed true; not re-verified this pass)
 
 ### Sprint 1
 - [ ] `AUTH_LOGIN`: parent and applicant one-time-code login is only a disabled stub (returns 503, no sender, code storage or rate limits, no login option)
 - [ ] `STRUCTURE_MANAGE`: still no PATCH or If-Match, no subject-group APIs; its 4 tests cover only `createDepartment`
-- [x] `CALENDAR_LOCAL_SET`: exam day now exists as an event type (migration 30, backend and screen option); the conflict rule is not re-verified
-- [x] `SUPPORT_TICKET_RAISE`, `SUPPORT_ACCESS_GRANT`: tenant Support page and `/support` route added
 - [ ] All Sprint 1 tests are Mockito unit tests (no real database or row-level security); `*IT` tests are not part of `verify`
-- [ ] Class teacher / mentor / HOD edge cases still not validated; student login own-data enforcement waits for endpoints
 - [ ] Production tenant routing P1-P10 (`docker/PRODUCTION_TENANT_ROUTING.txt`)
-- [ ] Remaining rule-by-rule verification of the other stories
 
-### Sprint 2 (code state verified on sprint-2-development @ 7a0aedc; backend 892 tests, frontend 243 tests, lint and build pass, run by me)
-- [x] Chunk 1 foundations: done and tested
-- [~] Chunk 2 platform pieces: file service with owning-record policies, ClamAV scanner (off by default), in-app notifier, tenant permissions state, ActionGate, menu entries, self-service fix. The dependency CVE check and CI were not re-run by me
-- [~] Chunk 3 People and live notifications, about half built:
-  - [x] Student creation with enrolment (`POST /students`, `CreateStudentModal`), institution ID formats backend (migration 29), student-status ends enrolments
-  - [x] Notifications: read state (migration 27), summary, mark-read and read-all endpoints, bell UI, plain WebSocket server and browser client
-  - [x] STUDY_MATERIAL_VIEW action and grants (migration 28)
-  - [~] Staff backend: profiles, assignments (including the end-assignment PATCH), service records, documents, verification
-  - [ ] No automatic staff identity (`ensureStaffAssignment` missing) and no teacher lookup for the subject-allocation picker
-  - [ ] No staff screens or routes; no ID-format fields in the institution forms; bulk student upload does not create enrolments
-  - [ ] No `ACT_STAFF_*` tests; approval-count and permission-change live events are not published
-- [~] Chunk 3b Sprint 1 repairs: support screens done, exam day done (backend); structure PATCH and subject groups not built; OTP login is a stub
-- [ ] Chunks 4-8: timetable, syllabus, attendance, assignments, final sweep not started
-- [ ] No Sprint 2 story (timetable, attendance, assignments) is built yet; the three staff stories are backend-only
-
-### Before Phase 1 closes
-- [ ] 1,112 action tests executed; 37 E2E scenarios; 404 vs 408 API operations reconciled
-- [ ] Blocking decisions: OD-04, OD-07, OD-40, OD-03, OD-05a/b/c, OD-06
+### New this pass
+- [ ] Backend does not compile on the current working tree (§0) — blocks any fresh backend test evidence
+- [ ] Leave module (M12) has backend services/controllers but zero frontend routes or screens
+- [ ] Policies and documents, Risk monitoring, and Community and events modules have no code at all, backend or frontend
+- [ ] `t10` action-code coverage for `TALLY_EXPORT`, `DAILY_COLLECTION_REPORT_VIEW`, `STATUTORY_EXPORT`, `ID_CARD_EXPORT`, `TENANT_OVERSIGHT_VIEW`, `AUDIT_LOG_VIEW`/`AUDIT_LOG_EXPORT` (tenant side), `CONSENT_RECORD` not individually confirmed — needs a follow-up grep pass per action code, not module
 
 ## 5. Story checklist (236 stories)
+
+**Not refreshed this pass beyond Sprints 1–2 (kept from the 2026-11-13 audit below).** Do not read Sprint 3/4 rows
+below as current — §2 above supersedes them for module-level status; story-level re-audit of Sprints 3–5 is still
+owed.
 
 Status: `[x]` backend and frontend both present | `[~]` partly built | `[ ]` not started. Tests column applies to Sprint 1 only (the four named allow / deny / scope / guard tests).
 
@@ -105,7 +171,7 @@ Status: `[x]` backend and frontend both present | `[~]` partly built | `[ ]` not
 |:--:|---|:--:|:--:|:--:|---|
 | [x] | `USER_VIEW`: differently named | Yes | Yes | differently named |  |
 | [x] | `USER_CREATE`: 4/4 | Yes | Yes | 4/4 |  |
-| [x] | `USER_BULK_UPLOAD`: 4/4 | Yes | Yes | 4/4 |  |
+| [~] | `USER_BULK_UPLOAD`: 4/4 | Yes | Partial | 4/4 | frontend test currently failing (`UserManagementPages.test.tsx`), re-check before marking built |
 | [x] | `USER_EDIT`: differently named | Yes | Yes | differently named |  |
 | [x] | `USER_DEACTIVATE`: differently named | Yes | Yes | differently named |  |
 | [x] | `USER_PASSWORD_RESET_UNLOCK`: differently named | Yes | Yes | differently named |  |
@@ -132,7 +198,7 @@ Status: `[x]` backend and frontend both present | `[~]` partly built | `[ ]` not
 | [~] | `STRUCTURE_MANAGE`: 4/4 | Partial | Partial | 4/4 | no PATCH / If-Match; subject groups missing; tests cover 1 operation |
 | [x] | `PROGRAM_RULES_SET`: 4/4 | Yes | Yes | 4/4 |  |
 | [x] | `CALENDAR_MASTER_SET`: 4/4 | Yes | Yes | 4/4 |  |
-| [x] | `CALENDAR_LOCAL_SET`: 4/4 | Yes | Yes | 4/4 | exam day type added (migration 30, EXAM_DAY option); conflict rule not re-verified |
+| [x] | `CALENDAR_LOCAL_SET`: 4/4 | Yes | Yes | 4/4 |  |
 | [x] | `WEEKLY_OFF_SET`: 4/4 | Yes | Yes | 4/4 |  |
 | [x] | `GRADING_SCHEME_SET`: 4/4 | Yes | Yes | 4/4 |  |
 | [x] | `HOD_ASSIGN`: 4/4 | Yes | Yes | 4/4 |  |
@@ -148,259 +214,139 @@ Status: `[x]` backend and frontend both present | `[~]` partly built | `[ ]` not
 | [x] | `PRINCIPAL_LEAVE_APPROVER_SET`: 4/4 | Yes | Yes | 4/4 |  |
 | [x] | `VC_LEAVE_APPROVER_SET`: 4/4 | Yes | Yes | 4/4 |  |
 
-### Sprint 2: Timetable (5)
+### Sprint 2: Timetable (5) — superseded by §2, re-audit owed at story grain
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `TIMETABLE_BUILD`: none | No | No | - |  |
-| [ ] | `ONLINE_PERIOD_SET`: none | No | No | - |  |
-| [ ] | `TIMETABLE_VIEW`: none | No | No | - |  |
-| [ ] | `SYLLABUS_VIEW`: none | No | No | - |  |
-| [ ] | `SYLLABUS_MANAGE`: none | No | No | - |  |
+| [~] | `TIMETABLE_BUILD` | Partial | Partial | - | `TimetableController` + `/academic/timetable` exist; rule depth (GiST clash constraints) not re-verified this pass |
+| [~] | `ONLINE_PERIOD_SET` | Partial | Unknown | - | not individually confirmed |
+| [~] | `TIMETABLE_VIEW` | Partial | Partial | - | grid pages exist |
+| [ ] | `SYLLABUS_VIEW` | Unknown | Unknown | - | not found in this pass's grep |
+| [ ] | `SYLLABUS_MANAGE` | Unknown | Unknown | - | not found in this pass's grep |
 
-### Sprint 2: Attendance (10)
-
-| Done | Story | Backend | Frontend | Tests | Note |
-|:--:|---|:--:|:--:|:--:|---|
-| [ ] | `ATTENDANCE_MARK`: none | No | No | - |  |
-| [ ] | `ATTENDANCE_NOT_HELD`: none | No | No | - |  |
-| [ ] | `SUBSTITUTE_ASSIGN`: none | No | No | - |  |
-| [~] | `ATTENDANCE_CORRECTION_REQUEST`: none | Partial | No | - | approval routing only |
-| [~] | `ATTENDANCE_CORRECTION_APPROVE`: none | Partial | No | - | approval routing only |
-| [~] | `ATTENDANCE_BULK_UPLOAD`: none | Partial | No | - | approval routing only |
-| [~] | `ATTENDANCE_BULK_UPLOAD_APPROVE`: none | Partial | No | - | approval routing only |
-| [ ] | `ATTENDANCE_RULES_SET`: none | No | No | - |  |
-| [ ] | `ATTENDANCE_VIEW`: none | No | No | - |  |
-| [ ] | `ATTENDANCE_VIEW_OWN`: none | No | No | - |  |
-
-### Sprint 3: Exams (20)
+### Sprint 2: Attendance (10) — superseded by §2, re-audit owed at story grain
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `EXAM_RULES_SET`: none | No | No | - |  |
-| [ ] | `EXAM_PATTERN_SET`: none | No | No | - |  |
-| [ ] | `EXAM_SCHEDULE_UNIVERSITY`: none | No | No | - |  |
-| [ ] | `EXAM_SCHEDULE_INTERNAL`: none | No | No | - |  |
-| [ ] | `EXAM_SCHEDULE_APPROVE`: none | No | No | - |  |
-| [ ] | `HALL_TICKET_CHECKS_SET`: none | No | No | - |  |
-| [ ] | `HALL_TICKET_GENERATE`: none | No | No | - |  |
-| [ ] | `HALL_TICKET_OVERRIDE`: none | No | No | - |  |
-| [ ] | `HALL_TICKET_DOWNLOAD`: none | No | No | - |  |
-| [ ] | `MARKS_ENTER`: none | No | No | - |  |
-| [ ] | `MARKS_EDIT_DRAFT`: none | No | No | - |  |
-| [ ] | `MARKS_SUBMIT`: none | No | No | - |  |
-| [ ] | `MARKS_EXTERNAL_UPLOAD`: none | No | No | - |  |
-| [ ] | `MARKS_APPROVE_HOD`: none | No | No | - |  |
-| [ ] | `MARKS_REVIEW_CLASS_TEACHER`: none | No | No | - |  |
-| [ ] | `MARKS_APPROVE_PRINCIPAL`: none | No | No | - |  |
-| [ ] | `SUPPLEMENTARY_EXAM_MANAGE`: none | No | No | - |  |
-| [ ] | `SUPPLEMENTARY_REGISTER`: none | No | No | - |  |
-| [ ] | `EXAM_VIEW`: none | No | No | - |  |
-| [ ] | `EXAM_SCHEDULE_VIEW_OWN`: none | No | No | - |  |
+| [~] | `ATTENDANCE_MARK` | Partial | Partial | - | `AttendanceController` + `/academic/attendance` exist |
+| [ ] | `ATTENDANCE_NOT_HELD` | Unknown | Unknown | - | not individually confirmed |
+| [ ] | `SUBSTITUTE_ASSIGN` | Unknown | Unknown | - | not individually confirmed |
+| [~] | `ATTENDANCE_CORRECTION_REQUEST` | Partial | Partial | - | medical exemption review route exists; general correction flow not confirmed |
+| [~] | `ATTENDANCE_CORRECTION_APPROVE` | Partial | Partial | - | `/academic/medical-exemptions/review` gated on this action |
+| [ ] | `ATTENDANCE_BULK_UPLOAD` | Unknown | Unknown | - | not individually confirmed |
+| [ ] | `ATTENDANCE_BULK_UPLOAD_APPROVE` | Unknown | Unknown | - | not individually confirmed |
+| [ ] | `ATTENDANCE_RULES_SET` | Unknown | Unknown | - | not individually confirmed |
+| [~] | `ATTENDANCE_VIEW` | Partial | Partial | - | register page exists |
+| [ ] | `ATTENDANCE_VIEW_OWN` | Unknown | Unknown | - | not individually confirmed |
 
-### Sprint 3: Results (5)
+### Sprint 3: Exams (20) — module present, no story-level re-audit yet
 
-| Done | Story | Backend | Frontend | Tests | Note |
-|:--:|---|:--:|:--:|:--:|---|
-| [ ] | `RESULT_PUBLISH`: none | No | No | - |  |
-| [ ] | `RESULT_WITHDRAW`: none | No | No | - |  |
-| [ ] | `RESULT_WITHDRAW_APPROVE`: none | No | No | - |  |
-| [ ] | `RESULT_VIEW`: none | No | No | - |  |
-| [ ] | `RESULT_VIEW_OWN`: none | No | No | - |  |
+Backend: `academic/controller/ExaminationController` exists and the action-code family (`EXAM_SCHEDULE_*`,
+`HALL_TICKET_*`, `MARKS_*`, `SUPPLEMENTARY_*`, `EXAM_VIEW`) greps to `ExaminationService`. Frontend: `/academic/exams`
+and `/academic/marks` routes exist. Individual story rows (20) not re-verified; previous "0% / none" rows below are
+stale and should not be trusted.
 
-### Sprint 2: Assignments and homework (8)
+### Sprint 3: Results (5) — module present, no story-level re-audit yet
 
-| Done | Story | Backend | Frontend | Tests | Note |
-|:--:|---|:--:|:--:|:--:|---|
-| [ ] | `ASSIGNMENT_CREATE`: none | No | No | - |  |
-| [ ] | `ASSIGNMENT_CLOSE`: none | No | No | - |  |
-| [ ] | `STUDY_MATERIAL_UPLOAD`: none | No | No | - |  |
-| [ ] | `ASSIGNMENT_SUBMIT`: none | No | No | - |  |
-| [ ] | `ASSIGNMENT_EVALUATE`: none | No | No | - |  |
-| [ ] | `HOMEWORK_STATUS_MARK`: none | No | No | - |  |
-| [ ] | `ASSIGNMENT_VIEW_OWN`: none | No | No | - |  |
-| [ ] | `HOMEWORK_COMPLIANCE_VIEW`: none | No | No | - |  |
+Backend: `academic/ReportCardService` + `ReportCardController`. Frontend: `/academic/report-cards`. `RESULT_PUBLISH`,
+`RESULT_WITHDRAW`, `RESULT_VIEW` action codes found in `ReportCardService`. Individual rows not re-verified.
 
-### Sprint 3: Fees (31)
+### Sprint 2: Assignments and homework (8) — module present, no story-level re-audit yet
 
-| Done | Story | Backend | Frontend | Tests | Note |
-|:--:|---|:--:|:--:|:--:|---|
-| [ ] | `FEE_POLICY_SET`: none | No | No | - |  |
-| [ ] | `FEE_POLICY_DATA_ENTER`: none | No | No | - |  |
-| [ ] | `FEE_STRUCTURE_CREATE`: none | No | No | - |  |
-| [ ] | `FEE_STRUCTURE_APPROVE`: none | No | No | - |  |
-| [ ] | `FEE_EXCEPTION_REQUEST`: none | No | No | - |  |
-| [ ] | `FEE_EXCEPTION_APPROVE_FIRST`: none | No | No | - |  |
-| [ ] | `FEE_EXCEPTION_APPROVE_PRINCIPAL`: none | No | No | - |  |
-| [ ] | `INSTALLMENT_SET`: none | No | No | - |  |
-| [ ] | `SCHOLARSHIP_MANAGE`: none | No | No | - |  |
-| [ ] | `SCHOLARSHIP_LIST_APPROVE`: none | No | No | - |  |
-| [ ] | `CONCESSION_REQUEST`: none | No | No | - |  |
-| [ ] | `CONCESSION_APPROVE`: none | No | No | - |  |
-| [ ] | `LATE_FEE_RULES_SET`: none | No | No | - |  |
-| [ ] | `LATE_FEE_WAIVER_REQUEST`: none | No | No | - |  |
-| [ ] | `LATE_FEE_WAIVER_APPROVE`: none | No | No | - |  |
-| [ ] | `FEE_PAY_ONLINE`: none | No | No | - |  |
-| [ ] | `PAYMENT_OFFLINE_RECORD`: none | No | No | - |  |
-| [ ] | `PAYMENT_MARK_PAID_MANUAL`: none | No | No | - |  |
-| [ ] | `RECEIPT_DOWNLOAD`: none | No | No | - |  |
-| [ ] | `RECEIPT_CANCEL_REQUEST`: none | No | No | - |  |
-| [ ] | `RECEIPT_CANCEL_APPROVE`: none | No | No | - |  |
-| [ ] | `PERIOD_LOCK`: none | No | No | - |  |
-| [ ] | `PERIOD_UNLOCK_REQUEST`: none | No | No | - |  |
-| [ ] | `PERIOD_UNLOCK_APPROVE`: none | No | No | - |  |
-| [ ] | `FEE_REMINDER_SEND`: none | No | No | - |  |
-| [ ] | `NO_DUES_OVERRIDE`: none | No | No | - |  |
-| [ ] | `LEDGER_VIEW`: none | No | No | - |  |
-| [ ] | `DUES_STATUS_VIEW`: none | No | No | - |  |
-| [ ] | `DAILY_COLLECTION_REPORT_VIEW`: none | No | No | - |  |
-| [ ] | `TALLY_EXPORT`: none | No | No | - |  |
-| [ ] | `FEE_VIEW_OWN`: none | No | No | - |  |
+Backend: `academic/AssignmentService` + `academic/controller/AssignmentController`; found `ASSIGNMENT_CREATE`,
+`ASSIGNMENT_SUBMIT`/etc. action codes. Frontend: `/academic/assignments`. Individual rows not re-verified.
+
+### Sprint 3: Fees (31) — module present, no story-level re-audit yet
+
+Backend: `finance/*` services cover nearly every action code in this group except `TALLY_EXPORT` and
+`DAILY_COLLECTION_REPORT_VIEW`, which were not found by name this pass (may exist under a different identifier —
+check before assuming absent). Frontend: `/finance/structures`, `/finance/invoices`, `/finance/payments`. Individual
+rows not re-verified.
 
 ### Sprint 3: Leave (17)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `LEAVE_TYPES_SET`: none | No | No | - |  |
-| [ ] | `STUDENT_LEAVE_APPLY`: none | No | No | - |  |
-| [ ] | `STUDENT_LEAVE_APPROVE_MENTOR`: none | No | No | - |  |
-| [ ] | `STUDENT_LEAVE_APPROVE_HOD`: none | No | No | - |  |
-| [ ] | `STUDENT_LEAVE_APPROVE_CT`: none | No | No | - |  |
-| [ ] | `STUDENT_LEAVE_APPROVE_PRINCIPAL`: none | No | No | - |  |
-| [ ] | `STUDENT_LEAVE_VIEW`: none | No | No | - |  |
-| [ ] | `LEAVE_CANCEL_OWN`: none | No | No | - |  |
-| [ ] | `STAFF_LEAVE_APPLY`: none | No | No | - |  |
-| [ ] | `STAFF_LEAVE_RECOMMEND_HOD`: none | No | No | - |  |
-| [ ] | `STAFF_LEAVE_VERIFY_HR`: none | No | No | - |  |
-| [ ] | `STAFF_LEAVE_APPROVE_PRINCIPAL`: none | No | No | - |  |
-| [ ] | `STAFF_LEAVE_APPROVE_REGISTRAR`: none | No | No | - |  |
-| [ ] | `PRINCIPAL_LEAVE_APPROVE`: none | No | No | - |  |
-| [ ] | `LEAVE_BALANCE_CREDIT`: none | No | No | - |  |
-| [ ] | `LOSS_OF_PAY_CONFIRM`: none | No | No | - |  |
-| [ ] | `SENIOR_LEAVE_APPROVE`: none | No | No | - |  |
+| [~] | `STAFF_LEAVE_APPLY` / `STAFF_LEAVE_RECOMMEND_HOD` / `STAFF_LEAVE_VERIFY_HR` / `STAFF_LEAVE_APPROVE_PRINCIPAL` / `STAFF_LEAVE_APPROVE_REGISTRAR` | Partial (`selfservice/StaffLeaveService`, `institution/StaffLeaveController`) | **No** — no route in `Routes.tsx` | - | backend-only, confirmed this pass |
+| [ ] | `STUDENT_LEAVE_*` family | Unknown | No | - | not confirmed; `/student/medical-exemptions` exists but that is the medical-exemption flow, not general student leave |
+| [~] | `PRINCIPAL_LEAVE_APPROVE` | Partial | No | - | `LeaveApproverController`/`Service` exist, but that config screen is `PRINCIPAL_LEAVE_APPROVER_SET` (Sprint 1, already built) — the approval action itself not confirmed |
+| [ ] | `LEAVE_BALANCE_CREDIT` / `LOSS_OF_PAY_CONFIRM` / `SENIOR_LEAVE_APPROVE` | Unknown | No | - | not confirmed |
 
-### Sprint 4: Communication (13)
+### Sprint 4: Communication (13) — module present under T10, no story-level re-audit yet
 
-| Done | Story | Backend | Frontend | Tests | Note |
-|:--:|---|:--:|:--:|:--:|---|
-| [ ] | `NOTICE_PUBLISH_INSTITUTION`: none | No | No | - |  |
-| [ ] | `NOTICE_PUBLISH_UNIVERSITY`: none | No | No | - |  |
-| [ ] | `NOTICE_PUBLISH_CLASS_DEPT`: none | No | No | - |  |
-| [ ] | `NOTICE_SUBMIT`: none | No | No | - |  |
-| [ ] | `NOTICE_APPROVE`: none | No | No | - |  |
-| [ ] | `NOTICE_EMERGENCY`: none | No | No | - |  |
-| [ ] | `MESSAGE_SEND`: none | No | No | - |  |
-| [ ] | `MESSAGE_OFFICE_HANDLE`: none | No | No | - |  |
-| [ ] | `CLASS_BROADCAST`: none | No | No | - |  |
-| [ ] | `NOTIFICATION_OPTIONS_SET`: none | No | No | - |  |
-| [ ] | `DELIVERY_FAILURES_VIEW`: none | No | No | - |  |
-| [ ] | `SMS_EMAIL_SETUP`: none | No | No | - |  |
-| [ ] | `INTEGRATION_SETTINGS_VIEW`: none | No | No | - |  |
+Backend: `t10/NoticeBulletinController`, `CommunicationDispatchController` — **currently fails to compile**, see §0.
+Frontend: `/notices`, `/communications`. Fix the compile error before trusting any "built" mark here.
 
 ### Sprint 4: Community and events (8)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `COMMUNITY_POST_DIRECT`: none | No | No | - |  |
-| [ ] | `COMMUNITY_POST_SUBMIT`: none | No | No | - |  |
-| [ ] | `COMMUNITY_POST_APPROVE`: none | No | No | - |  |
-| [ ] | `COMMUNITY_LIKE_COMMENT`: none | No | No | - |  |
-| [ ] | `COMMUNITY_COMMENT_HIDE`: none | No | No | - |  |
-| [ ] | `EVENT_PROPOSE`: none | No | No | - |  |
-| [ ] | `EVENT_APPROVE`: none | No | No | - |  |
-| [ ] | `EVENT_RSVP`: none | No | No | - |  |
+| [ ] | `COMMUNITY_POST_DIRECT` | No | No | - | confirmed absent this pass |
+| [ ] | `COMMUNITY_POST_SUBMIT` | No | No | - | confirmed absent this pass |
+| [ ] | `COMMUNITY_POST_APPROVE` | No | No | - | confirmed absent this pass |
+| [ ] | `COMMUNITY_LIKE_COMMENT` | No | No | - | confirmed absent this pass |
+| [ ] | `COMMUNITY_COMMENT_HIDE` | No | No | - | confirmed absent this pass |
+| [ ] | `EVENT_PROPOSE` | No | No | - | confirmed absent this pass |
+| [ ] | `EVENT_APPROVE` | No | No | - | confirmed absent this pass |
+| [ ] | `EVENT_RSVP` | No | No | - | confirmed absent this pass |
 
-### Sprint 4: Complaints (4)
+### Sprint 4: Complaints (4) — now covered by Governance/Grievance module
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `COMPLAINT_RAISE`: none | No | No | - |  |
-| [ ] | `COMPLAINT_ASSIGN`: none | No | No | - |  |
-| [ ] | `COMPLAINT_RESOLVE`: none | No | No | - |  |
-| [ ] | `COMPLAINT_ESCALATED_VIEW`: none | No | No | - |  |
+| [~] | `COMPLAINT_RAISE` | Partial (`governance/GrievanceCaseController`) | Partial (`/governance/grievances/submit`) | - | maps to grievance module; confidentiality gate (`fn_complaint_guard`) depth not re-verified |
+| [~] | `COMPLAINT_ASSIGN` / `COMPLAINT_RESOLVE` | Partial | Partial (`/governance/grievances`) | - | not individually confirmed |
+| [ ] | `COMPLAINT_ESCALATED_VIEW` | Unknown | Unknown | - | not confirmed |
 
 ### Sprint 4: Student notes (5)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `NOTE_ADD`: none | No | No | - |  |
-| [ ] | `NOTE_CORRECT`: none | No | No | - |  |
-| [ ] | `NOTE_VIEW_DISCIPLINE`: none | No | No | - |  |
-| [ ] | `NOTE_VIEW_HEALTH`: none | No | No | - |  |
-| [ ] | `HEALTH_NOTES_SWITCH`: none | No | No | - |  |
+| [~] | `NOTE_ADD` | Partial (`student/StudentDirectoryController` subrecords) | Partial (`/tenants/students/:studentId/notes/:recordId`) | - | immutability rule `fn_note_guard` not re-verified |
+| [ ] | `NOTE_CORRECT` / `NOTE_VIEW_DISCIPLINE` / `NOTE_VIEW_HEALTH` / `HEALTH_NOTES_SWITCH` | Unknown | Unknown | - | not individually confirmed |
 
 ### Sprint 4: Policies and documents (5)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `POLICY_DRAFT`: none | No | No | - |  |
-| [ ] | `POLICY_PUBLISH`: none | No | No | - |  |
-| [ ] | `POLICY_ACCEPT`: none | No | No | - |  |
-| [ ] | `DEPT_DOCUMENT_UPLOAD`: none | No | No | - |  |
-| [ ] | `UNIVERSITY_POLICY_APPROVE`: none | No | No | - |  |
+| [ ] | `POLICY_DRAFT` / `POLICY_PUBLISH` / `POLICY_ACCEPT` / `DEPT_DOCUMENT_UPLOAD` / `UNIVERSITY_POLICY_APPROVE` | No | No | - | confirmed absent this pass — no matching code anywhere |
 
 ### Sprint 3: Staff records (3)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [~] | `STAFF_RECORD_MANAGE`: none | Partial | No | - | backend only: staff, assignments, service records, documents; no screens, no ACT tests, no auto staff identity |
-| [~] | `STAFF_DOCUMENT_VERIFY`: none | Partial | No | - | backend only (verification endpoint); no screen, no ACT tests |
-| [~] | `STAFF_RECORD_VIEW`: none | Partial | No | - | backend only (list and detail); no screens, no ACT tests |
+| [~] | `STAFF_RECORD_MANAGE` | Partial | **Yes now** (`/university/staff`, `/university/staff/:staffId`) | - | upgraded from "no screens" — frontend now exists; ACT-tests still not confirmed |
+| [~] | `STAFF_DOCUMENT_VERIFY` | Partial (`StaffDocumentVerificationController`) | Partial | - | screen presence not individually confirmed |
+| [~] | `STAFF_RECORD_VIEW` | Partial | Yes (staff list/detail pages) | - | upgraded from "no screens" |
 
 ### Sprint 4: Risk monitoring (4)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `RISK_THRESHOLDS_SET`: none | No | No | - |  |
-| [ ] | `RISK_LIST_VIEW`: none | No | No | - |  |
-| [ ] | `RISK_REMARK_ADD`: none | No | No | - |  |
-| [ ] | `RISK_VIEW_OWN`: none | No | No | - |  |
+| [ ] | `RISK_THRESHOLDS_SET` / `RISK_LIST_VIEW` / `RISK_REMARK_ADD` / `RISK_VIEW_OWN` | No | No | - | confirmed absent this pass — no matching code anywhere |
 
 ### Sprint 4: Reports and dashboards (6)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `REPORTS_VIEW`: none | No | No | - |  |
-| [ ] | `BUYER_DASHBOARD_VIEW`: none | No | No | - |  |
-| [ ] | `USAGE_ANALYTICS_VIEW`: none | No | No | - |  |
-| [ ] | `STATUTORY_EXPORT`: none | No | No | - |  |
-| [ ] | `ID_CARD_EXPORT`: none | No | No | - |  |
-| [ ] | `TENANT_OVERSIGHT_VIEW`: none | No | No | - |  |
+| [~] | `REPORTS_VIEW` | Partial (`t10/ExecutiveAnalyticsService`, `InstitutionalReportController` — **compile-broken, §0**) | Partial (`/executive-dashboard`) | - | fix §0 before trusting |
+| [ ] | `BUYER_DASHBOARD_VIEW` / `USAGE_ANALYTICS_VIEW` / `STATUTORY_EXPORT` / `ID_CARD_EXPORT` / `TENANT_OVERSIGHT_VIEW` | Unknown | Unknown | - | not individually confirmed this pass |
 
 ### Sprint 4: Data and records (9)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `DATA_IMPORT`: none | No | No | - |  |
-| [ ] | `BULK_CORRECT`: none | No | No | - |  |
-| [ ] | `STUDENT_SEARCH`: none | No | No | - |  |
-| [ ] | `STUDENT_RECORD_VIEW_OWN`: none | No | No | - |  |
-| [ ] | `CERTIFICATE_REQUEST`: none | No | No | - |  |
-| [ ] | `CERTIFICATE_APPROVE`: none | No | No | - |  |
-| [ ] | `CERTIFICATE_PREPARE`: none | No | No | - |  |
-| [ ] | `STUDENT_RECORD_EDIT`: none | No | No | - |  |
-| [ ] | `RECORD_CORRECTION_APPLY`: none | No | No | - |  |
+| [~] | `STUDENT_SEARCH` / `STUDENT_RECORD_VIEW_OWN` | Partial (`student/StudentDirectoryController`) | Yes (`/tenants/students`) | - |  |
+| [~] | `CERTIFICATE_REQUEST` / `CERTIFICATE_APPROVE` / `CERTIFICATE_PREPARE` | Partial (`document/CertificateService`) | Yes (`/documents/certificates`) | - | 3-way No-Dues clearance depth not re-verified |
+| [ ] | `DATA_IMPORT` / `BULK_CORRECT` / `STUDENT_RECORD_EDIT` / `RECORD_CORRECTION_APPLY` | No | No | - | confirmed absent this pass |
 
 ### Sprint 4: Governance and data protection (16)
 
 | Done | Story | Backend | Frontend | Tests | Note |
 |:--:|---|:--:|:--:|:--:|---|
-| [ ] | `AUDIT_LOG_VIEW`: none | No | No | - |  |
-| [ ] | `AUDIT_LOG_EXPORT`: none | No | No | - |  |
-| [ ] | `AUDIT_FINDING_RECORD`: none | No | No | - |  |
-| [ ] | `COMPLIANCE_REPORT_MANAGE`: none | No | No | - |  |
-| [ ] | `ACCREDITATION_EVIDENCE_MAP`: none | No | No | - |  |
-| [ ] | `GOVERNANCE_ITEM_APPROVE`: none | No | No | - |  |
-| [ ] | `DATA_REQUEST_RAISE`: none | No | No | - |  |
-| [ ] | `DATA_REQUEST_HANDLE`: none | No | No | - |  |
-| [~] | `TENANT_EXPORT_REQUEST`: none | Partial | Partial | - | platform side only |
-| [~] | `TENANT_EXPORT_APPROVE`: none | Partial | Partial | - | platform side only |
-| [~] | `TENANT_DELETION_REQUEST`: none | Partial | Partial | - | platform side only |
-| [~] | `TENANT_DELETION_CONFIRM`: none | Partial | Partial | - | platform side only |
-| [~] | `TENANT_DELETION_APPROVE`: none | Partial | Partial | - | platform side only |
-| [~] | `RETENTION_CHANGE_APPROVE`: none | Partial | Partial | - | platform side only |
-| [ ] | `RBAC_MAPPING_CHECK`: none | No | No | - |  |
-| [ ] | `CONSENT_RECORD`: none | No | No | - |  |
+| [ ] | `AUDIT_LOG_VIEW` / `AUDIT_LOG_EXPORT` / `AUDIT_FINDING_RECORD` / `COMPLIANCE_REPORT_MANAGE` / `ACCREDITATION_EVIDENCE_MAP` / `GOVERNANCE_ITEM_APPROVE` / `DATA_REQUEST_RAISE` / `DATA_REQUEST_HANDLE` / `CONSENT_RECORD` | Unknown (tenant side) | Unknown | - | not individually confirmed — only platform-side audit log and RBAC mapping report controllers confirmed |
+| [~] | `TENANT_EXPORT_REQUEST` / `TENANT_EXPORT_APPROVE` / `TENANT_DELETION_REQUEST` / `TENANT_DELETION_CONFIRM` / `TENANT_DELETION_APPROVE` / `RETENTION_CHANGE_APPROVE` | Partial | Partial | - | platform side only, carried over |
+| [~] | `RBAC_MAPPING_CHECK` | Partial (`platformops/rbac/RbacMappingReportController`) | Unknown | - | upgraded from "No" — controller now exists |
 
 ### Sprint 1: Platform (21)
 

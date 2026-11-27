@@ -2670,10 +2670,22 @@ input[type="number"] {
 .app-modal form .app-form-field { margin-top: 0; }
 
 /* Panel header already pads the header area; ensure content area also has
-   consistent inner padding when a plain form/div is the direct body child     */
+   consistent inner padding when a plain form/div or body container is the direct body child */
 .app-panel > form,
 .app-panel > div:not([class]),
+.app-panel > .app-form-grid,
+.app-panel > .kpi-grid,
+.app-panel > .app-panel__body,
 .app-panel__body { padding: 0 var(--space-5) var(--space-5); }
+
+.app-panel .eds-empty-state {
+  margin: 0 var(--space-5) var(--space-5);
+}
+
+.staff-records-layout .staff-record-list {
+  padding-inline: var(--space-5);
+  padding-bottom: var(--space-5);
+}
 
 @media print {
   .app-sidebar,

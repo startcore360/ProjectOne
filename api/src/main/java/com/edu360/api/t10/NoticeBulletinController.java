@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping({"/v1/tenants/{tenantId}/notice-bulletins", "/api/tenants/{tenantId}/notice-bulletins"})
 public class NoticeBulletinController {
     private final T10DomainService service;
-    @GetMapping public List<Map<String,Object>> list(@PathVariable UUID tenantId,@RequestParam UUID institutionId,Authentication auth) {
-        return service.listNotices(tenantId, principal(auth,tenantId), institutionId);
+    @GetMapping public List<Map<String,Object>> list(@PathVariable UUID tenantId,@RequestParam(required=false) UUID institutionId,Authentication auth) {
+        TenantPrincipal p = principal(auth,tenantId);
+        if (institutionId == null) return List.of();
+        return service.listNotices(tenantId, p, institutionId);
     }
+    
     @PostMapping public Map<String,Object> publish(@PathVariable UUID tenantId,@RequestBody NoticeRequest request,Authentication auth) {
         return service.publishNotice(tenantId, principal(auth,tenantId), request);
     }

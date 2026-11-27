@@ -99,6 +99,10 @@ export function InstitutionsPage() {
     can("INSTITUTION_ACTIVATE") ||
     (!isNonAdminRole && (!roleCode || roleCode === "UNIVERSITY_ADMIN"));
 
+  const canSetVcApprover =
+    can("VC_LEAVE_APPROVER_SET") ||
+    (!isNonAdminRole && (roleCode === "UNIVERSITY_ADMIN" || !roleCode));
+
   // Leave Approver state (Stories #45 & #46)
   const [goLiveCheck, setGoLiveCheck] = useState<GoLiveCheckResponse | null>(null);
   const [goLiveCheckError, setGoLiveCheckError] = useState("");
@@ -187,13 +191,15 @@ export function InstitutionsPage() {
           canManageInstitutions ? (
             <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
               <Link className="app-link" to="/university/setup/hierarchy">View hierarchy</Link>
-              <Button
-                variant="secondary"
-                onClick={() => setVcModalOpen(true)}
-                title="Configure the Vice-Chancellor leave approver"
-              >
-                Set VC Approver
-              </Button>
+              {canSetVcApprover && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setVcModalOpen(true)}
+                  title="Configure the Vice-Chancellor leave approver"
+                >
+                  Set VC Approver
+                </Button>
+              )}
               <Button onClick={() => setModalOpen(true)}>
                 <span aria-hidden="true">+ </span>Register institution (Draft)
               </Button>

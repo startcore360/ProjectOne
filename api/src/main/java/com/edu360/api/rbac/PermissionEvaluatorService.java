@@ -2,6 +2,7 @@ package com.edu360.api.rbac;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -289,8 +290,54 @@ public class PermissionEvaluatorService {
                     || "AMBIGUOUS_ROLE_ASSIGNMENT".equals(decision.reasonCode())) {
                 throw new ActiveRoleRequiredException(decision.message());
             }
-            throw new UnauthorizedException(decision.message());
+            String actionDescription = actionCatalogRepository.findById(actionCode)
+                    .map(ActionCatalog::getDescription).orElse(null);
+            List<String> heldBy = "ACTION_NOT_GRANTED".equals(decision.reasonCode()) && !isSensitiveAction(actionCode, actionDescription)
+                    ? heldByRoleNames(principal.tenantId(), actionCode)
+                    : List.of();
+            throw new UnauthorizedException(decision.message(), decision.reasonCode(), actionCode, actionDescription, heldBy);
         }
+    }
+
+    /**
+     * True when naming "who holds this action" would itself be a disclosure problem: a locked,
+     * platform-only or PO-T05 confidential action, or one ref.action_catalog itself flags with a
+     * non-Normal sensitivity class (P/F/H/K). The UI falls back to a generic message for these -
+     * never a role list - regardless of how many roles actually hold the action.
+     */
+    private boolean isSensitiveAction(String actionCode, String actionDescription) {
+        if (isLockedForCustomRoles(actionCode) || PERSONAL_ACTIONS.contains(actionCode)) {
+            return true;
+        }
+        ActionCatalog action = actionCatalogRepository.findById(actionCode).orElse(null);
+        String sensitiveClass = action == null ? null : action.getSensitiveClass();
+        return sensitiveClass != null && !sensitiveClass.isBlank() && !"N".equalsIgnoreCase(sensitiveClass);
+    }
+
+    /**
+     * Up to the 2 highest-priority roles (by organisational RoleLevel, Addendum rule 1) in this
+     * tenant that currently hold actionCode, by role name. Never a long list - the UI shows a
+     * short "ask a ..." hint, not a permission matrix. Empty when the repositories required to
+     * answer aren't wired (some unit tests construct this service without them) or nothing holds
+     * the action yet.
+     */
+    private List<String> heldByRoleNames(UUID tenantId, String actionCode) {
+        if (roleDefinitionRepository == null) {
+            return List.of();
+        }
+        Set<UUID> roleDefinitionIds = roleActionRepository.findByIdTenantIdAndActionCode(tenantId, actionCode)
+                .stream().map(RoleAction::getRoleDefinitionId).collect(java.util.stream.Collectors.toSet());
+        if (roleDefinitionIds.isEmpty()) {
+            return List.of();
+        }
+        return roleDefinitionRepository.findByIdTenantId(tenantId).stream()
+                .filter(r -> roleDefinitionIds.contains(r.getId().getRoleDefinitionId())
+                        && r.getStatus() == RoleDefinitionStatus.ACTIVE && !r.isSensitiveRole())
+                .sorted(Comparator.comparing(RoleDefinition::getRoleLevel).thenComparing(RoleDefinition::getRoleName))
+                .map(RoleDefinition::getRoleName)
+                .distinct()
+                .limit(2)
+                .toList();
     }
 
     /**

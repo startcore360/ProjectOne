@@ -162,7 +162,7 @@ public class SelfServiceService {
                   FROM app.notice_bulletin n
                  WHERE n.tenant_id=? AND n.status='PUBLISHED'
                    AND (n.expires_at IS NULL OR n.expires_at>now())
-                   AND (n.target_roles_json='[]'::jsonb OR n.target_roles_json ? ?)
+                   AND (n.target_roles_json='[]'::jsonb OR jsonb_exists(n.target_roles_json, ?))
                 """, (rs, row) -> new NoticeDto(
                     rs.getObject("id", UUID.class), rs.getBoolean("is_urgent") ? "URGENT" : "INSTITUTION",
                     "CIRCULAR", rs.getString("title"), rs.getString("body"), "NOTICE_BULLETIN",

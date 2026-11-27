@@ -4424,5 +4424,8 @@ INSERT INTO ref.data_class VALUES ('TENANT_LIFETIME','Whole tenant','Only throug
 INSERT INTO ref.data_class VALUES ('REFERENCE','Reference data','Retired, never deleted',false) ON CONFLICT DO NOTHING;
 INSERT INTO ref.safe_file_type VALUES (1,'MESSAGE_ATTACHMENT','pdf','application/pdf',10485760),(2,'MESSAGE_ATTACHMENT','jpg','image/jpeg',10485760),(3,'MESSAGE_ATTACHMENT','png','image/png',10485760) ON CONFLICT DO NOTHING;
 
--- E7 landing CMS action referenced by the platform landing-page management service.
-INSERT INTO ref.action_catalog VALUES ('LANDING_CMS_MANAGE',283,'Landing page CMS',1,'Manage public landing-page content and enquiries',false,NULL,'4.1') ON CONFLICT DO NOTHING;
+-- LANDING_CMS_MANAGE is not seeded here: it collided with action_no 283, already reserved by
+-- migration 56 (sql/56_v41_rolldown_management_revocation.sql) for ROLLDOWN_GBA_REVOKED, and
+-- the collision silently dropped whichever of the two inserts ran second (ON CONFLICT DO
+-- NOTHING). 75_v41_landing_cms_and_enquiries.sql is the sole owner of that action; it inserts
+-- it at its own free number.

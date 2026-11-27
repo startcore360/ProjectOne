@@ -1,22 +1,30 @@
 DO $$
 DECLARE t text; def text;
+-- The 17 T9 action codes added by migration 72, in the order 72 assigns their numbers
+-- (next_action_no, next_action_no+1, ...). This check is baseline-relative rather than
+-- hardcoded to the authoritative sql/05_ref_data.sql catalogue (highest seeded action_no:
+-- 283), because it also runs against the acceptance-test database, which seeds a smaller
+-- ref.action_catalog fixture (sql/25t_seed_sprint2_refs.sql) with its own numbering.
+v_base integer;
 BEGIN
+ SELECT MIN(action_no) INTO v_base FROM ref.action_catalog WHERE action_code='ID_CARD_ISSUE';
+ IF v_base IS NULL THEN RAISE EXCEPTION 'T9_DB_72 action codes or numbers do not match the catalog extension'; END IF;
  IF EXISTS (
   SELECT 1 FROM (VALUES
-   ('ID_CARD_ISSUE',284),('ID_CARD_REPLACE',285),('ID_CARD_TEMPLATE_MANAGE',286),('ID_CARD_REVOKE',287),
-   ('CERTIFICATE_TEMPLATE_MANAGE',288),('CERTIFICATE_REVOKE',289),
-   ('DISCIPLINARY_INCIDENT_VIEW',290),('DISCIPLINARY_INCIDENT_MANAGE',291),
-   ('GRIEVANCE_CASE_SUBMIT',292),('GRIEVANCE_CASE_VIEW',293),('GRIEVANCE_CASE_ASSIGN',294),
-   ('GRIEVANCE_HEARING_MANAGE',295),('GRIEVANCE_CASE_RESOLVE',296),('GRIEVANCE_EVIDENCE_VIEW',297),
-   ('GRIEVANCE_EVIDENCE_UPLOAD',298),('ID_CARD_REPLACEMENT_REQUEST',299),('DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE',300)
-  ) AS expected(code,action_no)
-  LEFT JOIN ref.action_catalog a ON a.action_code=expected.code AND a.action_no=expected.action_no
+   ('ID_CARD_ISSUE',0),('ID_CARD_REPLACE',1),('ID_CARD_TEMPLATE_MANAGE',2),('ID_CARD_REVOKE',3),
+   ('CERTIFICATE_TEMPLATE_MANAGE',4),('CERTIFICATE_REVOKE',5),
+   ('DISCIPLINARY_INCIDENT_VIEW',6),('DISCIPLINARY_INCIDENT_MANAGE',7),
+   ('GRIEVANCE_CASE_SUBMIT',8),('GRIEVANCE_CASE_VIEW',9),('GRIEVANCE_CASE_ASSIGN',10),
+   ('GRIEVANCE_HEARING_MANAGE',11),('GRIEVANCE_CASE_RESOLVE',12),('GRIEVANCE_EVIDENCE_VIEW',13),
+   ('GRIEVANCE_EVIDENCE_UPLOAD',14),('ID_CARD_REPLACEMENT_REQUEST',15),('DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE',16)
+  ) AS expected(code,off_n)
+  LEFT JOIN ref.action_catalog a ON a.action_code=expected.code AND a.action_no=v_base+expected.off_n
   WHERE a.action_code IS NULL
  ) THEN RAISE EXCEPTION 'T9_DB_72 action codes or numbers do not match the catalog extension'; END IF;
- IF (SELECT count(*) FROM ref.action_catalog WHERE action_no BETWEEN 284 AND 300)<>17 THEN
-  RAISE EXCEPTION 'T9_DB_72 expected exactly 17 action numbers 284-300';
+ IF (SELECT count(*) FROM ref.action_catalog WHERE action_no BETWEEN v_base AND v_base+16)<>17 THEN
+  RAISE EXCEPTION 'T9_DB_72 expected exactly 17 action numbers %-%', v_base, v_base+16;
  END IF;
- IF EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no BETWEEN 284 AND 300 GROUP BY action_no HAVING count(*)>1) THEN
+ IF EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no BETWEEN v_base AND v_base+16 GROUP BY action_no HAVING count(*)>1) THEN
   RAISE EXCEPTION 'T9_DB_72 action number collision';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_code='ID_CARD_REPLACE' AND is_approval_action=true) THEN
@@ -27,9 +35,12 @@ BEGIN
   OR NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='PROFESSOR' AND action_code='ID_CARD_REPLACEMENT_REQUEST') THEN
   RAISE EXCEPTION 'T9_DB_72 self-service ID card replacement request grants missing';
  END IF;
- IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no=283 AND action_code='LANDING_CMS_MANAGE') THEN
-  RAISE EXCEPTION 'T9_DB_72 must preserve seeded action number 283';
- END IF;
+ -- NOTE: migration 72 never touches LANDING_CMS_MANAGE, so there is no "preserve action
+ -- number 283" invariant for this migration to guard: sql/05_ref_data.sql seeds it at 283 on a
+ -- fresh database, but 75r_v41_landing_cms_and_enquiries_rollback.sql legitimately deletes that
+ -- row on rollback (it owns the row as a V4.1 addition), so it is not permanently pinned to 283
+ -- across a rollback/reapply cycle. The 17 new T9 action numbers above are what this migration
+ -- actually owns and are already checked.
  IF NOT EXISTS(SELECT 1 FROM ref.standard_role WHERE role_code='INTERNAL_COMPLAINTS_COMMITTEE' AND role_level='COLLEGE') THEN
   RAISE EXCEPTION 'T9_DB_72 institution-level ICC standard role missing';
  END IF;
@@ -38,7 +49,7 @@ BEGIN
    AND sra.role_code NOT IN ('INTERNAL_COMPLAINTS_COMMITTEE','PRINCIPAL_COLLEGE','SCHOOL_PRINCIPAL')) THEN
   RAISE EXCEPTION 'T9_DB_72 confidential grievance action granted outside ICC/Principal';
  END IF;
- IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no=300 AND action_code='DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE') THEN
+ IF NOT EXISTS(SELECT 1 FROM ref.action_catalog WHERE action_no=v_base+16 AND action_code='DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE') THEN
   RAISE EXCEPTION 'T9_DB_72 department equipment clearance action missing';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM ref.standard_role_action WHERE role_code='HEAD_OF_DEPARTMENT' AND action_code='DEPARTMENT_EQUIPMENT_CLEARANCE_MANAGE') THEN

@@ -52,6 +52,10 @@ CREATE TABLE app.certificate_template (
  CHECK(char_length(name) BETWEEN 1 AND 100),CHECK(char_length(template_html) BETWEEN 1 AND 50000),
  CHECK(status IN ('ACTIVE','INACTIVE')),CHECK(row_version>=1)
 );
+-- Supersedes the unreferenced Phase-1 placeholder app.certificate_request from 01_schema.sql (no
+-- FK from any other table, no application code against it) with the real T9 shape below.
+DROP TABLE IF EXISTS app.certificate_request CASCADE;
+
 CREATE TABLE app.certificate_request (
  tenant_id uuid NOT NULL,certificate_request_id uuid NOT NULL,institution_id uuid NOT NULL,
  student_id uuid NOT NULL,template_id uuid NOT NULL,reason text NOT NULL,status text NOT NULL DEFAULT 'REQUESTED',

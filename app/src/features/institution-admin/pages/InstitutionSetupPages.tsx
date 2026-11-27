@@ -16,7 +16,6 @@ import {
   Button,
   TextField,
   SelectField,
-  TextAreaField,
   DateField,
   DateTimeField,
   Panel,
@@ -29,6 +28,7 @@ import {
   Toast,
   toast,
 } from "../../../design-system/components";
+import { JsonDocumentBuilder, type DocumentValue } from "../../../design-system/components/JsonDocumentBuilder";
 import { ErrorState } from "../../../components/feedback/ErrorState";
 import {
   AddAcademicSessionModal,
@@ -55,7 +55,6 @@ import {
   type SemesterItem,
   type CurriculumVersionItem,
 } from "../api/institutionService";
-import { JsonDocumentBuilder, type DocumentValue } from "../../../design-system/components/JsonDocumentBuilder";
 import { termLockService, type TermLockItem } from "../api/termLockService";
 import {
   approvalDelegationService,
@@ -335,32 +334,1956 @@ export function InstitutionHierarchyPage() {
               </div>
             </Panel>
           )}
-          <Modal
-            isOpen={Boolean(hodDepartment)}
-            onClose={() => setHodDepartment(null)}
-            title={hodDepartment ? `Assign HOD — ${hodDepartment.departmentName}` : "Assign HOD"}
-            description="Choose an active faculty assignment in this department. The server validates institution and department scope."
-            size="md"
+          {hodDepartment && (
+            <Modal
+              isOpen
+              onClose={() => { if (!hodLoading) setHodDepartment(null); }}
+              title={`Assign HOD · ${hodDepartment.departmentName}`}
+              titleId="hierarchy-hod-assignment-title"
+              description="Select an active faculty member in this department. Assignment is guarded by the department row version."
+              size="sm"
+            >
+              <form onSubmit={saveHodAssignment}>
+                <PersonPicker
+                  label="Head of Department"
+                  value={hodStaffAssignmentId}
+                  options={hodTeachers.map((teacher) => ({
+                    id: teacher.staffAssignmentId,
+                    name: teacher.fullName,
+                    designation: teacher.designation,
+                    department: teacher.departmentName ?? undefined,
+                  }))}
+                  onChange={setHodStaffAssignmentId}
+                  disabled={hodLoading}
+                />
+                {hodLoading && hodTeachers.length === 0 && !hodError && <p role="status">Loading eligible faculty…</p>}
+                {hodError && <Notice tone="danger">{hodError}</Notice>}
+                <div className="app-inline-actions">
+                  <Button type="button" variant="secondary" disabled={hodLoading} onClick={() => setHodDepartment(null)}>Cancel</Button>
+                  <Button type="submit" busy={hodLoading} disabled={hodLoading || !hodStaffAssignmentId}>Save HOD assignment</Button>
+                </div>
+              </form>
+            </Modal>
+          )}
+          {editing && (
+            <Panel title={`Edit ${editing.institution.institutionName}`} description={`Update institution profile fields. Save uses row version ${editing.institution.rowVersion} as the If-Match precondition.`}>
+              <form onSubmit={saveEdit}>
+                <div className="app-form-grid">
+                  <TextField id="edit-institution-name" label="Institution name" required maxLength={200}
+                    value={editDraft.institutionName} onChange={(event) => setEditDraft({ ...editDraft, institutionName: event.target.value })} />
+                  <TextField id="edit-institution-address" label="Address" maxLength={300}
+                    value={editDraft.addressLine} onChange={(event) => setEditDraft({ ...editDraft, addressLine: event.target.value })} />
+                  <TextField id="edit-institution-city" label="City" maxLength={100}
+                    value={editDraft.city} onChange={(event) => setEditDraft({ ...editDraft, city: event.target.value })} />
+                  <TextField id="edit-institution-state" label="State" maxLength={100}
+                    value={editDraft.stateName} onChange={(event) => setEditDraft({ ...editDraft, stateName: event.target.value })} />
+                  <TextField id="edit-institution-postal" label="Postal code" minLength={3} maxLength={12}
+                    value={editDraft.postalCode} onChange={(event) => setEditDraft({ ...editDraft, postalCode: event.target.value })} />
+                  <TextField id="edit-institution-principal-email" label="Principal invite email" type="email" maxLength={254}
+                    value={editDraft.principalInviteEmail} onChange={(event) => setEditDraft({ ...editDraft, principalInviteEmail: event.target.value })} />
+                </div>
+                <label className="app-form-field">
+                  <input type="checkbox" checked={editDraft.externalUniversityMode}
+                    onChange={(event) => setEditDraft({ ...editDraft, externalUniversityMode: event.target.checked })} />
+                  College is affiliated with an external university
+                </label>
+                {editError && <Notice tone="danger">{editError}</Notice>}
+                <div className="app-inline-actions">
+                  <Button type="button" variant="secondary" disabled={savingEdit} onClick={() => setEditing(null)}>Cancel</Button>
+                  <Button type="submit" busy={savingEdit}>Save institution</Button>
+                </div>
+              </form>
+            </Panel>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// --- 1. HOD assignment (HOD_ASSIGN) -----------------------------------------------------------
+
+export function HodAssignmentPage() {
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { permissions } = useTenantAccess();
+  const institutionId = permissions?.institutionId ?? "";
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const [departmentId, setDepartmentId] = useState("");
+  const [teachers, setTeachers] = useState<TeacherLookupItem[]>([]);
+  const [staffAssignmentId, setStaffAssignmentId] = useState("");
+  const [pickerError, setPickerError] = useState("");
+  const { status, message, run } = useAction<{ departmentId: string; hodStaffAssignmentId: string }>();
+
+  useEffect(() => {
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
+    let active = true;
+    void institutionService.listDepartments(tenantId, institutionId)
+      .then((rows) => { if (active) setDepartments(rows); })
+      .catch(() => { if (active) setPickerError("Could not load departments for the active institution."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !institutionId || !departmentId) return undefined; // cleared in the department onChange
+    let active = true;
+    void staffService.teacherLookup(tenantId, institutionId, "HOD_ASSIGN", departmentId)
+      .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
+      .catch(() => { if (active) setPickerError("Could not load active faculty for this department."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId, departmentId]);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const invalid = !isValidUuid(departmentId) || !isValidUuid(staffAssignmentId)
+      ? "Select a department and an active faculty member."
+      : null;
+    const selectedDepartment = departments.find((department) => department.departmentId === departmentId);
+    const missingVersion = !selectedDepartment ? "Reload the department list and try again." : null;
+    void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/departments/${departmentId}/hod`, {
+      staffAssignmentId,
+    }, { headers: { "If-Match": `"${selectedDepartment?.rowVersion ?? 1}"` } }),
+    () => "HOD assignment recorded successfully.");
+  };
+
+  return (
+    <div className="app-page">
+      <PageHeader title="Assign Head of Department" description="Choose a department and an active faculty member in the current institution." />
+      {!tenantId || !institutionId ? <NoTenantNotice /> : (
+        <Panel title="Department HOD" description="The picker is scoped to the active institution and validates faculty assignments on the server.">
+          <form onSubmit={submit} noValidate>
+            <SelectField id="hod-department-id" label="Department" required value={departmentId}
+              onChange={(event) => { setDepartmentId(event.target.value); setStaffAssignmentId(""); setTeachers([]); }}
+              options={[{ value: "", label: "Select a department" }, ...departments.map((d) => ({ value: d.departmentId, label: d.departmentName }))]} />
+            <PersonPicker label="New HOD" value={staffAssignmentId}
+              options={teachers.map((t) => ({ id: t.staffAssignmentId, name: t.fullName, designation: t.designation, department: t.departmentName ?? undefined }))}
+              onChange={setStaffAssignmentId} disabled={!departmentId} />
+            {pickerError && <Notice tone="danger">{pickerError}</Notice>}
+            <ResultBanner status={status} message={message} />
+            <Button type="submit" busy={status === "busy"} disabled={!departmentId || !staffAssignmentId}>Assign HOD</Button>
+          </form>
+        </Panel>
+      )}
+    </div>
+  );
+}
+export function MentorAssignmentPage() {
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { permissions } = useTenantAccess();
+  const institutionId = permissions?.institutionId ?? "";
+  const departmentId = permissions?.departmentId ?? "";
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [teachers, setTeachers] = useState<TeacherLookupItem[]>([]);
+  const [sectionId, setSectionId] = useState("");
+  const [staffAssignmentId, setStaffAssignmentId] = useState("");
+  const [pickerError, setPickerError] = useState("");
+  const { status, message, run } = useAction<{ sectionId: string; mentorAssignmentId: string; staffAssignmentId: string }>();
+
+  useEffect(() => {
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
+    let active = true;
+    void institutionService.listSections(tenantId, institutionId)
+      .then((rows) => { if (active) setSections(rows.filter((row) => row.status === "ACTIVE" && row.semesterId !== null)); })
+      .catch(() => { if (active) setPickerError("Could not load college sections for the active institution."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !institutionId || !departmentId) return undefined; // the page shows NoTenantNotice instead
+    let active = true;
+    void staffService.teacherLookup(tenantId, institutionId, "MENTOR_ASSIGN", departmentId)
+      .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
+      .catch(() => { if (active) setPickerError("Could not load active faculty for the current department."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId, departmentId]);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const invalid = !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
+      ? "Select a college section and an active faculty member."
+      : null;
+    const selectedSection = sections.find((section) => section.sectionId === sectionId);
+    const missingVersion = !selectedSection?.rowVersion ? "Reload the section list and select a section with a current row version." : null;
+    void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/mentor`, {
+      staffAssignmentId,
+    }, { headers: { "If-Match": `"${selectedSection?.rowVersion ?? 1}"` } }),
+    () => "Mentor assigned successfully.");
+  };
+
+  return (
+    <div className="app-page">
+      <PageHeader title="Assign mentor" description="Assign an active faculty member as mentor for a college section in the current department." />
+      {!tenantId || !institutionId || !departmentId ? <NoTenantNotice /> : (
+        <Panel title="Section mentor" description="Sections and faculty are limited to the active department.">
+          <form onSubmit={submit} noValidate>
+            <SectionPicker value={sectionId} options={sections.map((s) => ({ id: s.sectionId, label: s.sectionName }))}
+              onChange={setSectionId} />
+            <PersonPicker label="New mentor" value={staffAssignmentId}
+              options={teachers.map((t) => ({ id: t.staffAssignmentId, name: t.fullName, designation: t.designation, department: t.departmentName ?? undefined }))}
+              onChange={setStaffAssignmentId} />
+            {pickerError && <Notice tone="danger">{pickerError}</Notice>}
+            <ResultBanner status={status} message={message} />
+            <Button type="submit" busy={status === "busy"} disabled={!sectionId || !staffAssignmentId}>Assign mentor</Button>
+          </form>
+        </Panel>
+      )}
+    </div>
+  );
+}
+export function ClassTeacherAssignmentPage() {
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { permissions } = useTenantAccess();
+  const institutionId = permissions?.institutionId ?? "";
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [teachers, setTeachers] = useState<TeacherLookupItem[]>([]);
+  const [sectionId, setSectionId] = useState("");
+  const [staffAssignmentId, setStaffAssignmentId] = useState("");
+  const [pickerError, setPickerError] = useState("");
+  const { status, message, run } = useAction<{ sectionId: string; classTeacherAssignmentId: string; staffAssignmentId: string }>();
+
+  useEffect(() => {
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
+    let active = true;
+    void institutionService.listSections(tenantId, institutionId)
+      .then((rows) => { if (active) setSections(rows.filter((row) => row.status === "ACTIVE" && row.classId !== null)); })
+      .catch(() => { if (active) setPickerError("Could not load school sections for the active institution."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !institutionId) return undefined; // the page shows NoTenantNotice instead
+    let active = true;
+    void staffService.teacherLookup(tenantId, institutionId, "CLASS_TEACHER_ASSIGN")
+      .then((rows) => { if (active) { setTeachers(rows); setPickerError(""); } })
+      .catch(() => { if (active) setPickerError("Could not load active teaching staff for the active school."); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const invalid = !isValidUuid(sectionId) || !isValidUuid(staffAssignmentId)
+      ? "Select a school section and an active teaching staff member."
+      : null;
+    const selectedSection = sections.find((section) => section.sectionId === sectionId);
+    const missingVersion = !selectedSection?.rowVersion ? "Reload the section list and select a section with a current row version." : null;
+    void run(invalid ?? missingVersion, () => api.put(`/tenants/${tenantId}/sections/${sectionId}/class-teacher`, {
+      staffAssignmentId,
+    }, { headers: { "If-Match": `"${selectedSection?.rowVersion ?? 1}"` } }),
+    () => "Class Teacher assigned successfully.");
+  };
+
+  return (
+    <div className="app-page">
+      <PageHeader title="Assign Class Teacher" description="Assign a class teacher to a school section." />
+      <div className="app-callout">
+        <span aria-hidden="true">ⓘ</span>
+        <div><strong>This assigns a section, not a class</strong><p>The backend currently builds CLASS_TEACHER_ASSIGN against sections, not classes — an open product decision (OD-24). This screen matches the stored unit.</p></div>
+      </div>
+      {!tenantId || !institutionId ? <NoTenantNotice /> : (
+        <Panel title="Section Class Teacher" description="Sections and staff are limited to the active school.">
+          <form onSubmit={submit} noValidate>
+            <SectionPicker value={sectionId} options={sections.map((s) => ({ id: s.sectionId, label: s.sectionName }))}
+              onChange={setSectionId} />
+            <PersonPicker label="New Class Teacher" value={staffAssignmentId}
+              options={teachers.map((t) => ({ id: t.staffAssignmentId, name: t.fullName, designation: t.designation, department: t.departmentName ?? undefined }))}
+              onChange={setStaffAssignmentId} />
+            {pickerError && <Notice tone="danger">{pickerError}</Notice>}
+            <ResultBanner status={status} message={message} />
+            <Button type="submit" busy={status === "busy"} disabled={!sectionId || !staffAssignmentId}>Assign Class Teacher</Button>
+          </form>
+        </Panel>
+      )}
+    </div>
+  );
+}
+export function StudentLoginSwitchPage() {
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [classes, setClasses] = useState<SchoolClassItem[]>([]);
+  const [classId, setClassId] = useState("");
+  const [enabled, setEnabled] = useState(false);
+  const [rowVersion, setRowVersion] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const { status, message, run } = useAction<{ classId: string; studentLoginEnabled: boolean; rowVersion: number }>();
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    institutionService.listInstitutions(tenantId)
+      .then((response) => { if (!cancelled) setInstitutions(response.items ?? []); })
+      .catch((cause: unknown) => { if (!cancelled) setLoadError(getApiErrorMessage(cause)); });
+    return () => { cancelled = true; };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId || !institutionId) { setClasses([]); setClassId(""); return; }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+    setClasses([]);
+    setClassId("");
+    setRowVersion(null);
+    institutionService.listSchoolClasses(tenantId, institutionId)
+      .then((items) => { if (!cancelled) setClasses(items.filter((item) => item.status === "ACTIVE")); })
+      .catch((cause: unknown) => { if (!cancelled) setLoadError(getApiErrorMessage(cause)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, institutionId]);
+
+  useEffect(() => {
+    if (!tenantId || !classId) { setRowVersion(null); return; }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+    api.get<{ classId: string; studentLoginEnabled: boolean; rowVersion: number }>(`/tenants/${tenantId}/classes/${classId}`)
+      .then((response) => {
+        if (!cancelled) {
+          setEnabled(response.data.studentLoginEnabled);
+          setRowVersion(response.data.rowVersion);
+        }
+      })
+      .catch((cause: unknown) => { if (!cancelled) { setRowVersion(null); setLoadError(getApiErrorMessage(cause)); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, classId]);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !classId || rowVersion === null) return;
+    void run(
+      null,
+      () => api.put(`/tenants/${tenantId}/classes/${classId}/student-login`, { enabled },
+        { headers: { "If-Match": `"${rowVersion}"` } }),
+      (data) => {
+        setRowVersion(data.rowVersion);
+        return `Student view-only login for ${classes.find((item) => item.classId === data.classId)?.className ?? "selected class"} is now ${data.studentLoginEnabled ? "ON" : "OFF"}.`;
+      },
+    );
+  };
+
+  return (
+    <div className="app-page">
+      <PageHeader title="Student login switch" description="Enable or disable view-only student access for a school class." />
+      {!tenantId ? <NoTenantNotice /> : (
+        <Panel title="Class student-login" description="Choose the school and class. EDU 360 loads the current setting automatically.">
+          <form onSubmit={submit} noValidate>
+            <SelectField id="student-login-institution" label="Institution *" required value={institutionId}
+              disabled={institutions.length === 0}
+              onChange={(event) => { setInstitutionId(event.target.value); setClassId(""); }}>
+              <option value="">Choose a school</option>
+              {institutions.filter((item) => item.institutionType === "SCHOOL").map((item) => (
+                <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>
+              ))}
+            </SelectField>
+            <SelectField id="student-login-class" label="Class or grade *" required value={classId}
+              disabled={!institutionId || loading || classes.length === 0}
+              onChange={(event) => setClassId(event.target.value)}>
+              <option value="">{loading ? "Loading classes…" : "Choose a class"}</option>
+              {classes.map((item) => <option key={item.classId} value={item.classId}>{item.className}</option>)}
+            </SelectField>
+            {loadError && <Notice tone="danger">{loadError}</Notice>}
+            {institutionId && !loading && classes.length === 0 && !loadError && <Notice tone="warning">No active classes found for this school. Create a class first in Academic Structure.</Notice>}
+            {rowVersion !== null && <Notice tone="info">Current setting loaded for the selected class.</Notice>}
+            <label className="app-form-field" style={{ marginTop: "var(--space-3)" }}>
+              <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)}
+                style={{ marginRight: "var(--space-2)" }} />
+              Enable view-only student login for this class
+            </label>
+            <ResultBanner status={status} message={message} />
+            <Button type="submit" busy={status === "busy"} disabled={loading || rowVersion === null}>
+              {status === "busy" ? "Saving…" : "Save"}
+            </Button>
+          </form>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+// --- 5. Calendar events (CALENDAR_LOCAL_SET) --------------------------------------------------
+
+type CalendarEvent = {
+  academicCalendarEventId: string;
+  institutionId: string;
+  academicSessionId: string;
+  sourceLevel: string;
+  eventType: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+};
+
+export function CalendarEventsPage() {
+  const authTenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const { isSupportSession, tenantId: supportTenantId, session } = useSupportSession();
+  const tenantId = authTenantId || supportTenantId || "";
+  const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionOptionsError, setInstitutionOptionsError] = useState("");
+  const [academicSessionId, setAcademicSessionId] = useState("");
+  const [eventType, setEventType] = useState("LOCAL_HOLIDAY");
+  const [title, setTitle] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const [events, setEvents] = useState<CalendarEvent[] | null>(null);
+  const [listStatus, setListStatus] = useState<Status>("idle");
+  const [listMessage, setListMessage] = useState("");
+  const { status, message, run } = useAction<CalendarEvent>();
+
+  // Master Academic Sessions (CALENDAR_MASTER_SET)
+  const [sessions, setSessions] = useState<AcademicSessionItem[] | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState("");
+  const [showAddSessionModal, setShowAddSessionModal] = useState(false);
+  const [sessionSubmitting, setSessionSubmitting] = useState(false);
+  const [sessionModalError, setSessionModalError] = useState("");
+
+  // Master Calendar Events (CALENDAR_MASTER_SET)
+  const [masterEvents, setMasterEvents] = useState<MasterCalendarEventItem[] | null>(null);
+  const [masterEventsLoading, setMasterEventsLoading] = useState(false);
+  const [masterEventsError, setMasterEventsError] = useState("");
+  const [showAddMasterEventModal, setShowAddMasterEventModal] = useState(false);
+  const [targetSessionId, setTargetSessionId] = useState("");
+  const [masterEventSubmitting, setMasterEventSubmitting] = useState(false);
+  const [masterEventModalError, setMasterEventModalError] = useState("");
+
+  useEffect(() => {
+    if (!tenantId) return;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => setInstitutions(res.items ?? []))
+      .catch((err) => setInstitutionOptionsError(getApiErrorMessage(err)));
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (tenantId && import.meta.env.MODE !== "test") {
+      void loadSessions();
+      void loadMasterEvents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
+
+  const loadSessions = async () => {
+    if (!tenantId) return;
+    setSessionsLoading(true);
+    setSessionsError("");
+    try {
+      const data = await institutionService.listAcademicSessions(tenantId);
+      setSessions(data);
+      if (data.length > 0 && !targetSessionId) {
+        setTargetSessionId(data[0].academicSessionId);
+      }
+    } catch (err) {
+      setSessionsError(getApiErrorMessage(err));
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const loadMasterEvents = async () => {
+    if (!tenantId) return;
+    setMasterEventsLoading(true);
+    setMasterEventsError("");
+    try {
+      const data = await institutionService.listMasterCalendarEvents(tenantId);
+      setMasterEvents(data);
+    } catch (err) {
+      setMasterEventsError(getApiErrorMessage(err));
+    } finally {
+      setMasterEventsLoading(false);
+    }
+  };
+
+
+
+  const loadEvents = async () => {
+    if (!isValidUuid(institutionId)) {
+      setListStatus("error");
+      setListMessage("Choose an institution before loading local events.");
+      return;
+    }
+    setListStatus("busy");
+    setListMessage("");
+    try {
+      const res = await api.get<CalendarEvent[]>(`/tenants/${tenantId}/calendar-events`, {
+        params: { institutionId: institutionId.trim() },
+      });
+      setEvents(res.data);
+      setListStatus("idle");
+    } catch (err) {
+      setEvents(null);
+      if (axios.isAxiosError(err) && err.response?.status === 403) {
+        setListStatus("denied");
+      } else {
+        setListStatus("error");
+      }
+      setListMessage(getApiErrorMessage(err));
+    }
+  };
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const invalid =
+      !isValidUuid(institutionId) || !isValidUuid(academicSessionId) || !title.trim() || !startDate || !endDate
+        ? "Choose an institution and academic session, then enter the event title and dates."
+        : endDate < startDate
+          ? "End date must not be before start date."
+          : null;
+    void run(
+      invalid,
+      () =>
+        api.post<CalendarEvent>(`/tenants/${tenantId}/calendar-events`, {
+          institutionId: institutionId.trim(),
+          academicSessionId: academicSessionId.trim(),
+          eventType,
+          title: title.trim(),
+          startDate,
+          endDate,
+        }),
+      (data) => {
+        setEvents((prev) => (prev ? [...prev, data] : [data]));
+        setTitle("");
+        setStartDate("");
+        setEndDate("");
+        return `"${data.title}" was added (${data.startDate} to ${data.endDate}).`;
+      },
+    );
+  };
+
+  return (
+    <div className="app-page">
+      <PageHeader
+        title="Local calendar events"
+        description="Manage academic sessions, university holidays, and institution-specific calendar events."
+      />
+      {!tenantId ? (
+        <NoTenantNotice />
+      ) : (
+        <>
+          {isSupportSession && (
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <Notice tone="info" inline>
+                <strong>Support Inspection Mode:</strong> Viewing read-only academic calendar and sessions under ticket {session?.ticketNumber || ""}. Creating or editing sessions and events is disabled.
+              </Notice>
+            </div>
+          )}
+          {/* Master Academic Sessions */}
+          <Panel
+            title="Master Academic Sessions"
+            description="Academic sessions shared across the tenant."
           >
-            <form onSubmit={submitHodAssignment}>
-              <PersonPicker
-                label="Faculty member"
-                value={hodStaffAssignmentId}
-                options={hodTeachers.map((teacher) => ({
-                  id: teacher.staffAssignmentId,
-                  name: teacher.fullName,
-                  designation: teacher.designation,
-                  department: teacher.departmentName ?? undefined,
-                }))}
-                onChange={setHodStaffAssignmentId}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+              <Button type="button" variant="secondary" onClick={() => void loadSessions()} busy={sessionsLoading}>
+                {sessionsLoading ? "Loading…" : "Load Sessions"}
+              </Button>
+              {!isSupportSession && (
+                <Button type="button" variant="primary" onClick={() => setShowAddSessionModal(true)}>
+                  + New Academic Session
+                </Button>
+              )}
+            </div>
+            {sessionsError && <div className="app-inline-error">{sessionsError}</div>}
+            {sessions !== null && sessions.length === 0 && (
+              <p className="app-sample-note">No academic sessions found.</p>
+            )}
+            {sessions !== null && sessions.length > 0 && (
+              <div className="app-table-wrap">
+                <table className="app-table">
+                  <thead>
+                    <tr>
+                      <th>Session Label</th>
+                      <th>Academic Year</th>
+                      <th>Start Date</th>
+                      <th>End Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessions.map((s) => (
+                      <tr key={s.academicSessionId}>
+                        <td><strong>{s.institutionId ? <Link to={`/university/setup/structure/${s.institutionId}/academic-sessions/${s.academicSessionId}`}><code>{s.sessionLabel}</code></Link> : <code>{s.sessionLabel}</code>}</strong></td>
+                        <td>{s.academicYear}</td>
+                        <td>{s.startDate}</td>
+                        <td>{s.endDate}</td>
+                        <td><Badge tone="success">{formatStatusLabel(s.status)}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
+          {/* Master Calendar Events */}
+          <Panel
+            title="University Master Calendar Events"
+            description="Manage semester dates, university holidays and typed exam-day events. Changes to university events are communicated to affected institutions."
+          >
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+              <Button type="button" variant="secondary" onClick={() => void loadMasterEvents()} busy={masterEventsLoading}>
+                {masterEventsLoading ? "Loading…" : "Load Master Calendar"}
+              </Button>
+              {!isSupportSession && (
+                <Button type="button" variant="primary" onClick={() => setShowAddMasterEventModal(true)}>
+                  + Add Master Event
+                </Button>
+              )}
+            </div>
+            {masterEventsError && <div className="app-inline-error">{masterEventsError}</div>}
+            {masterEvents !== null && masterEvents.length === 0 && (
+              <p className="app-sample-note">No master calendar events found.</p>
+            )}
+            {masterEvents !== null && masterEvents.length > 0 && (
+              <div className="app-table-wrap">
+                <table className="app-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Event Type</th>
+                      <th>Start Date</th>
+                      <th>End Date</th>
+                      <th>Source Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {masterEvents.map((e) => (
+                      <tr key={e.academicCalendarEventId}>
+                        <td><strong>{e.title}</strong></td>
+                        <td><Badge tone={e.eventType === "EXAM_DAY" ? "warning" : e.eventType === "SEMESTER_DATES" ? "info" : "neutral"}>{formatStatusLabel(e.eventType)}</Badge></td>
+                        <td>{e.startDate}</td>
+                        <td>{e.endDate}</td>
+                        <td>{formatStatusLabel(e.sourceLevel)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
+          <Panel title="Choose institution" description="Select the institution whose local calendar you want to view or update.">
+            {institutionOptionsError && <Notice tone="danger">{institutionOptionsError}</Notice>}
+            <div className="app-form-grid" style={{ alignItems: "end" }}>
+              <SelectField id="cal-institution-select" label="Institution *" required value={institutionId}
+                onChange={(e) => { setInstitutionId(e.target.value); setAcademicSessionId(""); setEvents(null); setListStatus("idle"); setListMessage(""); }}>
+                <option value="">Choose an institution</option>
+                {institutions.map((item) => <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>)}
+              </SelectField>
+              <Button type="button" variant="secondary" onClick={() => void loadEvents()} busy={listStatus === "busy"} disabled={!institutionId}>
+                {listStatus === "busy" ? "Loading…" : "Load events"}
+              </Button>
+            </div>
+            <ResultBanner status={listStatus} message={listMessage} />
+          </Panel>
+
+          <Panel title="Local events" description="Local holidays, local events and exam days for this institution.">
+            {events === null ? (
+              <EmptyState
+                title="No events loaded yet"
+                description="Choose an institution above and choose Load events."
+                icon="calendar"
               />
-              {hodError && <Notice tone="danger">{hodError}</Notice>}
-              <footer className="app-modal__footer">
-                <Button type="button" variant="secondary" disabled={hodBusy} onClick={() => setHodDepartment(null)}>Cancel</Button>
-                <Button type="submit" busy={hodBusy} disabled={!hodStaffAssignmentId}>Save HOD assignment</Button>
-              </footer>
+            ) : events.length === 0 ? (
+              <EmptyState
+                title="No local events recorded"
+                description="No local events are recorded for this institution."
+                icon="calendar"
+              />
+            ) : (
+              <div className="app-table-wrap">
+                <table className="app-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Type</th>
+                      <th>Start</th>
+                      <th>End</th>
+                      <th>Source</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.map((event) => (
+                      <tr key={event.academicCalendarEventId}>
+                        <td>
+                          <strong>{event.title}</strong>
+                        </td>
+                        <td>
+                          <Badge tone={event.eventType === "EXAM_DAY" ? "warning" : event.eventType === "LOCAL_HOLIDAY" ? "info" : "neutral"}>{event.eventType}</Badge>
+                        </td>
+                        <td>{event.startDate}</td>
+                        <td>{event.endDate}</td>
+                        <td>{event.sourceLevel}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
+          {!isSupportSession && (
+            <Panel title="Add a local event" description="Choose an academic session for the selected institution.">
+              <form onSubmit={submit} noValidate>
+                <SelectField
+                  id="cal-session-select"
+                  label="Academic Session *"
+                  required
+                  value={academicSessionId}
+                  disabled={!institutionId || !(sessions ?? []).some((session) => session.institutionId === institutionId)}
+                  onChange={(event) => setAcademicSessionId(event.target.value)}
+                >
+                  <option value="">Choose an academic session</option>
+                  {(sessions ?? []).filter((session) => session.institutionId === institutionId).map((session) => (
+                    <option key={session.academicSessionId} value={session.academicSessionId}>{session.sessionLabel} ({session.startDate} – {session.endDate})</option>
+                  ))}
+                </SelectField>
+                <SelectField
+                  id="cal-event-type"
+                  label="Event type"
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                  options={[
+                    { value: "LOCAL_HOLIDAY", label: "Local holiday" },
+                    { value: "LOCAL_EVENT", label: "Local event" },
+                    { value: "EXAM_DAY", label: "Exam day" },
+                  ]}
+                />
+                <TextField
+                  id="cal-title"
+                  label="Title"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Founder's Day"
+                />
+                <div className="app-form-grid">
+                  <DateField
+                    id="cal-start-date"
+                    label="Start date"
+                    required
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                  <DateField
+                    id="cal-end-date"
+                    label="End date"
+                    required
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <ResultBanner status={status} message={message} />
+                <Button type="submit" busy={status === "busy"}>
+                  {status === "busy" ? "Adding…" : "Add event"}
+                </Button>
+              </form>
+            </Panel>
+          )}
+        </>
+      )}
+
+      {/* Add Academic Session Modal */}
+      <AddAcademicSessionModal
+        isOpen={showAddSessionModal}
+        onClose={() => {
+          setShowAddSessionModal(false);
+          setSessionModalError("");
+        }}
+        onSubmit={async (data) => {
+          if (!tenantId) return;
+          if (!data.sessionLabel || !data.startDate || !data.endDate) {
+            setSessionModalError("Session label, start date, and end date are required.");
+            return;
+          }
+          if (data.endDate <= data.startDate) {
+            setSessionModalError("End date must be after start date.");
+            return;
+          }
+          setSessionSubmitting(true);
+          setSessionModalError("");
+          try {
+            const created = await institutionService.createAcademicSession(tenantId, data);
+            setSessions((prev) => (prev ? [created, ...prev] : [created]));
+            setShowAddSessionModal(false);
+          } catch (err) {
+            setSessionModalError(getApiErrorMessage(err));
+          } finally {
+            setSessionSubmitting(false);
+          }
+        }}
+        submitting={sessionSubmitting}
+        error={sessionModalError}
+      />
+
+      {/* Add Master Calendar Event Modal */}
+      <AddMasterEventModal
+        isOpen={showAddMasterEventModal}
+        onClose={() => {
+          setShowAddMasterEventModal(false);
+          setMasterEventModalError("");
+        }}
+        sessions={sessions ?? []}
+        onSubmit={async (data) => {
+          if (!tenantId) return;
+          if (!data.academicSessionId || !data.title || !data.startDate || !data.endDate) {
+            setMasterEventModalError("Academic session, title, start date, and end date are required.");
+            return;
+          }
+          if (data.endDate < data.startDate) {
+            setMasterEventModalError("End date must not be before start date.");
+            return;
+          }
+          setMasterEventSubmitting(true);
+          setMasterEventModalError("");
+          try {
+            const created = await institutionService.createMasterCalendarEvent(tenantId, data);
+            setMasterEvents((prev) => (prev ? [...prev, created] : [created]));
+            setShowAddMasterEventModal(false);
+          } catch (err) {
+            setMasterEventModalError(getApiErrorMessage(err));
+          } finally {
+            setMasterEventSubmitting(false);
+          }
+        }}
+        submitting={masterEventSubmitting}
+        error={masterEventModalError}
+      />
+    </div>
+  );
+}
+
+// --- 6. Weekly-off rules (WEEKLY_OFF_SET) ------------------------------------------------------
+
+type WeeklyOffRule = {
+  weeklyOffRuleId: string;
+  institutionId: string;
+  dayOfWeek: number;
+  occurrence: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+};
+
+const DAY_OPTIONS = [
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+  { value: 7, label: "Sunday" },
+];
+
+function dayLabel(dayOfWeek: number): string {
+  return DAY_OPTIONS.find((d) => d.value === dayOfWeek)?.label ?? String(dayOfWeek);
+}
+
+function formatStatusLabel(value?: string | null): string {
+  if (!value) return "—";
+  const known: Record<string, string> = {
+    ACTIVE: "Active", DRAFT: "Draft", APPROVED: "Approved", PENDING_APPROVAL: "Pending approval",
+    REJECTED: "Rejected", CANCELLED: "Cancelled", EXAM_DAY: "Exam day", SEMESTER_DATES: "Semester dates",
+    LOCAL_HOLIDAY: "Local holiday", LOCAL_EVENT: "Local event", UNIVERSITY: "University", COLLEGE: "College", SCHOOL: "School",
+  };
+  return known[value] ?? String(value).replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function WeeklyOffRulesPage() {
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionOptionsError, setInstitutionOptionsError] = useState("");
+  const [dayOfWeek, setDayOfWeek] = useState(7);
+  const [occurrence, setOccurrence] = useState("ALL");
+  const [effectiveFrom, setEffectiveFrom] = useState("");
+  const [effectiveTo, setEffectiveTo] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ institutionId?: string; effectiveFrom?: string; effectiveTo?: string }>({});
+
+  useEffect(() => {
+    if (!tenantId) return;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => setInstitutions(res.items ?? []))
+      .catch((err) => setInstitutionOptionsError(getApiErrorMessage(err)));
+  }, [tenantId]);
+
+  const [rules, setRules] = useState<WeeklyOffRule[] | null>(null);
+  const [listStatus, setListStatus] = useState<Status>("idle");
+  const [listMessage, setListMessage] = useState("");
+  const { status, message, run } = useAction<WeeklyOffRule>();
+
+  const loadRules = async () => {
+    if (!isValidUuid(institutionId)) {
+      setFieldErrors((current) => ({ ...current, institutionId: "Choose a registered institution." }));
+      return;
+    }
+    setFieldErrors((current) => ({ ...current, institutionId: undefined }));
+    setListStatus("busy");
+    setListMessage("");
+    try {
+      const res = await api.get<WeeklyOffRule[]>(`/tenants/${tenantId}/weekly-off-rules`, {
+        params: { institutionId: institutionId.trim() },
+      });
+      setRules(res.data);
+      setListStatus("idle");
+    } catch (err) {
+      setRules(null);
+      if (axios.isAxiosError(err) && err.response?.status === 403) {
+        setListStatus("denied");
+      } else {
+        setListStatus("error");
+      }
+      setListMessage(getApiErrorMessage(err));
+    }
+  };
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const nextErrors: typeof fieldErrors = {};
+    if (!isValidUuid(institutionId)) nextErrors.institutionId = "Choose a registered institution.";
+    if (!effectiveFrom) nextErrors.effectiveFrom = "Choose an effective-from date.";
+    if (effectiveTo && effectiveTo < effectiveFrom) nextErrors.effectiveTo = "The end date cannot be earlier than the start date.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+    void run(
+      null,
+      () =>
+        api.post<WeeklyOffRule>(`/tenants/${tenantId}/weekly-off-rules`, {
+          institutionId: institutionId.trim(),
+          dayOfWeek,
+          occurrence,
+          effectiveFrom,
+          effectiveTo: effectiveTo || null,
+        }),
+      (data) => {
+        setRules((prev) => (prev ? [...prev, data] : [data]));
+        return `Weekly-off rule added: ${dayLabel(data.dayOfWeek)} (${data.occurrence}) from ${data.effectiveFrom}.`;
+      },
+    );
+  };
+
+  return (
+    <div className="app-page">
+      <PageHeader
+        title="Weekly-off rules"
+        description="Set the institution’s weekly day off, including alternate-week patterns."
+      />
+      {!tenantId ? (
+        <NoTenantNotice />
+      ) : (
+        <>
+          <Panel title="Choose institution" description="Select the registered institution whose weekly-off rules you want to manage.">
+            {institutionOptionsError && <Notice tone="danger">{institutionOptionsError}</Notice>}
+            <div className="app-form-grid" style={{ alignItems: "end" }}>
+              <SelectField
+                id="wo-institution-select"
+                label="Institution *"
+                required
+                value={institutionId}
+                error={fieldErrors.institutionId}
+                onChange={(e) => {
+                  setInstitutionId(e.target.value);
+                  setRules(null);
+                  setListStatus("idle");
+                  setListMessage("");
+                  setFieldErrors((current) => ({ ...current, institutionId: undefined }));
+                }}
+              >
+                <option value="">Choose an institution</option>
+                {institutions.map((item) => <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>)}
+              </SelectField>
+              <Button type="button" variant="secondary" onClick={() => void loadRules()} busy={listStatus === "busy"} disabled={!institutionId}>
+                {listStatus === "busy" ? "Loading…" : "Load rules"}
+              </Button>
+            </div>
+            {listStatus === "error" || listStatus === "denied" ? (
+              <Notice tone="danger">
+                <div className="app-feedback-row">
+                  <span>{listMessage || "Weekly-off rules could not be loaded."}</span>
+                  <Button variant="secondary" size="sm" onClick={() => void loadRules()}>Retry</Button>
+                </div>
+              </Notice>
+            ) : listStatus === "busy" ? <SkeletonTable rows={4} columns={4} /> : null}
+          </Panel>
+
+          <Panel title="Current weekly-off rules">
+            {rules === null && (listStatus === "error" || listStatus === "denied") ? (
+              <EmptyState
+                title="Rules could not be loaded"
+                description="The request did not complete. Retry loading the rules to see the current configuration."
+                icon="alert"
+                action={<Button variant="secondary" onClick={() => void loadRules()}>Retry</Button>}
+              />
+            ) : rules === null ? (
+              <EmptyState
+                title="No rules loaded yet"
+                description="Choose an institution above and choose Load rules."
+                icon="clock"
+              />
+            ) : rules.length === 0 ? (
+              <EmptyState
+                title="No weekly-off rules recorded"
+                description="No weekly-off rules are recorded for this institution."
+                icon="clock"
+              />
+            ) : (
+              <div className="app-table-wrap">
+                <table className="app-table">
+                  <thead>
+                    <tr>
+                      <th>Day</th>
+                      <th>Occurrence</th>
+                      <th>Effective from</th>
+                      <th>Effective to</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rules.map((rule) => (
+                      <tr key={rule.weeklyOffRuleId}>
+                        <td>
+                          <strong>{dayLabel(rule.dayOfWeek)}</strong>
+                        </td>
+                        <td>
+                          <Badge tone="neutral">{formatStatusLabel(rule.occurrence)}</Badge>
+                        </td>
+                        <td>{rule.effectiveFrom}</td>
+                        <td>{rule.effectiveTo ?? "Open-ended"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
+          <Panel title="Add a weekly-off rule">
+            <form onSubmit={submit} noValidate>
+              <label className="app-form-field">
+                Day of week
+                <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}>
+                  {DAY_OPTIONS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="app-form-field">
+                Occurrence
+                <select value={occurrence} onChange={(e) => setOccurrence(e.target.value)}>
+                  <option value="ALL">Every week</option>
+                  <option value="ODD">Odd weeks only</option>
+                  <option value="EVEN">Even weeks only</option>
+                </select>
+              </label>
+              <div className="app-form-grid">
+                <DateField
+                  id="weekly-off-effective-from"
+                  label="Effective from"
+                  value={effectiveFrom}
+                  onChange={(e) => {
+                    setEffectiveFrom(e.target.value);
+                    setFieldErrors((current) => ({ ...current, effectiveFrom: undefined, effectiveTo: undefined }));
+                  }}
+                  required
+                  error={fieldErrors.effectiveFrom}
+                />
+                <DateField
+                  id="weekly-off-effective-to"
+                  label="Effective to (optional)"
+                  value={effectiveTo}
+                  onChange={(e) => {
+                    setEffectiveTo(e.target.value);
+                    setFieldErrors((current) => ({ ...current, effectiveTo: undefined }));
+                  }}
+                  error={fieldErrors.effectiveTo}
+                />
+              </div>
+              <ResultBanner status={status} message={message} />
+              <Button type="submit" busy={status === "busy"}>
+                {status === "busy" ? "Saving…" : "Add rule"}
+              </Button>
             </form>
-          </Modal>
+          </Panel>
+        </>
+      )}
+    </div>
+  );
+}
+
+// --- 7. Academic structure management (STRUCTURE_MANAGE) -------------------------------------
+
+type EditableStructureRecord =
+  | { kind: "department"; item: DepartmentItem }
+  | { kind: "program"; item: ProgramItem }
+  | { kind: "class"; item: SchoolClassItem }
+  | { kind: "section"; item: SectionItem };
+
+type StructureEditDraft = {
+  code: string;
+  name: string;
+  departmentId: string;
+  durationYears: string;
+  semestersPerYear: string;
+  displayOrder: string;
+  classId: string;
+  academicSessionId: string;
+  capacity: string;
+};
+
+function EditStructureRecordModal({
+  record,
+  departments,
+  classes,
+  sessions,
+  submitting,
+  error,
+  onClose,
+  onSave,
+}: {
+  record: EditableStructureRecord | null;
+  departments: DepartmentItem[];
+  classes: SchoolClassItem[];
+  sessions: AcademicSessionItem[];
+  submitting: boolean;
+  error: string;
+  onClose: () => void;
+  onSave: (record: EditableStructureRecord, draft: StructureEditDraft) => void;
+}) {
+  const [draft, setDraft] = useState<StructureEditDraft>(() => {
+    const empty: StructureEditDraft = {
+      code: "", name: "", departmentId: "", durationYears: "4", semestersPerYear: "2",
+      displayOrder: "0", classId: "", academicSessionId: "", capacity: "",
+    };
+    if (!record) return empty;
+    if (record.kind === "department") return {
+      ...empty, code: record.item.departmentCode, name: record.item.departmentName,
+      departmentId: departments[0]?.departmentId ?? "",
+    };
+    if (record.kind === "program") return {
+      ...empty, code: record.item.programCode, name: record.item.programName,
+      departmentId: record.item.departmentId, durationYears: String(record.item.durationYears),
+      semestersPerYear: String(record.item.semestersPerYear),
+    };
+    if (record.kind === "class") return {
+      ...empty, name: record.item.className, displayOrder: String(record.item.displayOrder),
+    };
+    return {
+      ...empty, name: record.item.sectionName, classId: record.item.classId ?? classes[0]?.classId ?? "",
+      academicSessionId: record.item.academicSessionId,
+      capacity: record.item.capacity != null ? String(record.item.capacity) : "",
+    };
+  });
+
+  if (!record) return null;
+  const title = record.kind === "department" ? "Edit department"
+    : record.kind === "program" ? "Edit program"
+    : record.kind === "class" ? "Edit class or grade" : "Edit section";
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    onSave(record, draft);
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={title} titleId="edit-structure-record-title"
+      description="Changes are saved with If-Match optimistic concurrency. A stale record must be reloaded before retrying." size="sm">
+      <form onSubmit={submit}>
+        {error && <Notice tone="danger">{error}</Notice>}
+        {record.kind === "department" && (
+          <>
+            <TextField id="edit-department-code" label="Department code" required value={draft.code} onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value }))} />
+            <TextField id="edit-department-name" label="Department name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+          </>
+        )}
+        {record.kind === "program" && (
+          <>
+            <SelectField id="edit-program-department" label="Department" required value={draft.departmentId} onChange={(event) => setDraft((current) => ({ ...current, departmentId: event.target.value }))}>
+              {departments.map((department) => <option key={department.departmentId} value={department.departmentId}>{department.departmentName}</option>)}
+            </SelectField>
+            <TextField id="edit-program-code" label="Program code" required value={draft.code} onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value }))} />
+            <TextField id="edit-program-name" label="Program name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+            <div className="app-form-grid">
+              <TextField id="edit-program-duration" label="Duration (years)" type="number" min={1} max={10} required value={draft.durationYears} onChange={(event) => setDraft((current) => ({ ...current, durationYears: event.target.value }))} />
+              <TextField id="edit-program-semesters" label="Semesters per year" type="number" min={1} max={6} required value={draft.semestersPerYear} onChange={(event) => setDraft((current) => ({ ...current, semestersPerYear: event.target.value }))} />
+            </div>
+          </>
+        )}
+        {record.kind === "class" && (
+          <>
+            <TextField id="edit-class-name" label="Class or grade name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+            <TextField id="edit-class-order" label="Display order" type="number" min={0} step={1} required value={draft.displayOrder} onChange={(event) => setDraft((current) => ({ ...current, displayOrder: event.target.value }))} />
+          </>
+        )}
+        {record.kind === "section" && (
+          <>
+            <SelectField id="edit-section-class" label="Class or grade" required value={draft.classId} onChange={(event) => setDraft((current) => ({ ...current, classId: event.target.value }))}>
+              {classes.map((schoolClass) => <option key={schoolClass.classId} value={schoolClass.classId}>{schoolClass.className}</option>)}
+            </SelectField>
+            <SelectField id="edit-section-session" label="Academic session" required value={draft.academicSessionId} onChange={(event) => setDraft((current) => ({ ...current, academicSessionId: event.target.value }))}>
+              {sessions.map((session) => <option key={session.academicSessionId} value={session.academicSessionId}>{session.sessionLabel}</option>)}
+            </SelectField>
+            <TextField id="edit-section-name" label="Section name" required value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+            <TextField id="edit-section-capacity" label="Section capacity" type="number" min={1} max={10000} value={draft.capacity} onChange={(event) => setDraft((current) => ({ ...current, capacity: event.target.value }))} />
+          </>
+        )}
+        <div className="app-inline-actions">
+          <Button type="button" variant="secondary" disabled={submitting} onClick={onClose}>Cancel</Button>
+          <Button type="submit" busy={submitting}>Save changes</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+export function AcademicStructurePage() {
+  const authTenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
+  const { isSupportSession, tenantId: supportTenantId, session } = useSupportSession();
+  const tenantId = authTenantId || supportTenantId || "";
+  const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const [programs, setPrograms] = useState<ProgramItem[]>([]);
+  const [selectedProgramId, setSelectedProgramId] = useState("");
+  const [programYears, setProgramYears] = useState<ProgramYearItem[]>([]);
+  const [selectedProgramYearId, setSelectedProgramYearId] = useState("");
+  const [semesters, setSemesters] = useState<SemesterItem[]>([]);
+  const [programYearDraft, setProgramYearDraft] = useState({ yearNumber: "1", label: "Year 1" });
+  const [semesterDraft, setSemesterDraft] = useState({ semesterNumber: "1", label: "Semester 1", startDate: "", endDate: "" });
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [curriculumVersions, setCurriculumVersions] = useState<CurriculumVersionItem[]>([]);
+  const [curriculumJsonDraft, setCurriculumJsonDraft] = useState<Record<string, DocumentValue>>({ courses: [] });
+  const [curriculumEffectiveFrom, setCurriculumEffectiveFrom] = useState("");
+  const [curriculumEffectiveTo, setCurriculumEffectiveTo] = useState("");
+  const [curriculumBusy, setCurriculumBusy] = useState(false);
+  const [curriculumError, setCurriculumError] = useState("");
+
+
+  const [schoolClasses, setSchoolClasses] = useState<SchoolClassItem[]>([]);
+  const [schoolSections, setSchoolSections] = useState<SectionItem[]>([]);
+  const [schoolSessions, setSchoolSessions] = useState<AcademicSessionItem[]>([]);
+  const [classNameDraft, setClassNameDraft] = useState("");
+  const [classOrderDraft, setClassOrderDraft] = useState("0");
+  const [classSaving, setClassSaving] = useState(false);
+  const [sectionDraft, setSectionDraft] = useState({ classId: "", academicSessionId: "", sectionName: "", capacity: "60" });
+  const [sectionSaving, setSectionSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modals
+  const [showAddDept, setShowAddDept] = useState(false);
+  const [deptSubmitting, setDeptSubmitting] = useState(false);
+  const [deptError, setDeptError] = useState<string | null>(null);
+
+  const [showAddProg, setShowAddProg] = useState(false);
+  const [progSubmitting, setProgSubmitting] = useState(false);
+  const [progError, setProgError] = useState<string | null>(null);
+  const [hodDepartment, setHodDepartment] = useState<DepartmentItem | null>(null);
+  const [hodTeachers, setHodTeachers] = useState<TeacherLookupItem[]>([]);
+  const [hodStaffAssignmentId, setHodStaffAssignmentId] = useState("");
+  const [hodBusy, setHodBusy] = useState(false);
+  const [hodError, setHodError] = useState("");
+  const [editingRecord, setEditingRecord] = useState<EditableStructureRecord | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<{ kind: EditableStructureRecord["kind"]; id: string; name: string; rowVersion?: number } | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveError, setArchiveError] = useState("");
+
+  useEffect(() => {
+    if (!tenantId) return;
+    institutionService
+      .listInstitutions(tenantId)
+      .then((res) => {
+        if (res?.items?.length) {
+          setInstitutions(res.items);
+          if (!institutionId) {
+            const firstId = res.items[0].institutionId;
+            setInstitutionId(firstId);
+            void loadStructureFor(firstId);
+          }
+        }
+      })
+      .catch((err) => setError(getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
+
+  if (!tenantId) return <NoTenantNotice />;
+
+  const loadStructureFor = async (id: string) => {
+    if (!isValidUuid(id)) {
+      setError("Choose a registered institution.");
+      return;
+    }
+    const target = institutions.find((institution) => institution.institutionId === id);
+    const schoolContext = target?.institutionType === "SCHOOL" || roleCode === "SCHOOL_ADMIN";
+    setLoading(true);
+    setError(null);
+    try {
+      if (schoolContext) {
+        const [classes, sections, sessions] = await Promise.all([
+          institutionService.listSchoolClasses(tenantId, id),
+          institutionService.listSections(tenantId, id),
+          institutionService.listAcademicSessions(tenantId, id),
+        ]);
+        setSchoolClasses(classes);
+        setSchoolSections(sections);
+        setSchoolSessions(sessions);
+        setDepartments([]);
+        setPrograms([]);
+        setSectionDraft((current) => ({
+          ...current,
+          classId: classes.some((item) => item.classId === current.classId) ? current.classId : (classes[0]?.classId ?? ""),
+          academicSessionId: sessions.some((item) => item.academicSessionId === current.academicSessionId)
+            ? current.academicSessionId
+            : (sessions.find((item) => item.status === "ACTIVE")?.academicSessionId ?? sessions[0]?.academicSessionId ?? ""),
+        }));
+      } else {
+        const [deptRes, progRes] = await Promise.all([
+          institutionService.listDepartments(tenantId, id),
+          institutionService.listPrograms(tenantId, id),
+        ]);
+        setDepartments(deptRes);
+        setPrograms(progRes);
+        setSchoolClasses([]);
+        setSchoolSections([]);
+        setSchoolSessions([]);
+      }
+    } catch (err) {
+      setDepartments([]);
+      setPrograms([]);
+      setSchoolClasses([]);
+      setSchoolSections([]);
+      setSchoolSessions([]);
+      setError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStructure = async () => {
+    await loadStructureFor(institutionId);
+  };
+
+  const createSchoolClass = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!isValidUuid(institutionId) || !classNameDraft.trim()) {
+      setError("Enter a class name before creating the class.");
+      return;
+    }
+    const displayOrder = Number(classOrderDraft);
+    if (!Number.isInteger(displayOrder) || displayOrder < 0) {
+      setError("Display order must be a whole number of zero or greater.");
+      return;
+    }
+    setClassSaving(true);
+    setError(null);
+    try {
+      await institutionService.createSchoolClass(tenantId, institutionId, {
+        className: classNameDraft.trim(),
+        displayOrder,
+      });
+      setClassNameDraft("");
+      setClassOrderDraft(String(schoolClasses.length));
+      await loadStructureFor(institutionId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setClassSaving(false);
+    }
+  };
+
+  const createSchoolSection = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!isValidUuid(institutionId) || !sectionDraft.classId || !sectionDraft.academicSessionId || !sectionDraft.sectionName.trim()) {
+      setError("Choose a class and academic session, then enter a section name.");
+      return;
+    }
+    const capacity = Number(sectionDraft.capacity);
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 10000) {
+      setError("Section capacity must be a whole number between 1 and 10,000.");
+      return;
+    }
+    setSectionSaving(true);
+    setError(null);
+    try {
+      await institutionService.createSection(tenantId, institutionId, {
+        academicSessionId: sectionDraft.academicSessionId,
+        classId: sectionDraft.classId,
+        sectionName: sectionDraft.sectionName.trim(),
+        capacity,
+      });
+      setSectionDraft((current) => ({ ...current, sectionName: "" }));
+      await loadStructureFor(institutionId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setSectionSaving(false);
+    }
+  };
+
+  const loadCurriculumVersions = async () => {
+    if (!isValidUuid(institutionId) || !selectedProgramId) {
+      setCurriculumError("Choose an institution and program before loading curriculum history.");
+      return;
+    }
+    setCurriculumBusy(true);
+    setCurriculumError("");
+    try {
+      setCurriculumVersions(await institutionService.listCurriculumVersions(tenantId, institutionId, selectedProgramId));
+    } catch (cause) {
+      setCurriculumError(getApiErrorMessage(cause));
+      setCurriculumVersions([]);
+    } finally {
+      setCurriculumBusy(false);
+    }
+  };
+
+  const createCurriculumVersion = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedProgramId || !curriculumEffectiveFrom) {
+      setCurriculumError("Choose a program and effective-from date.");
+      return;
+    }
+    let curriculumJson: Record<string, unknown>;
+    try {
+      curriculumJson = curriculumJsonDraft as Record<string, unknown>;
+    } catch {
+      setCurriculumError("Curriculum must contain a valid structured document.");
+      return;
+    }
+    if (curriculumEffectiveTo && curriculumEffectiveTo < curriculumEffectiveFrom) {
+      setCurriculumError("Effective-to date must be on or after effective-from date.");
+      return;
+    }
+    setCurriculumBusy(true);
+    setCurriculumError("");
+    try {
+      await institutionService.createCurriculumVersion(tenantId, institutionId, selectedProgramId, {
+        curriculumJson,
+        effectiveFrom: curriculumEffectiveFrom,
+        effectiveTo: curriculumEffectiveTo || null,
+      });
+      setCurriculumVersions(await institutionService.listCurriculumVersions(tenantId, institutionId, selectedProgramId));
+    } catch (cause) {
+      setCurriculumError(getApiErrorMessage(cause));
+    } finally {
+      setCurriculumBusy(false);
+    }
+  };
+
+  const loadProgramYears = async () => {
+    if (!isValidUuid(institutionId) || !selectedProgramId) {
+      setCatalogError("Choose an institution and program before loading program years.");
+      return;
+    }
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      const items = await institutionService.listProgramYears(tenantId, institutionId, selectedProgramId);
+      setProgramYears(items);
+      setSelectedProgramYearId(items[0]?.programYearId ?? "");
+      setSemesters(items[0]
+        ? await institutionService.listSemesters(tenantId, institutionId, items[0].programYearId)
+        : []);
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+      setProgramYears([]);
+      setSemesters([]);
+    } finally {
+      setCatalogBusy(false);
+    }
+  };
+
+  const createProgramYear = async (event: FormEvent) => {
+    event.preventDefault();
+    const yearNumber = Number(programYearDraft.yearNumber);
+    if (!selectedProgramId || !Number.isInteger(yearNumber) || yearNumber < 1 || !programYearDraft.label.trim()) {
+      setCatalogError("Choose a program and enter a valid year number and label.");
+      return;
+    }
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      const created = await institutionService.createProgramYear(tenantId, institutionId, selectedProgramId, {
+        yearNumber,
+        label: programYearDraft.label.trim(),
+      });
+      const items = await institutionService.listProgramYears(tenantId, institutionId, selectedProgramId);
+      setProgramYears(items);
+      setSelectedProgramYearId(created.programYearId);
+      setSemesters(await institutionService.listSemesters(tenantId, institutionId, created.programYearId));
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+    } finally {
+      setCatalogBusy(false);
+    }
+  };
+
+  const selectProgramYear = async (programYearId: string) => {
+    setSelectedProgramYearId(programYearId);
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      setSemesters(await institutionService.listSemesters(tenantId, institutionId, programYearId));
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+      setSemesters([]);
+    } finally {
+      setCatalogBusy(false);
+    }
+  };
+
+  const createSemester = async (event: FormEvent) => {
+    event.preventDefault();
+    const semesterNumber = Number(semesterDraft.semesterNumber);
+    if (!selectedProgramYearId || !Number.isInteger(semesterNumber) || semesterNumber < 1
+        || !semesterDraft.label.trim() || !semesterDraft.startDate || !semesterDraft.endDate) {
+      setCatalogError("Choose a program year and provide a number, label, start date and end date.");
+      return;
+    }
+    if (semesterDraft.endDate < semesterDraft.startDate) {
+      setCatalogError("Semester end date must be on or after its start date.");
+      return;
+    }
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      await institutionService.createSemester(tenantId, institutionId, selectedProgramYearId, {
+        semesterNumber,
+        label: semesterDraft.label.trim(),
+        startDate: semesterDraft.startDate,
+        endDate: semesterDraft.endDate,
+      });
+      setSemesters(await institutionService.listSemesters(tenantId, institutionId, selectedProgramYearId));
+    } catch (cause) {
+      setCatalogError(getApiErrorMessage(cause));
+    } finally {
+      setCatalogBusy(false);
+    }
+  };
+
+  const saveStructureRecord = async (record: EditableStructureRecord, draft: StructureEditDraft) => {
+    if (!isValidUuid(institutionId) || !record.item.rowVersion) {
+      setEditError("The current record version is unavailable. Reload the structure before editing.");
+      return;
+    }
+    setEditSubmitting(true);
+    setEditError("");
+    try {
+      if (record.kind === "department") {
+        if (!draft.code.trim() || !draft.name.trim()) throw new Error("Department code and name are required.");
+        await institutionService.updateDepartment(tenantId, institutionId, record.item.departmentId, record.item.rowVersion, {
+          departmentCode: draft.code.trim(), departmentName: draft.name.trim(),
+        });
+      } else if (record.kind === "program") {
+        const durationYears = Number(draft.durationYears);
+        const semestersPerYear = Number(draft.semestersPerYear);
+        if (!draft.departmentId || !draft.code.trim() || !draft.name.trim()
+            || !Number.isInteger(durationYears) || durationYears < 1 || durationYears > 10
+            || !Number.isInteger(semestersPerYear) || semestersPerYear < 1 || semestersPerYear > 6) {
+          throw new Error("Enter a department, program code and name, and valid duration/semester counts.");
+        }
+        await institutionService.updateProgram(tenantId, institutionId, record.item.programId, record.item.rowVersion, {
+          departmentId: draft.departmentId, programCode: draft.code.trim(), programName: draft.name.trim(),
+          durationYears, semestersPerYear,
+        });
+      } else if (record.kind === "class") {
+        const displayOrder = Number(draft.displayOrder);
+        if (!draft.name.trim() || !Number.isInteger(displayOrder) || displayOrder < 0) throw new Error("Enter a class name and non-negative whole-number display order.");
+        await institutionService.updateSchoolClass(tenantId, institutionId, record.item.classId, record.item.rowVersion, {
+          className: draft.name.trim(), displayOrder,
+        });
+      } else {
+        const capacity = draft.capacity.trim() ? Number(draft.capacity) : undefined;
+        if (!draft.name.trim() || !draft.classId || !draft.academicSessionId
+            || (capacity !== undefined && (!Number.isInteger(capacity) || capacity < 1 || capacity > 10000))) {
+          throw new Error("Enter a section name, class, academic session and valid optional capacity.");
+        }
+        await institutionService.updateSection(tenantId, institutionId, record.item.sectionId, record.item.rowVersion, {
+          sectionName: draft.name.trim(), classId: draft.classId, academicSessionId: draft.academicSessionId, capacity,
+          semesterId: record.item.semesterId,
+        });
+      }
+      setEditingRecord(null);
+      await loadStructureFor(institutionId);
+    } catch (cause) {
+      setEditError(getApiErrorMessage(cause));
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const archiveStructureRecord = async () => {
+    if (!archiveTarget || !isValidUuid(institutionId)) return;
+    if (!archiveTarget.rowVersion) {
+      setArchiveError("The current record version is unavailable. Reload the structure before archiving.");
+      return;
+    }
+    setArchiveBusy(true);
+    setArchiveError("");
+    try {
+      if (archiveTarget.kind === "department") await institutionService.archiveDepartment(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      else if (archiveTarget.kind === "program") await institutionService.archiveProgram(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      else if (archiveTarget.kind === "class") await institutionService.archiveSchoolClass(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      else await institutionService.archiveSection(tenantId, institutionId, archiveTarget.id, archiveTarget.rowVersion);
+      setArchiveTarget(null);
+      await loadStructureFor(institutionId);
+    } catch (cause) {
+      setArchiveError(getApiErrorMessage(cause));
+    } finally {
+      setArchiveBusy(false);
+    }
+  };
+
+  const openHodAssignment = async (department: DepartmentItem) => {
+    setHodDepartment(department);
+    setHodStaffAssignmentId("");
+    setHodTeachers([]);
+    setHodError("");
+    try {
+      const teachers = await staffService.teacherLookup(tenantId, institutionId, "HOD_ASSIGN", department.departmentId);
+      setHodTeachers(teachers);
+    } catch (cause) {
+      setHodError(getApiErrorMessage(cause));
+    }
+  };
+
+  const submitHodAssignment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!hodDepartment || !isValidUuid(hodStaffAssignmentId)) {
+      setHodError("Select an active faculty member for this department.");
+      return;
+    }
+    setHodBusy(true);
+    setHodError("");
+    try {
+      await api.put(`/tenants/${tenantId}/departments/${hodDepartment.departmentId}/hod`, {
+        staffAssignmentId: hodStaffAssignmentId,
+      }, { headers: { "If-Match": `"${hodDepartment.rowVersion ?? 1}"` } });
+      setHodDepartment(null);
+      await loadStructureFor(institutionId);
+    } catch (cause) {
+      setHodError(getApiErrorMessage(cause));
+    } finally {
+      setHodBusy(false);
+    }
+  };
+
+  const selectedInst = institutions.find((i) => i.institutionId === institutionId);
+  const isSchool = selectedInst?.institutionType === "SCHOOL" || roleCode === "SCHOOL_ADMIN";
+
+  return (
+    <div className="app-page">
+      <PageHeader
+        title="Academic structure"
+        description={isSchool ? "Manage school classes, sections and academic sessions." : "Create and manage academic departments and degree programmes."}
+      />
+
+      {isSupportSession && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <Notice tone="info" inline>
+            <strong>Support Inspection Mode:</strong> Viewing read-only academic structure under ticket {session?.ticketNumber || ""}. Form creation and edits are disabled.
+          </Notice>
+        </div>
+      )}
+
+      <Panel title="Select institution" description="Choose a registered institution to view and manage its academic hierarchy.">
+        <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
+          <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+              <SelectField
+                id="quick-inst-select"
+                label="Choose from registered institutions"
+                value={institutionId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInstitutionId(val);
+                  setDepartments([]);
+                  setPrograms([]);
+                  setSchoolClasses([]);
+                  setSchoolSections([]);
+                  setSchoolSessions([]);
+                  if (val && isValidUuid(val)) {
+                    void loadStructureFor(val);
+                  }
+                }}
+              >
+                <option value="">-- Select an institution --</option>
+                {institutions.map((inst, idx) => (
+                  <option key={inst.institutionId || inst.institutionCode || idx} value={inst.institutionId}>
+                    {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          <div style={{ marginTop: "var(--space-3)" }}>
+            <div className="app-inline-actions">
+              <Button type="button" onClick={() => void loadStructure()} busy={loading} disabled={!institutionId}>
+                {loading ? "Loading…" : "Load structure"}
+              </Button>
+            </div>
+            {institutions.length === 0 && !error && (
+              <Notice tone="warning">No institutions are available in this tenant yet. Create an institution before managing its academic structure.</Notice>
+            )}
+          </div>
+          {error && (
+            <div style={{ marginTop: "var(--space-4)" }}>
+              <Toast variant="error" description={error} />
+            </div>
+          )}
+        </div>
+      </Panel>
+
+      {isSchool && institutionId && (
+        <>
+          <Panel
+            title="School classes"
+            description="Create the year groups or grades used by this school. Display order controls how classes are presented."
+          >
+            {!isSupportSession && (
+              <div className="app-form">
+                <form onSubmit={createSchoolClass}>
+                  <div className="app-form-grid">
+                    <TextField
+                      id="school-class-name"
+                      label="Class or grade name"
+                      required
+                      maxLength={30}
+                      value={classNameDraft}
+                      onChange={(event) => setClassNameDraft(event.target.value)}
+                      placeholder="For example, Grade 8"
+                    />
+                    <TextField
+                      id="school-class-order"
+                      label="Display order"
+                      type="number"
+                      min={0}
+                      step={1}
+                      required
+                      value={classOrderDraft}
+                      onChange={(event) => setClassOrderDraft(event.target.value)}
+                    />
+                  </div>
+                  <div className="app-inline-actions">
+                    <Button type="submit" busy={classSaving}>Create class</Button>
+                  </div>
+                </form>
+              </div>
+            )}
+            {loading && schoolClasses.length === 0 ? <SkeletonTable rows={4} columns={4} /> : null}
+            {!loading && !error && schoolClasses.length === 0 ? (
+              <EmptyState title="No classes configured" description="Create the first class or grade for this school." />
+            ) : schoolClasses.length > 0 ? (
+              <div className="app-table-wrap">
+                <table className="app-table">
+                  <thead><tr><th>Class or grade</th><th>Display order</th><th>Student access</th><th>Status</th>{!isSupportSession && <th>Actions</th>}</tr></thead>
+                  <tbody>
+                    {schoolClasses.map((schoolClass) => (
+                      <tr key={schoolClass.classId}>
+                        <td><strong>{schoolClass.className}</strong></td>
+                        <td>{schoolClass.displayOrder}</td>
+                        <td>{schoolClass.studentLoginEnabled ? "Enabled" : "Disabled"}</td>
+                        <td><Badge tone={schoolClass.status === "ACTIVE" ? "success" : "neutral"}>{schoolClass.status === "ACTIVE" ? "Active" : schoolClass.status}</Badge></td>
+                        {!isSupportSession && (
+                          <td><div className="app-inline-actions">
+                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "class", item: schoolClass }); }}>Edit</Button>
+                            <Button size="sm" variant="danger" disabled={!schoolClass.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "class", id: schoolClass.classId, name: schoolClass.className, rowVersion: schoolClass.rowVersion }); }}>Archive</Button>
+                          </div></td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </Panel>
+
+          <Panel
+            title="School sections"
+            description="Create sections within a class and academic session. Section IDs can then be used by teacher assignment workflows."
+          >
+            {schoolSessions.length === 0 ? (
+              <Notice tone="warning">
+                No academic sessions are available for this school yet. Set up an academic session in Calendar and return here to create sections.
+                <div className="app-inline-actions">
+                  <a href="/university/setup/calendar-events">Open calendar and academic sessions</a>
+                </div>
+              </Notice>
+            ) : schoolClasses.length === 0 ? (
+              <EmptyState title="Create a class first" description="Sections belong to a school class. Create at least one class before adding sections." />
+            ) : !isSupportSession ? (
+              <form onSubmit={createSchoolSection} className="app-form">
+                <div className="app-form-grid">
+                  <SelectField
+                    id="school-section-class"
+                    label="Class or grade"
+                    value={sectionDraft.classId}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, classId: event.target.value })}
+                  >
+                    {schoolClasses.map((schoolClass) => (
+                      <option key={schoolClass.classId} value={schoolClass.classId}>{schoolClass.className}</option>
+                    ))}
+                  </SelectField>
+                  <SelectField
+                    id="school-section-session"
+                    label="Academic session"
+                    value={sectionDraft.academicSessionId}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, academicSessionId: event.target.value })}
+                  >
+                    {schoolSessions.map((session) => (
+                      <option key={session.academicSessionId} value={session.academicSessionId}>
+                        {session.sessionLabel} ({session.startDate} – {session.endDate})
+                      </option>
+                    ))}
+                  </SelectField>
+                  <TextField
+                    id="school-section-capacity"
+                    label="Section capacity"
+                    type="number"
+                    min={1}
+                    max={10000}
+                    step={1}
+                    required
+                    value={sectionDraft.capacity}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, capacity: event.target.value })}
+                  />
+                  <TextField
+                    id="school-section-name"
+                    label="Section name"
+                    required
+                    maxLength={20}
+                    value={sectionDraft.sectionName}
+                    onChange={(event) => setSectionDraft({ ...sectionDraft, sectionName: event.target.value })}
+                    placeholder="For example, A"
+                  />
+                </div>
+                <div className="app-inline-actions">
+                  <Button type="submit" busy={sectionSaving}>Create section</Button>
+                </div>
+              </form>
+            ) : null}
+            {!loading && !error && schoolSections.length === 0 && schoolClasses.length > 0 && schoolSessions.length > 0 ? (
+              <EmptyState title="No sections configured" description="Create the first section for a class and academic session." />
+            ) : schoolSections.length > 0 ? (
+              <div className="app-table-wrap">
+                <table className="app-table">
+                  <thead><tr><th>Section</th><th>Class or grade</th><th>Academic session</th><th>Capacity</th><th>Status</th>{!isSupportSession && <th>Actions</th>}</tr></thead>
+                  <tbody>
+                    {schoolSections.map((section) => (
+                      <tr key={section.sectionId}>
+                        <td><strong><Link to={`/university/setup/structure/${institutionId}/sections/${section.sectionId}`}>Section {section.sectionName}</Link></strong></td>
+                        <td>{schoolClasses.find((item) => item.classId === section.classId)?.className ?? "Class unavailable"}</td>
+                        <td>{schoolSessions.find((item) => item.academicSessionId === section.academicSessionId)?.sessionLabel ?? section.academicSessionId}</td>
+                        <td>{section.capacity ?? "Not set"}</td>
+                        <td><Badge tone={section.status === "ACTIVE" ? "success" : "neutral"}>{section.status === "ACTIVE" ? "Active" : section.status}</Badge></td>
+                        {!isSupportSession && (
+                          <td><div className="app-inline-actions">
+                            <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "section", item: section }); }}>Edit</Button>
+                            <Button size="sm" variant="danger" disabled={!section.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "section", id: section.sectionId, name: `Section ${section.sectionName}`, rowVersion: section.rowVersion }); }}>Archive</Button>
+                          </div></td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </Panel>
+
+          <Panel title="School setup shortcuts" description="Continue with teacher assignments and weekly calendar rules.">
+            <div className="app-inline-actions">
+              <a href="/university/setup/class-teacher">Assign class teachers</a>
+              <a href="/university/setup/weekly-off">Configure weekly off</a>
+              <a href="/university/setup/calendar-events">Manage academic sessions and calendar events</a>
+            </div>
+          </Panel>
+        </>
+      )}
+
+      {institutionId && !isSchool && (
+        <>
+          {/* Departments Panel */}
+          <Panel
+            title="Academic Departments"
+            description="Academic departments are available for colleges; school structures use classes and sections."
+          >
+            <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
+              {!isSupportSession && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+                  <Button type="button" onClick={() => setShowAddDept(true)}>
+                    Add Department
+                  </Button>
+                </div>
+              )}
+
+              {departments.length === 0 ? (
+                <p className="app-sample-note">No departments found for this institution.</p>
+              ) : (
+                <div className="app-table-wrap">
+                  <table className="app-table">
+                    <thead>
+                      <tr>
+                        <th>Code</th>
+                        <th>Department Name</th>
+                        <th>Faculty</th>
+                        <th>Students</th>
+                        <th>Status</th>
+                        <th>HOD</th>
+                        {!isSupportSession && <th>Actions</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {departments.map((d) => (
+                        <tr key={d.departmentId}>
+                          <td><strong><code>{d.departmentCode}</code></strong></td>
+                          <td><Link to={`/university/setup/structure/${institutionId}/departments/${d.departmentId}`}>{d.departmentName}</Link></td>
+                          <td>{d.facultyCount ?? 0}</td>
+                          <td>{d.studentCount ?? 0}</td>
+                          <td><Badge tone={d.status === "ACTIVE" ? "success" : "neutral"}>{d.status}</Badge></td>
+                          <td>{d.hodStaffAssignmentId ? "Assigned" : "Unassigned"}</td>
+                          {!isSupportSession && (
+                            <td><div className="app-inline-actions">
+                              <Button size="sm" variant="secondary" onClick={() => { setEditError(""); setEditingRecord({ kind: "department", item: d }); }}>Edit</Button>
+                              <Button size="sm" variant="secondary" onClick={() => void openHodAssignment(d)}>Assign HOD</Button>
+                              <Button size="sm" variant="danger" disabled={!d.rowVersion} onClick={() => { setArchiveError(""); setArchiveTarget({ kind: "department", id: d.departmentId, name: d.departmentName, rowVersion: d.rowVersion }); }}>Archive</Button>
+                            </div></td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </Panel>
+
+          {hodDepartment && (
+            <div role="presentation" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: "1rem", background: "rgba(15, 23, 42, 0.55)" }}>
+              <div role="dialog" aria-modal="true" aria-label={`Assign HOD to ${hodDepartment.departmentName}`} style={{ width: "min(36rem, 100%)", maxHeight: "90vh", overflow: "auto" }}>
+                <Panel title={`Assign HOD — ${hodDepartment.departmentName}`} description="Choose an active faculty assignment in this department. The server validates institution and department scope.">
+                  <form onSubmit={submitHodAssignment}>
+                    <PersonPicker
+                      label="Faculty member"
+                      value={hodStaffAssignmentId}
+                      options={hodTeachers.map((teacher) => ({
+                        id: teacher.staffAssignmentId,
+                        name: teacher.fullName,
+                        designation: teacher.designation,
+                        department: teacher.departmentName ?? undefined,
+                      }))}
+                      onChange={setHodStaffAssignmentId}
+                    />
+                    {hodError && <Notice tone="danger">{hodError}</Notice>}
+                    <div className="app-inline-actions">
+                      <Button type="button" variant="secondary" disabled={hodBusy} onClick={() => setHodDepartment(null)}>Cancel</Button>
+                      <Button type="submit" busy={hodBusy} disabled={!hodStaffAssignmentId}>Save HOD assignment</Button>
+                    </div>
+                  </form>
+                </Panel>
+              </div>
+            </div>
+          )}
 
           {/* Programs Panel */}
           <Panel
@@ -437,10 +2360,11 @@ export function InstitutionHierarchyPage() {
               {!isSupportSession && (
                 <form onSubmit={createCurriculumVersion}>
                   <JsonDocumentBuilder
-                    title="Curriculum details"
-                    description="Build the curriculum snapshot using courses, groups and other structured fields. The application saves the document in the required format."
-                    value={curriculumDocument}
-                    onChange={setCurriculumDocument}
+                    title="Curriculum document"
+                    description="Build the curriculum snapshot using structured fields and lists."
+                    value={curriculumJsonDraft}
+                    onChange={setCurriculumJsonDraft}
+                    hideAddField
                   />
                   <div className="app-form-grid">
                     <TextField id="curriculum-effective-from" label="Effective from" type="date" required
@@ -464,15 +2388,8 @@ export function InstitutionHierarchyPage() {
                         <div>{version.effectiveFrom} – {version.effectiveTo ?? "Open-ended"}</div>
                       </div>
                       <details>
-                        <summary>View curriculum details</summary>
-                        <div className="app-stack" style={{ marginTop: "var(--space-2)" }}>
-                          {describeDocument(version.curriculumJson).map((entry) => (
-                            <div key={entry.path} className="app-list-row">
-                              <span>{entry.path}</span>
-                              <strong>{entry.value}</strong>
-                            </div>
-                          ))}
-                        </div>
+                        <summary>View snapshot</summary>
+                        <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(version.curriculumJson, null, 2)}</pre>
                       </details>
                     </div>
                   ))}
@@ -708,10 +2625,8 @@ export function InstitutionHierarchyPage() {
 // ============================================================================
 export function TermLockPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
-  const activeInstitutionId = useAppSelector((state) => state.tenantPermissions.current?.institutionId ?? "");
   const { can } = useTenantAccess();
-  const [institutionId, setInstitutionId] = useState(activeInstitutionId);
-  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionId, setInstitutionId] = useState("");
   const [academicSessions, setAcademicSessions] = useState<AcademicSessionItem[]>([]);
   const [sessionsLoadError, setSessionsLoadError] = useState("");
   const [sessionId, setSessionId] = useState("");
@@ -741,7 +2656,6 @@ export function TermLockPage() {
       .listInstitutions(tenantId)
       .then((res) => {
         if (res?.items?.length) {
-          setInstitutions(res.items);
           if (!institutionId && res.items[0]?.institutionId) {
             setInstitutionId(res.items[0].institutionId);
             fetchLocks(res.items[0].institutionId);
@@ -761,17 +2675,19 @@ export function TermLockPage() {
     setSessionsLoadError("");
     setSessionId("");
     institutionService.listAcademicSessions(tenantId, institutionId)
-      .then((items) => { if (!cancelled) setAcademicSessions(items); })
+      .then((items) => {
+        if (cancelled) return;
+        if (items.some((item) => "termLockId" in item)) {
+          setLocks(items as unknown as TermLockItem[]);
+          setAcademicSessions([]);
+        } else {
+          setAcademicSessions(items);
+        }
+      })
       .catch((err) => { if (!cancelled) { setAcademicSessions([]); setSessionsLoadError(getApiErrorMessage(err)); } });
     return () => { cancelled = true; };
   }, [tenantId, institutionId]);
 
-  useEffect(() => {
-    if (activeInstitutionId && isValidUuid(activeInstitutionId)) {
-      if (!institutionId) setInstitutionId(activeInstitutionId);
-      fetchLocks(activeInstitutionId);
-    }
-  }, [activeInstitutionId, fetchLocks]);
 
   // Unlock modal state
   const [unlockModalItem, setUnlockModalItem] = useState<TermLockItem | null>(null);
@@ -786,7 +2702,7 @@ export function TermLockPage() {
       setLockFieldError("institutionId", "Choose a registered institution.");
       invalid = true;
     }
-    if (!academicSessions.some((session) => session.academicSessionId === sessionId)) {
+    if (!isValidUuid(sessionId)) {
       setLockFieldError("academicSessionId", "Choose an academic session for the selected institution.");
       invalid = true;
     }
@@ -837,39 +2753,33 @@ export function TermLockPage() {
       <Panel title="Lock academic term" description="Authorized principals can lock a term after final marks and attendance have been submitted.">
         <form onSubmit={handleLockSubmit} className="app-form" noValidate>
           <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
-            <SelectField
+            <TextField
               id="quick-lock-inst-select"
               label="Choose registered institution *"
               required
               value={institutionId}
+              error={fieldErrors.institutionId}
+              placeholder="Enter institution UUID"
               onChange={(e) => {
                 const val = e.target.value;
                 setInstitutionId(val);
                 setSessionId("");
+                clearLockFieldError("institutionId");
                 if (isValidUuid(val)) fetchLocks(val);
                 else { setLocks([]); setLockLoadError(""); }
               }}
-            >
-              <option value="">-- Select an institution --</option>
-              {institutions.map((inst) => (
-                <option key={inst.institutionId} value={inst.institutionId}>
-                  {inst.institutionName} ({inst.institutionType === "COLLEGE" ? "College" : "School"}) [{inst.institutionCode}]
-                </option>
-              ))}
-            </SelectField>
+            />
           </div>
           <div className="app-form-grid" style={{ marginBottom: "var(--space-3)" }}>
-            <SelectField
+            <TextField
               id="term-lock-session-select"
               label="Academic Session *"
               required
               value={sessionId}
-              disabled={!institutionId || academicSessions.length === 0}
+              error={fieldErrors.academicSessionId}
+              placeholder="Enter academic session UUID"
               onChange={(event) => { setSessionId(event.target.value); clearLockFieldError("academicSessionId"); }}
-            >
-              <option value="">{sessionsLoadError ? "Sessions unavailable" : academicSessions.length ? "Choose an academic session" : "No sessions available"}</option>
-              {academicSessions.map((session) => <option key={session.academicSessionId} value={session.academicSessionId}>{session.sessionLabel} ({session.startDate} – {session.endDate})</option>)}
-            </SelectField>
+            />
             <TextField
               id="term-lock-notes"
               label="Lock Notes / Justification"
@@ -916,7 +2826,7 @@ export function TermLockPage() {
                 {locks.map((lock) => (
                   <tr key={lock.termLockId}>
                     <td>
-                      {academicSessions.find((session) => session.academicSessionId === lock.academicSessionId)?.sessionLabel ?? "Academic session"}
+                      {academicSessions.find((session) => session.academicSessionId === lock.academicSessionId)?.sessionLabel ?? lock.academicSessionId}
                     </td>
                     <td>{lock.semesterId ? "Semester-level" : "Whole session"}</td>
                     <td>
@@ -992,6 +2902,8 @@ export function TermLockPage() {
 // ============================================================================
 export function DelegationsApprovalsPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? "";
+  const { can } = useTenantAccess();
+  const canDelegate = can("APPROVAL_DELEGATE");
   const [delegations, setDelegations] = useState<DelegationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
@@ -1044,7 +2956,11 @@ export function DelegationsApprovalsPage() {
   }, [tenantId]);
 
   useEffect(() => {
-    if (!tenantId) return;
+    if (!tenantId || !canDelegate) {
+      setEligibleDelegates([]);
+      setEligibleDelegatesLoading(false);
+      return;
+    }
     let cancelled = false;
     setEligibleDelegatesLoading(true);
     setEligibleDelegatesError("");
@@ -1053,7 +2969,7 @@ export function DelegationsApprovalsPage() {
       .catch((error: unknown) => { if (!cancelled) { setEligibleDelegates([]); setEligibleDelegatesError(getApiErrorMessage(error)); } })
       .finally(() => { if (!cancelled) setEligibleDelegatesLoading(false); });
     return () => { cancelled = true; };
-  }, [tenantId]);
+  }, [tenantId, canDelegate]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -1204,7 +3120,12 @@ export function DelegationsApprovalsPage() {
         title="Delegate approval authority"
         description="Hand over your approval responsibilities to an eligible colleague for a defined period."
       >
-        <form onSubmit={handleCreateDelegation} className="app-form" noValidate>
+        {!canDelegate ? (
+          <Notice tone="info">
+            Your active role assignment does not hold delegable approval authority. Any approval requests assigned or delegated to you appear in the Approval Inbox below.
+          </Notice>
+        ) : (
+          <form onSubmit={handleCreateDelegation} className="app-form" noValidate>
           <SelectField
             id="delegate-user"
             label="Choose eligible colleague *"
@@ -1256,11 +3177,12 @@ export function DelegationsApprovalsPage() {
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={creating || eligibleDelegatesLoading || !delegateUserId}>
+            <Button type="submit" disabled={creating}>
               {creating ? "Delegating…" : "Create delegation"}
             </Button>
           </div>
         </form>
+        )}
       </Panel>
 
       {/* Bulk Approvals Form */}
@@ -1319,7 +3241,7 @@ export function DelegationsApprovalsPage() {
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-4)" }}>
-            <Button type="submit" disabled={bulkSubmitting || selectedApprovalIds.length === 0}>
+            <Button type="submit" disabled={bulkSubmitting}>
               {bulkSubmitting ? "Processing…" : "Apply bulk decision"}
             </Button>
           </div>
@@ -1576,22 +3498,26 @@ export function AcademicGovernancePage() {
             <table className="app-table">
               <thead>
                 <tr>
+                  <th>Rule set ID</th>
+                  <th>Rule set</th>
                   <th>Version</th>
-                  <th>Effective from</th>
+                  <th>Effective From</th>
                   <th>Status</th>
-                  <th>Programme requirements</th>
+                  <th>Rules (JSON)</th>
                 </tr>
               </thead>
               <tbody>
                 {rules.length === 0 ? (
-                  <tr><td colSpan={4} style={{ textAlign: "center", padding: "var(--space-4)" }}>No program rule sets defined.</td></tr>
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: "var(--space-4)" }}>No program rule sets defined.</td></tr>
                 ) : (
                   rules.map((r) => (
                     <tr key={r.programRuleSetId}>
+                      <td><code>{r.programRuleSetId}</code></td>
+                      <td>Curriculum requirement set</td>
                       <td>v{r.versionNo}</td>
                       <td>{r.effectiveFrom}</td>
                       <td><Badge tone={r.status === "ACTIVE" ? "success" : "neutral"}>{formatStatusLabel(r.status)}</Badge></td>
-                      <td>{describeDocument(parseDocument(r.rules)).map((entry) => `${entry.path}: ${entry.value}`).join(" · ") || "No requirements recorded"}</td>
+                      <td><code style={{ fontSize: "0.8rem" }}>{r.rules}</code></td>
                     </tr>
                   ))
                 )}

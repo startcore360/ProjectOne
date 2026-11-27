@@ -154,6 +154,10 @@ CREATE TRIGGER trg_exam_invigilator_conflict
     BEFORE INSERT OR UPDATE ON app.exam_invigilator
     FOR EACH ROW EXECUTE FUNCTION app.fn_exam_invigilator_conflict_guard();
 
+-- Supersedes the unreferenced Phase-1 placeholder app.hall_ticket from 01_schema.sql (no FK from
+-- any other table, no application code against it) with the real T7 exam-cycle shape below.
+DROP TABLE IF EXISTS app.hall_ticket CASCADE;
+
 CREATE TABLE app.hall_ticket (
     tenant_id uuid NOT NULL,
     hall_ticket_id uuid NOT NULL,

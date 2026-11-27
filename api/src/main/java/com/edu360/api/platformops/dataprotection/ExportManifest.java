@@ -51,7 +51,8 @@ public final class ExportManifest {
         groups.put("enrolments", List.of("student_profile", "student_code_sequence", "guardian_profile",
                 "student_guardian_link", "parent_consent", "student_enrollment", "promotion_run", "promotion_run_item",
                 "certificate_request", "admission_cycle", "admission_application", "merit_list", "merit_list_item",
-                "seat_allotment", "certificate_template", "certificate_issuance", "id_card_template", "id_card_issuance", "id_card_replacement"));
+                "seat_allotment", "certificate_template", "certificate_issuance", "id_card_template", "id_card_issuance", "id_card_replacement",
+                "department_equipment_clearance"));
         groups.put("attendance", List.of("attendance_session", "attendance_sync_conflict", "attendance_entry",
                 "attendance_correction_request", "attendance_correction", "attendance_bulk_upload", "term_lock",
                 "term_lock_event", "term_unlock_log", "risk_flag", "risk_remark"));
@@ -69,7 +70,8 @@ public final class ExportManifest {
         groups.put("leave", List.of("leave_approver_setting", "leave_type", "leave_balance", "leave_request",
                 "leave_delegation"));
         groups.put("notices", List.of("notice", "notice_audience", "notice_bulletin", "notice_target", "notice_acknowledgment"));
-        groups.put("complaints", List.of("complaint", "complaint_action", "disciplinary_incident", "grievance_case", "grievance_evidence", "grievance_action"));
+        groups.put("complaints", List.of("complaint", "complaint_action", "disciplinary_incident", "disciplinary_action",
+                "disciplinary_evidence", "grievance_case", "grievance_evidence", "grievance_action", "grievance_hearing"));
         groups.put("notes", List.of("student_note"));
         groups.put("staff", List.of("staff_profile", "staff_code_sequence", "staff_service_record",
                 "staff_assignment", "staff_document", "appraisal_cycle", "appraisal_submission", "appraisal_review"));

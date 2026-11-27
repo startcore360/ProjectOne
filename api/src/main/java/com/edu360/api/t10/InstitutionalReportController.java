@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping({"/v1/tenants/{tenantId}/institutional-reports", "/api/tenants/{tenantId}/institutional-reports"})
 public class InstitutionalReportController {
     private final ExecutiveAnalyticsService analytics;
-    @GetMapping("/executive-dashboard") public Map<String,Object> dashboard(@PathVariable UUID tenantId,@RequestParam UUID institutionId,
+    @GetMapping("/executive-dashboard") public Map<String,Object> dashboard(@PathVariable UUID tenantId,@RequestParam(required=false) UUID institutionId,
             @RequestParam(required=false) LocalDate from,@RequestParam(required=false) LocalDate to,Authentication auth) {
-        return analytics.dashboard(tenantId,principal(auth,tenantId),institutionId,from,to);
+        TenantPrincipal p = principal(auth,tenantId); if (institutionId == null) throw new com.edu360.api.exception.BusinessRuleViolationException("INSTITUTION_REQUIRED", "Institution ID is required."); return analytics.dashboard(tenantId,p,institutionId,from,to);
     }
     private TenantPrincipal principal(Authentication a,UUID t) {
         if(a==null || !(a.getPrincipal() instanceof TenantPrincipal p)) throw new AccessDeniedException("Tenant authentication required");

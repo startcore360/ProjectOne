@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, Modal, Notice, SelectField } from "../../../../design-system/components";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
-import { institutionService, type InstitutionItem, type AcademicSessionItem } from "../../api/institutionService";
+import { institutionService, type AcademicSessionItem } from "../../api/institutionService";
 
 export interface PromotionRunModalProps {
   tenantId: string;
@@ -12,7 +12,6 @@ export interface PromotionRunModalProps {
 }
 
 export function PromotionRunModal({ tenantId, isOpen, onClose, onSubmit, saving }: PromotionRunModalProps) {
-  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [institutionId, setInstitutionId] = useState("");
   const [sessions, setSessions] = useState<AcademicSessionItem[]>([]);
   const [fromSessionId, setFromSessionId] = useState("");
@@ -29,7 +28,6 @@ export function PromotionRunModal({ tenantId, isOpen, onClose, onSubmit, saving 
     institutionService.listInstitutions(tenantId)
       .then((response) => {
         if (!cancelled) {
-          setInstitutions(response.items ?? []);
           setInstitutionId((current) => current || response.items?.[0]?.institutionId || "");
         }
       })
@@ -80,11 +78,9 @@ export function PromotionRunModal({ tenantId, isOpen, onClose, onSubmit, saving 
       <form onSubmit={handleSubmit} className="app-form" noValidate>
         {modalError && <Notice tone="danger">{modalError}</Notice>}
         {lookupError && <Notice tone="danger">{lookupError}</Notice>}
-        <SelectField id="prom-institution" label="Institution *" required value={institutionId} disabled={loading || institutions.length === 0}
-          onChange={(event) => setInstitutionId(event.target.value)}>
-          <option value="">{loading ? "Loading institutions…" : "Choose an institution"}</option>
-          {institutions.map((item) => <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>)}
-        </SelectField>
+        <TextField id="prom-institution" label="Institution *" required value={institutionId}
+          placeholder="Enter institution UUID"
+          onChange={(event) => setInstitutionId(event.target.value)} />
         <SelectField id="prom-from-session" label="Promote students from *" required value={fromSessionId}
           disabled={loading || !institutionId || sessions.length === 0}
           onChange={(event) => setFromSessionId(event.target.value)}>

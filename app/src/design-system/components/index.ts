@@ -46,6 +46,8 @@ export { Spinner } from "./Spinner";
 export type { SpinnerProps } from "./Spinner";
 export { ErrorState } from "./ErrorState";
 export type { ErrorStateProps } from "./ErrorState";
+export { PermissionDeniedState } from "./PermissionDeniedState";
+export type { PermissionDeniedStateProps } from "./PermissionDeniedState";
 export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";
 export { Pagination } from "./Pagination";
