@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
+import { useEffect, useState, type FormEvent } from "react";
+import { Button, Modal, Notice, SelectField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   leaveApproverService,
-  type ApproverKind,
+  type ApproverKind,\n  type LeaveApproverCandidate,
 } from "../../api/leaveApproverService";
 
 export interface ViceChancellorModalProps {
@@ -20,23 +20,32 @@ export function ViceChancellorModal({
   onSaved,
 }: ViceChancellorModalProps) {
   const [approverKind, setApproverKind] = useState<ApproverKind>("GOVERNING_BODY_APPROVER");
-  const [approverUserId, setApproverUserId] = useState("");
+  const [approverUserId, setApproverUserId] = useState("");\n  const [candidates, setCandidates] = useState<LeaveApproverCandidate[]>([]);\n  const [loadingCandidates, setLoadingCandidates] = useState(false);\n  const [candidateError, setCandidateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoadingCandidates(true);
+    setCandidateError(null);
+    setApproverUserId("");
+    leaveApproverService.listVcApproverCandidates(tenantId, approverKind)
+      .then((items) => { if (!cancelled) setCandidates(items); })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setCandidates([]);
+          setCandidateError(getApiErrorMessage(err));
+        }
+      })
+      .finally(() => { if (!cancelled) setLoadingCandidates(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, isOpen, approverKind]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const normalizedApproverUserId = approverUserId.trim();
-    if (!normalizedApproverUserId) {
-      setError("Choose an approver user account.");
-      return;
-    }
-    // The API DTO deserializes this field directly as java.util.UUID. Reject
-    // malformed values here instead of sending a request that the API reports
-    // as a generic "Malformed JSON request body" error.
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidPattern.test(normalizedApproverUserId)) {
-      setError("Enter a valid user account ID. The value must be a UUID.");
+    if (!approverUserId) {
+      setError("Choose an eligible approver account.");
       return;
     }
     setSaving(true);
@@ -44,7 +53,7 @@ export function ViceChancellorModal({
     try {
       await leaveApproverService.setVcLeaveApprover(tenantId, {
         approverKind,
-        approverUserId: normalizedApproverUserId,
+        approverUserId,
       });
       onSaved("Vice-Chancellor leave approver configured successfully.");
       setApproverUserId("");
@@ -88,14 +97,25 @@ export function ViceChancellorModal({
         </SelectField>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <TextField
-            id="vc-approver-user-id"
-            label="Approver User Account ID (UUID) *"
+          <SelectField
+            id="vc-approver-user"
+            label="Select Approver *"
             required
             value={approverUserId}
+            disabled={loadingCandidates || candidates.length === 0}
             onChange={(e) => setApproverUserId(e.target.value)}
-            placeholder="00000000-0000-0000-0000-000000000010"
-          />
+          >
+            <option value="">{loadingCandidates ? "Loading eligible accounts…" : "Choose an approver"}</option>
+            {candidates.map((candidate) => (
+              <option key={candidate.userAccountId} value={candidate.userAccountId}>
+                {candidate.displayName} · {candidate.email}
+              </option>
+            ))}
+          </SelectField>
+          {candidateError && <Notice tone="danger">{candidateError}</Notice>}
+          {!loadingCandidates && !candidateError && candidates.length === 0 && (
+            <p className="app-empty-inline">No eligible accounts found. Create a Management or Governing Body Approver account first in Users &amp; Roles.</p>
+          )}
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
