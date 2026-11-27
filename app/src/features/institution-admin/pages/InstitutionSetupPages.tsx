@@ -3675,6 +3675,7 @@ export function AcademicGovernancePage() {
 
       {/* Subject Allocation Modal */}
       <AllocateSubjectModal
+        tenantId={tenantId}
         isOpen={allocationModalOpen}
         onClose={() => setAllocationModalOpen(false)}
         onSubmit={async (data) => {
@@ -3696,6 +3697,7 @@ export function AcademicGovernancePage() {
 
       {/* Promotion Run Modal */}
       <PromotionRunModal
+        tenantId={tenantId}
         isOpen={promotionModalOpen}
         onClose={() => setPromotionModalOpen(false)}
         onSubmit={async (data) => {
