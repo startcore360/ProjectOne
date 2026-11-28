@@ -2040,6 +2040,7 @@ export function AcademicStructurePage() {
           <Panel
             title="School classes"
             description="Create the year groups or grades used by this school. Display order controls how classes are presented."
+            className="app-structure-data-panel"
           >
             {!isSupportSession && (
               <div className="app-form">
@@ -2102,6 +2103,7 @@ export function AcademicStructurePage() {
           <Panel
             title="School sections"
             description="Create sections within a class and academic session. Section IDs can then be used by teacher assignment workflows."
+            className="app-structure-data-panel"
           >
             {schoolSessions.length === 0 ? (
               <Notice tone="warning">
