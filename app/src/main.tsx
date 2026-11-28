@@ -11,6 +11,7 @@ import { clearUser } from "./store/slices/authSlice";
 import { setPlatformPermissions } from "./store/slices/platformPermissionsSlice";
 import { clearTenantPermissions } from "./store/slices/tenantPermissionsSlice";
 import { store } from "./store";
+import { isSharedLandingHost } from "./lib/tenantHost";
 import "./main.css";
 
 initTheme();
@@ -45,6 +46,14 @@ if (!getAccessToken()) {
   store.dispatch(clearUser());
   store.dispatch(setPlatformPermissions(null));
   store.dispatch(clearTenantPermissions());
+  // An unauthenticated visit on the shared landing host renders LandingPage (routes/Routes.tsx's
+  // RootEntry) - its own lazy chunk otherwise only starts downloading once React gets there,
+  // which is the one navigation nobody else prefetches (unlike the post-login dashboard chunk,
+  // started during the sign-in request itself). Start it now, in parallel with renderApp(),
+  // so the RootEntry Suspense fallback rarely has anything left to wait for by the time it runs.
+  if (isSharedLandingHost(window.location.hostname)) {
+    void import("./features/landing/LandingPage");
+  }
   renderApp();
 } else {
   void bootstrapAuth().then(renderApp);

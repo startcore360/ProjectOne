@@ -3,7 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
 import AuthLayout from "../layout/AuthLayout";
 import LoginPage from "../features/auth/pages/LoginPage";
-import { SkeletonPage } from "../design-system/components";
+import { AppLoader } from "../design-system/components";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import { PLATFORM_PAGE_ACTIONS, canOpenPlatformConsole, platformLandingPath } from "../features/platform/platformAccess";
 import PlatformConsoleRoute, { PlatformPageGate } from "./PlatformConsoleRoute";
@@ -113,11 +113,7 @@ const UserDetailPage = lazy(() => import("../features/user-management/pages/User
 function LazyRouteView() {
   return (
     <RouteErrorBoundary>
-      <Suspense
-        fallback={
-          <SkeletonPage title="Loading page" showKpis showTable tableRows={5} tableColumns={5} />
-        }
-      >
+      <Suspense fallback={<AppLoader label="Loading page" />}>
         <Outlet />
       </Suspense>
     </RouteErrorBoundary>
@@ -153,7 +149,7 @@ function RootEntry() {
   if (typeof window !== "undefined" && isSharedLandingHost(window.location.hostname)) {
     return (
       <RouteErrorBoundary>
-        <Suspense fallback={<SkeletonPage title="Loading EDU 360" />}>
+        <Suspense fallback={<AppLoader label="Loading EDU 360" />}>
           <LandingPage />
         </Suspense>
       </RouteErrorBoundary>

@@ -1,3 +1,5 @@
+export { AppLoader } from "./AppLoader";
+export type { AppLoaderProps } from "./AppLoader";
 export { default as Button } from "./Button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button";
 export { default as TextField } from "./TextField";

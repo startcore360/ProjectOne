@@ -197,7 +197,7 @@ COMMENT ON TABLE platform.landing_testimonial IS 'Published text and video testi
 COMMENT ON TABLE platform.landing_enquiry IS 'Public quotation and demo requests submitted from the landing page with internal server-computed quote snapshot.';
 
 -- The landing CMS is a platform-scoped capability, restricted to Product Owner and Platform Admin.
-INSERT INTO ref.action_catalog VALUES (
+INSERT INTO ref.action_catalog (action_code, action_no, module_name, phase, description, is_approval_action, sensitive_class, changed_in) VALUES (
     'LANDING_CMS_MANAGE', 290, 'Platform', 1,
     'Manage public landing page content, testimonials, media and inbound enquiries',
     false, NULL, 'V4.1'

@@ -2134,6 +2134,24 @@ progress.progress--thin { height: 6px; }
 .eds-empty-state__icon { display:grid; width:48px; height:48px; place-items:center; border-radius:50%; background:var(--color-bg-info-soft); color:var(--color-text-muted); }
 .eds-empty-state__title { margin:0; font:var(--fw-semibold) var(--fs-h4)/var(--lh-h4) var(--font-display); }
 .eds-empty-state__description { max-width:52ch; margin:0; color:var(--color-text-muted); font-size:var(--fs-body-sm); line-height:var(--lh-body); overflow-wrap:anywhere; }
+
+/* Lighter branded loader for a lazy route's code still being fetched (see AppLoader.tsx) -
+   a pulsing logo mark instead of a fixed-shape skeleton that didn't match the real page. */
+.eds-app-loader {
+  display:flex; align-items:center; justify-content:center;
+  width:100%; min-height:clamp(280px,52vh,520px);
+}
+.eds-app-loader__mark {
+  width:56px; height:auto;
+  animation: eds-app-loader-pulse 2.2s ease-in-out infinite;
+}
+@keyframes eds-app-loader-pulse {
+  0%, 100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.65; transform:scale(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eds-app-loader__mark { animation:none; }
+}
 .eds-empty-state__action { margin-top:var(--space-3); }
 .eds-error-state {
   display:grid; grid-template-columns:minmax(0,1fr); justify-items:start; gap:var(--space-2);
@@ -3217,70 +3235,6 @@ html[data-theme="dark"] select,
   color-scheme: dark;
   background-color: #0f172a;
   color: #f8fafc;
-}
-
-/* Full-page branded loading screen used across HTML initial load and React Suspense */
-.initial-loader-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  width: 100%;
-  background: color-mix(in srgb, var(--color-bg-canvas, #f3f6f3) 82%, transparent);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  box-sizing: border-box;
-  padding: 24px;
-}
-.initial-loader-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-4);
-  min-width: 260px;
-  max-width: calc(100vw - var(--space-8));
-  padding: var(--space-5) var(--space-6);
-  border: 1px solid var(--color-border-divider);
-  border-radius: var(--radius-xl);
-  background: var(--color-bg-surface);
-  box-shadow: var(--elevation-3);
-}
-.edu360-initial-logo {
-  display: block;
-  width: clamp(96px, 28vw, 120px);
-  max-width: 100%;
-  height: auto;
-}
-.initial-loader-spinner-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.initial-loader-spinner {
-  width: 22px;
-  height: 22px;
-  border: 2.5px solid var(--color-border-control, rgba(45, 97, 84, 0.15));
-  border-top-color: var(--color-action-primary, #2d6154);
-  border-radius: 50%;
-  animation: initial-spin 0.8s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
-}
-.initial-loader-label {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--color-text, #1c302d);
-  opacity: 0.85;
-}
-@keyframes initial-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .initial-loader-spinner {
-    animation-duration: 1.8s;
-  }
 }
 
 /* Universal smooth active feedback for clickable buttons and controls */
