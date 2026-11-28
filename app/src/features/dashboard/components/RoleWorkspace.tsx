@@ -102,7 +102,25 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
     focus: role.purpose,
     metrics: familyMetrics[role.family],
   };
-  const quickActions = familyQuickActions[role.family] ?? [];
+  const quickActions = PRINCIPAL_ROLES.has(role.code)
+    ? [
+        { label: "Attendance", href: "/academic/attendance", description: "Review attendance registers and exceptions" },
+        { label: "Results", href: "/academic/report-cards", description: "Review academic outcomes and publication readiness" },
+        { label: "Notices", href: "/notices", description: "Institution-wide announcements and notices" },
+      ]
+    : role.code === "SCHOOL_ADMIN"
+      ? [
+          { label: "Classes & sections", href: "/university/setup/structure", description: "School academic structure and sections" },
+          { label: "Users & roles", href: "/university/users", description: "Manage school identities and access" },
+          { label: "Staff directory", href: "/university/staff", description: "Staff records and assignments" },
+        ]
+      : role.code === "COLLEGE_ADMIN"
+        ? [
+            { label: "Academic setup", href: "/university/setup/structure", description: "Departments, programmes and academic structure" },
+            { label: "Users & roles", href: "/university/users", description: "Manage college identities and access" },
+            { label: "Staff directory", href: "/university/staff", description: "Faculty and staff records" },
+          ]
+        : familyQuickActions[role.family] ?? [];
   const showHero = !NO_HERO_ROLES.has(role.code);
 
   const liveMetrics = (() => {
@@ -110,12 +128,12 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
       return [
         { label: "Active users", value: String(summary.activeUsers), context: "Active accounts in this institution", icon: "users" },
         { label: "Active sections", value: String(summary.activeSections), context: "Configured active sections", icon: "layers" },
-        { label: "Approvals assigned", value: String(pendingApprovalCount), context: "Pending items in your approval inbox", icon: "clipboard-check" },
+        { label: "Approvals assigned", value: String(pendingApprovalCount), context: "Pending items in your approval inbox", icon: "file-text" },
       ];
     }
     if (institutionSummary && role.code === "UNIVERSITY_ADMIN") {
       return [
-        { label: "Institutions", value: String(institutionSummary.total), context: "Institutions in your university scope", icon: "building-2" },
+        { label: "Institutions", value: String(institutionSummary.total), context: "Institutions in your university scope", icon: "building" },
         { label: "Active institutions", value: String(institutionSummary.active), context: "Institutions currently active", icon: "check-circle" },
         { label: "Approvals assigned", value: String(pendingApprovalCount), context: "Pending items in your approval inbox", icon: "clipboard-check" },
       ];
@@ -178,7 +196,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
                 {loading ? "Updating live data…" : loadError ? loadError : "Approval count is supplied by the live approval inbox."}
               </span>
               <button type="button" className="app-dashboard__refresh" onClick={refresh} disabled={loading}>
-                <Icon name="refresh-cw" size={15} />
+                <Icon name="refresh" size={15} />
                 {loading ? "Refreshing" : "Refresh data"}
               </button>
             </div>
