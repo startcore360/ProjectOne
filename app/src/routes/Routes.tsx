@@ -86,6 +86,7 @@ const ExamSchedulePage = lazy(() => import("../features/academic/pages/ExamSched
 const TimetableGridView = lazy(() => import("../features/academic/pages/TimetableGridView"));
 const TimetableGridPage = lazy(() => import("../features/academic/pages/TimetableGridPage"));
 const DailyAttendanceSheetPage = lazy(() => import("../features/academic/pages/DailyAttendanceSheetPage"));
+const AttendanceOversightPage = lazy(() => import("../features/academic/pages/AttendanceOversightPage"));
 const AttendanceRegisterPage = lazy(() => import("../features/academic/pages/AttendanceRegisterPage"));
 const StudentMedicalExemptionPage = lazy(() => import("../features/academic/pages/StudentMedicalExemptionPage"));
 const MedicalExemptionReviewPage = lazy(() => import("../features/academic/pages/MedicalExemptionReviewPage"));
@@ -219,6 +220,7 @@ export default function AppRoutes() {
               <Route path="/academic/timetable/grid" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.timetable}><TimetableGridPage /></ActionGate>} />
               <Route path="/academic/attendance" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.attendance}><AttendanceRegisterPage /></ActionGate>} />
               <Route path="/academic/attendance/daily" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.attendance}><DailyAttendanceSheetPage /></ActionGate>} />
+              <Route path="/academic/attendance/oversight" element={<ActionGate anyOf={["ATTENDANCE_CORRECTION_APPROVE"]}><AttendanceOversightPage /></ActionGate>} />
               <Route path="/student/medical-exemptions" element={<ActionGate anyOf={["STUDENT_LEAVE_APPLY"]}><StudentMedicalExemptionPage /></ActionGate>} />
               <Route path="/academic/medical-exemptions/review" element={<ActionGate anyOf={["ATTENDANCE_CORRECTION_APPROVE"]}><MedicalExemptionReviewPage /></ActionGate>} />
               <Route path="/academic/marks" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.marks}><MarksEntrySheetPage /></ActionGate>} />
