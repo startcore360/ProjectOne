@@ -129,11 +129,18 @@ Repository areas reviewed in the work to date include frontend pages/components 
 - HOD can select institution, section and date, load the existing register, select a session and review student statuses and session-level counts.
 - API authorization remains authoritative for department scope; an out-of-scope section request is surfaced as an error.
 - Added responsive layout styles for the HOD review workspace.
+- Refocused the teacher register around the current class/session, renamed raw-ID labels, removed medical-exemption detail and threshold configuration from the marking task, added roll/ID as a separate column, and added submitted-session read-only handling.
+- Reused an existing unsubmitted session ID when saving, rather than always creating another session. Updated the related test labels.
 
 **Commits**
 - `04fcb567ed02e0c666797e14e74dc601134668ca` — add HOD attendance review workspace.
 - `5a2c3cecf5d136f97172685129d2d765df1e5431` — add HOD oversight route and permission gate.
 - `59e21403c61fd57989f1aac085e00ab7dc1ec79a` — add oversight layout styles.
+- `436a78ead74683fd485028b10eb8f07f1843b0e3` — focus teacher register on the current session.
+- `a9eed90b0f3a12a3c21ac8a9c608a4a364eefe9` — correct roster columns and bulk controls.
+- `477819c3f5688a73b2950bdf0a0b51c48eee2d72` — type submitted state and use local attendance date.
+- `4ea6c2b83acaf9e725bf302522c730c0f738decf` — align teacher register test labels.
+- `5b21caa9c540660237981de785136232a155a513` — repair submitted-state JSX condition.
 
 **Source-derived requirements**
 - V4.0 §8.4: college period marking; school twice-daily marking; canonical statuses Present, Absent, On approved leave, Not held; teacher assignment restriction; correction approval by HOD in college and School Principal/Vice-Principal in school; immutable original/new correction audit; term-lock refusal.
@@ -147,7 +154,7 @@ Repository areas reviewed in the work to date include frontend pages/components 
 - Teacher register still needs its dedicated UX refinement and separation of threshold/rules configuration from the marking task.
 - No tests, frontend build, backend build or runtime checks were executed for these commits.
 
-**Status:** HOD review UI slice committed; authorization, API lifecycle, teacher UX and full V4.0 attendance coverage remain open.
+**Status:** First teacher-register UX refinement and HOD read-only review slice committed; authorization, correction workflow, department-wide analytics, API lifecycle and full V4.0 attendance coverage remain open.
 
 ### 3.4 Timetable Management
 
