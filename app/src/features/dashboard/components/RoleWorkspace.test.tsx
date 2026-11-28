@@ -55,9 +55,9 @@ describe("RoleWorkspace", () => {
       expect(screen.getByText("12")).toBeInTheDocument();
       expect(screen.getByText("7")).toBeInTheDocument();
     });
-    expect(screen.getByText("Active users in your tenant")).toBeInTheDocument();
-    expect(screen.getByText("Active sections configured")).toBeInTheDocument();
-    expect(screen.getByText("Pending approvals")).toBeInTheDocument();
+    expect(screen.getByText("Active accounts in this institution")).toBeInTheDocument();
+    expect(screen.getByText("Configured active sections")).toBeInTheDocument();
+    expect(screen.getByText("Approvals assigned")).toBeInTheDocument();
   });
 
 
@@ -85,7 +85,7 @@ describe("RoleWorkspace", () => {
     await waitFor(() => {
       expect(screen.getAllByText("—").length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("Live data not yet connected")).toBeInTheDocument();
+    expect(screen.getByText("Live data not connected for this metric")).toBeInTheDocument();
     expect(dashboardService.getSummary).not.toHaveBeenCalled();
   });
 });
