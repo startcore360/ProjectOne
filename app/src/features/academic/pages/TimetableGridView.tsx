@@ -40,6 +40,20 @@ export default function TimetableGridView(){
  const [dragged,setDragged]=useState<Slot|null>(null);const [toast,setToast]=useState("");const [feedback,setFeedback]=useState("");const [busy,setBusy]=useState(false);
  const [studentAccessToken,setStudentAccessToken]=useState("");const [accessUrl,setAccessUrl]=useState("");
  const selectedInstitution=institutions.find(item=>item.institutionId===institutionId);
+ const overlaps=(slot:Slot)=>slot.day_of_week===Number(day)
+  &&(!validTo||validTo>=slot.valid_from)&&(!slot.valid_to||slot.valid_to>=validFrom)
+  &&start<slot.end_time&&end>slot.start_time;
+ const allocationConflict=(allocation:SubjectAllocationItem)=>{
+  const sameClass=slots.find(slot=>slot.subject_allocation_id===allocation.subjectAllocationId
+   &&(allocation.sectionId?slot.section_id===allocation.sectionId:slot.subject_group_id===allocation.subjectGroupId)
+   &&overlaps(slot));
+  return sameClass?{slot:sameClass,reason:"Already allocated to this class at "+sameClass.start_time.slice(0,5)+"–"+sameClass.end_time.slice(0,5)}:null;
+ };
+ const roomConflict=(room:string)=>{
+  const occupied=slots.find(slot=>slot.room_id===room&&overlaps(slot));
+  return occupied?{slot:occupied,reason:"Room already allocated "+occupied.start_time.slice(0,5)+"–"+occupied.end_time.slice(0,5)}:null;
+ };
+
 
  useEffect(()=>{
   if(!tenantId)return;
@@ -176,9 +190,9 @@ export default function TimetableGridView(){
   <ClashWarningToast message={toast} onDismiss={()=>setToast("")}/>
   {canBuild&&<>
   <section><h2>Create timetable slot</h2><form onSubmit={createSlot} className="form-grid">
-   <label>Subject allocation {canListAllocations?<select required value={subjectAllocationId} onChange={e=>{setSubjectAllocationId(e.target.value);const allocation=allocations.find(item=>item.subjectAllocationId===e.target.value);if(allocation?.sectionId)setSectionId(allocation.sectionId);}}><option value="">Select subject / faculty allocation</option>{allocations.filter(item=>item.status==="ACTIVE").map(item=><option key={item.subjectAllocationId} value={item.subjectAllocationId}>{item.courseOfferingId.slice(0,8)} · {item.sectionId?"Section allocation":"Elective group"} · {item.staffAssignmentId.slice(0,8)}</option>)}</select>:<input required value={subjectAllocationId} onChange={e=>setSubjectAllocationId(e.target.value)} placeholder="Subject allocation reference"/>}{!canListAllocations&&<small>Allocation lookup is permission-restricted. Enter an existing allocation reference supplied by your institution.</small>}</label>
+   <label>Subject allocation {canListAllocations?<select required value={subjectAllocationId} onChange={e=>{setSubjectAllocationId(e.target.value);const allocation=allocations.find(item=>item.subjectAllocationId===e.target.value);if(allocation?.sectionId)setSectionId(allocation.sectionId);}}><option value="">Select subject / faculty allocation</option>{allocations.filter(item=>item.status==="ACTIVE"&&(!sectionId||!item.sectionId||item.sectionId===sectionId)).map(item=>{const conflict=allocationConflict(item);return <option key={item.subjectAllocationId} value={item.subjectAllocationId} disabled={Boolean(conflict)} title={conflict?.reason}>{item.courseOfferingId.slice(0,8)} · {item.sectionId?"Section allocation":"Elective group"} · {item.staffAssignmentId.slice(0,8)}{conflict?" — "+conflict.reason:""}</option>;})}</select>:<input required value={subjectAllocationId} onChange={e=>setSubjectAllocationId(e.target.value)} placeholder="Subject allocation reference"/>}{canListAllocations&&<small>Unavailable allocations are disabled and labelled with the existing class period.</small>}{!canListAllocations&&<small>Allocation lookup is permission-restricted. Enter an existing allocation reference supplied by your institution.</small>}</label>
    <label>Period number<input type="number" min="1" max="20" required value={periodNo} onChange={e=>setPeriodNo(e.target.value)}/></label>
-   <label>Room<select value={roomId} onChange={e=>setRoomId(e.target.value)}><option value="">No room / online</option>{rooms.map(item=><option key={item.room_id} value={item.room_id}>{item.room_number}{item.building?" · "+item.building:""}</option>)}</select></label>
+   <label>Room<select value={roomId} onChange={e=>setRoomId(e.target.value)}><option value="">No room / online</option>{rooms.map(item=>{const conflict=roomConflict(item.room_id);return <option key={item.room_id} value={item.room_id} disabled={Boolean(conflict)} title={conflict?.reason}>{item.room_number}{item.building?" · "+item.building:""}{conflict?" — "+conflict.reason:""}</option>;})}</select><small>Rooms already booked for the selected day, time and effective dates are disabled.</small></label>
    <label>Day<select value={day} onChange={e=>setDay(e.target.value)}>{DAYS.map((name,i)=><option key={name} value={i+1}>{name}</option>)}</select></label>
    <label>Start<input type="time" value={start} onChange={e=>setStart(e.target.value)}/></label>
    <label>End<input type="time" value={end} onChange={e=>setEnd(e.target.value)}/></label>
