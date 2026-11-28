@@ -496,7 +496,8 @@ export default function AttendanceRegisterPage() {
                 type="submit"
                 disabled={
                   busy ||
-                  students.length === 0 ||\n                  sessionSubmitted ||
+                  students.length === 0 ||
+                  sessionSubmitted ||
                   !institutionId ||
                   !sectionId ||
                   periodIncomplete ||
