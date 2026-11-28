@@ -52,13 +52,41 @@ export type ApprovalStepItem = {
   remark: string | null;
   skipReason: string | null;
   decidedAt: string | null;
-  approvalRequestId?: string;
+};
+
+export type ApprovalInboxItem = {
+  approvalRequestId: string;
+  stepNo: number;
+  approverRoleCode: string;
+  decision: string;
+  processCode: string;
+  subjectType: string;
+  subjectId: string;
+  institutionId: string | null;
+  requesterActiveRole: string;
+  requestedAt: string;
+  currentStepNo: number;
+  requestStatus: string;
+};
+
+export type ApprovalRequestSummary = {
+  approvalRequestId: string;
+  processCode: string;
+  status: string;
+  currentStepNo: number;
+  subject: { type: string; id: string };
+  steps: ApprovalStepItem[];
 };
 
 export const approvalDelegationService = {
-  async listInbox(tenantId: string): Promise<ApprovalStepItem[]> {
-    const res = await api.get<{ items: ApprovalStepItem[] }>(`/api/tenants/${tenantId}/approvals/inbox`);
+  async listInbox(tenantId: string): Promise<ApprovalInboxItem[]> {
+    const res = await api.get<{ items: ApprovalInboxItem[] }>(`/api/tenants/${tenantId}/approvals/inbox`);
     return res.data?.items || [];
+  },
+
+  async getApprovalRequest(tenantId: string, requestId: string): Promise<ApprovalRequestSummary> {
+    const res = await api.get<ApprovalRequestSummary>(`/api/tenants/${tenantId}/approval-requests/${requestId}`);
+    return res.data;
   },
 
   async decideApproval(
@@ -71,7 +99,7 @@ export const approvalDelegationService = {
     const res = await api.post(`/api/tenants/${tenantId}/approval-requests/${requestId}/decisions`, {
       stepNo,
       decision,
-      remark: remark || (decision === "REJECTED" ? "Rejected by approver" : undefined),
+      remark,
     });
     return res.data;
   },
