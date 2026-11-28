@@ -187,6 +187,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
                 value={metric.value}
                 context={metric.context}
                 icon={metric.icon}
+                showSparkline={false}
               />
             ))}
           </div>
