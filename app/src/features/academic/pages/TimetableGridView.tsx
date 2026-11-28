@@ -58,8 +58,8 @@ export default function TimetableGridView(){
   let active=true;
   setOptionsLoading(true);setOptionsError("");
   Promise.all([
-   institutionService.listAcademicSessions(tenantId,institutionId),
-   institutionService.listSections(tenantId,institutionId),
+   canManageStructure?institutionService.listAcademicSessions(tenantId,institutionId):Promise.resolve([] as AcademicSessionItem[]),
+   canManageStructure?institutionService.listSections(tenantId,institutionId):Promise.resolve([] as SectionItem[]),
    api.get<typeof rooms>("/api/tenants/"+tenantId+"/timetable/rooms",{params:{institutionId}}).then(res=>res.data),
    canListAllocations?academicService.listSubjectAllocations(tenantId,institutionId):Promise.resolve([] as SubjectAllocationItem[]),
   ]).then(([sessionRows,sectionRows,roomRows,allocationRows])=>{
@@ -81,8 +81,10 @@ export default function TimetableGridView(){
  async function createSlot(event:FormEvent){
   event.preventDefault();if(!tenantId)return;setBusy(true);setToast("");setFeedback("");
   try{
+   const allocation=allocations.find(item=>item.subjectAllocationId===subjectAllocationId);
+   if(!allocation)throw new Error("Choose an active subject allocation before creating a period.");
    const response=await api.post("/api/tenants/"+tenantId+"/timetable/slots",{
-    institutionId,sectionId,subjectGroupId:null,subjectAllocationId,periodNo:Number(periodNo),dayOfWeek:Number(day),
+    institutionId,sectionId:allocation.sectionId??null,subjectGroupId:allocation.subjectGroupId??null,subjectAllocationId,periodNo:Number(periodNo),dayOfWeek:Number(day),
     startTime:start+":00",endTime:end+":00",roomId:roomId||null,isOnline,validFrom,validTo:validTo||null,
    });
    const created=response.data as Slot;
@@ -138,9 +140,10 @@ export default function TimetableGridView(){
     &&startAt<slot.end_time&&newEnd>slot.start_time;
   });
   if(clashes)setToast("Clash warning: this move overlaps an existing teacher or room booking. The timetable rule allows the change; review the warning before publishing.");
+  const clashWarning=clashes?"Clash warning: this move overlaps an existing teacher or room booking. The timetable rule allows the change; review the warning before publishing.":"";
   void api.put("/api/tenants/"+tenantId+"/timetable/slots/"+dragged.timetable_slot_id,{
    institutionId,dayOfWeek,periodNo:dragged.period_no,startTime:startAt,endTime:newEnd,roomId:dragged.room_id,
-  }).then(()=>{setToast("");setFeedback("Draft timetable slot moved.");void load();})
+  }).then(()=>{setToast(clashWarning);setFeedback("Draft timetable slot moved.");void load();})
    .catch((e:unknown)=>{const failure=e as {response?:{data?:{code?:string;message?:string}}};const code=failure.response?.data?.code??"";
     setToast(code.includes("TEACHER_DOUBLE_BOOKED")?"Teacher already has a slot at this time."
      :code.includes("ROOM_OCCUPIED")?"Room is already occupied at this time."
@@ -154,12 +157,12 @@ export default function TimetableGridView(){
   <header className="eds-page-header"><div><h1>Timetable Management</h1><p>Build and review weekly schedules by class, faculty or room. Timetables are created manually in Phase 1.</p></div><span className="eds-badge eds-badge--info">{canBuild?"Builder access":"Read-only oversight"}</span></header>
   {!canBuild&&<div className="notice notice-info" role="status">You can view published timetables for your authorised scope. Creating, moving or publishing periods is restricted to College Admin, School Admin, HOD and Department Coordinator roles.</div>}
   <div className="form-grid">
-   <label>Institution ID<input value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/></label>
-   <label>Academic session ID (filter)<input value={sessionId} onChange={e=>setSessionId(e.target.value)}/></label>
+   <label>Institution<select value={institutionId} onChange={e=>{setInstitutionId(e.target.value);setSessionId("");setSectionId("");setSubjectAllocationId("");}}><option value="">Select institution</option>{institutions.map(item=><option key={item.institutionId} value={item.institutionId}>{item.institutionName}</option>)}</select></label>
+   <label>Academic session<select value={sessionId} onChange={e=>setSessionId(e.target.value)}><option value="">All sessions</option>{sessions.map(item=><option key={item.academicSessionId} value={item.academicSessionId}>{item.sessionLabel}</option>)}</select></label>
    <label>View<select value={viewMode} onChange={e=>setViewMode(e.target.value as "SECTION"|"TEACHER"|"ROOM")}><option value="SECTION">Section view</option><option value="TEACHER">Teacher view</option><option value="ROOM">Room view</option></select></label>
   {viewMode==="SECTION"&&canManageStructure&&<label>Class / Section<select value={sectionId} onChange={e=>setSectionId(e.target.value)}><option value="">All sections</option>{sections.map(item=><option key={item.sectionId} value={item.sectionId}>{item.sectionName}</option>)}</select></label>}
-  {viewMode==="TEACHER"&&<label>Teacher ID<input value={teacherFilter} onChange={e=>setTeacherFilter(e.target.value)}/></label>}
-  {viewMode==="ROOM"&&<label>Room ID<input value={roomFilter} onChange={e=>setRoomFilter(e.target.value)}/></label>}
+  {viewMode==="TEACHER"&&<label>Faculty<select value={teacherFilter} onChange={e=>setTeacherFilter(e.target.value)}><option value="">All faculty</option>{Array.from(new Map(slots.filter(slot=>slot.teacher_id).map(slot=>[slot.teacher_id!,slot.teacher_name??slot.teacher_id!.slice(0,8)])).entries()).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>}
+  {viewMode==="ROOM"&&<label>Room<select value={roomFilter} onChange={e=>setRoomFilter(e.target.value)}><option value="">All rooms</option>{rooms.map(item=><option key={item.room_id} value={item.room_id}>{item.room_number}</option>)}</select></label>}
   <label>Effective date<input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/></label>
   <label>Day filter<select value={dayFilter} onChange={e=>setDayFilter(e.target.value)}><option value="">All days</option>{DAYS.map((d,i)=><option key={d} value={i+1}>{d}</option>)}</select></label>
    <button type="button" onClick={()=>void load()}>Refresh timetable</button>
@@ -203,9 +206,9 @@ export default function TimetableGridView(){
     </div>)}
    </td>;})}</tr>)}
   </tbody></table></div>
-  <section><h2>Join an online meeting</h2><form onSubmit={accessMeeting} className="form-grid">
+  {canBuild&&<section><h2>Online period access</h2><form onSubmit={accessMeeting} className="form-grid">
    <label>Student access token<input required value={studentAccessToken} onChange={e=>setStudentAccessToken(e.target.value)}/></label>
-   <button disabled={busy||!studentAccessToken}>Verify and open meeting</button>
-  </form>{accessUrl&&<p><a href={accessUrl} target="_blank" rel="noopener noreferrer">Open verified meeting link</a></p>}</section>
+   <button disabled={busy||!studentAccessToken}>Verify meeting access</button>
+  </form>{accessUrl&&<p><a href={accessUrl} target="_blank" rel="noopener noreferrer">Open verified meeting link</a></p>}</section>}
  </main>;
 }
