@@ -62,7 +62,7 @@ class SessionServiceTest {
     private static final String PLATFORM_REALM = "edu360-platform";
     private static final String CHROME_WINDOWS =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
-    private static final String BROWSER_KEY = "0b6f3c1e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
+    private static final String TEST_BROWSER_ID = "0b6f3c1e-1d2a-4c3b-9e8f-7a6b5c4d3e2f";
 
     private final TenantPrincipal tenantUser =
             new TenantPrincipal(TENANT_ID, USER_ACCOUNT_ID, UserType.STAFF, "Test User", false);
@@ -97,7 +97,7 @@ class SessionServiceTest {
     @Test
     void recordTenantSignIn_newBrowser_savesDeviceRowWithLabelAndHashedBrowserKey() {
         sessionService.recordTenantSignIn(tenant(), USER_ACCOUNT_ID,
-                new SessionService.SignInContext("sid-new", BROWSER_KEY, CHROME_WINDOWS, "203.0.113.7"));
+                new SessionService.SignInContext("sid-new", TEST_BROWSER_ID, CHROME_WINDOWS, "203.0.113.7"));
 
         ArgumentCaptor<UserDevice> saved = ArgumentCaptor.forClass(UserDevice.class);
         verify(userDeviceRepository).save(saved.capture());
@@ -106,7 +106,7 @@ class SessionServiceTest {
         assertThat(row.getDeviceClass()).isEqualTo("COMPUTER");
         assertThat(row.getDeviceLabel()).isEqualTo("Chrome on Windows");
         assertThat(row.getIpAddress()).isEqualTo("203.0.113.7");
-        assertThat(row.getBrowserKeyHash()).matches("^[0-9a-f]{64}$").isNotEqualTo(BROWSER_KEY);
+        assertThat(row.getBrowserKeyHash()).matches("^[0-9a-f]{64}$").isNotEqualTo(TEST_BROWSER_ID);
         assertThat(row.getId().getTenantId()).isEqualTo(TENANT_ID);
         verify(keycloakAdminClient, never()).logoutSession(anyString(), anyString());
     }
@@ -118,7 +118,7 @@ class SessionServiceTest {
                 eq(TENANT_ID), eq(USER_ACCOUNT_ID), anyString())).thenReturn(Optional.of(previous));
 
         sessionService.recordTenantSignIn(tenant(), USER_ACCOUNT_ID,
-                new SessionService.SignInContext("sid-new", BROWSER_KEY, CHROME_WINDOWS, "203.0.113.7"));
+                new SessionService.SignInContext("sid-new", TEST_BROWSER_ID, CHROME_WINDOWS, "203.0.113.7"));
 
         assertThat(previous.getRevokedReason()).isEqualTo("NEW_LOGIN");
         assertThat(previous.getRevokedAt()).isNotNull();
@@ -140,7 +140,7 @@ class SessionServiceTest {
     @Test
     void recordTenantSignIn_withoutSessionId_recordsNothing() {
         sessionService.recordTenantSignIn(tenant(), USER_ACCOUNT_ID,
-                new SessionService.SignInContext(null, BROWSER_KEY, CHROME_WINDOWS, null));
+                new SessionService.SignInContext(null, TEST_BROWSER_ID, CHROME_WINDOWS, null));
 
         verify(userDeviceRepository, never()).save(any());
     }
@@ -157,7 +157,7 @@ class SessionServiceTest {
     @Test
     void recordPlatformSignIn_savesPlatformRow() {
         sessionService.recordPlatformSignIn(PLATFORM_USER_ID,
-                new SessionService.SignInContext("sid-p", BROWSER_KEY, CHROME_WINDOWS, "198.51.100.4"));
+                new SessionService.SignInContext("sid-p", TEST_BROWSER_ID, CHROME_WINDOWS, "198.51.100.4"));
 
         ArgumentCaptor<PlatformUserDevice> saved = ArgumentCaptor.forClass(PlatformUserDevice.class);
         verify(platformUserDeviceRepository).save(saved.capture());

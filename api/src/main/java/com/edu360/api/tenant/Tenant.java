@@ -1,6 +1,7 @@
 package com.edu360.api.tenant;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -84,8 +85,50 @@ public class Tenant {
     @Column(name = "api_limit")
     private Integer apiLimit;
 
+    @Column(name = "max_students")
+    private Integer maxStudents;
+
+    @Column(name = "max_staff")
+    private Integer maxStaff;
+
+    @Column(name = "max_colleges")
+    private Integer maxColleges;
+
+    @Column(name = "max_schools")
+    private Integer maxSchools;
+
+    @Column(name = "subscription_engine_version", nullable = false)
+    @Builder.Default
+    private String subscriptionEngineVersion = "LEGACY";
+
+    @Column(name = "renewal_mode", nullable = false)
+    @Builder.Default
+    private String renewalMode = "AUTOMATIC";
+
+    @Column(name = "contract_duration_months")
+    private Integer contractDurationMonths;
+
+    @Column(name = "contract_end_at")
+    private LocalDate contractEndAt;
+
+    @Column(name = "grace_period_days", nullable = false)
+    @Builder.Default
+    private Integer gracePeriodDays = 15;
+
     @Column(name = "branding_logo_file_ref")
     private UUID brandingLogoFileRef;
+
+    /** E1-S4: FileStorage key of the logo (never sent to clients) and its checked content type. */
+    @Column(name = "branding_logo_storage_key")
+    private String brandingLogoStorageKey;
+
+    @Column(name = "branding_logo_content_type")
+    private String brandingLogoContentType;
+
+    /** E1-S4: {"primary":"#RRGGBB","accent":"#RRGGBB"}, only on plans that allow colours. */
+    @Column(name = "branding_colors", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private String brandingColors;
 
     /** Unique per tenant — used by bootstrap resolver to validate issuer JWKS. */
     @Column(name = "keycloak_realm", unique = true)
@@ -94,6 +137,10 @@ public class Tenant {
     @Column(name = "analytics_opt_out", nullable = false)
     @Builder.Default
     private boolean analyticsOptOut = false;
+
+    @Column(name = "listed_in_directory", nullable = false)
+    @Builder.Default
+    private boolean listedInDirectory = false;
 
     @Column(name = "activated_at")
     private Instant activatedAt;
@@ -106,6 +153,12 @@ public class Tenant {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "next_renewal_at")
+    private LocalDate nextRenewalAt;
+
+    @Column(name = "pending_plan_id")
+    private UUID pendingPlanId;
 
     @Column(name = "created_at", nullable = false)
     @Builder.Default
@@ -124,4 +177,5 @@ public class Tenant {
     @Column(name = "row_version", nullable = false)
     @Builder.Default
     private Integer rowVersion = 1;
+
 }

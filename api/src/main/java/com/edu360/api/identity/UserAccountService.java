@@ -1,6 +1,5 @@
 package com.edu360.api.identity;
 
-import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -8,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.edu360.api.audit.AuditEventType;
 import com.edu360.api.audit.AuditLogService;
@@ -48,8 +49,6 @@ import lombok.RequiredArgsConstructor;
 public class UserAccountService {
 
     private static final Logger log = LoggerFactory.getLogger(UserAccountService.class);
-    private static final SecureRandom RANDOM = new SecureRandom();
-    private static final String CHAR_POOL = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
     private final UserAccountRepository userAccountRepository;
     private final UserIdentityLinkRepository userIdentityLinkRepository;
@@ -86,14 +85,16 @@ public class UserAccountService {
         String normalizedEmail = request.email() != null ? request.email().toLowerCase().trim() : null;
         if (normalizedEmail != null && userAccountRepository.existsByIdTenantIdAndEmail(tenantId, normalizedEmail)) {
             throw new DuplicateResourceException(
-                    "A user with email '" + normalizedEmail + "' already exists in this tenant."
+                    "A user with email '" + normalizedEmail + "' already exists in this tenant.",
+                    "email"
             );
         }
 
         if (request.mobile() != null && request.userType() == UserType.GUARDIAN
                 && userAccountRepository.existsByIdTenantIdAndMobile(tenantId, request.mobile().trim())) {
             throw new DuplicateResourceException(
-                    "A guardian with mobile number '" + request.mobile() + "' already exists in this tenant."
+                    "A guardian with mobile number '" + request.mobile() + "' already exists in this tenant.",
+                    "mobile"
             );
         }
 
@@ -127,6 +128,21 @@ public class UserAccountService {
         if (keycloakUserId == null || keycloakUserId.isBlank()) {
             throw new KeycloakProvisioningException("Keycloak created no account id for this user; nothing was saved.");
         }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                        try {
+                            keycloakAdminClient.deleteUser(realm, keycloakUserId);
+                        } catch (RuntimeException cleanupFailure) {
+                            log.error("Could not remove orphan staff/user identity {} from realm {} after transaction rollback",
+                                    keycloakUserId, realm, cleanupFailure);
+                        }
+                    }
+                }
+            });
+        }
         log.info("Provisioned Keycloak account {} in realm '{}'", keycloakUserId, realm);
 
         // 7. Persist UserAccount (app.user_account)
@@ -144,7 +160,7 @@ public class UserAccountService {
                 .updatedBy(principal.userAccountId())
                 .build();
 
-        UserAccount savedAccount = userAccountRepository.save(account);
+        UserAccount savedAccount = userAccountRepository.saveAndFlush(account);
 
         // 8. Persist UserIdentityLink (app.user_identity_link)
         UserIdentityLink identityLink = UserIdentityLink.builder()
@@ -158,7 +174,7 @@ public class UserAccountService {
                 .updatedBy(principal.userAccountId())
                 .build();
 
-        userIdentityLinkRepository.save(identityLink);
+        userIdentityLinkRepository.saveAndFlush(identityLink);
 
         // 9. Assign initial role if requested
         String assignedRole = null;
@@ -189,23 +205,122 @@ public class UserAccountService {
         return CreateUserResponse.from(savedAccount, tempPassword, assignedRole);
     }
 
-    private void enforcePlanUserLimit(UUID tenantId) {
-        long activeUserCount = userAccountRepository.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED);
+    /**
+     * Creates a student login using the institution-generated student code as the Keycloak
+     * username. Students do not need an email address; the identity link records STUDENT_CODE.
+     */
+    @Transactional
+    public CreateUserResponse createStudentAccount(RbacPrincipal principal, String displayName,
+            String studentCode, UUID institutionId) {
+        Objects.requireNonNull(principal, "principal is required");
+        if (displayName == null || displayName.isBlank() || studentCode == null || studentCode.isBlank()
+                || institutionId == null) {
+            throw new IllegalArgumentException("Student name, student code and institution are required.");
+        }
+        UUID tenantId = principal.tenantId();
+        RbacScope studentScope = RbacScope.institution(institutionId);
+        boolean canCreateUser = permissionEvaluatorService.can(principal, "USER_CREATE", studentScope, RbacTarget.NONE).allowed();
+        boolean canAdmitStudent = permissionEvaluatorService.can(principal, "SEAT_ALLOCATE", studentScope, RbacTarget.NONE).allowed();
+        if (!canCreateUser && !canAdmitStudent) {
+            permissionEvaluatorService.authorize(principal, "USER_CREATE", studentScope, RbacTarget.NONE);
+        }
+        enforcePlanUserLimit(tenantId);
 
-        tenantRepository.findById(tenantId).ifPresent(tenant -> {
-            if (tenant.getPlanId() != null) {
-                planRepository.findById(tenant.getPlanId()).ifPresent(plan -> {
-                    Integer userLimit = plan.getUserLimit();
-                    if (userLimit != null && activeUserCount >= userLimit) {
-                        throw new BusinessRuleViolationException(
-                                "PLAN_LIMIT_REACHED",
-                                "Plan limit reached: maximum " + userLimit
-                                        + " active user accounts allowed under plan '" + plan.getPlanName() + "' [WF-14]."
-                        );
+        String realm = tenantRepository.findById(tenantId)
+                .map(Tenant::getKeycloakRealm)
+                .filter(r -> !r.isBlank())
+                .orElseThrow(() -> new KeycloakProvisioningException(
+                        "Tenant " + tenantId + " has no sign-in realm, so no account can be provisioned."));
+
+        String tempPassword = generateTemporaryPassword();
+        String keycloakUserId = keycloakAdminClient.provisionStudentUser(
+                realm, displayName.trim(), studentCode.trim(), tempPassword, true);
+        if (keycloakUserId == null || keycloakUserId.isBlank()) {
+            throw new KeycloakProvisioningException("Keycloak created no student account id; nothing was saved.");
+        }
+        // Keycloak is outside the database transaction. If the enclosing student/profile/enrolment
+        // transaction rolls back, remove the external identity so no orphan login remains.
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                        try {
+                            keycloakAdminClient.deleteUser(realm, keycloakUserId);
+                        } catch (RuntimeException cleanupFailure) {
+                            log.error("Could not remove orphan student identity {} from realm {} after transaction rollback",
+                                    keycloakUserId, realm, cleanupFailure);
+                        }
                     }
-                });
-            }
-        });
+                }
+            });
+        }
+
+        UUID userAccountId = UUID.randomUUID();
+        UserAccount account = UserAccount.builder()
+                .id(new UserAccountId(tenantId, userAccountId))
+                .userType(UserType.STUDENT)
+                .displayName(displayName.trim())
+                .email(null)
+                .mobile(null)
+                .status(UserAccountStatus.PENDING_ACTIVATION)
+                .credentialExpiresAt(com.edu360.api.auth.PrintedPasswordPolicy.expiryFor(
+                        UserType.STUDENT, java.time.Instant.now()))
+                .createdBy(principal.userAccountId())
+                .updatedBy(principal.userAccountId())
+                .build();
+        UserAccount saved = userAccountRepository.save(account);
+
+        userIdentityLinkRepository.save(UserIdentityLink.builder()
+                .id(new UserIdentityLinkId(tenantId, UUID.randomUUID()))
+                .userAccountId(userAccountId)
+                .identityRealm(realm)
+                .identitySubject(keycloakUserId)
+                .usernameKind(UsernameKind.STUDENT_CODE)
+                .status(IdentityLinkStatus.ACTIVE)
+                .createdBy(principal.userAccountId())
+                .updatedBy(principal.userAccountId())
+                .build());
+
+        roleAssignmentService.assignRole(principal, userAccountId,
+                new AssignRoleRequest(null, "STUDENT", ScopeType.INSTITUTION,
+                        institutionId, null, null, null));
+
+        auditLogService.record(AuditEventType.ACCOUNT_CREATED, null,
+                principal.userAccountId().toString(), null,
+                "Created student login for student code " + studentCode + " in tenant " + tenantId);
+        return CreateUserResponse.from(saved, tempPassword, "STUDENT");
+    }
+
+    /**
+     * WF-14 / E1-S5: at 100% of the tenant's user limit no more accounts can be created. The limit
+     * is the tenant's own (which the Product Owner may have raised above the plan, E1-S3), falling
+     * back to the plan's. Answered as 409 USER_LIMIT_REACHED so the screen can offer an upgrade.
+     */
+    private void enforcePlanUserLimit(UUID tenantId) {
+        UserLimit limit = currentUserLimit(tenantId);
+        if (limit.limit() != null && limit.active() >= limit.limit()) {
+            throw new com.edu360.api.exception.ApiException(org.springframework.http.HttpStatus.CONFLICT,
+                    "USER_LIMIT_REACHED",
+                    "User limit reached: " + limit.active() + " of " + limit.limit()
+                            + " active accounts are in use. Request an upgrade to add more [WF-14].");
+        }
+    }
+
+    /** E1-S5: how many accounts are in use against the tenant's limit (null limit = no limit set). */
+    public record UserLimit(Integer limit, long active, int percent) {
+    }
+
+    public UserLimit currentUserLimit(UUID tenantId) {
+        long active = userAccountRepository.countByIdTenantIdAndStatusNot(tenantId, UserAccountStatus.DEACTIVATED);
+        Integer limit = tenantRepository.findById(tenantId)
+                // 0 or empty means "not set on the tenant": fall back to the plan's limit.
+                .map(tenant -> tenant.getUserLimit() != null && tenant.getUserLimit() > 0 ? tenant.getUserLimit()
+                        : tenant.getPlanId() == null ? null
+                        : planRepository.findById(tenant.getPlanId()).map(com.edu360.api.platform.Plan::getUserLimit).orElse(null))
+                .orElse(null);
+        int percent = limit == null || limit <= 0 ? 0 : (int) Math.min(999, (active * 100) / limit);
+        return new UserLimit(limit, active, percent);
     }
 
     private RbacScope resolveActingScope(CreateUserRequest request) {
@@ -220,10 +335,6 @@ public class UserAccountService {
     }
 
     private String generateTemporaryPassword() {
-        StringBuilder sb = new StringBuilder("Edu360@");
-        for (int i = 0; i < 6; i++) {
-            sb.append(CHAR_POOL.charAt(RANDOM.nextInt(CHAR_POOL.length())));
-        }
-        return sb.toString();
+        return com.edu360.api.auth.TemporaryPasswordGenerator.generate();
     }
 }

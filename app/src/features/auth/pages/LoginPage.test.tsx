@@ -134,4 +134,141 @@ describe("LoginPage", () => {
     expect(await screen.findByText(/Enter the 6-digit code shown/)).toBeTruthy();
     expect(enrol).not.toHaveBeenCalled();
   });
+
+  // ------------------------------------------------------------------ MFA-01: recovery
+
+  const reachCodeStep = async () => {
+    mockedLogin.mockRejectedValueOnce(challenge("MFA_REQUIRED"));
+    renderPage();
+    fireEvent.change(document.getElementById("login-email")!, { target: { value: "a@b.test" } });
+    fireEvent.change(document.getElementById("login-password")!, { target: { value: "pw-123456" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    await screen.findByLabelText(/Authenticator code/);
+  };
+
+  it("MFA-01-FE-1: 'Problem with your code?' explains the three ways back in", async () => {
+    await reachCodeStep();
+    fireEvent.click(screen.getByRole("button", { name: /Problem with your code/i }));
+    const help = screen.getByRole("region", { name: /Help with your code/i });
+    expect(help.textContent).toMatch(/correct time/i);
+    expect(help.textContent).toMatch(/administrator to reset your two-step login/i);
+    expect(help.textContent).toMatch(/Use a backup code instead/i);
+  });
+
+  it("MFA-01-FE-6: the backup code option is a visible button on the code step, no extra click needed", async () => {
+    await reachCodeStep();
+    const button = screen.getByRole("button", { name: /Use a backup code instead/i });
+    expect(button.className).toContain("eds-button--secondary");
+  });
+
+  it("MFA-01-FE-7: letters typed into the authenticator box move to the backup box, keeping what was typed", async () => {
+    await reachCodeStep();
+    fireEvent.change(screen.getByLabelText(/Authenticator code/), { target: { value: "mdj5m-td7px" } });
+
+    const backupField = (await screen.findByLabelText(/Backup code/)) as HTMLInputElement;
+    expect(backupField.value).toBe("MDJ5M-TD7PX");
+    expect(screen.queryByLabelText(/Authenticator code/)).toBeNull();
+  });
+
+  it("MFA-01-FE-8: digits in the authenticator box still stop at 6", async () => {
+    await reachCodeStep();
+    const field = screen.getByLabelText(/Authenticator code/) as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "12345678" } });
+    expect(field.value).toBe("123456");
+  });
+
+  it("MFA-01-FE-9: a wrong password on the backup step says the password failed, not the code", async () => {
+    vi.spyOn(authService, "loginWithRecoveryCode").mockRejectedValueOnce(
+      new AxiosError("401", "ERR_BAD_REQUEST", undefined, undefined, {
+        status: 401,
+        data: { code: "INVALID_CREDENTIALS", error: "Invalid credentials" },
+      } as AxiosResponse),
+    );
+    await reachCodeStep();
+    fireEvent.click(screen.getByRole("button", { name: /Use a backup code instead/i }));
+    fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "AAAAA-BBBBB" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/email or password is wrong/i)).toBeTruthy();
+    expect(screen.getByText(/backup code was not checked/i)).toBeTruthy();
+  });
+
+  it("MFA-01-FE-2: a backup code is sent instead of the authenticator code and leads to a new set-up", async () => {
+    const backup = vi.spyOn(authService, "loginWithRecoveryCode").mockRejectedValueOnce(enrolmentChallenge());
+    await reachCodeStep();
+    fireEvent.click(screen.getByRole("button", { name: /Use a backup code/i }));
+    fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "k7qd4-9mxrt" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    await screen.findByText("Set up two-step login.");
+    expect(backup).toHaveBeenCalledWith("a@b.test", "pw-123456", "k7qd4-9mxrt");
+    expect(screen.getByText(/Backup code accepted/)).toBeTruthy();
+  });
+
+  it("MFA-01-FE-3: a wrong backup code shows the server's message and stays on the backup step", async () => {
+    vi.spyOn(authService, "loginWithRecoveryCode").mockRejectedValueOnce(
+      new AxiosError("401", "ERR_BAD_REQUEST", undefined, undefined, {
+        status: 401,
+        data: { code: "INVALID_RECOVERY_CODE", error: "That backup code is not valid or was already used." },
+      } as AxiosResponse),
+    );
+    await reachCodeStep();
+    fireEvent.click(screen.getByRole("button", { name: /Use a backup code/i }));
+    fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "AAAAA-BBBBB" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/not valid or was already used/)).toBeTruthy();
+    expect(screen.getByLabelText(/Backup code/)).toBeTruthy();
+  });
+
+  it("MFA-01-FE-4: a malformed backup code is caught before anything is sent", async () => {
+    const backup = vi.spyOn(authService, "loginWithRecoveryCode");
+    await reachCodeStep();
+    fireEvent.click(screen.getByRole("button", { name: /Use a backup code/i }));
+    fireEvent.change(screen.getByLabelText(/Backup code/), { target: { value: "ABC" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText(/Enter a backup code, like/)).toBeTruthy();
+    expect(backup).not.toHaveBeenCalled();
+  });
+
+  it("MFA-01-FE-5: after set-up the backup codes are shown once and must be confirmed as saved", async () => {
+    vi.spyOn(authService, "enrolMfa").mockResolvedValueOnce({
+      data: { status: "ENROLLED", message: "ok", recoveryCodes: ["AAAAA-BBBBB", "CCCCC-DDDDD"] },
+    } as never);
+    await signInToSetUp();
+    fireEvent.change(screen.getByLabelText(/Enter the 6-digit code/), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: /confirm and continue/i }));
+
+    await screen.findByText("Save your backup codes.");
+    expect(screen.getByText("AAAAA-BBBBB")).toBeTruthy();
+    const continueButton = screen.getByRole("button", { name: /Continue to sign in/i });
+    expect((continueButton as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByLabelText(/I have saved these codes/));
+    fireEvent.click(screen.getByRole("button", { name: /Continue to sign in/i }));
+    await screen.findByLabelText(/Authenticator code/);
+    expect(screen.queryByText("AAAAA-BBBBB")).toBeNull();
+  });
+  it("shows the dedicated account-locked state after the lockout response", async () => {
+    mockedLogin.mockRejectedValueOnce(challenge("LOCKED", { error: "Locked for 30 minutes." }));
+    renderPage();
+    fireEvent.change(document.getElementById("login-email")!, { target: { value: "a@b.test" } });
+    fireEvent.change(document.getElementById("login-password")!, { target: { value: "wrong" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    expect(await screen.findByText("Please try again later.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("Locked for 30 minutes.");
+    expect(screen.getByRole("button", { name: /back to sign in/i })).toBeTruthy();
+  });
+
+  it("shows the dedicated password-expired state", async () => {
+    mockedLogin.mockRejectedValueOnce(challenge("PASSWORD_EXPIRED", { error: "Password expired." }));
+    renderPage();
+    fireEvent.change(document.getElementById("login-email")!, { target: { value: "a@b.test" } });
+    fireEvent.change(document.getElementById("login-password")!, { target: { value: "old-password" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    expect(await screen.findByText("Update your password.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("Password expired.");
+  });
+
 });

@@ -1,4 +1,5 @@
 import api from "../../../services/axios";
+import { idempotencyHeaders } from "./platformTenantService";
 
 export type IntegrationTypeItem = {
   integrationTypeId: string;
@@ -29,21 +30,25 @@ export type PlatformAuditLogItem = {
   entityId?: string;
   outcome: string;
   correlationId?: string;
+  eventType?: string;
+  payload?: Record<string, unknown> | null;
 };
 
 export type UsageMetricSnapshot = {
-  metricName: string;
-  latestValue: number;
-  asOfDate: string;
+  metricCode: string;
+  value: number | null;
+  asOfDate: string | null;
 };
 
 export type UsageCountsResponse = {
   totalTenantCount: number;
+  tenantsInAnalytics: number;
+  tenantsOptedOut: number;
   metrics: UsageMetricSnapshot[];
-  totalUserCountGap?: string;
 };
 
 export type BackupStatusItem = {
+  stale?: boolean;
   tenantId: string;
   lastDailyBackupAt: string;
   lastBackupOutcome: "SUCCESS" | "FAILED" | "IN_PROGRESS" | string;
@@ -64,12 +69,44 @@ export type InvoiceItem = {
   totalAmount: number;
   currencyCode: string;
   status: "DRAFT" | "APPROVED" | "SENT" | "PAID";
+  approvedBy?: string;
+  approvedAt?: string;
+  dueAt?: string;
   sentAt?: string;
   paidAt?: string;
   paymentMode?: string;
   paymentReference?: string;
   overdueFlaggedAt?: string;
+  overdue: boolean;
   createdAt: string;
+};
+
+export type BillingSettingsItem = { invoiceDueDays: number };
+
+export type BillingCycleSkippedTenant = { tenantId: string; reason: string };
+export type BillingCycleResponse = { created: InvoiceItem[]; skipped: BillingCycleSkippedTenant[] };
+
+export type InvoiceLineItem = {
+  invoiceLineId: string;
+  invoiceId: string;
+  lineType: string;
+  description: string;
+  quantity: number;
+  unitAmount: number;
+  lineAmount: number;
+  tenantUsageMonthlyId?: string;
+  createdAt: string;
+};
+
+export type ApplyDiscountPayload = {
+  discountPercent: number;
+  reason: string;
+};
+
+export type AddInvoiceLinePayload = {
+  description: string;
+  quantity: number;
+  unitAmount: number;
 };
 
 export type CreateInvoicePayload = {
@@ -97,6 +134,30 @@ export type CreateReleasePayload = {
   releaseNotes: string;
   isHotfix?: boolean;
   schemaVersion: string;
+};
+
+export type RealmSyncPreviewItem = {
+  previewId: string;
+  realms: string[];
+  settings: {
+    minPasswordLength: number;
+    requireDigit: boolean;
+    requireSpecialChar: boolean;
+    maxFailedLogins: number;
+    lockoutMinutes: number;
+    idleSessionTimeoutMinutes: number;
+  };
+};
+
+export type RealmSyncResultItem = {
+  realm: string;
+  applied: boolean;
+  error?: string | null;
+};
+
+export type RealmSyncRunItem = {
+  runId: string;
+  results: RealmSyncResultItem[];
 };
 
 export type SecurityPolicyItem = {
@@ -134,8 +195,9 @@ export type SupportTicketItem = {
   description: string;
   priority: string;
   category: string;
-  status: "NEW" | "ASSIGNED" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  status: "NEW" | "TRIAGED" | "ASSIGNED" | "ESCALATED" | "RESOLVED" | "CLOSED";
   assignedTo?: string;
+  escalatedAt?: string;
   resolutionNote?: string;
   createdAt: string;
 };
@@ -157,7 +219,7 @@ export type PlatformReportItem = {
   reportName: string;
   generatedAt: string;
   currency: string;
-  metrics: Record<string, number | string>;
+  metrics: Record<string, unknown>;
 };
 
 export const platformOpsService = {
@@ -169,6 +231,14 @@ export const platformOpsService = {
   async createIntegrationType(payload: CreateIntegrationTypePayload): Promise<IntegrationTypeItem> {
     const res = await api.post<IntegrationTypeItem>("/platform/integration-types", payload);
     return res.data;
+  },
+
+  /** A short, newest-first slice of the platform audit log (dashboard activity). */
+  async listRecentAuditLogs(size: number, outcome?: string): Promise<PlatformAuditLogItem[]> {
+    const res = await api.get<PlatformAuditLogItem[] | { items?: PlatformAuditLogItem[] }>("/platform/audit-logs", {
+      params: { page: 0, size, ...(outcome ? { outcome } : {}) },
+    });
+    return Array.isArray(res.data) ? res.data : res.data?.items ?? [];
   },
 
   async listAuditLogs(): Promise<PlatformAuditLogItem[]> {
@@ -183,20 +253,62 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async getPlatformBackupStatus(): Promise<BackupStatusItem[]> {
-    const res = await api.get<BackupStatusItem[]>("/platform/backup-status");
+  async getPlatformBackupStatus(): Promise<{ wiredToRealBackupSystem: boolean; note: string; tenants: BackupStatusItem[] }> {
+    const res = await api.get<{ wiredToRealBackupSystem: boolean; note: string; tenants: BackupStatusItem[] }>("/platform/backup-status");
     return res.data;
   },
 
   // Billing & Invoices
+  async getBillingSettings(): Promise<BillingSettingsItem> {
+    const res = await api.get<BillingSettingsItem>("/platform/billing/settings");
+    return res.data;
+  },
+
+  async updateBillingSettings(invoiceDueDays: number): Promise<BillingSettingsItem> {
+    const res = await api.put<BillingSettingsItem>("/platform/billing/settings", { invoiceDueDays });
+    return res.data;
+  },
+
+  async createBillingCycle(payload: { periodStart: string; periodEnd: string }, idempotencyKey: string): Promise<BillingCycleResponse> {
+    const res = await api.post<BillingCycleResponse>("/platform/billing-cycles", payload, { headers: { "Idempotency-Key": idempotencyKey } });
+    return res.data;
+  },
+
   async listInvoices(tenantId?: string): Promise<InvoiceItem[]> {
     const query = tenantId ? `?tenantId=${tenantId}` : "";
     const res = await api.get<InvoiceItem[]>(`/platform/invoices${query}`);
     return res.data;
   },
 
+  async listOverdueInvoices(): Promise<InvoiceItem[]> {
+    const res = await api.get<InvoiceItem[]>("/platform/invoices/overdue");
+    return res.data;
+  },
+
   async createInvoice(payload: CreateInvoicePayload): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>("/platform/invoices", payload);
+    const res = await api.post<InvoiceItem>("/platform/invoices", payload, { headers: idempotencyHeaders() });
+    return res.data;
+  },
+
+  async listInvoiceLines(invoiceId: string): Promise<InvoiceLineItem[]> {
+    const res = await api.get<InvoiceLineItem[]>(`/platform/invoices/${invoiceId}/lines`);
+    return res.data;
+  },
+
+  async addInvoiceLine(invoiceId: string, payload: AddInvoiceLinePayload): Promise<InvoiceItem> {
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/lines`, payload);
+    return res.data;
+  },
+
+  async removeInvoiceLine(invoiceId: string, lineId: string): Promise<InvoiceItem> {
+    const res = await api.delete<InvoiceItem>(`/platform/invoices/${invoiceId}/lines/${lineId}`);
+    return res.data;
+  },
+
+  async approveInvoice(invoiceId: string, idempotencyKey: string): Promise<InvoiceItem> {
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/approval`, {}, {
+      headers: { "Idempotency-Key": idempotencyKey },
+    });
     return res.data;
   },
 
@@ -205,8 +317,10 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async applyDiscount(invoiceId: string, discountAmount: number): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/discounts`, { discountAmount });
+  async applyDiscount(invoiceId: string, payload: ApplyDiscountPayload, idempotencyKey: string): Promise<InvoiceItem> {
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/discounts`, payload, {
+      headers: { "Idempotency-Key": idempotencyKey },
+    });
     return res.data;
   },
 
@@ -216,7 +330,7 @@ export const platformOpsService = {
   },
 
   async recordPayment(invoiceId: string, payload: { paymentMode: string; paymentReference: string }): Promise<InvoiceItem> {
-    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/record-payment`, payload);
+    const res = await api.post<InvoiceItem>(`/platform/invoices/${invoiceId}/record-payment`, payload, { headers: idempotencyHeaders() });
     return res.data;
   },
 
@@ -241,6 +355,11 @@ export const platformOpsService = {
     return res.data;
   },
 
+  async getPendingDataProtectionCount(): Promise<{ count: number }> {
+    const res = await api.get<{ count: number }>("/platform/data-protection/pending-count");
+    return res.data;
+  },
+
   // Reports
   async getReport(reportCode: string): Promise<PlatformReportItem> {
     const res = await api.get<PlatformReportItem>(`/platform/reports/${reportCode}`);
@@ -250,6 +369,21 @@ export const platformOpsService = {
   // Security Policy & Incidents
   async getSecurityPolicy(): Promise<SecurityPolicyItem> {
     const res = await api.get<SecurityPolicyItem>("/platform/security-policy");
+    return res.data;
+  },
+
+  async previewSecurityPolicyRealmSync(): Promise<RealmSyncPreviewItem> {
+    const res = await api.get<RealmSyncPreviewItem>("/platform/security-policy/realm-sync/preview");
+    return res.data;
+  },
+
+  async applySecurityPolicyRealmSync(previewId: string): Promise<RealmSyncRunItem> {
+    const res = await api.post<RealmSyncRunItem>("/platform/security-policy/realm-sync", { previewId });
+    return res.data;
+  },
+
+  async retryFailedSecurityPolicyRealms(runId: string): Promise<RealmSyncRunItem> {
+    const res = await api.post<RealmSyncRunItem>("/platform/security-policy/realm-sync/retry", { runId });
     return res.data;
   },
 
@@ -280,14 +414,26 @@ export const platformOpsService = {
     return res.data;
   },
 
-  async updateSupportTicket(ticketId: string, payload: { status?: string; assignedTo?: string; resolutionNote?: string }): Promise<SupportTicketItem> {
+  async updateSupportTicket(ticketId: string, payload: { status?: string; assignedTo?: string; resolutionNote?: string; priority?: string; category?: string }): Promise<SupportTicketItem> {
     const res = await api.patch<SupportTicketItem>(`/platform/support-tickets/${ticketId}`, payload);
     return res.data;
   },
 
-  async assumeSupportSession(ticketId: string): Promise<{ token: string; expiresAt: string; ticketNumber: string }> {
-    const res = await api.post<{ token: string; expiresAt: string; ticketNumber: string }>(`/platform/support-sessions?ticketId=${ticketId}`);
+  async escalateSupportTicket(ticketId: string, payload: { to: "ENGINEERING" | "RELEASE_MANAGER"; note: string }): Promise<SupportTicketItem> {
+    const res = await api.post<SupportTicketItem>(`/platform/support-tickets/${ticketId}/escalation`, payload);
     return res.data;
+  },
+
+  async assumeSupportSession(ticketId: string): Promise<{ token: string; expiresAt: string; tenantLoginAddress: string }> {
+    const res = await api.post<{ token: string; expiresAt: string; tenantLoginAddress: string }>(
+      "/platform/support-sessions",
+      { ticketId },
+    );
+    return res.data;
+  },
+
+  async endCurrentSupportSession(): Promise<void> {
+    await api.delete("/platform/support-sessions/current");
   },
 
   async listActiveGrants(): Promise<SupportAccessGrantItem[]> {

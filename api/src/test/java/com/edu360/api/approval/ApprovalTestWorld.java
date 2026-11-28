@@ -31,11 +31,19 @@ import com.edu360.api.guardian.StudentGuardianLinkRepository;
 import com.edu360.api.identity.StudentProfile;
 import com.edu360.api.identity.StudentProfileRepository;
 import com.edu360.api.identity.UserType;
+import com.edu360.api.identity.UserAccount;
+import com.edu360.api.identity.UserAccountId;
+import com.edu360.api.identity.UserAccountStatus;
 import com.edu360.api.institution.Institution;
 import com.edu360.api.institution.InstitutionId;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.InstitutionService;
 import com.edu360.api.institution.LeaveApproverSettingRepository;
+import com.edu360.api.institution.StaffAssignment;
+import com.edu360.api.institution.StaffAssignmentRepository;
+import com.edu360.api.institution.StaffProfile;
+import com.edu360.api.institution.StaffProfileId;
+import com.edu360.api.institution.StaffProfileRepository;
 import com.edu360.api.rbac.AssignmentStatus;
 import com.edu360.api.rbac.RbacTestWorld;
 import com.edu360.api.rbac.ScopeType;
@@ -67,6 +75,8 @@ final class ApprovalTestWorld {
     final List<RoleRolldownOverride> overrides = new ArrayList<>();
     final List<RoleRolldownDefault> rolldownDefaults = new ArrayList<>();
     final Set<UUID> leaveApproverInstitutions = new HashSet<>();
+    final Map<String, UserAccount> guardianAccounts = new LinkedHashMap<>();
+    final List<StudentProfile> activeChildren = new ArrayList<>();
 
     final ApprovalRouting routing;
     final ApprovalInboxService inbox;
@@ -77,6 +87,11 @@ final class ApprovalTestWorld {
     final PromotionRunRepository promotionRunRepository = mock(PromotionRunRepository.class);
     final ApprovalRequestRepository requestRepository = mock(ApprovalRequestRepository.class);
     final ApprovalStepRepository stepRepository = mock(ApprovalStepRepository.class);
+    final StaffProfileRepository staffProfileRepository = mock(StaffProfileRepository.class);
+    final StaffAssignmentRepository staffAssignmentRepository = mock(StaffAssignmentRepository.class);
+    final Map<UUID, StaffProfile> staffProfiles = new LinkedHashMap<>();
+    final List<StaffAssignment> staffAssignments = new ArrayList<>();
+    final ApprovalScopeResolver scopeResolver;
 
     ApprovalTestWorld() {
         DelegationRepository delegationRepository = mock(DelegationRepository.class);
@@ -143,6 +158,10 @@ final class ApprovalTestWorld {
         });
         lenient().when(studentRepository.findById(any(UUID.class))).thenAnswer(inv ->
                 Optional.ofNullable(students.get((UUID) inv.getArgument(0))));
+        lenient().when(studentRepository.findActiveChildrenByGuardianUser(any(), any())).thenAnswer(inv ->
+                activeChildren.stream().filter(s -> tenantId.equals(s.getTenantId())).toList());
+        lenient().when(w.userAccountRepository.findByIdTenantIdAndMobileAndUserType(any(), any(), any()))
+                .thenAnswer(inv -> Optional.ofNullable(guardianAccounts.get((String) inv.getArgument(1))));
         lenient().when(linkRepository.findByIdTenantIdAndIdStudentGuardianLinkId(any(), any())).thenAnswer(inv ->
                 Optional.ofNullable(links.get((UUID) inv.getArgument(1))));
         lenient().when(linkRepository.save(any())).thenAnswer(inv -> {
@@ -152,13 +171,19 @@ final class ApprovalTestWorld {
         });
         lenient().when(linkRepository.findByIdTenantIdAndStudentProfileId(any(), any())).thenAnswer(inv ->
                 links.values().stream().filter(l -> l.getStudentProfileId().equals(inv.getArgument(1))).toList());
-        lenient().when(linkRepository.countByIdTenantIdAndStudentProfileId(any(), any())).thenAnswer(inv ->
-                links.values().stream().filter(l -> l.getStudentProfileId().equals(inv.getArgument(1))).count());
+        lenient().when(linkRepository.countByIdTenantIdAndStudentProfileIdAndStatusNot(any(), any(), any())).thenAnswer(inv ->
+                links.values().stream().filter(l -> l.getStudentProfileId().equals(inv.getArgument(1))
+                        && !inv.getArgument(2).equals(l.getStatus())).count());
         lenient().when(profileRepository.findByIdTenantIdAndMobile(any(), any())).thenReturn(Optional.empty());
         lenient().when(profileRepository.findByIdTenantIdAndIdGuardianProfileId(any(), any())).thenReturn(Optional.empty());
         lenient().when(profileRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(promotionRunRepository.findByIdTenantIdAndIdPromotionRunId(any(), any())).thenAnswer(inv ->
                 Optional.ofNullable(runs.get((UUID) inv.getArgument(1))));
+        lenient().when(promotionRunRepository.findByIdTenantId(any())).thenAnswer(inv ->
+                runs.values().stream().filter(r -> r.getId().getTenantId().equals(inv.getArgument(0))).toList());
+        lenient().when(promotionRunRepository.findByIdTenantIdAndInstitutionId(any(), any())).thenAnswer(inv ->
+                runs.values().stream().filter(r -> r.getId().getTenantId().equals(inv.getArgument(0))
+                        && inv.getArgument(1).equals(r.getInstitutionId())).toList());
         lenient().when(promotionRunRepository.save(any())).thenAnswer(inv -> {
             PromotionRun r = inv.getArgument(0);
             runs.put(r.getId().getPromotionRunId(), r);
@@ -183,12 +208,21 @@ final class ApprovalTestWorld {
 
         routing = new ApprovalRouting(delegationRepository, w.evaluator, w.roleDefinitionRepository,
                 w.userRoleAssignmentRepository, overrideRepository, defaultRepository, institutionRepository);
+        // -- staff profiles / assignments (the department a staff-originated request belongs to)
+        lenient().when(staffProfileRepository.findByIdTenantIdAndUserAccountId(any(), any())).thenAnswer(inv ->
+                staffProfiles.values().stream().filter(p -> p.getId().getTenantId().equals(inv.getArgument(0))
+                        && p.getUserAccountId().equals(inv.getArgument(1))).findFirst());
+        lenient().when(staffAssignmentRepository.findByTenantIdAndStaffProfileIdOrderByEffectiveFromDesc(any(), any()))
+                .thenAnswer(inv -> staffAssignments.stream().filter(a -> a.getTenantId().equals(inv.getArgument(0))
+                        && a.getStaffProfileId().equals(inv.getArgument(1))).toList());
+
+        scopeResolver = new ApprovalScopeResolver(w.evaluator, staffProfileRepository, staffAssignmentRepository);
         inbox = new ApprovalInboxService(requestRepository, stepRepository, w.auditLogService, linkRepository,
-                institutionRepository, promotionRunRepository, w.evaluator, routing, leaveRepository);
+                institutionRepository, promotionRunRepository, w.evaluator, routing, leaveRepository, scopeResolver);
         delegation = new ApprovalDelegationService(delegationRepository, batchRepository, w.evaluator,
                 w.auditLogService, w.userAccountRepository, requestRepository, inbox);
         guardian = new GuardianLinkService(linkRepository, profileRepository, w.evaluator, w.auditLogService,
-                requestRepository, stepRepository, studentRepository, institutionRepository, inbox);
+                requestRepository, stepRepository, studentRepository, institutionRepository, inbox, w.userAccountRepository);
         institutionService = new InstitutionService(institutionRepository, leaveRepository,
                 mock(com.edu360.api.tenant.TenantRepository.class), mock(com.edu360.api.platform.PlanRepository.class),
                 w.evaluator, w.auditLogService, requestRepository, stepRepository, inbox);
@@ -217,6 +251,29 @@ final class ApprovalTestWorld {
         return u;
     }
 
+    /** Gives the user a staff profile with one ACTIVE staff assignment in the institution/department. */
+    StaffAssignment staffAssignment(UUID userId, UUID institutionId, UUID departmentId) {
+        StaffProfile profile = staffProfiles.values().stream().filter(p -> p.getUserAccountId().equals(userId))
+                .findFirst().orElseGet(() -> {
+                    StaffProfile p = new StaffProfile();
+                    p.setId(new StaffProfileId(tenantId, UUID.randomUUID()));
+                    p.setUserAccountId(userId);
+                    staffProfiles.put(p.getStaffProfileId(), p);
+                    return p;
+                });
+        StaffAssignment a = new StaffAssignment();
+        a.setStaffAssignmentId(UUID.randomUUID());
+        a.setTenantId(tenantId);
+        a.setStaffProfileId(profile.getStaffProfileId());
+        a.setInstitutionId(institutionId);
+        a.setDepartmentId(departmentId);
+        a.setDesignation("Faculty");
+        a.setEffectiveFrom(java.time.LocalDate.now().minusYears(1));
+        a.setStatus("ACTIVE");
+        staffAssignments.add(a);
+        return a;
+    }
+
     StudentProfile student(UUID institutionId) {
         StudentProfile s = new StudentProfile();
         s.setStudentProfileId(UUID.randomUUID());
@@ -224,6 +281,15 @@ final class ApprovalTestWorld {
         s.setInstitutionId(institutionId);
         students.put(s.getStudentProfileId(), s);
         return s;
+    }
+
+    UserAccount guardianAccount(String mobile) {
+        UUID id = UUID.randomUUID();
+        UserAccount account = UserAccount.builder().id(new UserAccountId(tenantId, id))
+                .userType(UserType.GUARDIAN).displayName("Guardian").mobile(mobile)
+                .status(UserAccountStatus.PENDING_ACTIVATION).createdBy(UUID.randomUUID()).updatedBy(UUID.randomUUID()).build();
+        guardianAccounts.put(mobile, account);
+        return account;
     }
 
     StudentGuardianLink link(UUID studentId) {

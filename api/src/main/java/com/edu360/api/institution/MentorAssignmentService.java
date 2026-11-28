@@ -3,10 +3,12 @@ package com.edu360.api.institution;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.MentorAssignRequest;
 import com.edu360.api.institution.dto.MentorAssignResponse;
@@ -14,6 +16,7 @@ import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
+import com.edu360.api.time.TenantClock;
 
 import lombok.RequiredArgsConstructor;
 
@@ -51,9 +54,15 @@ public class MentorAssignmentService {
     private final StaffAssignmentRepository staffAssignmentRepository;
     private final MentorAssignmentRepository mentorAssignmentRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
+    private TenantClock tenantClock;
+
+    @Autowired(required = false)
+    public void setTenantClock(TenantClock clock) { this.tenantClock = clock; }
+
+    private LocalDate today(UUID tenantId) { return tenantClock != null ? tenantClock.today(tenantId) : LocalDate.now(TenantClock.DEFAULT_ZONE); }
 
     @Transactional
-    public MentorAssignResponse assignMentor(RbacPrincipal principal, UUID sectionId, MentorAssignRequest request) {
+    public MentorAssignResponse assignMentor(RbacPrincipal principal, UUID sectionId, String ifMatch, MentorAssignRequest request) {
         Section section = sectionRepository.findByTenantIdAndSectionId(principal.tenantId(), sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section " + sectionId + " was not found."));
 
@@ -66,6 +75,12 @@ public class MentorAssignmentService {
 
         permissionEvaluatorService.authorize(principal, "MENTOR_ASSIGN",
                 RbacScope.department(section.getInstitutionId(), departmentId), RbacTarget.NONE);
+
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        if (section.getRowVersion() == null || section.getRowVersion() != expectedVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Section was changed by another user. Reload and retry with the latest ETag.");
+        }
 
         StaffAssignment target = staffAssignmentRepository
                 .findByTenantIdAndStaffAssignmentId(principal.tenantId(), request.staffAssignmentId())
@@ -81,8 +96,14 @@ public class MentorAssignmentService {
                     "Staff assignment " + target.getStaffAssignmentId()
                             + " is not a faculty member of department " + departmentId + ".");
         }
-
-        LocalDate today = LocalDate.now();
+        if (!section.getInstitutionId().equals(target.getInstitutionId())) {
+            throw new UnauthorizedException("Staff assignment does not belong to the section institution.");
+        }
+        LocalDate today = today(principal.tenantId());
+        requireEffective(target, today);
+        if (sectionRepository.bumpRowVersion(principal.tenantId(), sectionId, expectedVersion, principal.userAccountId()) != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT", "Section was changed by another user. Reload and retry with the latest ETag.");
+        }
         mentorAssignmentRepository.findByTenantIdAndSectionIdAndEffectiveToIsNull(principal.tenantId(), sectionId)
                 .ifPresent(current -> {
                     current.setEffectiveTo(today);
@@ -101,7 +122,14 @@ public class MentorAssignmentService {
         created.setUpdatedBy(principal.userAccountId());
         mentorAssignmentRepository.save(created);
 
-        return new MentorAssignResponse(sectionId, created.getMentorAssignmentId(), target.getStaffAssignmentId());
+        return new MentorAssignResponse(sectionId, created.getMentorAssignmentId(), target.getStaffAssignmentId(), expectedVersion + 1);
+    }
+
+    private void requireEffective(StaffAssignment target, LocalDate date) {
+        if (target.getEffectiveFrom() == null || target.getEffectiveFrom().isAfter(date)
+                || (target.getEffectiveTo() != null && target.getEffectiveTo().isBefore(date))) {
+            throw new BusinessRuleViolationException("STAFF_ASSIGNMENT_NOT_EFFECTIVE", "Staff assignment is not effective on the allocation date.");
+        }
     }
 
     private UUID departmentOf(UUID tenantId, UUID semesterId) {
@@ -116,4 +144,21 @@ public class MentorAssignmentService {
                         "Program " + programYear.getProgramId() + " was not found."));
         return program.getDepartmentId();
     }
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the section ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replace(String.valueOf((char) 34), "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException();
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive section row version.");
+        }
+    }
+
+
 }

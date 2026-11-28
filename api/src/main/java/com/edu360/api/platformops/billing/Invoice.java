@@ -50,6 +50,12 @@ public class Invoice {
     @Column(name = "discount_applied_by")
     private UUID discountAppliedBy;
 
+    @Column(name = "discount_type")
+    private String discountType;
+
+    @Column(name = "discount_value", precision = 14, scale = 2)
+    private BigDecimal discountValue;
+
     @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal totalAmount;
 
@@ -58,6 +64,15 @@ public class Invoice {
 
     @Column(name = "status", nullable = false)
     private String status;
+
+    @Column(name = "approved_by")
+    private UUID approvedBy;
+
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
+    @Column(name = "due_at")
+    private LocalDate dueAt;
 
     @Column(name = "sent_at")
     private Instant sentAt;

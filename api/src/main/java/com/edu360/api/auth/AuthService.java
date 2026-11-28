@@ -92,7 +92,7 @@ import lombok.RequiredArgsConstructor;
  *    without the second step for such an account is ended at once and refused.
  * 6. Printed student passwords (R2-35, I-05): refused 7 days after issue
  *    (app.user_account.credential_expires_at); the check runs before any token is issued.
- * 7. Rotation (R2-12, story 3): a password older than the policy's rotation period (120 days)
+ * 7. Rotation (R2-12, story 3): a password older than the policy's rotation period (90 days)
  *    sets must_change_password, so MustChangePasswordFilter sends the user to the change screen.
  */
 @Service
@@ -129,9 +129,99 @@ public class AuthService {
     /** Kept for existing callers; the list itself lives in MfaRequirementService. */
     static final Set<String> MFA_REQUIRED_ROLES = MfaRequirementService.MFA_REQUIRED_ROLES;
 
+    /**
+     * MFA-01 backup codes. Set by Spring after construction (not a constructor argument, so the
+     * existing hand-built test fixtures keep compiling); null means backup codes are unavailable.
+     */
+    private MfaRecoveryService mfaRecoveryService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setMfaRecoveryService(MfaRecoveryService mfaRecoveryService) {
+        this.mfaRecoveryService = mfaRecoveryService;
+    }
+
     public AuthTokenResponse login(HttpServletRequest httpRequest, String identifier, String password,
                                    String ipAddress) {
         return login(httpRequest, identifier, password, null, ipAddress);
+    }
+
+    /**
+     * MFA-01: sign in with a one-time backup code instead of the authenticator code. The password
+     * is proven first (counted by Keycloak like any sign-in). A matching code is used up, the old
+     * authenticator is removed and every session of the account ends; the answer is then the
+     * normal MFA_ENROLMENT_REQUIRED challenge, so the screen sets up a new authenticator. No token
+     * is ever issued from a backup code alone.
+     */
+    public AuthTokenResponse loginWithRecoveryCode(HttpServletRequest httpRequest, String identifier, String password,
+                                                   String recoveryCode, String ipAddress) {
+        if (mfaRecoveryService == null) {
+            throw new AuthChallengeException(503, "RECOVERY_CODES_UNAVAILABLE",
+                    "Backup codes are not available on this server. Ask your administrator to reset your two-step login.");
+        }
+        Resolution resolution = loginTenantResolver.resolve(httpRequest);
+        String realm = realmOf(resolution);
+        String username = keycloakUsernameFor(resolution, identifier);
+
+        PasswordCheck check = keycloakAuthClient.verifyPassword(realm, username, password,
+                realmSecurityService.passwordCheckSecret(realm));
+        if (check != PasswordCheck.VERIFIED) {
+            throw refused(realm, username, identifier, ipAddress, false);
+        }
+        KeycloakUser kcUser = keycloakAdminClient.findUser(realm, username)
+                .orElseThrow(() -> refused(realm, username, identifier, ipAddress, false));
+
+        if (!mfaRecoveryService.consume(realm, kcUser.id(), recoveryCode)) {
+            auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress,
+                    "Wrong or already used backup code");
+            throw new AuthChallengeException(401, "INVALID_RECOVERY_CODE",
+                    "That backup code is not valid or was already used.");
+        }
+        keycloakAdminClient.removeOtpCredentials(realm, kcUser.id());
+        mfaRecoveryService.clear(realm, kcUser.id());
+        keycloakAdminClient.logoutUser(realm, kcUser.id());
+        auditLogService.record(AuditEventType.MFA_RECOVERY_CODE_USED, null, identifier, ipAddress,
+                "Backup code used; old authenticator removed, all sessions ended");
+        throw enrolmentRequired(realm, username);
+    }
+
+    /**
+     * MFA-01: a signed-in user replaces their backup codes. The current password is proven again,
+     * so a stolen open session alone cannot mint codes that would bypass the authenticator later.
+     */
+    public java.util.List<String> issueRecoveryCodes(Object principal, String keycloakSubject, String currentPassword,
+                                                     String ipAddress) {
+        if (mfaRecoveryService == null) {
+            throw new AuthChallengeException(503, "RECOVERY_CODES_UNAVAILABLE", "Backup codes are not available on this server.");
+        }
+        String realm;
+        String identifier;
+        switch (principal) {
+            case TenantPrincipal tenantPrincipal -> {
+                Tenant tenant = tenantRepository.findById(tenantPrincipal.tenantId())
+                        .orElseThrow(() -> new InvalidCredentialsException("Tenant no longer exists"));
+                UserAccount account = userAccountRepository
+                        .findById(new UserAccountId(tenantPrincipal.tenantId(), tenantPrincipal.userAccountId()))
+                        .orElseThrow(() -> new InvalidCredentialsException("Account no longer exists"));
+                realm = tenant.getKeycloakRealm();
+                identifier = identifierFor(tenantPrincipal.tenantId(), tenantPrincipal.userAccountId(), account);
+            }
+            case PlatformPrincipal platformPrincipal -> {
+                realm = keycloakProperties.getPlatformRealm();
+                identifier = platformPrincipal.email();
+            }
+            case null, default -> throw new InvalidCredentialsException("Sign in again to get backup codes");
+        }
+        verifyCurrentPassword(realm, keycloakSubject, identifier, currentPassword, ipAddress);
+        boolean hasAuthenticator = keycloakAdminClient.listCredentials(realm, keycloakSubject).stream()
+                .anyMatch(c -> "otp".equalsIgnoreCase(c.type()));
+        if (!hasAuthenticator) {
+            throw new AuthChallengeException(409, "NO_AUTHENTICATOR",
+                    "Set up two-step login first. Backup codes only work with an authenticator.");
+        }
+        java.util.List<String> issued = mfaRecoveryService.issue(realm, keycloakSubject);
+        auditLogService.record(AuditEventType.MFA_RECOVERY_CODES_ISSUED, null, identifier, ipAddress,
+                "New backup codes issued; earlier codes no longer work");
+        return issued;
     }
 
     public AuthTokenResponse login(HttpServletRequest httpRequest, String identifier, String password,
@@ -148,10 +238,25 @@ public class AuthService {
         }
 
         AuthTokenResponse response = toResponse(resolution, tokens);
+        recordPlatformLastLogin(resolution, response.user());
         auditLogService.record(AuditEventType.LOGIN_SUCCESS, null, identifier, ipAddress,
                 totp == null || totp.isBlank() ? null : "Two-step login completed");
         recordSignedInDevice(httpRequest, resolution, response, tokens, ipAddress);
         return response;
+    }
+
+    private void recordPlatformLastLogin(Resolution resolution, AuthUserResponse user) {
+        if (!(resolution instanceof PlatformLogin) || user == null || user.id() == null) {
+            return;
+        }
+        try {
+            int updated = platformUserRepository.updateLastLogin(user.id(), Instant.now());
+            if (updated != 1) {
+                log.warn("Could not record last login for platform user {}: updated {} rows", user.id(), updated);
+            }
+        } catch (RuntimeException ex) {
+            log.warn("Could not record last login for platform user {}: {}", user.id(), ex.getMessage());
+        }
     }
 
     /**
@@ -162,7 +267,7 @@ public class AuthService {
      * here: the screen then asks for the NEXT code and signs in normally, because Keycloak does
      * not accept the same code twice.
      */
-    public void confirmMfaEnrolment(HttpServletRequest httpRequest, String identifier, String password,
+    public java.util.List<String> confirmMfaEnrolment(HttpServletRequest httpRequest, String identifier, String password,
                                     String enrolmentId, String code, String deviceName, String ipAddress) {
         Resolution resolution = loginTenantResolver.resolve(httpRequest);
         String realm = realmOf(resolution);
@@ -177,8 +282,21 @@ public class AuthService {
         KeycloakAdminClient.OtpConfirmResult result =
                 keycloakAdminClient.confirmOtpEnrolment(realm, username, enrolmentId, code, deviceName);
         switch (result.outcome()) {
-            case CONFIRMED -> auditLogService.record(AuditEventType.MFA_ENROLLED, null, identifier, ipAddress,
-                    "Authenticator app set up in the EDU 360 sign-in screen");
+            case CONFIRMED -> {
+                auditLogService.record(AuditEventType.MFA_ENROLLED, null, identifier, ipAddress,
+                        "Authenticator app set up in the EDU 360 sign-in screen");
+                // MFA-01: a new authenticator always comes with a fresh set of backup codes.
+                if (mfaRecoveryService != null) {
+                    java.util.Optional<KeycloakUser> kcUser = keycloakAdminClient.findUser(realm, username);
+                    if (kcUser.isPresent()) {
+                        java.util.List<String> issued = mfaRecoveryService.issue(realm, kcUser.get().id());
+                        auditLogService.record(AuditEventType.MFA_RECOVERY_CODES_ISSUED, null, identifier, ipAddress,
+                                "Backup codes issued with the new authenticator");
+                        return issued;
+                    }
+                }
+                return java.util.List.of();
+            }
             case INVALID_CODE -> {
                 auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress,
                         "Authenticator set-up: wrong code");
@@ -197,6 +315,7 @@ public class AuthService {
                         "This set-up has expired or had too many wrong codes. Sign in again to start over.");
             }
         }
+        return java.util.List.of();
     }
 
     // --------------------------------------------------------------------- sign-in steps
@@ -333,7 +452,7 @@ public class AuthService {
         } catch (RuntimeException ex) {
             log.warn("Could not read the lockout state from Keycloak for realm {}: {}", realm, ex.getMessage());
         }
-        auditLogService.record(AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress, locked ? "LOCKED" : null);
+        auditLogService.record(locked ? AuditEventType.ACCOUNT_LOCKED : AuditEventType.LOGIN_FAILURE, null, identifier, ipAddress, locked ? "Keycloak brute-force protection locked the account" : null);
         if (locked) {
             return AuthChallengeException.locked(securityPolicyService.current().lockoutMinutes());
         }
@@ -388,12 +507,14 @@ public class AuthService {
      */
     private String keycloakUsernameFor(Resolution resolution, String identifier) {
         String trimmed = identifier == null ? "" : identifier.trim();
-        if (!(resolution instanceof TenantLogin tenantLogin) || trimmed.contains("@") || trimmed.isEmpty()) {
+        if (!(resolution instanceof TenantLogin tenantLogin) || trimmed.isEmpty()) {
             return trimmed;
         }
         Tenant tenant = tenantLogin.tenant();
         TenantContext.set(tenant.getTenantId(), tenant.getIsolationMode(), tenant.getDbConnectionRef());
-        Optional<UUID> accountId = studentLoginLookup.accountForStudentCode(trimmed);
+        Optional<UUID> accountId = trimmed.contains("@")
+                ? studentLoginLookup.accountForVerifiedEmailAlias(trimmed)
+                : studentLoginLookup.accountForStudentCode(trimmed);
         if (accountId.isEmpty()) {
             return trimmed;
         }

@@ -1,14 +1,20 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
   Button,
+  CheckboxField,
   DataTable,
   MetricCard,
+  Modal,
   Notice,
   Panel,
+  SelectField,
+  SkeletonCard,
+  SkeletonText,
   StatusBadge,
+  TextField,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   platformOpsService,
   type SecurityPolicyItem,
@@ -22,10 +28,17 @@ export function SecurityPolicyView() {
 
   const [policy, setPolicy] = useState<SecurityPolicyItem | null>(null);
   const [incidents, setIncidents] = useState<SecurityIncidentItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [realmPreview, setRealmPreview] = useState<import("../../api/platformOpsService").RealmSyncPreviewItem | null>(null);
+  const [realmSyncRun, setRealmSyncRun] = useState<import("../../api/platformOpsService").RealmSyncRunItem | null>(null);
+  const [previewingRealms, setPreviewingRealms] = useState(false);
+  const [applyingRealms, setApplyingRealms] = useState(false);
+  const [retryingRealms, setRetryingRealms] = useState(false);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [policyError, setPolicyError] = useState("");
+  const [incidentError, setIncidentError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   // Edit policy state
   const [minPasswordLength, setMinPasswordLength] = useState(12);
@@ -43,17 +56,13 @@ export function SecurityPolicyView() {
   const [incidentSeverity, setIncidentSeverity] = useState("MEDIUM");
   const [incidentExternalNotify, setIncidentExternalNotify] = useState(false);
   const [submittingIncident, setSubmittingIncident] = useState(false);
+  const [incidentModalError, setIncidentModalError] = useState("");
 
-  const loadData = async () => {
-    setLoading(true);
-    setError("");
+  const loadPolicy = useCallback(async () => {
+    setPolicyError("");
     try {
-      const [pol, incs] = await Promise.all([
-        platformOpsService.getSecurityPolicy(),
-        platformOpsService.listSecurityIncidents(),
-      ]);
+      const pol = await platformOpsService.getSecurityPolicy();
       setPolicy(pol);
-      setIncidents(incs);
       setMinPasswordLength(pol.minPasswordLength);
       setRequireSpecialChar(pol.requireSpecialChar);
       setRequireDigit(pol.requireDigit);
@@ -63,20 +72,37 @@ export function SecurityPolicyView() {
       setMfaRequiredForPrivileged(pol.mfaRequiredForPrivileged);
       setDefaultBackupRetentionDays(pol.defaultBackupRetentionDays);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load security configuration");
-    } finally {
-      setLoading(false);
+      setPolicy(null);
+      setPolicyError(err instanceof Error ? err.message : "Failed to load security policy configuration");
     }
-  };
+  }, []);
+
+  const loadIncidents = useCallback(async () => {
+    setIncidentError("");
+    try {
+      const incs = await platformOpsService.listSecurityIncidents();
+      setIncidents(incs);
+    } catch (err: unknown) {
+      setIncidentError(err instanceof Error ? err.message : "Failed to load incident history");
+    }
+  }, []);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setActionError("");
+    await Promise.all([loadPolicy(), loadIncidents()]);
+    setLoading(false);
+  }, [loadPolicy, loadIncidents]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+  }, [loadData]);
 
   const handleSavePolicy = async (e: FormEvent) => {
     e.preventDefault();
     setSavingPolicy(true);
-    setError("");
+    setActionError("");
+    setMessage("");
     try {
       const updated = await platformOpsService.updateSecurityPolicy({
         minPasswordLength,
@@ -91,16 +117,57 @@ export function SecurityPolicyView() {
       setPolicy(updated);
       setMessage("Platform security policy updated successfully.");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save security policy");
+      setActionError(err instanceof Error ? err.message : "Failed to save security policy");
     } finally {
       setSavingPolicy(false);
     }
   };
 
+  const handlePreviewRealmSync = async () => {
+    setPreviewingRealms(true);
+    setActionError("");
+    setRealmSyncRun(null);
+    try {
+      setRealmPreview(await platformOpsService.previewSecurityPolicyRealmSync());
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to preview realm security sync");
+    } finally {
+      setPreviewingRealms(false);
+    }
+  };
+
+  const handleApplyRealmSync = async () => {
+    if (!realmPreview) return;
+    setApplyingRealms(true);
+    setActionError("");
+    try {
+      setRealmSyncRun(await platformOpsService.applySecurityPolicyRealmSync(realmPreview.previewId));
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to apply realm security policy");
+    } finally {
+      setApplyingRealms(false);
+    }
+  };
+
+  const handleRetryFailedRealms = async () => {
+    if (!realmSyncRun) return;
+    setRetryingRealms(true);
+    setActionError("");
+    try {
+      setRealmSyncRun(await platformOpsService.retryFailedSecurityPolicyRealms(realmSyncRun.runId));
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to retry failed realms");
+    } finally {
+      setRetryingRealms(false);
+    }
+  };
+
+  const failedRealmCount = realmSyncRun?.results.filter((result) => !result.applied).length ?? 0;
+
   const handleCreateIncident = async (e: FormEvent) => {
     e.preventDefault();
     setSubmittingIncident(true);
-    setError("");
+    setIncidentModalError("");
     try {
       await platformOpsService.createSecurityIncident({
         title: incidentTitle.trim(),
@@ -110,58 +177,66 @@ export function SecurityPolicyView() {
       setMessage("Security incident logged.");
       setShowIncidentModal(false);
       setIncidentTitle("");
-      loadData();
+      setIncidentSeverity("MEDIUM");
+      setIncidentExternalNotify(false);
+      void loadIncidents();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to log security incident");
+      setIncidentModalError(err instanceof Error ? err.message : "Failed to log security incident");
     } finally {
       setSubmittingIncident(false);
     }
   };
 
   const handleUpdateIncidentStatus = async (id: string, newStatus: string) => {
+    setActionError("");
     try {
       await platformOpsService.updateSecurityIncident(id, {
         status: newStatus,
         closureNote: newStatus === "CLOSED" ? "Resolved by Data Protection / Security Officer" : undefined,
       });
       setMessage(`Incident marked as ${newStatus}.`);
-      loadData();
+      void loadIncidents();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update incident status");
+      setActionError(err instanceof Error ? err.message : "Failed to update incident status");
     }
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Security Policy & Incidents"
         description="Global platform authentication controls, password complexity rules, session timeouts, and security incident tracking."
         actions={
           canEditPolicy && (
-            <Button onClick={() => setShowIncidentModal(true)}>Log Security Incident</Button>
+            <Button onClick={() => {
+              setIncidentModalError("");
+              setShowIncidentModal(true);
+            }}>
+              Log Security Incident
+            </Button>
           )
         }
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {actionError && <Notice tone="danger">{actionError}</Notice>}
 
       <div className="kpi-grid">
         <MetricCard
           label="MFA Enforcement"
-          value={policy?.mfaRequiredForPrivileged ? "Active" : "Optional"}
+          value={policy ? (policy.mfaRequiredForPrivileged ? "Active" : "Optional") : "—"}
           note="Privileged staff accounts"
           mark="shield"
         />
         <MetricCard
           label="Lockout Threshold"
-          value={`${policy?.maxFailedLogins ?? 5} attempts`}
-          note={`Lockout for ${policy?.lockoutMinutes ?? 15} mins`}
+          value={policy ? `${policy.maxFailedLogins} attempts` : "—"}
+          note={policy ? `Lockout for ${policy.lockoutMinutes} mins` : "Pending policy load"}
           mark="lock"
         />
         <MetricCard
           label="Session Timeout"
-          value={`${policy?.idleSessionTimeoutMinutes ?? 30} mins`}
+          value={policy ? `${policy.idleSessionTimeoutMinutes} mins` : "—"}
           note="Idle automatic sign-out"
           mark="clock"
         />
@@ -173,118 +248,163 @@ export function SecurityPolicyView() {
         />
       </div>
 
-      <div className="platform-two-col">
+      {canEditPolicy && (
+        <Panel
+          title="Realm Security Policy Re-application"
+          description="Preview target realms and policy values before making changes. Credentials and client secrets are never displayed."
+        >
+          <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
+            <Button variant="secondary" onClick={() => void handlePreviewRealmSync()} disabled={previewingRealms || applyingRealms || retryingRealms}>
+              {previewingRealms ? "Loading Preview..." : "Preview Realm Sync"}
+            </Button>
+            {realmPreview && (
+              <Button onClick={() => void handleApplyRealmSync()} disabled={applyingRealms || retryingRealms || realmPreview.realms.length === 0}>
+                {applyingRealms ? "Applying..." : "Apply to Previewed Realms"}
+              </Button>
+            )}
+            {failedRealmCount > 0 && realmSyncRun && (
+              <Button variant="secondary" onClick={() => void handleRetryFailedRealms()} disabled={retryingRealms || applyingRealms}>
+                {retryingRealms ? "Retrying Failed..." : "Retry Failed Realms (" + failedRealmCount + ")"}
+              </Button>
+            )}
+          </div>
+          {realmPreview && (
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <p><strong>Read-only preview</strong> · {realmPreview.realms.length} realm(s) targeted</p>
+              <p>
+                Password length: {realmPreview.settings.minPasswordLength}; digits: {realmPreview.settings.requireDigit ? "required" : "not required"}; special character: {realmPreview.settings.requireSpecialChar ? "required" : "not required"}; lockout: {realmPreview.settings.maxFailedLogins} failures / {realmPreview.settings.lockoutMinutes} min; idle timeout: {realmPreview.settings.idleSessionTimeoutMinutes} min.
+              </p>
+              <DataTable headers={["Target realm", "Action"]}>
+                {realmPreview.realms.map((realm) => (
+                  <tr key={realm}><td>{realm}</td><td>Apply current security baseline</td></tr>
+                ))}
+              </DataTable>
+            </div>
+          )}
+          {realmSyncRun && (
+            <div>
+              <p><strong>Execution results</strong> · {realmSyncRun.results.length - failedRealmCount} applied · {failedRealmCount} failed</p>
+              <DataTable headers={["Realm", "Result", "Safe error code"]}>
+                {realmSyncRun.results.map((result) => (
+                  <tr key={result.realm} style={!result.applied ? { background: "var(--color-status-danger-bg)" } : undefined}>
+                    <td>{result.realm}</td>
+                    <td><StatusBadge value={result.applied ? "APPLIED" : "FAILED"} /></td>
+                    <td>{result.error ?? "—"}</td>
+                  </tr>
+                ))}
+              </DataTable>
+              {failedRealmCount > 0 && <Notice tone="warning">Failed realms are highlighted. Retry targets only the failed realms from this run.</Notice>}
+            </div>
+          )}
+        </Panel>
+      )}
+
+      <div className="app-two-col">
         {/* Policy Configuration Form */}
         <Panel title="Platform Security Rules" description="Set security baseline enforced across realms">
-          {loading ? (
-            <div className="platform-empty-inline">
-              <Spinner label="Loading policy..." />
-            </div>
+          {loading && !policy ? (
+            <SkeletonCard>
+              <SkeletonText height="1rem" width="45%" />
+              <SkeletonText lines={5} height="1.25rem" />
+            </SkeletonCard>
+          ) : policyError && !policy ? (
+            <ErrorState
+              message={policyError}
+              action={
+                <Button variant="secondary" onClick={() => void loadPolicy()}>
+                  Retry Policy Load
+                </Button>
+              }
+            />
           ) : (
             <form onSubmit={handleSavePolicy}>
-              <div style={{ display: "grid", gap: "14px" }}>
-                <label className="field-label">
-                  <span>Minimum Password Length</span>
-                  <input
+              <div style={{ display: "grid", gap: "var(--space-3)" }}>
+                <TextField
+                  id="sec-min-pwd-len"
+                  label="Minimum Password Length"
+                  type="number"
+                  value={minPasswordLength}
+                  onChange={(e) => setMinPasswordLength(Number(e.target.value))}
+                  min={8}
+                  max={64}
+                  disabled={!canEditPolicy}
+                  required
+                />
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                  <TextField
+                    id="sec-max-failed-logins"
+                    label="Max Failed Logins"
                     type="number"
-                    className="platform-input"
-                    value={minPasswordLength}
-                    onChange={(e) => setMinPasswordLength(Number(e.target.value))}
-                    min="8"
-                    max="64"
+                    value={maxFailedLogins}
+                    onChange={(e) => setMaxFailedLogins(Number(e.target.value))}
+                    min={3}
+                    max={10}
                     disabled={!canEditPolicy}
                     required
                   />
-                </label>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <label className="field-label">
-                    <span>Max Failed Logins</span>
-                    <input
-                      type="number"
-                      className="platform-input"
-                      value={maxFailedLogins}
-                      onChange={(e) => setMaxFailedLogins(Number(e.target.value))}
-                      min="3"
-                      max="10"
-                      disabled={!canEditPolicy}
-                      required
-                    />
-                  </label>
-                  <label className="field-label">
-                    <span>Lockout Duration (mins)</span>
-                    <input
-                      type="number"
-                      className="platform-input"
-                      value={lockoutMinutes}
-                      onChange={(e) => setLockoutMinutes(Number(e.target.value))}
-                      min="5"
-                      disabled={!canEditPolicy}
-                      required
-                    />
-                  </label>
+                  <TextField
+                    id="sec-lockout-minutes"
+                    label="Lockout Duration (mins)"
+                    type="number"
+                    value={lockoutMinutes}
+                    onChange={(e) => setLockoutMinutes(Number(e.target.value))}
+                    min={5}
+                    disabled={!canEditPolicy}
+                    required
+                  />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <label className="field-label">
-                    <span>Idle Session Timeout (mins)</span>
-                    <input
-                      type="number"
-                      className="platform-input"
-                      value={idleSessionTimeoutMinutes}
-                      onChange={(e) => setIdleSessionTimeoutMinutes(Number(e.target.value))}
-                      min="5"
-                      disabled={!canEditPolicy}
-                      required
-                    />
-                  </label>
-                  <label className="field-label">
-                    <span>Backup Retention (days)</span>
-                    <input
-                      type="number"
-                      className="platform-input"
-                      value={defaultBackupRetentionDays}
-                      onChange={(e) => setDefaultBackupRetentionDays(Number(e.target.value))}
-                      min="30"
-                      disabled={!canEditPolicy}
-                      required
-                    />
-                  </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                  <TextField
+                    id="sec-idle-timeout"
+                    label="Idle Session Timeout (mins)"
+                    type="number"
+                    value={idleSessionTimeoutMinutes}
+                    onChange={(e) => setIdleSessionTimeoutMinutes(Number(e.target.value))}
+                    min={5}
+                    disabled={!canEditPolicy}
+                    required
+                  />
+                  <TextField
+                    id="sec-backup-retention"
+                    label="Backup Retention (days)"
+                    type="number"
+                    value={defaultBackupRetentionDays}
+                    onChange={(e) => setDefaultBackupRetentionDays(Number(e.target.value))}
+                    min={30}
+                    disabled={!canEditPolicy}
+                    required
+                  />
                 </div>
 
-                <div style={{ display: "grid", gap: "8px", marginTop: "4px" }}>
-                  <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={requireSpecialChar}
-                      onChange={(e) => setRequireSpecialChar(e.target.checked)}
-                      disabled={!canEditPolicy}
-                    />
-                    <span>Require at least one special character</span>
-                  </label>
-                  <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={requireDigit}
-                      onChange={(e) => setRequireDigit(e.target.checked)}
-                      disabled={!canEditPolicy}
-                    />
-                    <span>Require at least one numerical digit</span>
-                  </label>
-                  <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={mfaRequiredForPrivileged}
-                      onChange={(e) => setMfaRequiredForPrivileged(e.target.checked)}
-                      disabled={!canEditPolicy}
-                    />
-                    <span>Enforce Multi-Factor Authentication (MFA) for privileged roles</span>
-                  </label>
+                <div style={{ display: "grid", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                  <CheckboxField
+                    id="sec-require-special"
+                    label="Require at least one special character"
+                    checked={requireSpecialChar}
+                    onChange={(e) => setRequireSpecialChar(e.target.checked)}
+                    disabled={!canEditPolicy}
+                  />
+                  <CheckboxField
+                    id="sec-require-digit"
+                    label="Require at least one numerical digit"
+                    checked={requireDigit}
+                    onChange={(e) => setRequireDigit(e.target.checked)}
+                    disabled={!canEditPolicy}
+                  />
+                  <CheckboxField
+                    id="sec-mfa-privileged"
+                    label="Enforce Multi-Factor Authentication (MFA) for privileged roles"
+                    checked={mfaRequiredForPrivileged}
+                    onChange={(e) => setMfaRequiredForPrivileged(e.target.checked)}
+                    disabled={!canEditPolicy}
+                  />
                 </div>
               </div>
 
               {canEditPolicy && (
-                <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ marginTop: "var(--space-5)", display: "flex", justifyContent: "flex-end" }}>
                   <Button type="submit" disabled={savingPolicy}>
                     {savingPolicy ? "Saving Policy..." : "Update Security Policy"}
                   </Button>
@@ -296,15 +416,28 @@ export function SecurityPolicyView() {
 
         {/* Incidents Panel */}
         <Panel title="Security Incidents" description="Active threat reports and containment log">
-          {incidents.length === 0 ? (
-            <p className="platform-empty-inline">No security incidents logged.</p>
+          {incidentError ? (
+            <ErrorState
+              message={incidentError}
+              action={
+                <Button variant="secondary" onClick={() => void loadIncidents()}>
+                  Retry Incident Load
+                </Button>
+              }
+            />
           ) : (
-            <DataTable headers={["Title", "Severity", "Status", "Actions"]}>
+            <DataTable
+              headers={["Title", "Severity", "Status", "Actions"]}
+              loading={loading && incidents.length === 0}
+              loadingLabel="Loading incidents"
+              empty={!loading && incidents.length === 0}
+              emptyMessage="No security incidents logged."
+            >
               {incidents.map((inc) => (
                 <tr key={inc.securityIncidentId}>
                   <td>
                     <strong>{inc.title}</strong>
-                    <small className="platform-cell-sub">
+                    <small className="app-cell-sub">
                       Detected {new Date(inc.detectedAt).toLocaleDateString()}
                     </small>
                   </td>
@@ -317,7 +450,7 @@ export function SecurityPolicyView() {
                     <StatusBadge value={inc.status} />
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: "6px" }}>
+                    <div style={{ display: "flex", gap: "var(--space-1)" }}>
                       {inc.status === "DETECTED" && canEditPolicy && (
                         <Button size="sm" variant="secondary" onClick={() => handleUpdateIncidentStatus(inc.securityIncidentId, "CONTAINED")}>
                           Contain
@@ -343,60 +476,59 @@ export function SecurityPolicyView() {
       </div>
 
       {/* New Incident Modal */}
-      {showIncidentModal && (
-        <div className="platform-modal-backdrop">
-          <div className="platform-modal" role="dialog" aria-label="Log Security Incident">
-            <header>
-              <h2>Log Security Incident</h2>
-              <p>Report an anomaly, breach attempt, or suspicious platform activity.</p>
-            </header>
-            <form onSubmit={handleCreateIncident}>
-              <div style={{ display: "grid", gap: "12px" }}>
-                <label className="field-label">
-                  <span>Incident Summary / Title</span>
-                  <input
-                    type="text"
-                    className="platform-input"
-                    value={incidentTitle}
-                    onChange={(e) => setIncidentTitle(e.target.value)}
-                    placeholder="e.g. Unusual brute-force attempt on admin auth"
-                    required
-                  />
-                </label>
-                <label className="field-label">
-                  <span>Severity Level</span>
-                  <select
-                    className="platform-input"
-                    value={incidentSeverity}
-                    onChange={(e) => setIncidentSeverity(e.target.value)}
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
-                  </select>
-                </label>
-                <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={incidentExternalNotify}
-                    onChange={(e) => setIncidentExternalNotify(e.target.checked)}
-                  />
-                  <span>CERT-In / External authority notification required</span>
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <Button variant="secondary" onClick={() => setShowIncidentModal(false)} type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submittingIncident}>
-                  {submittingIncident ? "Logging..." : "Submit Incident Report"}
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showIncidentModal}
+        onClose={() => setShowIncidentModal(false)}
+        kicker="SECURITY"
+        title="Log Security Incident"
+        titleId="log-incident-title"
+        description="Report an anomaly, breach attempt, or suspicious platform activity."
+        size="sm"
+      >
+        <form onSubmit={handleCreateIncident}>
+          {incidentModalError && (
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <Notice tone="danger">{incidentModalError}</Notice>
+            </div>
+          )}
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+            <TextField
+              id="incident-title"
+              label="Incident Summary / Title"
+              value={incidentTitle}
+              onChange={(e) => setIncidentTitle(e.target.value)}
+              placeholder="e.g. Unusual brute-force attempt on admin auth"
+              required
+            />
+            <SelectField
+              id="incident-severity"
+              label="Severity Level"
+              value={incidentSeverity}
+              onChange={(e) => setIncidentSeverity(e.target.value)}
+              options={[
+                { value: "LOW", label: "Low" },
+                { value: "MEDIUM", label: "Medium" },
+                { value: "HIGH", label: "High" },
+                { value: "CRITICAL", label: "Critical" },
+              ]}
+            />
+            <CheckboxField
+              id="incident-external-notify"
+              label="CERT-In / External authority notification required"
+              checked={incidentExternalNotify}
+              onChange={(e) => setIncidentExternalNotify(e.target.checked)}
+            />
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-5)" }}>
+            <Button variant="secondary" onClick={() => setShowIncidentModal(false)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" busy={submittingIncident}>
+              Submit Incident Report
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

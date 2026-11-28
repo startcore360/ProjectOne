@@ -15,9 +15,19 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.edu360.api.config.keycloak.KeycloakProvisioningException;
+import com.edu360.api.audit.AuditFailureException;
+import org.springframework.dao.DataAccessException;
 
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.HttpMessageNotWritableException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +42,23 @@ import jakarta.servlet.http.HttpServletRequest;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex, HttpServletRequest request) {
+        ResponseEntity<Map<String, Object>> response = buildResponse(ex.getStatus(), ex.getErrorCode(), ex.getMessage(), request);
+        if ("OTP_PROVIDER_NOT_CONFIGURED".equals(ex.getErrorCode())) {
+            Map<String, Object> body = new HashMap<>(response.getBody());
+            body.put("retryable", false);
+            return ResponseEntity.status(ex.getStatus()).header("Cache-Control", "no-store").body(body);
+        }
+        return response;
+    }
+
+    @ExceptionHandler(AuditFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleAuditFailure(AuditFailureException ex, HttpServletRequest request) {
+        log.error("Required audit write failed; transaction will roll back", ex);
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "AUDIT_UNAVAILABLE", "The required audit record could not be stored; no change was committed.", request);
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
@@ -49,9 +76,26 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found: " + ex.getRequestURL(), request);
     }
 
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+        String code = status.name();
+        String message = ex.getReason() != null ? ex.getReason() : status.getReasonPhrase();
+        return buildResponse(status, code, message, request);
+    }
+
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateResourceException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", ex.getMessage(), request);
+        ResponseEntity<Map<String, Object>> base = buildResponse(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", ex.getMessage(), request);
+        if (ex.getFieldName() != null && !ex.getFieldName().isBlank()) {
+            Map<String, Object> body = new HashMap<>(base.getBody());
+            body.put("fieldErrors", Map.of(ex.getFieldName(), ex.getMessage()));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
+        return base;
     }
 
     /** P-01: deciding your own request is 403, not 422. */
@@ -62,22 +106,30 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessRuleViolationException.class)
     public ResponseEntity<Map<String, Object>> handleBusinessRuleViolation(BusinessRuleViolationException ex, HttpServletRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now().toString());
-        body.put("status", HttpStatus.UNPROCESSABLE_ENTITY.value());
-        body.put("error", ex.getMessage());
-        body.put("errorCode", ex.getErrorCode());
-        body.put("code", ex.getErrorCode());
-        body.put("message", ex.getMessage());
-        if (request != null) {
-            body.put("path", request.getRequestURI());
-        }
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body);
+        HttpStatus status = businessRuleStatus(ex.getErrorCode());
+        return buildResponse(status, ex.getErrorCode(), ex.getMessage(), request);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage(), request);
+        String code = ex.getReasonCode() != null ? ex.getReasonCode() : "FORBIDDEN";
+        ResponseEntity<Map<String, Object>> base = buildResponse(HttpStatus.FORBIDDEN, code, ex.getMessage(), request);
+        if (ex.getActionCode() == null && ex.getHeldByRoleNames().isEmpty()) {
+            return base;
+        }
+        Map<String, Object> body = new HashMap<>(base.getBody());
+        if (ex.getActionCode() != null) {
+            body.put("actionCode", ex.getActionCode());
+        }
+        if (ex.getActionDescription() != null) {
+            body.put("actionDescription", ex.getActionDescription());
+        }
+        // Deliberately never a long list (CLAUDE.md UI/UX standard): at most the 2 highest-
+        // priority roles, and only for a non-sensitive denial - see PermissionEvaluatorService.
+        if (!ex.getHeldByRoleNames().isEmpty()) {
+            body.put("heldBy", ex.getHeldByRoleNames());
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
     /** A-02: several active roles and none chosen - 409, the screen sends the user to the role switcher. */
@@ -125,6 +177,23 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "Malformed JSON request body", request);
     }
 
+    @ExceptionHandler(HttpMessageNotWritableException.class)
+    public ResponseEntity<Map<String, Object>> handleNotWritableMessage(HttpMessageNotWritableException ex, HttpServletRequest request) {
+        String correlationId = java.util.UUID.randomUUID().toString();
+        log.error("Internal serialization error during response write [correlationId={}]", correlationId, ex);
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("code", "INTERNAL_ERROR");
+        body.put("error", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
+        body.put("message", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
+        body.put("correlationId", correlationId);
+        if (request != null) {
+            body.put("path", request.getRequestURI());
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, "TYPE_MISMATCH", "Invalid parameter: " + ex.getName(), request);
@@ -157,21 +226,91 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
-        log.warn("Database integrity violation: {}", ex.getMessage());
-        String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
-        if (msg.contains("unique") || msg.contains("duplicate")) {
-            return buildResponse(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", "A record with this identifier already exists.", request);
-        } else if (msg.contains("foreign key") || msg.contains("referential integrity") || msg.contains("violates foreign key constraint")) {
-            return buildResponse(HttpStatus.NOT_FOUND, "REFERENCE_NOT_FOUND", "Referenced entity was not found in the current scope.", request);
-        } else {
-            return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, "BUSINESS_RULE_VIOLATION", "The requested operation violates a business rule constraint.", request);
+        return mapDatabaseFailure(ex, request);
+    }
+
+    @ExceptionHandler(org.springframework.dao.EmptyResultDataAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleEmptyResult(org.springframework.dao.EmptyResultDataAccessException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Requested resource not found.", request);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleDataAccessFailure(DataAccessException ex, HttpServletRequest request) {
+        return mapDatabaseFailure(ex, request);
+    }
+
+    private HttpStatus businessRuleStatus(String code) {
+        if (code == null) return HttpStatus.UNPROCESSABLE_ENTITY;
+        return switch (code) {
+            case "TERM_LOCKED", "ATTENDANCE_ALREADY_SUBMITTED", "PUBLISHED_SLOT_IMMUTABLE", "TIMETABLE_SLOT_NOT_AVAILABLE", "ASSIGNMENT_CLOSED",
+                 "VERSION_CONFLICT", "FILE_NOT_AVAILABLE" -> HttpStatus.CONFLICT;
+            case "PAYLOAD_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case "ONLINE_SESSION_ACCESS_DENIED" -> HttpStatus.FORBIDDEN;
+            case "IF_MATCH_REQUIRED", "IDEMPOTENCY_KEY_REQUIRED", "INVALID_CURSOR",
+                 "INVALID_QUERY" -> HttpStatus.BAD_REQUEST;
+            default -> HttpStatus.UNPROCESSABLE_ENTITY;
+        };
+    }
+
+    private ResponseEntity<Map<String, Object>> mapDatabaseFailure(Throwable ex, HttpServletRequest request) {
+        log.error("Database failure occurred during request {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+        String message = ex.getMessage();
+        Throwable cause = ex.getCause();
+        while (cause != null && cause.getMessage() != null) { message = cause.getMessage(); cause = cause.getCause(); }
+        String msg = message == null ? "" : message.toLowerCase(java.util.Locale.ROOT);
+        if (msg.contains("self_approval")) return buildResponse(HttpStatus.FORBIDDEN,"SELF_APPROVAL","You cannot approve this request.",request);
+        if (msg.contains("approval_immutable")) return buildResponse(HttpStatus.CONFLICT,"APPROVAL_IMMUTABLE","A decided approval step cannot be changed.",request);
+        if (msg.contains("term_locked")) return buildResponse(HttpStatus.CONFLICT,"TERM_LOCKED","The term is locked for this date.",request);
+        if (msg.contains("ex_timetable_teacher_no_overlap")) return buildResponse(HttpStatus.CONFLICT,"TEACHER_DOUBLE_BOOKED","The teacher already has a timetable slot during this period.",request);
+        if (msg.contains("ex_timetable_room_no_overlap")) return buildResponse(HttpStatus.CONFLICT,"ROOM_OCCUPIED","The room is already booked during this period.",request);
+        if (msg.contains("attendance_already_submitted")) return buildResponse(HttpStatus.CONFLICT,"ATTENDANCE_ALREADY_SUBMITTED","Submitted attendance cannot be changed.",request);
+        if (msg.contains("correction_locked")) return buildResponse(HttpStatus.CONFLICT,"CORRECTION_LOCKED","Attendance corrections are locked for this period.",request);
+        if (msg.contains("not_held_mismatch")) return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"NOT_HELD_MISMATCH","Attendance status must match the session held status.",request);
+        if (msg.contains("partition_year_mismatch") || msg.contains("no partition of relation") || msg.contains("partition of relation"))
+            return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"ATTENDANCE_PARTITION_MISSING","The academic-year attendance partition is not provisioned.",request);
+        if (msg.contains("unique") || msg.contains("duplicate key") || msg.contains("ux_attendance_session_1"))
+            return buildResponse(HttpStatus.CONFLICT,"DUPLICATE_RESOURCE","A record with this identifier already exists.",request);
+        if (msg.contains("foreign key") || msg.contains("referential integrity"))
+            return buildResponse(HttpStatus.NOT_FOUND,"REFERENCE_NOT_FOUND","Referenced entity was not found in the current scope.",request);
+        if (ex instanceof DataAccessException && !(ex instanceof org.springframework.dao.DataIntegrityViolationException)) {
+            log.error("DataAccessException occurred: {}", ex.getMessage(), ex);
+            return buildResponse(HttpStatus.SERVICE_UNAVAILABLE,"DATABASE_UNAVAILABLE","The database could not complete the operation.",request);
         }
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY,"BUSINESS_RULE_VIOLATION","The requested operation violates a business rule constraint.",request);
     }
 
     @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
     public ResponseEntity<Map<String, Object>> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex, HttpServletRequest request) {
         log.warn("Constraint violation: {}", ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Input validation constraint violated.", request);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        log.warn("Missing request parameter: {}", ex.getParameterName());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Required parameter '" + ex.getParameterName() + "' is missing.", request);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingHeader(MissingRequestHeaderException ex, HttpServletRequest request) {
+        log.warn("Missing request header: {}", ex.getHeaderName());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Required header '" + ex.getHeaderName() + "' is missing.", request);
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    public ResponseEntity<Map<String, Object>> handleMultipartException(Exception ex, HttpServletRequest request) {
+        log.warn("Multipart request error: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "A valid multipart file must be provided.", request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE", ex.getMessage(), request);
     }
 
     @ExceptionHandler(FeatureNotAvailableException.class)
@@ -190,6 +329,8 @@ public class GlobalExceptionHandler {
         body.put("error", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("message", "An unexpected error occurred. Please contact support quoting correlation ID: " + correlationId);
         body.put("correlationId", correlationId);
+        // E0-B15: never echo the exception class or message to the client (CLAUDE.md: a 500 returns a
+        // generic message). The full exception stays in the server log above, keyed by correlationId.
         if (request != null) {
             body.put("path", request.getRequestURI());
         }

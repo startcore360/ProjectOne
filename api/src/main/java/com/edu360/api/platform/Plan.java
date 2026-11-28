@@ -58,6 +58,57 @@ public class Plan {
     @Column(name = "max_institutions")
     private Integer maxInstitutions;
 
+    @Column(name = "max_colleges")
+    private Integer maxColleges;
+
+    @Column(name = "max_schools")
+    private Integer maxSchools;
+
+    @Column(name = "max_students")
+    private Integer maxStudents;
+
+    @Column(name = "max_staff")
+    private Integer maxStaff;
+
+    @Column(name = "setup_fee_amount", precision = 14, scale = 2)
+    private BigDecimal setupFeeAmount;
+
+    @Column(name = "discount_type")
+    private String discountType;
+
+    @Column(name = "discount_value", precision = 14, scale = 2)
+    private BigDecimal discountValue;
+
+    @Column(name = "contract_duration_months")
+    private Integer contractDurationMonths;
+
+    @Column(name = "grace_period_days", nullable = false)
+    @Builder.Default
+    private Integer gracePeriodDays = 15;
+
+    @Column(name = "renewal_mode", nullable = false)
+    @Builder.Default
+    private String renewalMode = "AUTOMATIC";
+
+    @Column(name = "pricing_engine_version", nullable = false)
+    @Builder.Default
+    private String pricingEngineVersion = "LEGACY";
+
+    @Column(name = "custom_domain_allowed", nullable = false)
+    private boolean customDomainAllowed;
+
+    @Column(name = "branding_colors_allowed", nullable = false)
+    private boolean brandingColorsAllowed;
+
+    @Column(name = "billing_cycle_months", nullable = false)
+    private Integer billingCycleMonths;
+
+    @Column(name = "sms_unit_amount", precision = 14, scale = 2)
+    private BigDecimal smsUnitAmount;
+
+    @Column(name = "storage_unit_amount_per_gb", precision = 14, scale = 2)
+    private BigDecimal storageUnitAmountPerGb;
+
     @Column(name = "status", nullable = false)
     private String status;
 
@@ -75,4 +126,5 @@ public class Plan {
 
     @Column(name = "row_version", nullable = false)
     private Integer rowVersion;
+
 }

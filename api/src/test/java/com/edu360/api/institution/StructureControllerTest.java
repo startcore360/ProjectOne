@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,8 +31,14 @@ import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.institution.dto.CreateDepartmentRequest;
 import com.edu360.api.institution.dto.CreateProgramRequest;
+import com.edu360.api.institution.dto.CreateSchoolClassRequest;
+import com.edu360.api.institution.dto.UpdateSectionRequest;
+import com.edu360.api.institution.dto.CreateSemesterRequest;
 import com.edu360.api.institution.dto.DepartmentResponse;
 import com.edu360.api.institution.dto.ProgramResponse;
+import com.edu360.api.institution.dto.SchoolClassResponse;
+import com.edu360.api.institution.dto.SectionResponse;
+import com.edu360.api.institution.dto.SemesterResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
@@ -43,6 +50,11 @@ class StructureControllerTest {
     @Mock private InstitutionRepository institutionRepository;
     @Mock private DepartmentRepository departmentRepository;
     @Mock private ProgramRepository programRepository;
+    @Mock private ProgramYearRepository programYearRepository;
+    @Mock private SemesterRepository semesterRepository;
+    @Mock private SchoolClassRepository schoolClassRepository;
+    @Mock private SectionRepository sectionRepository;
+    @Mock private AcademicSessionRepository academicSessionRepository;
     @Mock private AuditLogService auditLogService;
     @Mock private Authentication authentication;
 
@@ -63,6 +75,11 @@ class StructureControllerTest {
                 departmentRepository,
                 programRepository,
                 auditLogService);
+        structureService.setProgramYearRepository(programYearRepository);
+        structureService.setSemesterRepository(semesterRepository);
+        structureService.setSchoolClassRepository(schoolClassRepository);
+        structureService.setSectionRepository(sectionRepository);
+        structureService.setAcademicSessionRepository(academicSessionRepository);
         structureController = new StructureController(structureService);
     }
 
@@ -142,6 +159,263 @@ class StructureControllerTest {
         assertThat(response.getBody().semestersPerYear()).isEqualTo((short) 2);
 
         verify(auditLogService).record(eq(AuditEventType.PROGRAM_CREATED), any(), eq("BTECH_CSE"), any(), any());
+    }
+
+    @Test
+    void createSemester_persistsDateRangeAndRejectsInstitutionWideOverlap() {
+        mockPrincipal(TENANT_ID);
+        UUID programId = UUID.randomUUID();
+        UUID programYearId = UUID.randomUUID();
+        ProgramYear programYear = ProgramYear.builder()
+                .programYearId(programYearId)
+                .tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID)
+                .programId(programId)
+                .yearNumber((short) 1)
+                .label("Year 1")
+                .build();
+        when(programYearRepository.findByTenantIdAndProgramYearId(TENANT_ID, programYearId))
+                .thenReturn(Optional.of(programYear));
+        when(semesterRepository.existsByTenantIdAndProgramYearIdAndSemesterNumber(TENANT_ID, programYearId, (short) 1))
+                .thenReturn(false);
+        when(semesterRepository.existsOverlappingInstitutionTerm(
+                TENANT_ID, COLLEGE_ID, LocalDate.parse("2026-07-01"), LocalDate.parse("2026-11-30")))
+                .thenReturn(false);
+        when(semesterRepository.save(any(Semester.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CreateSemesterRequest request = new CreateSemesterRequest(
+                (short) 1, "Semester 1", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-11-30"));
+
+        ResponseEntity<SemesterResponse> response = structureController.createSemester(
+                TENANT_ID, COLLEGE_ID, programYearId, request, authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().startDate()).isEqualTo(LocalDate.parse("2026-07-01"));
+        assertThat(response.getBody().endDate()).isEqualTo(LocalDate.parse("2026-11-30"));
+        ArgumentCaptor<Semester> saved = ArgumentCaptor.forClass(Semester.class);
+        verify(semesterRepository).save(saved.capture());
+        assertThat(saved.getValue().getStartDate()).isEqualTo(LocalDate.parse("2026-07-01"));
+        assertThat(saved.getValue().getEndDate()).isEqualTo(LocalDate.parse("2026-11-30"));
+        verify(permissionEvaluatorService).authorize(any(), eq("STRUCTURE_MANAGE"),
+                eq(RbacScope.institution(COLLEGE_ID)), eq(RbacTarget.NONE));
+    }
+
+    @Test
+    void createSemester_rejectsDateRangeOverlappingAnotherProgramInInstitution() {
+        mockPrincipal(TENANT_ID);
+        UUID programYearId = UUID.randomUUID();
+        ProgramYear programYear = ProgramYear.builder()
+                .programYearId(programYearId)
+                .tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID)
+                .programId(UUID.randomUUID())
+                .yearNumber((short) 1)
+                .label("Year 1")
+                .build();
+        when(programYearRepository.findByTenantIdAndProgramYearId(TENANT_ID, programYearId))
+                .thenReturn(Optional.of(programYear));
+        when(semesterRepository.existsByTenantIdAndProgramYearIdAndSemesterNumber(TENANT_ID, programYearId, (short) 1))
+                .thenReturn(false);
+        when(semesterRepository.existsOverlappingInstitutionTerm(
+                TENANT_ID, COLLEGE_ID, LocalDate.parse("2026-08-01"), LocalDate.parse("2026-12-15")))
+                .thenReturn(true);
+
+        CreateSemesterRequest request = new CreateSemesterRequest(
+                (short) 1, "Semester 1", LocalDate.parse("2026-08-01"), LocalDate.parse("2026-12-15"));
+
+        assertThrows(BusinessRuleViolationException.class, () ->
+                structureController.createSemester(TENANT_ID, COLLEGE_ID, programYearId, request, authentication));
+        verify(semesterRepository, never()).save(any(Semester.class));
+    }
+
+    @Test
+    void createSemester_rejectsEndDateBeforeStartDate() {
+        mockPrincipal(TENANT_ID);
+        UUID programYearId = UUID.randomUUID();
+        ProgramYear programYear = ProgramYear.builder()
+                .programYearId(programYearId)
+                .tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID)
+                .programId(UUID.randomUUID())
+                .yearNumber((short) 1)
+                .label("Year 1")
+                .build();
+        when(programYearRepository.findByTenantIdAndProgramYearId(TENANT_ID, programYearId))
+                .thenReturn(Optional.of(programYear));
+
+        CreateSemesterRequest request = new CreateSemesterRequest(
+                (short) 1, "Semester 1", LocalDate.parse("2026-12-15"), LocalDate.parse("2026-08-01"));
+
+        assertThrows(BusinessRuleViolationException.class, () ->
+                structureController.createSemester(TENANT_ID, COLLEGE_ID, programYearId, request, authentication));
+        verify(semesterRepository, never()).save(any(Semester.class));
+    }
+
+    @Test
+    void updateDepartment_usesIfMatchAndReturnsFacultyStudentCounts() {
+        mockPrincipal(TENANT_ID);
+        Department current = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").rowVersion(2).build();
+        Department updated = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science and Engineering").status("ACTIVE").rowVersion(3).build();
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(departmentRepository.existsByTenantIdAndInstitutionIdAndDepartmentCodeAndDepartmentIdNot(
+                TENANT_ID, COLLEGE_ID, "CSE", DEPT_ID)).thenReturn(false);
+        when(departmentRepository.updateProfile(TENANT_ID, DEPT_ID, 2, "CSE",
+                "Computer Science and Engineering", USER_ID)).thenReturn(1);
+        when(departmentRepository.countActiveFaculty(TENANT_ID, DEPT_ID)).thenReturn(7L);
+        when(departmentRepository.countCurrentStudents(TENANT_ID, DEPT_ID)).thenReturn(420L);
+
+        ResponseEntity<DepartmentResponse> response = structureController.updateDepartment(
+                TENANT_ID, COLLEGE_ID, DEPT_ID, "\"2\"",
+                new CreateDepartmentRequest("CSE", "Computer Science and Engineering"), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().departmentName()).isEqualTo("Computer Science and Engineering");
+        assertThat(response.getBody().facultyCount()).isEqualTo(7);
+        assertThat(response.getBody().studentCount()).isEqualTo(420);
+        verify(permissionEvaluatorService).authorize(any(), eq("STRUCTURE_MANAGE"),
+                eq(RbacScope.institution(COLLEGE_ID)), eq(RbacTarget.NONE));
+    }
+
+    @Test
+    void updateDepartment_rejectsStaleIfMatchWithoutWriting() {
+        mockPrincipal(TENANT_ID);
+        Department current = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").rowVersion(2).build();
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID)).thenReturn(Optional.of(current));
+
+        assertThrows(BusinessRuleViolationException.class, () -> structureController.updateDepartment(
+                TENANT_ID, COLLEGE_ID, DEPT_ID, "\"1\"",
+                new CreateDepartmentRequest("CSE", "Changed name"), authentication));
+        verify(departmentRepository, never()).updateProfile(any(), any(), org.mockito.ArgumentMatchers.anyInt(),
+                any(), any(), any());
+    }
+
+    @Test
+    void archiveDepartment_usesIfMatchAndRefusesActivePrograms() {
+        mockPrincipal(TENANT_ID);
+        Department current = Department.builder()
+                .departmentId(DEPT_ID).tenantId(TENANT_ID).institutionId(COLLEGE_ID)
+                .departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").rowVersion(2).build();
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID)).thenReturn(Optional.of(current));
+        when(programRepository.existsByTenantIdAndDepartmentIdAndStatus(TENANT_ID, DEPT_ID, "ACTIVE")).thenReturn(true);
+
+        assertThrows(BusinessRuleViolationException.class, () -> structureController.archiveDepartment(
+                TENANT_ID, COLLEGE_ID, DEPT_ID, "\"2\"", authentication));
+        verify(departmentRepository, never()).archive(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any());
+    }
+
+    @Test
+    void updateProgram_usesIfMatchAndValidatesDepartmentScope() {
+        mockPrincipal(TENANT_ID);
+        UUID programId = UUID.randomUUID();
+        Program current = Program.builder().programId(programId).tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID).departmentId(DEPT_ID).programCode("BTECH_CSE")
+                .programName("B.Tech CSE").durationYears((short) 4).semestersPerYear((short) 2)
+                .degreeLevel("UG").totalCredits(new java.math.BigDecimal("160"))
+                .curriculumVersion(1).status("ACTIVE").rowVersion(2).build();
+        Program updated = Program.builder().programId(programId).tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID).departmentId(DEPT_ID).programCode("BTECH_CSE")
+                .programName("B.Tech Computer Science").durationYears((short) 4).semestersPerYear((short) 2)
+                .degreeLevel("UG").totalCredits(new java.math.BigDecimal("160"))
+                .curriculumVersion(1).status("ACTIVE").rowVersion(3).build();
+        Department department = Department.builder().departmentId(DEPT_ID).tenantId(TENANT_ID)
+                .institutionId(COLLEGE_ID).departmentCode("CSE").departmentName("Computer Science").status("ACTIVE").build();
+        when(programRepository.findByTenantIdAndProgramId(TENANT_ID, programId))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(departmentRepository.findByTenantIdAndDepartmentId(TENANT_ID, DEPT_ID)).thenReturn(Optional.of(department));
+        when(programRepository.existsByTenantIdAndInstitutionIdAndProgramCodeAndProgramIdNot(
+                TENANT_ID, COLLEGE_ID, "BTECH_CSE", programId)).thenReturn(false);
+        when(programRepository.updateProfile(TENANT_ID, programId, 2, DEPT_ID, "BTECH_CSE",
+                "B.Tech Computer Science", (short) 4, (short) 2, "UG",
+                new java.math.BigDecimal("160"), USER_ID)).thenReturn(1);
+
+        ResponseEntity<ProgramResponse> response = structureController.updateProgram(
+                TENANT_ID, COLLEGE_ID, programId, "\"2\"",
+                new CreateProgramRequest(DEPT_ID, "BTECH_CSE", "B.Tech Computer Science",
+                        (short) 4, (short) 2, "UG", new java.math.BigDecimal("160")), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().programName()).isEqualTo("B.Tech Computer Science");
+        assertThat(response.getBody().rowVersion()).isEqualTo(3);
+    }
+
+    @Test
+    void updateSchoolClass_usesIfMatchAndReturnsNewRowVersion() {
+        mockPrincipal(TENANT_ID);
+        UUID classId = UUID.randomUUID();
+        SchoolClass current = SchoolClass.builder().classId(classId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).className("Grade 8").displayOrder((short) 8)
+                .studentLoginEnabled(true).status("ACTIVE").rowVersion(2).build();
+        SchoolClass updated = SchoolClass.builder().classId(classId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).className("Grade VIII").displayOrder((short) 8)
+                .studentLoginEnabled(true).status("ACTIVE").rowVersion(3).build();
+        when(schoolClassRepository.findByTenantIdAndClassId(TENANT_ID, classId))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(schoolClassRepository.existsByTenantIdAndInstitutionIdAndClassNameAndClassIdNot(
+                TENANT_ID, SCHOOL_ID, "Grade VIII", classId)).thenReturn(false);
+        when(schoolClassRepository.updateProfile(TENANT_ID, classId, 2, "Grade VIII", (short) 8, true, USER_ID))
+                .thenReturn(1);
+
+        ResponseEntity<SchoolClassResponse> response = structureController.updateSchoolClass(
+                TENANT_ID, SCHOOL_ID, classId, "\"2\"",
+                new CreateSchoolClassRequest("Grade VIII", (short) 8), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().className()).isEqualTo("Grade VIII");
+        assertThat(response.getBody().rowVersion()).isEqualTo(3);
+    }
+
+    @Test
+    void updateSection_usesIfMatchAndValidatesSchoolClassScope() {
+        mockPrincipal(TENANT_ID);
+        UUID sectionId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        Section current = Section.builder().sectionId(sectionId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).academicSessionId(sessionId).classId(classId)
+                .sectionName("A").capacity(45).status("ACTIVE").rowVersion(2).build();
+        Section updated = Section.builder().sectionId(sectionId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).academicSessionId(sessionId).classId(classId)
+                .sectionName("B").capacity(60).status("ACTIVE").rowVersion(3).build();
+        AcademicSession session = new AcademicSession();
+        session.setAcademicSessionId(sessionId);
+        session.setTenantId(TENANT_ID);
+        session.setInstitutionId(SCHOOL_ID);
+        SchoolClass schoolClass = SchoolClass.builder().classId(classId).tenantId(TENANT_ID)
+                .institutionId(SCHOOL_ID).className("Grade 8").status("ACTIVE").build();
+        Institution school = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, SCHOOL_ID)).institutionType("SCHOOL")
+                .institutionName("Northbridge School").status("ACTIVE").build();
+        when(sectionRepository.findByTenantIdAndSectionId(TENANT_ID, sectionId))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, sessionId))
+                .thenReturn(Optional.of(session));
+        when(schoolClassRepository.findByTenantIdAndClassId(TENANT_ID, classId)).thenReturn(Optional.of(schoolClass));
+        when(institutionRepository.findById(new InstitutionId(TENANT_ID, SCHOOL_ID))).thenReturn(Optional.of(school));
+        when(sectionRepository.existsByTenantIdAndAcademicSessionIdAndClassIdAndSectionNameAndSectionIdNot(
+                TENANT_ID, sessionId, classId, "B", sectionId)).thenReturn(false);
+        when(sectionRepository.updateProfile(TENANT_ID, sectionId, 2, sessionId, null, classId, "B", 60, USER_ID))
+                .thenReturn(1);
+
+        ResponseEntity<SectionResponse> response = structureController.updateSection(
+                TENANT_ID, SCHOOL_ID, sectionId, "\"2\"",
+                new UpdateSectionRequest(sessionId, null, classId, "B", 60), authentication);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"3\"");
+        assertThat(response.getBody().sectionName()).isEqualTo("B");
+        assertThat(response.getBody().capacity()).isEqualTo(60);
+        assertThat(response.getBody().rowVersion()).isEqualTo(3);
     }
 
     @Test

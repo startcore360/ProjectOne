@@ -200,14 +200,14 @@ class ApprovalEngineB2Test {
     }
 
     @Test
-    @DisplayName("REG-P05-2: the University Admin (tenant-wide) sees every institution")
+    @DisplayName("REG-P05-2: the Vice-Chancellor (tenant-wide) sees every institution")
     void reg_P05_2() {
-        UUID ua = t.staff("University Admin", "UNIVERSITY_ADMIN", ScopeType.TENANT, null);
+        UUID vc = t.staff("Vice-Chancellor", "VICE_CHANCELLOR", ScopeType.TENANT, null);
         UUID subject = UUID.randomUUID();
-        t.request("INSTITUTION_BLOCK", "INSTITUTION", subject, instA, adminA, "UNIVERSITY_ADMIN");
-        t.request("INSTITUTION_BLOCK", "INSTITUTION", UUID.randomUUID(), instB, adminA, "UNIVERSITY_ADMIN");
+        t.request("INSTITUTION_BLOCK", "INSTITUTION", subject, instA, adminA, "VICE_CHANCELLOR");
+        t.request("INSTITUTION_BLOCK", "INSTITUTION", UUID.randomUUID(), instB, adminA, "VICE_CHANCELLOR");
 
-        assertThat(inboxSize(ua)).isEqualTo(2);
+        assertThat(inboxSize(vc)).isEqualTo(2);
     }
 
     @Test
@@ -350,6 +350,12 @@ class ApprovalEngineB2Test {
                 .isInstanceOf(BusinessRuleViolationException.class).hasMessageContaining("never bulk-approved");
         assertThat(ok.getStatus()).isEqualTo("PENDING");
         assertThat(dpo.getStatus()).isEqualTo("PENDING");
+
+        ApprovalRequest merit = t.request("MERIT_LIST_APPROVE", "MERIT_LIST", UUID.randomUUID(), instA, adminA, "PRINCIPAL_COLLEGE");
+        assertThatThrownBy(() -> t.delegation.bulkDecide(t.tenantId, p, new BulkApprovalRequest(
+                List.of(merit.getId().getApprovalRequestId()), "APPROVED", null)))
+                .isInstanceOf(BusinessRuleViolationException.class).hasMessageContaining("never be bulk-approved");
+        assertThat(merit.getStatus()).isEqualTo("PENDING");
 
         assertThatThrownBy(() -> t.delegation.bulkDecide(t.tenantId, p, new BulkApprovalRequest(
                 List.of(ok.getId().getApprovalRequestId(), UUID.randomUUID()), "APPROVED", null)))

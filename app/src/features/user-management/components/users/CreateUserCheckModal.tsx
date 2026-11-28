@@ -39,18 +39,18 @@ export function CreateUserCheckModal({ tenantId, isOpen, onClose }: CreateUserCh
       description="This only checks whether you are authorized to create a user in the chosen scope. It does not create an account - the backend endpoint behind this check is a proof-of-integration authorization check only."
     >
       <form onSubmit={runCheck}>
-        <ScopeFields scope={scope} onChange={setScope} idPrefix="create-check" />
+        <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="create-check" />
         {result && (
-          <div style={{ marginTop: "12px" }}>
+          <div style={{ marginTop: "var(--space-3)" }}>
             <Notice tone={result.ok ? "success" : "danger"}>
               {result.message}
             </Notice>
           </div>
         )}
-        <div className="platform-modal-note" style={{ marginTop: "12px" }}>
+        <div className="app-note" style={{ marginTop: "var(--space-3)" }}>
           No account is created by this dialog, regardless of the result shown above.
         </div>
-        <footer style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+        <footer style={{ marginTop: "var(--space-5)", display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button type="button" variant="secondary" onClick={onClose}>
             Close
           </Button>

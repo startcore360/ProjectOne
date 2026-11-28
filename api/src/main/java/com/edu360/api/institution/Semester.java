@@ -1,6 +1,7 @@
 package com.edu360.api.institution;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -43,6 +44,12 @@ public class Semester {
 
     @Column(name = "label", nullable = false)
     private String label;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;

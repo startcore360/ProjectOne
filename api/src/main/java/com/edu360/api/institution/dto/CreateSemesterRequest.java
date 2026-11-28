@@ -1,5 +1,7 @@
 package com.edu360.api.institution.dto;
 
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -14,5 +16,11 @@ public record CreateSemesterRequest(
 
         @NotBlank(message = "label is required")
         @Size(min = 1, max = 30, message = "label must be between 1 and 30 characters")
-        String label
+        String label,
+
+        @NotNull(message = "startDate is required")
+        LocalDate startDate,
+
+        @NotNull(message = "endDate is required")
+        LocalDate endDate
 ) {}

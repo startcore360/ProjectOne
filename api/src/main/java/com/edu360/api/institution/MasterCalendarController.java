@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.edu360.api.config.PrincipalExtractor;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.AcademicSessionResponse;
@@ -31,7 +32,7 @@ import lombok.RequiredArgsConstructor;
  * REST Controller for CALENDAR_MASTER_SET (Action Code #28) - Academic Sessions and Master Calendar Events.
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}")
+@RequestMapping({"/v1/tenants/{tenantId}", "/api/tenants/{tenantId}"})
 @RequiredArgsConstructor
 @Tag(name = "Academic Calendar", description = "Academic Sessions and Master Calendar Events (CALENDAR_MASTER_SET)")
 public class MasterCalendarController {
@@ -112,12 +113,6 @@ public class MasterCalendarController {
     }
 
     private RbacPrincipal tenantPrincipal(UUID tenantId, Authentication authentication) {
-        if (!(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
-            throw new UnauthorizedException("CALENDAR_MASTER_SET is a tenant-side action; no tenant principal on this request.");
-        }
-        if (!tenantId.equals(principal.tenantId())) {
-            throw new UnauthorizedException("tenantId in the URL does not match the authenticated tenant.");
-        }
-        return new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        return PrincipalExtractor.extractTenantOrSupportPrincipal(tenantId, authentication, "CALENDAR_MASTER_SET");
     }
 }

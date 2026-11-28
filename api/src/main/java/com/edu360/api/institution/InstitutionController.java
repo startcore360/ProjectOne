@@ -9,6 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,7 +22,9 @@ import com.edu360.api.institution.dto.BlockInstitutionRequest;
 import com.edu360.api.institution.dto.CreateInstitutionRequest;
 import com.edu360.api.institution.dto.InstitutionBlockResponse;
 import com.edu360.api.institution.dto.InstitutionPageResponse;
+import com.edu360.api.institution.dto.InstitutionHierarchyResponse;
 import com.edu360.api.institution.dto.InstitutionResponse;
+import com.edu360.api.institution.dto.UpdateInstitutionRequest;
 import com.edu360.api.rbac.RbacPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -57,6 +61,20 @@ public class InstitutionController {
                 .body(response);
     }
 
+
+    @PutMapping("/{institutionId}")
+    @Operation(summary = "Update editable institution profile fields using If-Match (INSTITUTION_CREATE_DRAFT)")
+    public ResponseEntity<InstitutionResponse> updateInstitution(
+            @PathVariable UUID tenantId,
+            @PathVariable UUID institutionId,
+            @RequestHeader("If-Match") String ifMatch,
+            @Valid @RequestBody UpdateInstitutionRequest request,
+            Authentication authentication) {
+        RbacPrincipal principal = extractTenantPrincipal(tenantId, authentication);
+        InstitutionResponse response = institutionService.updateInstitution(principal, institutionId, ifMatch, request);
+        return ResponseEntity.ok().eTag("\"" + response.rowVersion() + "\"").body(response);
+    }
+
     @PostMapping("/{institutionId}/activation")
     @Operation(summary = "Approve the pending activation request of an institution (INSTITUTION_ACTIVATE)")
     public ResponseEntity<InstitutionResponse> activateInstitution(
@@ -88,6 +106,15 @@ public class InstitutionController {
 
         RbacPrincipal principal = extractTenantPrincipal(tenantId, authentication);
         return ResponseEntity.ok(institutionService.listInstitutions(principal));
+    }
+
+    @GetMapping("/hierarchy")
+    @Operation(summary = "Get tenant-rooted university group, college/school and department hierarchy")
+    public ResponseEntity<InstitutionHierarchyResponse> getHierarchy(
+            @PathVariable UUID tenantId,
+            Authentication authentication) {
+        RbacPrincipal principal = extractTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(institutionService.getHierarchy(principal));
     }
 
     @GetMapping("/{institutionId}")
@@ -126,12 +153,7 @@ public class InstitutionController {
     }
 
     private RbacPrincipal extractTenantPrincipal(UUID tenantId, Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
-            throw new UnauthorizedException("Institution operations require authenticated tenant principal.");
-        }
-        if (!tenantId.equals(principal.tenantId())) {
-            throw new UnauthorizedException("tenantId in the path does not match the authenticated tenant.");
-        }
-        return new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        return com.edu360.api.config.PrincipalExtractor.extractTenantOrSupportPrincipal(
+                tenantId, authentication, "Institution operations");
     }
 }

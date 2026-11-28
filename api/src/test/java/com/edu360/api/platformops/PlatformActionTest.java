@@ -28,6 +28,7 @@ import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.config.keycloak.KeycloakAdminClient;
+import com.edu360.api.exception.ApiException;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.DuplicateResourceException;
 import com.edu360.api.exception.ResourceNotFoundException;
@@ -44,6 +45,8 @@ import com.edu360.api.platformops.billing.Invoice;
 import com.edu360.api.platformops.billing.InvoiceRepository;
 import com.edu360.api.platformops.billing.PlatformBillingController;
 import com.edu360.api.platformops.billing.PlatformBillingService;
+import com.edu360.api.idempotency.PlatformIdempotencyService;
+import tools.jackson.databind.json.JsonMapper;
 import com.edu360.api.platformops.billing.dto.ApplyDiscountRequest;
 import com.edu360.api.platformops.billing.dto.CreateInvoiceRequest;
 import com.edu360.api.platformops.billing.dto.InvoiceResponse;
@@ -83,12 +86,15 @@ import com.edu360.api.platformops.support.SupportAccessGrant;
 import com.edu360.api.platformops.support.SupportAccessGrantRepository;
 import com.edu360.api.platformops.support.SupportTicket;
 import com.edu360.api.platformops.support.SupportTicketRepository;
+import com.edu360.api.platformops.support.SupportSessionService;
 import com.edu360.api.platformops.support.TenantSupportController;
 import com.edu360.api.platformops.support.dto.CreateSupportTicketRequest;
 import com.edu360.api.platformops.support.dto.GrantSupportAccessRequest;
 import com.edu360.api.platformops.support.dto.SupportAccessGrantResponse;
 import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
+import com.edu360.api.platformops.support.dto.OpenSupportSessionRequest;
+import com.edu360.api.platformops.support.dto.SupportSessionResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.tenant.IsolationMode;
 import com.edu360.api.tenant.Tenant;
@@ -124,11 +130,13 @@ class PlatformActionTest {
     private InvoiceRepository invoiceRepository;
     private PlatformBillingService billingService;
     private PlatformBillingController billingController;
+    private PlatformIdempotencyService billingIdempotencyService;
 
     private SupportTicketRepository ticketRepository;
     private SupportAccessGrantRepository grantRepository;
     private PlatformSupportService supportService;
     private PlatformSupportController supportController;
+    private SupportSessionService supportSessionService;
     private PermissionEvaluatorService permissionEvaluatorService;
     private TenantSupportController tenantSupportController;
 
@@ -143,6 +151,7 @@ class PlatformActionTest {
     private PlatformAuditLogController auditLogController;
 
     private UsageMetricDailyRepository usageMetricDailyRepository;
+    private com.edu360.api.platformops.usage.TenantUsageMonthlyRepository tenantUsageMonthlyRepository;
     private UsageCountsController usageCountsController;
 
     private TenantBackupStatusRepository tenantBackupStatusRepository;
@@ -172,21 +181,26 @@ class PlatformActionTest {
                 leaveApproverSettingRepository, institutionRepository,
                 null, null, null, null, null, null, null, invoiceRepository, platformAuditWriter
         );
-        tenantController = new PlatformTenantController(permissionService, tenantManagementService);
+        tenantController = new PlatformTenantController(permissionService, tenantManagementService, org.mockito.Mockito.mock(com.edu360.api.idempotency.PlatformIdempotentExecutor.class));
 
         planEntitlementRepository = mock(PlanEntitlementRepository.class);
         tenantEntitlementRepository = mock(TenantEntitlementRepository.class);
         featureToggleController = new PlatformFeatureToggleController(
-                permissionService, planEntitlementRepository, tenantEntitlementRepository, platformAuditWriter
+                permissionService, planEntitlementRepository, tenantEntitlementRepository, tenantRepository, platformAuditWriter
         );
 
         billingService = new PlatformBillingService(invoiceRepository, platformAuditWriter);
-        billingController = new PlatformBillingController(billingService, permissionService);
+        billingIdempotencyService = mock(PlatformIdempotencyService.class);
+        when(billingIdempotencyService.claim(any(), any(), any(), any())).thenReturn(
+                new PlatformIdempotencyService.Claim(UUID.randomUUID(), false, null, null));
+        billingController = new PlatformBillingController(billingService, permissionService, billingIdempotencyService,
+                JsonMapper.builder().findAndAddModules().build());
 
         ticketRepository = mock(SupportTicketRepository.class);
         grantRepository = mock(SupportAccessGrantRepository.class);
         supportService = new PlatformSupportService(ticketRepository, grantRepository, platformAuditWriter, auditLogService);
-        supportController = new PlatformSupportController(supportService, permissionService);
+        supportSessionService = mock(SupportSessionService.class);
+        supportController = new PlatformSupportController(supportService, supportSessionService, permissionService);
         permissionEvaluatorService = mock(PermissionEvaluatorService.class);
         tenantSupportController = new TenantSupportController(supportService, permissionEvaluatorService);
 
@@ -198,10 +212,11 @@ class PlatformActionTest {
         integrationTypeController = new IntegrationTypeController(permissionService, integrationTypeRepository, platformAuditWriter);
 
         auditOutboxEventRepository = mock(PlatformAuditOutboxEventRepository.class);
-        auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository);
+        auditLogController = new PlatformAuditLogController(permissionService, auditOutboxEventRepository, platformAuditWriter);
 
         usageMetricDailyRepository = mock(UsageMetricDailyRepository.class);
-        usageCountsController = new UsageCountsController(permissionService, tenantRepository, usageMetricDailyRepository);
+        tenantUsageMonthlyRepository = mock(com.edu360.api.platformops.usage.TenantUsageMonthlyRepository.class);
+        usageCountsController = new UsageCountsController(permissionService, tenantRepository, usageMetricDailyRepository, tenantUsageMonthlyRepository);
 
         tenantBackupStatusRepository = mock(TenantBackupStatusRepository.class);
         backupStatusController = new BackupStatusController(permissionService, tenantBackupStatusRepository);
@@ -234,7 +249,8 @@ class PlatformActionTest {
     void actPlanManage_allow() {
         CreatePlanRequest req = new CreatePlanRequest(
                 "Growth Plan", "PER_STUDENT_YEAR", new BigDecimal("799.00"), "INR",
-                2500, 100, 10000, 25000, 10
+                2500, 100, 10000, 25000, 10,
+                false, false, 12, null, null
         );
         when(planRepository.save(any(Plan.class))).thenAnswer(inv -> {
             Plan p = inv.getArgument(0);
@@ -252,7 +268,8 @@ class PlatformActionTest {
     void actPlanManage_deny() {
         CreatePlanRequest req = new CreatePlanRequest(
                 "School Tier", "PER_STUDENT_YEAR", new BigDecimal("499.00"), "INR",
-                1000, 50, 5000, 10000, 5
+                1000, 50, 5000, 10000, 5,
+                false, false, 12, null, null
         );
 
         assertThatThrownBy(() -> tenantController.createPlan(req, auth(PlatformRole.PLATFORM_ADMIN)))
@@ -264,7 +281,8 @@ class PlatformActionTest {
     @DisplayName("ACT-PLAN_MANAGE-SCOPE: Non-platform principal rejected")
     void actPlanManage_scope() {
         CreatePlanRequest req = new CreatePlanRequest(
-                "Tier", "FLAT", new BigDecimal("1000.00"), "INR", 100, 10, 1000, 1000, 1
+                "Tier", "FLAT", new BigDecimal("1000.00"), "INR", 100, 10, 1000, 1000, 1,
+                false, false, 12, null, null
         );
         assertThatThrownBy(() -> tenantController.createPlan(req, tenantAuth(tenantId)))
                 .isInstanceOf(UnauthorizedException.class);
@@ -274,16 +292,20 @@ class PlatformActionTest {
     @DisplayName("ACT-PLAN_MANAGE-GUARD: Platform Admin cannot alter price on existing plan")
     void actPlanManage_guard() {
         Plan plan = Plan.builder().planId(planId).planName("Old").pricingType("FLAT")
-                .priceAmount(new BigDecimal("100.00")).currencyCode("INR").build();
+                .priceAmount(new BigDecimal("100.00")).currencyCode("INR").rowVersion(1).build();
         when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
 
         UpdatePlanRequest req = new UpdatePlanRequest(
-                "New Name", new BigDecimal("200.00"), "INR",
-                100, 10, 1000, 1000, 5, "ACTIVE"
+                "New Name", new BigDecimal("200.00"), null, "INR",
+                100, 10, 1000, 1000, 5, null, null, null, null, null, "ACTIVE"
         );
-        assertThatThrownBy(() -> tenantController.updatePlan(planId, req, auth(PlatformRole.PLATFORM_ADMIN)))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessageContaining("Rule [F-4]");
+        assertThatThrownBy(() -> tenantController.updatePlan(planId, req, "\"1\"", auth(PlatformRole.PLATFORM_ADMIN)))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> {
+                    ApiException apiException = (ApiException) error;
+                    assertThat(apiException.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(apiException.getErrorCode()).isEqualTo("PRICE_CHANGE_PO_ONLY");
+                });
     }
 
     // =========================================================================
@@ -298,7 +320,7 @@ class PlatformActionTest {
                 .tenantType("STANDALONE_SCHOOL")
                 .planId(planId)
                 .subdomain("dps-delhi")
-                .isolationMode(IsolationMode.ISOLATED)
+                .isolationMode(IsolationMode.SHARED)
                 .firstAdminName("Principal Sharma")
                 .firstAdminEmail("principal@dps-delhi.edu")
                 .timeZone("Asia/Kolkata")
@@ -462,8 +484,13 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-TENANT_SETTINGS-ALLOW: Platform Admin updates tenant settings")
     void actTenantSettings_allow() {
-        Tenant tenant = Tenant.builder().tenantId(tenantId).build();
+        // E1-S3: the custom domain needs a plan that includes it; the limits stay within the plan.
+        UUID settingsPlanId = UUID.randomUUID();
+        Tenant tenant = Tenant.builder().tenantId(tenantId).planId(settingsPlanId).build();
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(planRepository.findById(settingsPlanId)).thenReturn(Optional.of(Plan.builder().planId(settingsPlanId)
+                .planName("Custom domain plan").userLimit(1000).storageLimitGb(50).smsLimit(5000).apiLimit(10000)
+                .customDomainAllowed(true).build()));
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateTenantSettingsRequest req = new UpdateTenantSettingsRequest(
@@ -595,12 +622,12 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-ALLOW: Product Owner applies valid promotional discount")
     void actDiscountApply_allow() {
         Invoice invoice = Invoice.builder().invoiceId(invoiceId).tenantId(tenantId)
-                .subtotalAmount(new BigDecimal("10000.00")).discountAmount(BigDecimal.ZERO).build();
+                .subtotalAmount(new BigDecimal("10000.00")).discountAmount(BigDecimal.ZERO).status("DRAFT").build();
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("2000.00"), "Founder school discount");
-        ResponseEntity<InvoiceResponse> res = billingController.applyDiscount(invoiceId, req, auth(PlatformRole.PRODUCT_OWNER));
+        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("20.00"), "Founder school discount");
+        ResponseEntity<InvoiceResponse> res = billingController.applyDiscount(invoiceId, req, "action-discount-allow", auth(PlatformRole.PRODUCT_OWNER));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody().discountAmount()).isEqualTo(new BigDecimal("2000.00"));
@@ -610,7 +637,7 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-DENY: Billing Manager cannot give discounts under Rule F-4")
     void actDiscountApply_deny() {
         ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("500.00"), "Rebate");
-        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, auth(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, "action-discount-deny", auth(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
@@ -618,7 +645,7 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-SCOPE: Tenant principal rejected")
     void actDiscountApply_scope() {
         ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("500.00"), "Rebate");
-        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, tenantAuth(tenantId)))
+        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, "action-discount-scope", tenantAuth(tenantId)))
                 .isInstanceOfAny(UnauthorizedException.class, ClassCastException.class);
     }
 
@@ -626,13 +653,13 @@ class PlatformActionTest {
     @DisplayName("ACT-DISCOUNT_APPLY-GUARD: Discount exceeding subtotal rejected under Rule ck_invoice_r2")
     void actDiscountApply_guard() {
         Invoice invoice = Invoice.builder().invoiceId(invoiceId).tenantId(tenantId)
-                .subtotalAmount(new BigDecimal("5000.00")).discountAmount(BigDecimal.ZERO).build();
+                .subtotalAmount(new BigDecimal("5000.00")).discountAmount(BigDecimal.ZERO).status("DRAFT").build();
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
 
-        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("6000.00"), "Over 100%");
-        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, auth(PlatformRole.PRODUCT_OWNER)))
+        ApplyDiscountRequest req = new ApplyDiscountRequest(new BigDecimal("101.00"), "Over 100%");
+        assertThatThrownBy(() -> billingController.applyDiscount(invoiceId, req, "action-discount-guard", auth(PlatformRole.PRODUCT_OWNER)))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("Rule ck_invoice_r2");
+                .hasMessageContaining("between 0.01 and 100");
     }
 
     // =========================================================================
@@ -726,15 +753,15 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-SUPPORT_TICKET_MANAGE-ALLOW: Support Manager updates ticket")
     void actSupportTicketManage_allow() {
-        SupportTicket ticket = SupportTicket.builder().supportTicketId(ticketId).tenantId(tenantId).status("OPEN").build();
+        SupportTicket ticket = SupportTicket.builder().supportTicketId(ticketId).tenantId(tenantId).status("NEW").build();
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(ticketRepository.save(any(SupportTicket.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateSupportTicketRequest req = new UpdateSupportTicketRequest("IN_PROGRESS", userId, "Investigating logs");
+        UpdateSupportTicketRequest req = new UpdateSupportTicketRequest("ASSIGNED", userId, "Investigating logs");
         ResponseEntity<SupportTicketResponse> res = supportController.updateTicket(ticketId, req, auth(PlatformRole.SUPPORT_MANAGER));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody().status()).isEqualTo("IN_PROGRESS");
+        assertThat(res.getBody().status()).isEqualTo("ASSIGNED");
     }
 
     @Test
@@ -829,23 +856,26 @@ class PlatformActionTest {
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(eq(ticketId), any())).thenReturn(Optional.of(grant));
 
-        // L-03 / R7: the made-up session token is gone. With a live grant the answer is an honest "not available yet" (501).
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, auth(PlatformRole.SUPPORT_MANAGER)))
-                .isInstanceOfSatisfying(com.edu360.api.exception.FeatureNotAvailableException.class,
-                        ex -> assertThat(ex.getCode()).isEqualTo("SUPPORT_SESSION_NOT_AVAILABLE"));
+        SupportSessionResponse expected = new SupportSessionResponse(
+                "signed-token", Instant.now().plusSeconds(1800), "https://tenant.edu360.example");
+        when(supportSessionService.open(eq(ticketId), any())).thenReturn(expected);
+        ResponseEntity<SupportSessionResponse> response = supportController.assumeSupportSession(
+                new OpenSupportSessionRequest(ticketId), auth(PlatformRole.SUPPORT_MANAGER));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expected);
     }
 
     @Test
     @DisplayName("ACT-SUPPORT_ACCESS_USE-DENY: Billing Manager lacking SUPPORT_ACCESS_USE denied")
     void actSupportAccessUse_deny() {
-        assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, auth(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> supportController.assumeSupportSession(new OpenSupportSessionRequest(ticketId), auth(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-SUPPORT_ACCESS_USE-SCOPE: Tenant principal rejected")
     void actSupportAccessUse_scope() {
-        assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, tenantAuth(tenantId)))
+        assertThatThrownBy(() -> supportController.assumeSupportSession(new OpenSupportSessionRequest(ticketId), tenantAuth(tenantId)))
                 .isInstanceOfAny(UnauthorizedException.class, ClassCastException.class);
     }
 
@@ -856,9 +886,12 @@ class PlatformActionTest {
         when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
         when(grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(eq(ticketId), any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> supportController.assumeSupportSession(ticketId, auth(PlatformRole.SUPPORT_MANAGER)))
-                .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("No active support access grant");
+        when(supportSessionService.open(eq(ticketId), any()))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("SUPPORT_GRANT_REQUIRED"));
+        assertThatThrownBy(() -> supportController.assumeSupportSession(
+                new OpenSupportSessionRequest(ticketId), auth(PlatformRole.SUPPORT_MANAGER)))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessageContaining("SUPPORT_GRANT_REQUIRED");
     }
 
     // =========================================================================
@@ -954,8 +987,8 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-ALLOW: Platform Admin views platform audit logs")
     void actPlatformAuditView_allow() {
-        when(auditOutboxEventRepository.findAllByOrderByOccurredAtDesc(any())).thenReturn(org.springframework.data.domain.Page.empty());
-        var res = auditLogController.listAuditLogs(0, 50, auth(PlatformRole.PLATFORM_ADMIN));
+        when(auditOutboxEventRepository.findFiltered(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(org.springframework.data.domain.Page.empty());
+        var res = auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, auth(PlatformRole.PLATFORM_ADMIN));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
@@ -963,22 +996,22 @@ class PlatformActionTest {
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-DENY: Billing Manager lacking PLATFORM_AUDIT_VIEW denied")
     void actPlatformAuditView_deny() {
-        assertThatThrownBy(() -> auditLogController.listAuditLogs(0, 50, auth(PlatformRole.BILLING_MANAGER)))
+        assertThatThrownBy(() -> auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, auth(PlatformRole.BILLING_MANAGER)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-SCOPE: Tenant principal rejected")
     void actPlatformAuditView_scope() {
-        assertThatThrownBy(() -> auditLogController.listAuditLogs(0, 50, tenantAuth(tenantId)))
+        assertThatThrownBy(() -> auditLogController.listAuditLogs(null, null, null, null, null, null, 0, 50, tenantAuth(tenantId)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
     @DisplayName("ACT-PLATFORM_AUDIT_VIEW-GUARD: Audit page size clamped safely")
     void actPlatformAuditView_guard() {
-        when(auditOutboxEventRepository.findAllByOrderByOccurredAtDesc(any())).thenReturn(org.springframework.data.domain.Page.empty());
-        var res = auditLogController.listAuditLogs(-1, 500, auth(PlatformRole.PLATFORM_ADMIN));
+        when(auditOutboxEventRepository.findFiltered(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(org.springframework.data.domain.Page.empty());
+        var res = auditLogController.listAuditLogs(null, null, null, null, null, null, -1, 500, auth(PlatformRole.PLATFORM_ADMIN));
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
@@ -1016,7 +1049,7 @@ class PlatformActionTest {
     void actUsageCountsView_guard() {
         when(tenantRepository.count()).thenReturn(5L);
         var res = usageCountsController.usageCounts(auth(PlatformRole.PRODUCT_OWNER));
-        assertThat(res.getBody().totalUserCountGap()).contains("break tenant isolation");
+        assertThat(res.getBody().metrics()).anySatisfy(metric -> assertThat(metric.metricCode()).isEqualTo("ACTIVE_USERS"));
     }
 
     // =========================================================================
@@ -1154,6 +1187,35 @@ class PlatformActionTest {
         ResponseEntity<PlatformReportResponse> supRes = reportController.getReport("SUPPORT_SUMMARY", auth(PlatformRole.SUPPORT_MANAGER));
         assertThat(supRes.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(supRes.getBody().metrics()).containsKey("openTicketsCount");
+    }
+
+    @Test
+    @DisplayName("ACT-PLATFORM_REPORTS_VIEW-ALLOW: Revenue report returns twelve months, churn and upcoming renewals")
+    void actPlatformRevenueReport_allow() {
+        Instant now = Instant.now();
+        Invoice paid = Invoice.builder().invoiceId(UUID.randomUUID()).tenantId(tenantId)
+                .totalAmount(new BigDecimal("125.50")).status("PAID").paidAt(now).build();
+        Tenant archived = Tenant.builder().tenantId(UUID.randomUUID()).tenantName("Archived tenant")
+                .tenantType("STANDALONE_SCHOOL").state(TenantState.ARCHIVED).archivedAt(now).build();
+        Tenant renewing = Tenant.builder().tenantId(UUID.randomUUID()).tenantName("Renewing tenant")
+                .tenantType("STANDALONE_SCHOOL").state(TenantState.ACTIVE)
+                .nextRenewalAt(LocalDate.now(java.time.ZoneOffset.UTC).plusDays(30)).build();
+        when(invoiceRepository.findByStatus("PAID")).thenReturn(List.of(paid));
+        when(tenantRepository.findAll()).thenReturn(List.of(archived, renewing));
+        when(tenantRepository.findByStateAndNextRenewalAtBetween(eq(TenantState.ACTIVE), any(), any()))
+                .thenReturn(List.of(renewing));
+
+        ResponseEntity<PlatformReportResponse> response =
+                reportController.getReport("REVENUE", auth(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<?>) response.getBody().metrics().get("monthlyRevenue")).hasSize(12);
+        assertThat(response.getBody().metrics().get("monthlyRevenue").toString())
+                .contains("revenue=0.00").contains("revenue=125.50");
+        assertThat((List<?>) response.getBody().metrics().get("monthlyChurn")).hasSize(12);
+        assertThat(response.getBody().metrics().get("monthlyChurn").toString())
+                .contains("churn=0").contains("churn=1");
+        assertThat(response.getBody().metrics()).containsEntry("renewalsDueIn60Days", 1);
     }
 
     @Test

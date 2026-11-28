@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,7 +30,7 @@ import lombok.RequiredArgsConstructor;
  * including why CLASS_TEACHER_ASSIGN's unit is "section" here (OD-24 is still open).
  */
 @RestController
-@RequestMapping("/api/tenants/{tenantId}/sections/{sectionId}")
+@RequestMapping({"/v1/tenants/{tenantId}/sections/{sectionId}", "/api/tenants/{tenantId}/sections/{sectionId}"})
 @RequiredArgsConstructor
 @Tag(name = "Institution setup", description = "Section-level institution setup (MENTOR_ASSIGN, CLASS_TEACHER_ASSIGN)")
 public class SectionController {
@@ -42,11 +43,13 @@ public class SectionController {
     public ResponseEntity<MentorAssignResponse> assignMentor(
             @PathVariable UUID tenantId,
             @PathVariable UUID sectionId,
+            @RequestHeader("If-Match") String ifMatch,
             @Valid @RequestBody MentorAssignRequest request,
             Authentication authentication) {
 
         RbacPrincipal principal = tenantPrincipal(tenantId, authentication);
-        return ResponseEntity.ok(mentorAssignmentService.assignMentor(principal, sectionId, request));
+        var response = mentorAssignmentService.assignMentor(principal, sectionId, ifMatch, request);
+        return ResponseEntity.ok().eTag(String.format("\"%d\"", response.rowVersion())).body(response);
     }
 
     @PutMapping("/class-teacher")
@@ -54,11 +57,13 @@ public class SectionController {
     public ResponseEntity<ClassTeacherAssignResponse> assignClassTeacher(
             @PathVariable UUID tenantId,
             @PathVariable UUID sectionId,
+            @RequestHeader("If-Match") String ifMatch,
             @Valid @RequestBody ClassTeacherAssignRequest request,
             Authentication authentication) {
 
         RbacPrincipal principal = tenantPrincipal(tenantId, authentication);
-        return ResponseEntity.ok(classTeacherAssignmentService.assignClassTeacher(principal, sectionId, request));
+        var response = classTeacherAssignmentService.assignClassTeacher(principal, sectionId, ifMatch, request);
+        return ResponseEntity.ok().eTag(String.format("\"%d\"", response.rowVersion())).body(response);
     }
 
     private RbacPrincipal tenantPrincipal(UUID tenantId, Authentication authentication) {

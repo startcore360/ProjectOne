@@ -1,13 +1,7 @@
 import api from "../../../services/axios";
+import { notificationsApi, type BellNotification } from "../../notifications/api/notificationsApi";
 
-export interface NotificationItem {
-  notificationId: string;
-  triggerCode: string;
-  title: string;
-  body: string | null;
-  priorityClass: string;
-  createdAt: string;
-}
+export type NotificationItem = BellNotification;
 
 export interface LeaveBalanceItem {
   leaveBalanceId: string;
@@ -39,12 +33,20 @@ export interface NoticeItem {
   body: string;
   authoredActiveRole: string;
   publishedAt: string | null;
+  institutionId?: string | null;
+  requiresAcknowledgment?: boolean;
+  acknowledged?: boolean;
 }
 
 export const selfServiceApi = {
   getNotifications: async (tenantId: string): Promise<NotificationItem[]> => {
-    const res = await api.get<NotificationItem[]>(`/tenants/${tenantId}/me/notifications`);
-    return Array.isArray(res.data) ? res.data : [];
+    return notificationsApi.list(tenantId);
+  },
+  markNotificationRead: async (tenantId: string, notificationId: string): Promise<void> => {
+    return notificationsApi.markRead(tenantId, notificationId);
+  },
+  markAllNotificationsRead: async (tenantId: string): Promise<void> => {
+    return notificationsApi.markAllRead(tenantId);
   },
   getLeaveBalances: async (tenantId: string): Promise<LeaveBalanceItem[]> => {
     const res = await api.get<LeaveBalanceItem[]>(`/tenants/${tenantId}/me/leave-balances`);
@@ -53,6 +55,9 @@ export const selfServiceApi = {
   getLeaveRequests: async (tenantId: string): Promise<LeaveRequestItem[]> => {
     const res = await api.get<LeaveRequestItem[]>(`/tenants/${tenantId}/me/leave-requests`);
     return Array.isArray(res.data) ? res.data : [];
+  },
+  acknowledgeNotice: async (tenantId: string, institutionId: string, noticeId: string): Promise<void> => {
+    await api.post(`/tenants/${tenantId}/notice-bulletins/${noticeId}/acknowledgment`, null, { params: { institutionId } });
   },
   getNotices: async (tenantId: string): Promise<NoticeItem[]> => {
     const res = await api.get<NoticeItem[]>(`/tenants/${tenantId}/notices`);

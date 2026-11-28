@@ -52,7 +52,14 @@ export const authService = {
   // Finishes the in-app authenticator set-up started by a MFA_ENROLMENT_REQUIRED sign-in answer.
   // The password is sent again on purpose: the server re-proves it before attaching anything.
   enrolMfa: (body: { email: string; password: string; enrolmentId: string; code: string; deviceName?: string }) =>
-    api.post<{ status: "ENROLLED"; message: string }>("/auth/mfa/enrol", body),
+    api.post<{ status: "ENROLLED"; message: string; recoveryCodes?: string[] }>("/auth/mfa/enrol", body),
+  // MFA-01: sign in with a one-time backup code. It never returns tokens: the server answers
+  // MFA_ENROLMENT_REQUIRED so the screen sets up a new authenticator, or an error.
+  loginWithRecoveryCode: (email: string, password: string, recoveryCode: string) =>
+    api.post<AuthTokenResponse>("/auth/login", { email, password, recoveryCode }),
+  // MFA-01: a signed-in user gets a new set of backup codes (current password required).
+  issueRecoveryCodes: (currentPassword: string) =>
+    api.post<{ recoveryCodes: string[] }>("/auth/mfa/recovery-codes", { currentPassword }),
   refresh: (refreshToken: string) =>
     api.post<AuthTokenResponse>("/auth/refresh", { refreshToken }),
   changePassword: (currentPassword: string, newPassword: string) =>

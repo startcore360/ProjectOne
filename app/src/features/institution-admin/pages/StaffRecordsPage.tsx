@@ -1,0 +1,648 @@
+import { memo, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import "./StaffRecordsPage.css";
+import {
+  Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
+  Pagination, Panel, PhoneField, SearchBox, SelectField, SkeletonCard, SkeletonText, TextAreaField, TextField, DataTable,
+} from "../../../design-system/components";
+import { getApiErrorMessage } from "../../../services/apiHelper";
+import { useFormErrors } from "../../../hooks";
+import { useAppSelector } from "../../../store/hooks";
+import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { FileDrop } from "../../../components/common/FileDrop";
+import { CreatedCredentialsModal, type ProvisionedUserCredentials } from "../../user-management/components/users/CreatedCredentialsModal";
+import {
+  staffService, type StaffAssignment, type StaffDocument, type StaffProfile,
+  type StaffProfilePayload, type StaffServiceRecord,
+} from "../api/staffService";
+import { institutionService, type InstitutionItem, type DepartmentItem } from "../api/institutionService";
+import { getLocalDateString } from "../../../utils/dateUtils";
+
+type LoadState = "idle" | "loading" | "loaded" | "error";
+const EVENT_OPTIONS = [
+  { value: "JOINED", label: "Joined" },
+  { value: "DESIGNATION_CHANGE", label: "Designation change" },
+  { value: "TRANSFER", label: "Transfer" },
+  { value: "CONFIRMATION", label: "Confirmation" },
+  { value: "LEAVE_OF_ABSENCE", label: "Leave of absence" },
+  { value: "LEFT", label: "Left service" },
+  { value: "OTHER", label: "Other" },
+];
+function humanize(value: string) {
+  return value.replaceAll("_", " ").toLowerCase().split(" ").map((word) => word ? word[0].toUpperCase() + word.slice(1) : "").join(" ");
+}
+const today = () => getLocalDateString();
+
+interface StaffRecordListItemProps {
+  person: StaffProfile;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+}
+
+const StaffRecordListItem = memo(function StaffRecordListItem({
+  person,
+  isSelected,
+  onSelect,
+}: StaffRecordListItemProps) {
+  return (
+    <div role="listitem">
+      <button
+        type="button"
+        aria-pressed={isSelected}
+        className={`app-record-item ${isSelected ? "is-selected" : ""}`}
+        onClick={() => onSelect(person.id)}
+      >
+        <span className="staff-record-list__copy">
+          <strong>{person.fullName}</strong>
+          <small>{person.staffCode} · {humanize(person.employmentStatus)}</small>
+        </span>
+        <Badge tone={person.employmentStatus === "ACTIVE" ? "success" : "neutral"}>
+          {humanize(person.employmentStatus)}
+        </Badge>
+      </button>
+    </div>
+  );
+});
+
+export default function StaffRecordsPage() {
+  const navigate = useNavigate();
+  const { staffId } = useParams<{ staffId: string }>();
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const userId = useAppSelector((state) => state.auth.user?.id);
+  const { can, permissions } = useTenantAccess();
+  const isAdminRole = ["COLLEGE_ADMIN", "UNIVERSITY_ADMIN", "TENANT_ADMIN"].includes(permissions?.activeRoleCode ?? "");
+  const canManage = can("STAFF_RECORD_MANAGE") || isAdminRole;
+  const canVerify = can("STAFF_DOCUMENT_VERIFY") || isAdminRole;
+  const [query, setQuery] = useState("");
+  const [directoryPage, setDirectoryPage] = useState(1);
+  const [directoryPageSize, setDirectoryPageSize] = useState(10);
+  const [state, setState] = useState<LoadState>("idle");
+  const [staff, setStaff] = useState<StaffProfile[]>([]);
+  const [listError, setListError] = useState("");
+  const [selected, setSelected] = useState<StaffProfile | null>(null);
+
+  const handleSelectStaff = useCallback((id: string) => {
+    navigate(`/university/staff/${id}`);
+  }, [navigate]);
+  const [etag, setEtag] = useState("");
+  const [assignments, setAssignments] = useState<StaffAssignment[]>([]);
+  const [documents, setDocuments] = useState<StaffDocument[]>([]);
+  const [records, setRecords] = useState<StaffServiceRecord[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [draft, setDraft] = useState<StaffProfilePayload>({ fullName: "", officialEmail: "", employmentStatus: "ACTIVE", joinedOn: today() });
+  const [profileDraft, setProfileDraft] = useState<StaffProfilePayload | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const {
+    fieldErrors: editFieldErrors,
+    setFieldError: setEditFieldError,
+    clearFieldError: clearEditFieldError,
+    clearAll: clearEditAll,
+    handleApiError: handleEditApiError,
+  } = useFormErrors();
+
+  const {
+    fieldErrors: createFieldErrors,
+    setFieldError: setCreateFieldError,
+    clearFieldError: clearCreateFieldError,
+    clearAll: clearCreateAll,
+    handleApiError: handleCreateApiError,
+  } = useFormErrors();
+  const [assignmentDraft, setAssignmentDraft] = useState({ institutionId: "", departmentId: "", designation: "", effectiveFrom: today() });
+  const [savingAssignment, setSavingAssignment] = useState(false);
+  const [documentType, setDocumentType] = useState("DEGREE");
+  const [qualificationDraft, setQualificationDraft] = useState({ title: "", awardingInstitution: "", level: "UNDERGRADUATE", awardedOn: "" });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [verifyRemark, setVerifyRemark] = useState("");
+  const [serviceDraft, setServiceDraft] = useState({
+    eventType: "OTHER" as "JOINED" | "DESIGNATION_CHANGE" | "TRANSFER" | "CONFIRMATION" | "LEAVE_OF_ABSENCE" | "LEFT" | "OTHER",
+    effectiveOn: today(), details: "",
+  });
+  const [savingService, setSavingService] = useState(false);
+  const [newStaffCreds, setNewStaffCreds] = useState<ProvisionedUserCredentials | null>(null);
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const latestStaffIdRef = useRef<string | null>(staffId ?? null);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let active = true;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => { if (active) setInstitutions(res.items ?? []); })
+      .catch(() => { if (active) setInstitutions([]); });
+    return () => { active = false; };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId || !assignmentDraft.institutionId) {
+      setDepartments([]);
+      return;
+    }
+    let active = true;
+    institutionService.listDepartments(tenantId, assignmentDraft.institutionId)
+      .then((res) => { if (active) setDepartments(Array.isArray(res) ? res : []); })
+      .catch(() => { if (active) setDepartments([]); });
+    return () => { active = false; };
+  }, [tenantId, assignmentDraft.institutionId]);
+
+  const loadDirectory = useCallback(async (search: string) => {
+    if (!tenantId) return;
+    setState("loading");
+    setListError("");
+    try {
+      const result = await staffService.list(tenantId, search.trim());
+      setStaff(result.items ?? []);
+      setDirectoryPage(1);
+      setState("loaded");
+    } catch (error) {
+      setStaff([]);
+      setListError(getApiErrorMessage(error));
+      setState("error");
+    }
+  }, [tenantId]);
+
+  const loadProfile = useCallback(async (id: string) => {
+    if (!tenantId) return;
+    latestStaffIdRef.current = id;
+    setDetailLoading(true);
+    setDetailError("");
+    try {
+      const [profile, assignmentRows, documentRows, serviceRows] = await Promise.all([
+        staffService.get(tenantId, id),
+        staffService.listAssignments(tenantId, id),
+        staffService.listDocuments(tenantId, id),
+        staffService.listServiceRecords(tenantId, id),
+      ]);
+      if (latestStaffIdRef.current !== id) return;
+      setSelected(profile.data);
+      setEtag(profile.etag || `"${profile.data.version}"`);
+      setProfileDraft({
+        staffCode: profile.data.staffCode, fullName: profile.data.fullName,
+        dateOfBirth: profile.data.dateOfBirth ?? "", personalEmail: profile.data.personalEmail ?? "",
+        personalMobile: profile.data.personalMobile ?? "", nationalIdLast4: profile.data.nationalIdLast4 ?? "",
+        employmentStatus: profile.data.employmentStatus, joinedOn: profile.data.joinedOn ?? "",
+        leftOn: profile.data.leftOn ?? "",
+      });
+      setAssignments(assignmentRows);
+      setDocuments(documentRows);
+      setRecords(serviceRows);
+    } catch (error) {
+      if (latestStaffIdRef.current !== id) return;
+      setDetailError(getApiErrorMessage(error));
+    } finally {
+      if (latestStaffIdRef.current === id) {
+        setDetailLoading(false);
+      }
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (tenantId && !staffId) void loadDirectory("");
+  }, [tenantId, staffId, loadDirectory]);
+
+  useEffect(() => {
+    latestStaffIdRef.current = staffId ?? null;
+    if (staffId) {
+      setSelected(null);
+      void loadProfile(staffId);
+    } else {
+      setSelected(null);
+      setDetailError("");
+      setDetailLoading(false);
+    }
+  }, [staffId, loadProfile]);
+
+  const createStaff = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId) return;
+    if (!draft.fullName?.trim()) { setCreateError("Enter the staff member’s full name."); return; }
+    setCreating(true);
+    setCreateError("");
+    clearCreateAll();
+    try {
+      const created = await staffService.create(tenantId, {
+        ...draft, fullName: draft.fullName.trim(), officialEmail: draft.officialEmail?.trim(),
+        staffCode: draft.staffCode?.trim() || undefined,
+        personalEmail: draft.personalEmail?.trim() || undefined,
+        personalMobile: draft.personalMobile?.trim() || undefined,
+        nationalIdLast4: draft.nationalIdLast4?.trim() || undefined,
+        dateOfBirth: draft.dateOfBirth || undefined, joinedOn: draft.joinedOn || undefined,
+      });
+      setCreateOpen(false);
+      setDraft({ fullName: "", officialEmail: "", employmentStatus: "ACTIVE", joinedOn: today() });
+      await loadDirectory("");
+      setSelected(created.staff);
+      await loadProfile(created.staff.id);
+      setNewStaffCreds({
+        displayName: created.staff.fullName,
+        email: created.login.email,
+        temporaryPassword: created.login.temporaryPassword,
+        message: created.login.initialRole
+          ? `Initial role: ${created.login.initialRole}.`
+          : "No role was assigned — assign a staff role before granting application access.",
+      });
+    } catch (error) {
+      handleCreateApiError(error);
+      setCreateError(getApiErrorMessage(error));
+    } finally { setCreating(false); }
+  };
+
+  const saveProfile = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !selected || !profileDraft || !etag) return;
+    setSavingProfile(true);
+    setFeedback(null);
+    clearEditAll();
+    try {
+      const result = await staffService.update(tenantId, selected.id, etag, {
+        ...profileDraft, fullName: profileDraft.fullName?.trim(),
+        staffCode: profileDraft.staffCode?.trim() || undefined,
+        personalEmail: profileDraft.personalEmail?.trim() || "",
+        personalMobile: profileDraft.personalMobile?.trim() || "",
+        nationalIdLast4: profileDraft.nationalIdLast4?.trim() || "",
+        dateOfBirth: profileDraft.dateOfBirth || undefined,
+        joinedOn: profileDraft.joinedOn || undefined, leftOn: profileDraft.leftOn || undefined,
+      });
+      setSelected(result.data);
+      setEtag(result.etag || `"${result.data.version}"`);
+      setFeedback({ tone: "success", message: "Staff profile updated." });
+      await loadDirectory(query);
+    } catch (error) {
+      handleEditApiError(error);
+      const statusCode = (error as { response?: { status?: number } })?.response?.status;
+      setFeedback({ tone: "danger", message: statusCode === 409 || statusCode === 412
+        ? "This staff profile changed after you opened it. Reload the record before saving."
+        : getApiErrorMessage(error) });
+    } finally { setSavingProfile(false); }
+  };
+
+  const addAssignment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !selected) return;
+    if (!assignmentDraft.designation.trim()) { setFeedback({ tone: "danger", message: "Enter a designation." }); return; }
+    setSavingAssignment(true);
+    setFeedback(null);
+    try {
+      await staffService.addAssignment(tenantId, selected.id, {
+        institutionId: assignmentDraft.institutionId.trim() || undefined,
+        departmentId: assignmentDraft.departmentId.trim() || undefined,
+        designation: assignmentDraft.designation.trim(), effectiveFrom: assignmentDraft.effectiveFrom,
+      });
+      setAssignmentDraft({ institutionId: "", departmentId: "", designation: "", effectiveFrom: today() });
+      setAssignments(await staffService.listAssignments(tenantId, selected.id));
+      await loadDirectory(query);
+      setFeedback({ tone: "success", message: "Staff assignment added." });
+    } catch (error) { setFeedback({ tone: "danger", message: getApiErrorMessage(error) }); }
+    finally { setSavingAssignment(false); }
+  };
+
+  const uploadDocument = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !selected || !documentFile) { setFeedback({ tone: "danger", message: "Choose a document file first." }); return; }
+    setUploading(true);
+    setFeedback(null);
+    try {
+      const institutionId = assignments.find((item) => item.status === "ACTIVE")?.institutionId ?? undefined;
+      const file = await staffService.uploadDocument(tenantId, documentFile, institutionId);
+      if (file.scanStatus !== "CLEAN" || file.status !== "ACTIVE") {
+        throw new Error("The file is still being scanned or was rejected. Refresh the directory after scanning finishes.");
+      }
+      await staffService.attachDocument(tenantId, selected.id, {
+        documentType, fileId: file.fileId,
+        ...(documentType === "DEGREE" && qualificationDraft.title.trim() && qualificationDraft.awardingInstitution.trim() ? {
+          qualificationTitle: qualificationDraft.title.trim(),
+          awardingInstitution: qualificationDraft.awardingInstitution.trim(),
+          qualificationLevel: qualificationDraft.level,
+          awardedOn: qualificationDraft.awardedOn || undefined,
+        } : {}),
+      });
+      setDocuments(await staffService.listDocuments(tenantId, selected.id));
+      setDocumentFile(null);
+      setQualificationDraft({ title: "", awardingInstitution: "", level: "UNDERGRADUATE", awardedOn: "" });
+      setFeedback({ tone: "success", message: "Document scanned and attached. Verification must be completed by another authorized person." });
+    } catch (error) { setFeedback({ tone: "danger", message: getApiErrorMessage(error) }); }
+    finally { setUploading(false); }
+  };
+
+  const verifyDocument = async (document: StaffDocument, decision: "VERIFIED" | "REJECTED") => {
+    if (!tenantId) return;
+    setVerifyingId(document.id);
+    setFeedback(null);
+    try {
+      await staffService.verifyDocument(tenantId, document.id, { verificationStatus: decision, remark: verifyRemark.trim() || undefined });
+      setDocuments(await staffService.listDocuments(tenantId, document.staffProfileId));
+      setVerifyRemark("");
+      setFeedback({ tone: "success", message: `Document marked ${humanize(decision).toLowerCase()}.` });
+    } catch (error) { setFeedback({ tone: "danger", message: getApiErrorMessage(error) }); }
+    finally { setVerifyingId(null); }
+  };
+
+  const addServiceRecord = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tenantId || !selected) return;
+    if (!serviceDraft.details.trim()) { setFeedback({ tone: "danger", message: "Enter the service record details." }); return; }
+    setSavingService(true);
+    setFeedback(null);
+    try {
+      await staffService.addServiceRecord(tenantId, selected.id, { ...serviceDraft, details: serviceDraft.details.trim() });
+      setRecords(await staffService.listServiceRecords(tenantId, selected.id));
+      setServiceDraft({ eventType: "OTHER", effectiveOn: today(), details: "" });
+      setFeedback({ tone: "success", message: "Service history entry added." });
+    } catch (error) { setFeedback({ tone: "danger", message: getApiErrorMessage(error) }); }
+    finally { setSavingService(false); }
+  };
+
+  if (!tenantId) return <div className="app-page"><PageHeader title="Staff records" description="Staff profiles and institution assignments." /><ErrorState title="Tenant context unavailable" message="Sign in with an institution account to access staff records." /></div>;
+
+  return (
+    <div className="app-page">
+      <PageHeader title={staffId ? "Staff profile" : "Staff records"} description={staffId ? "Review and manage this staff member’s profile, qualifications, assignments and service history." : "Manage staff profiles, institution assignments, service history and verified documents."}
+        actions={canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : null} />
+      {feedback && <Notice tone={feedback.tone}>{feedback.message}</Notice>}
+      <div className="app-two-col staff-records-layout">
+        {!staffId && <Panel title="Staff directory" description="Results are limited to the active role scope.">
+          <div className="app-toolbar">
+            <SearchBox value={query} onChange={setQuery} placeholder="Search staff name or code" />
+            <Button variant="secondary" size="sm" onClick={() => { setDirectoryPage(1); void loadDirectory(query); }} busy={state === "loading"}>Search</Button>
+            <Button variant="secondary" size="sm" disabled={state === "loading"} onClick={() => void loadDirectory(query)}>Refresh</Button>
+          </div>
+          {state === "loading" && <SkeletonCard><SkeletonText height="1rem" width="55%" /><SkeletonText lines={5} /></SkeletonCard>}
+          {state === "error" && <ErrorState title="Could not load staff" message={listError} action={<Button variant="secondary" onClick={() => void loadDirectory(query)}>Retry</Button>} />}
+          {state === "loaded" && staff.length === 0 && (
+            <EmptyState
+              title={query ? "No matching staff records" : "Your staff directory is empty"}
+              description={query ? "Try a different name or staff code, or clear your search." : "Staff profiles within your active role scope will appear here. Create the first staff profile to begin building the directory."}
+              icon="users"
+              action={!query && canManage ? <Button onClick={() => setCreateOpen(true)}>Add staff member</Button> : undefined}
+            />
+          )}
+          {state === "loaded" && staff.length > 0 && (
+            <>
+              <div className="app-list-summary">
+                <span><strong>{staff.length}</strong> staff {staff.length === 1 ? "record" : "records"}</span>
+              </div>
+              <div className="staff-record-list" role="list" aria-label="Staff directory">
+                {staff.slice((directoryPage - 1) * directoryPageSize, directoryPage * directoryPageSize).map((person) => (
+                  <StaffRecordListItem
+                    key={person.id}
+                    person={person}
+                    isSelected={selected?.id === person.id}
+                    onSelect={handleSelectStaff}
+                  />
+                ))}
+              </div>
+              {staff.length > directoryPageSize && (
+                <Pagination
+                  ariaLabel="Staff directory pagination"
+                  currentPage={directoryPage}
+                  totalPages={Math.ceil(staff.length / directoryPageSize)}
+                  totalItems={staff.length}
+                  pageSize={directoryPageSize}
+                  currentItemsCount={staff.slice((directoryPage - 1) * directoryPageSize, directoryPage * directoryPageSize).length}
+                  pageSizeOptions={[10, 25, 50]}
+                  onPageChange={setDirectoryPage}
+                  onPageSizeChange={(size) => {
+                    setDirectoryPageSize(size);
+                    setDirectoryPage(1);
+                  }}
+                />
+              )}
+            </>
+          )}
+
+        </Panel>}
+
+        <div className="staff-record-detail">
+          {staffId && <div className="app-inline-actions"><Button variant="tertiary" onClick={() => navigate("/university/staff")}>Back to staff directory</Button></div>}
+          {!selected && !detailLoading && <EmptyState title={staffId ? "Staff profile unavailable" : "Select a staff member"} description={staffId ? "The requested staff record could not be loaded in your active role scope." : "Choose a record to view profile details, assignments, documents and service history."} icon="users" />}
+          {detailLoading && <SkeletonCard><SkeletonText height="1.25rem" width="55%" /><SkeletonText lines={5} /></SkeletonCard>}
+          {detailError && <ErrorState title="Could not load staff details" message={detailError} action={selected ? <Button variant="secondary" onClick={() => void loadProfile(selected.id)}>Retry</Button> : undefined} />}
+          {selected && !detailLoading && !detailError && (
+            <>
+              <Panel title={selected.fullName} description={`${selected.staffCode} · ${humanize(selected.employmentStatus)}`}>
+                {profileDraft && <form onSubmit={saveProfile} className="app-form">
+                  <div className="app-form-grid">
+                    <TextField id="staff-edit-code" label="Staff code" value={profileDraft.staffCode ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, staffCode: e.target.value })} disabled={!canManage} />
+                    <TextField
+                      id="staff-edit-name"
+                      label="Full name"
+                      required
+                      value={profileDraft.fullName ?? ""}
+                      onChange={(e) => setProfileDraft({ ...profileDraft, fullName: e.target.value })}
+                      disabled={!canManage}
+                      fieldName="fullName"
+                      error={editFieldErrors.fullName}
+                      setFieldError={setEditFieldError}
+                      clearFieldError={clearEditFieldError}
+                    />
+                    <TextField
+                      id="staff-edit-email"
+                      label="Personal email"
+                      type="email"
+                      value={profileDraft.personalEmail ?? ""}
+                      onChange={(e) => setProfileDraft({ ...profileDraft, personalEmail: e.target.value })}
+                      disabled={!canManage}
+                      fieldName="personalEmail"
+                      error={editFieldErrors.personalEmail}
+                      setFieldError={setEditFieldError}
+                      clearFieldError={clearEditFieldError}
+                    />
+                    <PhoneField
+                      id="staff-edit-mobile"
+                      label="Mobile number"
+                      value={profileDraft.personalMobile ?? ""}
+                      onChange={(e) => {
+                        setProfileDraft({ ...profileDraft, personalMobile: e.target.value });
+                        clearEditFieldError("personalMobile");
+                      }}
+                      disabled={!canManage}
+                      fieldName="personalMobile"
+                      error={editFieldErrors.personalMobile}
+                      setFieldError={setEditFieldError}
+                      clearFieldError={clearEditFieldError}
+                    />
+                    <DateField id="staff-edit-dob" label="Date of birth" value={profileDraft.dateOfBirth ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, dateOfBirth: e.target.value })} disabled={!canManage} />
+                    <TextField id="staff-edit-national" label="National ID (last four only)" maxLength={4} value={profileDraft.nationalIdLast4 ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, nationalIdLast4: e.target.value.replace(/\D/g, "") })} disabled={!canManage} />
+                    <SelectField id="staff-edit-status" label="Employment status" value={profileDraft.employmentStatus ?? "ACTIVE"} onChange={(e) => setProfileDraft({ ...profileDraft, employmentStatus: e.target.value })} disabled={!canManage}
+                      options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }, { value: "LEFT", label: "Left service" }]} />
+                    <DateField id="staff-edit-joined" label="Joined on" value={profileDraft.joinedOn ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, joinedOn: e.target.value })} disabled={!canManage} />
+                    <DateField id="staff-edit-left" label="Left on" value={profileDraft.leftOn ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, leftOn: e.target.value })} disabled={!canManage} />
+                  </div>
+                  {canManage && <div className="app-inline-actions"><Button type="submit" busy={savingProfile}>Save profile</Button></div>}
+                  <p className="app-note">Updates use the server version tag. Reload before saving if another administrator changed this record.</p>
+                </form>}
+              </Panel>
+
+              <Panel title="Institution assignments" description="Assign the staff member to an institution or department with an effective date.">
+                {assignments.length === 0 ? <EmptyState title="No assignments recorded" description="A staff profile must have an active assignment to appear in an institution or department directory." /> : (
+                  <DataTable headers={["Designation", "Institution", "Department", "Effective from", "Status"]} ariaLabel="Staff institution assignments" empty={assignments.length === 0}>
+                    {assignments.map((item) => <tr key={item.id}><td>{item.designation}</td><td><code>{item.institutionId ?? "Tenant-wide"}</code></td><td><code>{item.departmentId ?? "—"}</code></td><td>{item.effectiveFrom}</td><td><Badge tone={item.status === "ACTIVE" ? "success" : "neutral"}>{humanize(item.status)}</Badge></td></tr>)}
+                  </DataTable>
+                )}
+                {canManage && <form onSubmit={addAssignment} className="app-form app-form-divider">
+                  <div className="app-form-grid">
+                    <SelectField
+                      id="staff-inst-id"
+                      label="Institution (optional)"
+                      value={assignmentDraft.institutionId}
+                      onChange={(e) => setAssignmentDraft({ ...assignmentDraft, institutionId: e.target.value, departmentId: "" })}
+                    >
+                      <option value="">Tenant-wide (no institution)</option>
+                      {institutions.map((inst) => (
+                        <option key={inst.institutionId} value={inst.institutionId}>
+                          {inst.institutionName} ({inst.institutionCode})
+                        </option>
+                      ))}
+                    </SelectField>
+                    <SelectField
+                      id="staff-dept-id"
+                      label="Department (optional)"
+                      value={assignmentDraft.departmentId}
+                      onChange={(e) => setAssignmentDraft({ ...assignmentDraft, departmentId: e.target.value })}
+                      disabled={!assignmentDraft.institutionId}
+                    >
+                      <option value="">No department</option>
+                      {departments.map((dept) => (
+                        <option key={dept.departmentId} value={dept.departmentId}>
+                          {dept.departmentName} ({dept.departmentCode})
+                        </option>
+                      ))}
+                    </SelectField>
+                    <TextField id="staff-designation" label="Designation" required value={assignmentDraft.designation} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, designation: e.target.value })} />
+                    <DateField id="staff-assignment-start" label="Effective from" required value={assignmentDraft.effectiveFrom} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, effectiveFrom: e.target.value })} />
+                  </div>
+                  <div className="app-inline-actions"><Button type="submit" variant="secondary" busy={savingAssignment}>Add assignment</Button></div>
+                </form>}
+              </Panel>
+
+              <Panel title="Staff documents" description="Upload supporting documents for scanning and attach them to this profile. An authorized second person must verify them.">
+                {documents.length === 0 ? <EmptyState title="No documents attached" description="Add a degree certificate, identity proof or other supporting document." icon="book" /> : (
+                  <DataTable headers={["Document", "File ID", "Status", "Review"]} ariaLabel="Staff documents">
+                    {documents.map((doc) => <tr key={doc.id}>
+                      <td>{humanize(doc.documentType)}</td><td><code>{doc.fileId}</code></td><td>{humanize(doc.verificationStatus)}</td>
+                      <td>{canVerify && doc.verificationStatus === "UPLOADED" && doc.createdBy !== userId ? (
+                        <span className="app-action-group">
+                          <Button size="sm" variant="secondary" disabled={verifyingId === doc.id} onClick={() => void verifyDocument(doc, "VERIFIED")}>Verify</Button>
+                          <Button size="sm" variant="tertiary" disabled={verifyingId === doc.id} onClick={() => void verifyDocument(doc, "REJECTED")}>Reject</Button>
+                        </span>
+                      ) : doc.createdBy === userId && doc.verificationStatus === "UPLOADED" ? "Awaiting independent review" : "—"}</td>
+                    </tr>)}
+                  </DataTable>
+                )}
+                {canManage && <form onSubmit={uploadDocument} className="app-form app-form-divider">
+                  <div className="app-form-grid">
+                    <SelectField id="staff-doc-type" label="Document type" value={documentType} onChange={(e) => setDocumentType(e.target.value)} options={[{ value: "DEGREE", label: "Degree certificate" }, { value: "ID_PROOF", label: "Identity proof" }, { value: "OTHER", label: "Other" }]} />
+                    <FileDrop label="Choose file" onFile={setDocumentFile} accept=".pdf,.png,.jpg,.jpeg" maxBytes={10_485_760} />
+                    {documentType === "DEGREE" && <>
+                      <TextField id="staff-qualification-title" label="Qualification (optional)" value={qualificationDraft.title} onChange={(e) => setQualificationDraft({ ...qualificationDraft, title: e.target.value })} />
+                      <TextField id="staff-qualification-awarder" label="Awarding institution (optional)" value={qualificationDraft.awardingInstitution} onChange={(e) => setQualificationDraft({ ...qualificationDraft, awardingInstitution: e.target.value })} />
+                      <SelectField id="staff-qualification-level" label="Qualification level" value={qualificationDraft.level} onChange={(e) => setQualificationDraft({ ...qualificationDraft, level: e.target.value })} options={[{ value: "CERTIFICATE", label: "Certificate" }, { value: "DIPLOMA", label: "Diploma" }, { value: "UNDERGRADUATE", label: "Undergraduate" }, { value: "POSTGRADUATE", label: "Postgraduate" }, { value: "DOCTORATE", label: "Doctorate" }, { value: "OTHER", label: "Other" }]} />
+                      <DateField id="staff-qualification-awarded" label="Awarded on" value={qualificationDraft.awardedOn} onChange={(e) => setQualificationDraft({ ...qualificationDraft, awardedOn: e.target.value })} />
+                    </>}
+                  </div>
+                  <div className="app-inline-actions"><Button type="submit" variant="secondary" busy={uploading} disabled={!documentFile}>Upload and attach</Button></div>
+                </form>}
+                {canVerify && documents.some((doc) => doc.verificationStatus === "UPLOADED" && doc.createdBy !== userId) && <TextField id="staff-doc-remark" label="Verification note (optional)" value={verifyRemark} onChange={(e) => setVerifyRemark(e.target.value)} />}
+              </Panel>
+
+              <Panel title="Service history" description="Record employment events and other staff service history.">
+                {records.length === 0 ? <EmptyState title="No service history yet" description="Add the first service record below." icon="clock" /> : (
+                  <DataTable headers={["Event", "Effective on", "Details"]} ariaLabel="Staff service history">
+                    {records.map((record) => <tr key={record.id}><td>{humanize(record.eventType)}</td><td>{record.effectiveOn}</td><td>{record.details}</td></tr>)}
+                  </DataTable>
+                )}
+                {canManage && <form onSubmit={addServiceRecord} className="app-form app-form-divider">
+                  <div className="app-form-grid">
+                    <SelectField id="staff-service-event" label="Event type" value={serviceDraft.eventType} onChange={(e) => setServiceDraft({ ...serviceDraft, eventType: e.target.value as typeof serviceDraft.eventType })} options={EVENT_OPTIONS} />
+                    <DateField id="staff-service-date" label="Effective date" required value={serviceDraft.effectiveOn} onChange={(e) => setServiceDraft({ ...serviceDraft, effectiveOn: e.target.value })} />
+                  </div>
+                  <TextAreaField id="staff-service-details" label="Details" required rows={3} value={serviceDraft.details} onChange={(e) => setServiceDraft({ ...serviceDraft, details: e.target.value })} />
+                  <div className="app-inline-actions"><Button type="submit" variant="secondary" busy={savingService}>Add service record</Button></div>
+                </form>}
+              </Panel>
+            </>
+          )}
+        </div>
+      </div>
+
+      <CreatedCredentialsModal
+        isOpen={!!newStaffCreds}
+        user={newStaffCreds ?? { displayName: "" }}
+        onClose={() => setNewStaffCreds(null)}
+        kicker="STAFF ACCOUNT CREATED"
+        title="Staff account provisioned"
+        description="Share this temporary password securely with the staff member. It will only be shown once."
+      />
+
+      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Add staff member" kicker="STAFF RECORDS" description="Create a staff profile, then add its institution or department assignment." size="lg">
+        <form onSubmit={createStaff} className="app-form">
+          {createError && <Notice tone="danger">{createError}</Notice>}
+          <div className="app-form-grid">
+            <TextField
+              id="new-staff-full-name"
+              label="Full name"
+              required
+              value={draft.fullName}
+              onChange={(e) => setDraft({ ...draft, fullName: e.target.value })}
+              fieldName="fullName"
+              error={createFieldErrors.fullName}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
+            <TextField id="new-staff-code" label="Staff code (optional)" value={draft.staffCode ?? ""} onChange={(e) => setDraft({ ...draft, staffCode: e.target.value })} />
+            <TextField
+              id="new-staff-official-email"
+              label="Official email (login)"
+              type="email"
+              required
+              value={draft.officialEmail ?? ""}
+              onChange={(e) => setDraft({ ...draft, officialEmail: e.target.value })}
+              fieldName="officialEmail"
+              error={createFieldErrors.officialEmail}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
+            <TextField
+              id="new-staff-personal-email"
+              label="Personal email (secondary login after verification)"
+              type="email"
+              value={draft.personalEmail ?? ""}
+              onChange={(e) => setDraft({ ...draft, personalEmail: e.target.value })}
+              fieldName="personalEmail"
+              error={createFieldErrors.personalEmail}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
+            <TextField id="new-staff-role" label="Initial role code (optional)" value={draft.initialRoleCode ?? ""} onChange={(e) => setDraft({ ...draft, initialRoleCode: e.target.value })} />
+            <PhoneField
+              id="new-staff-mobile"
+              label="Mobile number"
+              value={draft.personalMobile ?? ""}
+              onChange={(e) => {
+                setDraft({ ...draft, personalMobile: e.target.value });
+                clearCreateFieldError("personalMobile");
+              }}
+              fieldName="personalMobile"
+              error={createFieldErrors.personalMobile}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
+            <DateField id="new-staff-dob" label="Date of birth" value={draft.dateOfBirth ?? ""} onChange={(e) => setDraft({ ...draft, dateOfBirth: e.target.value })} />
+            <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\D/g, "") })} />
+            <DateField id="new-staff-joined-on" label="Joined on" value={draft.joinedOn ?? ""} onChange={(e) => setDraft({ ...draft, joinedOn: e.target.value })} />
+          </div>
+          <footer className="app-modal__footer">
+            <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
+            <Button type="submit" busy={creating}>Create staff account and profile</Button>
+          </footer>
+        </form>
+      </Modal>
+    </div>
+  );
+}

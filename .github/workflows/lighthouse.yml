@@ -1,0 +1,71 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lighthouse-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse quality report
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run Lighthouse CI
+        run: npx --yes @lhci/cli@0.14.0 autorun
+
+      - name: Write Lighthouse scores to job summary
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = ".lighthouseci/manifest.json";
+            if (!fs.existsSync(path)) {
+              console.log("No manifest.json found; Lighthouse CI likely failed before producing a report.");
+              process.exit(0);
+            }
+            const runs = JSON.parse(fs.readFileSync(path, "utf8"));
+            const pct = (v) => `${Math.round(v * 100)}%`;
+            let md = "## Lighthouse CI scores\n\n";
+            md += "| URL | Performance | Accessibility | Best Practices | SEO | Report |\n";
+            md += "|---|---|---|---|---|---|\n";
+            for (const run of runs) {
+              const s = run.summary;
+              const reportLink = run.htmlPath ? run.htmlPath.split("/").pop() : "n/a";
+              md += `| ${run.url} | ${pct(s.performance)} | ${pct(s.accessibility)} | ${pct(s["best-practices"])} | ${pct(s.seo)} | ${reportLink} |\n`;
+            }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
+            console.log(md);
+          '
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report-${{ github.sha }}
+          path: app/.lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 7

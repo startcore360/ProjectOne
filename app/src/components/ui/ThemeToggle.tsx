@@ -8,15 +8,14 @@ import { Icon } from "./Icon";
 // a floating button was competing with the mobile bottom nav for the same
 // corner, so the signed-in app no longer uses the fab variant at all.
 export function ThemeToggle({ variant = "fab" }: { variant?: "fab" | "inline" }) {
-  // Starts with whatever theme is already saved/active, so the icon matches
-  // the page on first render instead of flashing the wrong one.
   const [theme, setTheme] = useState(getStoredTheme);
 
   return (
     <button
       type="button"
       className={"theme-toggle" + (variant === "fab" ? " theme-toggle--fab" : "")}
-      aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label="Dark theme"
+      aria-pressed={theme === "dark"}
       onClick={() => setTheme(toggleStoredTheme(theme))}
     >
       <Icon name={theme === "dark" ? "sun" : "moon"} size={18} />

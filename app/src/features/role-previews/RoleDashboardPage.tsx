@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Icon } from "../../components/ui/Icon";
 import {
@@ -56,7 +56,7 @@ export default function RoleDashboardPage() {
       <section className="role-preview-page">
         <header className="role-preview-heading">
           <div>
-            <p className="student-eyebrow">EDU 360 · V4.0 ROLE CATALOGUE</p>
+            <p className="app-eyebrow">EDU 360 · V4.0 ROLE CATALOGUE</p>
             <h1>Dashboard experiences for every role.</h1>
             <p>
               71 source-defined roles, organised into consistent dashboard families. Each role has its own
@@ -91,7 +91,7 @@ export default function RoleDashboardPage() {
       <section className="role-preview-page">
         <div className="role-preview-student-head">
           <span className="role-preview-tag">DESIGN PREVIEW · {role.name}</span>
-          <Link to="/role-previews" className="student-text-link">
+          <Link to="/role-previews" className="app-text-link">
             All roles <Icon name="more" size={15} />
           </Link>
         </div>
@@ -121,7 +121,7 @@ export default function RoleDashboardPage() {
       ) : (
         <div className="role-preview-banner">
           <div>
-            <p className="student-eyebrow">
+            <p className="app-eyebrow">
               GOOD MORNING · {role.level.toUpperCase()} · {role.code}
             </p>
             <h1>{role.name}</h1>
@@ -132,18 +132,18 @@ export default function RoleDashboardPage() {
       )}
       <div className="role-preview-intro">
         <div>
-          <p className="student-eyebrow">ROLE DASHBOARD</p>
+          <p className="app-eyebrow">ROLE DASHBOARD</p>
           <h2>{content.title}</h2>
           <p>{content.focus}</p>
         </div>
-        <Link to="/role-previews" className="student-text-link">
+        <Link to="/role-previews" className="app-text-link">
           All roles <Icon name="more" size={15} />
         </Link>
       </div>
-      <section className="role-preview-queue student-panel" id="role-queue">
-        <header className="student-panel__header">
+      <section className="role-preview-queue app-dash-card" id="role-queue">
+        <header className="app-dash-card__header">
           <div>
-            <p className="student-eyebrow">YOUR ASSIGNED WORK</p>
+            <p className="app-eyebrow">YOUR ASSIGNED WORK</p>
             <h2>Work queue</h2>
           </div>
           <span className="role-preview-tag">ROLE & SCOPE AWARE</span>
@@ -168,13 +168,13 @@ export default function RoleDashboardPage() {
       </div>
       <div className="role-preview-panels">
         {content.panels.map(([title, eyebrow, description], i) => (
-          <article className="student-panel" key={title}>
-            <header className="student-panel__header">
+          <article className="app-dash-card" key={title}>
+            <header className="app-dash-card__header">
               <div>
-                <p className="student-eyebrow">{eyebrow}</p>
+                <p className="app-eyebrow">{eyebrow}</p>
                 <h2>{title}</h2>
               </div>
-              <span className="student-panel__chevron">
+              <span className="app-dash-card__chevron">
                 <Icon name={i === 1 ? "clock" : i === 2 ? "chart" : "home"} size={17} />
               </span>
             </header>

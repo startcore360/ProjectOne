@@ -80,7 +80,7 @@ public class RoleCustomService {
 
         String roleCode = request.roleCode().trim().toUpperCase();
         if (roleDefinitionRepository.existsByIdTenantIdAndRoleCode(tenantId, roleCode)) {
-            throw new DuplicateResourceException("Role code '" + roleCode + "' already exists in this tenant.");
+            throw new DuplicateResourceException("Role code '" + roleCode + "' already exists in this tenant.", "roleCode");
         }
 
         enforceCustomScope(caller, request.customScope());

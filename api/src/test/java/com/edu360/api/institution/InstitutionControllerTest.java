@@ -32,6 +32,7 @@ import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.BlockDecisionRequest;
 import com.edu360.api.institution.dto.BlockInstitutionRequest;
 import com.edu360.api.institution.dto.CreateInstitutionRequest;
+import com.edu360.api.institution.dto.UpdateInstitutionRequest;
 import com.edu360.api.institution.dto.InstitutionBlockResponse;
 import com.edu360.api.institution.dto.InstitutionResponse;
 import com.edu360.api.platform.Plan;
@@ -48,6 +49,7 @@ import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.tenant.IsolationMode;
 import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.tenant.TenantRepository;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * Action & Guard tests for:
@@ -102,6 +104,8 @@ class InstitutionControllerTest {
                 approvalInboxService
         );
 
+        ReflectionTestUtils.setField(institutionService, "institutionIdFormatService",
+                mock(InstitutionIdFormatService.class));
         controller = new InstitutionController(institutionService);
         TenantContext.set(TENANT_ID, IsolationMode.SHARED, null, "ALL", java.util.Set.of(), "UNIVERSITY_ADMIN", ScopeType.TENANT);
     }
@@ -122,6 +126,58 @@ class InstitutionControllerTest {
         return new UsernamePasswordAuthenticationToken(principal, "n/a", java.util.Collections.emptyList());
     }
 
+    @Test
+    @DisplayName("T2-S1: hierarchy returns tenant root, colleges/schools and nested departments")
+    void getHierarchy_returnsTenantRootedInstitutionTree() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        Tenant tenant = Tenant.builder()
+                .tenantId(TENANT_ID)
+                .tenantName("Northbridge University Group")
+                .tenantType("UNIVERSITY_GROUP")
+                .planId(PLAN_ID)
+                .build();
+        Institution college = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College")
+                .status("ACTIVE")
+                .build();
+        Institution school = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, UUID.randomUUID()))
+                .institutionType("SCHOOL")
+                .institutionCode("NPS-01")
+                .institutionName("Northbridge Public School")
+                .status("ACTIVE")
+                .build();
+        Department department = Department.builder()
+                .departmentId(UUID.randomUUID())
+                .tenantId(TENANT_ID)
+                .institutionId(INSTITUTION_ID)
+                .departmentCode("CSE")
+                .departmentName("Computer Science")
+                .status("ACTIVE")
+                .build();
+        DepartmentRepository departments = mock(DepartmentRepository.class);
+        ReflectionTestUtils.setField(institutionService, "departmentRepository", departments);
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        when(institutionRepository.findByIdTenantId(TENANT_ID)).thenReturn(java.util.List.of(college, school));
+        when(departments.findByTenantIdAndInstitutionId(TENANT_ID, INSTITUTION_ID))
+                .thenReturn(java.util.List.of(department));
+
+        var response = controller.getHierarchy(TENANT_ID, auth);
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().tenantName()).isEqualTo("Northbridge University Group");
+        assertThat(response.getBody().institutions()).hasSize(2);
+        assertThat(response.getBody().institutions().getFirst().departments()).hasSize(1);
+        assertThat(response.getBody().institutions().getFirst().departments().getFirst().departmentCode()).isEqualTo("CSE");
+        assertThat(response.getBody().institutions().get(1).departments()).isEmpty();
+        verify(permissionEvaluatorService).authorize(
+                eq(new RbacPrincipal(TENANT_ID, USER_ID)),
+                eq("INSTITUTION_CREATE_DRAFT"), eq(RbacScope.tenant()), eq(RbacTarget.NONE));
+    }
+
     // =========================================================================
     // INSTITUTION_CREATE_DRAFT (Story #25)
     // =========================================================================
@@ -132,7 +188,7 @@ class InstitutionControllerTest {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
                 "COLLEGE", "NBC-01", "Northbridge College of Science", false,
-                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001", "principal@northbridge.edu.in"
+                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001", "principal@northbridge.edu.in", "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         when(institutionRepository.existsByIdTenantIdAndInstitutionCode(TENANT_ID, "NBC-01")).thenReturn(false);
@@ -168,7 +224,7 @@ class InstitutionControllerTest {
     void actInstitutionCreateDraft_deny() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-01", "Northbridge College of Science", false, null, null, null, null, null
+                "COLLEGE", "NBC-01", "Northbridge College of Science", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         doThrow(new UnauthorizedException("The active role does not hold action INSTITUTION_CREATE_DRAFT."))
@@ -186,7 +242,7 @@ class InstitutionControllerTest {
         UUID foreignTenantId = UUID.randomUUID();
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null
+                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         assertThatThrownBy(() -> controller.createDraft(foreignTenantId, req, auth))
@@ -199,9 +255,11 @@ class InstitutionControllerTest {
     void actInstitutionCreateDraft_guard_duplicateCode() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null
+                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("UNIVERSITY_GROUP").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
         when(institutionRepository.existsByIdTenantIdAndInstitutionCode(TENANT_ID, "NBC-01")).thenReturn(true);
 
         assertThatThrownBy(() -> controller.createDraft(TENANT_ID, req, auth))
@@ -214,7 +272,7 @@ class InstitutionControllerTest {
     void actInstitutionCreateDraft_guard_planLimitReached() {
         Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
         CreateInstitutionRequest req = new CreateInstitutionRequest(
-                "COLLEGE", "NBC-02", "New Campus", false, null, null, null, null, null
+                "COLLEGE", "NBC-02", "New Campus", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
         when(institutionRepository.countByIdTenantIdAndStatusNot(TENANT_ID, "ARCHIVED")).thenReturn(5L);
@@ -230,6 +288,157 @@ class InstitutionControllerTest {
                     assertThat(bre.getErrorCode()).isEqualTo("PLAN_LIMIT_REACHED");
                     assertThat(bre.getMessage()).contains("WF-14");
                 });
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-GUARD: a STANDALONE_SCHOOL tenant cannot create a College")
+    void actInstitutionCreateDraft_guard_schoolTenantRejectsCollege() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("STANDALONE_SCHOOL").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+
+        assertThatThrownBy(() -> controller.createDraft(TENANT_ID, req, auth))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .satisfies(ex -> assertThat(((BusinessRuleViolationException) ex).getErrorCode())
+                        .isEqualTo("INSTITUTION_TYPE_NOT_ALLOWED"));
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-ALLOW: a STANDALONE_SCHOOL tenant can create a School")
+    void actInstitutionCreateDraft_allow_schoolTenantAllowsSchool() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "SCHOOL", "NPS-01", "Northbridge Public School", false,
+                null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("STANDALONE_SCHOOL").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        Plan plan = Plan.builder().planId(PLAN_ID).planName("School Plan").maxInstitutions(5).build();
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
+        when(institutionRepository.save(any(Institution.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<InstitutionResponse> response = controller.createDraft(TENANT_ID, req, auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().institutionCode()).isEqualTo("NPS-01");
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-GUARD: a STANDALONE_COLLEGE tenant cannot create a School")
+    void actInstitutionCreateDraft_guard_collegeTenantRejectsSchool() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "SCHOOL", "NPS-01", "Northbridge Public School", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("STANDALONE_COLLEGE").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+
+        assertThatThrownBy(() -> controller.createDraft(TENANT_ID, req, auth))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .satisfies(ex -> assertThat(((BusinessRuleViolationException) ex).getErrorCode())
+                        .isEqualTo("INSTITUTION_TYPE_NOT_ALLOWED"));
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-ALLOW: a UNIVERSITY_GROUP tenant can create either kind")
+    void actInstitutionCreateDraft_allow_universityGroupAllowsBothKinds() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "SCHOOL", "NPS-01", "Northbridge Public School", false,
+                null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("UNIVERSITY_GROUP").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        Plan plan = Plan.builder().planId(PLAN_ID).planName("University Plan").maxInstitutions(10).build();
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
+        when(institutionRepository.save(any(Institution.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<InstitutionResponse> response = controller.createDraft(TENANT_ID, req, auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().institutionCode()).isEqualTo("NPS-01");
+    }
+
+    @Test
+    @DisplayName("T2-S1: PUT institution updates profile atomically when If-Match matches")
+    void updateInstitution_withMatchingIfMatch_updatesProfileAndReturnsNewEtag() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        Institution current = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College")
+                .status("DRAFT")
+                .externalUniversityMode(false)
+                .rowVersion(4)
+                .build();
+        Institution updated = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College of Science")
+                .status("DRAFT")
+                .externalUniversityMode(true)
+                .rowVersion(5)
+                .build();
+        when(institutionRepository.findByIdTenantIdAndIdInstitutionId(TENANT_ID, INSTITUTION_ID))
+                .thenReturn(Optional.of(current), Optional.of(updated));
+        when(institutionRepository.existsByIdTenantIdAndInstitutionNameAndIdInstitutionIdNot(
+                TENANT_ID, "Northbridge College of Science", INSTITUTION_ID)).thenReturn(false);
+        when(institutionRepository.updateEditableFields(
+                TENANT_ID, INSTITUTION_ID, 4, "Northbridge College of Science",
+                "124 Knowledge Park", "Bengaluru", "Karnataka", "560001",
+                "principal@northbridge.edu.in", true, USER_ID)).thenReturn(1);
+
+        UpdateInstitutionRequest request = new UpdateInstitutionRequest(
+                "Northbridge College of Science", "124 Knowledge Park", "Bengaluru",
+                "Karnataka", "560001", "principal@northbridge.edu.in", true);
+
+        ResponseEntity<InstitutionResponse> response =
+                controller.updateInstitution(TENANT_ID, INSTITUTION_ID, "\"4\"", request, auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getETag()).isEqualTo("\"5\"");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().institutionName()).isEqualTo("Northbridge College of Science");
+        assertThat(response.getBody().rowVersion()).isEqualTo(5);
+        verify(permissionEvaluatorService).authorize(
+                eq(new RbacPrincipal(TENANT_ID, USER_ID)),
+                eq("INSTITUTION_CREATE_DRAFT"), eq(RbacScope.tenant()), eq(RbacTarget.NONE));
+        verify(auditLogService).record(eq(AuditEventType.INSTITUTION_UPDATED), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("T2-S1: PUT institution rejects stale If-Match before writing")
+    void updateInstitution_withStaleIfMatch_returnsVersionConflict() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        Institution current = Institution.builder()
+                .id(new InstitutionId(TENANT_ID, INSTITUTION_ID))
+                .institutionType("COLLEGE")
+                .institutionCode("NBC-01")
+                .institutionName("Northbridge College")
+                .status("DRAFT")
+                .rowVersion(4)
+                .build();
+        when(institutionRepository.findByIdTenantIdAndIdInstitutionId(TENANT_ID, INSTITUTION_ID))
+                .thenReturn(Optional.of(current));
+
+        UpdateInstitutionRequest request = new UpdateInstitutionRequest(
+                "Renamed College", null, null, null, null, null, null);
+
+        assertThatThrownBy(() -> controller.updateInstitution(TENANT_ID, INSTITUTION_ID, "\"3\"", request, auth))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .satisfies(ex -> assertThat(((BusinessRuleViolationException) ex).getErrorCode()).isEqualTo("VERSION_CONFLICT"));
+        org.mockito.Mockito.verify(institutionRepository, org.mockito.Mockito.never())
+                .updateEditableFields(any(), any(), org.mockito.ArgumentMatchers.anyInt(), any(),
+                        any(), any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean(), any());
     }
 
     // =========================================================================
@@ -261,9 +470,9 @@ class InstitutionControllerTest {
                 .id(new ApprovalRequestId(TENANT_ID, activationRequestId))
                 .currentStepNo((short) 1)
                 .status("PENDING")
-                .processCode("INSTITUTION_ACTIVATION")
+                .processCode("INSTITUTION_ACTIVATE")
                 .build();
-        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATION"))
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATE"))
                 .thenReturn(Optional.of(activationRequest));
         doAnswer(inv -> {
             draftInstitution.setStatus("ACTIVE");
@@ -337,9 +546,9 @@ class InstitutionControllerTest {
                 .id(new ApprovalRequestId(TENANT_ID, activationRequestId))
                 .currentStepNo((short) 1)
                 .status("PENDING")
-                .processCode("INSTITUTION_ACTIVATION")
+                .processCode("INSTITUTION_ACTIVATE")
                 .build();
-        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATION"))
+        when(approvalInboxService.pendingRequestFor(TENANT_ID, "INSTITUTION", INSTITUTION_ID, "INSTITUTION_ACTIVATE"))
                 .thenReturn(Optional.of(activationRequest));
         doThrow(new BusinessRuleViolationException("GO_LIVE_BLOCKED",
                 "Principal's-leave approver not set for institution " + INSTITUTION_ID + " [C7]"))

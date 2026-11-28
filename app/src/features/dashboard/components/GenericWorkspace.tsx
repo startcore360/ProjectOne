@@ -1,5 +1,8 @@
+﻿import { useNavigate } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader } from "../../../design-system/components";
+import { Button } from "../../../design-system/components";
+import { renderGreeting } from "../../../utils/greeting";
 
 export interface GenericWorkspaceProps {
   name: string;
@@ -7,6 +10,7 @@ export interface GenericWorkspaceProps {
 }
 
 export function GenericWorkspace({ name, userType }: GenericWorkspaceProps) {
+  const navigate = useNavigate();
   const labels: Record<string, { title: string; description: string; scope: string }> = {
     STAFF: {
       title: "Your work, in one place.",
@@ -23,7 +27,7 @@ export function GenericWorkspace({ name, userType }: GenericWorkspaceProps) {
     APPLICANT: {
       title: "Your application journey.",
       description:
-        "Application status, required documents and next steps will appear here when admissions services are connected.",
+        "Start or continue your admission application, upload supporting documents and track scrutiny and fee status.",
       scope: "Applicant workspace",
     },
     GOVERNANCE: {
@@ -46,10 +50,10 @@ export function GenericWorkspace({ name, userType }: GenericWorkspaceProps) {
     scope: "Institution workspace",
   };
   return (
-    <div className="workspace-dashboard">
-      <PageHeader title={`Welcome, ${name}.`} description={content.title} />
-      <section className="student-panel workspace-state">
-        <span className="student-panel__chevron">
+    <div className="app-dashboard">
+      <PageHeader title={renderGreeting(name)} description={content.title} />
+      <section className="app-dash-card app-welcome-state">
+        <span className="app-dash-card__chevron">
           <Icon name="home" size={20} />
         </span>
         <h2>Your workspace is ready</h2>
@@ -57,6 +61,9 @@ export function GenericWorkspace({ name, userType }: GenericWorkspaceProps) {
           {content.description} Available actions remain controlled by your assigned role and
           permissions.
         </p>
+        {userType === "APPLICANT" && (
+          <Button onClick={() => navigate("/admissions/apply")}>Open applicant portal</Button>
+        )}
       </section>
     </div>
   );

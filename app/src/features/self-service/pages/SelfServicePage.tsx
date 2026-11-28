@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "../../../components/layout/PageHeader";
-import { Badge, Spinner } from "../../../components/ui";
+import { Badge } from "../../../components/ui";
 import {
   Button,
   Tabs,
@@ -8,55 +8,93 @@ import {
   MetricCard,
   StatusBadge,
   EmptyState,
+  SkeletonCard,
+  SkeletonMetricCard,
+  SkeletonTable,
+  SkeletonText,
 } from "../../../design-system/components";
 import { ErrorState } from "../../../components/feedback/ErrorState";
 import { useAppSelector } from "../../../store/hooks";
+import { useNotifications } from "../../notifications/hooks/useNotifications";
 import {
   selfServiceApi,
-  type NotificationItem,
   type LeaveBalanceItem,
   type LeaveRequestItem,
   type NoticeItem,
 } from "../api/selfServiceApi";
 
 export default function SelfServicePage() {
-  const authUser = useAppSelector((state) => state.auth.user);
-  const tenantId = authUser?.tenantId ?? "";
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId ?? "");
 
   const [activeTab, setActiveTab] = useState<"notices" | "leaves" | "notifications">("notices");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(["notices"]));
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  // Each section loads and fails independently so the other tabs remain usable
+  // when a single API call returns an error (e.g. leave-balances 403).
+  const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(true);
+  const [noticesError, setNoticesError] = useState<string | null>(null);
+
   const [balances, setBalances] = useState<LeaveBalanceItem[]>([]);
   const [requests, setRequests] = useState<LeaveRequestItem[]>([]);
-  const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [leavesLoading, setLeavesLoading] = useState(true);
+  const [leavesError, setLeavesError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
+  const {
+    items: notifications,
+    loading: notificationsLoading,
+    error: notificationsError,
+    refresh: refreshNotifications,
+    markRead,
+  } = useNotifications(tenantId);
+
+  const MISSING_CTX = "Your account is not linked to an institution. Contact your administrator.";
+
+  const loadNotices = useCallback(async () => {
+    if (!tenantId) { setNoticesError(MISSING_CTX); setNoticesLoading(false); return; }
+    setNoticesLoading(true);
+    setNoticesError(null);
     try {
-      const [notifs, bals, reqs, nots] = await Promise.all([
-        selfServiceApi.getNotifications(tenantId).catch(() => []),
-        selfServiceApi.getLeaveBalances(tenantId).catch(() => []),
-        selfServiceApi.getLeaveRequests(tenantId).catch(() => []),
-        selfServiceApi.getNotices(tenantId).catch(() => []),
-      ]);
-      setNotifications(Array.isArray(notifs) ? notifs : []);
-      setBalances(Array.isArray(bals) ? bals : []);
-      setRequests(Array.isArray(reqs) ? reqs : []);
-      setNotices(Array.isArray(nots) ? nots : []);
+      setNotices(await selfServiceApi.getNotices(tenantId));
     } catch {
-      setError("Failed to load self-service records. Please retry.");
+      setNoticesError("Campus notices could not be loaded. Please try again.");
     } finally {
-      setLoading(false);
+      setNoticesLoading(false);
     }
   }, [tenantId]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const loadLeaves = useCallback(async () => {
+    if (!tenantId) { setLeavesError(MISSING_CTX); setLeavesLoading(false); return; }
+    setLeavesLoading(true);
+    setLeavesError(null);
+    try {
+      const [balsResult, reqsResult] = await Promise.allSettled([
+        selfServiceApi.getLeaveBalances(tenantId),
+        selfServiceApi.getLeaveRequests(tenantId),
+      ]);
+      if (balsResult.status === "fulfilled") {
+        setBalances(balsResult.value);
+      } else {
+        setBalances([]);
+      }
+      if (reqsResult.status === "fulfilled") {
+        setRequests(reqsResult.value);
+      } else {
+        setRequests([]);
+      }
+      if (balsResult.status === "rejected" || reqsResult.status === "rejected") {
+        setLeavesError("Leave records could not be loaded. Please try again.");
+      }
+    } catch {
+      setLeavesError("Leave records could not be loaded. Please try again.");
+    } finally {
+      setLeavesLoading(false);
+    }
+  }, [tenantId]);
+
+  // Load notices on mount (default tab). Load other tabs only on first activation.
+  useEffect(() => { void loadNotices(); }, [loadNotices]);
+  useEffect(() => { if (loadedTabs.has("leaves")) void loadLeaves(); }, [loadLeaves, loadedTabs]);
 
   const tabItems = [
     { id: "notices", label: `Campus Notices (${notices.length})` },
@@ -65,145 +103,218 @@ export default function SelfServicePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="app-page">
       <PageHeader
         title="Self-Service Portal"
-        description="Access institutional notices, check remaining leave balances, and review alert notifications [SELF_SERVICE_VIEW]."
+        description="Access institutional notices, check remaining leave balances, and review your notifications."
       />
 
-      {loading && (
-        <div className="flex justify-center p-12">
-          <Spinner />
-        </div>
-      )}
+      {/* tabRole="tab" (default) gives correct tablist/tab/tabpanel semantics and aria-controls */}
+      <Tabs
+        items={tabItems}
+        activeId={activeTab}
+        onChange={(id) => {
+          const tab = id as "notices" | "leaves" | "notifications";
+          setActiveTab(tab);
+          setLoadedTabs((prev) => { const next = new Set(prev); next.add(tab); return next; });
+        }}
+      />
 
-      {error && !loading && (
-        <ErrorState
-          message={error}
-          action={<Button variant="secondary" onClick={loadData}>Retry</Button>}
-        />
-      )}
+      {/* Each panel has id="panel-{id}" and role="tabpanel" matching the Tabs component's
+          aria-controls="panel-{id}" output so screen readers announce the relationship. */}
 
-      {!loading && !error && (
-        <>
-          <Tabs
-            items={tabItems}
-            activeId={activeTab}
-            onChange={(id) => setActiveTab(id as "notices" | "leaves" | "notifications")}
-            tabRole="button"
+      <div
+        id="panel-notices"
+        role="tabpanel"
+        aria-labelledby="tab-notices"
+        hidden={activeTab !== "notices"}
+        className="app-stack"
+      >
+        {noticesLoading && notices.length === 0 && (
+          <div className="app-stack" role="status" aria-busy="true" aria-label="Loading notices">
+            <span className="sr-only">Loading notices...</span>
+            {Array.from({ length: 3 }, (_, index) => <SkeletonCard key={index} />)}
+          </div>
+        )}
+        {noticesError && !noticesLoading && (
+          <ErrorState
+            message={noticesError}
+            action={<Button variant="secondary" onClick={() => void loadNotices()}>Retry</Button>}
           />
-
-          {activeTab === "notices" && (
-            <div className="space-y-4">
-              {!Array.isArray(notices) || notices.length === 0 ? (
-                <EmptyState
-                  title="No published notices found."
-                  description="Check back later for university-wide announcements."
-                />
-              ) : (
-                notices.map((n) => (
-                  <div
-                    key={n.noticeId}
-                    className="p-5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{n.title}</h3>
-                      <div className="flex gap-2">
-                        <Badge tone="info">{n.noticeKind}</Badge>
-                        <Badge tone="neutral">{n.noticeLevel}</Badge>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{n.body}</p>
-                    <div className="text-xs text-gray-400">
-                      Authored by: {n.authoredActiveRole} • {n.publishedAt ? new Date(n.publishedAt).toLocaleDateString() : "Just now"}
-                    </div>
+        )}
+        {(!noticesLoading || notices.length > 0) && !noticesError && (
+          notices.length === 0 ? (
+            <EmptyState
+              title="No published notices found."
+              description="Check back later for university-wide announcements."
+            />
+          ) : (
+            notices.map((n) => (
+              <div key={n.noticeId} className="app-card app-card--notice">
+                <div className="app-card__header">
+                  <h3 className="app-card__title">{n.title}</h3>
+                  <div className="app-card__badges">
+                    <Badge tone="info">{(n.noticeKind ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) || "General"}</Badge>
+                    <Badge tone="neutral">{(n.noticeLevel ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) || "Campus"}</Badge>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {activeTab === "leaves" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">Leave Balances</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {!Array.isArray(balances) || balances.length === 0 ? (
-                    <div className="col-span-3">
-                      <EmptyState
-                        title="No leave balance records found."
-                        description="Your account currently has no allocated leave quotas."
-                      />
-                    </div>
-                  ) : (
-                    balances.map((b) => (
-                      <MetricCard
-                        key={b.leaveBalanceId}
-                        label={`Year ${b.leaveYear}`}
-                        value={b.remainingDays}
-                        unit="days left"
-                        context={`Credited: ${b.creditedDays} • Used: ${b.usedDays}`}
-                        mark="clock"
-                      />
-                    ))
-                  )}
+                </div>
+                <p className="app-card__body">{n.body}</p>
+                {n.requiresAcknowledgment && !n.acknowledged && n.institutionId && (
+                  <Button variant="secondary" onClick={async () => { try { await selfServiceApi.acknowledgeNotice(tenantId, n.institutionId!, n.noticeId); await loadNotices(); } catch { setNoticesError("Notice acknowledgment could not be saved. Please try again."); } }}>Acknowledge</Button>
+                )}
+                <div className="app-card__meta">
+                  Authored by: {n.authoredActiveRole} • {n.publishedAt ? new Date(n.publishedAt).toLocaleDateString() : "Just now"}
                 </div>
               </div>
+            ))
+          )
+        )}
+      </div>
 
-              <div>
-                <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">Leave Requests</h3>
-                <DataTable
-                  headers={["Dates", "Days", "Reason", "Status"]}
-                  empty={requests.length === 0}
-                  emptyMessage="No leave requests found."
-                >
-                  {requests.map((r) => (
-                    <tr key={r.leaveRequestId}>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {r.startDate} to {r.endDate}
-                      </td>
-                      <td className="px-4 py-3">{r.daysCounted} ({r.unit})</td>
-                      <td className="px-4 py-3">{r.reason}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={r.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </DataTable>
+      <div
+        id="panel-leaves"
+        role="tabpanel"
+        aria-labelledby="tab-leaves"
+        hidden={activeTab !== "leaves"}
+        className="app-stack"
+      >
+        {leavesLoading && balances.length === 0 && requests.length === 0 && (
+          <div className="app-stack" role="status" aria-busy="true" aria-label="Loading leave information">
+            <span className="sr-only">Loading leave information...</span>
+            <div className="kpi-grid" aria-hidden="true">
+              {Array.from({ length: 3 }, (_, index) => <SkeletonMetricCard key={index} />)}
+            </div>
+            <SkeletonTable columns={4} rows={4} />
+          </div>
+        )}
+        {leavesError && !leavesLoading && (
+          <ErrorState
+            message={leavesError}
+            action={<Button variant="secondary" onClick={() => void loadLeaves()}>Retry</Button>}
+          />
+        )}
+        {(!leavesLoading || balances.length > 0 || requests.length > 0) && !leavesError && (
+          <>
+            <div>
+              <h3 className="app-section-title">Leave Balances</h3>
+              <div className="kpi-grid">
+                {balances.length === 0 ? (
+                  <EmptyState
+                    title="No leave balance records found."
+                    description="Your account currently has no allocated leave quotas."
+                  />
+                ) : (
+                  balances.map((b) => (
+                    <MetricCard
+                      key={b.leaveBalanceId}
+                      label={`Year ${b.leaveYear}`}
+                      value={b.remainingDays}
+                      unit="days left"
+                      context={`Credited: ${b.creditedDays} • Used: ${b.usedDays}`}
+                      mark="clock"
+                    />
+                  ))
+                )}
               </div>
             </div>
-          )}
-
-          {activeTab === "notifications" && (
-            <div className="space-y-3">
-              {!Array.isArray(notifications) || notifications.length === 0 ? (
-                <EmptyState
-                  title="No notifications."
-                  description="You are all caught up."
-                />
-              ) : (
-                notifications.map((n) => (
-                  <div
-                    key={n.notificationId}
-                    className="p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 flex items-start justify-between"
-                  >
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{n.title}</div>
-                      {n.body && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{n.body}</div>}
-                      <div className="text-xs text-gray-400 mt-2">
-                        {new Date(n.createdAt).toLocaleString()} • Trigger: {n.triggerCode}
-                      </div>
-                    </div>
-                    <Badge tone={n.priorityClass === "EMERGENCY" ? "danger" : "neutral"}>
-                      {n.priorityClass}
-                    </Badge>
-                  </div>
-                ))
-              )}
+            <div>
+              <h3 className="app-section-title">Leave Requests</h3>
+              <DataTable
+                headers={["Dates", "Days", "Reason", "Status"]}
+                empty={requests.length === 0}
+                emptyMessage="No leave requests found."
+              >
+                {requests.map((r) => (
+                  <tr key={r.leaveRequestId}>
+                    <td style={{ whiteSpace: "nowrap" }}>{r.startDate} to {r.endDate}</td>
+                    <td>{r.daysCounted} ({r.unit})</td>
+                    <td>{r.reason}</td>
+                    <td><StatusBadge status={r.status} /></td>
+                  </tr>
+                ))}
+              </DataTable>
             </div>
-          )}
-        </>
-      )}
+          </>
+        )}
+      </div>
+
+      <div
+        id="panel-notifications"
+        role="tabpanel"
+        aria-labelledby="tab-notifications"
+        hidden={activeTab !== "notifications"}
+        className="app-stack--sm"
+      >
+        {notificationsLoading && notifications.length === 0 && (
+          <div className="app-stack--sm" role="status" aria-busy="true" aria-label="Loading notifications">
+            <span className="sr-only">Loading notifications...</span>
+            {Array.from({ length: 3 }, (_, index) => (
+              <SkeletonCard key={index}>
+                <SkeletonText height="1rem" width="60%" />
+                <SkeletonText lines={2} height="0.875rem" />
+              </SkeletonCard>
+            ))}
+          </div>
+        )}
+        {notificationsError && !notificationsLoading && (
+          <ErrorState
+            message={notificationsError}
+            action={<Button variant="secondary" onClick={() => void refreshNotifications()}>Retry</Button>}
+          />
+        )}
+        {(!notificationsLoading || notifications.length > 0) && !notificationsError && (
+          notifications.length === 0 ? (
+            <EmptyState
+              title="No notifications."
+              description="You are all caught up."
+            />
+          ) : (
+            notifications.map((n) => {
+              const unread = n.readAt === null || n.readAt === undefined;
+              return (
+                <div
+                  key={n.notificationId}
+                  className={"app-card app-card--notification" + (unread ? " is-unread" : "")}
+                >
+                  <div className="app-card__content">
+                    <div className="app-card__title">
+                      {n.title}
+                      {unread && (
+                        <span
+                          style={{
+                            marginLeft: "var(--space-2)",
+                            fontSize: "var(--text-xs)",
+                            color: "var(--color-primary-600)",
+                          }}
+                        >
+                          • Unread
+                        </span>
+                      )}
+                    </div>
+                    {n.body && <div className="app-card__body">{n.body}</div>}
+                    <div className="app-card__meta">
+                      {new Date(n.createdAt).toLocaleString()}
+                      {unread && (
+                        <button
+                          type="button"
+                          className="notif-bell__link"
+                          style={{ marginLeft: "var(--space-2)" }}
+                          onClick={() => void markRead(n.notificationId)}
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <Badge tone={n.priorityClass === "EMERGENCY" ? "danger" : "neutral"}>
+                    {(n.priorityClass ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) || "Normal"}
+                  </Badge>
+                </div>
+              );
+            })
+          )
+        )}
+      </div>
     </div>
   );
 }

@@ -33,6 +33,21 @@ public class StudentProfile {
     @Column(name = "student_code", nullable = false)
     private String studentCode;
 
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
+
+    @Column(name = "date_of_birth")
+    private java.time.LocalDate dateOfBirth;
+
+    @Column(name = "admission_date")
+    private java.time.LocalDate admissionDate;
+
+    @Column(name = "national_id_last4")
+    private String nationalIdLast4;
+
+    @Column(name = "photo_file_id")
+    private UUID photoFileId;
+
     @Column(name = "status", nullable = false)
     private String status = "ACTIVE";
 
@@ -41,6 +56,21 @@ public class StudentProfile {
 
     @Column(name = "status_changed_at")
     private Instant statusChangedAt;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "created_by", nullable = false)
+    private UUID createdBy;
+
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private Instant updatedAt;
+
+    @Column(name = "updated_by", nullable = false)
+    private UUID updatedBy;
+
+    @Column(name = "row_version", insertable = false, updatable = false)
+    private Integer rowVersion;
 
     public StudentProfile(UUID studentProfileId, UUID tenantId, UUID institutionId,
                           UUID userAccountId, String studentCode, String status) {

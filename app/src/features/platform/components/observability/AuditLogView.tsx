@@ -1,15 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
-import { Spinner } from "../../../../components/ui";
+import "./AuditLogView.css";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import {
+  Button,
+  Modal,
+  Notice,
   Panel,
+  Pagination,
   StatusBadge,
   DataTable,
   SearchBox,
-  Notice,
 } from "../../../../design-system/components";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { formatTimestamp, titleCaseOutcome, readErrorMessage, type FetchStatus } from "../common/types";
 import api from "../../../../services/axios";
+import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
+
+export type AuditActor = {
+  actorUserId: string;
+  displayName: string;
+  email: string;
+  actorKind: string;
+};
 
 export type AuditLogItem = {
   auditOutboxId: string;
@@ -23,22 +35,93 @@ export type AuditLogItem = {
   entityId: string | null;
   outcome: string;
   correlationId: string | null;
+  eventType?: string | null;
+  payload?: Record<string, unknown> | null;
 };
+
+type AuditFilters = {
+  tenantId: string;
+  actorUserId: string;
+  actionCode: string;
+  outcome: string;
+  from: string;
+  to: string;
+};
+
+const EMPTY_FILTERS: AuditFilters = {
+  tenantId: "",
+  actorUserId: "",
+  actionCode: "",
+  outcome: "All",
+  from: "",
+  to: "",
+};
+const PAGE_SIZE = 25;
+
+function requestFilters(filters: AuditFilters) {
+  return {
+    ...(filters.tenantId.trim() ? { tenantId: filters.tenantId.trim() } : {}),
+    ...(filters.actorUserId.trim() ? { actorUserId: filters.actorUserId.trim() } : {}),
+    ...(filters.actionCode.trim() ? { actionCode: filters.actionCode.trim() } : {}),
+    ...(filters.outcome !== "All" ? { outcome: filters.outcome.toUpperCase() } : {}),
+    ...(filters.from ? { from: new Date(filters.from).toISOString() } : {}),
+    ...(filters.to ? { to: new Date(filters.to).toISOString() } : {}),
+  };
+}
 
 export function AuditLogView() {
   const [status, setStatus] = useState<FetchStatus>("loading");
   const [events, setEvents] = useState<AuditLogItem[]>([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [page, setPage] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [query, setQuery] = useState("");
-  const [outcome, setOutcome] = useState("All");
+  const [draftFilters, setDraftFilters] = useState<AuditFilters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
+  const [tenants, setTenants] = useState<TenantItem[]>([]);
+  const [actors, setActors] = useState<AuditActor[]>([]);
+  const [retryCount, setRetryCount] = useState(0);
+  const [selectedEvent, setSelectedEvent] = useState<AuditLogItem | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    platformTenantService.getTenants(0, 100)
+      ?.then((res) => { if (active) setTenants(res?.data?.items ?? []); })
+      ?.catch(() => { if (active) setTenants([]); });
+    return () => { active = false; };
+  }, []);
+
+  const [actorsLoading, setActorsLoading] = useState(false);
+  const loadActors = () => {
+    setActorsLoading(true);
+    api.get<AuditActor[]>("/platform/audit-logs/actors", {
+      params: draftFilters.tenantId ? { tenantId: draftFilters.tenantId } : {},
+    })
+      ?.then((res) => { setActors(Array.isArray(res?.data) ? res.data : []); })
+      ?.catch(() => { setActors([]); })
+      ?.finally(() => { setActorsLoading(false); });
+  };
+
+  useEffect(() => {
+    setActors([]);
+  }, [draftFilters.tenantId]);
+
+  const params = useMemo(() => requestFilters(filters), [filters]);
 
   useEffect(() => {
     let active = true;
     api
-      .get("/platform/audit-logs", { params: { page: 0, size: 100 } })
+      .get("/platform/audit-logs", { params: { page, size: PAGE_SIZE, ...params } })
       .then((res) => {
         if (!active) return;
-        setEvents(res.data?.items ?? []);
+        const items: AuditLogItem[] = res.data?.items ?? [];
+        const total = Number(res.data?.totalElements ?? items.length);
+        setEvents(items);
+        setTotalElements(total);
+        setTotalPages(Number(res.data?.totalPages ?? Math.ceil(total / PAGE_SIZE)));
         setStatus("success");
       })
       .catch((err) => {
@@ -46,82 +129,199 @@ export function AuditLogView() {
         setErrorMessage(readErrorMessage(err, "Could not load audit events."));
         setStatus("error");
       });
-    return () => {
-      active = false;
-    };
-  }, []);
+    return () => { active = false; };
+  }, [retryCount, page, params]);
 
   const filtered = useMemo(
-    () =>
-      events.filter(
-        (e) =>
-          (outcome === "All" || titleCaseOutcome(e.outcome) === outcome) &&
-          [e.actorKind, e.actorUserId, e.operation, e.actionCode, e.entityType, e.auditOutboxId]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-            .includes(query.toLowerCase())
-      ),
-    [events, outcome, query]
+    () => events.filter((event) =>
+      [event.actorKind, event.actorUserId, event.operation, event.actionCode, event.entityType,
+        event.entityId, event.eventType, event.auditOutboxId]
+        .filter(Boolean).join(" ").toLowerCase().includes(query.toLowerCase())),
+    [events, query],
   );
 
+  const updateDraft = (field: keyof AuditFilters, value: string) => {
+    setDraftFilters((current) => ({ ...current, [field]: value }));
+  };
+
+  const applyFilters = () => {
+    setStatus("loading");
+    setPage(0);
+    setFilters({ ...draftFilters });
+  };
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setExportError("");
+    try {
+      const response = await api.get("/platform/audit-logs/export", {
+        params,
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "platform-audit-logs.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      const statusCode = (error as { response?: { status?: number } })?.response?.status;
+      setExportError(statusCode === 413
+        ? "More than 50,000 events match. Narrow the filters before exporting."
+        : readErrorMessage(error, "Could not export audit events."));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Audit log"
-        description="Review platform-scope activity, including successful actions and denied attempts."
+        description="Review platform actions, filtered by tenant, actor, action, outcome and time range."
       />
-      <Panel title="Platform audit events" description="Tenant-level events remain within each tenant.">
-        {status === "error" && <Notice tone="danger">Could not load audit events: {errorMessage}</Notice>}
-        <div className="platform-toolbar">
-          <SearchBox value={query} onChange={setQuery} placeholder="Search actor, action or target" />
-          <label className="platform-select-label">
-            Outcome{" "}
-            <select value={outcome} onChange={(e) => setOutcome(e.target.value)}>
-              <option>All</option>
-              <option>Success</option>
-              <option>Denied</option>
+      <Panel title="Platform audit events" description="Only platform.audit_outbox is queried; tenant audit logs remain isolated.">
+        {status === "error" && (
+          <ErrorState
+            message={`Could not load audit events: ${errorMessage}`}
+            action={<Button variant="secondary" onClick={() => { setStatus("loading"); setRetryCount((c) => c + 1); }}>Retry</Button>}
+          />
+        )}
+        <div className="audit-log-filter-grid" aria-label="Audit log filters">
+          <SearchBox className="audit-log-filter-search" value={query} onChange={setQuery} placeholder="Search this page" />
+          <label className="audit-log-filter-field">
+            Tenant ID
+            <select
+              className="app-input"
+              aria-label="Tenant ID"
+              value={draftFilters.tenantId}
+              onChange={(e) => {
+                updateDraft("tenantId", e.target.value);
+                updateDraft("actorUserId", "");
+              }}
+            >
+              <option value="">All tenants / Platform-wide</option>
+              {tenants.map((t) => (
+                <option key={t.tenantId} value={t.tenantId}>
+                  {t.tenantName} ({t.subdomain})
+                </option>
+              ))}
             </select>
           </label>
-        </div>
-        {status === "loading" ? (
-          <div className="platform-empty-inline">
-            <Spinner label="Loading audit events" />
+          <label className="audit-log-filter-field">
+            Actor user ID
+            <select
+              className="app-input"
+              aria-label="Actor user ID"
+              value={draftFilters.actorUserId}
+              onFocus={loadActors}
+              onChange={(e) => updateDraft("actorUserId", e.target.value)}
+            >
+              <option value="">{actorsLoading ? "Loading actors…" : "All actors"}</option>
+              {actors.map((a) => (
+                <option key={a.actorUserId} value={a.actorUserId}>
+                  {a.displayName} ({a.email || a.actorKind})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="audit-log-filter-field">
+            Action code
+            <input className="app-input" aria-label="Action code" value={draftFilters.actionCode} onChange={(e) => updateDraft("actionCode", e.target.value)} />
+          </label>
+          <label className="audit-log-filter-field">
+            Outcome
+            <select className="app-input" aria-label="Outcome" value={draftFilters.outcome} onChange={(e) => updateDraft("outcome", e.target.value)}>
+              <option>All</option>
+              <option value="SUCCESS">Success</option>
+              <option value="DENIED">Denied</option>
+              <option value="FAILED">Failed</option>
+            </select>
+          </label>
+          <label className="audit-log-filter-field">
+            From
+            <input className="app-input" aria-label="From" type="datetime-local" value={draftFilters.from} onChange={(e) => updateDraft("from", e.target.value)} />
+          </label>
+          <label className="audit-log-filter-field">
+            To
+            <input className="app-input" aria-label="To" type="datetime-local" value={draftFilters.to} onChange={(e) => updateDraft("to", e.target.value)} />
+          </label>
+          <div className="audit-log-filter-actions">
+            <Button variant="primary" onClick={applyFilters}>Apply filters</Button>
+            <Button variant="secondary" onClick={exportCsv} busy={exporting} disabled={exporting}>Export CSV</Button>
           </div>
-        ) : (
-          <DataTable
-            headers={["When", "Actor", "Action", "Target", "Outcome"]}
-            empty={!filtered.length}
-            emptyMessage={
-              status === "error" ? "Audit events could not be loaded." : "No platform audit events recorded yet."
-            }
-          >
-            {filtered.map((e) => (
-              <tr key={e.auditOutboxId}>
-                <td>{formatTimestamp(e.occurredAt)}</td>
-                <td>
-                  <strong>{e.actorKind}</strong>
-                  {e.actorUserId && <small className="platform-cell-sub">{e.actorUserId}</small>}
-                </td>
-                <td>
-                  <strong>{e.actionCode ?? e.operation}</strong>
-                  <small className="platform-cell-sub">{e.operation}</small>
-                </td>
-                <td>
-                  {e.entityType ?? "—"}
-                  {e.entityId && <small className="platform-cell-sub">{e.entityId}</small>}
-                </td>
-                <td>
-                  <StatusBadge value={titleCaseOutcome(e.outcome)} />
-                </td>
-              </tr>
-            ))}
-          </DataTable>
+        </div>
+        {exportError && (
+          <div style={{ padding: "0 var(--space-5) var(--space-3)" }}>
+            <Notice tone="danger">{exportError}</Notice>
+          </div>
+        )}
+        <DataTable
+          headers={["When", "Actor", "Action", "Target", "Outcome", "Details"]}
+          ariaLabel="Platform audit events"
+          pagination={false}
+          pageSize={PAGE_SIZE}
+          loading={status === "loading" && events.length === 0}
+          loadingLabel="Loading audit events"
+          empty={status !== "loading" && !filtered.length}
+          emptyMessage={status === "error" ? "Audit events could not be loaded." : "No platform audit events recorded yet."}
+        >
+              {filtered.map((event) => (
+                <tr key={event.auditOutboxId}>
+                  <td>{formatTimestamp(event.occurredAt)}</td>
+                  <td>
+                    <strong>{event.actorKind}</strong>
+                    {event.actorUserId && <small className="app-cell-sub">{event.actorUserId}</small>}
+                  </td>
+                  <td>
+                    <strong>{event.actionCode ?? event.operation}</strong>
+                    <small className="app-cell-sub">{event.operation}</small>
+                  </td>
+                  <td>
+                    {event.entityType ?? "—"}
+                    {event.entityId && <small className="app-cell-sub">{event.entityId}</small>}
+                  </td>
+                  <td><StatusBadge value={titleCaseOutcome(event.outcome)} /></td>
+                  <td><Button variant="secondary" size="sm" onClick={() => setSelectedEvent(event)}>Details</Button></td>
+                </tr>
+              ))}
+        </DataTable>
+        {status !== "loading" && totalPages > 1 && (
+          <Pagination
+            ariaLabel="Audit log pagination"
+            currentPage={page + 1}
+            totalPages={totalPages}
+            totalItems={totalElements}
+            pageSize={PAGE_SIZE}
+            currentItemsCount={events.length}
+            onPageChange={(p) => {
+              setStatus("loading");
+              setPage(p - 1);
+            }}
+          />
         )}
       </Panel>
+
+      {selectedEvent && (
+        <Modal isOpen onClose={() => setSelectedEvent(null)} title="Audit event details" kicker="Platform audit" size="lg">
+          <dl className="app-detail-list">
+            <dt>Event type</dt><dd>{selectedEvent.eventType ?? "—"}</dd>
+            <dt>Audit ID</dt><dd>{selectedEvent.auditOutboxId}</dd>
+            <dt>Correlation ID</dt><dd>{selectedEvent.correlationId ?? "—"}</dd>
+            <dt>Tenant ID</dt><dd>{selectedEvent.tenantId ?? "—"}</dd>
+            <dt>Actor</dt><dd>{selectedEvent.actorUserId ?? selectedEvent.actorKind}</dd>
+          </dl>
+          <h3>Payload</h3>
+          <pre style={{ maxHeight: "22rem", overflow: "auto", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+            {selectedEvent.payload ? JSON.stringify(selectedEvent.payload, null, 2) : "No payload recorded."}
+          </pre>
+        </Modal>
+      )}
     </div>
   );
 }
 
-// Export alias
 export const AuditLogPage = AuditLogView;

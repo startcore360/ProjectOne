@@ -18,7 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Source: the ACTIVE platform.setting_value row with key "security.policy" (written by
  * PlatformSecurityPolicyController). When none has been saved yet, the D1 values apply
  * (D1 Part II §8.1 / §11.0 "Security", NF-07, NF-08, R2-12): passwords at least 8 characters,
- * lockout for 15 minutes after 5 wrong passwords, forced change every 120 days, two-step login
+ * lockout for 15 minutes after 5 wrong passwords, forced change every 90 days, two-step login
  * for the listed roles. The 30-minute idle timeout and 90-day backup retention are the values
  * this app already used before the policy could be saved.
  */
@@ -29,8 +29,18 @@ public class SecurityPolicyService {
 
     public static final String SETTING_KEY_SECURITY_POLICY = "security.policy";
 
-    /** D1 values used until the Product Owner saves a policy. */
-    public static final SecurityPolicy D1_DEFAULT = new SecurityPolicy(8, false, false, 5, 15, 30, true, 90, 120);
+    public static final int PRIVILEGED_IDLE_TIMEOUT_MINUTES = 15;
+    public static final int STANDARD_IDLE_TIMEOUT_MINUTES = 60;
+
+    /** Resolves the idle timeout from the caller's active security role class. */
+    public static int idleTimeoutMinutesForRoleCodes(java.util.Collection<String> roleCodes) {
+        return com.edu360.api.auth.MfaRequirementService.requiresMfa(roleCodes)
+                ? PRIVILEGED_IDLE_TIMEOUT_MINUTES
+                : STANDARD_IDLE_TIMEOUT_MINUTES;
+    }
+
+    /** EDU 360 V4.1 defaults: 90-day password rotation and the 30-minute lockout floor. */
+    public static final SecurityPolicy D1_DEFAULT = new SecurityPolicy(12, true, true, 5, 30, 30, true, 90, 90);
 
     /** The policy as stored. passwordRotationDays: forced change after that many days (R2-12). */
     public record SecurityPolicy(
@@ -44,7 +54,7 @@ public class SecurityPolicyService {
             int defaultBackupRetentionDays,
             Integer passwordRotationDays) {
 
-        /** Rotation days, D1's 120 for a policy saved before the field existed. */
+        /** Rotation days; the tenant-wide policy cannot exceed the 90-day master limit. */
         public int rotationDays() {
             return passwordRotationDays == null || passwordRotationDays <= 0
                     ? D1_DEFAULT.passwordRotationDays() : passwordRotationDays;
@@ -68,7 +78,11 @@ public class SecurityPolicyService {
             Optional<PlatformSettingValue> row = settingValueRepository
                     .findBySettingKeyAndStatus(SETTING_KEY_SECURITY_POLICY, "ACTIVE");
             if (row.isPresent()) {
-                return objectMapper.readValue(row.get().getValue(), SecurityPolicy.class);
+                SecurityPolicy saved = objectMapper.readValue(row.get().getValue(), SecurityPolicy.class);
+                return new SecurityPolicy(Math.max(12, saved.minPasswordLength()), true, true,
+                        Math.max(5, saved.maxFailedLogins()), Math.max(30, saved.lockoutMinutes()),
+                        saved.idleSessionTimeoutMinutes(), true, saved.defaultBackupRetentionDays(),
+                        Math.min(90, saved.rotationDays()));
             }
         } catch (Exception ex) {
             log.warn("Could not read the saved security policy, using the D1 defaults: {}", ex.getMessage());

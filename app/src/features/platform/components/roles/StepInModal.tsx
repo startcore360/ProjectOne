@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
 import { readErrorMessage } from "../common/types";
 import { platformRoleService } from "../../api/platformRoleService";
@@ -51,7 +51,7 @@ export function StepInModal({ actionCode, actionLabel, onClose, onDone }: StepIn
       }
     >
       <TextField
-        id="platform-step-in-reason"
+        id="app-step-in-reason"
         label="Reason"
         required
         maxLength={500}

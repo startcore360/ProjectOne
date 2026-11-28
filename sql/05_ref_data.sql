@@ -140,6 +140,7 @@ INSERT INTO ref.action_catalog VALUES ('USER_BULK_UPLOAD',10,'Users and roles',1
 INSERT INTO ref.action_catalog VALUES ('USER_EDIT',11,'Users and roles',1,'Edit a user account',false,'Personal – Correct',NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('USER_DEACTIVATE',12,'Users and roles',1,'Deactivate a user',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('USER_PASSWORD_RESET_UNLOCK',13,'Users and roles',1,'Reset a password or unlock an account',false,NULL,NULL) ON CONFLICT DO NOTHING;
+INSERT INTO ref.action_catalog VALUES ('USER_MFA_RESET',282,'Users and roles',1,'Reset a user''s two-step login so they can set up a new authenticator',false,NULL,'4.1') ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('ROLE_ASSIGN',14,'Users and roles',1,'Give a user any role',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('ROLE_ASSIGN_NON_SENSITIVE',15,'Users and roles',1,'Give a user a non-sensitive role',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('ROLE_CUSTOM_MANAGE',16,'Users and roles',1,'Create a custom role and set its rights',false,NULL,'3.3') ON CONFLICT DO NOTHING;
@@ -213,6 +214,7 @@ INSERT INTO ref.action_catalog VALUES ('ASSIGNMENT_EVALUATE',83,'Assignments and
 INSERT INTO ref.action_catalog VALUES ('HOMEWORK_STATUS_MARK',84,'Assignments and homework',1,'Mark school homework status',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('ASSIGNMENT_VIEW_OWN',85,'Assignments and homework',1,'See assignments, status and feedback',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('HOMEWORK_COMPLIANCE_VIEW',86,'Assignments and homework',1,'See homework compliance',false,NULL,NULL) ON CONFLICT DO NOTHING;
+INSERT INTO ref.action_catalog VALUES ('STUDY_MATERIAL_VIEW',281,'Assignments and homework',1,'View study material for assigned subjects or own active enrollment/children',false,NULL,'Sprint 2 B5') ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('FEE_POLICY_SET',87,'Fees',1,'Set the fee policy (heads, ranges, schemes, penalty policy)',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('FEE_POLICY_DATA_ENTER',88,'Fees',1,'Enter fee policy data for the Finance Director',false,NULL,NULL) ON CONFLICT DO NOTHING;
 INSERT INTO ref.action_catalog VALUES ('FEE_STRUCTURE_CREATE',89,'Fees',1,'Build a fee structure',false,NULL,NULL) ON CONFLICT DO NOTHING;
@@ -4421,3 +4423,9 @@ INSERT INTO ref.data_class VALUES ('BY_OWNER','Files','Follow the owning record'
 INSERT INTO ref.data_class VALUES ('TENANT_LIFETIME','Whole tenant','Only through the DPO-approved deletion chain [CL-07, CL-10]',true) ON CONFLICT DO NOTHING;
 INSERT INTO ref.data_class VALUES ('REFERENCE','Reference data','Retired, never deleted',false) ON CONFLICT DO NOTHING;
 INSERT INTO ref.safe_file_type VALUES (1,'MESSAGE_ATTACHMENT','pdf','application/pdf',10485760),(2,'MESSAGE_ATTACHMENT','jpg','image/jpeg',10485760),(3,'MESSAGE_ATTACHMENT','png','image/png',10485760) ON CONFLICT DO NOTHING;
+
+-- LANDING_CMS_MANAGE is not seeded here: it collided with action_no 283, already reserved by
+-- migration 56 (sql/56_v41_rolldown_management_revocation.sql) for ROLLDOWN_GBA_REVOKED, and
+-- the collision silently dropped whichever of the two inserts ran second (ON CONFLICT DO
+-- NOTHING). 75_v41_landing_cms_and_enquiries.sql is the sole owner of that action; it inserts
+-- it at its own free number.

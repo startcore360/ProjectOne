@@ -1,0 +1,312 @@
+package com.edu360.api.files;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+
+import com.edu360.api.audit.AuditEntry;
+import com.edu360.api.audit.AuditLogService;
+import com.edu360.api.config.TenantPrincipal;
+import com.edu360.api.exception.BusinessRuleViolationException;
+import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.identity.UserType;
+import com.edu360.api.rbac.PermissionEvaluatorService;
+import com.edu360.api.rbac.PermissionDecision;
+import com.edu360.api.rbac.ScopeType;
+import com.edu360.api.rbac.UserRoleAssignment;
+
+@ExtendWith(MockitoExtension.class)
+class FileServiceTest {
+    @Mock FileObjectRepository repository;
+    @Mock LocalFileStorage storage;
+    @Mock PermissionEvaluatorService permissions;
+    @Mock FileScanner scanner;
+    @Mock FileAccessPolicy accessPolicy;
+    @Mock AuditLogService auditLog;
+
+    private final UUID tenantId = UUID.randomUUID();
+    private final UUID userId = UUID.randomUUID();
+    private final TenantPrincipal principal = new TenantPrincipal(tenantId, userId, UserType.STAFF, "Uploader", false);
+    private FileService service;
+
+    @BeforeEach
+    void setUp() {
+        FileContentInspector inspector = new FileContentInspector();
+        service = new FileService(repository, storage, permissions, inspector, scanner, accessPolicy, auditLog, true);
+    }
+
+    private void allowPermission() {
+        UserRoleAssignment active = mock(UserRoleAssignment.class);
+        when(active.getScopeType()).thenReturn(ScopeType.INSTITUTION);
+        when(active.getInstitutionId()).thenReturn(UUID.randomUUID());
+        when(permissions.activeAssignment(any())).thenReturn(Optional.of(active));
+    }
+
+    private void allowUpload() {
+        allowPermission();
+        when(scanner.scan(any())).thenReturn(FileScanner.ScanResult.PENDING);
+        when(storage.store(eq(tenantId), any(UUID.class), any())).thenReturn("tenants/file.pdf");
+        when(repository.save(any(FileObject.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    @Test
+    void S2_27_rejectsExecutableRenamedWithPdfSuffix() {
+        allowPermission();
+        MockMultipartFile upload = new MockMultipartFile("file", "report.pdf.exe",
+                "application/x-msdownload", new byte[]{0x4d, 0x5a, 0, 0});
+        assertThatThrownBy(() -> service.upload(principal, upload, "STUDY_MATERIAL", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("permitted safe file types");
+        verify(repository, never()).save(any());
+        verify(auditLog, never()).record(any(AuditEntry.class));
+    }
+
+    @Test
+    void S2_27_rejectsTwelveMiBUploadWithPayloadTooLarge() {
+        MockMultipartFile upload = new MockMultipartFile("file", "large.pdf", "application/pdf",
+                new byte[12 * 1024 * 1024]);
+        assertThatThrownBy(() -> service.upload(principal, upload, "STUDY_MATERIAL", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("10 MiB");
+        verify(permissions, never()).activeAssignment(any());
+    }
+
+    @Test
+    void admissionUploadsRejectFilesAboveFiveMiB() {
+        MockMultipartFile upload = new MockMultipartFile("file", "large.pdf", "application/pdf",
+                new byte[5 * 1024 * 1024 + 1]);
+        assertThatThrownBy(() -> service.upload(principal, upload, "ADMISSION_DOCUMENT", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("5 MiB");
+        verify(permissions, never()).activeAssignment(any());
+    }
+
+    @Test
+    void admissionUploadsRejectOfficeDocumentsEvenWhenContentInspectorRecognizesThem() {
+        FileContentInspector inspector = mock(FileContentInspector.class);
+        service = new FileService(repository, storage, permissions, inspector, scanner, accessPolicy, auditLog, true);
+        allowPermission();
+        when(inspector.inspect(any(), any(), any())).thenReturn("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        MockMultipartFile upload = new MockMultipartFile("file", "supporting.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new byte[]{1,2,3});
+        assertThatThrownBy(() -> service.upload(principal, upload, "ADMISSION_DOCUMENT", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("PDF, JPG or PNG");
+        verify(storage, never()).store(any(), any(), any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void scannerUnavailableRejectsUploadBeforeStorageOrPersistence() {
+        allowPermission();
+        when(scanner.scan(any())).thenThrow(new com.edu360.api.exception.ApiException(
+                org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                "SERVICE_UNAVAILABLE", "Malware scanning is not configured."));
+        MockMultipartFile upload = new MockMultipartFile("file", "lesson.pdf", "application/pdf",
+                "%PDF-1.7 sample".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+
+        assertThatThrownBy(() -> service.upload(principal, upload, "STUDY_MATERIAL", null))
+                .isInstanceOf(com.edu360.api.exception.ApiException.class)
+                .hasMessageContaining("Malware scanning is not configured");
+        verify(storage, never()).store(any(), any(), any());
+        verify(repository, never()).save(any());
+        verify(auditLog, never()).record(any(AuditEntry.class));
+    }
+
+    @Test
+    void successfulUploadWritesOneStructuredAuditRecord() {
+        allowUpload();
+        MockMultipartFile upload = new MockMultipartFile("file", "lesson.pdf", "application/pdf",
+                "%PDF-1.7 sample".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        FileUploadResponse response = service.upload(principal, upload, "STUDY_MATERIAL", null);
+        assertThat(response.scanStatus()).isEqualTo("PENDING");
+        ArgumentCaptor<AuditEntry> audit = ArgumentCaptor.forClass(AuditEntry.class);
+        verify(auditLog, times(1)).record(audit.capture());
+        assertThat(audit.getValue().eventType().name()).isEqualTo("FILE_UPLOADED");
+        assertThat(audit.getValue().entityType()).isEqualTo("FILE_OBJECT");
+        assertThat(audit.getValue().entityId()).isEqualTo(response.fileId());
+    }
+
+    @Test
+    void studyMaterialDownloadUsesDedicatedViewAction() {
+        UUID institutionId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(institutionId).purpose("STUDY_MATERIAL")
+                .storageKey("tenants/material.pdf").originalFilename("material.pdf")
+                .contentType("application/pdf").sizeBytes(8).sha256("hash")
+                .scanStatus("CLEAN").status("ACTIVE").uploadedBy(userId)
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(true);
+        when(permissions.targetScope(any(), eq(institutionId), eq(null)))
+                .thenReturn(com.edu360.api.rbac.RbacScope.institution(institutionId));
+        when(storage.openRead("tenants/material.pdf")).thenReturn(new java.io.ByteArrayInputStream(new byte[]{1, 2, 3}));
+
+        StoredFile downloaded = service.download(principal, fileId);
+
+        assertThat(downloaded.content()).isNotNull();
+        verify(permissions).authorize(any(), eq("STUDY_MATERIAL_VIEW"), any(), any());
+        verify(permissions, never()).authorize(any(), eq("STUDY_MATERIAL_UPLOAD"), any(), any());
+    }
+
+    @Test
+    void S2_29_deniesClassmatesSubmissionWhenOwningRecordPolicyDoesNotMatch() {
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).purpose("ASSIGNMENT_SUBMISSION")
+                .storageKey("tenants/submission.pdf").originalFilename("submission.pdf")
+                .contentType("application/pdf").sizeBytes(8).sha256("hash")
+                .scanStatus("PENDING").status("ACTIVE").uploadedBy(UUID.randomUUID())
+                .createdBy(UUID.randomUUID()).updatedBy(UUID.randomUUID()).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(false);
+        assertThatThrownBy(() -> service.download(principal, fileId))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("owning record");
+        verify(permissions, never()).authorize(any(), any(), any(), any());
+        verify(storage, never()).openRead(any());
+    }
+    @Test
+    void infectedQuarantinedDeletedAndFailedScansAreAlwaysBlocked() {
+        assertBlockedFile("QUARANTINED", "INFECTED");
+        assertBlockedFile("DELETED", "CLEAN");
+        assertBlockedFile("ACTIVE", "INFECTED");
+        assertBlockedFile("ACTIVE", "SCAN_FAILED");
+    }
+
+    private void assertBlockedFile(String status, String scanStatus) {
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).purpose("STUDY_MATERIAL")
+                .storageKey("tenants/blocked.pdf").originalFilename("blocked.pdf")
+                .contentType("application/pdf").sizeBytes(8).sha256("hash")
+                .scanStatus(scanStatus).status(status).uploadedBy(userId)
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+
+        assertThatThrownBy(() -> service.download(principal, fileId))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("not available");
+    }
+
+    // ------------------------------------------------------------ STAFF_ATTENDANCE_SELFIE
+
+    @Test
+    void selfieUploadIsAuthorizedBySubmitAndStoredWithTheSelfiePurpose() {
+        allowUpload();
+        MockMultipartFile upload = new MockMultipartFile("file", "selfie.jpg", "image/jpeg",
+                new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0, 0x10});
+
+        service.upload(principal, upload, "STAFF_ATTENDANCE_SELFIE", null);
+
+        verify(permissions).authorize(any(), eq("STAFF_ATTENDANCE_CHECKIN_SUBMIT"), any(), any());
+        ArgumentCaptor<FileObject> saved = ArgumentCaptor.forClass(FileObject.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getPurpose()).isEqualTo("STAFF_ATTENDANCE_SELFIE");
+        assertThat(saved.getValue().getContentType()).isEqualTo("image/jpeg");
+    }
+
+    @Test
+    void selfieUploadRejectsAPdfEvenThoughPdfIsASafeType() {
+        allowPermission();
+        MockMultipartFile upload = new MockMultipartFile("file", "selfie.pdf", "application/pdf",
+                "%PDF-1.7 sample".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+
+        assertThatThrownBy(() -> service.upload(principal, upload, "STAFF_ATTENDANCE_SELFIE", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("JPG or PNG");
+        verify(storage, never()).store(any(), any(), any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void selfieUploadRejectsFilesAboveFiveMiB() {
+        MockMultipartFile upload = new MockMultipartFile("file", "selfie.jpg", "image/jpeg",
+                new byte[5 * 1024 * 1024 + 1]);
+        assertThatThrownBy(() -> service.upload(principal, upload, "STAFF_ATTENDANCE_SELFIE", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("5 MiB");
+        verify(permissions, never()).activeAssignment(any());
+    }
+
+    @Test
+    void selfieViewedByAReviewerIsAuditedAsASensitiveView() {
+        UUID institutionId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(institutionId).purpose("STAFF_ATTENDANCE_SELFIE")
+                .storageKey("tenants/selfie.jpg").originalFilename("selfie.jpg")
+                .contentType("image/jpeg").sizeBytes(8).sha256("hash")
+                .scanStatus("CLEAN").status("ACTIVE").uploadedBy(UUID.randomUUID())
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(true);
+        when(permissions.targetScope(any(), eq(institutionId), eq(null)))
+                .thenReturn(com.edu360.api.rbac.RbacScope.institution(institutionId));
+        when(storage.openRead("tenants/selfie.jpg")).thenReturn(new java.io.ByteArrayInputStream(new byte[]{1}));
+
+        service.download(principal, fileId);
+
+        ArgumentCaptor<AuditEntry> audit = ArgumentCaptor.forClass(AuditEntry.class);
+        verify(auditLog).record(audit.capture());
+        assertThat(audit.getValue().eventType().name()).isEqualTo("SENSITIVE_VIEW");
+        assertThat(audit.getValue().actionCode()).isEqualTo("STAFF_ATTENDANCE_CHECKIN_REVIEW");
+        assertThat(audit.getValue().entityId()).isEqualTo(fileId);
+    }
+
+    @Test
+    void selfieRefusedByTheAccessPolicyIsNeverStreamed() {
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(UUID.randomUUID()).purpose("STAFF_ATTENDANCE_SELFIE")
+                .storageKey("tenants/selfie.jpg").originalFilename("selfie.jpg")
+                .contentType("image/jpeg").sizeBytes(8).sha256("hash")
+                .scanStatus("CLEAN").status("ACTIVE").uploadedBy(UUID.randomUUID())
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.download(principal, fileId)).isInstanceOf(UnauthorizedException.class);
+        verify(storage, never()).openRead(any());
+        verify(auditLog, never()).record(any(AuditEntry.class));
+    }
+
+    @Test
+    void pendingDownloadDeniesNonUploaderWithoutPurposePermission() {
+        UUID institutionId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(institutionId)
+                .purpose("STUDY_MATERIAL").storageKey("tenants/pending.pdf")
+                .originalFilename("pending.pdf").contentType("application/pdf")
+                .sizeBytes(8).sha256("hash").scanStatus("PENDING").status("ACTIVE")
+                .uploadedBy(UUID.randomUUID()).createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(true);
+        when(permissions.targetScope(any(), eq(institutionId), eq(null)))
+                .thenReturn(com.edu360.api.rbac.RbacScope.institution(institutionId));
+        when(permissions.can(any(), eq("STUDY_MATERIAL_UPLOAD"), any(), any()))
+                .thenReturn(PermissionDecision.deny("ACTION_NOT_GRANTED", "Denied"));
+
+        assertThatThrownBy(() -> service.download(principal, fileId))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("Pending files are available only");
+        verify(storage, never()).openRead(any());
+        verify(permissions, never()).authorize(any(), any(), any(), any());
+    }
+
+}

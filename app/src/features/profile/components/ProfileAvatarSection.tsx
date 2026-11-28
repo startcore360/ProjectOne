@@ -29,21 +29,21 @@ export function ProfileAvatarSection({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="profile-avatar-row">
+    <div className="app-avatar-row">
       {photoLoading ? (
-        <span className="profile-avatar profile-avatar--loading" aria-hidden="true" />
+        <span className="app-avatar app-avatar--loading" aria-hidden="true" />
       ) : photoObjectUrl ? (
-        <img className="profile-avatar" src={photoObjectUrl} alt="" />
+        <img className="app-avatar" src={photoObjectUrl} alt="" loading="lazy" decoding="async" />
       ) : (
-        <span className="profile-avatar profile-avatar--placeholder" aria-hidden="true">
+        <span className="app-avatar app-avatar--placeholder" aria-hidden="true">
           {initialsFor(displayName)}
         </span>
       )}
 
       {isPlatform ? (
-        <p className="profile-photo-note">Profile photos are not available for platform accounts.</p>
+        <p className="app-hint">Profile photos are not available for platform accounts.</p>
       ) : (
-        <div className="profile-avatar-actions">
+        <div className="app-avatar-actions">
           <input
             ref={fileInputRef}
             id="profile-photo-input"
@@ -51,7 +51,7 @@ export function ProfileAvatarSection({
             accept="image/jpeg,image/png"
             tabIndex={-1}
             aria-hidden="true"
-            className="profile-photo-input"
+            className="app-file-input"
             onChange={onPhotoSelected}
           />
           <Button
@@ -63,14 +63,14 @@ export function ProfileAvatarSection({
           >
             {photoUploading ? "Uploading…" : photoObjectUrl ? "Change photo" : "Add photo"}
           </Button>
-          <p className="profile-photo-hint">JPEG or PNG, up to 2 MB.</p>
+          <p className="app-hint">JPEG or PNG, up to 2 MB.</p>
           {photoSuccess && (
-            <p className="profile-photo-message profile-photo-message--success" role="status">
+            <p className="app-status-text app-status-text--success" role="status">
               Your photo has been updated.
             </p>
           )}
           {photoError && (
-            <p className="profile-photo-message profile-photo-message--error" role="alert">
+            <p className="app-status-text app-status-text--error" role="alert">
               {photoError}
             </p>
           )}

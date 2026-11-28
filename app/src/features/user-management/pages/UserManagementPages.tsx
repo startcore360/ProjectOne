@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Button,
@@ -10,17 +10,29 @@ import {
   Notice,
   PageHeader,
   Panel,
+  PhoneField,
   SearchBox,
-  Spinner,
+  SelectField,
+  ShareMenu,
+  SkeletonCard,
+  SkeletonTable,
+  SkeletonText,
   StatusBadge,
   TextField,
 } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
+import type { TenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
+import { useFormErrors } from "../../../hooks";
+import { MfaResetDialog } from "../../auth/components/MfaResetDialog";
+import { serverMessage } from "../../auth/serverMessage";
+import { UserLimitBanner } from "../components/users/UserLimitBanner";
+import { institutionService, type InstitutionItem } from "../../institution-admin/api/institutionService";
 import { getApiErrorMessage, type ApiError } from "../../../services/apiHelper";
 import {
   userManagementService,
   type ActingScope,
   type CreateUserResponse,
+  type StudentProfileResponse,
   type ScopeType,
   type TopUserResponse,
   type UserSummary,
@@ -29,6 +41,7 @@ import {
   ScopeFields,
   CreateUserCheckModal,
   CreateUserModal,
+  CreateStudentModal,
   CreatedCredentialsModal,
   CreateTopUserModal,
   BulkUploadModal,
@@ -40,6 +53,7 @@ export {
   ScopeFields,
   CreateUserCheckModal,
   CreateUserModal,
+  CreateStudentModal,
   CreatedCredentialsModal,
   CreateTopUserModal,
   BulkUploadModal,
@@ -97,40 +111,195 @@ export function ConfirmDialog({
   );
 }
 
+function MoreActionsMenu({ items }: { items: { label: string; onClick: () => void }[] }) {
+  const [open, setOpen] = useState(false);
+  const [alignLeft, setAlignLeft] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        !triggerRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    // DOM geometry is only available after the menu opens; this measurement is intentionally effect-driven.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAlignLeft(rect.left < 220 || rect.right - 220 < 16);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && menuRef.current) {
+      const menuItems = menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+      if (menuItems.length > 0) menuItems[0].focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) {
+      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+
+    const menuItems = menuRef.current
+      ? Array.from(menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      : [];
+    if (menuItems.length === 0) return;
+    const activeIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextIndex = activeIndex < menuItems.length - 1 ? activeIndex + 1 : 0;
+      menuItems[nextIndex]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevIndex = activeIndex > 0 ? activeIndex - 1 : menuItems.length - 1;
+      menuItems[prevIndex]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      menuItems[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      menuItems[menuItems.length - 1]?.focus();
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  const closeMenu = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  return (
+    <div onKeyDown={handleKeyDown} style={{ position: "relative" }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="eds-button eds-button--secondary"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="More user actions"
+      >
+        More ▾
+      </button>
+      {open && (
+        <div
+          ref={menuRef}
+          role="menu"
+          className="app-row-menu__dropdown"
+          aria-label="More user actions"
+          style={{
+            position: "absolute",
+            left: alignLeft ? 0 : "auto",
+            right: alignLeft ? "auto" : 0,
+            top: "calc(100% + 4px)",
+            zIndex: 50,
+            background: "var(--color-bg-surface)",
+            border: "1px solid var(--color-border-divider)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--elevation-2)",
+            minWidth: "220px",
+            maxWidth: "calc(100vw - 32px)",
+            padding: "var(--space-1) 0",
+          }}
+          onClick={closeMenu}
+        >
+          {items.map((item) => (
+            <button
+              key={item.label}
+              role="menuitem"
+              onClick={item.onClick}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "var(--space-2) var(--space-4)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                color: "var(--color-text)",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The caller's own active-role scope, as the default "Acting scope" - scope matching is exact
+ *  (see PermissionEvaluatorService), so a School/College/Department-scoped role defaulting to
+ *  "Tenant (university-wide)" got USER_VIEW denied on every "Load users" until they manually
+ *  switched the dropdown. Falls back to TENANT only for the genuinely tenant-wide roles
+ *  (Management, University Admin, ...) or before /me/permissions has loaded. */
+function defaultScopeFrom(permissions: TenantPermissions | null): ActingScope {
+  if (!permissions || !permissions.scopeType || permissions.scopeType === "TENANT") {
+    return { scopeType: "TENANT" };
+  }
+  return {
+    scopeType: permissions.scopeType,
+    institutionId: permissions.institutionId ?? undefined,
+    departmentId: permissions.departmentId ?? undefined,
+  };
+}
+
 export function UserListPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
-  const [scope, setScope] = useState<ActingScope>({ scopeType: "TENANT" });
+  const activePermissions = useAppSelector((state) => state.tenantPermissions.current);
+  const [scope, setScope] = useState<ActingScope>(() => defaultScopeFrom(activePermissions));
+  const [scopeTouched, setScopeTouched] = useState(false);
   const [state, setState] = useState<LoadState>("idle");
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [query, setQuery] = useState("");
   const [showCreateCheck, setShowCreateCheck] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateStudentModal, setShowCreateStudentModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showGovernanceModal, setShowGovernanceModal] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreateUserResponse | TopUserResponse | null>(null);
-
-  if (!tenantId) {
-    return (
-      <div className="platform-page">
-        <PageHeader title="Users & roles" description="User account management (USER_VIEW)." />
-        <ErrorState
-          title="Not available"
-          message="This screen is for tenant accounts. No tenant is associated with your sign-in."
-        />
-      </div>
-    );
-  }
+  const [createdStudent, setCreatedStudent] = useState<StudentProfileResponse | null>(null);
+  const autoLoadedRef = useRef(false);
 
   const load = async () => {
+    if (!tenantId) return;
     if (scope.scopeType !== "TENANT" && !scope.institutionId) {
       setState("error");
-      setErrorMessage("Enter an institution ID for this scope before loading users.");
+      setErrorMessage("Choose an institution for this scope before loading users.");
       return;
     }
     if (scope.scopeType === "DEPARTMENT" && !scope.departmentId) {
       setState("error");
-      setErrorMessage("Enter a department ID for this scope before loading users.");
+      setErrorMessage("Choose a department for this scope before loading users.");
       return;
     }
     setState("loading");
@@ -150,26 +319,56 @@ export function UserListPage() {
     }
   };
 
+  // /me/permissions can resolve after this page's first render; keep the scope in step with it
+  // until the person picks a scope themselves (ScopeFields' onChange below sets scopeTouched).
+  useEffect(() => {
+    if (scopeTouched) return;
+    setScope(defaultScopeFrom(activePermissions));
+  }, [activePermissions, scopeTouched]);
+
+  // Auto-load once the real scope is known, so a non-tenant-wide role sees their register
+  // immediately instead of first hitting an empty/denied state at the old hardcoded TENANT
+  // default and having to notice the dropdown and press "Load users" a second time.
+  useEffect(() => {
+    if (autoLoadedRef.current || scopeTouched) return;
+    if (!activePermissions) return;
+    if (scope.scopeType !== "TENANT" && !scope.institutionId) return;
+    autoLoadedRef.current = true;
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePermissions, scope, scopeTouched]);
+
+  if (!tenantId) {
+    return (
+      <div className="app-page">
+        <PageHeader title="Users & roles" description="Manage tenant user accounts within your permitted scope." />
+        <ErrorState
+          title="Not available"
+          message="This screen is for tenant accounts. No tenant is associated with your sign-in."
+        />
+      </div>
+    );
+  }
+
   const filtered = users.filter((u) =>
     (u.displayName + " " + u.email).toLowerCase().includes(query.toLowerCase())
   );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Users & roles"
-        description="View and manage tenant user accounts in a chosen scope (USER_VIEW)."
+        description="View and manage tenant user accounts within your permitted scope."
         actions={
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <Button variant="secondary" onClick={() => setShowCreateCheck(true)}>
-              Check if I can create a user
-            </Button>
-            <Button variant="secondary" onClick={() => setShowBulkModal(true)}>
-              Bulk import users
-            </Button>
-            <Button variant="secondary" onClick={() => setShowGovernanceModal(true)}>
-              Create governance user
-            </Button>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <MoreActionsMenu
+              items={[
+                { label: "Check if I can create a user", onClick: () => setShowCreateCheck(true) },
+                { label: "Create student profile", onClick: () => setShowCreateStudentModal(true) },
+                { label: "Bulk import user accounts", onClick: () => setShowBulkModal(true) },
+                { label: "Create governance user", onClick: () => setShowGovernanceModal(true) },
+              ]}
+            />
             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
               Create user
             </Button>
@@ -177,19 +376,29 @@ export function UserListPage() {
         }
       />
 
+      <UserLimitBanner tenantId={tenantId} />
+
       <Panel
         title="Choose a scope"
         description="State the scope your own role assignment is acting in, then load the register."
       >
         <form
-          className="platform-toolbar"
+          className="app-toolbar"
           style={{ flexDirection: "column", alignItems: "stretch" }}
           onSubmit={(e) => {
             e.preventDefault();
             void load();
           }}
         >
-          <ScopeFields scope={scope} onChange={setScope} idPrefix="list" />
+          <ScopeFields
+            tenantId={tenantId}
+            scope={scope}
+            onChange={(next) => {
+              setScopeTouched(true);
+              setScope(next);
+            }}
+            idPrefix="list"
+          />
           <div>
             <Button type="submit" busy={state === "loading"}>
               Load users
@@ -215,14 +424,14 @@ export function UserListPage() {
           }
         />
       )}
-      {state === "loading" && <Spinner label="Loading users" />}
+      {state === "loading" && <Panel title="User register"><SkeletonTable rows={5} columns={6} /></Panel>}
 
       {state === "loaded" && (
         <Panel
           title="User register"
           description={`${filtered.length} of ${users.length} user${users.length === 1 ? "" : "s"} in this scope`}
         >
-          <div className="platform-toolbar">
+          <div className="app-toolbar">
             <SearchBox
               value={query}
               onChange={setQuery}
@@ -299,6 +508,17 @@ export function UserListPage() {
         }}
       />
 
+      <CreateStudentModal
+        tenantId={tenantId}
+        isOpen={showCreateStudentModal}
+        onClose={() => setShowCreateStudentModal(false)}
+        onCreated={(student) => {
+          setShowCreateStudentModal(false);
+          setCreatedStudent(student);
+          void load();
+        }}
+      />
+
       <CreateUserModal
         tenantId={tenantId}
         isOpen={showCreateModal}
@@ -309,6 +529,22 @@ export function UserListPage() {
           void load();
         }}
       />
+
+      {createdStudent && (
+        <CreatedCredentialsModal
+          user={{
+            displayName: createdStudent.fullName,
+            identifier: { label: "Student code", value: createdStudent.studentCode },
+            temporaryPassword: createdStudent.temporaryPassword ?? undefined,
+            message: "Student profile and enrolment were created. Login provisioning follows the institution and class settings.",
+          }}
+          isOpen={true}
+          onClose={() => setCreatedStudent(null)}
+          title="Student profile created successfully"
+          kicker="STUDENT PROFILE"
+          description="Share any issued temporary password securely. It is shown only in this confirmation."
+        />
+      )}
 
       {createdUser && (
         <CreatedCredentialsModal
@@ -328,6 +564,8 @@ export function UserDetailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  // MFA-01: nobody resets their own two-step login (the server refuses it too).
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
 
   const initialScopeType = searchParams.get("scopeType") as ScopeType | null;
   const [scope, setScope] = useState<ActingScope>({
@@ -346,22 +584,52 @@ export function UserDetailPage() {
   const [saveBanner, setSaveBanner] = useState<ActionBanner>(null);
 
   const [actionInstitutionId, setActionInstitutionId] = useState(scope.institutionId ?? "");
-  const [confirming, setConfirming] = useState<"deactivate" | "reset" | "unlock" | null>(null);
+  const [actionInstitutions, setActionInstitutions] = useState<InstitutionItem[]>([]);
+  const [actionInstitutionsLoading, setActionInstitutionsLoading] = useState(false);
+  const [actionInstitutionsError, setActionInstitutionsError] = useState("");
+  const [confirming, setConfirming] = useState<"deactivate" | "reset" | "unlock" | "mfa" | null>(null);
+  const [mfaError, setMfaError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [actionBanner, setActionBanner] = useState<ActionBanner>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState("");
+  const { fieldErrors, setFieldError, clearFieldError, clearAll, handleApiError } = useFormErrors();
+  const latestUserIdRef = useRef<string | undefined>(userId);
+  latestUserIdRef.current = userId;
 
-  const load = async (scopeToUse: ActingScope) => {
-    if (!tenantId || !userId) return;
+  useEffect(() => {
+    if (!tenantId) return;
+    let active = true;
+    setActionInstitutionsLoading(true);
+    setActionInstitutionsError("");
+    institutionService.listInstitutions(tenantId)
+      .then((response) => {
+        if (active) setActionInstitutions(response.items ?? []);
+      })
+      .catch((error) => {
+        if (active) {
+          setActionInstitutions([]);
+          setActionInstitutionsError(getApiErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (active) setActionInstitutionsLoading(false);
+      });
+    return () => { active = false; };
+  }, [tenantId]);
+
+  const load = async (scopeToUse: ActingScope, targetUserId = userId) => {
+    if (!tenantId || !targetUserId) return;
     setState("loading");
     setErrorMessage("");
     try {
-      const { data } = await userManagementService.getUser(tenantId, userId, scopeToUse);
+      const { data } = await userManagementService.getUser(tenantId, targetUserId, scopeToUse);
+      if (latestUserIdRef.current !== targetUserId) return;
       setUser(data);
       setFields({ displayName: data.displayName, email: data.email, mobile: data.mobile });
       setState("loaded");
     } catch (error) {
+      if (latestUserIdRef.current !== targetUserId) return;
       setUser(null);
       setState(isForbidden(error) ? "denied" : "error");
       setErrorMessage(getApiErrorMessage(error));
@@ -369,14 +637,20 @@ export function UserDetailPage() {
   };
 
   useEffect(() => {
-    if (initialScopeType) void load(scope);
+    setSaveBanner(null);
+    setActionBanner(null);
+    setTemporaryPassword(null);
+    setCopyNotice("");
+    if ((initialScopeType || !needsScope) && userId) {
+      void load(scope, userId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId, initialScopeType, needsScope]);
 
   if (!tenantId || !userId) {
     return (
-      <div className="platform-page">
-        <PageHeader title="User detail" description="User account management (USER_VIEW)." />
+      <div className="app-page">
+        <PageHeader title="User detail" description="Manage tenant user accounts and their profile details." />
         <ErrorState
           title="Not available"
           message="This screen is for tenant accounts with a valid user ID."
@@ -395,11 +669,13 @@ export function UserDetailPage() {
     event.preventDefault();
     setSaving(true);
     setSaveBanner(null);
+    clearAll();
     try {
       const { data } = await userManagementService.updateUser(tenantId, userId, scope, fields);
       setUser(data);
       setSaveBanner({ tone: "success", message: "Changes saved." });
     } catch (error) {
+      handleApiError(error);
       setSaveBanner({
         tone: isForbidden(error) ? "danger" : "danger",
         message: getApiErrorMessage(error),
@@ -468,6 +744,21 @@ export function UserDetailPage() {
     }
   };
 
+  const runMfaReset = async (reason: string) => {
+    setActionBusy(true);
+    setActionBanner(null);
+    setMfaError("");
+    try {
+      const { data } = await userManagementService.resetMfa(tenantId, userId, actionInstitutionId, reason);
+      setActionBanner({ tone: "success", message: data.message });
+      setConfirming(null);
+    } catch (error) {
+      setMfaError(serverMessage(error));
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
   const copyTempPassword = async () => {
     if (!temporaryPassword) return;
     try {
@@ -479,10 +770,10 @@ export function UserDetailPage() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="User detail"
-        description="View, edit and manage a single user account (USER_VIEW / USER_EDIT / USER_DEACTIVATE / USER_PASSWORD_RESET_UNLOCK)."
+        description="View, edit and manage a single user account. Sensitive changes are checked against your active role and institution scope."
         actions={
           <Button variant="secondary" onClick={() => navigate("/tenants/users")}>
             Back to register
@@ -496,11 +787,11 @@ export function UserDetailPage() {
           description="State the scope your own role assignment is acting in, then load this user."
         >
           <form
-            className="platform-toolbar"
+            className="app-toolbar"
             style={{ flexDirection: "column", alignItems: "stretch" }}
             onSubmit={submitScope}
           >
-            <ScopeFields scope={scope} onChange={setScope} idPrefix="detail" />
+            <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="detail" />
             <div>
               <Button type="submit">Load user</Button>
             </div>
@@ -508,7 +799,7 @@ export function UserDetailPage() {
         </Panel>
       )}
 
-      {!needsScope && state === "loading" && <Spinner label="Loading user" />}
+      {!needsScope && state === "loading" && <SkeletonCard><SkeletonText height="1.25rem" width="50%" /><SkeletonText lines={5} /></SkeletonCard>}
       {!needsScope && state === "denied" && (
         <ErrorState
           title="Permission denied"
@@ -535,7 +826,7 @@ export function UserDetailPage() {
             action={<StatusBadge status={user.status} />}
           >
             <form
-              className="platform-form-grid"
+              className="app-form-grid"
               style={{ padding: "0 var(--space-5) var(--space-5)" }}
               onSubmit={saveEdit}
             >
@@ -554,15 +845,22 @@ export function UserDetailPage() {
                 disabled={user.status === "DEACTIVATED"}
                 onChange={(e) => setFields({ ...fields, email: e.target.value })}
               />
-              <TextField
+              <PhoneField
                 id="edit-mobile"
-                label="Mobile"
+                label="Mobile number"
                 value={fields.mobile}
                 disabled={user.status === "DEACTIVATED"}
-                onChange={(e) => setFields({ ...fields, mobile: e.target.value })}
+                onChange={(e) => {
+                  setFields({ ...fields, mobile: e.target.value });
+                  clearFieldError("mobile");
+                }}
+                fieldName="mobile"
+                error={fieldErrors.mobile}
+                setFieldError={setFieldError}
+                clearFieldError={clearFieldError}
               />
               {user.status === "DEACTIVATED" ? (
-                <div className="platform-modal-note" style={{ gridColumn: "1 / -1" }}>
+                <div className="app-note" style={{ gridColumn: "1 / -1" }}>
                   This account is deactivated. Deactivation is permanent in this system (no
                   reactivate), so it can no longer be edited.
                 </div>
@@ -585,17 +883,25 @@ export function UserDetailPage() {
 
           <Panel
             title="Institution-scoped actions"
-            description="USER_DEACTIVATE and USER_PASSWORD_RESET_UNLOCK are always checked against your own institution-scoped grant, never tenant or department scope."
+            description="Account deactivation and password recovery are always checked against your own institution scope."
           >
             <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-              <TextField
-                id="action-institution-id"
-                label="Institution ID"
+              <SelectField
+                id="action-institution"
+                label="Institution"
                 required
                 value={actionInstitutionId}
+                disabled={actionInstitutionsLoading || actionInstitutions.length === 0}
                 onChange={(e) => setActionInstitutionId(e.target.value)}
-                placeholder="UUID of your institution"
-              />
+              >
+                <option value="">{actionInstitutionsLoading ? "Loading institutions…" : "Choose an institution"}</option>
+                {actionInstitutions.map((institution) => (
+                  <option key={institution.institutionId} value={institution.institutionId}>
+                    {institution.institutionName} · {institution.institutionCode}
+                  </option>
+                ))}
+              </SelectField>
+              {actionInstitutionsError && <p className="app-note" role="alert">{actionInstitutionsError}</p>}
               <div
                 style={{
                   display: "flex",
@@ -625,9 +931,17 @@ export function UserDetailPage() {
                 >
                   Unlock account
                 </Button>
+                <Button
+                  variant="secondary"
+                  disabled={!actionInstitutionId || user.status === "DEACTIVATED" || userId === currentUserId}
+                  title={userId === currentUserId ? "You cannot reset your own two-step login" : undefined}
+                  onClick={() => { setMfaError(""); setConfirming("mfa"); }}
+                >
+                  Reset two-step login
+                </Button>
               </div>
               {user.status === "DEACTIVATED" && (
-                <p className="platform-empty-inline">This user is already deactivated.</p>
+                <p className="app-empty-inline">This user is already deactivated.</p>
               )}
               {actionBanner && (
                 <div style={{ marginTop: "var(--space-3)" }}>
@@ -675,6 +989,14 @@ export function UserDetailPage() {
           onCancel={() => setConfirming(null)}
         />
       )}
+      <MfaResetDialog
+        isOpen={confirming === "mfa"}
+        personName={user?.displayName ?? "this user"}
+        busy={actionBusy}
+        error={mfaError}
+        onConfirm={(reason) => void runMfaReset(reason)}
+        onCancel={() => setConfirming(null)}
+      />
       {confirming === "unlock" && (
         <ConfirmDialog
           titleId="confirm-unlock-title"
@@ -704,10 +1026,18 @@ export function UserDetailPage() {
         description="This temporary password will not be shown again after you close this dialog. It is not stored anywhere in this browser."
         size="sm"
         footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", width: "100%" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", width: "100%" }}>
             <Button variant="secondary" onClick={() => void copyTempPassword()}>
               Copy to clipboard
             </Button>
+            <ShareMenu
+              text={`Your temporary password for EDU360 is:\n${temporaryPassword ?? ""}\n\nPlease sign in and set a new password.`}
+              title="Temporary Password"
+              label="Share temporary password"
+              asButton
+              buttonText="Share"
+              buttonVariant="secondary"
+            />
             <Button
               onClick={() => {
                 setActionBanner({
@@ -734,14 +1064,16 @@ export function UserDetailPage() {
             style={{
               fontFamily: "monospace",
               fontSize: "1.1rem",
-              padding: "0.5rem",
-              borderRadius: "4px",
-              border: "1px solid var(--color-border, #cbd5e1)",
+              padding: "var(--space-2)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--color-border-divider)",
+              backgroundColor: "var(--color-bg-surface)",
+              color: "var(--color-text)",
               width: "100%",
             }}
           />
         </div>
-        {copyNotice && <p className="platform-empty-inline" style={{ marginTop: "8px" }}>{copyNotice}</p>}
+        {copyNotice && <p className="app-empty-inline" style={{ marginTop: "var(--space-2)" }}>{copyNotice}</p>}
       </Modal>
     </div>
   );

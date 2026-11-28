@@ -1,6 +1,11 @@
 package com.edu360.api.termlock;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import com.edu360.api.tenant.TenantContext;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -35,6 +40,22 @@ public class TermLockService {
     private final TermLockEventRepository termLockEventRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final AuditLogService auditLogService;
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired(required = false)
+    public void setDataSource(DataSource dataSource) { this.jdbcTemplate = new JdbcTemplate(dataSource); }
+
+    /** Test-only seam: lets unit tests supply a mock JdbcTemplate directly, without a real DataSource. */
+    public void setJdbcTemplate(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
+
+    /** Shared date-based lock check; mirrors app.is_term_locked used by SQL guards. */
+    @Transactional(readOnly = true)
+    public boolean isLocked(UUID tenantId, UUID sectionId, LocalDate date) {
+        if (tenantId == null || sectionId == null || date == null || !tenantId.equals(TenantContext.currentTenantId()))
+            throw new ResourceNotFoundException("Term lock scope not found");
+        if (jdbcTemplate == null) throw new IllegalStateException("Term-lock JDBC function is unavailable.");
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject("SELECT app.is_term_locked(?, ?, ?)", Boolean.class, tenantId, sectionId, date));
+    }
 
     @Transactional(readOnly = true)
     public List<TermLockResponse> listTermLocks(UUID tenantId, UUID institutionId, TenantPrincipal principal) {
@@ -101,6 +122,16 @@ public class TermLockService {
             termLock.setRowVersion(termLock.getRowVersion() != null ? termLock.getRowVersion() + 1 : 1);
         }
 
+        if ("TEMP_UNLOCKED".equals(termLock.getLockState())) {
+            if (jdbcTemplate == null) throw new IllegalStateException("Term unlock log JDBC store is unavailable.");
+            jdbcTemplate.update("""
+                    UPDATE app.term_unlock_log
+                       SET is_active = false, relocked_at = now(), updated_at = now(),
+                           updated_by = ?, row_version = row_version + 1
+                     WHERE tenant_id = ? AND term_id = ? AND is_active
+                    """, principal.userAccountId(), tenantId, termLock.getTermLockId());
+        }
+
         TermLock saved = termLockRepository.save(termLock);
 
         // Record audit event in app.term_lock_event
@@ -132,6 +163,13 @@ public class TermLockService {
     }
 
     @Transactional
+    public TermLockResponse unlockTerm(UUID tenantId, UUID termLockId, TenantPrincipal principal, UnlockTermRequest request) {
+        TermLock termLock = termLockRepository.findByIdTenantIdAndIdTermLockId(tenantId, termLockId)
+                .orElseThrow(() -> new ResourceNotFoundException("Term lock not found: " + termLockId));
+        return unlockTerm(tenantId, termLock.getInstitutionId(), termLockId, principal, request);
+    }
+
+    @Transactional
     public TermLockResponse unlockTerm(UUID tenantId, UUID institutionId, UUID termLockId, TenantPrincipal principal, UnlockTermRequest request) {
         // Fail-closed authorization check: TERM_UNLOCK on own institution
         permissionEvaluatorService.authorize(
@@ -142,14 +180,14 @@ public class TermLockService {
         );
 
         // Rule AT-09: Reason required
-        if (request.reason() == null || request.reason().isBlank()) {
-            throw new BusinessRuleViolationException("REASON_REQUIRED", "Unlock reason is required under Rule AT-09.");
+        if (request.reason() == null || request.reason().trim().length() < 20) {
+            throw new BusinessRuleViolationException("REASON_REQUIRED", "Unlock reason must contain at least 20 characters under Rule AT-09.");
         }
 
         // Rule AT-09: Lasts at most 3 days (72 hours) then relocks
-        int hours = request.unlockDurationHours() != null ? request.unlockDurationHours() : 72;
-        if (hours <= 0 || hours > 72) {
-            throw new BusinessRuleViolationException("INVALID_DURATION", "Term unlock duration cannot exceed 72 hours (3 days) under Rule AT-09.");
+        int hours = 72;
+        if (request.unlockDurationHours() != null && request.unlockDurationHours() != 72) {
+            throw new BusinessRuleViolationException("INVALID_DURATION", "Emergency term unlock duration is fixed at 72 hours under Rule AT-09.");
         }
 
         TermLock termLock = termLockRepository.findByIdTenantIdAndIdTermLockId(tenantId, termLockId)
@@ -166,7 +204,24 @@ public class TermLockService {
                     "Term is currently temporarily unlocked until " + termLock.getUnlockUntil() + "; repeated re-unlocking is prohibited under Rule AT-09.");
         }
 
-        Instant unlockUntil = Instant.now().plus(hours, ChronoUnit.HOURS);
+        Instant unlockedAt = Instant.now();
+        Instant unlockUntil = unlockedAt.plus(hours, ChronoUnit.HOURS);
+        if (jdbcTemplate == null) throw new IllegalStateException("Term unlock log JDBC store is unavailable.");
+        jdbcTemplate.update("""
+                UPDATE app.term_unlock_log
+                   SET is_active = false, relocked_at = ?, updated_at = ?,
+                       updated_by = ?, row_version = row_version + 1
+                 WHERE tenant_id = ? AND term_id = ? AND is_active
+                   AND unlocked_at + interval '72 hours' <= ?
+                """, unlockedAt, unlockedAt, principal.userAccountId(), tenantId, termLockId, unlockedAt);
+        jdbcTemplate.update("""
+                INSERT INTO app.term_unlock_log
+                    (tenant_id, id, term_id, unlocked_by_user_id, reason, unlocked_at,
+                     is_active, created_at, created_by, updated_at, updated_by, row_version)
+                VALUES (?, ?, ?, ?, ?, ?, true, ?, ?, ?, ?, 1)
+                """, tenantId, UUID.randomUUID(), termLockId, principal.userAccountId(),
+                request.reason().trim(), unlockedAt, unlockedAt, principal.userAccountId(),
+                unlockedAt, principal.userAccountId());
         termLock.setLockState("TEMP_UNLOCKED");
         termLock.setUnlockUntil(unlockUntil);
         termLock.setUpdatedAt(Instant.now());

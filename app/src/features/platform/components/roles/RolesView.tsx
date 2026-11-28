@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import {
   Button,
   ConfirmDialog,
@@ -7,9 +7,9 @@ import {
   ErrorState,
   Notice,
   Panel,
+  SkeletonPage,
   StatusBadge,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { useAppDispatch, useAppSelector } from "../../../../store/hooks";
 import { PLATFORM_ROLE_LABELS, formatTimestamp, readErrorMessage } from "../common/types";
@@ -104,7 +104,7 @@ export function RolesView() {
     );
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Platform roles"
         description="Build roles from templates, choose what each one can do, and take access back at any time."
@@ -117,10 +117,8 @@ export function RolesView() {
       {notice && <Notice tone="success">{notice}</Notice>}
       {actionError && <Notice tone="danger">{actionError}</Notice>}
 
-      {loading ? (
-        <div className="platform-empty-inline">
-          <Spinner label="Loading platform roles" />
-        </div>
+      {loading && roles.length === 0 && templates.length === 0 && catalog.length === 0 ? (
+        <SkeletonPage title="Loading platform roles" showTable tableRows={5} tableColumns={6} />
       ) : loadError ? (
         <ErrorState
           title="Platform roles didn't load"

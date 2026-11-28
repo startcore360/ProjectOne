@@ -2,16 +2,26 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
+import tenantPermissionsReducer from "../../../store/slices/tenantPermissionsSlice";
 import { userManagementService } from "../api/userManagementService";
 import { GuardianManagementPanel, StudentStatusPanel, UserDetailPage, UserListPage } from "./UserManagementPages";
 import { academicService } from "../../institution-admin/api/academicService";
 import { guardianService } from "../api/guardianService";
+import { institutionService } from "../../institution-admin/api/institutionService";
+
+vi.mock("../../institution-admin/api/institutionService", () => ({
+  institutionService: {
+    listInstitutions: vi.fn(),
+    listDepartments: vi.fn(),
+  },
+}));
 
 vi.mock("../../institution-admin/api/academicService", () => ({
   academicService: {
     changeStudentStatus: vi.fn(),
+    getStudentStatus: vi.fn(),
   },
 }));
 
@@ -32,6 +42,9 @@ vi.mock("../api/userManagementService", () => ({
     deactivateUser: vi.fn(),
     resetPassword: vi.fn(),
     unlockUser: vi.fn(),
+    // E1-S5: the Users page reads the user limit for its banner; no limit means no banner.
+    getUserLimit: vi.fn(() => Promise.resolve({ data: { limit: null, active: 0, percent: 0 } })),
+    requestUpgrade: vi.fn(),
     checkCreateUserAuthorization: vi.fn(),
     createUser: vi.fn(),
     getImportTemplate: vi.fn(),
@@ -44,7 +57,7 @@ vi.mock("../api/userManagementService", () => ({
 }));
 
 function storeWithTenantUser(tenantId: string | null = "tenant-1") {
-  const store = configureStore({ reducer: { auth: authReducer } });
+  const store = configureStore({ reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer } });
   store.dispatch(
     setUser({
       id: "u1",
@@ -131,13 +144,19 @@ describe("UserListPage", () => {
     await waitFor(() => expect(screen.getByText("Permission denied")).toBeInTheDocument());
   });
 
+  // Secondary user actions live in the page's "More" menu.
+  const openMoreAction = (name: RegExp) => {
+    fireEvent.click(screen.getByRole("button", { name: /More/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name }));
+  };
+
   it("opens the create-user authorization check dialog without claiming to create an account", async () => {
     vi.mocked(userManagementService.checkCreateUserAuthorization).mockResolvedValueOnce({
       data: { actionCode: "USER_CREATE", reasonCode: "ALLOWED", message: "Authorized to create a user in this scope." },
     } as never);
     renderList();
 
-    fireEvent.click(screen.getByRole("button", { name: /Check if I can create a user/i }));
+    openMoreAction(/Check if I can create a user/i);
     expect(screen.getByText(/does not create an account/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Check authorization/i }));
@@ -188,6 +207,8 @@ describe("UserListPage", () => {
   });
 
   it("opens bulk upload modal, downloads template, pre-validates CSV with errors, and allows good rows import (Story #10: USER_BULK_UPLOAD)", async () => {
+    vi.mocked(institutionService.listInstitutions).mockResolvedValue({ items: [], total: 0 });
+
     vi.mocked(userManagementService.getImportTemplate).mockResolvedValueOnce({
       data: {
         importKind: "USERS",
@@ -239,9 +260,9 @@ describe("UserListPage", () => {
     renderList();
 
     // Click Bulk import users
-    fireEvent.click(screen.getByRole("button", { name: /Bulk import users/i }));
-    expect(screen.getByRole("heading", { name: "Bulk upload users" })).toBeInTheDocument();
-    expect(screen.getByText(/Enforces pre-validation and row error tracking \[Rule MD-27\]/i)).toBeInTheDocument();
+    openMoreAction(/Bulk import user accounts/i);
+    expect(screen.getByRole("heading", { name: "Bulk upload user accounts" })).toBeInTheDocument();
+    expect(screen.getByText(/This workflow does not create student profiles or enrolments/i)).toBeInTheDocument();
 
     // Download template
     fireEvent.click(screen.getByRole("button", { name: /Download CSV Template/i }));
@@ -256,7 +277,7 @@ describe("UserListPage", () => {
     });
 
     // Submit for pre-validation
-    fireEvent.click(screen.getByRole("button", { name: /Pre-validate CSV \(Rule MD-27\)/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Pre-validate CSV/i }));
 
     await waitFor(() => {
       expect(userManagementService.createUserImport).toHaveBeenCalledWith(
@@ -264,7 +285,7 @@ describe("UserListPage", () => {
         expect.stringContaining("clean@test.com"),
         undefined
       );
-      expect(screen.getByText("Pre-validation Results [Rule MD-27]")).toBeInTheDocument();
+      expect(screen.getByText("Pre-validation results")).toBeInTheDocument();
       expect(screen.getByText("UIDAI_MASKED_LAST4_REQUIRED")).toBeInTheDocument();
       expect(screen.getAllByText(/Unmasked 12-digit Aadhaar/i).length).toBeGreaterThanOrEqual(1);
     });
@@ -294,7 +315,7 @@ describe("UserListPage", () => {
         roleCode: "VICE_CHANCELLOR",
         userType: "STAFF",
         status: "PENDING_ACTIVATION",
-        temporaryPassword: "vc-temp-pass-1234",
+        temporaryPassword: "test-only-password",
         twoStepLoginRequired: true,
         message: "Executive account created successfully.",
       },
@@ -306,11 +327,11 @@ describe("UserListPage", () => {
     renderList();
 
     // Click "Create governance user"
-    fireEvent.click(screen.getByRole("button", { name: /Create governance user/i }));
+    openMoreAction(/Create governance user/i);
 
     const dialog = screen.getByRole("dialog", { name: /Create governance \/ top user/i });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByText(/Two-step login \(MFA\) will be enforced/i)).toBeInTheDocument();
+    expect(screen.getByText(/Two-step login \(MFA\) is required at first sign-in/i)).toBeInTheDocument();
 
     // Fill in fields
     fireEvent.change(screen.getByLabelText(/Governance Role/i), { target: { value: "VICE_CHANCELLOR" } });
@@ -328,17 +349,25 @@ describe("UserListPage", () => {
         email: "vc@northbridge.edu.in",
         mobile: "+919876543210",
       });
-      expect(screen.getByDisplayValue("vc-temp-pass-1234")).toBeInTheDocument();
-      expect(screen.getByText(/Security Invariant \[Rule F-12\]/i)).toBeInTheDocument();
+      expect(screen.getByDisplayValue("test-only-password")).toBeInTheDocument();
+      expect(screen.getByText(/Two-step login \(MFA\) will be required at the user/i)).toBeInTheDocument();
     });
 
     // Close modal
     fireEvent.click(screen.getByRole("button", { name: /I've copied it, close/i }));
-    expect(screen.queryByDisplayValue("vc-temp-pass-1234")).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue("test-only-password")).not.toBeInTheDocument();
   });
 });
 
 describe("UserDetailPage", () => {
+  beforeEach(() => {
+    vi.mocked(institutionService.listInstitutions).mockResolvedValue({ items: [{
+      institutionId: "inst-1",
+      institutionName: "Northbridge College",
+      institutionCode: "NBC",
+    }] } as never);
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -367,6 +396,22 @@ describe("UserDetailPage", () => {
     expect(screen.getByLabelText(/Display name/i)).toBeDisabled();
   });
 
+  it("fires blur-triggered format validation when an invalid mobile number is entered and blurred", async () => {
+    vi.mocked(userManagementService.getUser).mockResolvedValueOnce({ data: sampleUser } as never);
+    renderDetail("/tenants/users/ua-1?scopeType=TENANT");
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+
+    const mobileInput = screen.getByLabelText(/Mobile number/i);
+    fireEvent.change(mobileInput, { target: { value: "invalid-phone" } });
+    fireEvent.blur(mobileInput);
+
+    await waitFor(() => {
+      expect(mobileInput).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toHaveTextContent("Include the country code, for example +919876543210.");
+    });
+  });
+
   it("shows the one-time temporary password dialog after a successful reset, then clears it", async () => {
     vi.mocked(userManagementService.getUser).mockResolvedValueOnce({ data: sampleUser } as never);
     vi.mocked(userManagementService.resetPassword).mockResolvedValueOnce({
@@ -374,8 +419,9 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: "inst-1" } });
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Reset password$/i }));
 
     const confirmDialog = screen.getByRole("dialog", { name: /Reset this user's password\?/i });
@@ -395,8 +441,9 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: "inst-1" } });
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Deactivate user$/i }));
 
     const confirmDialog = screen.getByRole("dialog", { name: /Deactivate this user\?/i });
@@ -406,7 +453,7 @@ describe("UserDetailPage", () => {
     await waitFor(() => {
       expect(userManagementService.deactivateUser).toHaveBeenCalledWith("tenant-1", "ua-1", "inst-1");
       expect(screen.getByText(/User deactivated \(soft delete; the row was never removed\)\./i)).toBeInTheDocument();
-      expect(screen.getByText(/^DEACTIVATED$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Deactivated$/)).toBeInTheDocument();
     });
   });
 
@@ -417,8 +464,9 @@ describe("UserDetailPage", () => {
     } as never);
     renderDetail("/tenants/users/ua-1?scopeType=TENANT");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Northbridge College · NBC" })).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: "inst-1" } });
+    fireEvent.change(screen.getByLabelText(/Institution/i), { target: { value: "inst-1" } });
     fireEvent.click(screen.getByRole("button", { name: /^Unlock account$/i }));
 
     const confirmDialog = screen.getByRole("dialog", { name: /Unlock this user's account\?/i });
@@ -482,7 +530,7 @@ describe("UserDetailPage", () => {
         }),
         "inst-1"
       );
-      expect(screen.getByText(/Guardian linked successfully \[GUARDIAN_LINK/i)).toBeInTheDocument();
+      expect(screen.getByText("Guardian linked successfully.")).toBeInTheDocument();
     });
   });
 
@@ -550,7 +598,7 @@ describe("UserDetailPage", () => {
         { reason: "Court custody order updated" },
         "inst-1"
       );
-      expect(screen.getByText(/Guardian change requested with reason/i)).toBeInTheDocument();
+      expect(screen.getByText(/Guardian change request submitted to the Principal for review/i)).toBeInTheDocument();
     });
   });
 
@@ -616,7 +664,7 @@ describe("UserDetailPage", () => {
         { approved: true },
         "inst-1"
       );
-      expect(screen.getByText(/Guardian change approved\. Old guardian access blocked immediately/i)).toBeInTheDocument();
+      expect(screen.getByText(/Guardian change approved\. The previous guardian/i)).toBeInTheDocument();
     });
   });
   it("changes student academic status with statutory reason (Story #41: STUDENT_STATUS_CHANGE / Rule AT-08)", async () => {
@@ -627,6 +675,16 @@ describe("UserDetailPage", () => {
       statusChangedAt: "2026-11-07T00:00:00Z",
     });
 
+    // The panel now reads the student's current status before offering a change.
+    (academicService.getStudentStatus as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      studentProfileId: "student-1",
+      institutionId: "inst-1",
+      studentCode: "STU-001",
+      status: "ACTIVE",
+      statusReason: null,
+      statusChangedAt: null,
+    });
+
     const store = storeWithTenantUser("tenant-1");
     render(
       <Provider store={store}>
@@ -634,7 +692,9 @@ describe("UserDetailPage", () => {
       </Provider>
     );
 
-    expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(academicService.getStudentStatus).toHaveBeenCalledWith("tenant-1", "student-1");
+    });
 
     const changeBtn = screen.getByRole("button", { name: /Change Student Status/i });
     fireEvent.click(changeBtn);
@@ -658,8 +718,8 @@ describe("UserDetailPage", () => {
           reason: "Medical leave approved by Board",
         }
       );
-      expect(screen.getByText(/Student status successfully changed to LEAVE_OF_ABSENCE/i)).toBeInTheDocument();
-      expect(screen.getByText("LEAVE_OF_ABSENCE")).toBeInTheDocument();
+      expect(screen.getByText(/Student status successfully changed to Leave of absence/i)).toBeInTheDocument();
+      expect(screen.getByText("Leave of absence")).toBeInTheDocument();
     });
   });
 });

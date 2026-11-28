@@ -1,13 +1,20 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Badge,
   Button,
+  CheckboxField,
   DataTable,
   Modal,
   Notice,
   Panel,
+  PhoneField,
+  ErrorState,
+  SelectField,
+  SkeletonTable,
+  TextAreaField,
   TextField,
 } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   guardianService,
@@ -25,9 +32,10 @@ export function GuardianManagementPanel({
   studentId,
   institutionId,
 }: GuardianManagementPanelProps) {
-  const currentTenantId = tenantId || "00000000-0000-0000-0000-000000000001";
+  const currentTenantId = tenantId ?? "";
   const [links, setLinks] = useState<GuardianLinkItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   // Link modal state
@@ -38,6 +46,7 @@ export function GuardianManagementPanel({
   const [relationship, setRelationship] = useState("FATHER");
   const [isPrimary, setIsPrimary] = useState(true);
   const [linking, setLinking] = useState(false);
+  const { fieldErrors, setFieldError, clearFieldError, clearAll, handleApiError } = useFormErrors();
 
   // Change request modal state
   const [changeModalItem, setChangeModalItem] = useState<GuardianLinkItem | null>(null);
@@ -49,26 +58,37 @@ export function GuardianManagementPanel({
   const [decisionApproved, setDecisionApproved] = useState(true);
   const [deciding, setDeciding] = useState(false);
 
-  const fetchLinks = () => {
+  const fetchLinks = useCallback(async () => {
+    if (!currentTenantId || !studentId) {
+      setLoadError("A valid tenant and student context are required to load guardian links.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    guardianService
-      .listGuardianLinks(currentTenantId, studentId)
-      .then((data) => setLinks(data || []))
-      .catch(() => setLinks([]))
-      .finally(() => setLoading(false));
-  };
+    setLoadError("");
+    try {
+      const data = await guardianService.listGuardianLinks(currentTenantId, studentId);
+      setLinks(data || []);
+    } catch (err) {
+      setLoadError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [currentTenantId, studentId]);
 
   useEffect(() => {
-    fetchLinks();
-  }, [currentTenantId, studentId]);
+    void fetchLinks();
+  }, [fetchLinks]);
 
   const handleLinkSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!fullName.trim() || !mobile.trim()) {
       setFeedback({ tone: "danger", message: "Full name and valid mobile number are required." });
       return;
     }
     setLinking(true);
+    clearAll();
     try {
       await guardianService.linkGuardian(
         currentTenantId,
@@ -84,14 +104,15 @@ export function GuardianManagementPanel({
       );
       setFeedback({
         tone: "success",
-        message: "Guardian linked successfully [GUARDIAN_LINK / Rules WF-21, WF-22, WF-24].",
+        message: "Guardian linked successfully.",
       });
       setShowLinkModal(false);
       setFullName("");
       setMobile("+91");
       setEmail("");
-      fetchLinks();
+      void fetchLinks();
     } catch (err: unknown) {
+      handleApiError(err);
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
       setLinking(false);
@@ -100,9 +121,10 @@ export function GuardianManagementPanel({
 
   const handleRequestChangeSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!changeModalItem) return;
     if (!changeReason.trim()) {
-      setFeedback({ tone: "danger", message: "Reason is required to request guardian change (Rule WF-23)." });
+      setFeedback({ tone: "danger", message: "Enter a reason for the guardian change request." });
       return;
     }
     setRequestingChange(true);
@@ -115,11 +137,11 @@ export function GuardianManagementPanel({
       );
       setFeedback({
         tone: "success",
-        message: "Guardian change requested with reason [GUARDIAN_CHANGE_REQUEST / Rule WF-23]. Sent to Principal for decision.",
+        message: "Guardian change request submitted to the Principal for review.",
       });
       setChangeModalItem(null);
       setChangeReason("");
-      fetchLinks();
+      void fetchLinks();
     } catch (err: unknown) {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
@@ -129,6 +151,7 @@ export function GuardianManagementPanel({
 
   const handleDecideSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentTenantId) return;
     if (!decideModalItem) return;
     setDeciding(true);
     try {
@@ -141,11 +164,11 @@ export function GuardianManagementPanel({
       setFeedback({
         tone: "success",
         message: decisionApproved
-          ? "Guardian change approved. Old guardian access blocked immediately [GUARDIAN_CHANGE_APPROVE / Rule WF-25]."
+          ? "Guardian change approved. The previous guardian's access has been blocked."
           : "Guardian change request rejected. Existing link preserved.",
       });
       setDecideModalItem(null);
-      fetchLinks();
+      void fetchLinks();
     } catch (err: unknown) {
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
@@ -155,10 +178,10 @@ export function GuardianManagementPanel({
 
   return (
     <Panel
-      title="Guardian linkages [WF-21..25]"
+      title="Guardian linkages"
       description="Link parent or guardian profiles to this student (up to 3 guardians, exactly one primary). Changes require reason and Principal approval."
       action={
-        <Button onClick={() => setShowLinkModal(true)} disabled={links.length >= 3}>
+        <Button onClick={() => setShowLinkModal(true)} disabled={!currentTenantId || links.length >= 3}>
           + Link Guardian
         </Button>
       }
@@ -170,8 +193,14 @@ export function GuardianManagementPanel({
           </div>
         )}
 
-        {loading ? (
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>Loading guardian linkages...</p>
+        {!currentTenantId ? (
+          <ErrorState title="Tenant context unavailable" message="Guardian links cannot be loaded or changed without a tenant identity." />
+        ) : loadError ? (
+          <ErrorState title="Could not load guardian links" message={loadError} action={<Button variant="secondary" onClick={() => void fetchLinks()}>Retry</Button>} />
+        ) : loading ? (
+          <div role="status" aria-busy="true" aria-label="Loading guardian linkages">
+            <SkeletonTable columns={5} rows={3} />
+          </div>
         ) : (
           <DataTable
             headers={["Guardian Name", "Relationship", "Primary?", "Status", "Actions"]}
@@ -180,18 +209,18 @@ export function GuardianManagementPanel({
           >
             {links.map((link) => (
               <tr key={link.studentGuardianLinkId}>
-                <td style={{ padding: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>
                   <strong>{link.guardianName}</strong>
                 </td>
-                <td style={{ padding: "8px" }}>{link.relationship}</td>
-                <td style={{ padding: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>{link.relationship}</td>
+                <td style={{ padding: "var(--space-2)" }}>
                   {link.isPrimary ? (
                     <Badge tone="success">PRIMARY</Badge>
                   ) : (
-                    <span style={{ color: "#999" }}>—</span>
+                    <span style={{ color: "var(--color-text-muted)" }}>—</span>
                   )}
                 </td>
-                <td style={{ padding: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>
                   {link.changeApprovalRequestId ? (
                     <Badge tone="warning">Change Pending</Badge>
                   ) : (
@@ -202,8 +231,8 @@ export function GuardianManagementPanel({
                     </Badge>
                   )}
                 </td>
-                <td style={{ padding: "8px" }}>
-                  <div style={{ display: "flex", gap: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>
+                  <div style={{ display: "flex", gap: "var(--space-2)" }}>
                     {link.changeApprovalRequestId ? (
                       <Button
                         variant="secondary"
@@ -235,7 +264,7 @@ export function GuardianManagementPanel({
       <Modal
         isOpen={showLinkModal}
         onClose={() => setShowLinkModal(false)}
-        kicker="GUARDIAN_LINK • Action #17 / Rules WF-21..24"
+        kicker="GUARDIAN LINK"
         title="Link Parent or Guardian"
         size="md"
       >
@@ -252,13 +281,19 @@ export function GuardianManagementPanel({
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <TextField
+            <PhoneField
               id="guardian-mobile"
-              label="Mobile Number *"
+              label="Mobile number"
               required
               value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              placeholder="+919876543210"
+              onChange={(e) => {
+                setMobile(e.target.value);
+                clearFieldError("mobile");
+              }}
+              fieldName="mobile"
+              error={fieldErrors.mobile}
+              setFieldError={setFieldError}
+              clearFieldError={clearFieldError}
             />
           </div>
 
@@ -274,35 +309,27 @@ export function GuardianManagementPanel({
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "4px" }}>
-              Relationship *
-            </label>
-            <select
+            <SelectField
+              id="guardian-link-relationship"
+              label="Relationship *"
+              required
               value={relationship}
               onChange={(e) => setRelationship(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid var(--color-border, #ccc)",
-                borderRadius: "var(--radius-md, 4px)",
-              }}
             >
               <option value="FATHER">Father</option>
               <option value="MOTHER">Mother</option>
               <option value="LEGAL_GUARDIAN">Legal Guardian</option>
               <option value="OTHER">Other</option>
-            </select>
+            </SelectField>
           </div>
 
           <div style={{ marginBottom: "var(--space-4)" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={isPrimary}
-                onChange={(e) => setIsPrimary(e.target.checked)}
-              />
-              Designate as Primary Guardian [Rule WF-22: Exactly one primary required]
-            </label>
+            <CheckboxField
+              id="guardian-link-primary"
+              label="Designate as primary guardian"
+              checked={isPrimary}
+              onChange={(e) => setIsPrimary(e.target.checked)}
+            />
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
@@ -320,35 +347,24 @@ export function GuardianManagementPanel({
       <Modal
         isOpen={!!changeModalItem}
         onClose={() => setChangeModalItem(null)}
-        kicker="GUARDIAN_CHANGE_REQUEST • Action #18 / Rule WF-23"
+        kicker="GUARDIAN CHANGE REQUEST"
         title="Request Change or Block"
         size="md"
       >
         <form onSubmit={handleRequestChangeSubmit}>
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text-secondary, #666)", marginBottom: "var(--space-3)" }}>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
             Requesting change for guardian: <strong>{changeModalItem?.guardianName}</strong> ({changeModalItem?.relationship})
           </p>
 
           <div style={{ marginBottom: "var(--space-4)" }}>
-            <label
-              htmlFor="change-reason-input"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "4px" }}
-            >
-              Reason for Change / Block *
-            </label>
-            <textarea
+            <TextAreaField
               id="change-reason-input"
+              label="Reason for Change / Block *"
               required
               rows={3}
               value={changeReason}
               onChange={(e) => setChangeReason(e.target.value)}
               placeholder="e.g. Change of custody court order, relocation, or parent request..."
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "1px solid var(--color-border, #ccc)",
-                borderRadius: "var(--radius-md, 4px)",
-              }}
             />
           </div>
 
@@ -367,30 +383,30 @@ export function GuardianManagementPanel({
       <Modal
         isOpen={!!decideModalItem}
         onClose={() => setDecideModalItem(null)}
-        kicker="GUARDIAN_CHANGE_APPROVE • Action #19 / Rule WF-25"
+        kicker="GUARDIAN CHANGE REVIEW"
         title="Review Guardian Change"
         size="md"
       >
         <form onSubmit={handleDecideSubmit}>
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text-secondary, #666)", marginBottom: "var(--space-3)" }}>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
             Reviewing pending change request for: <strong>{decideModalItem?.guardianName}</strong>
           </p>
 
           <div style={{ marginBottom: "var(--space-4)" }}>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "8px" }}>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-2)" }}>
               Principal Decision
             </label>
-            <div style={{ display: "flex", gap: "16px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <div style={{ display: "flex", gap: "var(--space-4)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", cursor: "pointer" }}>
                 <input
                   type="radio"
                   name="decision"
                   checked={decisionApproved}
                   onChange={() => setDecisionApproved(true)}
                 />
-                Approve (Block old guardian immediately [Rule WF-25])
+                Approve and block previous guardian access
               </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", cursor: "pointer" }}>
                 <input
                   type="radio"
                   name="decision"

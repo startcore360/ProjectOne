@@ -72,6 +72,29 @@ export type CreateUserPayload = {
   departmentId?: string;
 };
 
+export type StudentCreatePayload = {
+  institutionId: string;
+  fullName: string;
+  dateOfBirth?: string;
+  admissionDate?: string;
+  sectionId: string;
+  academicSessionId: string;
+  createLogin?: boolean;
+  rollNumber?: string;
+};
+
+export type StudentProfileResponse = {
+  id: string;
+  userAccountId: string | null;
+  institutionId: string;
+  studentCode: string;
+  fullName: string;
+  dateOfBirth?: string | null;
+  admissionDate?: string | null;
+  status: string;
+  temporaryPassword?: string | null;
+};
+
 export type CreateUserResponse = {
   userAccountId: string;
   displayName: string;
@@ -187,6 +210,24 @@ export const userManagementService = {
   // POST /api/tenants/{tenantId}/users/{userId}/unlock (USER_PASSWORD_RESET_UNLOCK)
   unlockUser: (tenantId: string, userId: string, institutionId: string) =>
     api.post<ActionResponse>(`/tenants/${tenantId}/users/${userId}/unlock`, { institutionId }),
+
+  // E1-S5: accounts in use against the tenant's user limit, and "Request upgrade" (a BILLING ticket).
+  getUserLimit: (tenantId: string) =>
+    api.get<{ limit: number | null; active: number; percent: number }>(`/tenants/${tenantId}/user-limit`),
+  requestUpgrade: (tenantId: string, note?: string) =>
+    api.post<{ ticketId?: string }>(`/tenants/${tenantId}/upgrade-requests`, { note }),
+
+  // POST /api/tenants/{tenantId}/users/{userId}/mfa-reset (USER_MFA_RESET, MFA-01) - removes the
+  // user's authenticator and backup codes; their next sign-in sets up a new authenticator.
+  resetMfa: (tenantId: string, userId: string, institutionId: string, reason: string) =>
+    api.post<{ actionCode: string; status: string; message: string }>(
+      `/tenants/${tenantId}/users/${userId}/mfa-reset`,
+      { institutionId, reason },
+    ),
+
+  // POST /api/tenants/{tenantId}/students (USER_CREATE) - creates a student profile and active enrolment.
+  createStudentProfile: (tenantId: string, payload: StudentCreatePayload) =>
+    api.post<StudentProfileResponse>(`/tenants/${tenantId}/students`, payload),
 
   // POST /api/tenants/{tenantId}/users (USER_CREATE) - real user creation
   // with Keycloak provisioning, user account creation, DPDP Act 2023 compliance, and temporary credentials.

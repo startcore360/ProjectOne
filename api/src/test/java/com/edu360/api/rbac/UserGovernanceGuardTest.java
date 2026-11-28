@@ -197,4 +197,49 @@ class UserGovernanceGuardTest {
         assertThatCode(() -> guard.checkTargetUserAuthority(tenantId, topLeaderId, staffId, null))
                 .doesNotThrowAnyException();
     }
+    @Test
+    void t02_ownerAdminCanManageAHiredPrincipal_butInstitutionAdminAndStaffCannot() {
+        UUID ownerAdminId = UUID.randomUUID();
+        UUID principalId = UUID.randomUUID();
+        UUID staffId = UUID.randomUUID();
+        UUID roleDefAdminId = UUID.randomUUID();
+        roleDefinitionsById.put(roleDefAdminId, RoleDefinition.builder()
+                .id(new RoleDefinitionId(tenantId, roleDefAdminId))
+                .roleCode("SCHOOL_ADMIN").roleName("School Admin").build());
+        UUID roleDefSchoolPrincipalId = UUID.randomUUID();
+        roleDefinitionsById.put(roleDefSchoolPrincipalId, RoleDefinition.builder()
+                .id(new RoleDefinitionId(tenantId, roleDefSchoolPrincipalId))
+                .roleCode("SCHOOL_PRINCIPAL").roleName("School Principal").build());
+
+        assignmentsByUser.put(ownerAdminId, List.of(UserRoleAssignment.builder()
+                .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID())).userAccountId(ownerAdminId)
+                .roleDefinitionId(roleDefAdminId).scopeType(ScopeType.TENANT).status(AssignmentStatus.ACTIVE).build()));
+        assignmentsByUser.put(principalId, List.of(UserRoleAssignment.builder()
+                .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID())).userAccountId(principalId)
+                .roleDefinitionId(roleDefSchoolPrincipalId).scopeType(ScopeType.INSTITUTION).institutionId(instA)
+                .status(AssignmentStatus.ACTIVE).build()));
+        assignmentsByUser.put(staffId, List.of(UserRoleAssignment.builder()
+                .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID())).userAccountId(staffId)
+                .roleDefinitionId(roleDefStaffId).scopeType(ScopeType.INSTITUTION).institutionId(instA)
+                .status(AssignmentStatus.ACTIVE).build()));
+
+        // The owner Admin can reset or deactivate the Principal they hired.
+        assertThatCode(() -> guard.checkTargetUserAuthority(tenantId, ownerAdminId, principalId, null))
+                .doesNotThrowAnyException();
+        // An ordinary School Admin assigned to one institution is NOT a top post: A-06 keeps the Principal
+        // protected from them, and the owner Admin is protected from them too.
+        UUID institutionAdminId = UUID.randomUUID();
+        assignmentsByUser.put(institutionAdminId, List.of(UserRoleAssignment.builder()
+                .id(new UserRoleAssignmentId(tenantId, UUID.randomUUID())).userAccountId(institutionAdminId)
+                .roleDefinitionId(roleDefAdminId).scopeType(ScopeType.INSTITUTION).institutionId(instA)
+                .status(AssignmentStatus.ACTIVE).build()));
+        assertThatThrownBy(() -> guard.checkTargetUserAuthority(tenantId, institutionAdminId, principalId, null))
+                .isInstanceOf(UnauthorizedException.class).hasMessageContaining("governance authority");
+        assertThatThrownBy(() -> guard.checkTargetUserAuthority(tenantId, institutionAdminId, ownerAdminId, null))
+                .isInstanceOf(UnauthorizedException.class).hasMessageContaining("governance authority");
+        // Ordinary staff still cannot touch the owner Admin (TPA-06 protects the Admin as a top post).
+        assertThatThrownBy(() -> guard.checkTargetUserAuthority(tenantId, staffId, ownerAdminId, null))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("governance authority");
+    }
 }

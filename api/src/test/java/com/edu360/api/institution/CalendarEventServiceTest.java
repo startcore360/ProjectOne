@@ -26,6 +26,7 @@ class CalendarEventServiceTest {
 
     @Mock private AcademicCalendarEventRepository academicCalendarEventRepository;
     @Mock private PermissionEvaluatorService permissionEvaluatorService;
+    @Mock private AcademicSessionRepository academicSessionRepository;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
@@ -35,11 +36,13 @@ class CalendarEventServiceTest {
     private final RbacPrincipal principal = new RbacPrincipal(TENANT_ID, USER_ID);
 
     private CalendarEventService service() {
-        return new CalendarEventService(academicCalendarEventRepository, permissionEvaluatorService);
+        return new CalendarEventService(academicCalendarEventRepository, permissionEvaluatorService, academicSessionRepository);
     }
 
     @Test
     void addLocalEvent_savesAnInstitutionScopedLocalHolidayWhenAuthorized() {
+        AcademicSession session = new AcademicSession(); session.setAcademicSessionId(SESSION_ID); session.setTenantId(TENANT_ID); session.setInstitutionId(INSTITUTION_ID);
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, SESSION_ID)).thenReturn(java.util.Optional.of(session));
         when(academicCalendarEventRepository.save(any(AcademicCalendarEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
         var request = new CalendarEventRequest(
@@ -51,6 +54,36 @@ class CalendarEventServiceTest {
         assertThat(response.institutionId()).isEqualTo(INSTITUTION_ID);
         org.mockito.Mockito.verify(permissionEvaluatorService).authorize(
                 principal, "CALENDAR_LOCAL_SET", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+    }
+
+    @Test
+    void addLocalHoliday_refusesOverlapWithTypedUniversityExamDay() {
+        AcademicSession session = new AcademicSession();
+        session.setAcademicSessionId(SESSION_ID); session.setTenantId(TENANT_ID); session.setInstitutionId(null);
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, SESSION_ID))
+                .thenReturn(java.util.Optional.of(session));
+        AcademicCalendarEvent exam = new AcademicCalendarEvent();
+        exam.setEventType("EXAM_DAY"); exam.setTitle("Mid-term assessment");
+        exam.setStartDate(LocalDate.of(2026, 11, 10)); exam.setEndDate(LocalDate.of(2026, 11, 12));
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(TENANT_ID, "UNIVERSITY")).thenReturn(List.of(exam));
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(TENANT_ID, INSTITUTION_ID)).thenReturn(List.of());
+        var request = new CalendarEventRequest(INSTITUTION_ID, SESSION_ID, "LOCAL_HOLIDAY", "Local closure",
+                LocalDate.of(2026, 11, 12), LocalDate.of(2026, 11, 13));
+        assertThatThrownBy(() -> service().addLocalEvent(principal, request))
+                .isInstanceOfSatisfying(com.edu360.api.exception.BusinessRuleViolationException.class,
+                        error -> assertThat(error.getErrorCode()).isEqualTo("HOLIDAY_EXAM_CONFLICT"));
+        org.mockito.Mockito.verify(academicCalendarEventRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void addLocalEvent_allowsTypedLocalExamDay() {
+        AcademicSession session = new AcademicSession();
+        session.setAcademicSessionId(SESSION_ID); session.setTenantId(TENANT_ID); session.setInstitutionId(INSTITUTION_ID);
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, SESSION_ID)).thenReturn(java.util.Optional.of(session));
+        when(academicCalendarEventRepository.save(any(AcademicCalendarEvent.class))).thenAnswer(inv -> inv.getArgument(0));
+        var request = new CalendarEventRequest(INSTITUTION_ID, SESSION_ID, "EXAM_DAY", "Unit test",
+                LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 10));
+        assertThat(service().addLocalEvent(principal, request).eventType()).isEqualTo("EXAM_DAY");
     }
 
     @Test
@@ -75,6 +108,19 @@ class CalendarEventServiceTest {
                 INSTITUTION_ID, SESSION_ID, "LOCAL_EVENT", "Sports day", LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 1));
 
         assertThatThrownBy(() -> service().addLocalEvent(principal, request)).isInstanceOf(UnauthorizedException.class);
+        org.mockito.Mockito.verify(academicCalendarEventRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+
+    @Test
+    void addLocalEvent_rejectsSessionFromAnotherInstitution() {
+        AcademicSession foreign = new AcademicSession(); foreign.setAcademicSessionId(SESSION_ID);
+        foreign.setTenantId(TENANT_ID); foreign.setInstitutionId(UUID.randomUUID());
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, SESSION_ID)).thenReturn(java.util.Optional.of(foreign));
+        var request = new CalendarEventRequest(INSTITUTION_ID, SESSION_ID, "LOCAL_EVENT", "Sports day",
+                LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 1));
+        assertThatThrownBy(() -> service().addLocalEvent(principal, request))
+                .isInstanceOf(com.edu360.api.exception.ResourceNotFoundException.class);
         org.mockito.Mockito.verify(academicCalendarEventRepository, org.mockito.Mockito.never()).save(any());
     }
 

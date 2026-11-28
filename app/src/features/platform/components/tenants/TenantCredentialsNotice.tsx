@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Notice } from "../../../../design-system/components";
+import { Button, Notice, ShareMenu } from "../../../../design-system/components";
 
 export type CreatedTenantCredentials = {
   tenantName: string;
@@ -28,7 +28,7 @@ export function TenantCredentialsNotice({ credentials, onDismiss }: TenantCreden
   };
 
   return (
-    <Notice tone="success">
+    <Notice tone="success" inline>
       <div style={{ display: "grid", gap: "var(--space-2)" }}>
         <strong>{credentials.tenantName} is ready. Save this password now: it won't be shown again.</strong>
         <div>
@@ -45,6 +45,17 @@ export function TenantCredentialsNotice({ credentials, onDismiss }: TenantCreden
           <Button variant="secondary" size="sm" onClick={() => void copy()}>
             Copy password
           </Button>
+          <ShareMenu
+            text={`EDU360 Tenant Ready: ${credentials.tenantName}\nSign-in URL: ${credentials.loginAddress}\nAdmin: ${credentials.adminEmail}\nTemporary Password: ${credentials.temporaryPassword}\n\nPlease sign in and set your new password on first login.`}
+            title={`${credentials.tenantName} Administrator Credentials`}
+            emailSubject={`EDU360 Credentials for ${credentials.tenantName}`}
+            emailTo={credentials.adminEmail}
+            label="Share credentials"
+            asButton
+            buttonText="Share"
+            buttonVariant="secondary"
+            size="sm"
+          />
           <Button variant="secondary" size="sm" onClick={onDismiss}>
             I've saved it
           </Button>

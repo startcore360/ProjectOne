@@ -12,5 +12,12 @@ public record AcademicSessionResponse(
         LocalDate endDate,
         Integer academicYear,
         String status,
-        Integer rowVersion) {
+        Integer rowVersion,
+        boolean current) {
+    public AcademicSessionResponse(UUID academicSessionId, UUID tenantId, UUID institutionId,
+            String sessionLabel, LocalDate startDate, LocalDate endDate, Integer academicYear,
+            String status, Integer rowVersion) {
+        this(academicSessionId, tenantId, institutionId, sessionLabel, startDate, endDate,
+                academicYear, status, rowVersion, false);
+    }
 }

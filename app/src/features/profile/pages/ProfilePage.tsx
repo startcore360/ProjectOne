@@ -1,99 +1,90 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import axios from "axios";
-import "./ProfilePage.css";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { getApiErrorMessage } from "../../../services/apiHelper";
 import {
-  Button,
-  Kicker,
-  TextField,
-  Badge,
-  Spinner,
-  PageHeader,
+  ConfirmDialog,
   ErrorState,
+  PageHeader,
+  SkeletonText,
+  Tabs,
+  Button,
+  toast,
 } from "../../../design-system/components";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import { profileUpdated } from "../../../store/slices/authSlice";
 import { profileService, type ProfileResponse } from "../api/profileService";
-import { ProfileAvatarSection } from "../components";
+import {
+  ProfileDetailsTab,
+  ProfileDevicesTab,
+  ProfileHeader,
+  ProfileSecurityTab,
+} from "../components";
 
-// Same JPEG/PNG + 2 MB rule the backend enforces (ProfileService.uploadTenantPhoto) - checked
-// here too so a bad file never leaves the browser instead of round-tripping for a 400.
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png"];
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const PROFILE_TABS = [
+  { id: "details", label: "Details" },
+  { id: "security", label: "Security" },
+  { id: "devices", label: "Devices" },
+] as const;
+type ProfileTabId = (typeof PROFILE_TABS)[number]["id"];
 
-// PROFILE_EDIT_OWN (Sign-in epic, Scope: Self). View and edit your own display name, and
-// (tenant accounts only) your own mobile number. Role/platformRole/email are shown read-only -
-// there is no field for them on the backend's ProfileUpdateRequest, by design (it doubles as
-// the Keycloak login username for email - see profileService.ts).
-type FieldErrors = { displayName?: string; mobile?: string };
+type PendingNavigation =
+  | { kind: "tab"; tab: ProfileTabId }
+  | { kind: "route"; to: { pathname: string; search: string; hash: string } };
 
-function backendFieldErrors(err: unknown): FieldErrors | null {
-  if (axios.isAxiosError<{ fieldErrors?: FieldErrors }>(err)) {
-    return err.response?.data?.fieldErrors ?? null;
-  }
-  return null;
+function isProfileTab(value: string | null): value is ProfileTabId {
+  return PROFILE_TABS.some((tab) => tab.id === value);
 }
 
 function backendMessage(err: unknown): string | null {
   if (axios.isAxiosError<{ error?: string }>(err)) {
-    return err.response?.data?.error ?? null;
+    return err.response?.data?.error ? getApiErrorMessage(err) : null;
   }
   return null;
 }
 
+function friendlyError(err: unknown, fallback: string): string {
+  const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+  if (status === 404 || (status !== undefined && status >= 500)) return fallback;
+  return backendMessage(err) ?? fallback;
+}
+
 export default function ProfilePage() {
-  // Whether this signed-in principal is tenant or platform decides which fields the edit form
-  // shows (platform accounts have no mobile column at all - see ProfileResponse.fromPlatform on
-  // the backend). Read from the store, matching how AppLayout already branches on the same
-  // fields, rather than re-deriving it from this screen's own fetch.
-  const authUser = useAppSelector((state) => state.auth.user);
+  const isPlatform = useAppSelector((state) => !!state.auth.user?.platformRole);
   const dispatch = useAppDispatch();
-  const isPlatform = !!authUser?.platformRole;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab: ProfileTabId = isProfileTab(requestedTab) ? requestedTab : "details";
 
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [detailsDirty, setDetailsDirty] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
 
-  const [displayName, setDisplayName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  // Photo state is deliberately separate from the display-name/mobile form's own
-  // loading/success/error state above - an upload failure must never be reported as (or
-  // confused with) a "profile save" failure, and vice versa.
   const [photoObjectUrl, setPhotoObjectUrl] = useState<string | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoSuccess, setPhotoSuccess] = useState(false);
-  // Tracks the currently-live blob: URL so it can be revoked the instant it's replaced, not
-  // just on unmount - without this, uploading a new photo twice in one visit would leak the
-  // first blob: URL for the lifetime of the tab.
   const objectUrlRef = useRef<string | null>(null);
 
   const setDisplayedPhoto = (url: string | null) => {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-    }
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     objectUrlRef.current = url;
     setPhotoObjectUrl(url);
   };
 
   useEffect(() => {
-    // Revoke whatever blob: URL is still live when this page unmounts.
     return () => {
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-      }
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     };
   }, []);
 
-  // this app authenticates with a bearer header (services/axios.ts), not cookies, so a plain
-  // <img src="/me/profile/photo"> can never carry that header - the bytes have to come through
-  // axios (which does attach it) and get turned into an object URL for the <img> to point at.
-  // Only called when the profile actually has a photo, to avoid a wasted 404 for everyone else.
   const loadPhoto = async (hasPhoto: boolean) => {
     if (!hasPhoto) {
       setDisplayedPhoto(null);
@@ -110,30 +101,24 @@ export default function ProfilePage() {
     }
   };
 
-  // No synchronous setState call sits directly in this function's body - only inside the
-  // promise callbacks below - so it is safe to call from the mount effect as-is; loading/error
-  // start correctly set via useState's initial values above, and "Retry" resets them itself
-  // before calling this again.
   const fetchProfile = () => {
     profileService
       .get()
       .then(({ data }) => {
         setProfile(data);
-        setDisplayName(data.displayName);
-        setMobile(data.mobile ?? "");
         setLoadError(null);
         void loadPhoto(!!data.photoUrl);
       })
       .catch((err) => {
-        setLoadError(
-          backendMessage(err) ?? "Could not load your profile. Please try again.",
-        );
+        setLoadError(friendlyError(err, "Could not load your profile. Please try again."));
       })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchProfile();
+    // Load once on mount; Retry calls fetchProfile directly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const retry = () => {
@@ -142,66 +127,17 @@ export default function ProfilePage() {
     fetchProfile();
   };
 
-  // Clears the stale "saved"/error banner the moment the user starts editing again - it
-  // previously only cleared on the next submit, so after a successful save the "updated"
-  // banner stayed visible next to a field the user had since changed but not yet saved again.
-  const clearFeedback = () => {
-    if (success) setSuccess(false);
-    if (saveError) setSaveError(null);
-  };
-
-  const validate = (): FieldErrors => {
-    const errors: FieldErrors = {};
-    if (!displayName.trim()) {
-      errors.displayName = "Display name must not be blank";
-    }
-    if (!isPlatform && mobile && !/^\+?[1-9]\d{6,14}$/.test(mobile)) {
-      errors.mobile = "Mobile must be a valid E.164-style number";
-    }
-    return errors;
-  };
-
-  const submit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaveError(null);
-    setSuccess(false);
-    const clientErrors = validate();
-    setFieldErrors(clientErrors);
-    if (Object.keys(clientErrors).length > 0) {
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { data } = await profileService.update({
-        displayName,
-        ...(isPlatform ? {} : { mobile: mobile || undefined }),
-      });
-      setProfile(data);
-      setDisplayName(data.displayName);
-      setMobile(data.mobile ?? "");
-      setFieldErrors({});
-      setSuccess(true);
-      dispatch(profileUpdated({ displayName: data.displayName }));
-    } catch (err) {
-      const backendErrors = backendFieldErrors(err);
-      if (backendErrors) {
-        setFieldErrors(backendErrors);
-      } else {
-        setSaveError(backendMessage(err) ?? "Could not save your profile. Please try again.");
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleProfileSaved = useCallback((updatedProfile: ProfileResponse) => {
+    setProfile(updatedProfile);
+    dispatch(profileUpdated({ displayName: updatedProfile.displayName }));
+    toast.success("Profile updated", "Your changes have been saved.");
+  }, [dispatch]);
 
   const onPhotoSelected = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    // Reset the input so selecting the exact same file again still fires a change event.
     e.target.value = "";
-    if (!file) {
-      return;
-    }
+    if (!file) return;
+
     setPhotoSuccess(false);
     setPhotoError(null);
     if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
@@ -217,24 +153,96 @@ export default function ProfilePage() {
     try {
       const { data } = await profileService.uploadPhoto(file);
       setProfile(data);
-      // Tell the app shell, so the sidebar / mobile-menu avatar re-fetches the new photo.
       dispatch(profileUpdated({ photoUrl: data.photoUrl, photoChanged: true }));
       await loadPhoto(!!data.photoUrl);
       setPhotoSuccess(true);
     } catch (err) {
-      setPhotoError(backendMessage(err) ?? "Could not upload your photo. Please try again.");
+      setPhotoError(friendlyError(err, "Could not upload your photo. Please try again."));
     } finally {
       setPhotoUploading(false);
     }
   };
 
-  return (
-    <div className="profile-page">
-      <PageHeader title="My profile" description="View and update your own display name and contact details." />
+  const commitTabChange = useCallback((tab: ProfileTabId) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("tab", tab);
+      return next;
+    });
+  }, [setSearchParams]);
 
-      {loading && (
-        <section className="profile-card">
-          <Spinner label="Loading your profile…" />
+  const requestTabChange = (nextTab: string) => {
+    if (!isProfileTab(nextTab) || nextTab === activeTab) return;
+    if (detailsDirty) {
+      setPendingNavigation({ kind: "tab", tab: nextTab });
+      return;
+    }
+    commitTabChange(nextTab);
+  };
+
+  useEffect(() => {
+    if (!detailsDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [detailsDirty]);
+
+  useEffect(() => {
+    if (!detailsDirty) return;
+    const interceptNavigation = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!(event.target instanceof Element)) return;
+      const anchor = event.target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement) || anchor.target && anchor.target !== "_self" || anchor.hasAttribute("download")) return;
+
+      const destination = new URL(anchor.href, window.location.href);
+      if (destination.origin !== window.location.origin) return;
+      if (
+        destination.pathname === location.pathname &&
+        destination.search === location.search &&
+        destination.hash === location.hash
+      ) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setPendingNavigation({
+        kind: "route",
+        to: { pathname: destination.pathname, search: destination.search, hash: destination.hash },
+      });
+    };
+
+    document.addEventListener("click", interceptNavigation, true);
+    return () => document.removeEventListener("click", interceptNavigation, true);
+  }, [detailsDirty, location.hash, location.pathname, location.search]);
+
+  const confirmNavigation = () => {
+    if (!pendingNavigation) return;
+    const destination = pendingNavigation;
+    setPendingNavigation(null);
+    setDetailsDirty(false);
+    if (destination.kind === "tab") {
+      commitTabChange(destination.tab);
+    } else {
+      navigate(destination.to);
+    }
+  };
+
+  return (
+    <div className="app-page app-profile-page">
+      <PageHeader title="My profile" description="Your account, sign-in security, and active devices." />
+
+      {loading && !profile && (
+        <section className="app-profile-card app-profile-loading-card" role="status" aria-busy="true" aria-label="Loading your profile">
+          <span className="sr-only">Loading your profile...</span>
+          <div className="app-profile-skeleton" aria-hidden="true">
+            <span />
+            <div><span /><span /><span /></div>
+          </div>
+          <SkeletonText height="1rem" width="55%" />
+          <SkeletonText height="0.875rem" width="35%" />
         </section>
       )}
 
@@ -249,89 +257,59 @@ export default function ProfilePage() {
         />
       )}
 
-      {!loading && !loadError && profile && (
-        <section className="profile-card" aria-labelledby="profile-title">
-          <Kicker>{isPlatform ? "PLATFORM ACCOUNT" : "ACCOUNT"}</Kicker>
-          <h2 id="profile-title" className="profile-card__title">
-            Account details
-          </h2>
-
-          <ProfileAvatarSection
-            displayName={profile.displayName}
+      {!loadError && profile && (
+        <>
+          <ProfileHeader
+            profile={profile}
             isPlatform={isPlatform}
             photoLoading={photoLoading}
             photoObjectUrl={photoObjectUrl}
             photoUploading={photoUploading}
             photoSuccess={photoSuccess}
             photoError={photoError}
-            onPhotoSelected={(e) => void onPhotoSelected(e)}
+            onPhotoSelected={(event) => void onPhotoSelected(event)}
           />
 
-          <dl className="profile-readonly">
-            <div>
-              <dt>Email</dt>
-              <dd>{profile.email}</dd>
-            </div>
-            <div>
-              <dt>{isPlatform ? "Platform role" : "User type"}</dt>
-              <dd>
-                <Badge tone="info">{(profile.platformRole ?? profile.userType ?? "—").replaceAll("_", " ")}</Badge>
-              </dd>
-            </div>
-          </dl>
+          <Tabs
+            items={[...PROFILE_TABS]}
+            activeId={activeTab}
+            onChange={requestTabChange}
+            ariaLabel="Profile sections"
+            className="app-profile-tabs"
+          />
 
-          {success && (
-            <div className="profile-message profile-message--success" role="status">
-              Your profile has been updated.
-            </div>
-          )}
-          {saveError && (
-            <div className="profile-message profile-message--error" role="alert">
-              {saveError}
-            </div>
-          )}
-
-          <form onSubmit={submit} noValidate>
-            <TextField
-              id="profile-display-name"
-              label="Display name"
-              required
-              value={displayName}
-              onChange={(e) => { setDisplayName(e.target.value); clearFeedback(); }}
-              aria-invalid={!!fieldErrors.displayName}
-              aria-describedby={fieldErrors.displayName ? "profile-display-name-error" : undefined}
-            />
-            {fieldErrors.displayName && (
-              <p className="profile-field-error" id="profile-display-name-error" role="alert">
-                {fieldErrors.displayName}
-              </p>
+          <div
+            id={`panel-${activeTab}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${activeTab}`}
+            className="app-profile-tab-panel"
+            tabIndex={0}
+          >
+            {activeTab === "details" && (
+              <ProfileDetailsTab
+                profile={profile}
+                isPlatform={isPlatform}
+                onSaved={handleProfileSaved}
+                onDirtyChange={setDetailsDirty}
+              />
             )}
-
-            {!isPlatform && (
-              <>
-                <TextField
-                  id="profile-mobile"
-                  label="Mobile"
-                  placeholder="+15551234567"
-                  value={mobile}
-                  onChange={(e) => { setMobile(e.target.value); clearFeedback(); }}
-                  aria-invalid={!!fieldErrors.mobile}
-                  aria-describedby={fieldErrors.mobile ? "profile-mobile-error" : undefined}
-                />
-                {fieldErrors.mobile && (
-                  <p className="profile-field-error" id="profile-mobile-error" role="alert">
-                    {fieldErrors.mobile}
-                  </p>
-                )}
-              </>
-            )}
-
-            <Button type="submit" busy={saving} className="profile-submit">
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </form>
-        </section>
+            {activeTab === "security" && <ProfileSecurityTab isPlatform={isPlatform} />}
+            {activeTab === "devices" && <ProfileDevicesTab />}
+          </div>
+        </>
       )}
+
+      <ConfirmDialog
+        isOpen={pendingNavigation !== null}
+        onClose={() => setPendingNavigation(null)}
+        onConfirm={confirmNavigation}
+        title="Discard unsaved changes?"
+        message="Your profile edits have not been saved. Leave this page and discard them?"
+        kicker="UNSAVED PROFILE"
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        confirmTone="danger"
+      />
     </div>
   );
 }

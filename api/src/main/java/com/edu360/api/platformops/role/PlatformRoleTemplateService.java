@@ -78,7 +78,7 @@ public class PlatformRoleTemplateService {
         String name = request.templateName().trim();
         validate(request);
         if (templateRepository.existsByTemplateNameIgnoreCase(name)) {
-            throw new DuplicateResourceException("A template named '" + name + "' already exists.");
+            throw new DuplicateResourceException("A template named '" + name + "' already exists.", "templateName");
         }
         UUID id = UUID.randomUUID();
         PlatformRoleTemplate template = templateRepository.save(PlatformRoleTemplate.builder()
@@ -103,7 +103,7 @@ public class PlatformRoleTemplateService {
         String name = request.templateName().trim();
         validate(request);
         if (templateRepository.existsByTemplateNameIgnoreCaseAndPlatformRoleTemplateIdNot(name, id)) {
-            throw new DuplicateResourceException("A template named '" + name + "' already exists.");
+            throw new DuplicateResourceException("A template named '" + name + "' already exists.", "templateName");
         }
         template.setTemplateName(name);
         template.setDescription(request.description());

@@ -4,10 +4,57 @@ export type ApiErrorResponse = {
   message?: string;
   error?: string;
   details?: string;
+  code?: string;
+  /** Present on a 403 whose action the backend could identify (ActionCatalog.description). */
+  actionCode?: string;
+  actionDescription?: string;
+  /** At most 2 role names, highest organisational priority first; never present for a
+   * sensitive/locked action - see PermissionEvaluatorService.heldByRoleNames. */
+  heldBy?: string[];
   errors?: Record<string, string>;
+  /** Spring @Valid field-level errors: { fieldName: "error message" } */
+  fieldErrors?: Record<string, string>;
 };
 
 export type ApiError = AxiosError<ApiErrorResponse>;
+
+/** The structured shape a Permission Denied screen state renders - see PermissionDeniedState. */
+export type PermissionDenialDetails = {
+  reasonCode: string | null;
+  actionCode: string | null;
+  actionDescription: string | null;
+  /** At most 2 names. Empty when the backend withheld them (sensitive action) or none apply. */
+  heldBy: string[];
+  message: string;
+};
+
+function forbiddenMessage(data: ApiErrorResponse | undefined): string {
+  if (data?.actionDescription) {
+    return data.heldBy && data.heldBy.length > 0
+      ? `You don't have permission to ${data.actionDescription}. Ask a ${data.heldBy.join(" or ")} to do this, or switch to a role that can.`
+      : `You don't have permission to ${data.actionDescription}. Ask your administrator to review your access.`;
+  }
+  return "You do not have permission to perform this action. Ask your administrator to review your access.";
+}
+
+/**
+ * Reads the structured 403 body GlobalExceptionHandler.handleUnauthorized now sends, for a
+ * Permission Denied screen state to render. Returns null for anything that isn't a 403, so
+ * callers can tell "not a permission error" apart from "a permission error with no detail".
+ */
+export function getPermissionDenialDetails(error: unknown): PermissionDenialDetails | null {
+  if (!error || typeof error !== "object" || !("isAxiosError" in error)) return null;
+  const apiError = error as ApiError;
+  if (apiError.response?.status !== 403) return null;
+  const data = apiError.response.data;
+  return {
+    reasonCode: data?.code ?? null,
+    actionCode: data?.actionCode ?? null,
+    actionDescription: data?.actionDescription ?? null,
+    heldBy: data?.heldBy ?? [],
+    message: forbiddenMessage(data),
+  };
+}
 
 // Small shared helpers for talking to the backend API: building URLs,
 // turning a failed request into a friendly on-screen message, and turning
@@ -17,6 +64,25 @@ export type ApiError = AxiosError<ApiErrorResponse>;
  * Axios service calls should continue using relative paths with the shared
  * Axios instance (whose baseURL already includes /api).
  */
+function isInternalErrorText(value: string): boolean {
+  const text = value.trim();
+  return !text || /^[A-Z][A-Z0-9_]{2,}$/.test(text) ||
+    /correlation\s*id\s*:/i.test(text) ||
+    /^(?:org\.springframework|java\.|com\.edu360\.)/.test(text);
+}
+
+function cleanUserMessage(value: string | undefined): string | null {
+  if (!value) return null;
+  if (/does not hold action\s+[A-Z0-9_]+/i.test(value) || /does not hold permission\s+[A-Z0-9_]+/i.test(value)) {
+    return "Your current role does not have permission to perform this action. Ask your administrator to review your access.";
+  }
+  const cleaned = value
+    .replace(/\s*(?:please contact support quoting\s*)?correlation\s*id\s*:\s*[a-f0-9-]{16,}/ig, "")
+    .replace(/\s*\(?(?:code|error)\s*:\s*[A-Z][A-Z0-9_]{2,}\)?/g, "")
+    .trim();
+  return isInternalErrorText(cleaned) ? null : cleaned;
+}
+
 export class ApiHelper {
   static getUrl(path: string): string {
     const normalizedPath = path.replace(/^\/+/, "");
@@ -30,32 +96,31 @@ export class ApiHelper {
   // raw technical error.
   static normalizeError(error: unknown): string {
     if (typeof error === "string" && error.trim()) {
-      return error;
+      return cleanUserMessage(error) ?? "Something went wrong. Please try again.";
     }
 
     if (error && typeof error === "object" && "isAxiosError" in error) {
       const apiError = error as ApiError;
-      const responseMessage =
+      const status = apiError.response?.status;
+      if (status === 401) return "Your session has expired. Please sign in again.";
+      if (status === 403) return forbiddenMessage(apiError.response?.data);
+      if (status === 404) return "The requested record could not be found.";
+      if (status === 409 || status === 412) return "This record has changed. Refresh it and try again.";
+      if (status && status >= 500) return "The server encountered an error. Please try again later.";
+
+      const responseMessage = cleanUserMessage(
         apiError.response?.data?.message ||
         apiError.response?.data?.error ||
-        apiError.response?.data?.details;
-
+        apiError.response?.data?.details,
+      );
       if (responseMessage) return responseMessage;
       if (apiError.code === "ERR_NETWORK") {
         return "Unable to reach the server. Check your connection and try again.";
       }
-      if (apiError.response?.status === 401) {
-        return "Your session has expired. Please sign in again.";
-      }
-      if (apiError.response?.status === 403) {
-        return "You do not have permission to perform this action.";
-      }
-      if (apiError.response?.status && apiError.response.status >= 500) {
-        return "The server encountered an error. Please try again later.";
-      }
+
     }
 
-    if (error instanceof Error && error.message) return error.message;
+    if (error instanceof Error && error.message) return cleanUserMessage(error.message) ?? "Something went wrong. Please try again.";
     return "Something went wrong. Please try again.";
   }
 
@@ -76,3 +141,29 @@ export class ApiHelper {
 }
 
 export const getApiErrorMessage = ApiHelper.normalizeError;
+
+/**
+ * Extracts per-field validation errors from a Spring @Valid failure response.
+ * The backend sends: { code: "VALIDATION_FAILED", fieldErrors: { fieldName: "message" } }
+ *
+ * Returns an empty object when the error is not a validation failure, so callers
+ * can safely spread the result into form state without additional null-checks.
+ *
+ * Usage:
+ *   const fieldErrors = getApiFieldErrors(err);
+ *   // fieldErrors.institutionCode => "must not be blank"
+ */
+export function getApiFieldErrors(error: unknown): Record<string, string> {
+  if (error && typeof error === "object" && "isAxiosError" in error) {
+    const apiError = error as ApiError;
+    const data = apiError.response?.data;
+    if (data?.fieldErrors && typeof data.fieldErrors === "object") {
+      return data.fieldErrors as Record<string, string>;
+    }
+    // Also handle the older `errors` shape some endpoints return
+    if (data?.errors && typeof data.errors === "object") {
+      return data.errors as Record<string, string>;
+    }
+  }
+  return {};
+}

@@ -243,7 +243,9 @@ class TopUserControllerTest {
 
         assertThatThrownBy(() -> controller.createTopUser(tenantId, request, auth))
                 .isInstanceOf(DuplicateResourceException.class)
-                .hasMessageContaining("already exists in this tenant");
+                .hasMessageContaining("already exists in this tenant")
+                .extracting(ex -> ((DuplicateResourceException) ex).getFieldName())
+                .isEqualTo("email");
 
         verify(userAccountRepository, never()).save(any());
     }

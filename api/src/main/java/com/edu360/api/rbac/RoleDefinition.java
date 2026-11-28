@@ -47,7 +47,7 @@ public class RoleDefinition {
     @Column(name = "role_level", nullable = false)
     private RoleLevel roleLevel;
 
-    /** Set only for STANDARD roles: the ref.standard_role template this was copied from. */
+    /** Standard roles record the ref.standard_role template they were copied from; custom roles also record it when a base was selected. */
     @Column(name = "base_standard_role")
     private String baseStandardRole;
 

@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.approval.ApprovalInboxService;
@@ -27,6 +28,7 @@ import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.institution.dto.BlockDecisionRequest;
 import com.edu360.api.institution.dto.BlockInstitutionRequest;
 import com.edu360.api.institution.dto.CreateInstitutionRequest;
+import com.edu360.api.institution.dto.UpdateInstitutionRequest;
 import com.edu360.api.institution.dto.InstitutionBlockResponse;
 import com.edu360.api.institution.dto.InstitutionPageResponse;
 import com.edu360.api.institution.dto.InstitutionResponse;
@@ -51,7 +53,7 @@ import lombok.RequiredArgsConstructor;
 public class InstitutionService {
 
     static final String BLOCK_PROCESS = "INSTITUTION_BLOCK";
-    static final String ACTIVATION_PROCESS = "INSTITUTION_ACTIVATION";
+    static final String ACTIVATION_PROCESS = "INSTITUTION_ACTIVATE";
 
     private static final Logger log = LoggerFactory.getLogger(InstitutionService.class);
 
@@ -66,6 +68,18 @@ public class InstitutionService {
 
 
     private final ApprovalInboxService approvalInboxService;
+
+    @Autowired(required = false)
+    private InstitutionIdFormatService institutionIdFormatService;
+
+    @Autowired(required = false)
+    private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
+
+    @Autowired(required = false)
+    private com.edu360.api.platformops.TenantQuotaService tenantQuotaService;
+
+    @Autowired(required = false)
+    private DepartmentRepository departmentRepository;
 
     public InstitutionService(
             InstitutionRepository institutionRepository,
@@ -94,9 +108,12 @@ public class InstitutionService {
      * Creates a new institution in DRAFT state (INSTITUTION_CREATE_DRAFT).
      * Enforces:
      * 1. Authorization: University Admin at tenant/university scope.
-     * 2. Plan limits: tenant.max_institutions via platform.plan (WF-14).
-     * 3. Uniqueness: institution_code and institution_name unique within tenant.
-     * 4. Initial status: DRAFT.
+     * 2. Tenant kind: a STANDALONE_SCHOOL/STANDALONE_COLLEGE tenant may only create that one
+     *    institution type; UNIVERSITY_GROUP may create either (it has no institution row of its
+     *    own - the tenant itself is the university-group root).
+     * 3. Plan limits: tenant.max_institutions via platform.plan (WF-14).
+     * 4. Uniqueness: institution_code and institution_name unique within tenant.
+     * 5. Initial status: DRAFT.
      */
     @Transactional
     public InstitutionResponse createDraft(RbacPrincipal principal, CreateInstitutionRequest request) {
@@ -113,25 +130,47 @@ public class InstitutionService {
 
         UUID tenantId = principal.tenantId();
 
-        // 2. Enforce Plan Limits (WF-14)
-        enforcePlanLimits(tenantId);
+        // 2. Enforce tenant kind: platform.tenant.tenant_type was previously recorded only to pick
+        // the first admin's seeded role - it never actually constrained institution creation, so a
+        // tenant registered as a School could silently create a College (and vice versa).
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant " + tenantId + " was not found"));
+        String tenantType = tenant.getTenantType();
+        String institutionType = request.institutionType();
+        if ("STANDALONE_SCHOOL".equals(tenantType) && !"SCHOOL".equalsIgnoreCase(institutionType)) {
+            throw new BusinessRuleViolationException("INSTITUTION_TYPE_NOT_ALLOWED",
+                    "This tenant is registered as a School; it can only create School institutions.");
+        }
+        if ("STANDALONE_COLLEGE".equals(tenantType) && !"COLLEGE".equalsIgnoreCase(institutionType)) {
+            throw new BusinessRuleViolationException("INSTITUTION_TYPE_NOT_ALLOWED",
+                    "This tenant is registered as a College; it can only create College institutions.");
+        }
 
-        // 3. Enforce Uniqueness
+        // 3. Enforce Plan Limits (WF-14)
+        if (tenantQuotaService != null) {
+            tenantQuotaService.checkInstitutionCapacity(tenantId, request.institutionType());
+        } else {
+            enforcePlanLimits(tenantId);
+        }
+
+        // 4. Enforce Uniqueness
         String code = request.institutionCode().trim().toUpperCase();
         if (institutionRepository.existsByIdTenantIdAndInstitutionCode(tenantId, code)) {
             throw new DuplicateResourceException(
-                    "An institution with code '" + code + "' already exists in this tenant."
+                    "An institution with code '" + code + "' already exists in this tenant.",
+                    "institutionCode"
             );
         }
 
         String name = request.institutionName().trim();
         if (institutionRepository.existsByIdTenantIdAndInstitutionName(tenantId, name)) {
             throw new DuplicateResourceException(
-                    "An institution with name '" + name + "' already exists in this tenant."
+                    "An institution with name '" + name + "' already exists in this tenant.",
+                    "institutionName"
             );
         }
 
-        // 4. Build and persist Institution entity
+        // 5. Build and persist Institution entity
         UUID institutionId = UUID.randomUUID();
         Institution institution = Institution.builder()
                 .id(new InstitutionId(tenantId, institutionId))
@@ -152,6 +191,11 @@ public class InstitutionService {
                 .build();
 
         Institution saved = institutionRepository.save(institution);
+        if (institutionIdFormatService == null) {
+            throw new IllegalStateException("Institution ID format service is required for institution creation.");
+        }
+        institutionIdFormatService.set(principal, institutionId,
+                new InstitutionIdFormatsRequest(request.studentIdFormat(), request.staffIdFormat()));
         log.info("Created draft institution '{}' ({}) in tenant {}", name, institutionId, tenantId);
 
         auditLogService.record(
@@ -163,6 +207,72 @@ public class InstitutionService {
         );
 
         return InstitutionResponse.fromEntity(saved);
+    }
+
+
+    /**
+     * Updates editable institution profile fields using the row_version ETag.
+     * Institution type/code and lifecycle status remain controlled by their own workflows.
+     */
+    @Transactional
+    public InstitutionResponse updateInstitution(
+            RbacPrincipal principal, UUID institutionId, String ifMatch, UpdateInstitutionRequest request) {
+        Objects.requireNonNull(principal, "principal is required");
+        Objects.requireNonNull(institutionId, "institutionId is required");
+        Objects.requireNonNull(request, "request is required");
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_CREATE_DRAFT", RbacScope.tenant(), RbacTarget.NONE);
+
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        Institution current = institutionRepository.findByIdTenantIdAndIdInstitutionId(principal.tenantId(), institutionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found."));
+        int actualVersion = current.getRowVersion() == null ? 1 : current.getRowVersion();
+        if (expectedVersion != actualVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Institution was changed by another user. Reload it and retry with the latest ETag.");
+        }
+        if ("ARCHIVED".equalsIgnoreCase(current.getStatus())) {
+            throw new BusinessRuleViolationException("INSTITUTION_ARCHIVED", "Archived institutions cannot be edited.");
+        }
+
+        String name = request.institutionName().trim();
+        if (institutionRepository.existsByIdTenantIdAndInstitutionNameAndIdInstitutionIdNot(
+                principal.tenantId(), name, institutionId)) {
+            throw new DuplicateResourceException("An institution with name '" + name + "' already exists in this tenant.", "institutionName");
+        }
+
+        int updated = institutionRepository.updateEditableFields(
+                principal.tenantId(), institutionId, expectedVersion, name,
+                request.addressLine(), request.city(), request.stateName(), request.postalCode(),
+                request.principalInviteEmail(),
+                request.externalUniversityMode() == null ? current.isExternalUniversityMode() : request.externalUniversityMode(),
+                principal.userAccountId());
+        if (updated != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT",
+                    "Institution was changed by another user. Reload it and retry with the latest ETag.");
+        }
+
+        Institution saved = institutionRepository.findByIdTenantIdAndIdInstitutionId(principal.tenantId(), institutionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Institution " + institutionId + " was not found after update."));
+        auditLogService.record(AuditEventType.INSTITUTION_UPDATED, null, principal.userAccountId().toString(), null,
+                "Updated institution " + saved.getInstitutionName() + " (" + institutionId + "); row version "
+                        + actualVersion + " -> " + saved.getRowVersion());
+        return InstitutionResponse.fromEntity(saved);
+    }
+
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the current institution ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replace("\"", "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException("version must be positive");
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive institution row version.");
+        }
     }
 
     /**
@@ -220,6 +330,37 @@ public class InstitutionService {
         auditLogService.record(AuditEventType.INSTITUTION_ACTIVATION_REQUESTED, null, principal.userAccountId().toString(), null,
                 "Activation requested for institution " + institution.getInstitutionName() + " (" + institutionId + ")");
         return InstitutionResponse.fromEntity(institution);
+    }
+
+    /** Tenant-rooted hierarchy: the tenant is the university-group root in the V4.0 schema. */
+    @Transactional(readOnly = true)
+    public com.edu360.api.institution.dto.InstitutionHierarchyResponse getHierarchy(RbacPrincipal principal) {
+        Objects.requireNonNull(principal, "principal is required");
+        permissionEvaluatorService.authorize(principal, "INSTITUTION_CREATE_DRAFT", RbacScope.tenant(), RbacTarget.NONE);
+        Tenant tenant = tenantRepository.findById(principal.tenantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant " + principal.tenantId() + " was not found."));
+        List<com.edu360.api.institution.dto.InstitutionHierarchyNode> nodes = institutionRepository.findByIdTenantId(principal.tenantId())
+                .stream()
+                .map(institution -> {
+                    List<com.edu360.api.institution.dto.DepartmentResponse> departments = departmentRepository == null
+                            || !"COLLEGE".equalsIgnoreCase(institution.getInstitutionType())
+                            ? List.of()
+                            : departmentRepository.findByTenantIdAndInstitutionId(principal.tenantId(), institution.getInstitutionId())
+                                    .stream()
+                                    .map(department -> new com.edu360.api.institution.dto.DepartmentResponse(
+                                            department.getDepartmentId(), department.getInstitutionId(),
+                                            department.getDepartmentCode(), department.getDepartmentName(),
+                                            department.getHodStaffAssignmentId(), department.getStatus(),
+                                            departmentRepository.countActiveFaculty(principal.tenantId(), department.getDepartmentId()),
+                                            departmentRepository.countCurrentStudents(principal.tenantId(), department.getDepartmentId()),
+                                            department.getRowVersion() == null ? 1 : department.getRowVersion()))
+                                    .toList();
+                    return new com.edu360.api.institution.dto.InstitutionHierarchyNode(
+                            InstitutionResponse.fromEntity(institution), departments);
+                })
+                .toList();
+        return new com.edu360.api.institution.dto.InstitutionHierarchyResponse(
+                tenant.getTenantId(), tenant.getTenantName(), tenant.getTenantType(), nodes);
     }
 
     /**
@@ -380,6 +521,9 @@ public class InstitutionService {
                 .updatedAt(now).updatedBy(principal.userAccountId())
                 .rowVersion(1)
                 .build());
+        if (approvalCountPublisher != null) {
+            approvalCountPublisher.publishForRole(tenantId, institutionId, "VICE_CHANCELLOR");
+        }
     }
 
     private void enforcePlanLimits(UUID tenantId) {

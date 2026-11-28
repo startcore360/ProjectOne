@@ -2,6 +2,7 @@ package com.edu360.api.rbac;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +14,11 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.edu360.api.config.SupportPrincipal;
 import com.edu360.api.exception.ActiveRoleRequiredException;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.selfservice.UserActiveRole;
@@ -79,6 +83,16 @@ public class PermissionEvaluatorService {
             "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE"
     );
 
+    /** PO-T05 confidential case actions can never be delegated through tenant custom roles. */
+    public static final Set<String> POT05_CONFIDENTIAL_ACTIONS = Set.of(
+            "GRIEVANCE_CASE_VIEW", "GRIEVANCE_CASE_ASSIGN", "GRIEVANCE_HEARING_MANAGE",
+            "GRIEVANCE_CASE_RESOLVE", "GRIEVANCE_EVIDENCE_VIEW", "GRIEVANCE_EVIDENCE_UPLOAD"
+    );
+
+    private static final Set<String> POT05_AUTHORIZED_ROLE_CODES = Set.of(
+            "INTERNAL_COMPLAINTS_COMMITTEE", "PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL"
+    );
+
     /**
      * The 22 actions in group "Platform" of D2 (TOP_POST_AUTHORITY_RULES.md Appendix B). D2/D3
      * never-allowed: platform users never get tenant roles and platform work never enters a
@@ -99,7 +113,13 @@ public class PermissionEvaluatorService {
      * refused separately from ref.action_catalog.is_approval_action, so they are not copied here.
      */
     public static boolean isLockedForCustomRoles(String actionCode) {
-        return actionCode != null && (LOCKED_ACTIONS.contains(actionCode) || PLATFORM_ONLY_ACTIONS.contains(actionCode));
+        return actionCode != null && (LOCKED_ACTIONS.contains(actionCode)
+                || PLATFORM_ONLY_ACTIONS.contains(actionCode)
+                || POT05_CONFIDENTIAL_ACTIONS.contains(actionCode));
+    }
+
+    public static boolean isPot05AuthorizedRole(String roleCode) {
+        return roleCode != null && POT05_AUTHORIZED_ROLE_CODES.contains(roleCode);
     }
 
     private final ActionCatalogRepository actionCatalogRepository;
@@ -153,6 +173,22 @@ public class PermissionEvaluatorService {
             return PermissionDecision.deny("UNKNOWN_ACTION", "Action " + actionCode + " is not in the approved Action List.");
         }
 
+        // Delegated read-only support session: granted by validated support token grant.
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof SupportPrincipal support) {
+            if (!support.tenantId().equals(principal.tenantId())) {
+                return PermissionDecision.deny("SUPPORT_TENANT_MISMATCH", "Support session tenant mismatch.");
+            }
+            if (support.institutionId() != null && scope.institutionId() != null
+                    && !support.institutionId().equals(scope.institutionId())) {
+                return PermissionDecision.deny("SUPPORT_INSTITUTION_MISMATCH", "Support session is scoped to a specific institution.");
+            }
+            if (action.isSupportReadable()) {
+                return PermissionDecision.allow();
+            }
+            return PermissionDecision.deny("SUPPORT_READ_ONLY", "Action " + actionCode + " is not permitted in a read-only support session.");
+        }
+
         // Deny by default (Addendum rule 15): a check with no caller can never pass.
         if (principal.userAccountId() == null) {
             return PermissionDecision.deny("NO_PRINCIPAL", "No signed-in user was supplied for " + actionCode + ".");
@@ -203,8 +239,20 @@ public class PermissionEvaluatorService {
             return PermissionDecision.deny("ROLE_NOT_ACTIVE", "The assigned role definition is not in ACTIVE status.");
         }
 
+        // PO-T05 is a role boundary, not merely a grant-list convention. Require a resolvable
+        // active standard role and reject all other roles before consulting their action rows.
+        if (POT05_CONFIDENTIAL_ACTIONS.contains(actionCode)
+                && (activeRole == null
+                    || !isPot05AuthorizedRole(activeRole.getRoleCode())
+                    || activeRole.getRoleOrigin() != RoleOrigin.STANDARD
+                    || !activeRole.getRoleCode().equals(activeRole.getBaseStandardRole())
+                    || !activeRole.isSensitiveRole())) {
+            return PermissionDecision.deny("POT05_ROLE_FORBIDDEN",
+                    "Confidential grievance actions are restricted to the ICC and institution Principal under PO-T05.");
+        }
+
         if (!sameScope(active, scope)) {
-            if (activeRole == null || !topPostCovers(activeRole.getRoleCode(), active, scope)) {
+            if (activeRole == null || !topPostCovers(activeRole.getRoleCode(), active, scope, actionCode)) {
                 return PermissionDecision.deny("NO_ACTIVE_ROLE_IN_SCOPE",
                         "The active role does not apply to the requested scope (Addendum rules 8-10).");
             }
@@ -221,6 +269,9 @@ public class PermissionEvaluatorService {
         boolean hasAction = roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
                 principal.tenantId(), active.getRoleDefinitionId(), actionCode);
         if (!hasAction) {
+            log.warn("ACTION_NOT_GRANTED for tenant={}, roleDefinitionId={}, actionCode={}, activeRole={}",
+                    principal.tenantId(), active.getRoleDefinitionId(), actionCode,
+                    activeRole != null ? activeRole.getRoleCode() : "null");
             return PermissionDecision.deny("ACTION_NOT_GRANTED",
                     "The active role for this scope does not hold action " + actionCode + ".");
         }
@@ -239,8 +290,54 @@ public class PermissionEvaluatorService {
                     || "AMBIGUOUS_ROLE_ASSIGNMENT".equals(decision.reasonCode())) {
                 throw new ActiveRoleRequiredException(decision.message());
             }
-            throw new UnauthorizedException(decision.message());
+            String actionDescription = actionCatalogRepository.findById(actionCode)
+                    .map(ActionCatalog::getDescription).orElse(null);
+            List<String> heldBy = "ACTION_NOT_GRANTED".equals(decision.reasonCode()) && !isSensitiveAction(actionCode, actionDescription)
+                    ? heldByRoleNames(principal.tenantId(), actionCode)
+                    : List.of();
+            throw new UnauthorizedException(decision.message(), decision.reasonCode(), actionCode, actionDescription, heldBy);
         }
+    }
+
+    /**
+     * True when naming "who holds this action" would itself be a disclosure problem: a locked,
+     * platform-only or PO-T05 confidential action, or one ref.action_catalog itself flags with a
+     * non-Normal sensitivity class (P/F/H/K). The UI falls back to a generic message for these -
+     * never a role list - regardless of how many roles actually hold the action.
+     */
+    private boolean isSensitiveAction(String actionCode, String actionDescription) {
+        if (isLockedForCustomRoles(actionCode) || PERSONAL_ACTIONS.contains(actionCode)) {
+            return true;
+        }
+        ActionCatalog action = actionCatalogRepository.findById(actionCode).orElse(null);
+        String sensitiveClass = action == null ? null : action.getSensitiveClass();
+        return sensitiveClass != null && !sensitiveClass.isBlank() && !"N".equalsIgnoreCase(sensitiveClass);
+    }
+
+    /**
+     * Up to the 2 highest-priority roles (by organisational RoleLevel, Addendum rule 1) in this
+     * tenant that currently hold actionCode, by role name. Never a long list - the UI shows a
+     * short "ask a ..." hint, not a permission matrix. Empty when the repositories required to
+     * answer aren't wired (some unit tests construct this service without them) or nothing holds
+     * the action yet.
+     */
+    private List<String> heldByRoleNames(UUID tenantId, String actionCode) {
+        if (roleDefinitionRepository == null) {
+            return List.of();
+        }
+        Set<UUID> roleDefinitionIds = roleActionRepository.findByIdTenantIdAndActionCode(tenantId, actionCode)
+                .stream().map(RoleAction::getRoleDefinitionId).collect(java.util.stream.Collectors.toSet());
+        if (roleDefinitionIds.isEmpty()) {
+            return List.of();
+        }
+        return roleDefinitionRepository.findByIdTenantId(tenantId).stream()
+                .filter(r -> roleDefinitionIds.contains(r.getId().getRoleDefinitionId())
+                        && r.getStatus() == RoleDefinitionStatus.ACTIVE && !r.isSensitiveRole())
+                .sorted(Comparator.comparing(RoleDefinition::getRoleLevel).thenComparing(RoleDefinition::getRoleName))
+                .map(RoleDefinition::getRoleName)
+                .distinct()
+                .limit(2)
+                .toList();
     }
 
     /**
@@ -386,12 +483,25 @@ public class PermissionEvaluatorService {
     }
 
     /** Top-post coverage (TOP_POST_AUTHORITY_RULES.md, "Higher posts cover lower levels"). */
-    private static boolean topPostCovers(String roleCode, UserRoleAssignment a, RbacScope scope) {
+    private static boolean topPostCovers(String roleCode, UserRoleAssignment a, RbacScope scope, String actionCode) {
         if (roleCode == null) {
             return false;
         }
+        // PO-T04: Trustees (Governing Body Approver) may act as the primary authority when
+        // Management is absent; a Finance Director may act only when explicitly designated
+        // by the Management-step roll-down. Neither receives general top-post coverage.
+        if (("GOVERNING_BODY_APPROVER".equals(roleCode) || "FINANCE_DIRECTOR".equals(roleCode))
+                && ("CONCESSION_APPROVE".equals(actionCode) || "SCHOLARSHIP_LIST_APPROVE".equals(actionCode))) {
+            return a.getScopeType() == ScopeType.TENANT;
+        }
         return switch (roleCode) {
-            case "MANAGEMENT", "UNIVERSITY_ADMIN" -> a.getScopeType() == ScopeType.TENANT;
+            // TPA-05 (University Admin) and TPA-06 (School Admin / College Admin: the owner of a standalone
+            // school or college, set up at tenant creation). Both are tenant-scoped top posts; the same
+            // personal-action and locked-action exclusions apply to them as to every top post (TPA-04).
+            // SCHOOL_ADMIN / COLLEGE_ADMIN only ever hold a TENANT-scope assignment through tenant creation:
+            // RoleAssignmentService refuses to hand it out any other way, so this cannot be widened by
+            // assigning the role at tenant scope later.
+            case "MANAGEMENT", "UNIVERSITY_ADMIN", "SCHOOL_ADMIN", "COLLEGE_ADMIN" -> a.getScopeType() == ScopeType.TENANT;
             case "VICE_CHANCELLOR" -> a.getScopeType() == ScopeType.TENANT
                     || (a.getScopeType() == ScopeType.INSTITUTION && Objects.equals(a.getInstitutionId(), scope.institutionId()));
             case "PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL" -> a.getScopeType() == ScopeType.INSTITUTION

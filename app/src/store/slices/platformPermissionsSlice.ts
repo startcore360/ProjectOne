@@ -6,6 +6,9 @@ export type PlatformPermissions = {
   customRoleName: string | null;
   stepInRequired: string[];
   steppedIn: string[];
+  /** True when /platform/me/permissions could not be read; the menus fail closed and the shell
+   *  shows a retry message instead of an unexplained empty console. */
+  failed?: boolean;
 };
 
 // What the signed-in platform user can do, used to build menus. The stored userId keeps one

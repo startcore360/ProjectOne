@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 
 import com.edu360.api.rbac.ScopeType;
@@ -139,6 +140,7 @@ class InstitutionSetupActionTest {
     @Mock private StudentProfileRepository studentProfileRepository;
     @Mock private TermLockRepository termLockRepository;
     @Mock private TermLockEventRepository termLockEventRepository;
+    @Mock private JdbcTemplate termLockJdbcTemplate;
 
     private StructureService structureService;
     private ProgramRuleService programRuleService;
@@ -212,7 +214,9 @@ class InstitutionSetupActionTest {
         subjectAllocationService = new SubjectAllocationService(
                 subjectAllocationRepository,
                 permissionEvaluatorService,
-                auditLogService
+                auditLogService,
+                sectionRepository,
+                staffAssignmentRepository
         );
 
         mentorAssignmentService = new MentorAssignmentService(
@@ -255,6 +259,7 @@ class InstitutionSetupActionTest {
                 permissionEvaluatorService,
                 auditLogService
         );
+        termLockService.setJdbcTemplate(termLockJdbcTemplate);
         TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", java.util.Set.of(institutionId), "PRINCIPAL_COLLEGE", ScopeType.INSTITUTION);
     }
 
@@ -434,7 +439,7 @@ class InstitutionSetupActionTest {
         assertThatThrownBy(() -> masterCalendarService.createAcademicSession(p,
                 new CreateAcademicSessionRequest(null, "Invalid", LocalDate.of(2027, 5, 1), LocalDate.of(2026, 5, 1), 2026, "ACTIVE")))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("endDate must be after startDate");
+                .hasMessageContaining("endDate must be on or after startDate");
     }
 
     // =========================================================================
@@ -447,7 +452,9 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(academicSessionRepository.findByTenantIdAndAcademicSessionId(tenantId, sessionId))
                 .thenReturn(Optional.of(new AcademicSession()));
-        when(academicCalendarEventRepository.findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(tenantId, sessionId, "UNIVERSITY"))
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(tenantId, "UNIVERSITY"))
+                .thenReturn(List.of());
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(tenantId, institutionId))
                 .thenReturn(List.of());
 
         CalendarEventResponse resp = calendarEventService.addLocalEvent(p,
@@ -501,15 +508,18 @@ class InstitutionSetupActionTest {
                 .thenReturn(Optional.of(new AcademicSession()));
         AcademicCalendarEvent examEvent = new AcademicCalendarEvent();
         examEvent.setTitle("Final Semester Exam");
+        examEvent.setEventType("EXAM_DAY");
         examEvent.setStartDate(LocalDate.of(2026, 10, 1));
         examEvent.setEndDate(LocalDate.of(2026, 10, 5));
-        when(academicCalendarEventRepository.findByTenantIdAndAcademicSessionIdAndSourceLevelOrderByStartDateAsc(tenantId, sessionId, "UNIVERSITY"))
+        when(academicCalendarEventRepository.findByTenantIdAndSourceLevelOrderByStartDateAsc(tenantId, "UNIVERSITY"))
                 .thenReturn(List.of(examEvent));
+        when(academicCalendarEventRepository.findByTenantIdAndInstitutionIdOrderByStartDateAsc(tenantId, institutionId))
+                .thenReturn(List.of());
 
         assertThatThrownBy(() -> calendarEventService.addLocalEvent(p,
                 new CalendarEventRequest(institutionId, sessionId, "LOCAL_HOLIDAY", "Local Holiday", LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 2))))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("overlaps with scheduled university exam dates");
+                .hasMessageContaining("overlaps an exam day");
     }
 
     // =========================================================================
@@ -630,6 +640,7 @@ class InstitutionSetupActionTest {
                 .departmentId(departmentId)
                 .tenantId(tenantId)
                 .institutionId(institutionId)
+                .rowVersion(1)
                 .build();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.of(dept));
 
@@ -639,9 +650,11 @@ class InstitutionSetupActionTest {
         staff.setInstitutionId(institutionId);
         staff.setDepartmentId(departmentId);
         staff.setStatus("ACTIVE");
+        staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
+        when(departmentRepository.updateHodAssignment(tenantId, departmentId, 1, staffAssignmentId, p.userAccountId())).thenReturn(1);
 
-        HodAssignResponse resp = hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId));
+        HodAssignResponse resp = hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId));
         assertThat(resp).isNotNull();
         assertThat(resp.hodStaffAssignmentId()).isEqualTo(staffAssignmentId);
     }
@@ -654,12 +667,13 @@ class InstitutionSetupActionTest {
                 .departmentId(departmentId)
                 .tenantId(tenantId)
                 .institutionId(institutionId)
+                .rowVersion(1)
                 .build();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.of(dept));
         doThrow(new AccessDeniedException("Access denied")).when(permissionEvaluatorService)
                 .authorize(eq(p), eq("HOD_ASSIGN"), any(), any());
 
-        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -669,7 +683,7 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -681,6 +695,7 @@ class InstitutionSetupActionTest {
                 .departmentId(departmentId)
                 .tenantId(tenantId)
                 .institutionId(institutionId)
+                .rowVersion(1)
                 .build();
         when(departmentRepository.findByTenantIdAndDepartmentId(tenantId, departmentId)).thenReturn(Optional.of(dept));
 
@@ -693,7 +708,7 @@ class InstitutionSetupActionTest {
         staff.setStatus("ACTIVE");
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
-        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, new HodAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> hodAssignmentService.assignHod(p, departmentId, "\"1\"", new HodAssignRequest(staffAssignmentId)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
@@ -705,6 +720,11 @@ class InstitutionSetupActionTest {
     @DisplayName("ACT-SUBJECT_ALLOCATE-ALLOW: Admin / HOD allocates subject to section teacher")
     void actSubjectAllocate_allow() {
         when(subjectAllocationRepository.save(any(SubjectAllocation.class))).thenAnswer(inv -> inv.getArgument(0));
+        Section section = new Section(); section.setSectionId(sectionId); section.setInstitutionId(institutionId);
+        when(sectionRepository.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.of(section));
+        StaffAssignment staff = new StaffAssignment(); staff.setStaffAssignmentId(staffAssignmentId); staff.setTenantId(tenantId);
+        staff.setInstitutionId(institutionId); staff.setStatus("ACTIVE");
+        when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
         SubjectAllocationResponse resp = subjectAllocationService.allocateSubject(tenantId, tenantPrincipal(),
                 new CreateSubjectAllocationRequest(institutionId, UUID.randomUUID(), sectionId, null, staffAssignmentId));
@@ -754,6 +774,7 @@ class InstitutionSetupActionTest {
         sec.setSectionId(sectionId);
         sec.setInstitutionId(institutionId);
         sec.setSemesterId(semesterId);
+        sec.setRowVersion(1);
         when(sectionRepository.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.of(sec));
 
         Semester sem = new Semester();
@@ -771,10 +792,13 @@ class InstitutionSetupActionTest {
         StaffAssignment staff = new StaffAssignment();
         staff.setStaffAssignmentId(staffAssignmentId);
         staff.setDepartmentId(departmentId);
+        staff.setInstitutionId(institutionId);
         staff.setStatus("ACTIVE");
+        staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
+        when(sectionRepository.bumpRowVersion(tenantId, sectionId, 1, p.userAccountId())).thenReturn(1);
 
-        MentorAssignResponse resp = mentorAssignmentService.assignMentor(p, sectionId, new MentorAssignRequest(staffAssignmentId));
+        MentorAssignResponse resp = mentorAssignmentService.assignMentor(p, sectionId, "1", new MentorAssignRequest(staffAssignmentId));
         assertThat(resp).isNotNull();
         assertThat(resp.staffAssignmentId()).isEqualTo(staffAssignmentId);
     }
@@ -804,7 +828,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Denied")).when(permissionEvaluatorService)
                 .authorize(eq(p), eq("MENTOR_ASSIGN"), any(), any());
 
-        assertThatThrownBy(() -> mentorAssignmentService.assignMentor(p, sectionId, new MentorAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> mentorAssignmentService.assignMentor(p, sectionId, "1", new MentorAssignRequest(staffAssignmentId)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -814,7 +838,7 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(sectionRepository.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> mentorAssignmentService.assignMentor(p, sectionId, new MentorAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> mentorAssignmentService.assignMentor(p, sectionId, "1", new MentorAssignRequest(staffAssignmentId)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -825,9 +849,10 @@ class InstitutionSetupActionTest {
         Section schoolSec = new Section();
         schoolSec.setSectionId(sectionId);
         schoolSec.setSemesterId(null); // School section
+        schoolSec.setRowVersion(1);
         when(sectionRepository.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.of(schoolSec));
 
-        assertThatThrownBy(() -> mentorAssignmentService.assignMentor(p, sectionId, new MentorAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> mentorAssignmentService.assignMentor(p, sectionId, "1", new MentorAssignRequest(staffAssignmentId)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
@@ -844,15 +869,18 @@ class InstitutionSetupActionTest {
         sec.setInstitutionId(institutionId);
         sec.setClassId(classId);
         sec.setSemesterId(null);
+        sec.setRowVersion(1);
         when(sectionRepository.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.of(sec));
 
         StaffAssignment staff = new StaffAssignment();
         staff.setStaffAssignmentId(staffAssignmentId);
         staff.setInstitutionId(institutionId);
         staff.setStatus("ACTIVE");
+        staff.setEffectiveFrom(LocalDate.now(com.edu360.api.time.TenantClock.DEFAULT_ZONE));
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
+        when(sectionRepository.bumpRowVersion(tenantId, sectionId, 1, p.userAccountId())).thenReturn(1);
 
-        ClassTeacherAssignResponse resp = classTeacherAssignmentService.assignClassTeacher(p, sectionId, new ClassTeacherAssignRequest(staffAssignmentId));
+        ClassTeacherAssignResponse resp = classTeacherAssignmentService.assignClassTeacher(p, sectionId, "1", new ClassTeacherAssignRequest(staffAssignmentId));
         assertThat(resp).isNotNull();
         assertThat(resp.staffAssignmentId()).isEqualTo(staffAssignmentId);
     }
@@ -870,7 +898,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Access denied")).when(permissionEvaluatorService)
                 .authorize(eq(p), eq("CLASS_TEACHER_ASSIGN"), any(), any());
 
-        assertThatThrownBy(() -> classTeacherAssignmentService.assignClassTeacher(p, sectionId, new ClassTeacherAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> classTeacherAssignmentService.assignClassTeacher(p, sectionId, "1", new ClassTeacherAssignRequest(staffAssignmentId)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -880,7 +908,7 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(sectionRepository.findByTenantIdAndSectionId(tenantId, sectionId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> classTeacherAssignmentService.assignClassTeacher(p, sectionId, new ClassTeacherAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> classTeacherAssignmentService.assignClassTeacher(p, sectionId, "1", new ClassTeacherAssignRequest(staffAssignmentId)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -902,7 +930,7 @@ class InstitutionSetupActionTest {
         staff.setStatus("ACTIVE");
         when(staffAssignmentRepository.findByTenantIdAndStaffAssignmentId(tenantId, staffAssignmentId)).thenReturn(Optional.of(staff));
 
-        assertThatThrownBy(() -> classTeacherAssignmentService.assignClassTeacher(p, sectionId, new ClassTeacherAssignRequest(staffAssignmentId)))
+        assertThatThrownBy(() -> classTeacherAssignmentService.assignClassTeacher(p, sectionId, "1", new ClassTeacherAssignRequest(staffAssignmentId)))
                 .isInstanceOf(UnauthorizedException.class);
     }
 
@@ -1104,9 +1132,11 @@ class InstitutionSetupActionTest {
         sc.setClassId(classId);
         sc.setInstitutionId(institutionId);
         sc.setStudentLoginEnabled(false);
+        sc.setRowVersion(1);
+        when(schoolClassRepository.updateStudentLogin(tenantId, classId, 1, true, p.userAccountId())).thenReturn(1);
         when(schoolClassRepository.findByTenantIdAndClassId(tenantId, classId)).thenReturn(Optional.of(sc));
 
-        StudentLoginSwitchResponse resp = studentLoginSwitchService.setStudentLogin(p, classId, new StudentLoginSwitchRequest(true));
+        StudentLoginSwitchResponse resp = studentLoginSwitchService.setStudentLogin(p, classId, "1", new StudentLoginSwitchRequest(true));
         assertThat(resp).isNotNull();
         assertThat(resp.studentLoginEnabled()).isTrue();
     }
@@ -1122,7 +1152,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Forbidden")).when(permissionEvaluatorService)
                 .authorize(eq(p), eq("STUDENT_LOGIN_SWITCH"), any(), any());
 
-        assertThatThrownBy(() -> studentLoginSwitchService.setStudentLogin(p, classId, new StudentLoginSwitchRequest(true)))
+        assertThatThrownBy(() -> studentLoginSwitchService.setStudentLogin(p, classId, "1", new StudentLoginSwitchRequest(true)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -1132,7 +1162,7 @@ class InstitutionSetupActionTest {
         RbacPrincipal p = principal();
         when(schoolClassRepository.findByTenantIdAndClassId(tenantId, classId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> studentLoginSwitchService.setStudentLogin(p, classId, new StudentLoginSwitchRequest(true)))
+        assertThatThrownBy(() -> studentLoginSwitchService.setStudentLogin(p, classId, "1", new StudentLoginSwitchRequest(true)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -1148,7 +1178,7 @@ class InstitutionSetupActionTest {
         doThrow(new AccessDeniedException("Institution scope mismatch")).when(permissionEvaluatorService)
                 .authorize(eq(p), eq("STUDENT_LOGIN_SWITCH"), eq(RbacScope.institution(otherInst)), any());
 
-        assertThatThrownBy(() -> studentLoginSwitchService.setStudentLogin(p, classId, new StudentLoginSwitchRequest(true)))
+        assertThatThrownBy(() -> studentLoginSwitchService.setStudentLogin(p, classId, "1", new StudentLoginSwitchRequest(true)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -1230,7 +1260,7 @@ class InstitutionSetupActionTest {
         when(termLockRepository.save(any(TermLock.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TermLockResponse resp = termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
-                new UnlockTermRequest("Grade re-evaluation request approved by Dean", 48));
+                new UnlockTermRequest("Grade re-evaluation request approved by Dean", 72));
         assertThat(resp.lockState()).isEqualTo("TEMP_UNLOCKED");
     }
 
@@ -1258,7 +1288,7 @@ class InstitutionSetupActionTest {
         when(termLockRepository.findByIdTenantIdAndIdTermLockId(tenantId, termLockId)).thenReturn(Optional.of(lock));
 
         assertThatThrownBy(() -> termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
-                new UnlockTermRequest("reason", 24)))
+                new UnlockTermRequest("A sufficiently long unlock reason for this test", 72)))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("does not belong to the specified institution");
     }
@@ -1272,12 +1302,12 @@ class InstitutionSetupActionTest {
         assertThatThrownBy(() -> termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
                 new UnlockTermRequest("   ", 24)))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("Unlock reason is required");
+                .hasMessageContaining("Unlock reason must contain at least 20 characters");
 
-        // Exceeding 72 hours
+        // Duration other than the fixed 72 hours
         assertThatThrownBy(() -> termLockService.unlockTerm(tenantId, institutionId, termLockId, tenantPrincipal(),
-                new UnlockTermRequest("Valid reason", 96)))
+                new UnlockTermRequest("A sufficiently long unlock reason for this test", 96)))
                 .isInstanceOf(BusinessRuleViolationException.class)
-                .hasMessageContaining("cannot exceed 72 hours");
+                .hasMessageContaining("fixed at 72 hours");
     }
 }

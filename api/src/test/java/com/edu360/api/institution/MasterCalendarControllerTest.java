@@ -201,6 +201,27 @@ class MasterCalendarControllerTest {
         assertThat(eventListResponse.getBody()).hasSize(1);
     }
 
+    @Test
+    void createMasterCalendarEvent_allowsUniversityExamDay() {
+        mockPrincipal(TENANT_ID);
+        AcademicSession session = AcademicSession.builder()
+                .academicSessionId(SESSION_ID).tenantId(TENANT_ID).institutionId(null)
+                .sessionLabel("2026-27").startDate(LocalDate.of(2026, 6, 1))
+                .endDate(LocalDate.of(2027, 5, 31)).academicYear(2026).status("ACTIVE").build();
+        when(academicSessionRepository.findByTenantIdAndAcademicSessionId(TENANT_ID, SESSION_ID))
+                .thenReturn(Optional.of(session));
+        when(academicCalendarEventRepository.save(any(AcademicCalendarEvent.class))).thenAnswer(inv -> inv.getArgument(0));
+        CreateMasterCalendarEventRequest request = new CreateMasterCalendarEventRequest(
+                SESSION_ID, "EXAM_DAY", "University final examinations",
+                LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 12));
+        ResponseEntity<MasterCalendarEventResponse> response =
+                masterCalendarController.createMasterCalendarEvent(TENANT_ID, request, authentication);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().eventType()).isEqualTo("EXAM_DAY");
+        assertThat(response.getBody().sourceLevel()).isEqualTo("UNIVERSITY");
+        verify(permissionEvaluatorService).authorize(any(), eq("CALENDAR_MASTER_SET"), eq(RbacScope.tenant()), eq(RbacTarget.NONE));
+    }
+
     // ----------------------------------------------------------------- DENY
     @Test
     void createAcademicSession_deniesWhenPermissionEvaluatorDenies() {

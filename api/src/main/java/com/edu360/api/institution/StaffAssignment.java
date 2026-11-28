@@ -1,6 +1,7 @@
 package com.edu360.api.institution;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -55,4 +56,19 @@ public class StaffAssignment {
 
     @Column(name = "status", nullable = false)
     private String status;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "created_by", nullable = false)
+    private UUID createdBy;
+
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private Instant updatedAt;
+
+    @Column(name = "updated_by", nullable = false)
+    private UUID updatedBy;
+
+    @Column(name = "row_version", insertable = false, updatable = false)
+    private Integer rowVersion;
 }

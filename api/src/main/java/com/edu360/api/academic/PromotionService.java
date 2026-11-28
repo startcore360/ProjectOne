@@ -18,8 +18,11 @@ import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
 import com.edu360.api.rbac.RbacTarget;
+import com.edu360.api.rbac.ScopeType;
 import com.edu360.api.tenant.TenantContext;
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +39,9 @@ public class PromotionService {
     private final ApprovalRequestRepository approvalRequestRepository;
     private final ApprovalStepRepository approvalStepRepository;
     private final InstitutionRepository institutionRepository;
+
+    @Autowired(required = false)
+    private com.edu360.api.approval.ApprovalCountPublisher approvalCountPublisher;
 
     @Autowired
     public PromotionService(
@@ -108,6 +114,31 @@ public class PromotionService {
         );
 
         return PromotionRunResponse.from(run);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PromotionRunResponse> listPromotionRuns(UUID tenantId, TenantPrincipal principal, UUID institutionId) {
+        RbacPrincipal rbac = new RbacPrincipal(tenantId, principal.userAccountId());
+        RbacScope scope = scopeFor(rbac, institutionId);
+
+        boolean canRun = permissionEvaluatorService.can(rbac, "PROMOTION_RUN", scope, RbacTarget.NONE).allowed();
+        boolean canApprove = permissionEvaluatorService.can(rbac, "PROMOTION_APPROVE", scope, RbacTarget.NONE).allowed();
+        if (!canRun && !canApprove) {
+            permissionEvaluatorService.authorize(rbac, "PROMOTION_RUN", scope, RbacTarget.NONE);
+        }
+
+        List<PromotionRun> runs = (scope.scopeType() == ScopeType.INSTITUTION && scope.institutionId() != null)
+                ? repository.findByIdTenantIdAndInstitutionId(tenantId, scope.institutionId())
+                : (institutionId != null
+                        ? repository.findByIdTenantIdAndInstitutionId(tenantId, institutionId)
+                        : repository.findByIdTenantId(tenantId));
+
+        return runs.stream().map(PromotionRunResponse::from).toList();
+    }
+
+    private RbacScope scopeFor(RbacPrincipal rbac, UUID institutionId) {
+        RbacScope fallback = institutionId != null ? RbacScope.institution(institutionId) : RbacScope.tenant();
+        return Objects.requireNonNullElse(permissionEvaluatorService.targetScope(rbac, institutionId, null), fallback);
     }
 
     @Transactional(readOnly = true)
@@ -188,6 +219,9 @@ public class PromotionService {
                     .rowVersion(1)
                     .build();
             approvalStepRepository.save(step);
+            if (approvalCountPublisher != null) {
+                approvalCountPublisher.publishForRole(tenantId, run.getInstitutionId(), approverRole);
+            }
         }
 
         auditLogService.record(

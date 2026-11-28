@@ -7,9 +7,17 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.config.PlatformPrincipal;
+import com.edu360.api.platform.PlatformRole;
+import com.edu360.api.platform.PlatformUser;
+import com.edu360.api.platform.PlatformUserRepository;
+import com.edu360.api.platform.PlatformUserStatus;
+import com.edu360.api.platformops.PlatformNotificationService;
 import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.exception.ResourceNotFoundException;
 import com.edu360.api.platformops.support.dto.CreateSupportTicketRequest;
@@ -17,8 +25,8 @@ import com.edu360.api.platformops.support.dto.GrantSupportAccessRequest;
 import com.edu360.api.platformops.support.dto.SupportAccessGrantResponse;
 import com.edu360.api.platformops.support.dto.SupportTicketResponse;
 import com.edu360.api.platformops.support.dto.UpdateSupportTicketRequest;
-
-import lombok.RequiredArgsConstructor;
+import com.edu360.api.platformops.support.dto.EscalateSupportTicketRequest;
+import com.edu360.api.selfservice.InAppNotifier;
 
 @Service
 public class PlatformSupportService {
@@ -27,6 +35,11 @@ public class PlatformSupportService {
     private final SupportAccessGrantRepository grantRepository;
     private final com.edu360.api.platformops.role.PlatformAuditWriter platformAuditWriter;
     private final com.edu360.api.audit.AuditLogService tenantAuditService;
+    private JdbcTemplate settingsJdbc;
+    private InAppNotifier inAppNotifier;
+    private SupportSessionService supportSessionService;
+    private PlatformNotificationService platformNotificationService;
+    private PlatformUserRepository platformUserRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PlatformSupportService(
@@ -39,6 +52,21 @@ public class PlatformSupportService {
         this.grantRepository = grantRepository;
         this.platformAuditWriter = platformAuditWriter;
         this.tenantAuditService = tenantAuditService;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setSupportDependencies(JdbcTemplate settingsJdbc, InAppNotifier inAppNotifier,
+                                       SupportSessionService supportSessionService) {
+        this.settingsJdbc = settingsJdbc;
+        this.inAppNotifier = inAppNotifier;
+        this.supportSessionService = supportSessionService;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setPlatformNotificationDependencies(PlatformNotificationService platformNotificationService,
+                                                    PlatformUserRepository platformUserRepository) {
+        this.platformNotificationService = platformNotificationService;
+        this.platformUserRepository = platformUserRepository;
     }
 
     @Transactional
@@ -55,7 +83,7 @@ public class PlatformSupportService {
                 .subject(req.subject())
                 .description(req.description())
                 .priority(req.priority() != null ? req.priority() : "MEDIUM")
-                .category(req.category() != null ? req.category() : "GENERAL")
+                .category(req.category())
                 .status("NEW")
                 .createdAt(now)
                 .createdBy(actorUserId)
@@ -75,14 +103,34 @@ public class PlatformSupportService {
         SupportTicket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
 
+        String previousStatus = ticket.getStatus();
+        if (req.priority() != null) {
+            if (!List.of("LOW", "MEDIUM", "HIGH", "CRITICAL").contains(req.priority())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_PRIORITY");
+            }
+            ticket.setPriority(req.priority());
+        }
+        if (req.category() != null) {
+            validateCategory(req.category());
+            ticket.setCategory(req.category());
+        }
+
         if (req.status() != null) {
-            if (("RESOLVED".equals(req.status()) || "CLOSED".equals(req.status())) && (req.resolutionNote() == null || req.resolutionNote().isBlank())) {
+            if (!List.of("NEW", "TRIAGED", "ASSIGNED", "ESCALATED", "RESOLVED", "CLOSED").contains(req.status())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_STATUS");
+            }
+            if (("RESOLVED".equals(req.status()) || "CLOSED".equals(req.status()))
+                    && (req.resolutionNote() == null || req.resolutionNote().isBlank())) {
                 throw new BusinessRuleViolationException("Rule ck_support_ticket_r1: resolution_note is required when status is RESOLVED or CLOSED.");
             }
             ticket.setStatus(req.status());
             if ("CLOSED".equals(req.status())) {
                 ticket.setClosedAt(Instant.now());
             }
+        }
+
+        if ("NEW".equals(ticket.getStatus()) && ticket.getPriority() != null && ticket.getCategory() != null) {
+            ticket.setStatus("TRIAGED");
         }
 
         if (req.assignedTo() != null) {
@@ -101,6 +149,44 @@ public class PlatformSupportService {
 
         SupportTicket saved = ticketRepository.save(ticket);
         platformAuditWriter.record(principal, "SUPPORT_TICKET_UPDATED", "SUPPORT_TICKET_MANAGE", "SUPPORT_TICKET", saved.getSupportTicketId());
+        if (!java.util.Objects.equals(previousStatus, saved.getStatus())
+                && ("RESOLVED".equals(saved.getStatus()) || "CLOSED".equals(saved.getStatus()))
+                && inAppNotifier != null) {
+            String status = saved.getStatus();
+            String note = saved.getResolutionNote() == null ? "" : saved.getResolutionNote();
+            inAppNotifier.notify(saved.getTenantId(), saved.getRaisedByUserId(), null,
+                    "SUPPORT_TICKET_" + status, "Support ticket " + status,
+                    saved.getTicketNumber() + " is " + status + ". " + note,
+                    "SUPPORT_TICKET", saved.getSupportTicketId(), null, "NORMAL",
+                    "support-ticket:" + saved.getSupportTicketId() + ":" + status);
+        }
+        return SupportTicketResponse.fromEntity(saved);
+    }
+
+    @Transactional
+    public SupportTicketResponse escalateTicket(UUID ticketId, EscalateSupportTicketRequest request,
+                                                PlatformPrincipal principal) {
+        if (request == null || request.to() == null || !List.of("ENGINEERING", "RELEASE_MANAGER").contains(request.to()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_ESCALATION_TARGET");
+        if (request.note() == null || request.note().isBlank())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SUPPORT_TICKET_ESCALATION_NOTE_REQUIRED");
+        SupportTicket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
+        if ("CLOSED".equals(ticket.getStatus()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "SUPPORT_TICKET_CLOSED");
+        if (platformNotificationService == null || platformUserRepository == null)
+            throw new IllegalStateException("Platform notification dependencies are unavailable for support escalation.");
+        Instant now = Instant.now();
+        ticket.setStatus("ESCALATED"); ticket.setEscalatedAt(now); ticket.setUpdatedAt(now);
+        ticket.setUpdatedBy(principal.platformUserId());
+        SupportTicket saved = ticketRepository.save(ticket);
+        platformAuditWriter.record(principal, "SUPPORT_TICKET_ESCALATED", "SUPPORT_TICKET_MANAGE", "SUPPORT_TICKET", saved.getSupportTicketId());
+        List<PlatformUser> recipients = new java.util.ArrayList<>(platformUserRepository.findAllByPlatformRoleAndStatus(PlatformRole.PRODUCT_OWNER, PlatformUserStatus.ACTIVE));
+        if ("RELEASE_MANAGER".equals(request.to())) recipients.addAll(platformUserRepository.findAllByPlatformRoleAndStatus(PlatformRole.RELEASE_MANAGER, PlatformUserStatus.ACTIVE));
+        String body = saved.getTicketNumber() + " was escalated to " + request.to() + ". " + request.note().trim();
+        for (PlatformUser recipient : recipients) platformNotificationService.notify(recipient.getPlatformUserId(),
+                "SUPPORT_TICKET_ESCALATED", "Support ticket escalated", body, "SUPPORT_TICKET",
+                saved.getSupportTicketId(), "NORMAL", principal.platformUserId());
         return SupportTicketResponse.fromEntity(saved);
     }
 
@@ -117,6 +203,27 @@ public class PlatformSupportService {
 
         Instant now = Instant.now();
         Instant expiresAt = now.plus(Duration.ofHours(req.durationHours()));
+
+        // Supersede / withdraw any existing active grants for this ticket to avoid duplicate active grants
+        try {
+            List<SupportAccessGrant> existingActive = grantRepository
+                    .findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNullOrderByGrantedAtDesc(req.ticketId(), now);
+            if (existingActive != null) {
+                for (SupportAccessGrant existing : existingActive) {
+                    if (existing != null) {
+                        existing.setWithdrawnAt(now);
+                        existing.setUpdatedAt(now);
+                        existing.setUpdatedBy(actorUserId);
+                        grantRepository.save(existing);
+                        if (supportSessionService != null) {
+                            supportSessionService.endForGrant(existing.getSupportAccessGrantId());
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            // best-effort withdrawal of existing grants
+        }
 
         SupportAccessGrant grant = SupportAccessGrant.builder()
                 .supportAccessGrantId(UUID.randomUUID())
@@ -139,21 +246,6 @@ public class PlatformSupportService {
         return SupportAccessGrantResponse.fromEntity(saved);
     }
 
-    /**
-     * L-03, rule R7: a real read-only support session is designed (docs/SUPPORT_SESSION_DESIGN.md) but not built yet.
-     * The made-up session token that used to be returned here is gone. The ticket and the grant are still
-     * checked, so the answer is honest about what is missing: the session itself, not the grant.
-     */
-    @Transactional(readOnly = true)
-    public void assumeSupportSession(UUID ticketId, PlatformPrincipal principal) {
-        SupportTicket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new ResourceNotFoundException("Support ticket not found: " + ticketId));
-        grantRepository.findByTicketIdAndExpiresAtAfterAndWithdrawnAtIsNull(ticketId, Instant.now())
-                .orElseThrow(() -> new BusinessRuleViolationException("Rule WF-11: No active support access grant found for ticket " + ticket.getTicketNumber()));
-        throw new com.edu360.api.exception.FeatureNotAvailableException("SUPPORT_SESSION_NOT_AVAILABLE",
-                "Support sessions are not available yet. A tenant grant exists for this ticket, but read-only access to tenant data has not been built.");
-    }
-
     @Transactional
     public SupportAccessGrantResponse withdrawAccess(UUID tenantId, UUID grantId, UUID actorUserId) {
         SupportAccessGrant grant = grantRepository.findById(grantId)
@@ -166,23 +258,49 @@ public class PlatformSupportService {
         grant.setUpdatedAt(Instant.now());
         grant.setUpdatedBy(actorUserId);
         SupportAccessGrant saved = grantRepository.save(grant);
+        if (supportSessionService != null) {
+            supportSessionService.endForGrant(grantId);
+        }
         tenantAuditService.record(com.edu360.api.audit.AuditEventType.SUPPORT_ACCESS_GRANT_WITHDRAWN, null, actorUserId.toString(), null,
                 "Support access grant withdrawn for ticket: " + grant.getTicketId());
         return SupportAccessGrantResponse.fromEntity(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<SupportAccessGrantResponse> listGrantsForTenant(UUID tenantId) {
+        tenantAuditService.record(com.edu360.api.audit.AuditEventType.SENSITIVE_VIEW, null, null, null,
+                "Viewed tenant support access grant history.");
         return grantRepository.findByTenantIdOrderByGrantedAtDesc(tenantId).stream()
                 .map(SupportAccessGrantResponse::fromEntity)
                 .toList();
+    }
+
+    @Transactional
+    public List<SupportTicketResponse> listTicketsRaisedBy(UUID tenantId, UUID raisedByUserId) {
+        tenantAuditService.record(com.edu360.api.audit.AuditEventType.SENSITIVE_VIEW, null, null, null,
+                "Viewed own tenant support ticket list.");
+        return ticketRepository.findByTenantIdAndRaisedByUserIdOrderByCreatedAtDesc(tenantId, raisedByUserId).stream()
+                .map(SupportTicketResponse::fromEntity)
+                .toList();
+    }
+
+    private void validateCategory(String category) {
+        if (settingsJdbc == null) {
+            throw new IllegalStateException("The support_ticket_categories setting is unavailable.");
+        }
+        Boolean allowed = settingsJdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM ref.setting_definition d CROSS JOIN LATERAL jsonb_array_elements_text(d.default_value) AS c(category) WHERE d.setting_key = ? AND c.category = ?)",
+                Boolean.class, "support_ticket_categories", category);
+        if (!Boolean.TRUE.equals(allowed)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_SUPPORT_TICKET_CATEGORY");
+        }
     }
 
     @Transactional(readOnly = true)
     public List<SupportTicketResponse> listTickets(UUID tenantId) {
         List<SupportTicket> list = (tenantId != null)
                 ? ticketRepository.findByTenantIdOrderByCreatedAtDesc(tenantId)
-                : ticketRepository.findAllByOrderByCreatedAtDesc();
+                : ticketRepository.findAllPrioritizedByPriorityThenAge();
         return list.stream().map(SupportTicketResponse::fromEntity).toList();
     }
 

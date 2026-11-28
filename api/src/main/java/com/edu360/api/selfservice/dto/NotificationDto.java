@@ -9,5 +9,8 @@ public record NotificationDto(
         String title,
         String body,
         String priorityClass,
-        Instant createdAt
+        Instant createdAt,
+        Instant readAt,
+        String entityType,
+        UUID entityId
 ) {}

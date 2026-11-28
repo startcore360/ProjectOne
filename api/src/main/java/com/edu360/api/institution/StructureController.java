@@ -7,6 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edu360.api.academic.ProgramRuleSetResponse;
+import com.edu360.api.config.PrincipalExtractor;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
 import com.edu360.api.institution.dto.AcademicSessionResponse;
@@ -27,6 +31,7 @@ import com.edu360.api.institution.dto.CreateSchoolClassRequest;
 import com.edu360.api.institution.dto.CreateSectionRequest;
 import com.edu360.api.institution.dto.CreateSemesterRequest;
 import com.edu360.api.institution.dto.CreateSubjectRequest;
+import com.edu360.api.institution.dto.UpdateSectionRequest;
 import com.edu360.api.institution.dto.DepartmentResponse;
 import com.edu360.api.institution.dto.ProgramResponse;
 import com.edu360.api.institution.dto.ProgramYearResponse;
@@ -60,6 +65,118 @@ import lombok.RequiredArgsConstructor;
 public class StructureController {
 
     private final StructureService structureService;
+
+    @GetMapping("/departments/{departmentId}")
+    @Operation(summary = "Get department detail in the institution scope")
+    public ResponseEntity<DepartmentResponse> getDepartment(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID departmentId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getDepartment(principal, institutionId, departmentId));
+    }
+
+    @GetMapping("/programs/{programId}")
+    @Operation(summary = "Get program detail in the institution scope")
+    public ResponseEntity<ProgramResponse> getProgram(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID programId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getProgram(principal, institutionId, programId));
+    }
+
+    @GetMapping("/sections/{sectionId}")
+    @Operation(summary = "Get section detail in the institution scope")
+    public ResponseEntity<SectionResponse> getSection(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID sectionId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getSection(principal, institutionId, sectionId));
+    }
+
+    @GetMapping("/academic-sessions/{academicSessionId}")
+    @Operation(summary = "Get academic session detail in the institution scope")
+    public ResponseEntity<AcademicSessionResponse> getAcademicSession(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID academicSessionId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.getAcademicSession(principal, institutionId, academicSessionId));
+    }
+
+    @PutMapping("/departments/{departmentId}")
+    public ResponseEntity<DepartmentResponse> updateDepartment(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID departmentId,
+            @RequestHeader("If-Match") String ifMatch, @Valid @RequestBody CreateDepartmentRequest request,
+            Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        DepartmentResponse response = structureService.updateDepartment(principal, institutionId, departmentId, ifMatch, request);
+        return ResponseEntity.ok().eTag("\"" + response.rowVersion() + "\"").body(response);
+    }
+
+    @DeleteMapping("/departments/{departmentId}")
+    public ResponseEntity<Void> archiveDepartment(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID departmentId,
+            @RequestHeader("If-Match") String ifMatch, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        structureService.archiveDepartment(principal, institutionId, departmentId, ifMatch);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/programs/{programId}")
+    public ResponseEntity<ProgramResponse> updateProgram(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID programId,
+            @RequestHeader("If-Match") String ifMatch, @Valid @RequestBody CreateProgramRequest request,
+            Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        ProgramResponse response = structureService.updateProgram(principal, institutionId, programId, ifMatch, request);
+        return ResponseEntity.ok().eTag("\"" + response.rowVersion() + "\"").body(response);
+    }
+
+    @DeleteMapping("/programs/{programId}")
+    public ResponseEntity<Void> archiveProgram(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID programId,
+            @RequestHeader("If-Match") String ifMatch, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        structureService.archiveProgram(principal, institutionId, programId, ifMatch);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/classes/{classId}")
+    public ResponseEntity<SchoolClassResponse> updateSchoolClass(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID classId,
+            @RequestHeader("If-Match") String ifMatch, @Valid @RequestBody CreateSchoolClassRequest request,
+            Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        SchoolClassResponse response = structureService.updateSchoolClass(principal, institutionId, classId, ifMatch, request);
+        return ResponseEntity.ok().eTag("\"" + response.rowVersion() + "\"").body(response);
+    }
+
+    @DeleteMapping("/classes/{classId}")
+    public ResponseEntity<Void> archiveSchoolClass(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID classId,
+            @RequestHeader("If-Match") String ifMatch, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        structureService.archiveSchoolClass(principal, institutionId, classId, ifMatch);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/sections/{sectionId}")
+    public ResponseEntity<SectionResponse> updateSection(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID sectionId,
+            @RequestHeader("If-Match") String ifMatch, @Valid @RequestBody UpdateSectionRequest request,
+            Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        SectionResponse response = structureService.updateSection(principal, institutionId, sectionId, ifMatch, request);
+        return ResponseEntity.ok().eTag("\"" + response.rowVersion() + "\"").body(response);
+    }
+
+    @DeleteMapping("/sections/{sectionId}")
+    public ResponseEntity<Void> archiveSection(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId, @PathVariable UUID sectionId,
+            @RequestHeader("If-Match") String ifMatch, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        structureService.archiveSection(principal, institutionId, sectionId, ifMatch);
+        return ResponseEntity.noContent().build();
+    }
 
     @PostMapping("/departments")
     @Operation(summary = "Create an academic department (STRUCTURE_MANAGE, Colleges only per Rule HI-12)")
@@ -272,6 +389,15 @@ public class StructureController {
         return ResponseEntity.ok(structureService.listAcademicSessions(principal, institutionId));
     }
 
+    @PostMapping("/academic-sessions/{academicSessionId}/current")
+    @Operation(summary = "Make an academic session current within its institution scope")
+    public ResponseEntity<AcademicSessionResponse> setCurrentAcademicSession(
+            @PathVariable UUID tenantId, @PathVariable UUID institutionId,
+            @PathVariable UUID academicSessionId, Authentication authentication) {
+        RbacPrincipal principal = requireTenantPrincipal(tenantId, authentication);
+        return ResponseEntity.ok(structureService.setCurrentAcademicSession(principal, institutionId, academicSessionId));
+    }
+
     @GetMapping("/program-rule-sets")
     @Operation(summary = "List program rule sets for this institution (STRUCTURE_MANAGE)")
     public ResponseEntity<List<ProgramRuleSetResponse>> listProgramRuleSets(
@@ -284,12 +410,6 @@ public class StructureController {
     }
 
     private RbacPrincipal requireTenantPrincipal(UUID tenantId, Authentication authentication) {
-        if (!(authentication.getPrincipal() instanceof TenantPrincipal principal)) {
-            throw new UnauthorizedException("STRUCTURE_MANAGE is a tenant-side action; no tenant principal on this request.");
-        }
-        if (!tenantId.equals(principal.tenantId())) {
-            throw new UnauthorizedException("tenantId in the URL does not match the authenticated tenant.");
-        }
-        return new RbacPrincipal(principal.tenantId(), principal.userAccountId());
+        return PrincipalExtractor.extractTenantOrSupportPrincipal(tenantId, authentication, "STRUCTURE_MANAGE");
     }
 }

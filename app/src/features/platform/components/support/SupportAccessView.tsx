@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Icon } from "../../../../components/ui/Icon";
 import { Panel, StatusBadge, DataTable, Button, Notice } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
+import { ErrorState } from "../../../../components/feedback/ErrorState";
 import {
   platformOpsService,
   type SupportAccessGrantItem,
   type SupportTicketItem,
 } from "../../api/platformOpsService";
 import { usePlatformAccess } from "../../platformAccess";
+import { SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY } from "../../../../services/axios";
 
 export function SupportAccessView() {
   const { can } = usePlatformAccess();
@@ -16,7 +17,7 @@ export function SupportAccessView() {
 
   const [grants, setGrants] = useState<SupportAccessGrantItem[]>([]);
   const [tickets, setTickets] = useState<Record<string, SupportTicketItem>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -25,8 +26,8 @@ export function SupportAccessView() {
     setError("");
     try {
       const [gList, tList] = await Promise.all([
-        platformOpsService.listActiveGrants().catch(() => []),
-        platformOpsService.listSupportTickets().catch(() => []),
+        platformOpsService.listActiveGrants(),
+        platformOpsService.listSupportTickets(),
       ]);
       setGrants(gList);
       const ticketMap: Record<string, SupportTicketItem> = {};
@@ -45,26 +46,59 @@ export function SupportAccessView() {
     loadGrants();
   }, []);
 
+  useEffect(() => {
+    const onSupportSessionEnd = (event: MessageEvent) => {
+      const expectedOrigin = window.sessionStorage.getItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+      if (event.origin !== expectedOrigin || event.data?.type !== "EDU360_SUPPORT_SESSION_END") return;
+      void platformOpsService.endCurrentSupportSession().then(() => {
+        window.sessionStorage.removeItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY);
+        setMessage("The read-only support session has ended.");
+      }).catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not end support session."));
+    };
+    window.addEventListener("message", onSupportSessionEnd);
+    return () => window.removeEventListener("message", onSupportSessionEnd);
+  }, []);
+
   const handleAssume = async (ticketId: string, ticketNumber: string) => {
+    const opened = window.open("about:blank", "_blank");
+    if (!opened) {
+      setError("The tenant tab was blocked by the browser. Allow pop-ups and try again.");
+      return;
+    }
     try {
       const res = await platformOpsService.assumeSupportSession(ticketId);
-      setMessage(`Read-only session assumed for ${ticketNumber}. Token active until ${new Date(res.expiresAt).toLocaleTimeString()}.`);
+      const tenantOrigin = new URL(res.tenantLoginAddress).origin;
+      window.sessionStorage.setItem(SUPPORT_SESSION_OPENED_TENANT_ORIGIN_KEY, tenantOrigin);
+      const fragment = new URLSearchParams({
+        support_session: res.token,
+        expires_at: res.expiresAt,
+        ticket_number: ticketNumber,
+        platform_origin: window.location.origin,
+      });
+      opened.location.replace(`${tenantOrigin}/support#${fragment.toString()}`);
+      setMessage(`Opened a read-only session for ${ticketNumber}. It expires at ${new Date(res.expiresAt).toLocaleTimeString()}.`);
     } catch (err: unknown) {
+      opened.close();
       setError(err instanceof Error ? err.message : "Could not assume session");
     }
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Support access"
         description="Support access is ticket-bound, read-only, revocable and limited to 24 hours."
       />
 
       {message && <Notice tone="success">{message}</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {error && (
+        <ErrorState
+          message={error}
+          action={<Button variant="secondary" onClick={() => void loadGrants()}>Retry</Button>}
+        />
+      )}
 
-      <div className="platform-policy-callout">
+      <div className="app-callout">
         <span aria-hidden="true">
           <Icon name="shield" size={15} />
         </span>
@@ -78,14 +112,14 @@ export function SupportAccessView() {
       </div>
 
       <Panel title="Active Support Grants" description="Tenant-authorized diagnostic access windows">
-        {loading ? (
-          <div className="platform-empty-inline">
-            <Spinner label="Loading active grants..." />
-          </div>
-        ) : grants.length === 0 ? (
-          <p className="platform-empty-inline">No active support sessions or grants currently open.</p>
-        ) : (
-          <DataTable headers={["Ticket #", "Tenant ID", "Granted At", "Access Ends", "Status", "Actions"]}>
+        {!error && (
+          <DataTable
+            headers={["Ticket #", "Tenant ID", "Granted At", "Access Ends", "Status", "Actions"]}
+            loading={loading && grants.length === 0}
+            loadingLabel="Loading active grants"
+            empty={!loading && grants.length === 0}
+            emptyMessage="No active support sessions or grants currently open."
+          >
             {grants.map((g) => {
               const ticket = tickets[g.ticketId];
               const isExpired = new Date(g.expiresAt).getTime() < Date.now();
@@ -93,7 +127,7 @@ export function SupportAccessView() {
                 <tr key={g.supportAccessGrantId}>
                   <td>
                     <strong>{ticket?.ticketNumber ?? g.ticketId.substring(0, 8)}</strong>
-                    {ticket && <small className="platform-cell-sub">{ticket.subject}</small>}
+                    {ticket && <small className="app-cell-sub">{ticket.subject}</small>}
                   </td>
                   <td>{g.tenantId}</td>
                   <td>{new Date(g.grantedAt).toLocaleString()}</td>

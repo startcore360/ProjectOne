@@ -1,3 +1,4 @@
+﻿import { useState } from "react";
 import { useAppSelector } from "../../../store/hooks";
 import { roleDashboardByCode } from "../../role-previews/roleDashboardCatalog";
 import {
@@ -5,15 +6,38 @@ import {
   GenericWorkspace,
   RoleWorkspace,
 } from "../components";
+import { GuardianChildSwitcher } from "../../user-management/components/common/GuardianChildSwitcher";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import ApplicantPortalPage from "../../admissions/pages/ApplicantPortalPage";
+import { renderGreeting, formatGreetingName } from "../../../utils/greeting";
+import { useSupportSession } from "../../support/useSupportSession";
+import { SupportSessionDashboard } from "../../support/SupportSessionDashboard";
 
 export { StudentDashboard };
 
 export default function DashboardPage() {
+  const { isSupportSession, session, endSupportSession } = useSupportSession();
   const user = useAppSelector((s) => s.auth.user);
-  const name = user?.displayName?.trim() || "there";
+  const name = formatGreetingName(user?.displayName) || "there";
+  const [selectedChildId, setSelectedChildId] = useState("");
+
+  if (isSupportSession) {
+    return <SupportSessionDashboard session={session} onEndSession={endSupportSession} />;
+  }
+
+  if (user?.userType === "APPLICANT") {
+    return <ApplicantPortalPage />;
+  }
 
   if (user?.userType === "STUDENT") {
-    return <StudentDashboard name={name} />;
+    return <StudentDashboard name={name} tenantId={user.tenantId ?? ""} />;
+  }
+
+  if (user?.userType === "GUARDIAN") {
+    return <div className="app-page">
+      <PageHeader title={renderGreeting(user.displayName)} description="Parent dashboard · Choose a child linked to your account. Only linked student code and status are currently available." />
+      <GuardianChildSwitcher value={selectedChildId} onChange={setSelectedChildId} />
+    </div>;
   }
 
   if (user?.roleCode && roleDashboardByCode(user.roleCode)) {

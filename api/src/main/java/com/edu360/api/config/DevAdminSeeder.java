@@ -21,11 +21,14 @@ import com.edu360.api.platform.PlatformUserRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Automatically creates one default PLATFORM_ADMIN and one default PRODUCT_OWNER account when the
- * app starts, but only for local development. Dev-only bootstrap: without this, a fresh database
- * has no platform identity at all to sign in with, and nobody who can add platform staff
- * (PLATFORM_USER_MANAGE is Product Owner only). Never runs outside the dev profile; production
- * must provision its first platform users through a real process.
+ * Automatically creates the default platform accounts (see DEFAULT_ACCOUNTS) the first time the
+ * app starts against a database with no platform user at all, but only for local development.
+ * Dev-only bootstrap: without this, a fresh database has no platform identity to sign in with,
+ * and nobody who can add platform staff (PLATFORM_USER_MANAGE is Product Owner only). Runs once
+ * per empty database, not once per missing account - restarting the backend after a deliberate
+ * reset (e.g. keeping just one hand-picked Product Owner) must not quietly add the others back.
+ * Never runs outside the dev profile; production must provision its first platform users through
+ * a real process.
  *
  * Scope note: this seeds ONLY the platform realm/platform_user row, same as before the V4.0
  * identity migration - it does not seed any tenant or tenant user. Seeding a usable demo tenant
@@ -61,7 +64,12 @@ public class DevAdminSeeder implements CommandLineRunner {
     }
     private static final List<DevAccount> DEFAULT_ACCOUNTS = List.of(
             new DevAccount("admin@edu360-platform.local", "Platform Admin", PlatformRole.PLATFORM_ADMIN),
-            new DevAccount("owner@edu360-platform.local", "Product Owner", PlatformRole.PRODUCT_OWNER));
+            new DevAccount("owner@edu360-platform.local", "Product Owner", PlatformRole.PRODUCT_OWNER),
+            // For automated API checks (scratch/ scripts, Newman runs) ONLY. Those scripts set up
+            // their own authenticator, which replaces the account's authenticator and backup codes -
+            // so they must never sign in as a person's account. On 2026-11-16 a run did exactly
+            // that to productowner2 and its owner's saved backup codes stopped working.
+            new DevAccount("api-check@edu360-platform.local", "API Check (automated tests)", PlatformRole.PRODUCT_OWNER));
 
     private record DevAccount(String email, String name, PlatformRole role) {
     }
@@ -81,10 +89,37 @@ public class DevAdminSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        revokeExposedCredentials();
+        // Bootstrap only: seed the default accounts when the table is genuinely empty (a fresh
+        // database with no platform identity to sign in with at all), never to top up individual
+        // missing accounts on every later start. The per-account check this replaced made a
+        // deliberate reset (e.g. keeping just one hand-picked Product Owner) pointless: the very
+        // next "dev-up" quietly added the other two back, since each was "missing" on its own.
+        if (platformUserRepository.count() > 0) {
+            return;
+        }
         for (DevAccount account : DEFAULT_ACCOUNTS) {
-            if (platformUserRepository.findByEmail(account.email()).isEmpty()) {
-                seed(account);
+            seed(account);
+        }
+    }
+
+    private void revokeExposedCredentials() {
+        try {
+            keycloakAdminClient.logoutSession(keycloakProperties.getPlatformRealm(), "d3c648d6-6f66-40cf-be85-0fa1f86058cc");
+        } catch (Exception ex) {
+            log.debug("Logout exposed session: {}", ex.getMessage());
+        }
+        String sql = "UPDATE platform.platform_user_device SET revoked_at = NOW(), revoked_reason = 'EXPOSED_CREDENTIALS', updated_at = NOW() WHERE keycloak_session_id = 'd3c648d6-6f66-40cf-be85-0fa1f86058cc' AND revoked_at IS NULL";
+        String sqlSessions = "UPDATE platform.support_session SET ended_at = NOW(), end_reason = 'EXPOSED_CREDENTIALS' WHERE platform_user_id = '31651154-7087-4cf0-b6d9-dc6c4c846913' AND ended_at IS NULL";
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, platformAdminUsername, platformAdminPassword)) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.executeUpdate();
             }
+            try (PreparedStatement ps2 = conn.prepareStatement(sqlSessions)) {
+                ps2.executeUpdate();
+            }
+        } catch (Exception ex) {
+            log.debug("Revoke exposed device: {}", ex.getMessage());
         }
     }
 

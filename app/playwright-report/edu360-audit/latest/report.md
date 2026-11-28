@@ -1,0 +1,137 @@
+# EDU 360 Playwright UI Audit
+Generated: 2026-11-19T18:19:26.750Z
+Base URL: http://platform.edu360.local:5173
+
+## Summary
+- repeated API calls are counted only above 2 per page (dev StrictMode runs each load twice)
+- pagesVisited: 108
+- errors: 0
+- horizontalOverflow: 0
+- controlsMissingAccessibleName: 0
+- unnamedButtons: 0
+- imagesWithoutAlt: 0
+- failedApiCalls: 0
+- pagesWithRepeatedApiCalls: 0
+- pageErrors: 0
+- consoleErrors: 2
+- failedRequests: 0
+
+## Page observations
+- /login (light, 1440px): no issues found
+- /login (light, 1366px): no issues found
+- /login (light, 390px): no issues found
+- /login (dark, 1440px): no issues found
+- /login (dark, 1366px): no issues found
+- /login (dark, 390px): no issues found
+- /platform (light, 1440px): no issues found
+- /platform (light, 1366px): no issues found
+- /platform (light, 390px): no issues found
+- /platform/tenants (light, 1440px): no issues found
+- /platform/tenants (light, 1366px): no issues found
+- /platform/tenants (light, 390px): no issues found
+- /platform/plans (light, 1440px): no issues found
+- /platform/plans (light, 1366px): no issues found
+- /platform/plans (light, 390px): no issues found
+- /platform/invoices (light, 1440px): no issues found
+- /platform/invoices (light, 1366px): no issues found
+- /platform/invoices (light, 390px): no issues found
+- /platform/releases (light, 1440px): no issues found
+- /platform/releases (light, 1366px): no issues found
+- /platform/releases (light, 390px): no issues found
+- /platform/reports (light, 1440px): no issues found
+- /platform/reports (light, 1366px): no issues found
+- /platform/reports (light, 390px): no issues found
+- /platform/security-policy (light, 1440px): no issues found
+- /platform/security-policy (light, 1366px): no issues found
+- /platform/security-policy (light, 390px): no issues found
+- /platform/tickets (light, 1440px): no issues found
+- /platform/tickets (light, 1366px): no issues found
+- /platform/tickets (light, 390px): no issues found
+- /platform/users (light, 1440px): no issues found
+- /platform/users (light, 1366px): no issues found
+- /platform/users (light, 390px): no issues found
+- /platform/roles (light, 1440px): no issues found
+- /platform/roles (light, 1366px): no issues found
+- /platform/roles (light, 390px): no issues found
+- /platform/role-templates (light, 1440px): no issues found
+- /platform/role-templates (light, 1366px): no issues found
+- /platform/role-templates (light, 390px): no issues found
+- /platform/support (light, 1440px): no issues found
+- /platform/support (light, 1366px): no issues found
+- /platform/support (light, 390px): no issues found
+- /platform/audit (light, 1440px): no issues found
+- /platform/audit (light, 1366px): no issues found
+- /platform/audit (light, 390px): no issues found
+- /platform/usage-counts (light, 1440px): no issues found
+- /platform/usage-counts (light, 1366px): no issues found
+- /platform/usage-counts (light, 390px): no issues found
+- /platform/backup-status (light, 1440px): no issues found
+- /platform/backup-status (light, 1366px): no issues found
+- /platform/backup-status (light, 390px): no issues found
+- /platform/integration-types (light, 1440px): no issues found
+- /platform/integration-types (light, 1366px): no issues found
+- /platform/integration-types (light, 390px): no issues found
+- /platform/data-protection (light, 1440px): no issues found
+- /platform/data-protection (light, 1366px): no issues found
+- /platform/data-protection (light, 390px): no issues found
+- /platform (dark, 1440px): no issues found
+- /platform (dark, 1366px): no issues found
+- /platform (dark, 390px): no issues found
+- /platform/tenants (dark, 1440px): no issues found
+- /platform/tenants (dark, 1366px): no issues found
+- /platform/tenants (dark, 390px): no issues found
+- /platform/plans (dark, 1440px): no issues found
+- /platform/plans (dark, 1366px): no issues found
+- /platform/plans (dark, 390px): no issues found
+- /platform/invoices (dark, 1440px): no issues found
+- /platform/invoices (dark, 1366px): no issues found
+- /platform/invoices (dark, 390px): no issues found
+- /platform/releases (dark, 1440px): no issues found
+- /platform/releases (dark, 1366px): no issues found
+- /platform/releases (dark, 390px): no issues found
+- /platform/reports (dark, 1440px): no issues found
+- /platform/reports (dark, 1366px): no issues found
+- /platform/reports (dark, 390px): no issues found
+- /platform/security-policy (dark, 1440px): no issues found
+- /platform/security-policy (dark, 1366px): no issues found
+- /platform/security-policy (dark, 390px): no issues found
+- /platform/tickets (dark, 1440px): no issues found
+- /platform/tickets (dark, 1366px): no issues found
+- /platform/tickets (dark, 390px): no issues found
+- /platform/users (dark, 1440px): no issues found
+- /platform/users (dark, 1366px): no issues found
+- /platform/users (dark, 390px): no issues found
+- /platform/roles (dark, 1440px): no issues found
+- /platform/roles (dark, 1366px): no issues found
+- /platform/roles (dark, 390px): no issues found
+- /platform/role-templates (dark, 1440px): no issues found
+- /platform/role-templates (dark, 1366px): no issues found
+- /platform/role-templates (dark, 390px): no issues found
+- /platform/support (dark, 1440px): no issues found
+- /platform/support (dark, 1366px): no issues found
+- /platform/support (dark, 390px): no issues found
+- /platform/audit (dark, 1440px): no issues found
+- /platform/audit (dark, 1366px): no issues found
+- /platform/audit (dark, 390px): no issues found
+- /platform/usage-counts (dark, 1440px): no issues found
+- /platform/usage-counts (dark, 1366px): no issues found
+- /platform/usage-counts (dark, 390px): no issues found
+- /platform/backup-status (dark, 1440px): no issues found
+- /platform/backup-status (dark, 1366px): no issues found
+- /platform/backup-status (dark, 390px): no issues found
+- /platform/integration-types (dark, 1440px): no issues found
+- /platform/integration-types (dark, 1366px): no issues found
+- /platform/integration-types (dark, 390px): no issues found
+- /platform/data-protection (dark, 1440px): no issues found
+- /platform/data-protection (dark, 1366px): no issues found
+- /platform/data-protection (dark, 390px): no issues found
+
+## Console errors
+- http://platform.edu360.local:5173/login: Failed to load resource: the server responded with a status of 404 (Not Found) (resource: http://platform.edu360.local:5173/favicon.ico)
+- http://platform.edu360.local:5173/login: Failed to load resource: the server responded with a status of 401 () (resource: http://platform.edu360.local:8080/api/auth/login)
+
+## Page errors
+- none
+
+## Failed network requests
+- none

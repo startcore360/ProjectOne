@@ -45,18 +45,20 @@ class StudentLoginSwitchServiceTest {
         c.setClassName("9");
         c.setStudentLoginEnabled(false);
         c.setStatus("ACTIVE");
+        c.setRowVersion(1);
         return c;
     }
 
     @Test
     void setStudentLogin_enablesItWhenAuthorized() {
         when(schoolClassRepository.findByTenantIdAndClassId(TENANT_ID, CLASS_ID)).thenReturn(Optional.of(schoolClass()));
-        when(schoolClassRepository.save(any(SchoolClass.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(schoolClassRepository.updateStudentLogin(TENANT_ID, CLASS_ID, 1, true, USER_ID)).thenReturn(1);
 
-        var response = service().setStudentLogin(principal, CLASS_ID, new StudentLoginSwitchRequest(true));
+        var response = service().setStudentLogin(principal, CLASS_ID, "\"1\"", new StudentLoginSwitchRequest(true));
 
         assertThat(response.classId()).isEqualTo(CLASS_ID);
         assertThat(response.studentLoginEnabled()).isTrue();
+        assertThat(response.rowVersion()).isEqualTo(2);
         org.mockito.Mockito.verify(permissionEvaluatorService).authorize(
                 principal, "STUDENT_LOGIN_SWITCH", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
     }
@@ -68,9 +70,9 @@ class StudentLoginSwitchServiceTest {
                 .when(permissionEvaluatorService)
                 .authorize(principal, "STUDENT_LOGIN_SWITCH", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
 
-        assertThatThrownBy(() -> service().setStudentLogin(principal, CLASS_ID, new StudentLoginSwitchRequest(true)))
+        assertThatThrownBy(() -> service().setStudentLogin(principal, CLASS_ID, "\"1\"", new StudentLoginSwitchRequest(true)))
                 .isInstanceOf(UnauthorizedException.class);
 
-        org.mockito.Mockito.verify(schoolClassRepository, org.mockito.Mockito.never()).save(any());
+        org.mockito.Mockito.verify(schoolClassRepository, org.mockito.Mockito.never()).updateStudentLogin(any(), any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyBoolean(), any());
     }
 }

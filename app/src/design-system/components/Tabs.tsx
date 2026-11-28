@@ -1,4 +1,4 @@
-export interface TabItem {
+﻿export interface TabItem {
   id: string;
   label: string;
   count?: number;
@@ -22,58 +22,51 @@ export function Tabs({
   ariaLabel = "Navigation tabs",
   tabRole = "tab",
 }: TabsProps) {
+  const isTabList = tabRole === "tab";
+
   return (
     <div
-      role="tablist"
+      role={isTabList ? "tablist" : "group"}
       aria-label={ariaLabel}
-      className={`platform-tabs ${className}`.trim()}
-      style={{
-        display: "flex",
-        gap: "4px",
-        borderBottom: "1px solid var(--color-border)",
-        marginBottom: "var(--space-4)",
-        overflowX: "auto",
-      }}
+      className={`app-tabs ${className}`.trim()}
     >
       {items.map((tab) => {
         const isActive = tab.id === activeId;
         return (
           <button
             key={tab.id}
-            role={tabRole === "tab" ? "tab" : undefined}
+            role={isTabList ? "tab" : undefined}
             id={`tab-${tab.id}`}
-            aria-selected={tabRole === "tab" ? isActive : undefined}
-            aria-controls={`panel-${tab.id}`}
+            aria-selected={isTabList ? isActive : undefined}
+            aria-pressed={!isTabList ? isActive : undefined}
+            aria-controls={isTabList ? `panel-${tab.id}` : undefined}
+            tabIndex={isTabList ? (isActive ? 0 : -1) : undefined}
+            data-active={isActive}
             disabled={tab.disabled}
             onClick={() => onChange(tab.id)}
-            style={{
-              padding: "8px 16px",
-              background: "none",
-              border: "none",
-              borderBottom: isActive ? "2px solid var(--color-brand)" : "2px solid transparent",
-              color: isActive ? "var(--color-brand)" : "var(--color-text-muted)",
-              fontWeight: isActive ? 600 : 500,
-              cursor: tab.disabled ? "not-allowed" : "pointer",
-              opacity: tab.disabled ? 0.5 : 1,
-              whiteSpace: "nowrap",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "0.875rem",
-              transition: "all 0.15s ease",
+            onKeyDown={(event) => {
+              if (!isTabList || !["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+              const enabledTabs = Array.from(
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                  '[role="tab"]:not(:disabled)',
+                ) ?? [],
+              );
+              if (enabledTabs.length === 0) return;
+              const currentIndex = enabledTabs.indexOf(event.currentTarget);
+              const nextIndex = event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? enabledTabs.length - 1
+                  : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + enabledTabs.length) % enabledTabs.length;
+              event.preventDefault();
+              enabledTabs[nextIndex].focus();
+              onChange(enabledTabs[nextIndex].id.replace(/^tab-/, ""));
             }}
+            className="app-tabs__tab"
           >
             <span>{tab.label}</span>
             {typeof tab.count === "number" && (
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  padding: "1px 6px",
-                  borderRadius: "999px",
-                  background: isActive ? "var(--color-brand-muted, #EBF4FF)" : "var(--color-bg-muted, #F1F5F9)",
-                  color: isActive ? "var(--color-brand)" : "var(--color-text-muted)",
-                }}
-              >
+              <span className="app-tabs__count">
                 {tab.count}
               </span>
             )}

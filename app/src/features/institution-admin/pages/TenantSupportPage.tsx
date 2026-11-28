@@ -1,0 +1,205 @@
+﻿import { useCallback, useEffect, useState, type FormEvent } from "react";
+import api from "../../../services/axios";
+import { getApiErrorMessage } from "../../../services/apiHelper";
+import { useAppSelector } from "../../../store/hooks";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import {
+  Button,
+  Panel,
+  SelectField,
+  SkeletonTable,
+  TextAreaField,
+  TextField,
+  toast,
+} from "../../../design-system/components";
+import { ErrorState } from "../../../components/feedback/ErrorState";
+import { useSupportSession } from "../../support/useSupportSession";
+import { institutionService, type InstitutionItem } from "../api/institutionService";
+
+type Ticket = {
+  supportTicketId: string; ticketNumber: string; subject: string; description: string;
+  priority: string; status: string; createdAt: string;
+};
+type Grant = {
+  supportAccessGrantId: string; ticketId: string; grantedAt: string; expiresAt: string;
+  withdrawnAt?: string | null; institutionId?: string | null;
+};
+
+export default function TenantSupportPage() {
+  const { isSupportSession, tenantId: supportTenantId } = useSupportSession();
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId) ?? supportTenantId;
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [grants, setGrants] = useState<Grant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("MEDIUM");
+  const [ticketId, setTicketId] = useState("");
+  const [durationHours, setDurationHours] = useState("24");
+  const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let active = true;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => { if (active) setInstitutions(res.items ?? []); })
+      .catch(() => { if (active) setInstitutions([]); });
+    return () => { active = false; };
+  }, [tenantId]);
+
+  const load = useCallback(async () => {
+    if (isSupportSession || !tenantId) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const [ticketResponse, grantResponse] = await Promise.all([
+        api.get<Ticket[]>(`/tenants/${tenantId}/support-tickets`),
+        api.get<Grant[]>(`/tenants/${tenantId}/support-access-grants`),
+      ]);
+      setTickets(ticketResponse.data);
+      setGrants(grantResponse.data);
+      setTicketId((current) => current || ticketResponse.data[0]?.supportTicketId || "");
+    } catch (err) {
+      toast.error("Could not load support data", getApiErrorMessage(err));
+    } finally { setLoading(false); }
+  }, [tenantId, isSupportSession]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const raiseTicket = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!subject.trim() || !description.trim()) {
+      toast.error("Validation error", "Subject and description are required.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await api.post<Ticket>(`/tenants/${tenantId}/support-tickets`, {
+        subject: subject.trim(), description: description.trim(), priority,
+      });
+      setSubject(""); setDescription("");
+      toast.success("Support ticket submitted", `Support ticket ${response.data.ticketNumber} was submitted.`);
+      await load();
+    } catch (err) {
+      toast.error("Could not submit ticket", getApiErrorMessage(err));
+    }
+    finally { setSubmitting(false); }
+  };
+
+  const grantAccess = async (event: FormEvent) => {
+    event.preventDefault();
+    const hours = Number(durationHours);
+    if (!ticketId || !Number.isInteger(hours) || hours < 1 || hours > 24) {
+      toast.error("Validation error", "Choose one of your tickets and a duration from 1 to 24 hours.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.post(`/tenants/${tenantId}/support-access-grants`, {
+        ticketId, durationHours: hours, ...(institutionId.trim() ? { institutionId: institutionId.trim() } : {}),
+      });
+      setInstitutionId("");
+      toast.success("Support access granted", `Read-only support access was granted for ${hours} hour(s).`);
+      await load();
+    } catch (err) {
+      toast.error("Could not grant support access", getApiErrorMessage(err));
+    }
+    finally { setSubmitting(false); }
+  };
+
+  const withdraw = async (grantId: string) => {
+    setSubmitting(true);
+    try {
+      await api.post(`/tenants/${tenantId}/support-access-grants/${grantId}/withdrawal`);
+      toast.success("Support access withdrawn", "Support access was withdrawn immediately.");
+      await load();
+    } catch (err) {
+      toast.error("Could not withdraw support access", getApiErrorMessage(err));
+    }
+    finally { setSubmitting(false); }
+  };
+
+  if (isSupportSession) {
+    return (
+      <div className="app-page">
+        <PageHeader title="Support session" description="This tenant tab is operating under a ticket-bound, read-only support grant." />
+        <Panel title="Read-only access is active">
+          <p>Data-changing controls, ticket creation, grant management and withdrawal are unavailable in a support session.</p>
+          <p>Use the tenant navigation to open only the read operations explicitly marked support-readable in the API contract.</p>
+        </Panel>
+      </div>
+    );
+  }
+  return (
+    <div className="app-page">
+      <PageHeader title="Tenant support" description="Raise support tickets and control temporary, read-only access to your institution's data." />
+      {!tenantId ? <ErrorState title="Sign-in required" message="A tenant sign-in is required to use support." /> : (
+        <>
+          <Panel title="Raise a support ticket" description="Describe the issue. Do not include passwords, one-time codes or other secrets.">
+            <form onSubmit={raiseTicket} noValidate>
+              <TextField id="tenant-support-subject" label="Subject" required value={subject} onChange={(e) => setSubject(e.target.value)} />
+              <TextAreaField id="tenant-support-description" label="Description" required value={description} onChange={(e) => setDescription(e.target.value)} />
+              <SelectField id="tenant-support-priority" label="Priority" value={priority} onChange={(e) => setPriority(e.target.value)} options={[
+                { value: "LOW", label: "Low" }, { value: "MEDIUM", label: "Medium" }, { value: "HIGH", label: "High" }, { value: "CRITICAL", label: "Critical" },
+              ]} />
+              <Button type="submit" busy={submitting}>Submit ticket</Button>
+            </form>
+          </Panel>
+
+          <Panel title="My support tickets" description="Only tickets raised by your signed-in account are listed.">
+            {loading && tickets.length === 0 ? <SkeletonTable rows={4} columns={4} /> : tickets.length === 0 ? <p>No support tickets have been raised by this account.</p> : (
+              <div className="app-table-wrap"><table className="app-table">
+                <thead><tr><th>Ticket</th><th>Subject</th><th>Status</th><th>Created</th></tr></thead>
+                <tbody>{tickets.map((ticket) => <tr key={ticket.supportTicketId}>
+                  <td>{ticket.ticketNumber}</td><td>{ticket.subject}</td><td>{ticket.status}</td><td>{new Date(ticket.createdAt).toLocaleString()}</td>
+                </tr>)}</tbody>
+              </table></div>
+            )}
+          </Panel>
+
+          <Panel title="Grant temporary support access" description="Grants are ticket-bound, read-only, and expire automatically after at most 24 hours. You can withdraw them at any time.">
+            <form onSubmit={grantAccess} noValidate>
+              <SelectField id="support-grant-ticket" label="Support ticket" required value={ticketId} onChange={(e) => setTicketId(e.target.value)} options={tickets.map((ticket) => ({ value: ticket.supportTicketId, label: `${ticket.ticketNumber} — ${ticket.subject}` }))} />
+              <SelectField id="support-grant-duration" label="Duration" value={durationHours} onChange={(e) => setDurationHours(e.target.value)} options={[1,2,4,8,12,24].map((hours) => ({ value: String(hours), label: `${hours} hour(s)` }))} />
+              <SelectField
+                id="support-grant-institution"
+                label="Institution (optional)"
+                value={institutionId}
+                onChange={(e) => setInstitutionId(e.target.value)}
+                hint="Leave blank to grant tenant-wide read-only access."
+                options={[
+                  { value: "", label: "Tenant-wide (no institution)" },
+                  ...institutions.map((inst) => ({
+                    value: inst.institutionId,
+                    label: `${inst.institutionName} (${inst.institutionCode})`,
+                  })),
+                ]}
+              />
+              <Button type="submit" busy={submitting} disabled={tickets.length === 0}>Grant read-only access</Button>
+            </form>
+          </Panel>
+
+          <Panel title="Support access history" description="Review active, expired and withdrawn grants.">
+            {loading && grants.length === 0 ? <SkeletonTable rows={4} columns={5} /> : grants.length === 0 ? <p>No support access grants have been issued.</p> : (
+              <div className="app-table-wrap"><table className="app-table">
+                <thead><tr><th>Ticket</th><th>Granted</th><th>Expires</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>{grants.map((grant) => {
+                  const active = !grant.withdrawnAt && new Date(grant.expiresAt).getTime() > Date.now();
+                  const status = grant.withdrawnAt ? "WITHDRAWN" : active ? "ACTIVE" : "EXPIRED";
+                  return <tr key={grant.supportAccessGrantId}>
+                    <td>{tickets.find((t) => t.supportTicketId === grant.ticketId)?.ticketNumber ?? grant.ticketId}</td>
+                    <td>{new Date(grant.grantedAt).toLocaleString()}</td>
+                    <td>{new Date(grant.expiresAt).toLocaleString()}</td>
+                    <td>{status}</td>
+                    <td>{active && <Button type="button" size="sm" variant="secondary" disabled={submitting} onClick={() => void withdraw(grant.supportAccessGrantId)}>Withdraw now</Button>}</td>
+                  </tr>;
+                })}</tbody>
+              </table></div>
+            )}
+          </Panel>
+        </>
+      )}
+    </div>
+  );
+}

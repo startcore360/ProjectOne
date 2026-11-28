@@ -41,6 +41,7 @@ public class PlatformPermissionService {
             Map.entry("BACKUP_STATUS_VIEW", OWNER_AND_ADMIN),
             Map.entry("PLATFORM_USER_MANAGE", OWNER),
             Map.entry("SECURITY_POLICY_SET", OWNER),
+            Map.entry("LANDING_CMS_MANAGE", OWNER_AND_ADMIN),
             Map.entry("DISCOUNT_APPLY", OWNER), // Rule [F-4]: Billing Manager denied
             Map.entry("INVOICE_MANAGE", Set.of(PlatformRole.BILLING_MANAGER, PlatformRole.PRODUCT_OWNER)),
             Map.entry("OVERDUE_FLAG", Set.of(PlatformRole.BILLING_MANAGER, PlatformRole.PRODUCT_OWNER)),
@@ -109,9 +110,9 @@ public class PlatformPermissionService {
     }
 
     public boolean holds(PlatformPrincipal principal, String actionCode) {
-        return accessLookup.customRoleActions(principal.platformUserId())
-                .map(actions -> actions.contains(actionCode))
-                .orElseGet(() -> ALLOWED_ROLES.getOrDefault(actionCode, Set.of()).contains(principal.platformRole()));
+        boolean held = accessLookup.customRoleActions(principal.platformUserId()).map(actions -> actions.contains(actionCode)).orElseGet(() -> ALLOWED_ROLES.getOrDefault(actionCode, Set.of()).contains(principal.platformRole()));
+        return held || (Set.of("TENANT_EXPORT_APPROVE", "TENANT_DELETION_APPROVE", "RETENTION_CHANGE_APPROVE").contains(actionCode)
+                && !accessLookup.activeDelegationDelegators(principal.platformUserId()).isEmpty());
     }
 
     /** Actions this person holds, whether or not they must step in first. */

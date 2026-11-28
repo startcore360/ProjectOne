@@ -1,6 +1,8 @@
 package com.edu360.api.platformops.role;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -23,6 +25,7 @@ public class StoredPlatformAccessLookup implements PlatformAccessLookup {
     private final PlatformCustomRoleRepository roleRepository;
     private final PlatformCustomRoleActionRepository actionRepository;
     private final PlatformStepInRepository stepInRepository;
+    private final com.edu360.api.platformops.delegation.PlatformDelegationRepository delegationRepository;
 
     @Override
     public Optional<Set<String>> customRoleActions(UUID platformUserId) {
@@ -36,6 +39,12 @@ public class StoredPlatformAccessLookup implements PlatformAccessLookup {
                         .orElse(Set.of()));
     }
 
+    @Override
+    public List<UUID> activeDelegationDelegators(UUID id) {
+        return delegationRepository.findActiveDelegations(id, LocalDate.now(ZoneOffset.UTC)).stream()
+                .map(com.edu360.api.platformops.delegation.PlatformDelegation::getDelegatorUserId)
+                .toList();
+    }
     @Override
     public boolean isHandedOver(String actionCode) {
         return actionRepository.isHandedOver(actionCode);

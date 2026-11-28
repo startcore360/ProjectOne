@@ -29,6 +29,7 @@ export { ReleasesPage } from "../components/release/ReleasesView";
 export { ReportsPage } from "../components/reports/ReportsView";
 export { SecurityPolicyPage } from "../components/security/SecurityPolicyView";
 export { TicketsPage } from "../components/support/TicketsView";
+export { DataProtectionWorkspacePage } from "../components/dataprotection/DataProtectionWorkspaceView";
 
 // Re-export design system UI primitives for backwards compatibility
 export {

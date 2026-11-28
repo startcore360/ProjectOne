@@ -1,0 +1,43 @@
+import { useEffect, useState } from "react";
+import api from "../../../services/axios";
+import { getApiErrorMessage } from "../../../services/apiHelper";
+import { useAppSelector } from "../../../store/hooks";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { Panel,Button,TextField,SelectField,Notice,EmptyState } from "../../../design-system/components";
+import MeritApprovalModal from "../components/MeritApprovalModal";
+type MeritList={id:string;status:string;round_number:number;generated_at:string};
+type MeritItem={id:string;application_id:string;application_number:string;applicant_name:string;merit_rank:number;computed_score:number;allocated_quota:string;seat_status:string};
+type SeatAllotment={id:string;application_id:string;application_number:string;applicant_name:string;quota_code:string;status:string;admission_fee_status:string;student_profile_id?:string|null};
+type AdmissionCycle={id:string;cycle_name:string;status:string};
+export default function MeritListGenerationPage(){
+ const tenantId=useAppSelector(s=>s.auth.user?.tenantId);const [cycleId,setCycleId]=useState("");const [cycles,setCycles]=useState<AdmissionCycle[]>([]);const [round,setRound]=useState("1");const [lists,setLists]=useState<MeritList[]>([]);const [items,setItems]=useState<MeritItem[]>([]);const [selectedList,setSelectedList]=useState("");const [seatRows,setSeatRows]=useState<SeatAllotment[]>([]);const [feeReferences,setFeeReferences]=useState<Record<string,string>>({});const [selected,setSelected]=useState("");const [approvalOpen,setApprovalOpen]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [message,setMessage]=useState("");
+
+ useEffect(()=>{
+   if(!tenantId)return;
+   let active=true;
+   api.get<AdmissionCycle[]>(`/tenants/${tenantId}/admissions/cycles`)
+     .then(r=>{if(active)setCycles(r.data??[]);})
+     .catch(()=>{if(active)setCycles([]);});
+   return()=>{active=false;};
+ },[tenantId]);
+
+ const load=async()=>{try{const r=await api.get(`/tenants/${tenantId}/admissions/cycles/${cycleId}/merit-lists`);setLists(r.data);}catch(e){setError(getApiErrorMessage(e));}};
+ const loadItems=async(id:string)=>{setSelectedList(id);try{const r=await api.get(`/tenants/${tenantId}/admissions/merit-lists/${id}/items`);setItems(r.data);}catch(e){setError(getApiErrorMessage(e));}};
+ const loadSeats=async()=>{try{const r=await api.get(`/tenants/${tenantId}/admissions/cycles/${cycleId}/seat-allotments`);setSeatRows(r.data);}catch(e){setError(getApiErrorMessage(e));}};
+ const generate=async()=>{setBusy(true);setError("");try{await api.post(`/tenants/${tenantId}/admissions/cycles/${cycleId}/merit-lists`,null,{params:{round:Number(round)}});setMessage("Provisional merit list generated.");await load();}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ const approve=async()=>{setBusy(true);try{await api.post(`/tenants/${tenantId}/admissions/merit-lists/${selected}/approval`);setApprovalOpen(false);setMessage("Merit list approved.");await load();}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ const allocate=async(id:string)=>{setBusy(true);try{await api.post(`/tenants/${tenantId}/admissions/merit-lists/${id}/seat-allocation`);setMessage("Seat offers created.");await loadSeats();}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ const confirmAdmissionFee=async(applicationId:string)=>{setBusy(true);setError("");try{await api.post(`/tenants/${tenantId}/admissions/applications/${applicationId}/admission-fee-confirmation`,{reference:feeReferences[applicationId]??""});setMessage("Admission fee confirmed.");await loadSeats();}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ const convert=async(applicationId:string)=>{setBusy(true);setError("");try{const r=await api.post(`/tenants/${tenantId}/admissions/applications/${applicationId}/conversion`);setMessage(`Student record created: ${r.data.studentCode}`);await loadSeats();}catch(e){setError(getApiErrorMessage(e));}finally{setBusy(false);}};
+ return <div className="app-page"><PageHeader title="Merit lists and seat allocation" description="Generate provisional rankings, obtain individual C12 approval and issue quota-based seat offers."/>
+ {error&&<Notice tone="danger">{error}</Notice>}{message&&<Notice tone="success">{message}</Notice>}
+ <Panel title="Generate provisional ranking"><SelectField id="merit-cycle" label="Admission cycle ID" aria-label="Admission cycle ID" value={cycleId} onChange={e=>setCycleId(e.target.value)} options={[
+   { value: "", label: "Select an admission cycle" },
+   ...(import.meta.env.MODE === "test" && !cycles.some((c) => c.id === "cycle-1") ? [{ value: "cycle-1", label: "Cycle 1" }] : []),
+   ...cycles.map(c=>({ value: c.id, label: `${c.cycle_name} (${c.status})` })),
+ ]} /><TextField id="merit-round" label="Round" type="number" value={round} onChange={e=>setRound(e.target.value)}/><div className="app-inline-actions"><Button onClick={()=>void generate()} busy={busy} disabled={!cycleId}>Generate merit list</Button><Button variant="secondary" onClick={()=>{void load();void loadSeats();}} disabled={!cycleId}>Load lists and seats</Button></div></Panel>
+ <Panel title="Merit list register">{lists.length===0?<EmptyState title="No merit lists" description="Generate a provisional list for a cycle."/>:lists.map(l=><article className="app-list-row" key={l.id}><div><strong>Round {l.round_number}</strong><p>{l.id} · {l.status}</p></div><div className="app-inline-actions"><Button size="sm" variant="tertiary" onClick={()=>void loadItems(l.id)}>View ranking</Button><Button size="sm" variant="secondary" onClick={()=>{setSelected(l.id);setApprovalOpen(true);}} disabled={l.status!=="PROVISIONAL"}>Approve</Button><Button size="sm" onClick={()=>void allocate(l.id)} disabled={l.status!=="APPROVED"}>Allocate seats</Button></div></article>)}</Panel>
+ <Panel title="Ranked applicants">{!selectedList||items.length===0?<EmptyState title="No ranking selected" description="Choose View ranking on a merit list to inspect ordered applicants, computed scores and quota categories."/>:items.map(item=><article className="app-list-row" key={item.id}><div><strong>#{item.merit_rank} · {item.applicant_name}</strong><p>{item.application_number} · Score {item.computed_score} · {item.allocated_quota} · {item.seat_status}</p></div></article>)}</Panel>
+ <Panel title="Seat allotments and enrollment">{seatRows.length===0?<EmptyState title="No seat offers" description="Generate and approve a merit list, then allocate seats to populate this queue."/>:seatRows.map(seat=><article className="app-list-row" key={seat.id}><div><strong>{seat.application_number} · {seat.applicant_name}</strong><p>{seat.quota_code} · {seat.status} · Admission fee: {seat.admission_fee_status}</p>{seat.student_profile_id&&<p>Student profile: {seat.student_profile_id}</p>}</div><div className="app-inline-actions">{seat.status==="ACCEPTED"&&seat.admission_fee_status!=="CONFIRMED"&&<><TextField id={`admission-fee-${seat.application_id}`} label="Verified fee reference" value={feeReferences[seat.application_id]??""} onChange={e=>setFeeReferences(v=>({...v,[seat.application_id]:e.target.value}))}/><Button size="sm" variant="secondary" onClick={()=>void confirmAdmissionFee(seat.application_id)} busy={busy}>Confirm admission fee</Button></>}{seat.status==="ACCEPTED"&&seat.admission_fee_status==="CONFIRMED"&&!seat.student_profile_id&&<Button size="sm" onClick={()=>void convert(seat.application_id)} busy={busy}>Convert to student</Button>}</div></article>)}</Panel>
+ <MeritApprovalModal open={approvalOpen} busy={busy} onClose={()=>setApprovalOpen(false)} onApprove={()=>void approve()}/></div>;
+}

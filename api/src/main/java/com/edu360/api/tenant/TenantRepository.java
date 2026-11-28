@@ -1,6 +1,9 @@
 package com.edu360.api.tenant;
 
+import java.util.Collection;
 import java.util.Optional;
+import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -14,7 +17,17 @@ public interface TenantRepository extends JpaRepository<Tenant, java.util.UUID> 
      *  and, in production, by real subdomain-based routing before login even starts. */
     Optional<Tenant> findBySubdomain(String subdomain);
 
+    /** Exact custom-domain match used by the request Host binding check. */
+    Optional<Tenant> findByCustomDomainIgnoreCase(String customDomain);
+
+    List<Tenant> findByStateAndNextRenewalAtBetween(TenantState state, LocalDate from, LocalDate to);
+    List<Tenant> findByStateAndNextRenewalAtLessThanEqual(TenantState state, LocalDate to);
+
     long countByState(TenantState state);
 
     long countByAnalyticsOptOut(boolean analyticsOptOut);
+
+    List<Tenant> findByStateInAndListedInDirectoryTrueOrderByTenantNameAsc(Collection<TenantState> states);
+
+    List<Tenant> findAllByOrderByTenantNameAsc();
 }

@@ -3,7 +3,10 @@ package com.edu360.api.platformops.dto;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import com.edu360.api.platformops.PlatformAuditOutboxEvent;
+import com.edu360.api.platformops.PlatformAuditPayloadRedactor;
 
 /** One row from platform.audit_outbox, for PLATFORM_AUDIT_VIEW. */
 public record AuditLogEntryResponse(
@@ -18,7 +21,8 @@ public record AuditLogEntryResponse(
         UUID entityId,
         String outcome,
         String correlationId,
-        String eventType) {
+        String eventType,
+        JsonNode payload) {
 
     public static AuditLogEntryResponse from(PlatformAuditOutboxEvent event) {
         return new AuditLogEntryResponse(
@@ -33,6 +37,7 @@ public record AuditLogEntryResponse(
                 event.getEntityId(),
                 event.getOutcome(),
                 event.getCorrelationId(),
-                event.getEventType());
+                event.getEventType(),
+                PlatformAuditPayloadRedactor.redact(event.getPayload()));
     }
 }

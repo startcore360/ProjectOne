@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal } from "../../../../design-system/components";
+import { Button, Modal, Notice, DateField } from "../../../../design-system/components";
+import { JsonDocumentBuilder, type DocumentValue } from "../../../../design-system/components/JsonDocumentBuilder";
+import { getLocalDateString } from "../../../../utils/dateUtils";
+import { getApiErrorMessage } from "../../../../services/apiHelper";
 
 export interface SetProgramRulesModalProps {
   isOpen: boolean;
@@ -14,60 +17,70 @@ export function SetProgramRulesModal({
   onSubmit,
   saving,
 }: SetProgramRulesModalProps) {
-  const [ruleJson, setRuleJson] = useState('{\n  "minCredits": 160,\n  "maxYears": 6\n}');
-  const [ruleEffectiveFrom, setRuleEffectiveFrom] = useState(
-    new Date().toISOString().substring(0, 10),
-  );
+  const [ruleDocument, setRuleDocument] = useState<Record<string, DocumentValue>>({ minCredits: 160 });
+  const [ruleEffectiveFrom, setRuleEffectiveFrom] = useState(getLocalDateString());
+  const [modalError, setModalError] = useState("");
+
+  const handleClose = () => {
+    setModalError("");
+    onClose();
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit(ruleJson, ruleEffectiveFrom);
+    setModalError("");
+    if (Object.keys(ruleDocument).length === 0) {
+      setModalError("Add at least one programme requirement before saving.");
+      return;
+    }
+    if (!ruleEffectiveFrom) {
+      setModalError("Choose when these requirements take effect.");
+      return;
+    }
+    try {
+      await onSubmit(JSON.stringify(ruleDocument), ruleEffectiveFrom);
+      handleClose();
+    } catch (err: unknown) {
+      setModalError(getApiErrorMessage(err));
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
-      kicker="PROGRAM_RULES_SET • Action #30"
+      onClose={handleClose}
+      kicker="ACADEMIC GOVERNANCE"
       title="Set Curriculum Rules"
       titleId="rules-modal-title"
-      size="sm"
+      size="lg"
     >
-      <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <label htmlFor="rule-json" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            Rules JSON *
-          </label>
-          <textarea
-            id="rule-json"
-            rows={4}
-            value={ruleJson}
-            onChange={(e) => setRuleJson(e.target.value)}
-            required
-            style={{ width: "100%", padding: "var(--space-2)", fontFamily: "monospace" }}
+      <form onSubmit={handleSubmit} className="app-form" noValidate>
+        {modalError && <Notice tone="danger">{modalError}</Notice>}
+        <div>
+          <JsonDocumentBuilder
+            title="Programme requirements"
+            description="Add the requirements that apply to this programme. You can use numbers, text, yes/no values, groups and lists."
+            value={ruleDocument}
+            onChange={setRuleDocument}
           />
         </div>
-        <div style={{ marginBottom: "var(--space-4)" }}>
-          <label htmlFor="rule-effective-from" style={{ display: "block", fontSize: "0.875rem", fontWeight: 600 }}>
-            Effective From *
-          </label>
-          <input
+        <div>
+          <DateField
             id="rule-effective-from"
-            type="date"
+            label="Effective from"
             value={ruleEffectiveFrom}
             onChange={(e) => setRuleEffectiveFrom(e.target.value)}
             required
-            style={{ width: "100%", padding: "var(--space-2)" }}
           />
         </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+        <footer className="app-modal__footer">
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" busy={saving}>
             {saving ? "Saving..." : "Save Rules"}
           </Button>
-        </div>
+        </footer>
       </form>
     </Modal>
   );

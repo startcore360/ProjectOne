@@ -9,10 +9,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.academic.PromotionRunRepository;
@@ -22,6 +26,7 @@ import com.edu360.api.approval.dto.ApprovalSummaryDto;
 import com.edu360.api.approval.dto.DecideApprovalRequestDto;
 import com.edu360.api.approval.dto.DecideApprovalResponseDto;
 import com.edu360.api.audit.AuditEventType;
+import com.edu360.api.audit.AuditEntry;
 import com.edu360.api.audit.AuditLogService;
 import com.edu360.api.config.TenantPrincipal;
 import com.edu360.api.exception.BusinessRuleViolationException;
@@ -46,7 +51,8 @@ import com.edu360.api.tenant.TenantContext;
  * has an active role; the process resolves to an approval action (else deny); the caller is the
  * step's approver by role, named user, delegation or roll-down ({@link ApprovalRouting}); and the
  * evaluator allows the action at the target's scope - for the caller, or for the delegator when
- * acting by delegation. "Acting for" (delegation or roll-down) is written into the audit detail.
+ * acting by delegation. That scope is the request's institution, or the request's department when
+ * the checked caller's active role is department-scoped (HOD), see {@link ApprovalScopeResolver}. "Acting for" (delegation or roll-down) is written into the audit detail.
  *
  * WHY every repository is required: a missing repository used to skip a rule silently (P-03).
  */
@@ -64,6 +70,12 @@ public class ApprovalInboxService {
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final ApprovalRouting approvalRouting;
     private final LeaveApproverSettingRepository leaveApproverSettingRepository;
+    private final ApprovalScopeResolver approvalScopeResolver;
+    private List<ApprovalOutcomeHandler> outcomeHandlers = List.of();
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired(required = false)
+    private ApprovalCountPublisher approvalCountPublisher;
 
     public ApprovalInboxService(
             ApprovalRequestRepository approvalRequestRepository,
@@ -74,7 +86,8 @@ public class ApprovalInboxService {
             PromotionRunRepository promotionRunRepository,
             PermissionEvaluatorService permissionEvaluatorService,
             ApprovalRouting approvalRouting,
-            LeaveApproverSettingRepository leaveApproverSettingRepository) {
+            LeaveApproverSettingRepository leaveApproverSettingRepository,
+            ApprovalScopeResolver approvalScopeResolver) {
         this.approvalRequestRepository = Objects.requireNonNull(approvalRequestRepository);
         this.approvalStepRepository = Objects.requireNonNull(approvalStepRepository);
         this.auditLogService = Objects.requireNonNull(auditLogService);
@@ -84,7 +97,25 @@ public class ApprovalInboxService {
         this.permissionEvaluatorService = Objects.requireNonNull(permissionEvaluatorService);
         this.approvalRouting = Objects.requireNonNull(approvalRouting);
         this.leaveApproverSettingRepository = Objects.requireNonNull(leaveApproverSettingRepository);
+        this.approvalScopeResolver = Objects.requireNonNull(approvalScopeResolver);
     }
+
+    /**
+     * The scope the approval action is checked at for this caller: the request's institution, or -
+     * only for a DEPARTMENT-scoped active role (HOD) - the request's own department, so an HOD
+     * decides their department's requests and never another's ({@link ApprovalScopeResolver}).
+     */
+    public RbacScope approvalScope(RbacPrincipal checked, ApprovalRequest request) {
+        return approvalScopeResolver.scopeFor(checked, request);
+    }
+
+    @Autowired(required = false)
+    public void setOutcomeHandlers(List<ApprovalOutcomeHandler> handlers) {
+        this.outcomeHandlers = handlers == null ? List.of() : List.copyOf(handlers);
+    }
+
+    @Autowired(required = false)
+    public void setDataSource(DataSource dataSource) { this.jdbcTemplate = new JdbcTemplate(dataSource); }
 
     /** P-05: tenant-wide callers see every institution, others only their own, no context sees nothing. */
     public static boolean inCallerScope(UUID institutionId) {
@@ -127,6 +158,17 @@ public class ApprovalInboxService {
             if (!route.get().actingFor() && approvalRouting.handedOver(tenantId, userId, req)) {
                 continue;
             }
+            String action = resolveApprovalAction(req, step);
+            UUID checkedUser = route.get().via() == ApprovalRouting.Via.DELEGATION
+                    ? route.get().delegatorUserId() : userId;
+            if (action == null || checkedUser == null) {
+                continue;
+            }
+            RbacPrincipal rbac = new RbacPrincipal(tenantId, checkedUser);
+            if (!permissionEvaluatorService.can(rbac, action, approvalScope(rbac, req),
+                    RbacTarget.of(req.getRequestedByUserId())).allowed()) {
+                continue;
+            }
             items.add(toStepDto(step));
         }
         return new ApprovalInboxResponseDto(items, new ApprovalInboxResponseDto.PageInfoDto(items.size(), 1, 1, items.size()));
@@ -152,7 +194,7 @@ public class ApprovalInboxService {
             String action = resolveApprovalAction(request);
             if (action != null) {
                 RbacPrincipal rbac = new RbacPrincipal(tenantId, userId);
-                RbacScope scope = permissionEvaluatorService.targetScope(rbac, request.getInstitutionId(), null);
+                RbacScope scope = approvalScope(rbac, request);
                 allowed = permissionEvaluatorService.can(rbac, action, scope, RbacTarget.of(request.getRequestedByUserId())).allowed();
             }
         }
@@ -203,8 +245,12 @@ public class ApprovalInboxService {
                     "Approval request is not in PENDING state (status=" + request.getStatus() + ")");
         }
 
-        // Rule 11: self-approval prohibited
-        if (request.getRequestedByUserId().equals(userId)) {
+        // Rule 11: self-approval is prohibited except an APPROVED DEC-10 HOD correction for the session the HOD marked.
+        String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
+        String decision = requestDto.decision().trim().toUpperCase();
+        if (request.getRequestedByUserId().equals(userId)
+                && !("APPROVED".equals(decision)
+                    && isHodSelfApprovalForOwnMarkedSession(tenantId, request, activeRole, userId))) {
             log.warn("Security violation: user {} attempted to decide their own approval request {}", userId, approvalRequestId);
             throw new SelfApprovalForbiddenException("A principal may not approve or decide their own request (Addendum rule 11).");
         }
@@ -232,31 +278,29 @@ public class ApprovalInboxService {
             throw new UnauthorizedException("Separation of duties: A user cannot act at multiple steps of the same approval request (Addendum rule 12).");
         }
 
-        String decision = requestDto.decision().trim().toUpperCase();
         if ("REJECTED".equals(decision) && (requestDto.remark() == null || requestDto.remark().isBlank())) {
             throw new BusinessRuleViolationException("REJECTION_REMARK_REQUIRED",
                     "A remark is mandatory when rejecting an approval request.");
         }
 
         // P-01 / P-04: the audit and the step record the real active role, never a fallback.
-        String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
         if (activeRole == null) {
             throw new UnauthorizedException("No active role: choose an active role before deciding an approval.");
         }
-        String action = resolveApprovalAction(request);
+        String action = resolveApprovalAction(request, step);
         if (action == null) {
             throw new UnauthorizedException("Approval process " + request.getProcessCode() + " cannot be resolved to an action; denied.");
         }
         ApprovalRouting.Route route = approvalRouting.route(tenantId, userId, activeRole, request, step)
                 .orElseThrow(() -> new UnauthorizedException(
-                        "NOT_CURRENT_APPROVER: your active role is not the approver of step " + stepNo + " ("
-                                + step.getApproverRoleCode() + ")."));
+                        "NOT_CURRENT_APPROVER: your active role is not authorized by the current approval hierarchy for step " + stepNo + "."));
 
-        // The action and scope check: the delegator's rights when acting by delegation.
+        // The action and scope check: the delegator's rights when acting by delegation. The scope is
+        // the request's institution, or its department for a department-scoped (HOD) active role -
+        // exact matching still applies, so an HOD of another department is denied.
         UUID checked = route.via() == ApprovalRouting.Via.DELEGATION ? route.delegatorUserId() : userId;
         RbacPrincipal rbac = new RbacPrincipal(tenantId, checked);
-        permissionEvaluatorService.authorize(rbac, action,
-                permissionEvaluatorService.targetScope(rbac, request.getInstitutionId(), null),
+        permissionEvaluatorService.authorize(rbac, action, approvalScope(rbac, request),
                 RbacTarget.of(request.getRequestedByUserId()));
 
         Instant now = Instant.now();
@@ -305,13 +349,62 @@ public class ApprovalInboxService {
             case ROLLDOWN -> " (acting for " + route.actingForRole() + " by roll-down, no holder)";
             default -> "";
         };
-        auditLogService.record(AuditEventType.APPROVAL, null, request.getSubjectId().toString(), null,
-                "Approval request " + approvalRequestId + " step " + stepNo + " decided as " + decision
-                        + " by " + activeRole + actingFor);
+        if (isAttendanceCorrectionRequest(request) && request.getRequestedByUserId().equals(userId)
+                && "APPROVED".equals(decision)) {
+            auditLogService.record(new AuditEntry(AuditEventType.ATTENDANCE_CORRECTION_SELF_APPROVED,
+                    "ATTENDANCE_CORRECTION_APPROVE", "ATTENDANCE_CORRECTION_REQUEST", request.getSubjectId(),
+                    request.getInstitutionId(), Map.of("approval_status", "PENDING"), Map.of("approval_status", "APPROVED"),
+                    1, "P", "SUCCESS"));
+        } else {
+            auditLogService.record(AuditEventType.APPROVAL, null, request.getSubjectId().toString(), null,
+                    "Approval request " + approvalRequestId + " step " + stepNo + " decided as " + decision
+                            + " by " + activeRole + actingFor);
+        }
 
         List<ApprovalStep> allSteps = approvalStepRepository
                 .findByIdTenantIdAndApprovalRequestIdOrderByStepNoAsc(tenantId, approvalRequestId);
+        if (approvalCountPublisher != null) {
+            approvalCountPublisher.publishForRole(tenantId, request.getInstitutionId(), step.getApproverRoleCode());
+            if ("PENDING".equals(request.getStatus())) {
+                approvalStepRepository.findByIdTenantIdAndApprovalRequestIdAndStepNo(
+                        tenantId, approvalRequestId, request.getCurrentStepNo())
+                        .ifPresent(next -> approvalCountPublisher.publishForRole(
+                                tenantId, request.getInstitutionId(), next.getApproverRoleCode()));
+            }
+            approvalCountPublisher.publishForUser(tenantId, userId);
+        }
         return new DecideApprovalResponseDto(toSummaryDto(request, allSteps), subjectNewStatus, List.of());
+    }
+
+    /** DEC-10: only a HOD requester correcting the attendance session they personally marked may self-approve. */
+    private boolean isHodSelfApprovalForOwnMarkedSession(UUID tenantId, ApprovalRequest request, String activeRole, UUID userId) {
+        if (!"HEAD_OF_DEPARTMENT".equalsIgnoreCase(activeRole) || jdbcTemplate == null || request.getInstitutionId() == null) return false;
+        String process = request.getProcessCode();
+        String subject = request.getSubjectType();
+        boolean attendanceCorrection =
+                "ATTENDANCE_CORRECTION_COLLEGE".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION_SCHOOL".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(process)
+                || "ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subject)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subject);
+        if (!attendanceCorrection) return false;
+        try {
+            UUID markedBy = jdbcTemplate.queryForObject("""
+                    SELECT s.marked_by_user_id
+                    FROM app.attendance_correction_request cr
+                    JOIN app.attendance_session s
+                      ON s.tenant_id = cr.tenant_id
+                     AND s.institution_id = cr.institution_id
+                     AND s.attendance_session_id = cr.attendance_session_id
+                     AND s.session_kind = 'PERIOD'
+                    WHERE cr.tenant_id = ?
+                      AND cr.institution_id = ?
+                      AND cr.attendance_correction_request_id = ?
+                    """, UUID.class, tenantId, request.getInstitutionId(), request.getSubjectId());
+            return userId.equals(markedBy);
+        } catch (EmptyResultDataAccessException ex) {
+            return false;
+        }
     }
 
     /** Which action an approval process needs; null when the process is unknown (deny). */
@@ -319,7 +412,7 @@ public class ApprovalInboxService {
         String subjectType = request.getSubjectType();
         String processCode = request.getProcessCode();
         if ("INSTITUTION".equalsIgnoreCase(subjectType)) {
-            if ("INSTITUTION_ACTIVATION".equalsIgnoreCase(processCode) || "ACTIVATION".equalsIgnoreCase(processCode)) {
+            if ("INSTITUTION_ACTIVATION".equalsIgnoreCase(processCode) || "INSTITUTION_ACTIVATE".equalsIgnoreCase(processCode) || "ACTIVATION".equalsIgnoreCase(processCode)) {
                 return "INSTITUTION_ACTIVATE";
             }
             if ("INSTITUTION_BLOCK".equalsIgnoreCase(processCode)) {
@@ -333,6 +426,57 @@ public class ApprovalInboxService {
         if ("STUDENT_GUARDIAN_LINK".equalsIgnoreCase(subjectType) || "GUARDIAN_CHANGE".equalsIgnoreCase(processCode)) {
             return "GUARDIAN_CHANGE_APPROVE";
         }
+        if ("ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subjectType)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subjectType)
+                || "ATTENDANCE_CORRECTION".equalsIgnoreCase(processCode)
+                || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_CORRECTION_"))) {
+            return "ATTENDANCE_CORRECTION_APPROVE";
+        }
+        if ("ATTENDANCE_BULK_UPLOAD".equalsIgnoreCase(subjectType)
+                || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"))) {
+            return "ATTENDANCE_BULK_UPLOAD_APPROVE";
+        }
+        if (isStaffAttendanceCheckinReview(request)) {
+            return "STAFF_ATTENDANCE_CHECKIN_REVIEW";
+        }
+        return null;
+    }
+
+    private static boolean isStaffLeaveApproval(ApprovalRequest request) {
+        if (request == null || !("LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType())
+                || "STAFF_LEAVE_REQUEST".equalsIgnoreCase(request.getSubjectType()))) return false;
+        return java.util.Set.of("FACULTY_LEAVE_COLLEGE", "HOD_LEAVE", "VICE_PRINCIPAL_LEAVE",
+                "ADMIN_ACCOUNTANT_LEAVE_COLLEGE", "NON_TEACHING_LEAVE_COLLEGE",
+                "TEACHER_LEAVE_SCHOOL", "SCHOOL_STAFF_LEAVE", "UNIVERSITY_STAFF_LEAVE",
+                "REGISTRAR_LEAVE", "VC_LEAVE", "DPC_LEAVE", "PRINCIPAL_LEAVE")
+                .contains(request.getProcessCode());
+    }
+
+    /** Resolves each staff-leave step to its own Action Register permission. */
+    public static String resolveApprovalAction(ApprovalRequest request, ApprovalStep step) {
+        if (request == null || step == null || !isStaffLeaveApproval(request)) {
+            return resolveApprovalAction(request);
+        }
+        String role = step.getApproverRoleCode();
+        String requesterRole = request.getRequesterActiveRole();
+        if ("PRINCIPAL_COLLEGE".equalsIgnoreCase(requesterRole)
+                || "SCHOOL_PRINCIPAL".equalsIgnoreCase(requesterRole)) {
+            return "PRINCIPAL_LEAVE_APPROVE";
+        }
+        if ("VICE_CHANCELLOR".equalsIgnoreCase(requesterRole)) return "SENIOR_LEAVE_APPROVE";
+        if ("REGISTRAR".equalsIgnoreCase(requesterRole)
+                && ("HR_MANAGER".equalsIgnoreCase(role) || "UNIVERSITY_HR_MANAGER".equalsIgnoreCase(role))) {
+            return "STAFF_LEAVE_VERIFY_HR";
+        }
+        if ("REGISTRAR".equalsIgnoreCase(requesterRole)) return "SENIOR_LEAVE_APPROVE";
+        if ("HEAD_OF_DEPARTMENT".equalsIgnoreCase(role)) return "STAFF_LEAVE_RECOMMEND_HOD";
+        if ("HR_MANAGER".equalsIgnoreCase(role) || "UNIVERSITY_HR_MANAGER".equalsIgnoreCase(role)) {
+            return "STAFF_LEAVE_VERIFY_HR";
+        }
+        if ("PRINCIPAL_COLLEGE".equalsIgnoreCase(role) || "SCHOOL_PRINCIPAL".equalsIgnoreCase(role)) {
+            return "STAFF_LEAVE_APPROVE_PRINCIPAL";
+        }
+        if ("REGISTRAR".equalsIgnoreCase(role)) return "STAFF_LEAVE_APPROVE_REGISTRAR";
         return null;
     }
 
@@ -353,7 +497,7 @@ public class ApprovalInboxService {
                         studentGuardianLinkRepository.save(link);
                     });
         } else if ("INSTITUTION".equals(request.getSubjectType())) {
-            boolean activation = "INSTITUTION_ACTIVATION".equalsIgnoreCase(request.getProcessCode());
+            boolean activation = "INSTITUTION_ACTIVATION".equalsIgnoreCase(request.getProcessCode()) || "INSTITUTION_ACTIVATE".equalsIgnoreCase(request.getProcessCode());
             institutionRepository.findByIdTenantIdAndIdInstitutionId(tenantId, request.getSubjectId()).ifPresent(inst -> {
                 if (approved && activation) {
                     // Rule C7: the Principal's-leave approver must be set before an institution goes live.
@@ -387,7 +531,38 @@ public class ApprovalInboxService {
                 run.setUpdatedBy(actor);
                 promotionRunRepository.save(run);
             });
+        } else if (isAttendanceProcess(request) || isStaffLeaveApproval(request)
+                || isStaffAttendanceCheckinReview(request)
+                || ("CONCESSION".equalsIgnoreCase(request.getProcessCode()) && "CONCESSION".equalsIgnoreCase(request.getSubjectType()))
+                || "SCHOLARSHIP_LIST".equalsIgnoreCase(request.getProcessCode())
+                || "FEE_STRUCTURE".equalsIgnoreCase(request.getProcessCode())) {
+            ApprovalOutcomeHandler handler = outcomeHandlers.stream().filter(candidate -> candidate.supports(request))
+                    .findFirst().orElseThrow(() -> new BusinessRuleViolationException(
+                            "APPROVAL_HANDLER_NOT_REGISTERED",
+                            "No outcome handler is registered for approval process " + request.getProcessCode() + "."));
+            handler.apply(tenantId, request, approved, actor);
         }
+    }
+
+    private static boolean isAttendanceCorrectionRequest(ApprovalRequest request) {
+        String subject = request.getSubjectType();
+        String process = request.getProcessCode();
+        return "ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subject) || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subject)
+                || "ATTENDANCE_CORRECTION_COLLEGE".equalsIgnoreCase(process) || "ATTENDANCE_CORRECTION_SCHOOL".equalsIgnoreCase(process);
+    }
+
+    /** V4.1 staff self-attendance check-in review (sql/76); side effect in StaffCheckinApprovalOutcomeHandler. */
+    private static boolean isStaffAttendanceCheckinReview(ApprovalRequest request) {
+        return "STAFF_ATTENDANCE_REVIEW".equalsIgnoreCase(request.getProcessCode())
+                && "STAFF_ATTENDANCE_CHECKIN".equalsIgnoreCase(request.getSubjectType());
+    }
+
+    private static boolean isAttendanceProcess(ApprovalRequest request) {
+        String subject = request.getSubjectType();
+        String process = request.getProcessCode();
+        return isAttendanceCorrectionRequest(request)
+                || "ATTENDANCE_BULK_UPLOAD".equalsIgnoreCase(subject)
+                || (process != null && process.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"));
     }
 
     private static ResourceNotFoundException notFound(UUID approvalRequestId) {

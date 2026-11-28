@@ -47,4 +47,7 @@ public class ActionCatalog {
 
     @Column(name = "changed_in")
     private String changedIn;
+
+    @Column(name = "support_readable")
+    private boolean supportReadable;
 }

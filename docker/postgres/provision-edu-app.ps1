@@ -62,7 +62,37 @@ function Run-Sql($file) {
     # Copy the file in and run it with psql -f, instead of piping it through PowerShell: Windows
     # PowerShell 5.1 re-encodes piped text to native programs, which turned every non-ASCII
     # character of the bundle (e.g. the '<=3.2' (U+2264) version labels in 05_ref_data.sql) into '?'.
+        if ($file -eq "67_v41_assignment_and_submission_schema.sql") {
+        $has67 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.assignment') IS NOT NULL"
+        if ($has67.Trim() -eq "t") { return }
+    }
+    if ($file -eq "68_v41_exam_cycle_marks_and_report_cards.sql") {
+        $has68 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.exam_cycle') IS NOT NULL"
+        if ($has68.Trim() -eq "t") { return }
+    }
+    if ($file -eq "69_v41_fee_read_models_and_dues.sql") {
+        $has69 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regprocedure('app.fn_fee_balance(uuid, uuid)') IS NOT NULL"
+        if ($has69.Trim() -eq "t") { return }
+    }
+    if ($file -eq "70_v41_fee_concession_and_payment_idempotency.sql") {
+        $has70 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT count(*) >= 2 FROM ref.standard_role_action WHERE action_code = 'CONCESSION_APPROVE'"
+        if ($has70.Trim() -eq "t") { return }
+    }
+    if ($file -eq "71_v41_id_cards_and_certificates.sql") {
+        $has71 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.id_card_template') IS NOT NULL"
+        if ($has71.Trim() -eq "t") { return }
+    }
+    if ($file -eq "72_v41_disciplinary_and_grievance_guard.sql") {
+        $has72 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.disciplinary_incident') IS NOT NULL"
+        if ($has72.Trim() -eq "t") { return }
+    }
     $target = "/tmp/edu360_provision_$file"
+    if ($file -eq "67_v41_assignment_and_submission_schema.sql") {
+        $has67 = docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -tAc "SELECT to_regclass('app.assignment') IS NOT NULL"
+        if ($has67.Trim() -eq "t") {
+            return
+        }
+    }
     docker cp (Join-Path $root "sql\$file") "${container}:$target" | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Copying sql\$file into the Postgres container failed (docker exit code $LASTEXITCODE)."
@@ -119,10 +149,21 @@ if ($platformRolesApplied.Trim() -ne "t") {
     Run-Sql "12_v41_platform_roles.sql"
 }
 foreach ($f in @("12d_v41_platform_role_templates.sql", "14_v41_audit_foundation.sql", "15_v41_user_active_role.sql",
-                 "16_v41_tenant_top_post_authority.sql", "18_v41_user_sessions.sql", "20_v41_never_allowed_guard.sql", "22_v41_platform_audit_event_type.sql", "24_v41_sign_in_security.sql", "24d_v41_action_module_map.sql")) {
+                 "16_v41_tenant_top_post_authority.sql", "18_v41_user_sessions.sql", "20_v41_never_allowed_guard.sql", "22_v41_platform_audit_event_type.sql", "24_v41_sign_in_security.sql", "24d_v41_action_module_map.sql",
+                 "25_sprint2_foundations.sql", "26_v41_student_login_switch_guard.sql", "27_v41_notification_read_state.sql", "28_v41_study_material_view.sql", "29_v41_institution_code_formats.sql", "30_v41_exam_day_event_type.sql", "31_v41_staff_record_view_grants.sql", "32_v41_staff_login_aliases.sql", "33_v41_study_material_leadership_grants.sql", "36_v41_plan_commercial.sql", "37_v41_feature_catalog_and_provisioning.sql", "38_v41_invoice_approval_and_renewal.sql", "39_v41_billing_settings.sql", "40_v41_support_session.sql", "41_v41_support_readable.sql", "49_v41_platform_notification.sql", "50_v41_platform_audit_payload_idempotency.sql", "51_v41_mfa_recovery.sql", "52_v41_tenant_branding_logo.sql", "45_v41_usage_rollup.sql", "42_v41_deletion_retention_waiver.sql", "44_v41_release_scheduling.sql", "53_v41_platform_approval_delegation.sql", "54_v41_subscription_commercial_engine.sql", "55_v41_term_lock_engine.sql", "56_v41_rolldown_management_revocation.sql",
+                 "57_v41_academic_hierarchy_constraints.sql", "58_v41_department_program_section_schema.sql",
+                 "59_v41_staff_qualification_and_leave_indexes.sql", "60_v41_leave_delegation.sql",
+                 "61_v41_student_profile_and_guardians.sql", "62_v41_student_notes_and_legal_holds.sql",
+                 "63_v41_admission_cycles_and_applications.sql", "64_v41_merit_list_and_seat_allocation.sql",
+                 "65_v41_timetable_gist_constraints.sql", "66_v41_attendance_and_medical_exemptions.sql",
+                 "67_v41_assignment_and_submission_schema.sql", "68_v41_exam_cycle_marks_and_report_cards.sql",
+                 "69_v41_fee_read_models_and_dues.sql", "70_v41_fee_concession_and_payment_idempotency.sql",
+                 "71_v41_id_cards_and_certificates.sql", "72_v41_disciplinary_and_grievance_guard.sql",
+                 "73_v41_notices_and_communications.sql", "74_v41_library_and_transport_schema.sql",
+                 "75_v41_landing_cms_and_enquiries.sql")) {
     Run-Sql $f
 }
-Write-Host "V4.1 migrations applied (12d, 14, 15, 16, 18, 20, 22)."
+Write-Host "V4.1 migrations applied (including the term lock and permanent roll-down revocation engines)."
 
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "ALTER ROLE edu_app WITH PASSWORD '$password'"
 Write-Host "edu_app role credential set."
@@ -140,6 +181,7 @@ Write-Host "edu_app role credential set."
 # granting only table-level SELECT still fails with "permission denied for schema platform".
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT USAGE ON SCHEMA platform TO edu_app"
 docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT ON platform.tenant, platform.platform_user, platform.audit_outbox TO edu_app"
+docker exec -e PGPASSWORD=edu360 $container psql -h localhost -U edu360 -d edu360db -v ON_ERROR_STOP=1 -q -c "GRANT SELECT, INSERT, UPDATE ON platform.approval_delegation TO edu_app"
 Write-Host "Granted edu_app read-only access to platform.tenant, platform.platform_user, and platform.audit_outbox."
 
 # edu_platform (created by sql/01_schema.sql, already granted SELECT/INSERT/UPDATE on

@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
-import { Badge, Button, DataTable, Modal, Notice, TextField } from "../../../../design-system/components";
+import { useEffect, useState, type FormEvent } from "react";
+import { Badge, Button, DataTable, Modal, Notice, SelectField, TextAreaField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
+import { institutionService, type InstitutionItem } from "../../../institution-admin/api/institutionService";
 import {
   userManagementService,
   type ImportJobResponse,
@@ -22,6 +23,8 @@ export function BulkUploadModal({
 }: BulkUploadModalProps) {
   const [csvContent, setCsvContent] = useState("");
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [institutionsError, setInstitutionsError] = useState("");
   const [validating, setValidating] = useState(false);
   const [starting, setStarting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
@@ -29,6 +32,16 @@ export function BulkUploadModal({
   const [job, setJob] = useState<ImportJobResponse | null>(null);
   const [rowErrors, setRowErrors] = useState<ImportRowErrorResponse[]>([]);
   const [completedMessage, setCompletedMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setInstitutionsError("");
+    institutionService.listInstitutions(tenantId)
+      .then((response) => { if (!cancelled) setInstitutions(response.items ?? []); })
+      .catch((cause: unknown) => { if (!cancelled) setInstitutionsError(getApiErrorMessage(cause)); });
+    return () => { cancelled = true; };
+  }, [tenantId, isOpen]);
 
   const handleDownloadTemplate = async () => {
     setDownloadingTemplate(true);
@@ -110,10 +123,10 @@ export function BulkUploadModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="USER_BULK_UPLOAD"
-      title="Bulk upload users"
+      kicker="ACCOUNT IMPORT"
+      title="Bulk upload user accounts"
       titleId="bulk-upload-title"
-      description="Upload a CSV file of staff, faculty or student accounts. Enforces pre-validation and row error tracking [Rule MD-27]."
+      description="Import supported user accounts from CSV with pre-validation and row-level error tracking. This workflow does not create student profiles or enrolments. Student CSV admission is not available yet; use Create student profile for individual admissions."
       size="lg"
     >
       <div style={{ padding: "0.5rem 0" }}>
@@ -123,17 +136,17 @@ export function BulkUploadModal({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "0.75rem 1rem",
-            background: "var(--color-bg-subtle, #f8fafc)",
+            padding: "var(--space-3) var(--space-4)",
+            background: "var(--color-bg-subtle)",
             borderRadius: "6px",
-            marginBottom: "1rem",
-            border: "1px solid var(--color-border, #e2e8f0)",
+            marginBottom: "var(--space-4)",
+            border: "1px solid var(--color-border-divider)",
           }}
         >
           <div>
             <strong>1. Need a template?</strong>
-            <div style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary, #64748b)" }}>
-              Download standard CSV with required headers and sample data [MD-26].
+            <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
+              Download a standard CSV template with the required headers and sample data.
             </div>
           </div>
           <Button
@@ -148,10 +161,10 @@ export function BulkUploadModal({
 
         {/* Form */}
         <form onSubmit={handlePreValidate}>
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <label
               htmlFor="csv-file-input"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.25rem" }}
+              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
             >
               2. Select CSV File
             </label>
@@ -160,63 +173,64 @@ export function BulkUploadModal({
               type="file"
               accept=".csv,text/csv"
               onChange={handleFileChange}
-              style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
-            />
-          </div>
-
-          <div style={{ marginBottom: "1rem" }}>
-            <label
-              htmlFor="csv-textarea"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.25rem" }}
-            >
-              Or paste CSV text directly:
-            </label>
-            <textarea
-              id="csv-textarea"
-              rows={4}
-              value={csvContent}
-              onChange={(e) => setCsvContent(e.target.value)}
-              placeholder="email,fullName,userType,mobile,nationalIdLast4,roleCode&#10;john.doe@northbridge.edu.in,John Doe,STAFF,+919876543210,4821,OFFICE_STAFF"
               style={{
                 width: "100%",
-                padding: "0.5rem",
-                fontFamily: "monospace",
-                fontSize: "0.85rem",
-                borderRadius: "4px",
-                border: "1px solid var(--color-border, #cbd5e1)",
+                padding: "var(--space-2)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--color-border-divider)",
+                backgroundColor: "var(--color-bg-surface)",
+                color: "var(--color-text)",
               }}
             />
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
-            <TextField
-              id="bulk-institution-id"
-              label="Institution ID (Optional for college/school scoped uploads)"
-              value={institutionId}
-              onChange={(e) => setInstitutionId(e.target.value)}
-              placeholder="UUID of the institution, or leave empty for university scope"
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            <TextAreaField
+              id="csv-textarea"
+              label="Or paste CSV text directly:"
+              rows={4}
+              value={csvContent}
+              onChange={(e) => setCsvContent(e.target.value)}
+              placeholder="email,fullName,userType,mobile,nationalIdLast4,roleCode&#10;john.doe@northbridge.edu.in,John Doe,STAFF,+919876543210,4821,OFFICE_STAFF"
+              className="font-mono text-xs"
             />
           </div>
 
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            <SelectField
+              id="bulk-institution"
+              label="Institution (Optional for university-wide uploads)"
+              value={institutionId}
+              onChange={(e) => setInstitutionId(e.target.value)}
+              disabled={institutions.length === 0}
+            >
+              <option value="">All institutions / university-wide</option>
+              {institutions.map((item) => (
+                <option key={item.institutionId} value={item.institutionId}>{item.institutionName} · {item.institutionCode}</option>
+              ))}
+            </SelectField>
+            {institutionsError && <Notice tone="danger">{institutionsError}</Notice>}
+          </div>
+
           {error && (
-            <div style={{ marginBottom: "1rem" }}>
+            <div style={{ marginBottom: "var(--space-4)" }}>
               <Notice tone="danger">{error}</Notice>
             </div>
           )}
 
           {completedMessage && (
-            <div style={{ marginBottom: "1rem" }}>
+            <div style={{ marginBottom: "var(--space-4)" }}>
               <Notice tone="success">{completedMessage}</Notice>
             </div>
           )}
 
           {!job && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
               <Button type="button" variant="secondary" onClick={onClose} disabled={validating}>
                 Cancel
               </Button>
               <Button type="submit" variant="primary" busy={validating} disabled={!csvContent.trim()}>
-                Pre-validate CSV (Rule MD-27)
+                Pre-validate CSV
               </Button>
             </div>
           )}
@@ -224,34 +238,27 @@ export function BulkUploadModal({
 
         {/* Pre-validation Report */}
         {job && (
-          <div style={{ marginTop: "1.25rem", borderTop: "1px solid var(--color-border, #e2e8f0)", paddingTop: "1rem" }}>
-            <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>
-              Pre-validation Results [Rule MD-27]
+          <div style={{ marginTop: "var(--space-5)", borderTop: "1px solid var(--color-border-divider)", paddingTop: "var(--space-4)" }}>
+            <h3 style={{ fontSize: "1rem", margin: "0 0 var(--space-2)" }}>
+              Pre-validation results
             </h3>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "0.75rem",
-                marginBottom: "1rem",
-              }}
-            >
-              <div style={{ background: "var(--color-bg-subtle, #f8fafc)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary, #64748b)" }}>Total Rows</div>
+            <div className="app-stat-row">
+              <div style={{ background: "var(--color-bg-subtle)", padding: "var(--space-3)", borderRadius: "6px", textAlign: "center" }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Total Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.totalRows}</div>
               </div>
-              <div style={{ background: "#ecfdf5", padding: "0.75rem", borderRadius: "6px", textAlign: "center", color: "#065f46" }}>
+              <div style={{ background: "var(--color-status-success-bg)", padding: "0.75rem", borderRadius: "6px", textAlign: "center", color: "var(--color-status-success-fg)" }}>
                 <div style={{ fontSize: "0.75rem" }}>Valid Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.validRows}</div>
               </div>
               <div
                 style={{
-                  background: job.errorRows > 0 ? "#fef2f2" : "var(--color-bg-subtle, #f8fafc)",
+                  background: job.errorRows > 0 ? "var(--color-status-danger-bg)" : "var(--color-bg-subtle)",
                   padding: "0.75rem",
                   borderRadius: "6px",
                   textAlign: "center",
-                  color: job.errorRows > 0 ? "#991b1b" : "inherit",
+                  color: job.errorRows > 0 ? "var(--color-status-danger-fg)" : "inherit",
                 }}
               >
                 <div style={{ fontSize: "0.75rem" }}>Error Rows</div>
@@ -261,9 +268,9 @@ export function BulkUploadModal({
 
             {/* Error Rows Breakdown Table */}
             {rowErrors.length > 0 && (
-              <div style={{ marginBottom: "1rem" }}>
-                <h4 style={{ fontSize: "0.875rem", color: "#991b1b", margin: "0 0 0.5rem" }}>
-                  Rejected rows kept to fix and add later [Rule MD-27]:
+              <div style={{ marginBottom: "var(--space-4)" }}>
+                <h4 style={{ fontSize: "0.875rem", color: "var(--color-status-danger-fg)", margin: "0 0 var(--space-2)" }}>
+                  Rows with errors can be corrected and imported later:
                 </h4>
                 <DataTable
                   headers={["Row #", "Field", "Error Code", "Message"]}
@@ -274,7 +281,7 @@ export function BulkUploadModal({
                       <td><code>{err.rowNumber}</code></td>
                       <td><strong>{err.fieldName || "—"}</strong></td>
                       <td><Badge tone="neutral">{err.errorCode}</Badge></td>
-                      <td style={{ color: "var(--color-text-secondary, #64748b)" }}>{err.errorMessage}</td>
+                      <td style={{ color: "var(--color-text-muted)" }}>{err.errorMessage}</td>
                     </tr>
                   ))}
                 </DataTable>
@@ -284,20 +291,20 @@ export function BulkUploadModal({
             {/* Statutory Notice */}
             <div
               style={{
-                padding: "0.625rem 0.875rem",
-                backgroundColor: "var(--color-surface-subtle, #f3f4f6)",
+                padding: "var(--space-2) var(--space-3)",
+                backgroundColor: "var(--color-bg-subtle)",
                 borderRadius: "6px",
                 fontSize: "0.8125rem",
-                color: "var(--color-muted)",
-                marginBottom: "1rem",
+                color: "var(--color-text-muted)",
+                marginBottom: "var(--space-4)",
               }}
             >
-              <strong>Statutory Notice (DPDP Act 2023 / UIDAI [R2-34]):</strong> Unmasked 12-digit Aadhaar numbers are rejected. Only masked 4-digit national IDs are accepted and persisted.
+              <strong>Privacy notice:</strong> Unmasked 12-digit Aadhaar numbers are rejected. Only masked 4-digit national IDs are accepted and persisted.
             </div>
 
             {/* Actions */}
             {job.status !== "COMPLETED" ? (
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", flexWrap: "wrap" }}>
                 <Button type="button" variant="secondary" onClick={onClose} disabled={starting}>
                   Cancel
                 </Button>
@@ -307,7 +314,7 @@ export function BulkUploadModal({
                   disabled={job.errorRows > 0 || starting}
                   busy={starting}
                   onClick={() => handleStartImport("CLEAN_ONLY")}
-                  title={job.errorRows > 0 ? "Disabled: errors must be fixed first [MD-27]" : "Import only clean file"}
+                  title={job.errorRows > 0 ? "Fix the errors before importing a clean file" : "Import only clean file"}
                 >
                   Import clean only {job.errorRows > 0 ? "(Disabled: errors present)" : ""}
                 </Button>

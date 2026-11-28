@@ -11,8 +11,8 @@ import jakarta.validation.constraints.Size;
 public record CreateMasterCalendarEventRequest(
         @NotNull(message = "academicSessionId is required") UUID academicSessionId,
         @NotBlank(message = "eventType is required")
-        @Pattern(regexp = "SEMESTER_DATES|UNIVERSITY_HOLIDAY",
-                message = "eventType must be either SEMESTER_DATES or UNIVERSITY_HOLIDAY for master calendar events")
+        @Pattern(regexp = "SEMESTER_DATES|UNIVERSITY_HOLIDAY|EXAM_DAY",
+                message = "eventType must be SEMESTER_DATES, UNIVERSITY_HOLIDAY or EXAM_DAY for master calendar events")
         String eventType,
         @NotBlank(message = "title is required")
         @Size(min = 1, max = 200, message = "title must be between 1 and 200 characters")

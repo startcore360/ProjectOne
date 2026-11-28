@@ -52,6 +52,12 @@ public class UserLeaveRequest {
     @Column(name = "process_code", nullable = false)
     private String processCode;
 
+    @Column(name = "approval_request_id")
+    private UUID approvalRequestId;
+
+    @Column(name = "loss_of_pay_days", nullable = false)
+    private BigDecimal lossOfPayDays = BigDecimal.ZERO;
+
     @Column(name = "status", nullable = false)
     private String status;
 

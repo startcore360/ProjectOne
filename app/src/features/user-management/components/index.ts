@@ -7,3 +7,5 @@ export * from "./users/CreateTopUserModal";
 export * from "./users/BulkUploadModal";
 export * from "./details/StudentStatusPanel";
 export * from "./details/GuardianManagementPanel";
+
+export * from "./users/CreateStudentModal";

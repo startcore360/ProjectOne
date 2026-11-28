@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+import { useEffect, useState, type FormEvent } from "react";
+import { Button, Modal, Notice, SelectField } from "../../../../design-system/components";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   leaveApproverService,
   type ApproverKind,
+  type LeaveApproverCandidate,
 } from "../../api/leaveApproverService";
 import type { InstitutionItem } from "../../api/institutionService";
 
@@ -22,15 +23,37 @@ export function PrincipalLeaveApproverModal({
 }: PrincipalLeaveApproverModalProps) {
   const [approverKind, setApproverKind] = useState<ApproverKind>("MANAGEMENT");
   const [approverUserId, setApproverUserId] = useState("");
+  const [candidates, setCandidates] = useState<LeaveApproverCandidate[]>([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!institution) return;
+    let cancelled = false;
+    setLoadingCandidates(true);
+    setCandidateError(null);
+    setCandidates([]);
+    setApproverUserId("");
+    leaveApproverService.listPrincipalApproverCandidates(tenantId, institution.institutionId, approverKind)
+      .then((items) => { if (!cancelled) setCandidates(items); })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setCandidates([]);
+          setCandidateError(getApiErrorMessage(err));
+        }
+      })
+      .finally(() => { if (!cancelled) setLoadingCandidates(false); });
+    return () => { cancelled = true; };
+  }, [tenantId, institution?.institutionId, approverKind]);
 
   if (!institution) return null;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!approverUserId.trim()) {
-      setError("Approver User ID is required [Rule C7].");
+    if (!approverUserId) {
+      setError("Choose an eligible approver account.");
       return;
     }
     setSaving(true);
@@ -38,9 +61,9 @@ export function PrincipalLeaveApproverModal({
     try {
       await leaveApproverService.setPrincipalLeaveApprover(tenantId, institution.institutionId, {
         approverKind,
-        approverUserId: approverUserId.trim(),
+        approverUserId,
       });
-      onSaved(`Leave approver configured successfully for '${institution.institutionName}' [Rule C7].`);
+      onSaved(`Leave approver configured successfully for '${institution.institutionName}'.`);
       setApproverUserId("");
       onClose();
     } catch (err: unknown) {
@@ -60,7 +83,7 @@ export function PrincipalLeaveApproverModal({
       }}
       title={`Configure Leave Approver: ${institution.institutionName}`}
       titleId="approver-modal-title"
-      description="Designate who approves leaves submitted by the head/principal of this institution [Rule C7]."
+      description="Choose who can approve leave requests submitted by the head or principal of this institution."
       size="sm"
     >
       {error && (
@@ -70,39 +93,38 @@ export function PrincipalLeaveApproverModal({
       )}
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <label
-            htmlFor="approver-kind"
-            style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
-          >
-            Approver Role / Kind *
-          </label>
-          <select
-            id="approver-kind"
-            value={approverKind}
-            onChange={(e) => setApproverKind(e.target.value as ApproverKind)}
-            style={{
-              width: "100%",
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-md, 4px)",
-              border: "1px solid var(--color-border, #ccc)",
-            }}
-          >
-            <option value="MANAGEMENT">MANAGEMENT (Management / Trustees)</option>
-            <option value="VICE_CHANCELLOR">VICE_CHANCELLOR (University VC)</option>
-            <option value="GOVERNING_BODY_APPROVER">GOVERNING_BODY_APPROVER (Governing Body)</option>
-          </select>
-        </div>
+        <SelectField
+          id="approver-kind"
+          label="Approver Role / Kind *"
+          required
+          value={approverKind}
+          onChange={(e) => setApproverKind(e.target.value as ApproverKind)}
+        >
+          <option value="MANAGEMENT">Management / Trustees</option>
+          <option value="VICE_CHANCELLOR">Vice Chancellor</option>
+          <option value="GOVERNING_BODY_APPROVER">Governing Body Approver</option>
+        </SelectField>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
-          <TextField
-            id="approver-user-id"
-            label="Approver User Account ID (UUID) *"
+          <SelectField
+            id="approver-user"
+            label="Select Approver *"
             required
             value={approverUserId}
+            disabled={loadingCandidates || candidates.length === 0}
             onChange={(e) => setApproverUserId(e.target.value)}
-            placeholder="00000000-0000-0000-0000-000000000009"
-          />
+          >
+            <option value="">{loadingCandidates ? "Loading eligible accounts…" : "Choose an approver"}</option>
+            {candidates.map((candidate) => (
+              <option key={candidate.userAccountId} value={candidate.userAccountId}>
+                {candidate.displayName} · {candidate.email}
+              </option>
+            ))}
+          </SelectField>
+          {candidateError && <Notice tone="danger">{candidateError}</Notice>}
+          {!loadingCandidates && !candidateError && candidates.length === 0 && (
+            <p className="app-empty-inline">No eligible accounts found for this role. Create or assign the appropriate account in Users &amp; Roles first.</p>
+          )}
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
@@ -117,7 +139,7 @@ export function PrincipalLeaveApproverModal({
           >
             Cancel
           </Button>
-          <Button type="submit" busy={saving}>
+          <Button type="submit" busy={saving} disabled={saving || loadingCandidates || !approverUserId}>
             Save Approver
           </Button>
         </div>

@@ -19,9 +19,13 @@ public record InvoiceResponse(
         BigDecimal totalAmount,
         String currencyCode,
         String status,
+        UUID approvedBy,
+        Instant approvedAt,
+        LocalDate dueAt,
         Instant sentAt,
         Instant paidAt,
         Instant overdueFlaggedAt,
+        boolean overdue,
         Integer rowVersion
 ) {
     public static InvoiceResponse fromEntity(Invoice i) {
@@ -37,9 +41,13 @@ public record InvoiceResponse(
                 i.getTotalAmount(),
                 i.getCurrencyCode(),
                 i.getStatus(),
+                i.getApprovedBy(),
+                i.getApprovedAt(),
+                i.getDueAt(),
                 i.getSentAt(),
                 i.getPaidAt(),
                 i.getOverdueFlaggedAt(),
+                "SENT".equals(i.getStatus()) && i.getDueAt() != null && i.getDueAt().isBefore(LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))),
                 i.getRowVersion()
         );
     }

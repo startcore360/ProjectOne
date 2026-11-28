@@ -1,0 +1,196 @@
+import { configureStore } from "@reduxjs/toolkit";
+import { Provider } from "react-redux";
+import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import authReducer, { setUser } from "../../../store/slices/authSlice";
+import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
+import { staffService, type StaffProfile } from "../api/staffService";
+import StaffRecordsPage from "./StaffRecordsPage";
+
+vi.mock("../api/staffService", () => ({
+  staffService: {
+    list: vi.fn(),
+    get: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    listAssignments: vi.fn(),
+    addAssignment: vi.fn(),
+    endAssignment: vi.fn(),
+    listDocuments: vi.fn(),
+    attachDocument: vi.fn(),
+    verifyDocument: vi.fn(),
+    listServiceRecords: vi.fn(),
+    addServiceRecord: vi.fn(),
+    uploadDocument: vi.fn(),
+  },
+}));
+
+const staffMember: StaffProfile = {
+  id: "staff-1",
+  userAccountId: null,
+  staffCode: "ST-004",
+  fullName: "Taylor Reed",
+  employmentStatus: "ACTIVE",
+  version: 1,
+};
+
+function renderWithActions(allowedActions: string[] = ["STAFF_RECORD_VIEW"]) {
+  const store = configureStore({ reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer } });
+  store.dispatch(setUser({
+    id: "u-1",
+    displayName: "HR Manager",
+    tenantId: "tenant-1",
+    userType: "STAFF",
+    platformRole: null,
+    roleCode: "HR_MANAGER",
+    roleName: "HR Manager",
+    photoUrl: null,
+    mustChangePassword: false,
+  }));
+  store.dispatch(setTenantPermissions({
+    tenantId: "tenant-1",
+    userAccountId: "u-1",
+    activeRoleCode: "HR_MANAGER",
+    activeRoleName: "HR Manager",
+    allowedActions,
+  }));
+  return render(<MemoryRouter initialEntries={["/university/staff"]}><Provider store={store}><StaffRecordsPage /></Provider></MemoryRouter>);
+}
+
+describe("StaffRecordsPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("loads staff records and renders the scoped directory", async () => {
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: [staffMember],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 1 },
+    });
+
+    renderWithActions();
+
+    expect(await screen.findByText("Taylor Reed")).toBeInTheDocument();
+    const directoryButton = screen.getByRole("button", { name: /Taylor Reed/ });
+    expect(directoryButton).toHaveTextContent("ST-004");
+    expect(directoryButton).toHaveTextContent("Active");
+    expect(screen.queryByText("No staff records found")).not.toBeInTheDocument();
+  });
+
+  it("shows a retryable error rather than a misleading empty directory when loading fails", async () => {
+    vi.mocked(staffService.list).mockRejectedValue(new Error("Directory unavailable"));
+
+    renderWithActions();
+
+    expect(await screen.findByText("Could not load staff")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText("No staff records found")).not.toBeInTheDocument();
+  });
+
+  it("shows profile creation only to a role with staff-management permission", async () => {
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: [],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 0 },
+    });
+
+    const { rerender } = renderWithActions(["STAFF_RECORD_VIEW"]);
+    await waitFor(() => expect(staffService.list).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: "Add staff member" })).not.toBeInTheDocument();
+
+    // The same route can expose management actions when the server supplies the management grant.
+    const store = configureStore({ reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer } });
+    store.dispatch(setUser({
+      id: "u-1",
+      displayName: "HR Manager",
+      tenantId: "tenant-1",
+      userType: "STAFF",
+      platformRole: null,
+      roleCode: "HR_MANAGER",
+      roleName: "HR Manager",
+      photoUrl: null,
+      mustChangePassword: false,
+    }));
+    store.dispatch(setTenantPermissions({
+      tenantId: "tenant-1", userAccountId: "u-1", activeRoleCode: "HR_MANAGER",
+      activeRoleName: "HR Manager", allowedActions: ["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"],
+    }));
+    rerender(<MemoryRouter initialEntries={["/university/staff"]}><Provider store={store}><StaffRecordsPage /></Provider></MemoryRouter>);
+    expect(screen.getAllByRole("button", { name: "Add staff member" }).length).toBeGreaterThan(0);
+  });
+  it("paginates a long staff directory and reports the visible page", async () => {
+    const staffRows = Array.from({ length: 12 }, (_, index) => ({
+      ...staffMember,
+      id: `staff-${index + 1}`,
+      staffCode: `ST-${String(index + 1).padStart(3, "0")}`,
+      fullName: `Staff Member ${index + 1}`,
+    }));
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: staffRows,
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: staffRows.length },
+    });
+
+    renderWithActions();
+
+    expect(await screen.findByText("Staff Member 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    expect(screen.queryByText("Staff Member 11")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByText("Staff Member 11")).toBeInTheDocument();
+    expect(screen.queryByText("Staff Member 1")).not.toBeInTheDocument();
+  });
+
+  it("fires blur-triggered format validation on mobile field in add staff modal", async () => {
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: [],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 0 },
+    });
+
+    renderWithActions(["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"]);
+    await waitFor(() => expect(staffService.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Add staff member" })[0]);
+    const modal = screen.getByRole("dialog");
+    const mobileInput = within(modal).getByLabelText("Mobile number");
+    fireEvent.change(mobileInput, { target: { value: "invalid-phone" } });
+    fireEvent.blur(mobileInput);
+
+    await waitFor(() => {
+      expect(mobileInput).toHaveAttribute("aria-invalid", "true");
+      expect(within(modal).getByRole("alert")).toHaveTextContent("Include the country code, for example +919876543210.");
+    });
+  });
+
+  it("fires blur-triggered validation on full name and official email in add staff modal", async () => {
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: [],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 0 },
+    });
+
+    renderWithActions(["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"]);
+    await waitFor(() => expect(staffService.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Add staff member" })[0]);
+    const modal = screen.getByRole("dialog");
+    const nameInput = within(modal).getByLabelText("Full name (Required)");
+    fireEvent.focus(nameInput);
+    fireEvent.blur(nameInput);
+
+    await waitFor(() => {
+      expect(nameInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById("new-staff-full-name-error")).toHaveTextContent("Full name is required.");
+    });
+
+    const emailInput = within(modal).getByLabelText("Official email (login) (Required)");
+    fireEvent.change(emailInput, { target: { value: "invalid-email" } });
+    fireEvent.blur(emailInput);
+
+    await waitFor(() => {
+      expect(emailInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById("new-staff-official-email-error")).toHaveTextContent("Enter a valid email address.");
+    });
+  });
+});

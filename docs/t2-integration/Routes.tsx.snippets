@@ -1,0 +1,12 @@
+// Add imports with existing institution-admin imports; route elements stay inside existing tenant/auth/action guards.
+import InstitutionDetailPage from "../features/institution-admin/pages/InstitutionDetailPage";
+import DepartmentDetailPage from "../features/institution-admin/pages/DepartmentDetailPage";
+import ProgramDetailPage from "../features/institution-admin/pages/ProgramDetailPage";
+import SectionDetailPage from "../features/institution-admin/pages/SectionDetailPage";
+import AcademicSessionDetailPage from "../features/institution-admin/pages/AcademicSessionDetailPage";
+// Inject tenantId from authenticated tenant context. Preserve existing route guards.
+<Route path="/institutions/:institutionId" element={<InstitutionDetailPage tenantId={tenantId}/>}/>
+<Route path="/departments/:departmentId" element={<DepartmentDetailPage tenantId={tenantId}/>}/>
+<Route path="/programs/:programId" element={<ProgramDetailPage tenantId={tenantId}/>}/>
+<Route path="/sections/:sectionId" element={<SectionDetailPage tenantId={tenantId}/>}/>
+<Route path="/academic-calendar/:academicSessionId" element={<AcademicSessionDetailPage tenantId={tenantId}/>}/>

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Button, Kicker, Modal, Notice, TextField } from "../../../../design-system/components";
-import { getApiErrorMessage } from "../../../../services/apiHelper";
+import { Button, Modal, Notice, PhoneField, SelectField, TextField, validateNationalIdLast4 } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
 import {
   userManagementService,
   type ActingScope,
@@ -30,12 +30,20 @@ export function CreateUserModal({
   const [initialRoleCode, setInitialRoleCode] = useState("");
   const [scope, setScope] = useState<ActingScope>({ scopeType: "TENANT" });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const {
+    fieldErrors,
+    formError,
+    handleApiError,
+    setFieldError,
+    clearFieldError,
+    clearAll,
+  } = useFormErrors();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
+    clearAll();
     try {
       const { data } = await userManagementService.createUser(tenantId, {
         displayName: displayName.trim(),
@@ -50,7 +58,7 @@ export function CreateUserModal({
       });
       onCreated(data);
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }
@@ -60,14 +68,14 @@ export function CreateUserModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      kicker="USER_CREATE"
+      kicker="USER ACCOUNT"
       title="Create user account"
       titleId="create-user-title"
-      description="Provision an identity and create a tenant user account with Keycloak single sign-on."
+      description="Create a sign-in account and choose the organisation access for this person."
       size="lg"
     >
-      <form onSubmit={handleSubmit}>
-        <div className="platform-form-grid">
+      <form onSubmit={handleSubmit} className="app-form">
+        <section className="app-form-single-column" aria-label="Account details">
           <TextField
             id="create-display-name"
             label="Full name"
@@ -75,17 +83,24 @@ export function CreateUserModal({
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="e.g. Dr. Anita Sharma"
+            error={fieldErrors.displayName}
+            fieldName="displayName"
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
-          <label className="platform-form-field">
-            User type
-            <select value={userType} onChange={(e) => setUserType(e.target.value as UserType)}>
-              <option value="STAFF">Staff (Faculty / Admin)</option>
-              <option value="STUDENT">Student</option>
-              <option value="GUARDIAN">Guardian / Parent</option>
-              <option value="APPLICANT">Applicant</option>
-              <option value="GOVERNANCE">Governance / Board</option>
-            </select>
-          </label>
+          <SelectField
+            id="create-user-type"
+            label="User type"
+            value={userType}
+            onChange={(e) => setUserType(e.target.value as UserType)}
+            options={[
+              { value: "STAFF", label: "Staff (Faculty / Admin)" },
+              { value: "GUARDIAN", label: "Guardian / Parent" },
+              { value: "APPLICANT", label: "Applicant" },
+              { value: "GOVERNANCE", label: "Governance / Board" },
+            ]}
+            error={fieldErrors.userType}
+          />
           <TextField
             id="create-email"
             label="Email address"
@@ -94,14 +109,21 @@ export function CreateUserModal({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="e.g. anita.sharma@northbridge.edu.in"
+            error={fieldErrors.email}
+            fieldName="email"
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
-          <TextField
+          <PhoneField
             id="create-mobile"
-            label="Mobile number (E.164)"
+            label="Mobile number"
             required
             value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            placeholder="+919876543210"
+            onChange={(e) => { setMobile(e.target.value); clearFieldError("mobile"); }}
+            error={fieldErrors.mobile}
+            fieldName="mobile"
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
           <TextField
             id="create-national-id"
@@ -110,40 +132,39 @@ export function CreateUserModal({
             maxLength={4}
             onChange={(e) => setNationalIdLast4(e.target.value.replace(/\D/g, ""))}
             placeholder="e.g. 5678"
+            error={fieldErrors.nationalIdLast4}
+            fieldName="nationalIdLast4"
+            validator={(val) => validateNationalIdLast4(val, false)}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
           <TextField
             id="create-initial-role"
-            label="Initial role code (optional)"
+            label="Initial role (optional)"
+            hint="Enter a role code supplied by your institution administrator."
             value={initialRoleCode}
-            onChange={(e) => setInitialRoleCode(e.target.value)}
+            onChange={(e) => { setInitialRoleCode(e.target.value); clearFieldError("initialRoleCode"); }}
             placeholder="e.g. TEACHER, STUDENT, REGISTRAR"
+            error={fieldErrors.initialRoleCode}
           />
-        </div>
+        </section>
+        <p className="app-note">
+          This form provisions a general user account. For admissions, student profile creation and section enrolment, use the separate Create student profile workflow.
+        </p>
 
-        <div style={{ marginTop: "1rem" }}>
-          <Kicker>ACCESS SCOPE</Kicker>
-          <ScopeFields scope={scope} onChange={setScope} idPrefix="create-user" />
-        </div>
+        <section className="app-form-section" aria-labelledby="create-user-scope-title">
+          <h3 id="create-user-scope-title">Access scope</h3>
+          <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="create-user" />
+        </section>
 
-        <div
-          className="platform-modal-note"
-          style={{
-            marginTop: "0.75rem",
-            fontSize: "0.8rem",
-            color: "var(--color-text-secondary, #64748b)",
-          }}
-        >
-          Statutory Notice: Indian DPDP Act 2023 & UIDAI Guidelines [R2-34] prohibit storing full
+        <div className="app-note">
+          Statutory Notice: Indian DPDP Act 2023 &amp; UIDAI Guidelines [R2-34] prohibit storing full
           Aadhaar numbers. Only the last 4 digits are accepted for identity masking.
         </div>
 
-        {error && (
-          <div style={{ marginTop: "0.75rem" }}>
-            <Notice tone="danger">{error}</Notice>
-          </div>
-        )}
+        {formError && <Notice tone="danger">{formError}</Notice>}
 
-        <footer style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+        <footer className="app-modal__footer">
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>

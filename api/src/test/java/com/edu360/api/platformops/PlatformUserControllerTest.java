@@ -127,6 +127,68 @@ class PlatformUserControllerTest {
     }
 
     @Test
+    void unlockPlatformUser_allow_forProductOwner() {
+        UUID targetUserId = UUID.randomUUID();
+        when(platformUserRepository.findById(targetUserId)).thenReturn(Optional.of(PlatformUser.builder()
+                .platformUserId(targetUserId)
+                .identitySubject("kc-staff")
+                .platformRole(PlatformRole.PLATFORM_ADMIN)
+                .status(PlatformUserStatus.ACTIVE)
+                .build()));
+
+        ResponseEntity<Void> response = controller.unlockPlatformUser(
+                targetUserId, authFor(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        org.mockito.Mockito.verify(keycloakAdminClient)
+                .restoreSignIn("edu360-platform", "kc-staff");
+    }
+
+    @Test
+    void resetPlatformUserPassword_allow_forAnotherPlatformUser() {
+        UUID targetUserId = UUID.randomUUID();
+        PlatformUser target = PlatformUser.builder()
+                .platformUserId(targetUserId)
+                .fullName("Another Owner")
+                .email("owner2@edu360.com")
+                .identitySubject("kc-owner-2")
+                .platformRole(PlatformRole.PRODUCT_OWNER)
+                .status(PlatformUserStatus.ACTIVE)
+                .mfaRequired(true)
+                .build();
+        when(platformUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+
+        ResponseEntity<PlatformUserResponse> response =
+                controller.resetPlatformUserPassword(targetUserId, authFor(PlatformRole.PRODUCT_OWNER));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getFirst("Cache-Control")).isEqualTo("no-store");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().tempPassword()).isNotBlank();
+        org.mockito.Mockito.verify(keycloakAdminClient).resetPassword(
+                eq("edu360-platform"), eq("kc-owner-2"), anyString(), eq(true));
+        org.mockito.Mockito.verify(keycloakAdminClient).logoutUser("edu360-platform", "kc-owner-2");
+        org.mockito.Mockito.verify(keycloakAdminClient).restoreSignIn("edu360-platform", "kc-owner-2");
+    }
+
+    @Test
+    void resetPlatformUserPassword_rejectsOwnAccount() {
+        assertThatThrownBy(() -> controller.resetPlatformUserPassword(
+                PLATFORM_USER_ID, authFor(PlatformRole.PRODUCT_OWNER)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("own platform password");
+        org.mockito.Mockito.verifyNoInteractions(keycloakAdminClient);
+    }
+
+    @Test
+    void unlockPlatformUser_deny_forNonProductOwnerPlatformRoles() {
+        assertThatThrownBy(() -> controller.unlockPlatformUser(
+                UUID.randomUUID(), authFor(PlatformRole.PLATFORM_ADMIN)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("does not hold action PLATFORM_USER_MANAGE");
+    }
+
+    @Test
     void listPlatformUsers_returnsAllUsers() {
         PlatformUser user = PlatformUser.builder()
                 .platformUserId(UUID.randomUUID())

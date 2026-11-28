@@ -1,13 +1,17 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ReactElement } from "react";
 import api from "../../../services/axios";
+import { institutionService } from "../api/institutionService";
 import authReducer from "../../../store/slices/authSlice";
+import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
 import {
   AcademicGovernancePage,
   AcademicStructurePage,
+  InstitutionHierarchyPage,
   CalendarEventsPage,
   ClassTeacherAssignmentPage,
   DelegationsApprovalsPage,
@@ -19,16 +23,26 @@ import {
 } from "./InstitutionSetupPages";
 
 vi.mock("../../../services/axios", () => ({
-  default: { put: vi.fn(), get: vi.fn(), post: vi.fn() },
+  SUPPORT_SESSION_TOKEN_KEY: "test.support.token",
+  SUPPORT_SESSION_EXPIRY_KEY: "test.support.expiry",
+  SUPPORT_SESSION_TICKET_KEY: "test.support.ticket",
+  SUPPORT_SESSION_PLATFORM_ORIGIN_KEY: "test.support.origin",
+  default: { put: vi.fn(), get: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
 
 const TENANT_ID = "11111111-1111-1111-1111-111111111111";
 const DEPT_ID = "22222222-2222-2222-2222-222222222222";
 const STAFF_ASSIGNMENT_ID = "33333333-3333-3333-3333-333333333333";
+const INST_ID = "55555555-5555-5555-5555-555555555555";
+const SECTION_ID = "66666666-6666-6666-6666-666666666666";
 
-function renderWithTenant(element: ReactElement, tenantId: string | null = TENANT_ID) {
+function renderWithTenant(
+  element: ReactElement,
+  tenantId: string | null = TENANT_ID,
+  roleCode: string | null = null,
+) {
   const store = configureStore({
-    reducer: { auth: authReducer },
+    reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer },
     preloadedState: {
       auth: {
         user: tenantId
@@ -38,8 +52,8 @@ function renderWithTenant(element: ReactElement, tenantId: string | null = TENAN
               tenantId,
               userType: "STAFF" as const,
               platformRole: null,
-              roleCode: null,
-              roleName: null,
+              roleCode,
+              roleName: roleCode === "SCHOOL_ADMIN" ? "School Admin" : null,
               photoUrl: null,
               mustChangePassword: false,
             }
@@ -49,12 +63,35 @@ function renderWithTenant(element: ReactElement, tenantId: string | null = TENAN
       },
     },
   });
-  return render(<Provider store={store}>{element}</Provider>);
+  store.dispatch(setTenantPermissions({
+    tenantId: tenantId ?? TENANT_ID,
+    userAccountId: "u-1",
+    activeRoleCode: roleCode ?? "UNIVERSITY_ADMIN",
+    activeRoleName: roleCode === "SCHOOL_ADMIN" ? "School Admin" : "University Admin",
+    scopeType: roleCode === "HEAD_OF_DEPARTMENT" ? "DEPARTMENT" : "INSTITUTION",
+    institutionId: INST_ID,
+    departmentId: roleCode === "HEAD_OF_DEPARTMENT" ? DEPT_ID : null,
+    allowedActions: [
+      "STRUCTURE_MANAGE", "HOD_ASSIGN", "MENTOR_ASSIGN", "CLASS_TEACHER_ASSIGN",
+      "STUDENT_LOGIN_SWITCH", "CALENDAR_LOCAL_SET", "WEEKLY_OFF_SET", "TERM_LOCK",
+      "TERM_UNLOCK", "APPROVAL_DELEGATE", "APPROVAL_BULK", "PROGRAM_RULES_SET",
+      "GRADING_SCHEME_SET", "SUBJECT_ALLOCATE", "PROMOTION_RUN", "PROMOTION_APPROVE",
+    ],
+  }));
+  return render(<MemoryRouter><Provider store={store}>{element}</Provider></MemoryRouter>);
 }
 
 describe("Institution setup action screens", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (api.get as ReturnType<typeof vi.fn>).mockReset();
+    (api.post as ReturnType<typeof vi.fn>).mockReset();
+    (api.put as ReturnType<typeof vi.fn>).mockReset();
+    (api.delete as ReturnType<typeof vi.fn>).mockReset();
+    vi.spyOn(institutionService, "listInstitutions").mockResolvedValue({
+      items: [{ institutionId: INST_ID, institutionName: "Manoj College", institutionCode: "MNC", institutionType: "COLLEGE" }],
+      total: 1,
+    } as unknown as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
   });
 
   it("shows the permission-denied state when there is no tenant identity", () => {
@@ -62,67 +99,98 @@ describe("Institution setup action screens", () => {
     expect(screen.getByText(/requires a signed-in institution identity/i)).toBeInTheDocument();
   });
 
-  it("shows a validation error before calling the API with invalid IDs", async () => {
+  it("keeps the HOD action disabled until a department and person are selected", () => {
     renderWithTenant(<HodAssignmentPage />);
-    fireEvent.click(screen.getByRole("button", { name: /assign hod/i }));
-    expect(await screen.findByText(/must both be valid IDs/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /assign hod/i })).toBeDisabled();
+    expect(screen.getByLabelText(/Department/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/New HOD/i)).toBeInTheDocument();
     expect(api.put).not.toHaveBeenCalled();
   });
 
-  it("submits HOD_ASSIGN with the exact backend field names and shows success", async () => {
+  it("submits HOD_ASSIGN with a picked department and staff assignment", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [{ departmentId: DEPT_ID, departmentName: "Computer Science" }] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{
+        staffProfileId: "77777777-7777-7777-7777-777777777777", staffAssignmentId: STAFF_ASSIGNMENT_ID,
+        staffCode: "ST-01", fullName: "Asha Rao", designation: "Professor", departmentId: DEPT_ID, departmentName: "Computer Science",
+      }] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: { departmentId: DEPT_ID, hodStaffAssignmentId: STAFF_ASSIGNMENT_ID },
     });
     renderWithTenant(<HodAssignmentPage />);
-    fireEvent.change(screen.getByLabelText(/Department ID/i), { target: { value: DEPT_ID } });
-    fireEvent.change(screen.getByLabelText(/Staff assignment ID \(new HOD\)/i), {
-      target: { value: STAFF_ASSIGNMENT_ID },
-    });
+    await screen.findByRole("option", { name: "Computer Science" });
+    fireEvent.change(screen.getByLabelText(/Department/i), { target: { value: DEPT_ID } });
+    await screen.findByRole("option", { name: /Asha Rao/ });
+    fireEvent.change(screen.getByLabelText(/New HOD/i), { target: { value: STAFF_ASSIGNMENT_ID } });
     fireEvent.click(screen.getByRole("button", { name: /assign hod/i }));
 
-    await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`, {
-        staffAssignmentId: STAFF_ASSIGNMENT_ID,
-      }),
-    );
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`, {
+      staffAssignmentId: STAFF_ASSIGNMENT_ID,
+    }, { headers: { "If-Match": "\"1\"" } }));
     expect(await screen.findByText(/HOD assignment recorded/i)).toBeInTheDocument();
   });
 
-  it("surfaces a 403 from MENTOR_ASSIGN as a permission-denied banner, not a generic error", async () => {
+  it("surfaces a 403 from MENTOR_ASSIGN after selecting a college section and mentor", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [{
+        sectionId: SECTION_ID, sectionName: "CSE-A", institutionId: INST_ID, academicSessionId: "88888888-8888-8888-8888-888888888888",
+        semesterId: "99999999-9999-9999-9999-999999999999", classId: null, status: "ACTIVE", rowVersion: 1,
+      }] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{
+        staffProfileId: "77777777-7777-7777-7777-777777777777", staffAssignmentId: STAFF_ASSIGNMENT_ID,
+        staffCode: "ST-01", fullName: "Asha Rao", designation: "Professor", departmentId: DEPT_ID, departmentName: "Computer Science",
+      }] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.put as ReturnType<typeof vi.fn>).mockRejectedValueOnce({
       isAxiosError: true,
       response: { status: 403, data: { error: "Not authorized for MENTOR_ASSIGN." } },
     });
-    renderWithTenant(<MentorAssignmentPage />);
-    fireEvent.change(screen.getByLabelText(/Section ID/i), { target: { value: DEPT_ID } });
-    fireEvent.change(screen.getByLabelText(/Staff assignment ID \(new mentor\)/i), {
-      target: { value: STAFF_ASSIGNMENT_ID },
-    });
+    renderWithTenant(<MentorAssignmentPage />, TENANT_ID, "HEAD_OF_DEPARTMENT");
+    await screen.findByRole("option", { name: "CSE-A" });
+    fireEvent.change(screen.getByLabelText(/Section/i), { target: { value: SECTION_ID } });
+    await screen.findByRole("option", { name: /Asha Rao/ });
+    fireEvent.change(screen.getByLabelText(/New mentor/i), { target: { value: STAFF_ASSIGNMENT_ID } });
     fireEvent.click(screen.getByRole("button", { name: /assign mentor/i }));
 
     expect(await screen.findByText("Permission denied")).toBeInTheDocument();
-    expect(await screen.findByText(/Not authorized for MENTOR_ASSIGN/i)).toBeInTheDocument();
+    expect(await screen.findByText(/do not have permission/i)).toBeInTheDocument();
   });
 
-  it("labels CLASS_TEACHER_ASSIGN against sections, not classes (OD-24)", () => {
-    renderWithTenant(<ClassTeacherAssignmentPage />);
+  it("uses scoped section and person pickers for CLASS_TEACHER_ASSIGN", () => {
+    renderWithTenant(<ClassTeacherAssignmentPage />, TENANT_ID, "SCHOOL_ADMIN");
     expect(screen.getByText(/This assigns a section, not a class/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Section ID/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Section/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/New Class Teacher/i)).toBeInTheDocument();
   });
 
-  it("sends the enabled flag for STUDENT_LOGIN_SWITCH", async () => {
+  it("loads a school and class by name before saving student-login state", async () => {
+    vi.spyOn(institutionService, "listInstitutions").mockResolvedValue({
+      items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }],
+      total: 1,
+    } as unknown as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }] } });
+      if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [{ classId: DEPT_ID, className: "Grade 8", status: "ACTIVE" }] });
+      if (url.endsWith(`/classes/${DEPT_ID}`)) return Promise.resolve({ data: { classId: DEPT_ID, studentLoginEnabled: false, rowVersion: 4 } });
+      return Promise.resolve({ data: [] });
+    });
     (api.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: { classId: DEPT_ID, studentLoginEnabled: true },
+      data: { classId: DEPT_ID, studentLoginEnabled: true, rowVersion: 5 },
     });
     renderWithTenant(<StudentLoginSwitchPage />);
-    fireEvent.change(screen.getByLabelText(/Class ID/i), { target: { value: DEPT_ID } });
+    fireEvent.change(await screen.findByLabelText(/Institution/i), { target: { value: INST_ID } });
+    fireEvent.change(await screen.findByLabelText(/Class or grade/i), { target: { value: DEPT_ID } });
+    expect(await screen.findByText(/Current setting loaded for the selected class/i)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText(/Enable view-only student login/i));
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/classes/${DEPT_ID}/student-login`, {
         enabled: true,
-      }),
+      }, { headers: { "If-Match": "\"4\"" } }),
     );
   });
 
@@ -131,30 +199,124 @@ describe("Institution setup action screens", () => {
     expect(screen.getByText(/No events loaded yet/i)).toBeInTheDocument();
   });
 
+  it("places weekly-off validation messages beside the relevant fields", () => {
+    renderWithTenant(<WeeklyOffRulesPage />);
+    fireEvent.click(screen.getByRole("button", { name: /add rule/i }));
+
+    expect(screen.getByText("Choose a registered institution.")).toBeInTheDocument();
+    expect(screen.getByText("Choose an effective-from date.")).toBeInTheDocument();
+    expect(screen.queryByText("Institution ID and effective-from date are required.")).not.toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it("lists weekly-off rules returned by the API with the configured day labels", async () => {
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: [
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: INST_ID, institutionName: "Manoj College", institutionCode: "MNC", institutionType: "COLLEGE" }] } });
+      if (url.endsWith("/weekly-off-rules")) return Promise.resolve({ data: [
         {
           weeklyOffRuleId: "44444444-4444-4444-4444-444444444444",
-          institutionId: DEPT_ID,
+          institutionId: INST_ID,
           dayOfWeek: 7,
           occurrence: "ALL",
           effectiveFrom: "2026-01-01",
           effectiveTo: null,
         },
-      ],
+      ] });
+      return Promise.resolve({ data: [] });
     });
     renderWithTenant(<WeeklyOffRulesPage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), { target: { value: DEPT_ID } });
+    fireEvent.change(await screen.findByLabelText(/Institution/i), { target: { value: INST_ID } });
     fireEvent.click(screen.getByRole("button", { name: /load rules/i }));
 
     await waitFor(() =>
       expect(api.get).toHaveBeenCalledWith(`/tenants/${TENANT_ID}/weekly-off-rules`, {
-        params: { institutionId: DEPT_ID },
+        params: { institutionId: INST_ID },
       }),
     );
     await waitFor(() => expect(screen.getAllByText("Sunday").length).toBeGreaterThan(0));
     expect(screen.getByText("Open-ended")).toBeInTheDocument();
+  });
+
+  it("renders the tenant-rooted hierarchy with colleges, schools and nested departments", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const schoolId = "66666666-6666-6666-6666-666666666666";
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        tenantId: TENANT_ID,
+        tenantName: "Northbridge University Group",
+        tenantType: "UNIVERSITY_GROUP",
+        institutions: [
+          {
+            institution: {
+              tenantId: TENANT_ID, institutionId, institutionType: "COLLEGE",
+              institutionCode: "NBC-01", institutionName: "Northbridge College",
+              status: "ACTIVE", externalUniversityMode: false, underUniversity: true,
+              createdAt: "", updatedAt: "", rowVersion: 3,
+            },
+            departments: [{
+              departmentId: DEPT_ID, institutionId, departmentCode: "CSE",
+              departmentName: "Computer Science", hodStaffAssignmentId: null, status: "ACTIVE",
+            }],
+          },
+          {
+            institution: {
+              tenantId: TENANT_ID, institutionId: schoolId, institutionType: "SCHOOL",
+              institutionCode: "NPS-01", institutionName: "Northbridge Public School",
+              status: "ACTIVE", externalUniversityMode: false, underUniversity: false,
+              createdAt: "", updatedAt: "", rowVersion: 1,
+            },
+            departments: [],
+          },
+        ],
+      },
+    });
+
+    renderWithTenant(<InstitutionHierarchyPage />);
+    expect((await screen.findAllByText("Northbridge University Group")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Northbridge College").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Northbridge Public School").length).toBeGreaterThan(0);
+    expect(screen.getByText("Computer Science")).toBeInTheDocument();
+    expect(screen.getByText("HOD not assigned")).toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/hierarchy`);
+  });
+
+  it("edits an institution profile with the current row-version If-Match header", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const institution = {
+      tenantId: TENANT_ID, institutionId, institutionType: "COLLEGE" as const,
+      institutionCode: "NBC-01", institutionName: "Northbridge College",
+      status: "ACTIVE" as const, externalUniversityMode: false, underUniversity: true,
+      addressLine: "Old address", city: "Bengaluru", stateName: "Karnataka",
+      postalCode: "560001", principalInviteEmail: "principal@example.edu",
+      createdAt: "", updatedAt: "", rowVersion: 3,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        tenantId: TENANT_ID, tenantName: "Northbridge University Group", tenantType: "UNIVERSITY_GROUP",
+        institutions: [{ institution, departments: [] }],
+      },
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...institution, institutionName: "Northbridge College of Science", rowVersion: 4 } });
+
+    renderWithTenant(<InstitutionHierarchyPage />);
+    await screen.findByText("Northbridge College");
+    fireEvent.click(screen.getByRole("button", { name: /edit profile/i }));
+    fireEvent.change(screen.getByLabelText(/Institution name/i), { target: { value: "Northbridge College of Science" } });
+    fireEvent.click(screen.getByRole("button", { name: /save institution/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}`,
+      {
+        institutionName: "Northbridge College of Science",
+        addressLine: "Old address",
+        city: "Bengaluru",
+        stateName: "Karnataka",
+        postalCode: "560001",
+        principalInviteEmail: "principal@example.edu",
+        externalUniversityMode: false,
+      },
+      { headers: { "If-Match": "\"3\"" } },
+    ));
   });
 
   it("loads academic structure (departments and programs) for an institution (Story #29: STRUCTURE_MANAGE)", async () => {
@@ -186,17 +348,207 @@ describe("Institution setup action screens", () => {
       });
 
     renderWithTenant(<AcademicStructurePage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), {
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), {
       target: { value: "55555555-5555-5555-5555-555555555555" },
     });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Computer Science and Engineering")).toBeInTheDocument();
-      expect(screen.getByText("CSE")).toBeInTheDocument();
-      expect(screen.getByText("B.Tech Computer Science")).toBeInTheDocument();
+      expect(screen.getAllByText("Computer Science and Engineering").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("CSE").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("B.Tech Computer Science").length).toBeGreaterThan(0);
       expect(screen.getByText("BTECH_CSE")).toBeInTheDocument();
     });
+  });
+
+  it("assigns a department HOD from the integrated department-management modal", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const staffAssignmentId = "77777777-7777-7777-7777-777777777777";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [{
+        departmentId: DEPT_ID, institutionId, departmentCode: "CSE", departmentName: "Computer Science",
+        status: "ACTIVE", facultyCount: 5, studentCount: 42, rowVersion: 2,
+      }] });
+      if (url.endsWith("/programs")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{
+        staffProfileId: "88888888-8888-8888-8888-888888888888", staffAssignmentId,
+        staffCode: "FAC-01", fullName: "Dr. Ada Lovelace", designation: "Professor",
+        departmentId: DEPT_ID, departmentName: "Computer Science",
+      }], page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 1 } } });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { departmentId: DEPT_ID, hodStaffAssignmentId: staffAssignmentId } });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "COLLEGE_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Computer Science");
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /assign HOD/i }));
+    const facultyPicker = await screen.findByLabelText(/Faculty member/i);
+    fireEvent.change(facultyPicker, { target: { value: staffAssignmentId } });
+    fireEvent.click(screen.getByRole("button", { name: /save HOD assignment/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/tenants/${TENANT_ID}/departments/${DEPT_ID}/hod`,
+      { staffAssignmentId },
+      { headers: { "If-Match": "\"2\"" } },
+    ));
+  });
+
+  it("creates and retrieves immutable curriculum versions for a program", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const programId = "66666666-6666-6666-6666-666666666666";
+    const version = {
+      programCurriculumVersionId: "77777777-7777-7777-7777-777777777777",
+      institutionId, programId, versionNumber: 1,
+      curriculumJson: { courses: [{ code: "CS101", credits: 4 }] },
+      effectiveFrom: "2026-07-01", effectiveTo: null, createdAt: "2026-06-01T00:00:00Z", createdBy: "u-1",
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/programs")) return Promise.resolve({ data: [{
+        programId, institutionId, departmentId: DEPT_ID, programCode: "BTECH",
+        programName: "B.Tech", durationYears: 4, semestersPerYear: 2, status: "ACTIVE", rowVersion: 1,
+      }] });
+      if (url.endsWith("/curriculum-versions")) return Promise.resolve({ data: [version] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: version });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "COLLEGE_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByRole("link", { name: "B.Tech" });
+
+    fireEvent.change(screen.getAllByLabelText("Program")[0], { target: { value: programId } });
+    fireEvent.click(screen.getByRole("button", { name: /load curriculum history/i }));
+    await screen.findByText("Version 1");
+
+    fireEvent.click(screen.getByRole("button", { name: /Add item/i }));
+    const itemType = screen.getAllByLabelText("Value type")[1];
+    fireEvent.change(itemType, { target: { value: "object" } });
+    fireEvent.click(screen.getAllByRole("button", { name: /Add field/i })[0]);
+    const fieldNames = screen.getAllByLabelText("Field name");
+    fireEvent.change(fieldNames.at(-1)!, { target: { value: "code" } });
+    fireEvent.blur(fieldNames.at(-1)!);
+    fireEvent.change(screen.getAllByLabelText("Value")[0], { target: { value: "CS101" } });
+    fireEvent.click(screen.getAllByRole("button", { name: /Add field/i }).at(-1)!);
+    const updatedFieldNames = screen.getAllByLabelText("Field name");
+    fireEvent.change(updatedFieldNames.at(-1)!, { target: { value: "credits" } });
+    fireEvent.blur(updatedFieldNames.at(-1)!);
+    fireEvent.change(screen.getAllByLabelText("Value type")[3], { target: { value: "number" } });
+    fireEvent.change(screen.getAllByLabelText("Value")[1], { target: { value: "4" } });
+    fireEvent.change(screen.getByLabelText(/Effective from/i), { target: { value: "2026-07-01" } });
+    fireEvent.click(screen.getByRole("button", { name: /create immutable version/i }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}/programs/${programId}/curriculum-versions`,
+      { curriculumJson: { courses: [{ code: "CS101", credits: 4 }] }, effectiveFrom: "2026-07-01", effectiveTo: null },
+    ));
+  });
+
+  it("creates a dated semester under a selected college program year", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const programId = "66666666-6666-6666-6666-666666666666";
+    const programYearId = "77777777-7777-7777-7777-777777777777";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/departments")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/programs")) return Promise.resolve({ data: [{
+        programId, institutionId, departmentId: DEPT_ID, programCode: "BTECH",
+        programName: "B.Tech", durationYears: 4, semestersPerYear: 2, status: "ACTIVE",
+      }] });
+      if (url.endsWith("/years")) return Promise.resolve({ data: [{
+        programYearId, institutionId, programId, yearNumber: 1, label: "Year 1",
+      }] });
+      if (url.endsWith("/semesters")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { semesterId: "99999999-8888-7777-6666-555555555555", institutionId, programYearId,
+        semesterNumber: 1, label: "Semester 1", startDate: "2026-07-01", endDate: "2026-11-30" },
+    });
+
+    renderWithTenant(<AcademicStructurePage />);
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByRole("link", { name: "B.Tech" });
+
+    fireEvent.change(screen.getAllByLabelText("Program")[1], { target: { value: programId } });
+    fireEvent.click(screen.getByRole("button", { name: /load program years/i }));
+    await screen.findByLabelText("Program year");
+
+    fireEvent.change(screen.getByLabelText(/Start date/i), { target: { value: "2026-07-01" } });
+    fireEvent.change(screen.getByLabelText(/End date/i), { target: { value: "2026-11-30" } });
+    fireEvent.click(screen.getByRole("button", { name: /create dated semester/i }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}/program-years/${programYearId}/semesters`,
+      { semesterNumber: 1, label: "Semester 1", startDate: "2026-07-01", endDate: "2026-11-30" },
+    ));
+  });
+
+  it("loads school classes and sections without showing college department/programme panels", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const classId = "77777777-7777-7777-7777-777777777777";
+    const sessionId = "88888888-8888-8888-8888-888888888888";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/classes")) return Promise.resolve({ data: [
+        { classId, institutionId, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE" },
+      ] });
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [
+        { sectionId: "99999999-8888-7777-6666-555555555555", institutionId, academicSessionId: sessionId, semesterId: null, classId, sectionName: "A", status: "ACTIVE" },
+      ] });
+      return Promise.resolve({ data: [
+        { academicSessionId: sessionId, tenantId: TENANT_ID, institutionId, sessionLabel: "2026–27", startDate: "2026-06-01", endDate: "2027-05-31", academicYear: 2026, status: "ACTIVE", rowVersion: 1 },
+      ] });
+    });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+
+    expect((await screen.findAllByText("Grade 8")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Section A" })).toBeInTheDocument();
+    expect(screen.getByText("School classes")).toBeInTheDocument();
+    expect(screen.queryByText("Academic Departments")).not.toBeInTheDocument();
+    expect(screen.queryByText("Degree Programs")).not.toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/${institutionId}/classes`);
+    expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/${institutionId}/sections`);
+  });
+
+  it("creates a school section with its class and academic session IDs", async () => {
+    const institutionId = "55555555-5555-5555-5555-555555555555";
+    const classId = "77777777-7777-7777-7777-777777777777";
+    const sessionId = "88888888-8888-8888-8888-888888888888";
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/classes")) return Promise.resolve({ data: [
+        { classId, institutionId, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE" },
+      ] });
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [
+        { academicSessionId: sessionId, tenantId: TENANT_ID, institutionId, sessionLabel: "2026–27", startDate: "2026-06-01", endDate: "2027-05-31", academicYear: 2026, status: "ACTIVE", rowVersion: 1 },
+      ] });
+    });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { sectionId: "99999999-8888-7777-6666-555555555555", institutionId, academicSessionId: sessionId, semesterId: null, classId, sectionName: "B", status: "ACTIVE" },
+    });
+
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: institutionId } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findAllByText("Grade 8");
+
+    fireEvent.change(screen.getByLabelText(/Section name/i, { selector: "#school-section-name" }), { target: { value: "B" } });
+    fireEvent.change(screen.getByLabelText(/Section capacity/i), { target: { value: "45" } });
+    fireEvent.click(screen.getByRole("button", { name: /create section/i }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${institutionId}/sections`,
+      { academicSessionId: sessionId, classId, sectionName: "B", capacity: 45 },
+    ));
   });
 
   it("opens modal and creates department under college (Story #29: STRUCTURE_MANAGE)", async () => {
@@ -227,7 +579,7 @@ describe("Institution setup action screens", () => {
     });
 
     renderWithTenant(<AcademicStructurePage />);
-    fireEvent.change(screen.getByLabelText(/Institution ID/i), {
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), {
       target: { value: "55555555-5555-5555-5555-555555555555" },
     });
     fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
@@ -301,8 +653,17 @@ describe("Institution setup action screens", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Odd Semester 2026")).toBeInTheDocument();
-      expect(screen.getByText("SEMESTER_DATES")).toBeInTheDocument();
+      expect(screen.getByText("Semester dates")).toBeInTheDocument();
     });
+  });
+
+  it("shows term-lock UUID errors beside their fields before calling the API", () => {
+    renderWithTenant(<TermLockPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Lock term/i }));
+
+    expect(screen.getByText("Choose a registered institution.")).toBeInTheDocument();
+    expect(screen.getByText("Choose an academic session for the selected institution.")).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it("locks academic term upon submit (Story #43: TERM_LOCK / Rule R2-08)", async () => {
@@ -323,13 +684,13 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<TermLockPage />);
 
-    const instInput = screen.getByLabelText(/Institution ID/i);
-    const sessionInput = screen.getByLabelText(/Academic Session ID/i);
+    const instInput = screen.getByLabelText(/Institution|registered institutions/i);
+    const sessionInput = screen.getByLabelText(/Academic session/i);
 
     fireEvent.change(instInput, { target: { value: instId } });
     fireEvent.change(sessionInput, { target: { value: sessionId } });
 
-    const lockBtn = screen.getByRole("button", { name: /Lock Term \[Rule R2-08\]/i });
+    const lockBtn = screen.getByRole("button", { name: /Lock term/i });
     fireEvent.click(lockBtn);
 
     await waitFor(() => {
@@ -340,7 +701,7 @@ describe("Institution setup action screens", () => {
         })
       );
       expect(
-        screen.getByText(/Term locked successfully \[Rule R2-08\]/i)
+        screen.getByText(/Term locked successfully\. Attendance and marks can no longer be changed/i)
       ).toBeInTheDocument();
     });
   });
@@ -349,8 +710,8 @@ describe("Institution setup action screens", () => {
     const instId = "11111111-2222-3333-4444-555555555555";
     const sessionId = "22222222-3333-4444-5555-666666666666";
 
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      data: [
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/term-locks")) return Promise.resolve({ data: [
         {
           termLockId: "lock-1",
           tenantId: TENANT_ID,
@@ -359,7 +720,9 @@ describe("Institution setup action screens", () => {
           lockState: "LOCKED",
           rowVersion: 1,
         },
-      ],
+      ] });
+      if (url.endsWith("/academic-sessions")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
     });
 
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -376,12 +739,13 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<TermLockPage />);
 
-    const instInput = screen.getByLabelText(/Institution ID/i);
+    const instInput = screen.getByLabelText(/Institution|registered institutions/i);
     fireEvent.change(instInput, { target: { value: instId } });
 
     await waitFor(() => {
       expect(screen.getByText(sessionId)).toBeInTheDocument();
     });
+    expect(screen.getByText("Term Locked: Records are immutable")).toBeInTheDocument();
 
     const unlockBtn = screen.getByRole("button", { name: /Unlock Term/i });
     fireEvent.click(unlockBtn);
@@ -408,9 +772,23 @@ describe("Institution setup action screens", () => {
     });
   });
 
+  it("requires an eligible colleague and effective dates before creating a delegation", () => {
+    renderWithTenant(<DelegationsApprovalsPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Create delegation/i }));
+
+    expect(screen.getByText("Choose an eligible colleague from the list.")).toBeInTheDocument();
+    expect(screen.getByText("Choose when the delegation begins.")).toBeInTheDocument();
+    expect(screen.getByText("Choose when the delegation ends.")).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it("creates time-bounded delegation (Story #20: APPROVAL_DELEGATE / Rule 11)", async () => {
     const delegateId = "44444444-4444-4444-4444-444444444444";
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/delegations/eligible-users")) return Promise.resolve({ data: [{ userAccountId: delegateId, displayName: "Asha Rao", email: "asha@example.edu" }] });
+      if (url.endsWith("/approvals/inbox")) return Promise.resolve({ data: { items: [] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: {
         delegationId: "del-1",
@@ -427,7 +805,7 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<DelegationsApprovalsPage />);
 
-    const delegateInput = screen.getByLabelText(/Delegate User Account ID \(UUID\) \*/i);
+    const delegateInput = await screen.findByLabelText(/Choose eligible colleague/i);
     const startInput = screen.getByLabelText(/Effective From \*/i);
     const endInput = screen.getByLabelText(/Effective Until \*/i);
 
@@ -435,7 +813,7 @@ describe("Institution setup action screens", () => {
     fireEvent.change(startInput, { target: { value: "2026-11-08T00:00" } });
     fireEvent.change(endInput, { target: { value: "2026-11-15T00:00" } });
 
-    const submitBtn = screen.getByRole("button", { name: /Create Delegation \[Rule 11\]/i });
+    const submitBtn = screen.getByRole("button", { name: /Create delegation/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -446,15 +824,30 @@ describe("Institution setup action screens", () => {
           delegationBasis: "SAME_OR_HIGHER",
         })
       );
-      expect(screen.getByText(/Approval authority successfully delegated/i)).toBeInTheDocument();
+      expect(screen.getByText(/Approval authority delegated successfully/i)).toBeInTheDocument();
     });
+  });
+
+  it("requires selecting pending requests from the inbox for bulk decisions", () => {
+    renderWithTenant(<DelegationsApprovalsPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Apply bulk decision/i }));
+
+    expect(screen.getByText(/Select at least one request from your pending approval inbox/i)).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it("applies bulk approval decisions (Story #21: APPROVAL_BULK / Rule AP-25)", async () => {
     const req1 = "55555555-5555-5555-5555-555555555555";
     const req2 = "66666666-6666-6666-6666-666666666666";
 
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/approvals/inbox")) return Promise.resolve({ data: { items: [
+        { approvalRequestId: req1, stepNo: 1, approverRoleCode: "PRINCIPAL", decision: "PENDING" },
+        { approvalRequestId: req2, stepNo: 2, approverRoleCode: "DEAN", decision: "PENDING" },
+      ] } });
+      if (url.endsWith("/delegations/eligible-users")) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       data: {
         batchId: "batch-1",
@@ -467,13 +860,15 @@ describe("Institution setup action screens", () => {
 
     renderWithTenant(<DelegationsApprovalsPage />);
 
-    const idsInput = screen.getByLabelText(/Approval Request IDs/i);
+    const firstRequest = await screen.findByLabelText(/Request awaiting Principal · Step 1/i);
+    const secondRequest = await screen.findByLabelText(/Request awaiting Dean · Step 2/i);
     const commentInput = screen.getByLabelText(/Batch Comment/i);
 
-    fireEvent.change(idsInput, { target: { value: `${req1}, ${req2}` } });
+    fireEvent.click(firstRequest);
+    fireEvent.click(secondRequest);
     fireEvent.change(commentInput, { target: { value: "Batch review approved" } });
 
-    const submitBtn = screen.getByRole("button", { name: /Bulk Approve \[Rule AP-25\]/i });
+    const submitBtn = screen.getByRole("button", { name: /Apply bulk decision/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -488,6 +883,20 @@ describe("Institution setup action screens", () => {
       expect(screen.getByText(/Bulk decision applied: 2 items processed successfully/i)).toBeInTheDocument();
     });
   });
+  it("keeps every governance tab associated with a mounted tab panel", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    renderWithTenant(<AcademicGovernancePage />);
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(4);
+    for (const tab of tabs) {
+      const panelId = tab.getAttribute("aria-controls");
+      expect(panelId).toBeTruthy();
+      expect(document.getElementById(panelId!)).toHaveAttribute("role", "tabpanel");
+      expect(document.getElementById(panelId!)).toHaveAttribute("aria-labelledby", tab.id);
+    }
+  });
+
   it("renders academic governance and submits program rules (Story #30: PROGRAM_RULES_SET)", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: [
@@ -541,7 +950,18 @@ describe("Institution setup action screens", () => {
   });
 
   it("submits grading scheme, subject allocation, and promotion run (Stories #34, #36, #39, #40)", async () => {
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith("/institutions")) return Promise.resolve({ data: { items: [{ institutionId: "inst-1", institutionName: "Northbridge College", institutionCode: "NBC", institutionType: "COLLEGE" }] } });
+      if (url.endsWith("/academic-sessions")) return Promise.resolve({ data: [
+        { academicSessionId: "sess-1", tenantId: TENANT_ID, institutionId: "inst-1", sessionLabel: "2025–26", startDate: "2025-06-01", endDate: "2026-03-31", academicYear: 2025, status: "ACTIVE", rowVersion: 1 },
+        { academicSessionId: "sess-2", tenantId: TENANT_ID, institutionId: "inst-1", sessionLabel: "2026–27", startDate: "2026-06-01", endDate: "2027-03-31", academicYear: 2026, status: "ACTIVE", rowVersion: 1 },
+      ] });
+      if (url.endsWith("/subjects")) return Promise.resolve({ data: [{ subjectId: "sub-1", institutionId: "inst-1", subjectCode: "MATH", subjectName: "Mathematics", credits: 4, isElective: false, status: "ACTIVE" }] });
+      if (url.endsWith("/course-offerings")) return Promise.resolve({ data: [{ courseOfferingId: "off-1", institutionId: "inst-1", subjectId: "sub-1", academicSessionId: "sess-1", semesterId: null, classId: null }] });
+      if (url.endsWith("/sections")) return Promise.resolve({ data: [] });
+      if (url.endsWith("/staff")) return Promise.resolve({ data: { items: [{ staffProfileId: "profile-1", staffAssignmentId: "staff-1", staffCode: "ST-01", fullName: "Asha Rao", designation: "Professor", departmentId: null, departmentName: "Mathematics" }] } });
+      return Promise.resolve({ data: [] });
+    });
     (api.post as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         data: {
@@ -569,7 +989,7 @@ describe("Institution setup action screens", () => {
           institutionId: "inst-1",
           fromSessionId: "sess-1",
           toSessionId: "sess-2",
-          status: "PENDING_APPROVAL",
+          status: "DRAFT",
           rowVersion: 1,
         },
       })
@@ -579,15 +999,25 @@ describe("Institution setup action screens", () => {
           institutionId: "inst-1",
           fromSessionId: "sess-1",
           toSessionId: "sess-2",
-          status: "APPROVED",
+          status: "PENDING_APPROVAL",
           rowVersion: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          promotionRunId: "prom-1",
+          institutionId: "inst-1",
+          fromSessionId: "sess-1",
+          toSessionId: "sess-2",
+          status: "APPROVED",
+          rowVersion: 3,
         },
       });
 
     renderWithTenant(<AcademicGovernancePage />);
 
     // Test grading schemes tab
-    fireEvent.click(screen.getByRole("button", { name: /Grading Schemes \(#34\)/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Grading schemes/i }));
     fireEvent.click(screen.getByRole("button", { name: /\+ Set Grading Scheme/i }));
     fireEvent.click(screen.getByRole("button", { name: /Save Scheme/i }));
 
@@ -596,11 +1026,11 @@ describe("Institution setup action screens", () => {
     });
 
     // Test subject allocation tab
-    fireEvent.click(screen.getByRole("button", { name: /Subject Allocations \(#36\)/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Subject allocations/i }));
     fireEvent.click(screen.getByRole("button", { name: "+ Allocate Subject" }));
-    fireEvent.change(screen.getByLabelText(/Institution UUID \*/i), { target: { value: "inst-1" } });
-    fireEvent.change(screen.getByLabelText(/Course Offering UUID \*/i), { target: { value: "off-1" } });
-    fireEvent.change(screen.getByLabelText(/Teacher Staff Assignment UUID \*/i), { target: { value: "staff-1" } });
+    fireEvent.change(await screen.findByLabelText(/Institution \\*/i), { target: { value: "inst-1" } });
+    fireEvent.change(await screen.findByLabelText(/Course offering \\*/i), { target: { value: "off-1" } });
+    fireEvent.change(await screen.findByLabelText(/Teacher \\*/i), { target: { value: "staff-1" } });
     fireEvent.click(screen.getByRole("button", { name: "Allocate Subject" }));
 
     await waitFor(() => {
@@ -608,22 +1038,143 @@ describe("Institution setup action screens", () => {
     });
 
     // Test year-end promotions tab
-    fireEvent.click(screen.getByRole("button", { name: /Year-End Promotions \(#39 & #40\)/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /Year-end promotions/i }));
     fireEvent.click(screen.getByRole("button", { name: /\+ New Promotion Run/i }));
-    fireEvent.change(screen.getByLabelText(/Institution UUID \*/i), { target: { value: "inst-1" } });
-    fireEvent.change(screen.getByLabelText(/From Session UUID \*/i), { target: { value: "sess-1" } });
-    fireEvent.change(screen.getByLabelText(/To Session UUID \*/i), { target: { value: "sess-2" } });
+    fireEvent.change(await screen.findByLabelText(/Institution \\*/i), { target: { value: "inst-1" } });
+    fireEvent.change(await screen.findByLabelText(/Promote students from \\*/i), { target: { value: "sess-1" } });
+    fireEvent.change(await screen.findByLabelText(/Promote students to \\*/i), { target: { value: "sess-2" } });
     fireEvent.click(screen.getByRole("button", { name: /Create Run/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Year-end promotion run created in draft/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Approve \[Principal\]/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Submit for approval/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Approve \[Principal\]/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Submit for approval/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Promotion run submitted for Principal approval/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Approve$/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Approve$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Promotion run approved by Principal/i)).toBeInTheDocument();
     });
   });
+  it("edits a department using the current row version", async () => {
+    const department = {
+      departmentId: DEPT_ID, institutionId: INST_ID, departmentCode: "CSE",
+      departmentName: "Computer Science", status: "ACTIVE", facultyCount: 8, studentCount: 120, rowVersion: 2,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/departments`)) return Promise.resolve({ data: [department] });
+      if (url.endsWith(`/institutions/${INST_ID}/programs`)) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...department, departmentName: "Computer Science and Engineering", rowVersion: 3 } });
+    renderWithTenant(<AcademicStructurePage />);
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Computer Science");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Department name/i), { target: { value: "Computer Science and Engineering" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/departments/${DEPT_ID}`,
+      { departmentCode: "CSE", departmentName: "Computer Science and Engineering" },
+      { headers: { "If-Match": "\"2\"" } },
+    ));
+  });
+
+  it("edits a program using If-Match and its department relationship", async () => {
+    const department = { departmentId: DEPT_ID, institutionId: INST_ID, departmentCode: "CSE", departmentName: "Computer Science", status: "ACTIVE", rowVersion: 1 };
+    const program = {
+      programId: SECTION_ID, institutionId: INST_ID, departmentId: DEPT_ID, programCode: "BTECH",
+      programName: "B.Tech", durationYears: 4, semestersPerYear: 2, status: "ACTIVE", rowVersion: 3,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/departments`)) return Promise.resolve({ data: [department] });
+      if (url.endsWith(`/institutions/${INST_ID}/programs`)) return Promise.resolve({ data: [program] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...program, programName: "B.Tech Computer Science", rowVersion: 4 } });
+    renderWithTenant(<AcademicStructurePage />);
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByRole("link", { name: "B.Tech" });
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+    fireEvent.change(screen.getByLabelText(/Program name/i, { selector: "#edit-program-name" }), { target: { value: "B.Tech Computer Science" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/programs/${SECTION_ID}`,
+      { departmentId: DEPT_ID, programCode: "BTECH", programName: "B.Tech Computer Science", durationYears: 4, semestersPerYear: 2 },
+      { headers: { "If-Match": "\"3\"" } },
+    ));
+  });
+
+  it("edits a school class with optimistic concurrency", async () => {
+    const schoolClass = { classId: DEPT_ID, institutionId: INST_ID, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE", rowVersion: 4 };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [schoolClass] });
+      if (url.endsWith(`/institutions/${INST_ID}/sections`)) return Promise.resolve({ data: [] });
+      if (url.endsWith(`/institutions/${INST_ID}/academic-sessions`)) return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...schoolClass, className: "Grade 9", rowVersion: 5 } });
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Grade 8");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Class or grade name/i, { selector: "#edit-class-name" }), { target: { value: "Grade 9" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/classes/${DEPT_ID}`,
+      { className: "Grade 9", displayOrder: 8 },
+      { headers: { "If-Match": "\"4\"" } },
+    ));
+  });
+
+  it("edits a school section including capacity with optimistic concurrency", async () => {
+    const schoolClass = { classId: DEPT_ID, institutionId: INST_ID, className: "Grade 8", displayOrder: 8, studentLoginEnabled: false, status: "ACTIVE", rowVersion: 1 };
+    const sessionId = "77777777-7777-7777-7777-777777777777";
+    const section = {
+      sectionId: SECTION_ID, institutionId: INST_ID, academicSessionId: sessionId, semesterId: null,
+      classId: DEPT_ID, sectionName: "A", status: "ACTIVE", capacity: 60, rowVersion: 6,
+    };
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith(`/institutions/${INST_ID}/classes`)) return Promise.resolve({ data: [schoolClass] });
+      if (url.endsWith(`/institutions/${INST_ID}/sections`)) return Promise.resolve({ data: [section] });
+      if (url.includes(`/academic-sessions`)) return Promise.resolve({ data: [{
+        academicSessionId: sessionId, sessionLabel: "2026-27", startDate: "2026-06-01", endDate: "2027-05-31", status: "ACTIVE",
+      }] });
+      return Promise.resolve({ data: [] });
+    });
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { ...section, sectionName: "B", capacity: 72, rowVersion: 7 } });
+    renderWithTenant(<AcademicStructurePage />, TENANT_ID, "SCHOOL_ADMIN");
+    fireEvent.change(screen.getByLabelText(/Institution|registered institutions/i), { target: { value: INST_ID } });
+    fireEvent.click(screen.getByRole("button", { name: /load structure/i }));
+    await screen.findByText("Section A");
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+    fireEvent.change(screen.getByLabelText(/Section name/i, { selector: "#edit-section-name" }), { target: { value: "B" } });
+    fireEvent.change(screen.getByLabelText(/Section capacity/i, { selector: "#edit-section-capacity" }), { target: { value: "72" } });
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
+    const editForm = saveButton.closest("form");
+    expect(saveButton).toBeEnabled();
+    expect(editForm).not.toBeNull();
+    expect((editForm as HTMLFormElement).checkValidity()).toBe(true);
+    fireEvent.click(saveButton);
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(
+      `/api/tenants/${TENANT_ID}/institutions/${INST_ID}/sections/${SECTION_ID}`,
+      { sectionName: "B", classId: DEPT_ID, academicSessionId: sessionId, capacity: 72, semesterId: null },
+      { headers: { "If-Match": "\"6\"" } },
+    ));
+  });
+
 });

@@ -15,5 +15,7 @@ public record LeaveRequestDto(
         BigDecimal daysCounted,
         String processCode,
         String status,
-        Instant createdAt
+        Instant createdAt,
+        UUID approvalRequestId,
+        BigDecimal lossOfPayDays
 ) {}

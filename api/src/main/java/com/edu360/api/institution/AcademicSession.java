@@ -53,6 +53,10 @@ public class AcademicSession {
     @Column(name = "status", nullable = false)
     private String status;
 
+    @Column(name = "is_current", nullable = false)
+    @Builder.Default
+    private boolean current = false;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 

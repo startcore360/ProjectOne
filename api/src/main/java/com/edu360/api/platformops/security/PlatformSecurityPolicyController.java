@@ -97,14 +97,14 @@ public class PlatformSecurityPolicyController {
     }
 
     public record UpdateSecurityPolicyRequest(
-            int minPasswordLength,
-            boolean requireSpecialChar,
-            boolean requireDigit,
-            int maxFailedLogins,
-            int lockoutMinutes,
-            int idleSessionTimeoutMinutes,
-            boolean mfaRequiredForPrivileged,
-            int defaultBackupRetentionDays,
+            Integer minPasswordLength,
+            Boolean requireSpecialChar,
+            Boolean requireDigit,
+            Integer maxFailedLogins,
+            Integer lockoutMinutes,
+            Integer idleSessionTimeoutMinutes,
+            Boolean mfaRequiredForPrivileged,
+            Integer defaultBackupRetentionDays,
             Integer passwordRotationDays
     ) {
         public UpdateSecurityPolicyRequest(int minPasswordLength, boolean requireSpecialChar, boolean requireDigit,
@@ -174,42 +174,58 @@ public class PlatformSecurityPolicyController {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "SECURITY_POLICY_SET");
 
-        if (req == null || req.minPasswordLength() < 8) {
+        if (req == null) {
+            throw new BusinessRuleViolationException("INVALID_SECURITY_POLICY", "A security policy body is required.");
+        }
+        // The client sends Partial<SecurityPolicyItem>; merge omitted fields with the current
+        // policy rather than allowing Jackson's primitive defaults (0/false) to reject or
+        // unexpectedly weaken a valid partial update.
+        SecurityPolicyService.SecurityPolicy current = securityPolicyService.current();
+        int minPasswordLength = valueOr(req.minPasswordLength(), current.minPasswordLength());
+        boolean requireSpecialChar = valueOr(req.requireSpecialChar(), current.requireSpecialChar());
+        boolean requireDigit = valueOr(req.requireDigit(), current.requireDigit());
+        int maxFailedLogins = valueOr(req.maxFailedLogins(), current.maxFailedLogins());
+        int lockoutMinutes = valueOr(req.lockoutMinutes(), current.lockoutMinutes());
+        int idleSessionTimeoutMinutes = valueOr(req.idleSessionTimeoutMinutes(), current.idleSessionTimeoutMinutes());
+        boolean mfaRequiredForPrivileged = valueOr(req.mfaRequiredForPrivileged(), current.mfaRequiredForPrivileged());
+        int defaultBackupRetentionDays = valueOr(req.defaultBackupRetentionDays(), current.defaultBackupRetentionDays());
+        int passwordRotationDays = valueOr(req.passwordRotationDays(), current.rotationDays());
+
+        if (minPasswordLength < 8) {
             throw new BusinessRuleViolationException("INVALID_MIN_PASSWORD_LENGTH", "Minimum password length must be at least 8.");
         }
-        if (req.minPasswordLength() > 64) {
+        if (minPasswordLength > 64) {
             throw new BusinessRuleViolationException("INVALID_MIN_PASSWORD_LENGTH", "Minimum password length must be at most 64.");
         }
-        if (req.maxFailedLogins() <= 0) {
+        if (maxFailedLogins <= 0) {
             throw new BusinessRuleViolationException("INVALID_MAX_FAILED_LOGINS", "Max failed logins must be at least 1.");
         }
-        if (req.lockoutMinutes() <= 0) {
+        if (lockoutMinutes <= 0) {
             throw new BusinessRuleViolationException("INVALID_LOCKOUT_MINUTES", "Lockout duration must be at least 1 minute.");
         }
-        if (req.idleSessionTimeoutMinutes() <= 0) {
+        if (idleSessionTimeoutMinutes <= 0) {
             throw new BusinessRuleViolationException("INVALID_IDLE_TIMEOUT", "Idle session timeout must be at least 1 minute.");
         }
-        if (!req.mfaRequiredForPrivileged()) {
+        if (!mfaRequiredForPrivileged) {
             // D1 Part II §11.0 / NF-09 and PD-8: two-step login is mandatory for the listed
             // roles; the policy cannot switch it off.
             throw new BusinessRuleViolationException("MFA_MANDATORY",
                     "Two-step login is mandatory for platform roles, Admins, Principals, Accountants, HR and Payroll (D1 NF-09, PD-8).");
         }
-        if (req.passwordRotationDays() != null && (req.passwordRotationDays() < 1 || req.passwordRotationDays() > 365)) {
+        if (passwordRotationDays < 1 || passwordRotationDays > 365) {
             throw new BusinessRuleViolationException("INVALID_ROTATION_DAYS", "Password rotation must be between 1 and 365 days.");
         }
 
         SecurityPolicyService.SecurityPolicy newPolicy = new SecurityPolicyService.SecurityPolicy(
-                req.minPasswordLength(),
-                req.requireSpecialChar(),
-                req.requireDigit(),
-                req.maxFailedLogins(),
-                req.lockoutMinutes(),
-                req.idleSessionTimeoutMinutes(),
-                req.mfaRequiredForPrivileged(),
-                req.defaultBackupRetentionDays(),
-                req.passwordRotationDays() != null
-                        ? req.passwordRotationDays() : SecurityPolicyService.D1_DEFAULT.passwordRotationDays());
+                minPasswordLength,
+                requireSpecialChar,
+                requireDigit,
+                maxFailedLogins,
+                lockoutMinutes,
+                idleSessionTimeoutMinutes,
+                mfaRequiredForPrivileged,
+                defaultBackupRetentionDays,
+                passwordRotationDays);
 
         if (settingValueRepository != null) {
             int nextVersion = 1;
@@ -248,18 +264,78 @@ public class PlatformSecurityPolicyController {
         return ResponseEntity.ok(SecurityPolicyResponse.of(newPolicy, sync));
     }
 
-    /** I-06: re-push the current policy and the sign-in baseline to every realm (e.g. after a deployment). */
-    @PostMapping("/security-policy/realm-sync")
-    @Operation(summary = "Re-apply the security policy to every Keycloak realm (SECURITY_POLICY_SET)")
-    public ResponseEntity<List<RealmSecuritySyncService.RealmSyncResult>> syncRealms(Authentication auth) {
+    private static int valueOr(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private static boolean valueOr(Boolean value, boolean fallback) {
+        return value == null ? fallback : value;
+    }
+
+    public record ApplyRealmSyncRequest(UUID previewId) {
+    }
+
+    public record RetryRealmSyncRequest(UUID runId) {
+    }
+
+    /** Read-only target and policy preview; Keycloak is not contacted. */
+    @GetMapping("/security-policy/realm-sync/preview")
+    @Operation(summary = "Preview target realms and current security policy without applying changes")
+    public ResponseEntity<RealmSecuritySyncService.RealmSyncPreview> previewRealmSync(Authentication auth) {
         PlatformPrincipal principal = requirePlatformPrincipal(auth);
         permissionService.authorize(principal, "SECURITY_POLICY_SET");
         if (realmSecuritySyncService == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
-        List<RealmSecuritySyncService.RealmSyncResult> results = realmSecuritySyncService.applyToAllRealms();
-        auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
-        return ResponseEntity.ok(results);
+        return ResponseEntity.ok(realmSecuritySyncService.previewAllRealms());
+    }
+
+    /** Applies only the exact realm set and policy values captured by the read-only preview. */
+    @PostMapping("/security-policy/realm-sync")
+    @Operation(summary = "Apply the previewed security policy to every target Keycloak realm")
+    public ResponseEntity<?> syncRealms(@RequestBody ApplyRealmSyncRequest request, Authentication auth) {
+        PlatformPrincipal principal = requirePlatformPrincipal(auth);
+        permissionService.authorize(principal, "SECURITY_POLICY_SET");
+        if (realmSecuritySyncService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        if (request == null || request.previewId() == null) {
+            throw new BusinessRuleViolationException("REALM_SYNC_PREVIEW_REQUIRED", "A current realm sync preview is required.");
+        }
+        try {
+            RealmSecuritySyncService.RealmSyncRunResult result =
+                    realmSecuritySyncService.applyPreviewedRealms(request.previewId());
+            auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of(
+                    "code", "REALM_SYNC_PREVIEW_EXPIRED",
+                    "message", "Preview the current policy and target realms again before applying."));
+        }
+    }
+
+    /** Retry is bound to the server-recorded failed subset of the supplied run. */
+    @PostMapping("/security-policy/realm-sync/retry")
+    @Operation(summary = "Retry only realms that failed in the immediately preceding sync")
+    public ResponseEntity<?> retryFailedRealmSync(@RequestBody RetryRealmSyncRequest request, Authentication auth) {
+        PlatformPrincipal principal = requirePlatformPrincipal(auth);
+        permissionService.authorize(principal, "SECURITY_POLICY_SET");
+        if (realmSecuritySyncService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        if (request == null || request.runId() == null) {
+            throw new BusinessRuleViolationException("REALM_SYNC_RUN_REQUIRED", "A realm sync run id is required.");
+        }
+        try {
+            RealmSecuritySyncService.RealmSyncRunResult result =
+                    realmSecuritySyncService.retryFailedRealms(request.runId());
+            auditWriter.record(principal, "CONFIG_CHANGE", "SECURITY_POLICY_SET", "SETTING_VALUE", UUID.randomUUID());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of(
+                    "code", "REALM_SYNC_RETRY_NOT_AVAILABLE",
+                    "message", "The previous run is no longer available or has no failed realms."));
+        }
     }
 
     @GetMapping({"/incidents", "/security-incidents"})

@@ -1,4 +1,5 @@
 import type { TextareaHTMLAttributes } from "react";
+import { Icon } from "../../components/ui/Icon";
 
 export type TextAreaFieldProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string;
@@ -14,12 +15,14 @@ export default function TextAreaField({
   hint,
   error,
   rows = 3,
+  "aria-describedby": callerDescribedBy,
+  "aria-invalid": callerInvalid,
   ...rest
 }: TextAreaFieldProps) {
   const hasAsterisk = label.includes("*");
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
-  const describedBy = [errorId, hintId, rest["aria-describedby"]].filter(Boolean).join(" ") || undefined;
+  const describedBy = [errorId, hintId, callerDescribedBy].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="eds-field">
@@ -30,19 +33,19 @@ export default function TextAreaField({
         id={id}
         required={required}
         rows={rows}
-        aria-describedby={describedBy}
-        aria-invalid={Boolean(error) || rest["aria-invalid"]}
         {...rest}
+        aria-describedby={describedBy}
+        aria-invalid={Boolean(error) || Boolean(callerInvalid)}
       />
       {hint && (
         <p id={hintId} className="eds-field__hint">
-          <span aria-hidden="true">ⓘ</span> {hint}
+          <Icon name="info" size={14} /> {hint}
         </p>
       )}
-      {error && (
-        <p id={errorId} className="eds-field__error" role="alert">
-          {error}
-        </p>
+      {error ? (
+        <p id={errorId} className="eds-field__error" role="alert">{error}</p>
+      ) : (
+        <p className="eds-field__error-placeholder" aria-hidden="true">&nbsp;</p>
       )}
     </div>
   );

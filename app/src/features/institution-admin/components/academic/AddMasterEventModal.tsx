@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+﻿import { useState, type FormEvent } from "react";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export interface AcademicSessionOption {
   academicSessionId: string;
@@ -55,7 +55,7 @@ export function AddMasterEventModal({
       onClose={onClose}
       title="Add Master Calendar Event"
       titleId="add-master-event-title"
-      description="Set semester dates or university holidays [CALENDAR_MASTER_SET, Rule CL-02]."
+      description="Set semester dates, university holidays or exam days [CALENDAR_MASTER_SET, CL-01/CL-02]."
       size="md"
     >
       <form onSubmit={handleSubmit} style={{ padding: "0.5rem 0" }}>
@@ -64,48 +64,32 @@ export function AddMasterEventModal({
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="master-event-session-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-            Academic Session
-          </label>
-          {sessions && sessions.length > 0 ? (
-            <select
-              id="master-event-session-select"
-              value={targetSessionId || sessions[0]?.academicSessionId || ""}
-              onChange={(e) => setTargetSessionId(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
-            >
-              {sessions.map((s) => (
-                <option key={s.academicSessionId} value={s.academicSessionId}>
-                  {s.sessionLabel} ({s.startDate} to {s.endDate})
-                </option>
-              ))}
-            </select>
-          ) : (
-            <TextField
-              id="master-event-session-input"
-              label="Academic Session ID"
-              required
-              value={targetSessionId}
-              onChange={(e) => setTargetSessionId(e.target.value)}
-              placeholder="Enter academic session UUID"
-            />
-          )}
-        </div>
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="master-event-type-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-            Event Type
-          </label>
-          <select
-            id="master-event-type-select"
-            value={masterEventType}
-            onChange={(e) => setMasterEventType(e.target.value)}
-            style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
+        {sessions && sessions.length > 0 ? (
+          <SelectField
+            id="master-event-session-select"
+            label="Academic Session"
+            value={targetSessionId || sessions[0]?.academicSessionId || ""}
+            onChange={(e) => setTargetSessionId(e.target.value)}
           >
-            <option value="SEMESTER_DATES">Semester Dates (SEMESTER_DATES)</option>
-            <option value="UNIVERSITY_HOLIDAY">University Holiday (UNIVERSITY_HOLIDAY)</option>
-          </select>
-        </div>
+            {sessions.map((s) => (
+              <option key={s.academicSessionId} value={s.academicSessionId}>
+                {s.sessionLabel} ({s.startDate} to {s.endDate})
+              </option>
+            ))}
+          </SelectField>
+        ) : (
+          <Notice tone="warning">No academic sessions are available yet. Create an academic session first, then return to add a master calendar event.</Notice>
+        )}
+        <SelectField
+          id="master-event-type-select"
+          label="Event Type"
+          value={masterEventType}
+          onChange={(e) => setMasterEventType(e.target.value)}
+        >
+          <option value="SEMESTER_DATES">Semester Dates (SEMESTER_DATES)</option>
+          <option value="UNIVERSITY_HOLIDAY">University Holiday (UNIVERSITY_HOLIDAY)</option>
+          <option value="EXAM_DAY">Exam day (EXAM_DAY)</option>
+        </SelectField>
         <div style={{ marginBottom: "1rem" }}>
           <TextField
             id="master-event-title-input"
@@ -116,21 +100,29 @@ export function AddMasterEventModal({
             placeholder="e.g. Odd Semester 2026 or Diwali Break"
           />
         </div>
-        <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
-          <label className="platform-form-field">
-            Start Date
-            <input type="date" value={masterEventStart} onChange={(e) => setMasterEventStart(e.target.value)} required />
-          </label>
-          <label className="platform-form-field">
-            End Date
-            <input type="date" value={masterEventEnd} onChange={(e) => setMasterEventEnd(e.target.value)} required />
-          </label>
+        <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
+          <TextField
+            id="master-event-start-date"
+            label="Start Date"
+            type="date"
+            value={masterEventStart}
+            onChange={(e) => setMasterEventStart(e.target.value)}
+            required
+          />
+          <TextField
+            id="master-event-end-date"
+            label="End Date"
+            type="date"
+            value={masterEventEnd}
+            onChange={(e) => setMasterEventEnd(e.target.value)}
+            required
+          />
         </div>
         <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" busy={submitting}>
+          <Button type="submit" variant="primary" busy={submitting} disabled={submitting || sessions.length === 0}>
             Add Master Event
           </Button>
         </footer>

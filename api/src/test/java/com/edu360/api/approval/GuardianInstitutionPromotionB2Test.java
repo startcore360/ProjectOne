@@ -375,6 +375,22 @@ class GuardianInstitutionPromotionB2Test {
         assertThat(t.step(r, 1).getActedActiveRole()).isEqualTo(TenantContext.currentActiveRoleCode()).isEqualTo("SCHOOL_PRINCIPAL");
     }
 
+    @Test
+    @DisplayName("ACT-PROMOTION_RUN-LIST: authorized user can list promotion runs for their institution")
+    void actPromotionRun_list() {
+        UUID creator = t.staff("School Admin", "SCHOOL_ADMIN", ScopeType.INSTITUTION, school);
+        UUID otherInstStaff = t.staff("Other College Admin", "COLLEGE_ADMIN", ScopeType.INSTITUTION, otherCollege);
+        PromotionRun run1 = ApprovalTestWorld.run(t.tenantId, school, "DRAFT", creator, null);
+        t.runs.put(run1.getId().getPromotionRunId(), run1);
+        PromotionRun run2 = ApprovalTestWorld.run(t.tenantId, otherCollege, "DRAFT", otherInstStaff, null);
+        t.runs.put(run2.getId().getPromotionRunId(), run2);
+
+        TenantPrincipal p = t.as(creator);
+        var runs = promotionService().listPromotionRuns(t.tenantId, p, school);
+        assertThat(runs).hasSize(1);
+        assertThat(runs.get(0).promotionRunId()).isEqualTo(run1.getId().getPromotionRunId());
+    }
+
     @SuppressWarnings("unused")
     private Object unused() {
         return mock(Object.class);

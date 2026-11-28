@@ -3,6 +3,7 @@ package com.edu360.api.platformops.release;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,6 +19,7 @@ import com.edu360.api.platformops.PlatformPermissionService;
 import com.edu360.api.platformops.release.dto.CreateReleaseRequest;
 import com.edu360.api.platformops.release.dto.ReleaseResponse;
 import com.edu360.api.platformops.release.dto.ReleaseTransitionRequest;
+import com.edu360.api.platformops.release.dto.ScheduleReleaseRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,12 @@ public class PlatformReleaseController {
 
     private final PlatformReleaseService releaseService;
     private final PlatformPermissionService permissionService;
+    private PlatformReleaseHealthService healthService;
+
+    @Autowired
+    public void setHealthService(PlatformReleaseHealthService healthService) {
+        this.healthService = healthService;
+    }
 
     @GetMapping
     public ResponseEntity<List<ReleaseResponse>> listReleases(Authentication auth) {
@@ -44,6 +52,16 @@ public class PlatformReleaseController {
         return ResponseEntity.ok(releaseService.getRelease(id));
     }
 
+    @GetMapping("/{id}/health")
+    public ResponseEntity<ReleaseHealthResponse> getReleaseHealth(@PathVariable UUID id, Authentication auth) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "RELEASE_MANAGE");
+        if (healthService == null) {
+            throw new IllegalStateException("Release health service is unavailable.");
+        }
+        return ResponseEntity.ok(healthService.getHealth(id));
+    }
+
     @PostMapping
     public ResponseEntity<ReleaseResponse> createRelease(
             @Valid @RequestBody CreateReleaseRequest req,
@@ -52,6 +70,17 @@ public class PlatformReleaseController {
         PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
         permissionService.authorize(principal, "RELEASE_MANAGE");
         return ResponseEntity.status(HttpStatus.CREATED).body(releaseService.createRelease(req, principal));
+    }
+
+    @PostMapping("/{id}/schedule")
+    public ResponseEntity<ReleaseResponse> scheduleRelease(
+            @PathVariable UUID id,
+            @Valid @RequestBody ScheduleReleaseRequest req,
+            Authentication auth
+    ) {
+        PlatformPrincipal principal = (PlatformPrincipal) auth.getPrincipal();
+        permissionService.authorize(principal, "RELEASE_MANAGE");
+        return ResponseEntity.ok(releaseService.scheduleRelease(id, req.at(), principal));
     }
 
     @PostMapping("/{id}/transitions")

@@ -5,6 +5,7 @@ import { meService, type UserRoleOption } from "../../features/profile/api/meSer
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { switchActiveRole } from "../../store/slices/authSlice";
 import { ACTIVE_ROLE_REQUIRED_EVENT } from "../../services/activeRoleRequired";
+import { tenantPermissionsService } from "../../features/profile/api/tenantPermissionsService";
 
 type RoleSwitcherProps = {
   /**
@@ -18,7 +19,12 @@ type RoleSwitcherProps = {
 export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const user = useAppSelector((state) => state.auth.user);
+  const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
+  const platformRole = useAppSelector((state) => state.auth.user?.platformRole);
+  const hasUser = useAppSelector((state) => !!state.auth.user);
+  const roleCode = useAppSelector((state) => state.auth.user?.roleCode);
+  const roleName = useAppSelector((state) => state.auth.user?.roleName);
+  const userType = useAppSelector((state) => state.auth.user?.userType);
   // After any successful role switch, land on the dashboard: the page the user was on may not
   // exist (or not be permitted) for the new role, and the dashboard is that role's home.
   const goToDashboard = () => navigate("/dashboard", { replace: false });
@@ -35,7 +41,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
   }, []);
 
   useEffect(() => {
-    if (!user?.tenantId) return;
+    if (!tenantId) return;
     let mounted = true;
     meService
       .getMe()
@@ -53,7 +59,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
     return () => {
       mounted = false;
     };
-  }, [user?.tenantId]);
+  }, [tenantId]);
 
   const handleChange = async (newAssignmentId: string) => {
     if (newAssignmentId === currentId || switching) return;
@@ -67,6 +73,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
           roleName: data.roleName,
         })
       );
+      await tenantPermissionsService.reload();
       goToDashboard();
     } catch {
       // Retain prior on error
@@ -75,11 +82,17 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
     }
   };
 
-  if (!user || user.platformRole) {
+  if (!hasUser || platformRole) {
     return null;
   }
 
   const className = `role-switcher role-switcher--${layout}`;
+  const contextLabel = (role: UserRoleOption) =>
+    [role.institutionName, role.departmentName].filter(Boolean).join(" · ");
+  const scopeLabel = (role: UserRoleOption) => {
+    const context = contextLabel(role);
+    return context || role.scopeType.toLowerCase().replaceAll("_", " ");
+  };
 
   if (roles.length > 1) {
     return (
@@ -101,7 +114,7 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
           )}
           {roles.map((r) => (
             <option key={r.userRoleAssignmentId} value={r.userRoleAssignmentId}>
-              {r.roleName} ({r.scopeType})
+              {r.roleName} · {scopeLabel(r)}
             </option>
           ))}
         </select>
@@ -109,48 +122,22 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
     );
   }
 
-  // In DEV mode (outside automated test runs), allow switching active admin roles for convenient testing
-  if (import.meta.env.DEV && !import.meta.env.VITEST) {
-    const devAdminRoles = [
-      { code: "UNIVERSITY_ADMIN", name: "University Admin" },
-      { code: "COLLEGE_ADMIN", name: "College Admin" },
-      { code: "SCHOOL_ADMIN", name: "School Admin" },
-    ];
-    const currentCode = user.roleCode || "UNIVERSITY_ADMIN";
-
-    return (
-      <label className={className}>
-        <span className="role-switcher__label">Role</span>
-        <select
-          className="role-switcher__select"
-          aria-label="Switch active role"
-          value={currentCode}
-          onChange={(e) => {
-            const found = devAdminRoles.find((r) => r.code === e.target.value);
-            if (found) {
-              dispatch(switchActiveRole({ roleCode: found.code, roleName: found.name }));
-              goToDashboard();
-            }
-          }}
-        >
-          {devAdminRoles.map((r) => (
-            <option key={r.code} value={r.code}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
-
-  const roleLabel = user.roleName || user.roleCode || user.userType || "Member";
+  const roleLabel = roleName || roleCode || userType || "Member";
+  const activeRole = roles.find((role) => role.userRoleAssignmentId === currentId) || roles[0];
+  const activeContext = activeRole ? contextLabel(activeRole) : "";
   if (layout === "stacked") {
     return (
       <div className={className}>
         <span className="role-switcher__label">Role</span>
         <Badge tone="neutral">{roleLabel}</Badge>
+        {activeContext && <span className="role-switcher__context">{activeContext}</span>}
       </div>
     );
   }
-  return <Badge tone="neutral">{roleLabel}</Badge>;
+  return (
+    <div className={className}>
+      <Badge tone="neutral">{roleLabel}</Badge>
+      {activeContext && <span className="role-switcher__context">{activeContext}</span>}
+    </div>
+  );
 }

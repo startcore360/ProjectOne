@@ -1,0 +1,123 @@
+-- Minimal reference fixture for applying the Sprint 2 migration in the isolated acceptance-test database.
+-- The full V3.3 reference load is deliberately not used here because 04_tests.sql owns its own seed rows.
+INSERT INTO ref.module_catalog VALUES ('ASSIGNMENTS','Assignments, homework and study material',1,true) ON CONFLICT DO NOTHING;
+
+INSERT INTO ref.approval_process VALUES
+ ('ATTENDANCE_CORRECTION_COLLEGE','Attendance correction (college)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture'),
+ ('ATTENDANCE_CORRECTION_SCHOOL','Attendance correction (school)','ATTENDANCE_CORRECTION_REQUEST',true,true,'Sprint 2 test fixture'),
+ ('CONCESSION','Concession','CONCESSION',true,true,'FE-17'),
+ ('SCHOLARSHIP_LIST','Scholarship list','SCHOLARSHIP_AWARD_LIST',true,true,'WF-31')
+ON CONFLICT(process_code) DO NOTHING;
+
+INSERT INTO ref.standard_role(role_code,role_name,role_level,introduced_in_version,requires_two_step_login,is_staff) VALUES
+ ('MANAGEMENT','Management','TENANT','≤3.2',true,false),
+ ('GOVERNING_BODY_APPROVER','Governing Body Approver','TENANT','3.3',true,false),
+ ('FINANCE_DIRECTOR','Finance Director','UNIVERSITY','≤3.2',true,true),
+ ('COLLEGE_ADMIN','College Admin','COLLEGE','≤3.2',true,true),
+ ('SCHOOL_ADMIN','School Admin','SCHOOL','≤3.2',true,true),
+ ('RECORDS_OFFICER','Records Officer','COLLEGE','≤3.2',false,true),
+ ('UNIVERSITY_ADMIN','University Admin','UNIVERSITY','≤3.2',true,true),
+ ('PRODUCT_OWNER','Product Owner','PLATFORM','≤3.2',true,false),
+ ('PLATFORM_ADMIN','Platform Admin','PLATFORM','≤3.2',true,false),
+ ('PROFESSOR','Professor','COLLEGE','4.0',false,true),
+ ('ASSOCIATE_PROFESSOR','Associate Professor','COLLEGE','4.0',false,true),
+ ('ASSISTANT_PROFESSOR','Assistant Professor','COLLEGE','4.0',false,true),
+ ('HEAD_OF_DEPARTMENT','Head of Department','COLLEGE','4.0',false,true),
+ ('CLASS_TEACHER','Class Teacher','SCHOOL','4.0',false,true),
+ ('SUBJECT_TEACHER','Subject Teacher','SCHOOL','4.0',false,true),
+ ('DEPARTMENT_COORDINATOR','Department Coordinator','COLLEGE','4.0',false,true),
+ ('PRINCIPAL_COLLEGE','Principal College','COLLEGE','4.0',false,true),
+ ('SCHOOL_PRINCIPAL','School Principal','SCHOOL','4.0',false,true),
+ ('VICE_PRINCIPAL_COLLEGE','Vice Principal College','COLLEGE','4.0',false,true),
+ ('VICE_PRINCIPAL_SCHOOL','Vice Principal School','SCHOOL','4.0',false,true),
+ ('STUDENT_COLLEGE','Student (College)','COLLEGE','≤3.2',false,false),
+ ('STUDENT_SCHOOL','Student (School)','SCHOOL','≤3.2',false,false),
+ ('PARENT_COLLEGE','Parent (College)','COLLEGE','≤3.2',false,false),
+ ('PARENT_SCHOOL','Parent (School)','SCHOOL','≤3.2',false,false)
+ON CONFLICT(role_code) DO NOTHING;
+
+INSERT INTO ref.action_catalog(action_code,action_no,module_name,phase,description,is_approval_action,sensitive_class,changed_in) VALUES
+ ('TIMETABLE_BUILD',600,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ONLINE_PERIOD_SET',601,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('TIMETABLE_VIEW',602,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('SYLLABUS_VIEW',603,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('SYLLABUS_MANAGE',604,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_MARK',605,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_NOT_HELD',606,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('SUBSTITUTE_ASSIGN',607,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_CORRECTION_REQUEST',608,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_CORRECTION_APPROVE',609,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_BULK_UPLOAD',610,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_BULK_UPLOAD_APPROVE',611,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_RULES_SET',612,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_VIEW',613,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ATTENDANCE_VIEW_OWN',614,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ASSIGNMENT_CREATE',615,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ASSIGNMENT_CLOSE',616,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('STUDY_MATERIAL_UPLOAD',617,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ASSIGNMENT_SUBMIT',618,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ASSIGNMENT_EVALUATE',619,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('HOMEWORK_STATUS_MARK',620,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('ASSIGNMENT_VIEW_OWN',621,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('HOMEWORK_COMPLIANCE_VIEW',622,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('STAFF_RECORD_MANAGE',623,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('STAFF_DOCUMENT_VERIFY',624,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('STAFF_RECORD_VIEW',625,'Sprint 2',1,'Test fixture action',false,NULL,NULL),
+ ('CONCESSION_APPROVE',626,'Sprint 2',1,'Test fixture action',true,'Financial – Correct (approve)',NULL),
+ ('SCHOLARSHIP_LIST_APPROVE',627,'Sprint 2',1,'Test fixture action',true,NULL,NULL),
+ ('COMPLAINT_RAISE',628,'Complaints',1,'Raise a complaint',false,NULL,NULL),
+ ('COMPLAINT_ASSIGN',629,'Complaints',1,'Assign a complaint to an owner',false,NULL,NULL),
+ ('COMPLAINT_RESOLVE',630,'Complaints',1,'Resolve or escalate a complaint',false,NULL,NULL),
+ ('COMPLAINT_ESCALATED_VIEW',631,'Complaints',1,'Review escalated complaints',false,NULL,NULL)
+ON CONFLICT(action_code) DO NOTHING;
+
+INSERT INTO ref.approval_chain_step VALUES
+ (3900,'CONCESSION',1,'Principal','CONCESSION_APPROVE',false,NULL,false,false),
+ (3901,'SCHOLARSHIP_LIST',1,'Principal','SCHOLARSHIP_LIST_APPROVE',false,NULL,false,false)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO ref.standard_role_action(standard_role_action_id,role_code,action_code,limited_to) VALUES
+ (3000,'DEPARTMENT_COORDINATOR','TIMETABLE_BUILD','Test fixture'),
+ (3001,'DEPARTMENT_COORDINATOR','ONLINE_PERIOD_SET','Test fixture'),
+ (3002,'PROFESSOR','TIMETABLE_VIEW','Test fixture'),
+ (3003,'PROFESSOR','SYLLABUS_VIEW','Assigned subjects'),
+ (3004,'HEAD_OF_DEPARTMENT','SYLLABUS_MANAGE','Own department'),
+ (3005,'PROFESSOR','ATTENDANCE_MARK','Test fixture'),
+ (3006,'PROFESSOR','ATTENDANCE_NOT_HELD','Test fixture'),
+ (3007,'HEAD_OF_DEPARTMENT','SUBSTITUTE_ASSIGN','Test fixture'),
+ (3008,'PROFESSOR','ATTENDANCE_CORRECTION_REQUEST','Test fixture'),
+ (3009,'HEAD_OF_DEPARTMENT','ATTENDANCE_CORRECTION_APPROVE','Test fixture'),
+ (3010,'PROFESSOR','ATTENDANCE_BULK_UPLOAD','Test fixture'),
+ (3011,'PRINCIPAL_COLLEGE','ATTENDANCE_BULK_UPLOAD_APPROVE','Test fixture'),
+ (3012,'PRINCIPAL_COLLEGE','ATTENDANCE_RULES_SET','Test fixture'),
+ (3013,'PROFESSOR','ATTENDANCE_VIEW','Test fixture'),
+ (3014,'PROFESSOR','ATTENDANCE_VIEW_OWN','Test fixture'),
+ (3015,'PROFESSOR','ASSIGNMENT_CREATE','Test fixture'),
+ (3016,'PROFESSOR','ASSIGNMENT_CLOSE','Test fixture'),
+ (3017,'PROFESSOR','STUDY_MATERIAL_UPLOAD','Test fixture'),
+ (3018,'PROFESSOR','ASSIGNMENT_SUBMIT','Test fixture'),
+ (3019,'PROFESSOR','ASSIGNMENT_EVALUATE','Test fixture'),
+ (3020,'CLASS_TEACHER','HOMEWORK_STATUS_MARK','Test fixture'),
+ (3021,'PROFESSOR','ASSIGNMENT_VIEW_OWN','Test fixture'),
+ (3022,'PRINCIPAL_COLLEGE','HOMEWORK_COMPLIANCE_VIEW','Test fixture'),
+ (3023,'PRINCIPAL_COLLEGE','STAFF_RECORD_MANAGE','Test fixture'),
+ (3024,'PRINCIPAL_COLLEGE','STAFF_DOCUMENT_VERIFY','Test fixture'),
+ (3025,'PRINCIPAL_COLLEGE','STAFF_RECORD_VIEW','Test fixture'),
+ (3026,'PRINCIPAL_COLLEGE','CONCESSION_APPROVE','Own institution'),
+ (3027,'SCHOOL_PRINCIPAL','CONCESSION_APPROVE','Own institution'),
+ (3028,'PRINCIPAL_COLLEGE','SCHOLARSHIP_LIST_APPROVE','Own institution'),
+ (3029,'SCHOOL_PRINCIPAL','SCHOLARSHIP_LIST_APPROVE','Own institution'),
+ (3030,'STUDENT_COLLEGE','COMPLAINT_RAISE','Own institution'),
+ (3031,'PARENT_COLLEGE','COMPLAINT_RAISE','Own institution'),
+ (3032,'PARENT_SCHOOL','COMPLAINT_RAISE','Own institution'),
+ (3033,'PRINCIPAL_COLLEGE','COMPLAINT_ASSIGN','Own institution'),
+ (3034,'SCHOOL_PRINCIPAL','COMPLAINT_ASSIGN','Own institution'),
+ (3035,'COLLEGE_ADMIN','COMPLAINT_ASSIGN','Own institution'),
+ (3036,'SCHOOL_ADMIN','COMPLAINT_ASSIGN','Own institution'),
+ (3037,'PRINCIPAL_COLLEGE','COMPLAINT_RESOLVE','Assigned complaints (HOD: department student issues)'),
+ (3038,'SCHOOL_PRINCIPAL','COMPLAINT_RESOLVE','Assigned complaints (HOD: department student issues)'),
+ (3039,'COLLEGE_ADMIN','COMPLAINT_RESOLVE','Assigned complaints (HOD: department student issues)'),
+ (3040,'SCHOOL_ADMIN','COMPLAINT_RESOLVE','Assigned complaints (HOD: department student issues)'),
+ (3041,'HEAD_OF_DEPARTMENT','COMPLAINT_RESOLVE','Assigned complaints (HOD: department student issues)'),
+ (3042,'UNIVERSITY_ADMIN','COMPLAINT_ESCALATED_VIEW','University')
+ON CONFLICT(standard_role_action_id) DO NOTHING;

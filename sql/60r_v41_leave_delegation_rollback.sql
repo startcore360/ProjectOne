@@ -1,0 +1,1 @@
+BEGIN; ALTER TABLE app.leave_request DROP CONSTRAINT IF EXISTS fk_leave_request_designated_delegate; ALTER TABLE app.leave_request DROP COLUMN IF EXISTS designated_delegate_staff_profile_id; DROP TABLE IF EXISTS app.leave_delegation; DROP FUNCTION IF EXISTS app.fn_leave_delegation_guard(); COMMIT;

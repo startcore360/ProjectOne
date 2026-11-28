@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
-import { Button, Kicker, TextField, Notice } from "../../../../design-system/components";
-import { Icon } from "../../../../components/ui/Icon";
-import type { PlanItem, TenantType, IsolationMode } from "../../api/platformTenantService";
+import { Button, Modal, Notice, PhoneField, SelectField, TextField, validateNationalIdLast4 } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
+import type { PlanItem, TenantType, IsolationMode, FirstUserRole } from "../../api/platformTenantService";
 
 export interface CreateTenantDraft {
   tenantName: string;
@@ -9,10 +9,34 @@ export interface CreateTenantDraft {
   planId: string;
   subdomain: string;
   isolationMode: IsolationMode;
+  firstUserRole: FirstUserRole;
   firstAdminName: string;
   firstAdminEmail: string;
   firstAdminMobile: string;
   firstAdminNationalIdLast4: string;
+  retentionMonths: number | "";
+  backupRetentionDays: number | "";
+}
+
+// The first user is the owner of the new tenant. Only the Admin owner can be created today; the combined
+// Principal + Admin owner is shown so the choice is visible, but cannot be picked yet (the server refuses it).
+function firstUserRoleOptions(tenantType: TenantType) {
+  if (tenantType === "UNIVERSITY_GROUP") {
+    return [{ value: "ADMIN", label: "University Admin" }];
+  }
+  const admin = tenantType === "STANDALONE_COLLEGE" ? "College Admin" : "School Admin";
+  return [
+    { value: "ADMIN", label: `${admin}: owner who runs it and hires a Principal later` },
+    { value: "PRINCIPAL_ADMIN", label: "Principal + Admin: owner and Principal in one account (coming soon)", disabled: true },
+  ];
+}
+
+function firstUserRoleHint(tenantType: TenantType) {
+  if (tenantType === "UNIVERSITY_GROUP") {
+    return "The University Admin runs the whole university and creates the Vice Chancellor, Registrar and other top users.";
+  }
+  const place = tenantType === "STANDALONE_COLLEGE" ? "college" : "school";
+  return `This person is the owner. They run the ${place}, create staff and hire the Principal.`;
 }
 
 export interface CreateTenantModalProps {
@@ -38,141 +62,180 @@ export function CreateTenantModal({
   createError,
   onNameChange,
 }: CreateTenantModalProps) {
-  if (!isOpen) return null;
-
+  const { fieldErrors, setFieldError, clearFieldError } = useFormErrors();
   return (
-    <div
-      className="platform-modal-backdrop"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      kicker="NEW TENANT"
+      title="Create trial tenant"
+      titleId="tenant-create-title"
+      description="New tenants begin in Trial state with a 30-day evaluation period. Activation occurs upon plan payment."
+      size="lg"
     >
-      <section className="platform-modal" role="dialog" aria-modal="true" aria-labelledby="tenant-create-title">
-        <header>
-          <div>
-            <Kicker>NEW TENANT</Kicker>
-            <h2 id="tenant-create-title">Create trial tenant</h2>
-            <p>New tenants begin in Trial state with a 30-day evaluation period. Activation occurs upon plan payment.</p>
-          </div>
-          <button className="platform-icon-button" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={16} />
-          </button>
-        </header>
-        <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit}>
+        <TextField
+          id="tenant-name"
+          label="Institution name"
+          required
+          value={draft.tenantName}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder="e.g. Lakeside World School"
+          fieldName="tenantName"
+          error={fieldErrors.tenantName}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
+        />
+        <TextField
+          id="tenant-subdomain"
+          label="Assigned subdomain"
+          required
+          value={draft.subdomain}
+          onChange={(e) => setDraft({ ...draft, subdomain: e.target.value.toLowerCase().trim() })}
+          placeholder="e.g. lakeside"
+          fieldName="subdomain"
+          error={fieldErrors.subdomain}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
+        />
+        <div className="app-form-grid">
+          <SelectField
+            id="tenant-type"
+            label="Institution type"
+            value={draft.tenantType}
+            onChange={(e) => setDraft({ ...draft, tenantType: e.target.value as TenantType })}
+            options={[
+              { value: "STANDALONE_SCHOOL", label: "School" },
+              { value: "STANDALONE_COLLEGE", label: "College" },
+              { value: "UNIVERSITY_GROUP", label: "University Group" },
+            ]}
+          />
+          <SelectField
+            id="tenant-plan-id"
+            label="Subscription plan"
+            value={draft.planId}
+            onChange={(e) => setDraft({ ...draft, planId: e.target.value })}
+            options={
+              plans.length > 0
+                ? plans.map((p) => ({ value: p.planId, label: `${p.planName} (₹${p.priceAmount})` }))
+                : [{ value: "", label: "No subscription plans available" }]
+            }
+          />
+        </div>
+        {plans.length === 0 && (
+          <Notice tone="warning">
+            A subscription plan must exist before a tenant can be created. Configure a plan first, then retry.
+          </Notice>
+        )}
+        <div className="app-form-grid">
           <TextField
-            id="tenant-name"
-            label="Institution name"
+            id="tenant-retention-months"
+            label="Data retention (months)"
+            type="number"
             required
-            value={draft.tenantName}
-            onChange={(e) => onNameChange(e.target.value)}
-            placeholder="e.g. Lakeside World School"
+            value={String(draft.retentionMonths)}
+            onChange={(e) => setDraft({ ...draft, retentionMonths: e.target.value === "" ? "" : Number(e.target.value) })}
           />
           <TextField
-            id="tenant-subdomain"
-            label="Assigned subdomain"
+            id="tenant-backup-retention-days"
+            label="Backup retention (days)"
+            type="number"
             required
-            value={draft.subdomain}
-            onChange={(e) => setDraft({ ...draft, subdomain: e.target.value.toLowerCase().trim() })}
-            placeholder="e.g. lakeside"
+            value={String(draft.backupRetentionDays)}
+            onChange={(e) => setDraft({ ...draft, backupRetentionDays: e.target.value === "" ? "" : Number(e.target.value) })}
           />
-          <div className="platform-form-grid">
-            <label className="platform-form-field">
-              Institution type
-              <select
-                value={draft.tenantType}
-                onChange={(e) => setDraft({ ...draft, tenantType: e.target.value as TenantType })}
-              >
-                <option value="STANDALONE_SCHOOL">School</option>
-                <option value="STANDALONE_COLLEGE">College</option>
-                <option value="UNIVERSITY_GROUP">University Group</option>
-              </select>
-            </label>
-            <label className="platform-form-field">
-              Subscription plan
-              <select value={draft.planId} onChange={(e) => setDraft({ ...draft, planId: e.target.value })}>
-                {plans.length > 0 ? (
-                  plans.map((p) => (
-                    <option key={p.planId} value={p.planId}>
-                      {p.planName} (₹{p.priceAmount})
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="11111111-1111-1111-1111-111111111101">Standard School Plan (₹499)</option>
-                    <option value="11111111-1111-1111-1111-111111111102">Premium College Plan (₹999)</option>
-                    <option value="11111111-1111-1111-1111-111111111103">Enterprise University Plan (₹1999)</option>
-                  </>
-                )}
-              </select>
-            </label>
-          </div>
-          <div className="platform-form-grid">
-            <label className="platform-form-field">
-              Database isolation
-              <select
-                value={draft.isolationMode}
-                onChange={(e) => setDraft({ ...draft, isolationMode: e.target.value as IsolationMode })}
-              >
-                <option value="SHARED">Shared Database with RLS (SHARED)</option>
-                <option value="ISOLATED" disabled>
-                  Dedicated Database (ISOLATED - not yet available)
-                </option>
-              </select>
-              <small className="platform-field-hint">
-                Dedicated-database tenants aren&rsquo;t provisionable yet - every tenant is created on the shared,
-                RLS-isolated database for now.
-              </small>
-            </label>
-            <TextField
-              id="tenant-admin-name"
-              label="Primary administrator full name"
-              required
-              value={draft.firstAdminName}
-              onChange={(e) => setDraft({ ...draft, firstAdminName: e.target.value })}
-              placeholder="e.g. Dr. Ramesh Kumar"
-            />
-          </div>
+        </div>
+        <small className="app-field-hint">
+          Set at creation: data retention 1–240 months; backup retention 7–3650 days. Later changes require Data Protection Officer approval.
+        </small>
+        <div className="app-form-grid">
+          <SelectField
+            id="tenant-isolation-mode"
+            label="Database isolation"
+            value={draft.isolationMode}
+            onChange={(e) => setDraft({ ...draft, isolationMode: e.target.value as IsolationMode })}
+            options={[{ value: "SHARED", label: "Shared Database with RLS (SHARED)" }]}
+            hint="Dedicated-database tenants aren't provisionable yet - every tenant is created on the shared, RLS-isolated database for now."
+          />
           <TextField
-            id="tenant-admin-email"
-            label="Primary administrator email"
-            type="email"
+            id="tenant-admin-name"
+            label="Primary administrator full name"
             required
-            value={draft.firstAdminEmail}
-            onChange={(e) => setDraft({ ...draft, firstAdminEmail: e.target.value })}
-            placeholder="principal@lakeside.edu"
+            value={draft.firstAdminName}
+            onChange={(e) => setDraft({ ...draft, firstAdminName: e.target.value })}
+            placeholder="e.g. Dr. Ramesh Kumar"
+            fieldName="firstAdminName"
+            error={fieldErrors.firstAdminName}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
-          <div className="platform-form-grid">
-            <TextField
-              id="tenant-admin-mobile"
-              label="Primary contact mobile (+91 format)"
-              value={draft.firstAdminMobile}
-              onChange={(e) => setDraft({ ...draft, firstAdminMobile: e.target.value })}
-              placeholder="+919876543210"
-            />
-            <TextField
-              id="tenant-admin-national-id"
-              label="Aadhaar / National ID (Last 4 digits)"
-              value={draft.firstAdminNationalIdLast4}
-              onChange={(e) => setDraft({ ...draft, firstAdminNationalIdLast4: e.target.value })}
-              placeholder="e.g. 4582"
-            />
-          </div>
-          <div className="platform-modal-note">
-            <strong>Statutory Compliance Note:</strong> Per UIDAI guidelines and DPDP Act 2023 [R2-34], full 12-digit
-            Aadhaar numbers are never stored; only the last 4 digits are recorded for statutory identity verification.
-          </div>
-          {createError && <Notice tone="danger">{createError}</Notice>}
-          <footer>
-            <Button variant="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" busy={creating}>
-              Submit & create tenant
-            </Button>
-          </footer>
-        </form>
-      </section>
-    </div>
+        </div>
+        <SelectField
+          id="tenant-first-user-role"
+          label="First user's role"
+          value={draft.firstUserRole}
+          onChange={(e) => setDraft({ ...draft, firstUserRole: e.target.value as FirstUserRole })}
+          options={firstUserRoleOptions(draft.tenantType)}
+          hint={firstUserRoleHint(draft.tenantType)}
+        />
+        <TextField
+          id="tenant-admin-email"
+          label="Primary administrator email"
+          type="email"
+          required
+          value={draft.firstAdminEmail}
+          onChange={(e) => setDraft({ ...draft, firstAdminEmail: e.target.value })}
+          placeholder="principal@lakeside.edu"
+          fieldName="firstAdminEmail"
+          error={fieldErrors.firstAdminEmail}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
+        />
+        <div className="app-form-grid">
+          <PhoneField
+            id="tenant-admin-mobile"
+            label="Primary contact mobile (+91 format)"
+            value={draft.firstAdminMobile}
+            onChange={(e) => setDraft({ ...draft, firstAdminMobile: e.target.value })}
+            fieldName="firstAdminMobile"
+            error={fieldErrors.firstAdminMobile}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
+          />
+          <TextField
+            id="tenant-admin-national-id"
+            label="Aadhaar / National ID (Last 4 digits)"
+            value={draft.firstAdminNationalIdLast4}
+            onChange={(e) => {
+              const sanitized = e.target.value.replace(/\D/g, "").slice(0, 4);
+              setDraft({ ...draft, firstAdminNationalIdLast4: sanitized });
+            }}
+            placeholder="e.g. 4582"
+            maxLength={4}
+            inputMode="numeric"
+            pattern="\d{4}"
+            hint="Enter exactly 4 numeric digits."
+            fieldName="firstAdminNationalIdLast4"
+            error={fieldErrors.firstAdminNationalIdLast4}
+            validator={validateNationalIdLast4}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
+          />
+        </div>
+        <div className="app-note">
+          <strong>Statutory Compliance Note:</strong> Per UIDAI guidelines and DPDP Act 2023 [R2-34], full 12-digit
+          Aadhaar numbers are never stored; only the last 4 digits are recorded for statutory identity verification.
+        </div>
+        {createError && <Notice tone="danger">{createError}</Notice>}
+        <footer>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" busy={creating} disabled={creating || plans.length === 0}>
+            Submit & create tenant
+          </Button>
+        </footer>
+      </form>
+    </Modal>
   );
 }

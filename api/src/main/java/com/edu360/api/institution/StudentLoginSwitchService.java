@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.exception.ResourceNotFoundException;
+import com.edu360.api.exception.BusinessRuleViolationException;
 import com.edu360.api.institution.dto.StudentLoginSwitchRequest;
 import com.edu360.api.institution.dto.StudentLoginSwitchResponse;
 import com.edu360.api.rbac.PermissionEvaluatorService;
@@ -31,19 +32,51 @@ public class StudentLoginSwitchService {
     private final SchoolClassRepository schoolClassRepository;
     private final PermissionEvaluatorService permissionEvaluatorService;
 
+    @Transactional(readOnly = true)
+    public StudentLoginSwitchResponse getClassState(RbacPrincipal principal, UUID classId) {
+        SchoolClass schoolClass = schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), classId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class " + classId + " was not found."));
+        permissionEvaluatorService.authorize(principal, "STUDENT_LOGIN_SWITCH",
+                RbacScope.institution(schoolClass.getInstitutionId()), RbacTarget.NONE);
+        return new StudentLoginSwitchResponse(schoolClass.getClassId(), schoolClass.isStudentLoginEnabled(),
+                schoolClass.getRowVersion() == null ? 1 : schoolClass.getRowVersion());
+    }
+
     @Transactional
     public StudentLoginSwitchResponse setStudentLogin(
-            RbacPrincipal principal, UUID classId, StudentLoginSwitchRequest request) {
+            RbacPrincipal principal, UUID classId, String ifMatch, StudentLoginSwitchRequest request) {
         SchoolClass schoolClass = schoolClassRepository.findByTenantIdAndClassId(principal.tenantId(), classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class " + classId + " was not found."));
 
         permissionEvaluatorService.authorize(principal, "STUDENT_LOGIN_SWITCH",
                 RbacScope.institution(schoolClass.getInstitutionId()), RbacTarget.NONE);
 
-        schoolClass.setStudentLoginEnabled(request.enabled());
-        schoolClass.setUpdatedBy(principal.userAccountId());
-        schoolClassRepository.save(schoolClass);
+        int expectedVersion = parseIfMatchVersion(ifMatch);
+        if (schoolClass.getRowVersion() == null || schoolClass.getRowVersion() != expectedVersion) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT", "School class was changed by another user. Reload and retry with the latest ETag.");
+        }
 
-        return new StudentLoginSwitchResponse(schoolClass.getClassId(), schoolClass.isStudentLoginEnabled());
+        int updated = schoolClassRepository.updateStudentLogin(principal.tenantId(), classId,
+                expectedVersion, request.enabled(), principal.userAccountId());
+        if (updated != 1) {
+            throw new BusinessRuleViolationException("VERSION_CONFLICT", "School class was changed by another user. Reload and retry with the latest ETag.");
+        }
+        return new StudentLoginSwitchResponse(schoolClass.getClassId(), request.enabled(), expectedVersion + 1);
+    }
+
+    private int parseIfMatchVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match header with the class ETag is required.");
+        }
+        String value = ifMatch.trim();
+        if (value.startsWith("W/")) value = value.substring(2).trim();
+        value = value.replaceAll("\\\"", "");
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 1) throw new NumberFormatException();
+            return version;
+        } catch (NumberFormatException ex) {
+            throw new BusinessRuleViolationException("IF_MATCH_REQUIRED", "If-Match must contain a positive class row version.");
+        }
     }
 }

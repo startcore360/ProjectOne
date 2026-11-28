@@ -1,0 +1,51 @@
+/* MFA-01 backup codes - design-system tokens only. */
+.backup-codes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.backup-codes__intro {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-body-sm);
+}
+
+.backup-codes__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  list-style: none;
+}
+
+.backup-codes__list code {
+  color: var(--color-text);
+  font: var(--fw-semibold) var(--fs-body) / 1.5 var(--font-mono);
+  letter-spacing: 0.04em;
+  user-select: all;
+}
+
+.backup-codes__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 380px) {
+  .backup-codes__list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sign-in "Problem with your code?" help (LoginPage). */
+.auth-help-list {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

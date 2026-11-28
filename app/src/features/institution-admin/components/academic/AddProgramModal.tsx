@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, TextField } from "../../../../design-system/components";
+﻿import { useState, type FormEvent } from "react";
+import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
 
 export interface DepartmentOption {
   departmentId: string;
@@ -64,23 +64,18 @@ export function AddProgramModal({
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
-        <div className="platform-form-field" style={{ marginBottom: "1rem" }}>
-          <label htmlFor="prog-dept-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-            Owning Department
-          </label>
-          <select
-            id="prog-dept-select"
-            value={deptId || departments[0]?.departmentId || ""}
-            onChange={(e) => setDeptId(e.target.value)}
-            style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid var(--color-border, #cbd5e1)" }}
-          >
-            {departments.map((d) => (
-              <option key={d.departmentId} value={d.departmentId}>
-                {d.departmentCode} — {d.departmentName}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          id="prog-dept-select"
+          label="Owning Department"
+          value={deptId || departments[0]?.departmentId || ""}
+          onChange={(e) => setDeptId(e.target.value)}
+        >
+          {departments.map((d) => (
+            <option key={d.departmentId} value={d.departmentId}>
+              {d.departmentCode} — {d.departmentName}
+            </option>
+          ))}
+        </SelectField>
         <div style={{ marginBottom: "1rem" }}>
           <TextField
             id="prog-code-input"
@@ -101,7 +96,7 @@ export function AddProgramModal({
             placeholder="e.g. Bachelor of Technology in Computer Science"
           />
         </div>
-        <div className="platform-form-grid" style={{ marginBottom: "1rem" }}>
+        <div className="app-form-grid" style={{ marginBottom: "1rem" }}>
           <div>
             <TextField
               id="prog-duration-input"

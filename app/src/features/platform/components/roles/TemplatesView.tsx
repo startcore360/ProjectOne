@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import {
   Button,
   ConfirmDialog,
@@ -7,10 +7,10 @@ import {
   Modal,
   Notice,
   Panel,
+  SkeletonPage,
   StatusBadge,
   TextField,
 } from "../../../../design-system/components";
-import { Spinner } from "../../../../components/ui";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { PLATFORM_ROLE_LABELS, readErrorMessage } from "../common/types";
 import type { PlatformRole } from "../../api/platformUserService";
@@ -102,7 +102,7 @@ function TemplateEditorModal({
       {!readOnly && (
         <>
           <TextField
-            id="platform-template-name"
+            id="app-template-name"
             label="Template name"
             required
             maxLength={100}
@@ -110,13 +110,13 @@ function TemplateEditorModal({
             onChange={(e) => setName(e.target.value)}
           />
           <TextField
-            id="platform-template-description"
+            id="app-template-description"
             label="Description"
             maxLength={500}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <label className="platform-form-field">
+          <label className="app-form-field">
             Based on
             <select value={base} onChange={(e) => chooseBase(e.target.value as PlatformRole)}>
               {CUSTOMISABLE_ROLES.map((value) => (
@@ -186,7 +186,7 @@ export function TemplatesView() {
   };
 
   return (
-    <div className="platform-page">
+    <div className="app-page">
       <PageHeader
         title="Role templates"
         description="Starting suggestions for new roles. Change them freely: existing roles never change."
@@ -200,9 +200,7 @@ export function TemplatesView() {
       {actionError && <Notice tone="danger">{actionError}</Notice>}
 
       {loading ? (
-        <div className="platform-empty-inline">
-          <Spinner label="Loading role templates" />
-        </div>
+        <SkeletonPage title="Loading role templates" showTable tableRows={5} tableColumns={6} />
       ) : loadError ? (
         <ErrorState
           title="Role templates didn't load"
@@ -220,7 +218,7 @@ export function TemplatesView() {
               <tr key={t.platformRoleTemplateId}>
                 <td>
                   <strong>{t.templateName}</strong>
-                  {t.description && <small className="platform-cell-sub">{t.description}</small>}
+                  {t.description && <small className="app-cell-sub">{t.description}</small>}
                 </td>
                 <td>{PLATFORM_ROLE_LABELS[t.basePlatformRole]}</td>
                 <td>{t.locked ? "Locked" : t.standard ? "Standard" : "Custom"}</td>
