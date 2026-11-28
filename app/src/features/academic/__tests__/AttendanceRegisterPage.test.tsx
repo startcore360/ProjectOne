@@ -11,8 +11,8 @@ describe("AttendanceRegisterPage",()=>{
  it("loads an enrolled class roster and exposes only canonical attendance statuses",async()=>{
   vi.mocked(api.get).mockResolvedValue({data:[{enrollment_id:"enrol-1",student_profile_id:"student-1",student_code:"S001",full_name:"A Student"}]} as never);
   render(<AttendanceRegisterPage/>);
-  fireEvent.change(screen.getByLabelText("Institution ID"),{target:{value:"institution-1"}});
-  fireEvent.change(screen.getByLabelText("Section ID"),{target:{value:"section-1"}});
+  fireEvent.change(screen.getByLabelText("Institution"),{target:{value:"institution-1"}});
+  fireEvent.change(screen.getByLabelText("Class / section"),{target:{value:"section-1"}});
   await waitFor(()=>expect(screen.getByText("A Student")).toBeInTheDocument());
   expect(screen.getByText("Present")).toBeInTheDocument();expect(screen.getByText("Absent")).toBeInTheDocument();
   expect(screen.getByText("Approved leave")).toBeInTheDocument();expect(screen.queryByText(/Late|Excused/)).not.toBeInTheDocument();
@@ -21,8 +21,8 @@ describe("AttendanceRegisterPage",()=>{
   vi.mocked(api.get).mockResolvedValue({data:[{enrollment_id:"enrol-1",student_profile_id:"student-1",student_code:"S001",full_name:"A Student"}]} as never);
   vi.mocked(api.post).mockResolvedValueOnce({data:{attendance_session_id:"session-1"}} as never);
   render(<AttendanceRegisterPage/>);
-  fireEvent.change(screen.getByLabelText("Institution ID"),{target:{value:"institution-1"}});
-  fireEvent.change(screen.getByLabelText("Section ID"),{target:{value:"section-1"}});
+  fireEvent.change(screen.getByLabelText("Institution"),{target:{value:"institution-1"}});
+  fireEvent.change(screen.getByLabelText("Class / section"),{target:{value:"section-1"}});
   fireEvent.change(screen.getByLabelText("Session kind"),{target:{value:"SCHOOL_FIRST_HALF"}});
   await waitFor(()=>expect(screen.getByText("A Student")).toBeInTheDocument());
   fireEvent.click(screen.getByLabelText("A Student ABSENT"));
