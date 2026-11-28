@@ -57,7 +57,6 @@ export default function AttendanceRegisterPage() {
   const [feedback, setFeedback] = useState("");
   const [isError, setIsError] = useState(false);
   const [sessionId, setSessionId] = useState("");
-  const [sessionSubmitted, setSessionSubmitted] = useState(false);
 
   // Load available institutions
   useEffect(() => {
@@ -135,40 +134,10 @@ export default function AttendanceRegisterPage() {
         { params: { institutionId, date } }
       );
       const rosterData = Array.isArray(res.data) ? res.data : [];
-      setSessionId("");
-      setSessionSubmitted(false);
       setStudents(rosterData);
       setMarks(Object.fromEntries(rosterData.map((x) => [x.enrollment_id, ""])));
       setIsError(false);
 
-      // Attempt to load existing register asynchronously without blocking roster load
-      void api
-        .get<Array<{ enrollment_id: string; attendance_status: Status; attendance_session_id?: string; submitted_at?: string | null }>>(
-          "/api/tenants/" + tenantId + "/academic/attendance/register",
-          { params: { institutionId, sectionId, date } }
-        )
-        .then((regRes) => {
-          if (Array.isArray(regRes.data) && regRes.data.length > 0) {
-            let existingSessionId = "";
-            let submitted = false;
-            const existingMarks: Record<string, Status> = {};
-            for (const row of regRes.data) {
-              if (row.attendance_session_id) existingSessionId = row.attendance_session_id;
-              if (row.submitted_at) submitted = true;
-              if (row.enrollment_id && row.attendance_status) {
-                existingMarks[row.enrollment_id] = row.attendance_status;
-              }
-            }
-            if (Object.keys(existingMarks).length > 0) {
-              setMarks((prev) => ({ ...prev, ...existingMarks }));
-            }
-            if (existingSessionId) {
-              setSessionId(existingSessionId);
-              setSessionSubmitted(submitted);
-            }
-          }
-        })
-        .catch(() => {});
     } catch (e) {
       setFeedback(e instanceof Error ? e.message : "Unable to load class roster.");
       setIsError(true);
@@ -221,7 +190,7 @@ export default function AttendanceRegisterPage() {
         enrollmentId: s.enrollment_id,
         status: notHeld ? "NOT_HELD" : marks[s.enrollment_id],
       }));
-      const response = sessionId ? { data: { attendance_session_id: sessionId } } : await api.post("/api/tenants/" + tenantId + "/academic/attendance/sessions", {
+      const response = await api.post("/api/tenants/" + tenantId + "/academic/attendance/sessions", {
         institutionId,
         sectionId,
         subjectGroupId: null,
@@ -238,7 +207,6 @@ export default function AttendanceRegisterPage() {
         entries,
       });
       setSessionId(response.data.attendance_session_id);
-      setSessionSubmitted(false);
       setFeedback("Attendance session and entries saved.");
       setIsError(false);
     } catch (e) {
@@ -257,10 +225,6 @@ export default function AttendanceRegisterPage() {
         title="Mark attendance"
         description="Mark only the selected class and session. Use P, A or O on a focused student row; no full-day history is shown here."
       />
-
-      {sessionSubmitted && (
-        <Notice tone="warning">This session has already been submitted and is read-only. Any change must use the formal correction request process; direct edits are disabled.</Notice>
-      )}
 
       {feedback && (
         <Notice tone={isError ? "danger" : "success"}>
@@ -498,7 +462,6 @@ export default function AttendanceRegisterPage() {
                 disabled={
                   busy ||
                   students.length === 0 ||
-                  sessionSubmitted ||
                   !institutionId ||
                   !sectionId ||
                   periodIncomplete ||
