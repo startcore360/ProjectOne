@@ -15,7 +15,7 @@ const formatDate = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleString();
 };
 const readable = (value: string) =>
-  value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export default function ApprovalInboxPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
