@@ -117,6 +117,38 @@ Repository areas reviewed in the work to date include frontend pages/components 
 
 **Status:** implementation committed; tests/build and full workflow verification open.
 
+### 3.5 Attendance Management — first UI slice
+
+**Approved direction**
+- Teacher marking and HOD review are separate experiences.
+- Teacher marking is limited to the selected class/subject/session; complete-day or cross-subject history does not belong in the marking roster.
+- HOD review is read-only and must remain inside the active department scope. College correction approvals belong to the HOD; school correction approvals belong to the School Principal or Vice-Principal.
+
+**Changes committed**
+- Added `AttendanceOversightPage.tsx` and a dedicated `/academic/attendance/oversight` route gated by `ATTENDANCE_CORRECTION_APPROVE`.
+- HOD can select institution, section and date, load the existing register, select a session and review student statuses and session-level counts.
+- API authorization remains authoritative for department scope; an out-of-scope section request is surfaced as an error.
+- Added responsive layout styles for the HOD review workspace.
+
+**Commits**
+- `04fcb567ed02e0c666797e14e74dc601134668ca` — add HOD attendance review workspace.
+- `5a2c3cecf5d136f97172685129d2d765df1e5431` — add HOD oversight route and permission gate.
+- `59e21403c61fd57989f1aac085e00ab7dc1ec79a` — add oversight layout styles.
+
+**Source-derived requirements**
+- V4.0 §8.4: college period marking; school twice-daily marking; canonical statuses Present, Absent, On approved leave, Not held; teacher assignment restriction; correction approval by HOD in college and School Principal/Vice-Principal in school; immutable original/new correction audit; term-lock refusal.
+- Master Design System: compact roster, explicit per-student radio selection, mark-all-present then exceptions, submit only when every student is marked, visible loading/empty/error states.
+
+**Open implementation gaps — do not treat this module as complete**
+- The existing `AttendanceController` does not expose the correction-request/approval, attendance-summary, bulk-upload, substitute-assignment or sync-conflict operations specified in OpenAPI.
+- The existing `AttendanceService` authorizes the attendance action and department/institution scope but does not visibly enforce the assigned-teacher / substitute-for-date rule at the service layer. This is a blocking authorization gap to resolve before relying on teacher marking for production.
+- Current HOD screen reviews one selected section/date using the existing register API. It is not yet a complete department dashboard, defaulter/risk list, or correction inbox.
+- The existing register response can include session metadata but the current save flow creates a new session and writes entries separately; natural idempotency, submitted-state lifecycle, term-lock UI and preservation of correction history need backend/API alignment.
+- Teacher register still needs its dedicated UX refinement and separation of threshold/rules configuration from the marking task.
+- No tests, frontend build, backend build or runtime checks were executed for these commits.
+
+**Status:** HOD review UI slice committed; authorization, API lifecycle, teacher UX and full V4.0 attendance coverage remain open.
+
 ### 3.4 Timetable Management
 
 **Related detailed register:** `docs/implementation/EDU360_TIMETABLE_IMPLEMENTATION_AND_IMPLICATIONS.md`
