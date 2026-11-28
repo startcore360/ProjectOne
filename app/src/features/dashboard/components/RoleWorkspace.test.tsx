@@ -6,7 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
 import notificationsReducer from "../../../store/slices/notificationsSlice";
 import { dashboardService } from "../api/dashboardService";
+import { institutionService } from "../../institution-admin/api/institutionService";
 import { RoleWorkspace } from "./RoleWorkspace";
+
+vi.mock("../../institution-admin/api/institutionService", () => ({
+  institutionService: { listInstitutions: vi.fn() },
+}));
 
 vi.mock("../api/dashboardService", () => ({
   dashboardService: {
@@ -55,7 +60,26 @@ describe("RoleWorkspace", () => {
     expect(screen.getByText("Pending approvals")).toBeInTheDocument();
   });
 
-  it("leaves every other role's dashboard as the placeholder (not wired to live data)", async () => {
+
+  it("loads the live summary and role panels for a College Principal", async () => {
+    vi.mocked(dashboardService.getSummary).mockResolvedValueOnce({ data: { activeUsers: 48, activeSections: 16 } } as never);
+    renderWorkspace("PRINCIPAL_COLLEGE");
+    await waitFor(() => { expect(screen.getByText("48")).toBeInTheDocument(); expect(screen.getByText("16")).toBeInTheDocument(); });
+    expect(screen.getByText("Approval desk")).toBeInTheDocument();
+    expect(screen.getByText("Academic pulse")).toBeInTheDocument();
+    expect(screen.getByText("College oversight")).toBeInTheDocument();
+    expect(screen.getByText("Approvals assigned")).toBeInTheDocument();
+  });
+
+  it("loads the institution portfolio for University Admin", async () => {
+    vi.mocked(institutionService.listInstitutions).mockResolvedValueOnce({ total: 3, items: [ { institutionId: "i1", status: "ACTIVE" }, { institutionId: "i2", status: "ACTIVE" }, { institutionId: "i3", status: "DRAFT" } ] } as never);
+    renderWorkspace("UNIVERSITY_ADMIN");
+    await waitFor(() => { expect(screen.getByText("3")).toBeInTheDocument(); expect(screen.getByText("2")).toBeInTheDocument(); });
+    expect(screen.getByText("Institution setup")).toBeInTheDocument();
+    expect(screen.getByText("Users and roles")).toBeInTheDocument();
+  });
+
+  it("leaves roles without a scoped dashboard API on explicit placeholders", async () => {
     renderWorkspace("PROFESSOR");
 
     await waitFor(() => {
