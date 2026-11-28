@@ -4,6 +4,8 @@ import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 import ClashWarningToast from "../components/ClashWarningToast";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
+import { institutionService, type InstitutionItem, type AcademicSessionItem, type SectionItem } from "../../institution-admin/api/institutionService";
+import { academicService, type SubjectAllocationItem } from "../../institution-admin/api/academicService";
 
 type Slot={timetable_slot_id:string;section_id:string|null;subject_group_id:string|null;subject_allocation_id:string;
  course_offering_id:string;teacher_id:string|null;teacher_name?:string;room_id:string|null;room_number?:string;
@@ -15,6 +17,14 @@ export default function TimetableGridView(){
  const tenantId=useAppSelector(s=>s.auth.user?.tenantId);
  const {canAny}=useTenantAccess();
  const canBuild=canAny(["TIMETABLE_BUILD"]);
+ const canListAllocations=canAny(["SUBJECT_ALLOCATE"]);
+ const [institutions,setInstitutions]=useState<InstitutionItem[]>([]);
+ const [sessions,setSessions]=useState<AcademicSessionItem[]>([]);
+ const [sections,setSections]=useState<SectionItem[]>([]);
+ const [allocations,setAllocations]=useState<SubjectAllocationItem[]>([]);
+ const [rooms,setRooms]=useState<Array<{room_id:string;room_number:string;building?:string;capacity?:number;room_type?:string}>>([]);
+ const [optionsLoading,setOptionsLoading]=useState(false);
+ const [optionsError,setOptionsError]=useState("");
  const [institutionId,setInstitutionId]=useState("");const [sessionId,setSessionId]=useState("");const [sectionId,setSectionId]=useState("");
  const [viewMode,setViewMode]=useState<"SECTION"|"TEACHER"|"ROOM">("SECTION");
  const [teacherFilter,setTeacherFilter]=useState("");const [roomFilter,setRoomFilter]=useState("");const [dateFilter,setDateFilter]=useState("");const [dayFilter,setDayFilter]=useState("");
@@ -27,7 +37,40 @@ export default function TimetableGridView(){
  const [tokenExpiry,setTokenExpiry]=useState(()=>new Date(Date.now()+7*86400000).toISOString().slice(0,16));
  const [dragged,setDragged]=useState<Slot|null>(null);const [toast,setToast]=useState("");const [feedback,setFeedback]=useState("");const [busy,setBusy]=useState(false);
  const [studentAccessToken,setStudentAccessToken]=useState("");const [accessUrl,setAccessUrl]=useState("");
+ const selectedAllocation=allocations.find(item=>item.subjectAllocationId===subjectAllocationId);
+ const selectedInstitution=institutions.find(item=>item.institutionId===institutionId);
 
+ useEffect(()=>{
+  if(!tenantId)return;
+  let active=true;
+  setOptionsLoading(true);setOptionsError("");
+  institutionService.listInstitutions(tenantId).then(async response=>{
+   if(!active)return;
+   const available=response.items.filter(item=>item.status==="ACTIVE");
+   setInstitutions(available);
+   if(!institutionId&&available.length===1)setInstitutionId(available[0].institutionId);
+  }).catch(error=>{if(active)setOptionsError(error instanceof Error?error.message:"Unable to load institutions.");})
+   .finally(()=>{if(active)setOptionsLoading(false);});
+  return ()=>{active=false;};
+ },[tenantId]);
+ useEffect(()=>{
+  if(!tenantId||!institutionId)return;
+  let active=true;
+  setOptionsLoading(true);setOptionsError("");
+  Promise.all([
+   institutionService.listAcademicSessions(tenantId,institutionId),
+   institutionService.listSections(tenantId,institutionId),
+   api.get<typeof rooms>("/api/tenants/"+tenantId+"/timetable/rooms",{params:{institutionId}}).then(res=>res.data),
+   canListAllocations?academicService.listSubjectAllocations(tenantId,institutionId):Promise.resolve([] as SubjectAllocationItem[]),
+  ]).then(([sessionRows,sectionRows,roomRows,allocationRows])=>{
+   if(!active)return;
+   setSessions(sessionRows);setSections(sectionRows);setRooms(roomRows);setAllocations(allocationRows);
+   if(!sessionId&&sessionRows.length===1)setSessionId(sessionRows[0].academicSessionId);
+   if(!sectionId&&sectionRows.length===1)setSectionId(sectionRows[0].sectionId);
+  }).catch(error=>{if(active)setOptionsError(error instanceof Error?error.message:"Unable to load timetable setup options.");})
+   .finally(()=>{if(active)setOptionsLoading(false);});
+  return ()=>{active=false;};
+ },[tenantId,institutionId,canListAllocations]);
  const load=useCallback(async()=>{
   if(!tenantId||!institutionId)return;
   try{const res=await api.get<Slot[]>("/api/tenants/"+tenantId+"/academic/timetable/slots",{params:{institutionId,sectionId:viewMode==="SECTION"?(sectionId||undefined):undefined,teacherId:viewMode==="TEACHER"?(teacherFilter||undefined):undefined,roomId:viewMode==="ROOM"?(roomFilter||undefined):undefined,academicSessionId:sessionId||undefined,date:dateFilter||undefined,dayOfWeek:dayFilter||undefined}});setSlots(res.data);}
@@ -42,6 +85,13 @@ export default function TimetableGridView(){
     institutionId,sectionId,subjectGroupId:null,subjectAllocationId,periodNo:Number(periodNo),dayOfWeek:Number(day),
     startTime:start+":00",endTime:end+":00",roomId:roomId||null,isOnline,validFrom,validTo:validTo||null,
    });
+   const created=response.data as Slot;
+   const conflicts=slots.filter(slot=>slot.timetable_slot_id!==created.timetable_slot_id
+    &&slot.day_of_week===created.day_of_week
+    &&(!created.valid_to||created.valid_to>=slot.valid_from)&&(!slot.valid_to||slot.valid_to>=created.valid_from)
+    &&created.start_time<slot.end_time&&created.end_time>slot.start_time
+    &&((created.teacher_id&&created.teacher_id===slot.teacher_id)||(created.room_id&&created.room_id===slot.room_id)));
+   if(conflicts.length)setToast("Saved with a clash warning: a teacher or room is already scheduled during this period. Review before publishing.");
    if(isOnline&&meetingUrl){
     const meeting=await api.post("/api/tenants/"+tenantId+"/timetable/slots/"+response.data.timetable_slot_id+"/meeting-link",{
      institutionId,occurrenceDate,provider:meetingProvider,joinUrl:meetingUrl,externalMeetingId:null,tokenExpiresAt:new Date(tokenExpiry).toISOString(),
@@ -87,7 +137,7 @@ export default function TimetableGridView(){
    return slot.timetable_slot_id!==dragged.timetable_slot_id&&slot.day_of_week===dayOfWeek&&dateOverlap&&(teacherClash||roomClash)
     &&startAt<slot.end_time&&newEnd>slot.start_time;
   });
-  if(clashes){setToast("Move blocked: the teacher or room is already booked in that time range.");setDragged(null);return;}
+  if(clashes)setToast("Clash warning: this move overlaps an existing teacher or room booking. The timetable rule allows the change; review the warning before publishing.");
   void api.put("/api/tenants/"+tenantId+"/timetable/slots/"+dragged.timetable_slot_id,{
    institutionId,dayOfWeek,periodNo:dragged.period_no,startTime:startAt,endTime:newEnd,roomId:dragged.room_id,
   }).then(()=>{setToast("");setFeedback("Draft timetable slot moved.");void load();})
@@ -101,24 +151,26 @@ export default function TimetableGridView(){
  const byCell=useMemo(()=>{const map=new Map<string,Slot[]>();slots.forEach(slot=>{const key=slot.day_of_week+"-"+slot.start_time.slice(0,5);map.set(key,[...(map.get(key)??[]),slot]);});return map;},[slots]);
 
  return <main className="page-container">
-  <header><h1>Weekly timetable</h1><p>Slots use the existing subject-allocation model. PostgreSQL GiST constraints enforce teacher and room clashes across overlapping effective dates.</p></header>
+  <header className="eds-page-header"><div><h1>Timetable Management</h1><p>Build and review weekly schedules by class, faculty or room. Timetables are created manually in Phase 1.</p></div><span className="eds-badge eds-badge--info">{canBuild?"Builder access":"Read-only oversight"}</span></header>
+  {!canBuild&&<div className="notice notice-info" role="status">You can view published timetables for your authorised scope. Creating, moving or publishing periods is restricted to College Admin, School Admin, HOD and Department Coordinator roles.</div>}
   <div className="form-grid">
    <label>Institution ID<input value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/></label>
    <label>Academic session ID (filter)<input value={sessionId} onChange={e=>setSessionId(e.target.value)}/></label>
    <label>View<select value={viewMode} onChange={e=>setViewMode(e.target.value as "SECTION"|"TEACHER"|"ROOM")}><option value="SECTION">Section view</option><option value="TEACHER">Teacher view</option><option value="ROOM">Room view</option></select></label>
-  {viewMode==="SECTION"&&<label>Section ID<input value={sectionId} onChange={e=>setSectionId(e.target.value)}/></label>}
+  {viewMode==="SECTION"&&<label>Class / Section<select value={sectionId} onChange={e=>setSectionId(e.target.value)}><option value="">All sections</option>{sections.map(item=><option key={item.sectionId} value={item.sectionId}>{item.sectionName}</option>)}</select></label>}
   {viewMode==="TEACHER"&&<label>Teacher ID<input value={teacherFilter} onChange={e=>setTeacherFilter(e.target.value)}/></label>}
   {viewMode==="ROOM"&&<label>Room ID<input value={roomFilter} onChange={e=>setRoomFilter(e.target.value)}/></label>}
   <label>Effective date<input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/></label>
   <label>Day filter<select value={dayFilter} onChange={e=>setDayFilter(e.target.value)}><option value="">All days</option>{DAYS.map((d,i)=><option key={d} value={i+1}>{d}</option>)}</select></label>
    <button type="button" onClick={()=>void load()}>Refresh timetable</button>
   </div>
+  {optionsError&&<div className="eds-error-state" role="alert"><strong>Setup data unavailable</strong><p>{optionsError}</p></div>}
   <ClashWarningToast message={toast} onDismiss={()=>setToast("")}/>{feedback&&<p role="status">{feedback}</p>}
   {canBuild&&<>
   <section><h2>Create timetable slot</h2><form onSubmit={createSlot} className="form-grid">
-   <label>Subject allocation ID<input required value={subjectAllocationId} onChange={e=>setSubjectAllocationId(e.target.value)}/></label>
+   <label>Subject allocation<select required value={subjectAllocationId} onChange={e=>{setSubjectAllocationId(e.target.value);const allocation=allocations.find(item=>item.subjectAllocationId===e.target.value);if(allocation?.sectionId)setSectionId(allocation.sectionId);}}><option value="">Select subject / faculty allocation</option>{allocations.filter(item=>item.status==="ACTIVE"&&(!sessionId||sessions.some(session=>session.academicSessionId===sessionId))).map(item=><option key={item.subjectAllocationId} value={item.subjectAllocationId}>{item.courseOfferingId.slice(0,8)} · {item.sectionId?"Section allocation":"Elective group"} · {item.staffAssignmentId.slice(0,8)}</option>)}</select>{!canListAllocations&&<small>Subject allocation lookup requires SUBJECT_ALLOCATE permission. Ask an institution administrator to confirm the allocation.</small>}</label>
    <label>Period number<input type="number" min="1" max="20" required value={periodNo} onChange={e=>setPeriodNo(e.target.value)}/></label>
-   <label>Room ID (optional)<input value={roomId} onChange={e=>setRoomId(e.target.value)}/></label>
+   <label>Room<select value={roomId} onChange={e=>setRoomId(e.target.value)}><option value="">No room / online</option>{rooms.map(item=><option key={item.room_id} value={item.room_id}>{item.room_number}{item.building?" · "+item.building:""}</option>)}</select></label>
    <label>Day<select value={day} onChange={e=>setDay(e.target.value)}>{DAYS.map((name,i)=><option key={name} value={i+1}>{name}</option>)}</select></label>
    <label>Start<input type="time" value={start} onChange={e=>setStart(e.target.value)}/></label>
    <label>End<input type="time" value={end} onChange={e=>setEnd(e.target.value)}/></label>
@@ -131,7 +183,7 @@ export default function TimetableGridView(){
     <label>Occurrence date<input type="date" required value={occurrenceDate} onChange={e=>setOccurrenceDate(e.target.value)}/></label>
     <label>Access token expiry<input type="datetime-local" value={tokenExpiry} onChange={e=>setTokenExpiry(e.target.value)}/></label>
    </>}
-   <button disabled={busy||!institutionId||!sectionId||!subjectAllocationId||(isOnline&&!meetingUrl)}>Add draft slot</button>
+   <button disabled={busy||!institutionId||!subjectAllocationId||(isOnline&&!meetingUrl)}>Add draft slot</button>
   </form></section>
   <section><h2>Register room</h2><form onSubmit={createRoom} className="form-grid">
    <label>Room number<input required value={roomNumber} onChange={e=>setRoomNumber(e.target.value)}/></label>
@@ -140,7 +192,7 @@ export default function TimetableGridView(){
    <button disabled={busy||!institutionId}>Create room</button>
   </form></section>
   </>}
-  <h2>Weekly grid</h2><div style={{overflowX:"auto"}}><table><thead><tr><th>Time</th>{DAYS.map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>
+  <div className="timetable-grid-heading"><div><h2>Weekly timetable</h2><p>{selectedInstitution?.institutionName??"Select an institution"}{sessionId?" · "+(sessions.find(item=>item.academicSessionId===sessionId)?.sessionLabel??""):""}</p></div><button type="button" onClick={()=>void load()} disabled={!institutionId||busy}>Refresh</button></div><div style={{overflowX:"auto"}}><table><thead><tr><th>Time</th>{DAYS.map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>
    {TIMES.map(time=><tr key={time}><th>{time}</th>{DAYS.map((d,index)=>{const cell=byCell.get((index+1)+"-"+time)??[];return <td key={d} onDragOver={e=>e.preventDefault()} onDrop={e=>dropOn(index+1,time,e)} style={{minWidth:130,verticalAlign:"top"}}>
     {cell.map(slot=><div key={slot.timetable_slot_id} draggable={slot.status==="DRAFT"} onDragStart={()=>setDragged(slot)}
      style={{border:"1px solid var(--color-border-divider)",borderRadius:6,padding:6,marginBottom:4,cursor:slot.status==="DRAFT"?"grab":"default"}}>
