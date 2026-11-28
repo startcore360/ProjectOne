@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
 import notificationsReducer from "../../../store/slices/notificationsSlice";
 import { dashboardService } from "../api/dashboardService";
@@ -43,7 +43,7 @@ function renderWorkspace(roleCode: string) {
   );
 }
 
-describe("RoleWorkspace", () => {
+describe("RoleWorkspace", () => {\n  beforeEach(() => vi.clearAllMocks());
   it("shows real active-user and active-section counts for School Admin once loaded", async () => {
     vi.mocked(dashboardService.getSummary).mockResolvedValueOnce({
       data: { activeUsers: 12, activeSections: 7 },
