@@ -30,6 +30,7 @@ const StudentSubrecordDetailPage = lazy(() => import("../features/students/pages
 // Lazy-loaded feature pages
 const ChangePasswordPage = lazy(() => import("../features/auth/pages/ChangePasswordPage"));
 const DashboardPage = lazy(() => import("../features/dashboard/pages/DashboardPage"));
+const ApprovalInboxPage = lazy(() => import("../features/approvals/pages/ApprovalInboxPage"));
 const RoleDashboardPage = lazy(() => import("../features/role-previews/RoleDashboardPage"));
 const ProfilePage = lazy(() => import("../features/profile/pages/ProfilePage"));
 const SelfServicePage = lazy(() => import("../features/self-service/pages/SelfServicePage"));
@@ -290,6 +291,7 @@ export default function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route element={<LazyRouteView />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/approvals" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.approvalsInbox}><ApprovalInboxPage /></ActionGate>} />
             <Route path="/admissions/apply" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.applicantPortal}><ApplicantPortalPage /></ActionGate>} />
             <Route path="/admissions/cycles" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.admissionCycles}><AdmissionCyclesPage /></ActionGate>} />
             <Route path="/admissions/scrutiny" element={<ActionGate anyOf={TENANT_ROUTE_ACTIONS.applicationScrutiny}><ApplicationScrutinyPage /></ActionGate>} />
