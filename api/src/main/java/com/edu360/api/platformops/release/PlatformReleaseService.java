@@ -53,7 +53,7 @@ public class PlatformReleaseService {
     @Transactional
     public ReleaseResponse createRelease(CreateReleaseRequest req, PlatformPrincipal principal) {
         if (releaseRepository.findByVersionLabel(req.versionLabel()).isPresent()) {
-            throw new DuplicateResourceException("Release with version label already exists: " + req.versionLabel());
+            throw new DuplicateResourceException("Release with version label already exists: " + req.versionLabel(), "versionLabel");
         }
 
         Instant now = Instant.now();

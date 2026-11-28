@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, PhoneField, SelectField, TextField } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   userManagementService,
@@ -26,11 +27,13 @@ export function CreateTopUserModal({
   const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { fieldErrors, setFieldError, clearFieldError, clearAll, handleApiError } = useFormErrors();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    clearAll();
     try {
       const { data } = await userManagementService.createTopUser(tenantId, {
         roleCode,
@@ -40,6 +43,7 @@ export function CreateTopUserModal({
       });
       onCreated(data);
     } catch (err) {
+      handleApiError(err);
       setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
@@ -56,14 +60,14 @@ export function CreateTopUserModal({
       description="Create executive leadership and governance accounts for this tenant."
       size="md"
     >
-      <form onSubmit={handleSubmit} noValidate style={{ padding: "0.5rem 0" }}>
+      <form onSubmit={handleSubmit} noValidate style={{ padding: "var(--space-2) 0" }}>
         {error && (
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <Notice tone="danger">{error}</Notice>
           </div>
         )}
 
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <SelectField
             id="top-role-select"
             label="Governance role"
@@ -78,7 +82,7 @@ export function CreateTopUserModal({
           />
         </div>
 
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <TextField
             id="top-user-name"
             label="Full Name"
@@ -86,10 +90,14 @@ export function CreateTopUserModal({
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="e.g. Prof. Suresh Chandra"
+            fieldName="displayName"
+            error={fieldErrors.displayName}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
         </div>
 
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <TextField
             id="top-user-email"
             label="Email Address"
@@ -98,38 +106,48 @@ export function CreateTopUserModal({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="e.g. vc@northbridge.edu.in"
+            fieldName="email"
+            error={fieldErrors.email}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
         </div>
 
-        <div style={{ marginBottom: "1rem" }}>
-          <TextField
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <PhoneField
             id="top-user-mobile"
-            label="Mobile Number (Optional, E.164)"
+            label="Mobile number"
             value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            placeholder="+919876543210"
+            onChange={(e) => {
+              setMobile(e.target.value);
+              clearFieldError("mobile");
+            }}
+            fieldName="mobile"
+            error={fieldErrors.mobile}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
         </div>
 
         <div
           style={{
-            padding: "0.75rem",
+            padding: "var(--space-3)",
             backgroundColor: "var(--color-bg-subtle)",
             borderRadius: "6px",
             fontSize: "0.8125rem",
             color: "var(--color-text-muted)",
-            marginBottom: "1rem",
+            marginBottom: "var(--space-4)",
           }}
         >
           <strong>Governance Policies:</strong>
-          <ul style={{ margin: "0.25rem 0 0 1.25rem", padding: 0 }}>
+          <ul style={{ margin: "var(--space-1) 0 0 var(--space-5)", padding: 0 }}>
             <li>Two-step login (MFA) is required at first sign-in.</li>
             <li>You cannot create or assign an account to your own identity.</li>
             <li>Management and Governing Body Approver accounts are governance roles; Vice Chancellor and Data Protection Officer accounts are staff roles.</li>
           </ul>
         </div>
 
-        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
           </Button>

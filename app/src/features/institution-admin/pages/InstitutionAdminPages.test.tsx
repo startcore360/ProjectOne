@@ -30,6 +30,7 @@ vi.mock("../api/roleAssignmentService", () => ({
 vi.mock("../api/institutionService", () => ({
   institutionService: {
     listInstitutions: vi.fn(),
+    getHierarchy: vi.fn(),
     createDraftInstitution: vi.fn(),
     getIdFormats: vi.fn(),
     setIdFormats: vi.fn(),
@@ -124,6 +125,12 @@ describe("Sprint 1 university administration screens (Stories #25 & #26)", () =>
     vi.mocked(institutionService.listInstitutions).mockResolvedValue({
       items: mockInstitutions,
       total: 2,
+    });
+    vi.mocked(institutionService.getHierarchy).mockResolvedValue({
+      tenantId: "tenant-1",
+      tenantName: "Test Tenant",
+      tenantType: "UNIVERSITY_GROUP",
+      institutions: [],
     });
     vi.mocked(leaveApproverService.getGoLiveCheck).mockResolvedValue({
       ready: true,

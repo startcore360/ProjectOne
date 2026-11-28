@@ -253,7 +253,7 @@ export function SecurityPolicyView() {
           title="Realm Security Policy Re-application"
           description="Preview target realms and policy values before making changes. Credentials and client secrets are never displayed."
         >
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px" }}>
+          <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
             <Button variant="secondary" onClick={() => void handlePreviewRealmSync()} disabled={previewingRealms || applyingRealms || retryingRealms}>
               {previewingRealms ? "Loading Preview..." : "Preview Realm Sync"}
             </Button>
@@ -269,7 +269,7 @@ export function SecurityPolicyView() {
             )}
           </div>
           {realmPreview && (
-            <div style={{ marginBottom: "16px" }}>
+            <div style={{ marginBottom: "var(--space-4)" }}>
               <p><strong>Read-only preview</strong> · {realmPreview.realms.length} realm(s) targeted</p>
               <p>
                 Password length: {realmPreview.settings.minPasswordLength}; digits: {realmPreview.settings.requireDigit ? "required" : "not required"}; special character: {realmPreview.settings.requireSpecialChar ? "required" : "not required"}; lockout: {realmPreview.settings.maxFailedLogins} failures / {realmPreview.settings.lockoutMinutes} min; idle timeout: {realmPreview.settings.idleSessionTimeoutMinutes} min.
@@ -318,7 +318,7 @@ export function SecurityPolicyView() {
             />
           ) : (
             <form onSubmit={handleSavePolicy}>
-              <div style={{ display: "grid", gap: "14px" }}>
+              <div style={{ display: "grid", gap: "var(--space-3)" }}>
                 <TextField
                   id="sec-min-pwd-len"
                   label="Minimum Password Length"
@@ -331,7 +331,7 @@ export function SecurityPolicyView() {
                   required
                 />
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
                   <TextField
                     id="sec-max-failed-logins"
                     label="Max Failed Logins"
@@ -355,7 +355,7 @@ export function SecurityPolicyView() {
                   />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
                   <TextField
                     id="sec-idle-timeout"
                     label="Idle Session Timeout (mins)"
@@ -378,7 +378,7 @@ export function SecurityPolicyView() {
                   />
                 </div>
 
-                <div style={{ display: "grid", gap: "8px", marginTop: "4px" }}>
+                <div style={{ display: "grid", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
                   <CheckboxField
                     id="sec-require-special"
                     label="Require at least one special character"
@@ -404,7 +404,7 @@ export function SecurityPolicyView() {
               </div>
 
               {canEditPolicy && (
-                <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ marginTop: "var(--space-5)", display: "flex", justifyContent: "flex-end" }}>
                   <Button type="submit" disabled={savingPolicy}>
                     {savingPolicy ? "Saving Policy..." : "Update Security Policy"}
                   </Button>
@@ -450,7 +450,7 @@ export function SecurityPolicyView() {
                     <StatusBadge value={inc.status} />
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: "6px" }}>
+                    <div style={{ display: "flex", gap: "var(--space-1)" }}>
                       {inc.status === "DETECTED" && canEditPolicy && (
                         <Button size="sm" variant="secondary" onClick={() => handleUpdateIncidentStatus(inc.securityIncidentId, "CONTAINED")}>
                           Contain
@@ -487,11 +487,11 @@ export function SecurityPolicyView() {
       >
         <form onSubmit={handleCreateIncident}>
           {incidentModalError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div style={{ marginBottom: "var(--space-3)" }}>
               <Notice tone="danger">{incidentModalError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <TextField
               id="incident-title"
               label="Incident Summary / Title"
@@ -519,7 +519,7 @@ export function SecurityPolicyView() {
               onChange={(e) => setIncidentExternalNotify(e.target.checked)}
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-5)" }}>
             <Button variant="secondary" onClick={() => setShowIncidentModal(false)} type="button">
               Cancel
             </Button>

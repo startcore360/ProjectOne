@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GuardianManagerModal } from "./GuardianManagerModal";
 import { studentApi, type GuardianLink } from "../api/studentApi";
@@ -26,7 +26,7 @@ describe("GuardianManagerModal", () => {
     render(<GuardianManagerModal {...props} />);
 
     await user.type(screen.getByLabelText("Full name (Required)"), "Meera Rao");
-    await user.type(screen.getByLabelText("Mobile (E.164) (Required)"), "+919876543210");
+    await user.type(screen.getByLabelText("Mobile number (Required)"), "+919876543210");
     await user.type(screen.getByLabelText("Email"), "meera@example.com");
     await user.selectOptions(screen.getByLabelText("Relationship"), "MOTHER");
     await user.click(screen.getByLabelText("Authorized for contact"));
@@ -49,7 +49,7 @@ describe("GuardianManagerModal", () => {
     render(<GuardianManagerModal {...props} />);
 
     await user.type(screen.getByLabelText("Full name (Required)"), "Unknown Guardian");
-    await user.type(screen.getByLabelText("Mobile (E.164) (Required)"), "+919876543210");
+    await user.type(screen.getByLabelText("Mobile number (Required)"), "+919876543210");
     await user.click(screen.getByRole("button", { name: "Save guardian" }));
 
     expect(await screen.findByText("GUARDIAN_ACCOUNT_NOT_FOUND")).toBeTruthy();
@@ -64,7 +64,7 @@ describe("GuardianManagerModal", () => {
     vi.mocked(studentApi.guardianPreferences).mockRejectedValueOnce(new Error("preferences unavailable"));
     render(<GuardianManagerModal {...props} />);
     await user.type(screen.getByLabelText("Full name (Required)"), "Meera Rao");
-    await user.type(screen.getByLabelText("Mobile (E.164) (Required)"), "+919876543210");
+    await user.type(screen.getByLabelText("Mobile number (Required)"), "+919876543210");
     await user.click(screen.getByRole("button", { name: "Save guardian" }));
 
     expect(await screen.findByText("preferences unavailable")).toBeTruthy();
@@ -83,5 +83,38 @@ describe("GuardianManagerModal", () => {
     render(<GuardianManagerModal {...props} guardians={three} />);
     expect(screen.getByRole("button", { name: "Save guardian" })).toBeDisabled();
     expect(screen.getByText(/up to three non-blocked guardians/i)).toBeTruthy();
+  });
+
+  it("fires blur-triggered format validation when an invalid mobile number is entered and blurred", async () => {
+    render(<GuardianManagerModal {...props} />);
+    const mobileInput = screen.getByLabelText("Mobile number (Required)");
+    fireEvent.change(mobileInput, { target: { value: "12345" } });
+    fireEvent.blur(mobileInput);
+
+    await waitFor(() => {
+      expect(mobileInput).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toHaveTextContent("Include the country code, for example +919876543210.");
+    });
+  });
+
+  it("fires blur-triggered validation for required full name and invalid email", async () => {
+    render(<GuardianManagerModal {...props} />);
+    const nameInput = screen.getByLabelText("Full name (Required)");
+    fireEvent.focus(nameInput);
+    fireEvent.blur(nameInput);
+
+    await waitFor(() => {
+      expect(nameInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById("guardian-name-error")).toHaveTextContent("Full name is required.");
+    });
+
+    const emailInput = screen.getByLabelText("Email");
+    fireEvent.change(emailInput, { target: { value: "not-an-email" } });
+    fireEvent.blur(emailInput);
+
+    await waitFor(() => {
+      expect(emailInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById("guardian-email-error")).toHaveTextContent("Enter a valid email address.");
+    });
   });
 });

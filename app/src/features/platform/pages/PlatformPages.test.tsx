@@ -286,6 +286,7 @@ describe("Sprint 1 platform screens", () => {
       expect(mockedApi.post).toHaveBeenCalledWith("/platform/tenants", expect.objectContaining({
         tenantName: "Doon World Academy",
         subdomain: "doon-world",
+        firstUserRole: "ADMIN",
         firstAdminEmail: "principal@doon.edu",
         firstAdminMobile: "+919876543210",
         firstAdminNationalIdLast4: "7891",
@@ -293,6 +294,30 @@ describe("Sprint 1 platform screens", () => {
         backupRetentionDays: 30,
       }), expect.objectContaining({ headers: expect.objectContaining({ "Idempotency-Key": expect.any(String) }) }));
     });
+  });
+
+  it("asks who the first user is, offering the Admin owner now and Principal + Admin as coming soon", async () => {
+    mockedApi.get.mockImplementation((url: string) => Promise.resolve({ data: url === "/platform/plans" ? [{ planId: "plan-1", planName: "Standard trial", pricingType: "PER_STUDENT_YEAR", priceAmount: 499, currencyCode: "INR", status: "ACTIVE" }] : [] }));
+
+    renderWithStore(<TenantsPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Create trial tenant/i }));
+    await screen.findByRole("option", { name: /Standard trial/ });
+
+    const roleSelect = screen.getByLabelText(/First user's role/i) as HTMLSelectElement;
+    // School (the default type): Admin owner is chosen; the combined owner shows but cannot be picked.
+    expect(roleSelect.value).toBe("ADMIN");
+    expect(screen.getByRole("option", { name: /School Admin: owner who runs it/i })).toBeEnabled();
+    expect(screen.getByRole("option", { name: /Principal \+ Admin.*coming soon/i })).toBeDisabled();
+
+    // College: same choice, named for the college.
+    fireEvent.change(screen.getByLabelText(/Institution type/i), { target: { value: "STANDALONE_COLLEGE" } });
+    expect(screen.getByRole("option", { name: /College Admin: owner who runs it/i })).toBeEnabled();
+    expect(screen.getByRole("option", { name: /Principal \+ Admin.*coming soon/i })).toBeDisabled();
+
+    // University: the University Admin is the only first user.
+    fireEvent.change(screen.getByLabelText(/Institution type/i), { target: { value: "UNIVERSITY_GROUP" } });
+    expect(screen.getByRole("option", { name: "University Admin" })).toBeEnabled();
+    expect(screen.queryByRole("option", { name: /Principal \+ Admin/i })).not.toBeInTheDocument();
   });
 
   it("shows the first admin's temporary password once after creating a tenant, until dismissed", async () => {
@@ -648,7 +673,7 @@ describe("Sprint 1 platform screens", () => {
 
     expect(screen.getAllByRole("button", { name: "Unlock sign-in" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Unlock sign-in" }));
-    expect(screen.getByText(/clears the failed-login lockout only/i)).toBeInTheDocument();
+    expect(screen.getByText(/clears the failed-login lockout/i)).toBeInTheDocument();
     const confirmButtons = screen.getAllByRole("button", { name: "Unlock sign-in" });
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
 
@@ -656,6 +681,78 @@ describe("Sprint 1 platform screens", () => {
       expect(mockedApi.post).toHaveBeenCalledWith("/platform/platform-users/plt-2/unlock");
       expect(screen.getByText(/Priya Nair's sign-in lockout was cleared/i)).toBeInTheDocument();
     });
+  });
+
+  it("shows an error and no success notice when unlock fails", async () => {
+    mockedApi.get.mockResolvedValue({ data: [{ platformUserId: "plt-1", fullName: "Me Myself", email: "me@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }, { platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "BILLING_MANAGER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }] });
+    mockedApi.post.mockRejectedValue({ response: { data: { message: "Keycloak is not reachable." } } });
+    renderWithStore(<PlatformUsersPage />);
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Unlock sign-in" }));
+    const confirmButtons = screen.getAllByRole("button", { name: "Unlock sign-in" });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => expect(mockedApi.post).toHaveBeenCalledWith("/platform/platform-users/plt-2/unlock"));
+    expect(screen.queryByText(/sign-in lockout was cleared/i)).not.toBeInTheDocument();
+  });
+
+  it("asks for a reason before resetting someone's two-step login, then sends it", async () => {
+    mockedApi.get.mockResolvedValue({ data: [{ platformUserId: "plt-1", fullName: "Me Myself", email: "me@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }, { platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "BILLING_MANAGER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }] });
+    mockedApi.post.mockResolvedValue({ data: { actionCode: "PLATFORM_USER_MANAGE", status: "RESET", message: "ok" } });
+    renderWithStore(<PlatformUsersPage />);
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset two-step login" }));
+    // Confirm without a reason: nothing is sent.
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset two-step login" }).at(-1)!);
+    expect(screen.getByText(/at least 5 characters/i)).toBeInTheDocument();
+    expect(mockedApi.post).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Reason/i), { target: { value: "Lost phone, identity confirmed" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset two-step login" }).at(-1)!);
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith("/platform/platform-users/plt-2/mfa-reset", {
+        reason: "Lost phone, identity confirmed",
+      });
+    });
+  });
+
+  it("keeps the dialog open with the server message when the two-step reset fails", async () => {
+    mockedApi.get.mockResolvedValue({ data: [{ platformUserId: "plt-1", fullName: "Me Myself", email: "me@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }, { platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "BILLING_MANAGER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }] });
+    mockedApi.post.mockRejectedValue({ response: { data: { message: "Keycloak is not reachable." } } });
+    renderWithStore(<PlatformUsersPage />);
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset two-step login" }));
+    fireEvent.change(screen.getByLabelText(/Reason/i), { target: { value: "Lost phone, identity confirmed" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset two-step login" }).at(-1)!);
+
+    await waitFor(() => expect(screen.getByText(/Keycloak is not reachable/i)).toBeInTheDocument());
+    expect(screen.getByLabelText(/Reason/i)).toBeInTheDocument();
+  });
+
+  it("offers only Change role and Reactivate for an inactive person", async () => {
+    mockedApi.get.mockResolvedValue({ data: [{ platformUserId: "plt-1", fullName: "Me Myself", email: "me@edu360.com", platformRole: "PRODUCT_OWNER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }, { platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "BILLING_MANAGER", status: "INACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }] });
+    renderWithStore(<PlatformUsersPage />);
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: "Reactivate" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Change role" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Unlock sign-in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reset password" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reset two-step login" })).not.toBeInTheDocument();
+  });
+
+  it("hides every account action from someone who cannot manage platform users", async () => {
+    mockedApi.get.mockResolvedValue({ data: [{ platformUserId: "plt-2", fullName: "Priya Nair", email: "priya@edu360.com", platformRole: "BILLING_MANAGER", status: "ACTIVE", mfaRequired: true, createdAt: "2026-01-01T00:00:00Z" }] });
+    renderWithStore(<PlatformUsersPage />, "PLATFORM_ADMIN");
+    await waitFor(() => expect(screen.getByText("Priya Nair")).toBeInTheDocument());
+
+    for (const name of ["Unlock sign-in", "Reset password", "Reset two-step login", "Deactivate", "Change role"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
   });
 
   it("lets a Product Owner reset another platform user's password and shows it once", async () => {

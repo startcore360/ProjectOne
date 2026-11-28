@@ -89,7 +89,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateResourceException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", ex.getMessage(), request);
+        ResponseEntity<Map<String, Object>> base = buildResponse(HttpStatus.CONFLICT, "DUPLICATE_RESOURCE", ex.getMessage(), request);
+        if (ex.getFieldName() != null && !ex.getFieldName().isBlank()) {
+            Map<String, Object> body = new HashMap<>(base.getBody());
+            body.put("fieldErrors", Map.of(ex.getFieldName(), ex.getMessage()));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
+        return base;
     }
 
     /** P-01: deciding your own request is 403, not 422. */

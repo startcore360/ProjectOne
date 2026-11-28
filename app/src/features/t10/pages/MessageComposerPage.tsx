@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader, Button, TextField, TextAreaField, CheckboxField, Notice, Spinner, Panel } from "../../../design-system/components";
+import { PageHeader, Button, SelectField, TextAreaField, CheckboxField, Notice, Spinner, Panel } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { t10Api } from "../api/t10Api";
+import { userManagementService, type UserSummary } from "../../user-management/api/userManagementService";
 
 const availableChannels = ["IN_APP", "PUSH", "SMS", "EMAIL"] as const;
 type Channel = typeof availableChannels[number];
@@ -12,6 +13,8 @@ export default function MessageComposerPage() {
   const tenant = useAppSelector((s) => s.auth.user?.tenantId ?? "");
   const institution = useAppSelector((s) => s.tenantPermissions.current?.institutionId ?? "");
   const [recipient, setRecipient] = useState("");
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [body, setBody] = useState("");
   const [channels, setChannels] = useState<Channel[]>([...availableChannels]);
   const [status, setStatus] = useState("");
@@ -20,6 +23,23 @@ export default function MessageComposerPage() {
   const [historyError, setHistoryError] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!tenant) return;
+    let active = true;
+    setUsersLoading(true);
+    userManagementService.listUsers(tenant, { scopeType: "TENANT" })
+      .then((res) => {
+        if (active) setUsers(res.data?.users ?? []);
+      })
+      .catch(() => {
+        if (active) setUsers([]);
+      })
+      .finally(() => {
+        if (active) setUsersLoading(false);
+      });
+    return () => { active = false; };
+  }, [tenant]);
 
   const loadHistory = useCallback(async () => {
     if (!tenant || !institution || !actions.includes("DELIVERY_FAILURES_VIEW")) { setHistoryLoading(false); return; }
@@ -55,14 +75,20 @@ export default function MessageComposerPage() {
     <PageHeader title="Communications & Dispatch" description="Send a private message through ordered, configurable delivery channels." />
     <Panel title="Compose message" description="Send direct messages through multiple fall-through notification channels.">
       <form className="app-form" onSubmit={(e) => { e.preventDefault(); void send(); }}>
-        <TextField
+        <SelectField
           id="msg-recipient"
-          label="Recipient user ID *"
+          label="Recipient *"
           value={recipient}
           onChange={(event) => setRecipient(event.target.value)}
-          placeholder="Tenant user UUID"
           required
-        />
+        >
+          <option value="">{usersLoading ? "Loading recipients…" : "Select a recipient"}</option>
+          {users.map((u) => (
+            <option key={u.userAccountId} value={u.userAccountId}>
+              {u.displayName} ({u.email || u.userType})
+            </option>
+          ))}
+        </SelectField>
         <TextAreaField
           id="msg-body"
           label="Message *"

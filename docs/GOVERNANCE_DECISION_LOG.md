@@ -224,8 +224,31 @@ instructions being carried out. No code was written or modified as part of this 
   - **D3 RP-06:** names Management and the Vice Chancellor for roll-down changes.
   - **`ck_role_rolldown_override_set_by_role`:** allows the University Admin only for non-approval roll-down actions.
   - These need revisiting when this decision is implemented.
-- **Open:** whether the College Admin or School Admin is likewise the top post of a standalone college or school tenant. This decision covers university tenants only.
+- **Open:** whether the College Admin or School Admin is likewise the top post of a standalone college or school tenant. This decision covers university tenants only. (Decided in TPA-06, 2026-11-28.)
 - **Implementation status:** **Implemented.** `PermissionEvaluatorService` evaluates tenant-scoped University Admin across constituent institutions under TPA-01..TPA-05, enforces TPA-04 limits (personal and locked action exclusions), respects 30-minute step-in limits, and enforces `SCHOOL_PRINCIPAL` standard role code. Fully tested by DB-113..125 and unit test suites.
+
+## Decisions in this round — 2026-11-28
+
+**Decided by:** the project owner, in the Claude Code session of 2026-11-28.
+
+### TPA-06 — The first user of a new tenant is its owner; School Admin and College Admin are top posts of a standalone tenant
+
+- **Decision:**
+  - When a platform admin creates a tenant, the first user holds the major rights of that tenant. They are the owner. They create staff and hire the Principal.
+  - For a standalone school or college this is the **School Admin** or **College Admin**. For a university it is the **University Admin** (TPA-05).
+  - The School Admin and College Admin set up at tenant creation are top posts across their standalone institution, under TPA-01 to TPA-03. They were not top posts before.
+  - The creation screen asks who the first user is. Two choices are planned: the Admin owner, and a combined "Principal + Admin" owner who holds both permission lists.
+- **Replaces:** the open point in TPA-05 (whether the College or School Admin is the top post of a standalone tenant). The order inside a standalone tenant is now Admin owner, then Management, then Principal.
+- **Limits that still apply (TPA-04):** no self-approval, approval chains can't be skipped, personal actions and locked actions stay excluded, data protection approvals stay with the Data Protection Officer, and Decisions A to E apply.
+- **Safeguards added:**
+  - A School Admin or College Admin can be given at tenant scope only by tenant creation. Anyone given the role later gets it at one institution (`ADMIN_ROLE_REQUIRES_INSTITUTION`), so the top-post cover cannot be widened by assigning the role later.
+  - The owner Admin (the one holding the tenant-scope assignment from tenant creation) counts as top governance in `UserGovernanceGuard` (T02), so the owner can reset or deactivate the Principal they hired, and lower roles (IT support, HR) cannot touch the owner. An ordinary School or College Admin assigned to one institution is unchanged: the Principal stays protected from them (A-06, REG-A06-2).
+- **Not done yet (flagged, not silently resolved):**
+  - **Principal + Admin owner:** the API accepts `firstUserRole = PRINCIPAL_ADMIN` and refuses it with `FIRST_USER_ROLE_NOT_AVAILABLE`. A new combined standard role would be unknown to about 25 role-keyed rules (approval routing, result publishing, leave approvers, merit-list approval, confidential grievances, two-step login). Each needs checking first.
+  - **A single owner approving their own requests:** still blocked by the self-approval rule. A second person (for example the hired Principal) approves them.
+  - **TOP_POST_AUTHORITY_RULES.md Appendix B:** it has no School Admin or College Admin column yet.
+  - **How roll-down grants actions:** roll-down is a map and a set of overrides. Whether it gives a stand-in role extra actions has not been confirmed.
+- **Implementation status:** **Implemented (Admin owner only).** `PermissionEvaluatorService.topPostCovers`, `RoleAssignmentService`, `UserGovernanceGuard`, `TenantCreateRequest.firstUserRole` and `TenantManagementService.createTenant`; screen: `CreateTenantModal`. Tests: `PermissionEvaluatorServiceTest`, `RoleAssignmentControllerTest`, `UserGovernanceGuardTest`, `PlatformTenantControllerTest`, `PlatformPages.test.tsx`.
 
 ### SES-01 — Users may stay signed in on several devices; one session per browser
 

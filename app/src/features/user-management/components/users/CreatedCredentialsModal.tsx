@@ -47,7 +47,7 @@ export function CreatedCredentialsModal({
       description={description}
       size="sm"
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <p style={{ margin: 0, fontSize: "0.875rem" }}>
           {user.identifier ? (
             <>Student profile <strong>{user.displayName}</strong> has been created.</>
@@ -64,7 +64,7 @@ export function CreatedCredentialsModal({
         {user.temporaryPassword && (
           <div
             style={{
-              padding: "14px 16px",
+              padding: "var(--space-3) var(--space-4)",
               backgroundColor: "var(--color-bg-subtle)",
               borderRadius: "var(--radius-md)",
               border: "1px dashed var(--color-border-divider)",
@@ -77,13 +77,13 @@ export function CreatedCredentialsModal({
                 fontSize: "0.75rem",
                 fontWeight: "var(--fw-semibold)",
                 color: "var(--color-text-muted)",
-                marginBottom: "6px",
+                marginBottom: "var(--space-1)",
                 letterSpacing: "0.04em",
               }}
             >
               ONE-TIME TEMPORARY PASSWORD
             </label>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
               <input
                 id="created-temp-password"
                 readOnly
@@ -92,7 +92,7 @@ export function CreatedCredentialsModal({
                 style={{
                   fontFamily: "var(--font-mono)",
                   fontSize: "1.1rem",
-                  padding: "0.5rem 0.75rem",
+                  padding: "var(--space-2) var(--space-3)",
                   borderRadius: "var(--radius-sm)",
                   border: "1px solid var(--color-border-divider)",
                   backgroundColor: "var(--color-bg-surface)",
@@ -120,7 +120,7 @@ export function CreatedCredentialsModal({
                 buttonVariant="secondary"
               />
             </div>
-            <p style={{ marginTop: "8px", marginBottom: 0, fontSize: "0.8rem", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
+            <p style={{ marginTop: "var(--space-2)", marginBottom: 0, fontSize: "0.8rem", color: "var(--color-text-muted)", lineHeight: 1.4 }}>
               This temporary password will not be shown again. Securely share it with the user. They will be prompted to choose a new password on first sign-in.
             </p>
           </div>
@@ -132,7 +132,7 @@ export function CreatedCredentialsModal({
           </div>
         )}
 
-        <footer style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
+        <footer style={{ marginTop: "var(--space-4)", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "var(--space-2)" }}>
           {user.temporaryPassword && (
             <ShareMenu
               text={`Your EDU360 login credentials:\nAccount: ${user.displayName}${user.email ? ` (${user.email})` : ""}\nTemporary Password: ${user.temporaryPassword}\n\nPlease sign in and choose a new password.`}

@@ -441,6 +441,72 @@ class PermissionEvaluatorServiceTest {
         assertThat(decision.reasonCode()).isEqualTo("NO_ACTIVE_ROLE_IN_SCOPE");
     }
 
+    // TPA-06: School Admin / College Admin set up at tenant creation (TENANT scope) own the standalone institution.
+
+    private void configureOwnerAdmin(String roleCode, String actionCode, boolean assignedAtTenant) {
+        evaluator = new PermissionEvaluatorService(actionCatalogRepository, userRoleAssignmentRepository,
+                roleActionRepository, roleDefinitionRepository, null, null);
+        when(actionCatalogRepository.findById(actionCode)).thenReturn(Optional.of(action(actionCode, false)));
+        when(userRoleAssignmentRepository.findAllByIdTenantIdAndUserAccountIdAndStatusOrderByEffectiveFromAsc(
+                TENANT_ID, USER_ACCOUNT_ID, AssignmentStatus.ACTIVE))
+                .thenReturn(List.of(activeAssignment(assignedAtTenant ? null : INSTITUTION_ID)));
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID)))
+                .thenReturn(Optional.of(RoleDefinition.builder()
+                        .id(new RoleDefinitionId(TENANT_ID, ROLE_DEFINITION_ID))
+                        .roleCode(roleCode).roleName(roleCode).roleOrigin(RoleOrigin.STANDARD)
+                        .roleLevel(roleCode.startsWith("SCHOOL") ? RoleLevel.SCHOOL : RoleLevel.COLLEGE)
+                        .status(RoleDefinitionStatus.ACTIVE).build()));
+    }
+
+    @Test
+    void ownerAdminAtTenantScopeActsAtInstitutionScopeWhenTheRoleHoldsTheAction() {
+        for (String roleCode : List.of("SCHOOL_ADMIN", "COLLEGE_ADMIN")) {
+            configureOwnerAdmin(roleCode, USER_CREATE, true);
+            when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                    TENANT_ID, ROLE_DEFINITION_ID, USER_CREATE)).thenReturn(true);
+
+            PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                    USER_CREATE, RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+            assertThat(decision.allowed()).as(roleCode).isTrue();
+        }
+    }
+
+    @Test
+    void ownerAdminAtTenantScopeStillNeedsTheActionToBeGranted() {
+        configureOwnerAdmin("SCHOOL_ADMIN", USER_CREATE, true);
+        when(roleActionRepository.existsByIdTenantIdAndRoleDefinitionIdAndActionCode(
+                TENANT_ID, ROLE_DEFINITION_ID, USER_CREATE)).thenReturn(false);
+
+        PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                USER_CREATE, RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.reasonCode()).isEqualTo("ACTION_NOT_GRANTED");
+    }
+
+    @Test
+    void ownerAdminCannotUsePersonalStudentOrParentActions() {
+        configureOwnerAdmin("SCHOOL_ADMIN", "FEE_PAY_ONLINE", true);
+
+        PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                "FEE_PAY_ONLINE", RbacScope.institution(INSTITUTION_ID), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.reasonCode()).isEqualTo("TOP_POST_PERSONAL_FORBIDDEN");
+    }
+
+    @Test
+    void anAdminAssignedToOneInstitutionDoesNotGetTenantWideCoverage() {
+        configureOwnerAdmin("SCHOOL_ADMIN", USER_CREATE, false);
+
+        PermissionDecision decision = evaluator.can(new RbacPrincipal(TENANT_ID, USER_ACCOUNT_ID),
+                USER_CREATE, RbacScope.tenant(), RbacTarget.NONE);
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.reasonCode()).isEqualTo("NO_ACTIVE_ROLE_IN_SCOPE");
+    }
+
     @Test
     void idCardIssueIsAllowedOnlyWhenTheActiveRoleHasTheSpecificAction() {
         configureGrantedAction("ID_CARD_ISSUE", false, "RECORDS_OFFICER", false);

@@ -103,7 +103,7 @@ public class PlatformSubscriptionService {
         validateCatalogItem(request);
         String code = request.itemCode().trim().toUpperCase();
         if (catalogRepository.findByItemCode(code).isPresent()) {
-            throw new DuplicateResourceException("A commercial item with code '" + code + "' already exists.");
+            throw new DuplicateResourceException("A commercial item with code '" + code + "' already exists.", "itemCode");
         }
         requirePricePermission(actor, request.unitAmount());
         Instant now = Instant.now();

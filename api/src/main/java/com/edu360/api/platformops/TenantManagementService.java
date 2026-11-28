@@ -49,8 +49,10 @@ import com.edu360.api.identity.UserIdentityLinkRepository;
 import com.edu360.api.identity.UserType;
 import com.edu360.api.identity.UsernameKind;
 import com.edu360.api.institution.Institution;
+import com.edu360.api.institution.InstitutionId;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.LeaveApproverSettingRepository;
+import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.platform.Plan;
 import com.edu360.api.platform.PlanRepository;
 import com.edu360.api.platform.PlatformRole;
@@ -163,6 +165,9 @@ public class TenantManagementService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PlatformNotificationService platformNotificationService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.edu360.api.institution.InstitutionIdFormatService institutionIdFormatService;
+
     @org.springframework.beans.factory.annotation.Autowired
     public TenantManagementService(
             TenantRepository tenantRepository,
@@ -228,6 +233,14 @@ public class TenantManagementService {
                     "The subdomain '" + normalizedSubdomain + "' is reserved by the platform.");
         }
 
+        if (request.getFirstUserRole() != null
+                && request.getFirstUserRole() != com.edu360.api.platformops.dto.FirstUserRole.ADMIN) {
+            // Checked before anything is created, so a refused choice leaves no half-built tenant.
+            throw new BusinessRuleViolationException("FIRST_USER_ROLE_NOT_AVAILABLE",
+                    "Creating the first user as Principal + Admin is not available yet. "
+                            + "Choose the Admin owner; they can hire a Principal afterwards.");
+        }
+
         // Unit tests that instantiate this service directly bypass Spring field injection.
         // Production wiring always supplies the coordinator; retain the pre-coordinator path only
         // for those manually constructed service fixtures.
@@ -236,7 +249,7 @@ public class TenantManagementService {
         }
 
         if (tenantRepository.findBySubdomain(normalizedSubdomain).isPresent()) {
-            throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists");
+            throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists", "subdomain");
         }
         if (!ALLOWED_TENANT_TYPES.contains(request.getTenantType())) {
             throw new IllegalArgumentException("Invalid tenant type: " + request.getTenantType()
@@ -301,6 +314,12 @@ public class TenantManagementService {
         TenantProvisioningStatusResponse provisioningStatus = runProvisioning(tenant, plan, inputs, principal, false);
         failIfNotProvisioned(tenantId, provisioningStatus, principal);
         Tenant provisionedTenant = markProvisioned(tenant, principal);
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), null, null);
+        try {
+            provisionDefaultInstitutionIfStandalone(provisionedTenant, adminUserAccountId, principal);
+        } finally {
+            TenantContext.clear();
+        }
         platformAuditWriter.record(principal, tenantId, "TENANT_CREATED", "TENANT_CREATE", "TENANT", tenantId);
 
         return TenantResponse.from(
@@ -413,6 +432,12 @@ public class TenantManagementService {
         TenantProvisioningStatusResponse status = runProvisioning(tenant, plan, inputs, principal, true);
         failIfNotProvisioned(tenantId, status, principal);
         Tenant provisionedTenant = markProvisioned(tenant, principal);
+        TenantContext.set(tenantId, IsolationMode.SHARED, null, "ALL", Set.of(), null, null);
+        try {
+            provisionDefaultInstitutionIfStandalone(provisionedTenant, admin.getId().getUserAccountId(), principal);
+        } finally {
+            TenantContext.clear();
+        }
         platformAuditWriter.record(principal, tenantId, "TENANT_PROVISIONING_RETRIED", "TENANT_CREATE", "TENANT", tenantId);
         return TenantResponse.from(provisionedTenant, plan.getPlanName(), admin.getEmail(), admin.getMobile(), null,
                 temporaryPassword, admin.getId().getUserAccountId());
@@ -742,6 +767,63 @@ public class TenantManagementService {
         return actions;
     }
 
+    private static final String DEFAULT_STUDENT_ID_FORMAT = "{INST}-{YYYY}-{SEQ:4}";
+
+    /**
+     * STANDALONE_SCHOOL/STANDALONE_COLLEGE only: auto-creates the tenant's one institution, since
+     * nobody could ever create it themselves otherwise. UNIVERSITY_GROUP's institutions are each
+     * created by its own University Admin (INSTITUTION_CREATE_DRAFT), an action neither
+     * SCHOOL_ADMIN nor COLLEGE_ADMIN ever holds (see ref.standard_role_action) - a standalone
+     * tenant's one institution IS the tenant, so that action was never going to apply there. Not
+     * one of the seven resumable provisioning steps in TenantProvisioningService on purpose: that
+     * saga's step codes are a fixed, persisted set (platform.tenant_provision_step.step_code) that
+     * would need its own migration to extend, for one plain insert with nothing external to retry
+     * (no Keycloak call, no third-party system) - called once, right after provisioning finishes.
+     *
+     * Created ACTIVE, not DRAFT: INSTITUTION_ACTIVATE's own approval chain requires a
+     * Vice-Chancellor, a role that exists only in a university tenant and never in a standalone
+     * one - a DRAFT institution here could never be approved by anyone.
+     */
+    private void provisionDefaultInstitutionIfStandalone(Tenant tenant, UUID adminUserAccountId, PlatformPrincipal principal) {
+        String tenantType = tenant.getTenantType();
+        if (!"STANDALONE_SCHOOL".equals(tenantType) && !"STANDALONE_COLLEGE".equals(tenantType)) {
+            return;
+        }
+        UUID tenantId = tenant.getTenantId();
+        if (!institutionRepository.findByIdTenantId(tenantId).isEmpty()) {
+            return;
+        }
+        String institutionType = "STANDALONE_SCHOOL".equals(tenantType) ? "SCHOOL" : "COLLEGE";
+        Instant now = Instant.now();
+        UUID institutionId = UUID.randomUUID();
+        institutionRepository.save(Institution.builder()
+                .id(new InstitutionId(tenantId, institutionId))
+                .institutionType(institutionType)
+                .institutionCode(defaultInstitutionCode(tenant.getSubdomain()))
+                .institutionName(tenant.getTenantName())
+                .status("ACTIVE")
+                .activatedAt(now)
+                .externalUniversityMode(false)
+                .underUniversity(false)
+                .createdBy(principal.platformUserId())
+                .updatedBy(principal.platformUserId())
+                .rowVersion(1)
+                .build());
+        if (institutionIdFormatService != null) {
+            institutionIdFormatService.setSystemDefault(
+                    new RbacPrincipal(tenantId, adminUserAccountId), institutionId, DEFAULT_STUDENT_ID_FORMAT);
+        }
+        log.info("Auto-provisioned default institution '{}' ({}) for standalone tenant {}",
+                tenant.getTenantName(), institutionId, tenantId);
+    }
+
+    /** institution_code must match ^[A-Z0-9_-]{2,20}$ (ck_institution_institution_code); the
+     *  subdomain already satisfies that charset lowercase, so only case and length need fixing. */
+    private static String defaultInstitutionCode(String subdomain) {
+        String upper = subdomain.toUpperCase(java.util.Locale.ROOT);
+        return upper.length() <= 20 ? upper : upper.substring(0, 20);
+    }
+
     private void notifyTenantProvisioningFailure(UUID tenantId, UUID actorPlatformUserId) {
         if (platformUserRepository == null || platformNotificationService == null) {
             return;
@@ -777,7 +859,7 @@ private TenantResponse createTenantLegacy(TenantCreateRequest request, PlatformP
         // 1. Check subdomain uniqueness
         // PRODUCTION (docker/PRODUCTION_TENANT_ROUTING.txt, P6): reserved names such as "platform" must also be refused.
         if (tenantRepository.findBySubdomain(normalizedSubdomain).isPresent()) {
-            throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists");
+            throw new DuplicateResourceException("A tenant with subdomain '" + normalizedSubdomain + "' already exists", "subdomain");
         }
 
         // 2. Validate tenant type

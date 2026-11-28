@@ -143,7 +143,7 @@ export default function TimetableGridView(){
   <h2>Weekly grid</h2><div style={{overflowX:"auto"}}><table><thead><tr><th>Time</th>{DAYS.map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>
    {TIMES.map(time=><tr key={time}><th>{time}</th>{DAYS.map((d,index)=>{const cell=byCell.get((index+1)+"-"+time)??[];return <td key={d} onDragOver={e=>e.preventDefault()} onDrop={e=>dropOn(index+1,time,e)} style={{minWidth:130,verticalAlign:"top"}}>
     {cell.map(slot=><div key={slot.timetable_slot_id} draggable={slot.status==="DRAFT"} onDragStart={()=>setDragged(slot)}
-     style={{border:"1px solid var(--border, #ccc)",borderRadius:6,padding:6,marginBottom:4,cursor:slot.status==="DRAFT"?"grab":"default"}}>
+     style={{border:"1px solid var(--color-border-divider)",borderRadius:6,padding:6,marginBottom:4,cursor:slot.status==="DRAFT"?"grab":"default"}}>
      <strong>{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</strong><br/>
      <small>{slot.course_offering_id.slice(0,8)} · {slot.teacher_name??slot.teacher_id?.slice(0,8)??"Teacher pending"} · {slot.room_number??slot.room_id?.slice(0,8)??"Online"}</small><br/>
      <small>{slot.status}{slot.is_online?" · Online":""}</small>

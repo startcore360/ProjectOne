@@ -258,6 +258,8 @@ class InstitutionControllerTest {
                 "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
         );
 
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("UNIVERSITY_GROUP").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
         when(institutionRepository.existsByIdTenantIdAndInstitutionCode(TENANT_ID, "NBC-01")).thenReturn(true);
 
         assertThatThrownBy(() -> controller.createDraft(TENANT_ID, req, auth))
@@ -286,6 +288,82 @@ class InstitutionControllerTest {
                     assertThat(bre.getErrorCode()).isEqualTo("PLAN_LIMIT_REACHED");
                     assertThat(bre.getMessage()).contains("WF-14");
                 });
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-GUARD: a STANDALONE_SCHOOL tenant cannot create a College")
+    void actInstitutionCreateDraft_guard_schoolTenantRejectsCollege() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "COLLEGE", "NBC-01", "Northbridge College", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("STANDALONE_SCHOOL").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+
+        assertThatThrownBy(() -> controller.createDraft(TENANT_ID, req, auth))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .satisfies(ex -> assertThat(((BusinessRuleViolationException) ex).getErrorCode())
+                        .isEqualTo("INSTITUTION_TYPE_NOT_ALLOWED"));
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-ALLOW: a STANDALONE_SCHOOL tenant can create a School")
+    void actInstitutionCreateDraft_allow_schoolTenantAllowsSchool() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "SCHOOL", "NPS-01", "Northbridge Public School", false,
+                null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("STANDALONE_SCHOOL").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        Plan plan = Plan.builder().planId(PLAN_ID).planName("School Plan").maxInstitutions(5).build();
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
+        when(institutionRepository.save(any(Institution.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<InstitutionResponse> response = controller.createDraft(TENANT_ID, req, auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().institutionCode()).isEqualTo("NPS-01");
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-GUARD: a STANDALONE_COLLEGE tenant cannot create a School")
+    void actInstitutionCreateDraft_guard_collegeTenantRejectsSchool() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "SCHOOL", "NPS-01", "Northbridge Public School", false, null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("STANDALONE_COLLEGE").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+
+        assertThatThrownBy(() -> controller.createDraft(TENANT_ID, req, auth))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .satisfies(ex -> assertThat(((BusinessRuleViolationException) ex).getErrorCode())
+                        .isEqualTo("INSTITUTION_TYPE_NOT_ALLOWED"));
+    }
+
+    @Test
+    @DisplayName("ACT-INSTITUTION_CREATE_DRAFT-ALLOW: a UNIVERSITY_GROUP tenant can create either kind")
+    void actInstitutionCreateDraft_allow_universityGroupAllowsBothKinds() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, USER_ID);
+        CreateInstitutionRequest req = new CreateInstitutionRequest(
+                "SCHOOL", "NPS-01", "Northbridge Public School", false,
+                null, null, null, null, null, "{INST}-{YYYY}-{SEQ:4}", null
+        );
+
+        Tenant tenant = Tenant.builder().tenantId(TENANT_ID).planId(PLAN_ID).tenantType("UNIVERSITY_GROUP").build();
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+        Plan plan = Plan.builder().planId(PLAN_ID).planName("University Plan").maxInstitutions(10).build();
+        when(planRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
+        when(institutionRepository.save(any(Institution.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<InstitutionResponse> response = controller.createDraft(TENANT_ID, req, auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().institutionCode()).isEqualTo("NPS-01");
     }
 
     @Test

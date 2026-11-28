@@ -14,6 +14,14 @@ import {
 import { ErrorState } from "../../../../components/feedback/ErrorState";
 import { formatTimestamp, titleCaseOutcome, readErrorMessage, type FetchStatus } from "../common/types";
 import api from "../../../../services/axios";
+import { platformTenantService, type TenantItem } from "../../api/platformTenantService";
+
+export type AuditActor = {
+  actorUserId: string;
+  displayName: string;
+  email: string;
+  actorKind: string;
+};
 
 export type AuditLogItem = {
   auditOutboxId: string;
@@ -71,10 +79,35 @@ export function AuditLogView() {
   const [query, setQuery] = useState("");
   const [draftFilters, setDraftFilters] = useState<AuditFilters>(EMPTY_FILTERS);
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_FILTERS);
+  const [tenants, setTenants] = useState<TenantItem[]>([]);
+  const [actors, setActors] = useState<AuditActor[]>([]);
   const [retryCount, setRetryCount] = useState(0);
   const [selectedEvent, setSelectedEvent] = useState<AuditLogItem | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    platformTenantService.getTenants(0, 100)
+      ?.then((res) => { if (active) setTenants(res?.data?.items ?? []); })
+      ?.catch(() => { if (active) setTenants([]); });
+    return () => { active = false; };
+  }, []);
+
+  const [actorsLoading, setActorsLoading] = useState(false);
+  const loadActors = () => {
+    setActorsLoading(true);
+    api.get<AuditActor[]>("/platform/audit-logs/actors", {
+      params: draftFilters.tenantId ? { tenantId: draftFilters.tenantId } : {},
+    })
+      ?.then((res) => { setActors(Array.isArray(res?.data) ? res.data : []); })
+      ?.catch(() => { setActors([]); })
+      ?.finally(() => { setActorsLoading(false); });
+  };
+
+  useEffect(() => {
+    setActors([]);
+  }, [draftFilters.tenantId]);
 
   const params = useMemo(() => requestFilters(filters), [filters]);
 
@@ -161,11 +194,39 @@ export function AuditLogView() {
           <SearchBox className="audit-log-filter-search" value={query} onChange={setQuery} placeholder="Search this page" />
           <label className="audit-log-filter-field">
             Tenant ID
-            <input className="app-input" aria-label="Tenant ID" value={draftFilters.tenantId} onChange={(e) => updateDraft("tenantId", e.target.value)} />
+            <select
+              className="app-input"
+              aria-label="Tenant ID"
+              value={draftFilters.tenantId}
+              onChange={(e) => {
+                updateDraft("tenantId", e.target.value);
+                updateDraft("actorUserId", "");
+              }}
+            >
+              <option value="">All tenants / Platform-wide</option>
+              {tenants.map((t) => (
+                <option key={t.tenantId} value={t.tenantId}>
+                  {t.tenantName} ({t.subdomain})
+                </option>
+              ))}
+            </select>
           </label>
           <label className="audit-log-filter-field">
             Actor user ID
-            <input className="app-input" aria-label="Actor user ID" value={draftFilters.actorUserId} onChange={(e) => updateDraft("actorUserId", e.target.value)} />
+            <select
+              className="app-input"
+              aria-label="Actor user ID"
+              value={draftFilters.actorUserId}
+              onFocus={loadActors}
+              onChange={(e) => updateDraft("actorUserId", e.target.value)}
+            >
+              <option value="">{actorsLoading ? "Loading actors…" : "All actors"}</option>
+              {actors.map((a) => (
+                <option key={a.actorUserId} value={a.actorUserId}>
+                  {a.displayName} ({a.email || a.actorKind})
+                </option>
+              ))}
+            </select>
           </label>
           <label className="audit-log-filter-field">
             Action code

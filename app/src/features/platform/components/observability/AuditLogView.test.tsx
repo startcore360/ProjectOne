@@ -7,6 +7,16 @@ vi.mock("../../../../services/axios", () => ({
   default: { get: vi.fn() },
 }));
 
+vi.mock("../../api/platformTenantService", () => ({
+  platformTenantService: {
+    getTenants: vi.fn().mockResolvedValue({
+      data: {
+        items: [{ tenantId: "tenant-123", tenantName: "Tenant 123", subdomain: "t123" }],
+      },
+    }),
+  },
+}));
+
 const mockedApi = api as unknown as { get: ReturnType<typeof vi.fn> };
 
 function items(count: number, offset = 0): AuditLogItem[] {

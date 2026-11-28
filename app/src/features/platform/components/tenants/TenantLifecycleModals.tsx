@@ -32,7 +32,7 @@ export function SuspendTenantModal({
       size="sm"
     >
       <form onSubmit={onSubmit}>
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <TextField
             id="suspend-reason-input"
             label="Reason for suspension *"
@@ -42,7 +42,7 @@ export function SuspendTenantModal({
             placeholder="e.g. Non-payment, regulatory investigation, policy violation"
           />
         </div>
-        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={suspending}>
             Cancel
           </Button>
@@ -85,7 +85,7 @@ export function ArchiveTenantModal({
       size="sm"
     >
       <form onSubmit={onSubmit}>
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <TextField
             id="archive-reason-input"
             label="Reason for archival *"
@@ -95,7 +95,7 @@ export function ArchiveTenantModal({
             placeholder="e.g. Contract elapsed, customer offboarding completed"
           />
         </div>
-        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={archiving}>
             Cancel
           </Button>

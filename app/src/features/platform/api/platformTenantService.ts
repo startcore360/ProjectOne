@@ -83,12 +83,18 @@ export type TenantPageResponse = {
   totalPages: number;
 };
 
+// Who the first user of a new tenant is. ADMIN (School / College / University Admin) is the owner who runs the
+// institution and hires a Principal later. PRINCIPAL_ADMIN (owner and Principal in one account) is in the
+// contract but the server refuses it until that combined role exists.
+export type FirstUserRole = "ADMIN" | "PRINCIPAL_ADMIN";
+
 export type TenantCreateRequest = {
   tenantName: string;
   tenantType: TenantType;
   planId: string;
   subdomain: string;
   isolationMode: IsolationMode;
+  firstUserRole?: FirstUserRole;
   firstAdminName: string;
   firstAdminEmail: string;
   firstAdminMobile?: string;

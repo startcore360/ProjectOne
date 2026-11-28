@@ -97,4 +97,16 @@ describe("CreateStudentModal", () => {
     expect(screen.getByText("Choose an institution from the list.")).toBeInTheDocument();
     expect(userManagementService.createStudentProfile).not.toHaveBeenCalled();
   });
+
+  it("fires blur-triggered validation when full name is focused and blurred empty", async () => {
+    render(<CreateStudentModal tenantId={tenantId} isOpen onClose={vi.fn()} onCreated={vi.fn()} />);
+    const nameInput = screen.getByLabelText(/Student full name/i);
+    fireEvent.focus(nameInput);
+    fireEvent.blur(nameInput);
+
+    await waitFor(() => {
+      expect(nameInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById("student-full-name-error")).toHaveTextContent("Student full name is required.");
+    });
+  });
 });

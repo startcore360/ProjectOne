@@ -38,8 +38,6 @@ const universityNavigation = [
   { label: "Delegations & approvals", to: "/university/setup/delegations", icon: "check-circle" as const, important: false },
   { label: "Missing roles", to: "/university/missing-roles", icon: "alert" as const, important: false },
   { label: "Term lock", to: "/university/setup/term-lock", icon: "lock" as const, important: false },
-  { label: "Self-service", to: "/self-service", icon: "user" as const, important: false },
-  { label: "My sessions", to: "/sessions", icon: "clock" as const, important: false },
 ];
 
 const collegeNavigation = [
@@ -48,8 +46,6 @@ const collegeNavigation = [
   { label: "Academic structure", to: "/university/setup/structure", icon: "grid" as const, important: true },
   { label: "Delegations & approvals", to: "/university/setup/delegations", icon: "check-circle" as const, important: false },
   { label: "Term lock", to: "/university/setup/term-lock", icon: "lock" as const, important: false },
-  { label: "Self-service", to: "/self-service", icon: "user" as const, important: false },
-  { label: "My sessions", to: "/sessions", icon: "clock" as const, important: false },
 ];
 
 const schoolNavigation = [
@@ -60,8 +56,6 @@ const schoolNavigation = [
   { label: "Calendar & weekly off", to: "/university/setup/weekly-off", icon: "calendar" as const, important: false },
   { label: "Delegations & approvals", to: "/university/setup/delegations", icon: "check-circle" as const, important: false },
   { label: "Term lock", to: "/university/setup/term-lock", icon: "lock" as const, important: false },
-  { label: "Self-service", to: "/self-service", icon: "user" as const, important: false },
-  { label: "My sessions", to: "/sessions", icon: "clock" as const, important: false },
 ];
 
 const platformNavigation = [
@@ -81,22 +75,23 @@ const platformNavigation = [
   { label: "Security policy", to: "/platform/security-policy", icon: "key" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.security },
   { label: "Integrations", to: "/platform/integration-types", icon: "cpu" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.integrations },
   { label: "Releases", to: "/platform/releases", icon: "package" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.releases },
-  { label: "Data protection", to: "/platform/data-protection", icon: "shield" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.dataProtection },
+  { label: "Data protection", to: "/platform/data-protection", icon: "key" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.dataProtection },
   { label: "Landing & leads", to: "/platform/landing", icon: "layers" as const, important: false, anyOf: PLATFORM_PAGE_ACTIONS.landing },
 ];
 
 const workspaceNavigation = [
   { label: "Overview", to: "/dashboard", icon: "home" as const, important: true },
   { label: "Users & roles", to: "/university/users", icon: "users" as const, important: true },
-  { label: "Self-service", to: "/self-service", icon: "user" as const, important: true },
-  { label: "My sessions", to: "/sessions", icon: "lock" as const, important: false },
 ];
 
 const studentNavigation = [
   { label: "Overview", to: "/dashboard", icon: "home" as const, important: true },
-  { label: "Self-service", to: "/self-service", icon: "user" as const, important: true },
   { label: "Medical exemption", to: "/student/medical-exemptions", icon: "file-text" as const, important: true },
-  { label: "My sessions", to: "/sessions", icon: "lock" as const, important: true },
+];
+
+const personalNavigation = [
+  { label: "Self-service", to: "/self-service", icon: "user" as const, important: false },
+  { label: "My sessions", to: "/sessions", icon: "clock" as const, important: false },
 ];
 
 export default function AppLayout() {
@@ -346,7 +341,7 @@ export default function AppLayout() {
         { label: "Overview", to: "/dashboard", icon: "home" as const, important: true },
         { label: "Academic Structure", to: "/university/setup/structure", icon: "grid" as const, important: true },
         { label: "Calendar & Sessions", to: "/university/setup/calendar-events", icon: "calendar" as const, important: true },
-        { label: "Role Previews", to: "/role-previews", icon: "shield" as const, important: false },
+        { label: "Role Previews", to: "/role-previews", icon: "eye" as const, important: false },
         { label: "Support Status", to: "/support", icon: "help" as const, important: true },
       ]
     : isPlatformConsole
@@ -374,14 +369,16 @@ export default function AppLayout() {
     { label: "Attendance", to: "/academic/attendance", icon: "check-circle" as const, important: true, anyOf: ["ATTENDANCE_VIEW", "ATTENDANCE_MARK"] },
     { label: "Support", to: "/support", icon: "help" as const, important: false, anyOf: ["SUPPORT_TICKET_RAISE", "SUPPORT_ACCESS_GRANT"] },
     { label: "Staff records", to: "/university/staff", icon: "users" as const, important: false, anyOf: ["STAFF_RECORD_VIEW"] },
-    { label: "Data protection", to: "/tenant/data-protection", icon: "shield" as const, important: false, anyOf: ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"] },
+    { label: "Data protection", to: "/tenant/data-protection", icon: "key" as const, important: false, anyOf: ["TENANT_EXPORT_REQUEST", "TENANT_DELETION_REQUEST"] },
     { label: "Notice board", to: "/notices", icon: "bell" as const, important: false, anyOf: ["NOTICE_PUBLISH_INSTITUTION", "NOTICE_PUBLISH_CLASS_DEPT", "NOTICE_PUBLISH_UNIVERSITY", "NOTICE_EMERGENCY", "SELF_SERVICE_VIEW"] },
     { label: "Communications", to: "/communications", icon: "file-text" as const, important: false, anyOf: ["MESSAGE_SEND", "CLASS_BROADCAST"] },
     { label: "Library", to: "/library", icon: "book" as const, important: false, anyOf: ["BOOK_SEARCH_RESERVE", "CATALOG_MANAGE", "BOOK_ISSUE_RETURN", "RESERVATION_MANAGE", "FINE_COLLECT", "LIBRARY_SETTINGS_SET"] },
     { label: "Transport", to: "/transport", icon: "grid" as const, important: false, anyOf: ["TRANSPORT_MANAGE", "DRIVER_ROUTE_VIEW"] },
     { label: "Executive dashboard", to: "/executive-dashboard", icon: "chart" as const, important: false, anyOf: ["REPORTS_VIEW"] },
   ].filter((item) => canTenantAny(item.anyOf));
-  const navigation = isPlatformConsole ? baseNavigation : [...baseNavigation, ...academicNavigation];
+  const baseFeatureNavigation = isPlatformConsole ? baseNavigation : [...baseNavigation, ...academicNavigation];
+  const hasPersonalNav = !isPlatformConsole && !isSupportSession;
+  const navigation = hasPersonalNav ? [...baseFeatureNavigation, ...personalNavigation] : baseFeatureNavigation;
 
   // Sidebar overflow hint: overlay scrollbars (macOS, touch laptops) hide until hovered, so a
   // long menu gives no sign that more items sit below. Track whether the list can scroll
@@ -501,10 +498,16 @@ export default function AppLayout() {
           className={"app-nav" + (navOverflow.above ? " app-nav--more-above" : "") + (navOverflow.below ? " app-nav--more-below" : "")}
           aria-label="Main navigation"
         >
-          {navigation.map((item) => navLink(item))}
+          {baseFeatureNavigation.map((item) => navLink(item))}
+          {hasPersonalNav && (
+            <>
+              <hr className="app-nav__divider" aria-hidden="true" />
+              {personalNavigation.map((item) => navLink(item))}
+            </>
+          )}
           {!navigation.some((i) => i.to === "/role-previews") && import.meta.env.DEV && (
             <NavLink to="/role-previews" end title="Role dashboard previews" className={({ isActive }) => "app-nav__link" + (isActive ? " is-active" : "")}>
-              <Icon name="help" size={20}/><span>Role previews</span>
+              <Icon name="eye" size={20}/><span>Role previews</span>
             </NavLink>
           )}
         </nav>
@@ -579,7 +582,15 @@ export default function AppLayout() {
             lives here instead - the one place every mobile user already goes for account actions. */}
         <div className="app-more-drawer__role"><RoleSwitcher layout="stacked" /></div>
         <p className="app-sidebar__label">{scopeLabel}</p>
-        <div className="app-nav">{moreNav.map((item) => navLink(item))}</div>
+        <div className="app-nav">
+          {moreNav.filter((i) => !personalNavigation.some((p) => p.to === i.to)).map((item) => navLink(item))}
+          {hasPersonalNav && moreNav.some((i) => personalNavigation.some((p) => p.to === i.to)) && (
+            <>
+              <hr className="app-nav__divider" aria-hidden="true" />
+              {moreNav.filter((i) => personalNavigation.some((p) => p.to === i.to)).map((item) => navLink(item))}
+            </>
+          )}
+        </div>
         <hr/>
         <Button variant="secondary" className="app-more-drawer__signout" onClick={signOut}>Sign out</Button>
       </section>

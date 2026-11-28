@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
 import tenantPermissionsReducer, { setTenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
@@ -143,4 +143,54 @@ describe("StaffRecordsPage", () => {
     expect(screen.queryByText("Staff Member 1")).not.toBeInTheDocument();
   });
 
+  it("fires blur-triggered format validation on mobile field in add staff modal", async () => {
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: [],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 0 },
+    });
+
+    renderWithActions(["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"]);
+    await waitFor(() => expect(staffService.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Add staff member" })[0]);
+    const modal = screen.getByRole("dialog");
+    const mobileInput = within(modal).getByLabelText("Mobile number");
+    fireEvent.change(mobileInput, { target: { value: "invalid-phone" } });
+    fireEvent.blur(mobileInput);
+
+    await waitFor(() => {
+      expect(mobileInput).toHaveAttribute("aria-invalid", "true");
+      expect(within(modal).getByRole("alert")).toHaveTextContent("Include the country code, for example +919876543210.");
+    });
+  });
+
+  it("fires blur-triggered validation on full name and official email in add staff modal", async () => {
+    vi.mocked(staffService.list).mockResolvedValue({
+      items: [],
+      page: { limit: 100, nextCursor: null, hasMore: false, totalCount: 0 },
+    });
+
+    renderWithActions(["STAFF_RECORD_VIEW", "STAFF_RECORD_MANAGE"]);
+    await waitFor(() => expect(staffService.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Add staff member" })[0]);
+    const modal = screen.getByRole("dialog");
+    const nameInput = within(modal).getByLabelText("Full name (Required)");
+    fireEvent.focus(nameInput);
+    fireEvent.blur(nameInput);
+
+    await waitFor(() => {
+      expect(nameInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById("new-staff-full-name-error")).toHaveTextContent("Full name is required.");
+    });
+
+    const emailInput = within(modal).getByLabelText("Official email (login) (Required)");
+    fireEvent.change(emailInput, { target: { value: "invalid-email" } });
+    fireEvent.blur(emailInput);
+
+    await waitFor(() => {
+      expect(emailInput).toHaveAttribute("aria-invalid", "true");
+      expect(document.getElementById("new-staff-official-email-error")).toHaveTextContent("Enter a valid email address.");
+    });
+  });
 });

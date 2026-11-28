@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Button, CheckboxField, Modal, Notice, SelectField, TextField } from "../../../design-system/components";
+import { Button, CheckboxField, Modal, Notice, PhoneField, SelectField, TextField } from "../../../design-system/components";
+import { useFormErrors } from "../../../hooks";
 import { studentApi, type GuardianLink } from "../api/studentApi";
 
 export function GuardianManagerModal({
@@ -25,11 +26,13 @@ export function GuardianManagerModal({
   const [emergencyContact, setEmergencyContact] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const { fieldErrors, handleApiError, setFieldError, clearFieldError, clearAll } = useFormErrors();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
+    clearAll();
     try {
       const { data } = await studentApi.linkGuardian(tenantId, studentId, {
         fullName,
@@ -46,6 +49,7 @@ export function GuardianManagerModal({
       onSaved();
       onClose();
     } catch (x) {
+      handleApiError(x);
       setError(x instanceof Error ? x.message : "Could not save guardian link");
     } finally {
       setBusy(false);
@@ -68,14 +72,21 @@ export function GuardianManagerModal({
           required
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
+          fieldName="fullName"
+          error={fieldErrors.fullName}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
         />
-        <TextField
+        <PhoneField
           id="guardian-mobile"
-          label="Mobile (E.164)"
+          label="Mobile number"
           required
           value={mobile}
           onChange={(e) => setMobile(e.target.value)}
-          placeholder="+919876543210"
+          fieldName="mobile"
+          error={fieldErrors.mobile}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
         />
         <TextField
           id="guardian-email"
@@ -83,6 +94,10 @@ export function GuardianManagerModal({
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          fieldName="email"
+          error={fieldErrors.email}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
         />
         <SelectField
           id="guardian-relationship"

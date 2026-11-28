@@ -103,7 +103,8 @@ public class TopUserService {
         // 4. Check email uniqueness in tenant
         if (userAccountRepository.existsByIdTenantIdAndEmail(tenantId, normalizedEmail)) {
             throw new DuplicateResourceException(
-                    "A user with email '" + normalizedEmail + "' already exists in this tenant."
+                    "A user with email '" + normalizedEmail + "' already exists in this tenant.",
+                    "email"
             );
         }
 

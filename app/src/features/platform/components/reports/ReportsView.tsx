@@ -584,13 +584,13 @@ export function ReportsView() {
                                                 ? "var(--color-bg-brand-soft)"
                                                 : t.state === "TRIAL"
                                                 ? "var(--color-bg-subtle)"
-                                                : "var(--color-bg-danger-subtle, #fee2e2)",
+                                                : "var(--color-status-danger-bg)",
                                             color:
                                               t.state === "ACTIVE"
                                                 ? "var(--color-action-primary)"
                                                 : t.state === "TRIAL"
                                                 ? "var(--color-text-muted)"
-                                                : "var(--color-text-danger, #b91c1c)",
+                                                : "var(--color-status-danger-fg)",
                                             border: "1px solid var(--color-border-divider)",
                                           }}
                                         >
@@ -953,13 +953,13 @@ export function ReportsView() {
                                                 inv.status === "PAID"
                                                   ? "var(--color-bg-brand-soft)"
                                                   : isOverdue
-                                                  ? "var(--color-bg-danger-subtle, #fee2e2)"
+                                                  ? "var(--color-status-danger-bg)"
                                                   : "var(--color-bg-subtle)",
                                               color:
                                                 inv.status === "PAID"
                                                   ? "var(--color-action-primary)"
                                                   : isOverdue
-                                                  ? "var(--color-text-danger, #b91c1c)"
+                                                  ? "var(--color-status-danger-fg)"
                                                   : "var(--color-text-muted)",
                                               border: "1px solid var(--color-border-divider)",
                                             }}
@@ -1138,13 +1138,13 @@ export function ReportsView() {
                                             borderRadius: "var(--radius-sm)",
                                             background:
                                               tk.priority === "URGENT" || tk.priority === "CRITICAL"
-                                                ? "var(--color-bg-danger-subtle, #fee2e2)"
+                                                ? "var(--color-status-danger-bg)"
                                                 : tk.priority === "HIGH"
                                                 ? "var(--color-bg-brand-soft)"
                                                 : "var(--color-bg-subtle)",
                                             color:
                                               tk.priority === "URGENT" || tk.priority === "CRITICAL"
-                                                ? "var(--color-text-danger, #b91c1c)"
+                                                ? "var(--color-status-danger-fg)"
                                                 : tk.priority === "HIGH"
                                                 ? "var(--color-action-primary)"
                                                 : "var(--color-text-muted)",

@@ -169,7 +169,7 @@ public class StaffDirectoryService {
         if (request.staffCode() != null && !request.staffCode().isBlank()
                 && !request.staffCode().equalsIgnoreCase(profile.getStaffCode())) {
             if (staffProfiles.existsByIdTenantIdAndStaffCode(actor.tenantId(), request.staffCode().trim().toUpperCase())) {
-                throw new DuplicateResourceException("Staff code is already used in this tenant.");
+                throw new DuplicateResourceException("Staff code is already used in this tenant.", "staffCode");
             }
             profile.setStaffCode(request.staffCode().trim().toUpperCase());
         }

@@ -51,7 +51,8 @@ import com.edu360.api.tenant.TenantContext;
  * has an active role; the process resolves to an approval action (else deny); the caller is the
  * step's approver by role, named user, delegation or roll-down ({@link ApprovalRouting}); and the
  * evaluator allows the action at the target's scope - for the caller, or for the delegator when
- * acting by delegation. "Acting for" (delegation or roll-down) is written into the audit detail.
+ * acting by delegation. That scope is the request's institution, or the request's department when
+ * the checked caller's active role is department-scoped (HOD), see {@link ApprovalScopeResolver}. "Acting for" (delegation or roll-down) is written into the audit detail.
  *
  * WHY every repository is required: a missing repository used to skip a rule silently (P-03).
  */
@@ -69,6 +70,7 @@ public class ApprovalInboxService {
     private final PermissionEvaluatorService permissionEvaluatorService;
     private final ApprovalRouting approvalRouting;
     private final LeaveApproverSettingRepository leaveApproverSettingRepository;
+    private final ApprovalScopeResolver approvalScopeResolver;
     private List<ApprovalOutcomeHandler> outcomeHandlers = List.of();
     private JdbcTemplate jdbcTemplate;
 
@@ -84,7 +86,8 @@ public class ApprovalInboxService {
             PromotionRunRepository promotionRunRepository,
             PermissionEvaluatorService permissionEvaluatorService,
             ApprovalRouting approvalRouting,
-            LeaveApproverSettingRepository leaveApproverSettingRepository) {
+            LeaveApproverSettingRepository leaveApproverSettingRepository,
+            ApprovalScopeResolver approvalScopeResolver) {
         this.approvalRequestRepository = Objects.requireNonNull(approvalRequestRepository);
         this.approvalStepRepository = Objects.requireNonNull(approvalStepRepository);
         this.auditLogService = Objects.requireNonNull(auditLogService);
@@ -94,6 +97,16 @@ public class ApprovalInboxService {
         this.permissionEvaluatorService = Objects.requireNonNull(permissionEvaluatorService);
         this.approvalRouting = Objects.requireNonNull(approvalRouting);
         this.leaveApproverSettingRepository = Objects.requireNonNull(leaveApproverSettingRepository);
+        this.approvalScopeResolver = Objects.requireNonNull(approvalScopeResolver);
+    }
+
+    /**
+     * The scope the approval action is checked at for this caller: the request's institution, or -
+     * only for a DEPARTMENT-scoped active role (HOD) - the request's own department, so an HOD
+     * decides their department's requests and never another's ({@link ApprovalScopeResolver}).
+     */
+    public RbacScope approvalScope(RbacPrincipal checked, ApprovalRequest request) {
+        return approvalScopeResolver.scopeFor(checked, request);
     }
 
     @Autowired(required = false)
@@ -152,8 +165,7 @@ public class ApprovalInboxService {
                 continue;
             }
             RbacPrincipal rbac = new RbacPrincipal(tenantId, checkedUser);
-            if (!permissionEvaluatorService.can(rbac, action,
-                    permissionEvaluatorService.targetScope(rbac, req.getInstitutionId(), null),
+            if (!permissionEvaluatorService.can(rbac, action, approvalScope(rbac, req),
                     RbacTarget.of(req.getRequestedByUserId())).allowed()) {
                 continue;
             }
@@ -182,7 +194,7 @@ public class ApprovalInboxService {
             String action = resolveApprovalAction(request);
             if (action != null) {
                 RbacPrincipal rbac = new RbacPrincipal(tenantId, userId);
-                RbacScope scope = permissionEvaluatorService.targetScope(rbac, request.getInstitutionId(), null);
+                RbacScope scope = approvalScope(rbac, request);
                 allowed = permissionEvaluatorService.can(rbac, action, scope, RbacTarget.of(request.getRequestedByUserId())).allowed();
             }
         }
@@ -283,11 +295,12 @@ public class ApprovalInboxService {
                 .orElseThrow(() -> new UnauthorizedException(
                         "NOT_CURRENT_APPROVER: your active role is not authorized by the current approval hierarchy for step " + stepNo + "."));
 
-        // The action and scope check: the delegator's rights when acting by delegation.
+        // The action and scope check: the delegator's rights when acting by delegation. The scope is
+        // the request's institution, or its department for a department-scoped (HOD) active role -
+        // exact matching still applies, so an HOD of another department is denied.
         UUID checked = route.via() == ApprovalRouting.Via.DELEGATION ? route.delegatorUserId() : userId;
         RbacPrincipal rbac = new RbacPrincipal(tenantId, checked);
-        permissionEvaluatorService.authorize(rbac, action,
-                permissionEvaluatorService.targetScope(rbac, request.getInstitutionId(), null),
+        permissionEvaluatorService.authorize(rbac, action, approvalScope(rbac, request),
                 RbacTarget.of(request.getRequestedByUserId()));
 
         Instant now = Instant.now();
@@ -423,6 +436,9 @@ public class ApprovalInboxService {
                 || (processCode != null && processCode.toUpperCase(java.util.Locale.ROOT).startsWith("ATTENDANCE_BULK_UPLOAD_"))) {
             return "ATTENDANCE_BULK_UPLOAD_APPROVE";
         }
+        if (isStaffAttendanceCheckinReview(request)) {
+            return "STAFF_ATTENDANCE_CHECKIN_REVIEW";
+        }
         return null;
     }
 
@@ -516,6 +532,7 @@ public class ApprovalInboxService {
                 promotionRunRepository.save(run);
             });
         } else if (isAttendanceProcess(request) || isStaffLeaveApproval(request)
+                || isStaffAttendanceCheckinReview(request)
                 || ("CONCESSION".equalsIgnoreCase(request.getProcessCode()) && "CONCESSION".equalsIgnoreCase(request.getSubjectType()))
                 || "SCHOLARSHIP_LIST".equalsIgnoreCase(request.getProcessCode())
                 || "FEE_STRUCTURE".equalsIgnoreCase(request.getProcessCode())) {
@@ -532,6 +549,12 @@ public class ApprovalInboxService {
         String process = request.getProcessCode();
         return "ATTENDANCE_CORRECTION_REQUEST".equalsIgnoreCase(subject) || "ATTENDANCE_CORRECTION".equalsIgnoreCase(subject)
                 || "ATTENDANCE_CORRECTION_COLLEGE".equalsIgnoreCase(process) || "ATTENDANCE_CORRECTION_SCHOOL".equalsIgnoreCase(process);
+    }
+
+    /** V4.1 staff self-attendance check-in review (sql/76); side effect in StaffCheckinApprovalOutcomeHandler. */
+    private static boolean isStaffAttendanceCheckinReview(ApprovalRequest request) {
+        return "STAFF_ATTENDANCE_REVIEW".equalsIgnoreCase(request.getProcessCode())
+                && "STAFF_ATTENDANCE_CHECKIN".equalsIgnoreCase(request.getSubjectType());
     }
 
     private static boolean isAttendanceProcess(ApprovalRequest request) {

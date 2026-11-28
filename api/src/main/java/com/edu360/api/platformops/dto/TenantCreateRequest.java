@@ -86,6 +86,13 @@ public class TenantCreateRequest {
     )
     private String firstAdminNationalIdLast4;
 
+    /**
+     * Who the first user is. Omitted means ADMIN. Only ADMIN can be created today; PRINCIPAL_ADMIN is
+     * refused with FIRST_USER_ROLE_NOT_AVAILABLE (see {@link FirstUserRole}).
+     */
+    @Builder.Default
+    private FirstUserRole firstUserRole = FirstUserRole.ADMIN;
+
     @Builder.Default
     private String timeZone = "Asia/Kolkata";
 

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
-import { Button, Notice, PageHeader, Panel, TextAreaField, TextField } from "../../../design-system/components";
+import { Button, Notice, PageHeader, Panel, SelectField, TextAreaField, TextField } from "../../../design-system/components";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
+import { institutionService, type AcademicSessionItem } from "../../institution-admin/api/institutionService";
 
 type Cycle = { id: string; institution_id: string; academic_year_id: string; name: string; start_date: string; end_date: string; status: string; row_version: number };
 type Submission = { id: string; staff_id: string; self_score: number | null; hod_score: number | null; principal_score: number | null; final_rating: number | null; status: string; comments_json?: Record<string, unknown> };
@@ -20,6 +21,7 @@ export default function StaffAppraisalPage() {
   const { institutionId } = useParams<{ institutionId: string }>();
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
   const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [sessions, setSessions] = useState<AcademicSessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -57,6 +59,14 @@ export default function StaffAppraisalPage() {
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void loadSubmissions(); }, [loadSubmissions]);
+  useEffect(() => {
+    if (!tenantId) return;
+    let active = true;
+    institutionService.listAcademicSessions(tenantId, institutionId)
+      .then((res) => { if (active) setSessions(Array.isArray(res) ? res : []); })
+      .catch(() => { if (active) setSessions([]); });
+    return () => { active = false; };
+  }, [tenantId, institutionId]);
 
   const weightedKpiScore = useMemo(() => {
     const totalWeight = kpis.reduce((sum, item) => sum + item.weight, 0);
@@ -142,7 +152,20 @@ export default function StaffAppraisalPage() {
 
       <Panel title="Create annual cycle">
         <form onSubmit={(event) => void createCycle(event)} className="form-grid">
-          <TextField id="academicYearId" label="Academic year ID" value={draft.academicYearId} onChange={(event) => setDraft((v) => ({ ...v, academicYearId: event.target.value }))} required />
+          <SelectField
+            id="academicYearId"
+            label="Academic year"
+            value={draft.academicYearId}
+            onChange={(event) => setDraft((v) => ({ ...v, academicYearId: event.target.value }))}
+            required
+          >
+            <option value="">Select an academic year</option>
+            {sessions.map((session) => (
+              <option key={session.academicSessionId} value={session.academicSessionId}>
+                {session.sessionLabel} ({session.academicYear})
+              </option>
+            ))}
+          </SelectField>
           <TextField id="cycleName" label="Cycle name" value={draft.name} onChange={(event) => setDraft((v) => ({ ...v, name: event.target.value }))} required />
           <TextField id="cycleStartDate" label="Start date" type="date" value={draft.startDate} onChange={(event) => setDraft((v) => ({ ...v, startDate: event.target.value }))} required />
           <TextField id="cycleEndDate" label="End date" type="date" value={draft.endDate} onChange={(event) => setDraft((v) => ({ ...v, endDate: event.target.value }))} required />

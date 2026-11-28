@@ -4,6 +4,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import authReducer, { setUser } from "../../../store/slices/authSlice";
+import tenantPermissionsReducer from "../../../store/slices/tenantPermissionsSlice";
 import { userManagementService } from "../api/userManagementService";
 import { GuardianManagementPanel, StudentStatusPanel, UserDetailPage, UserListPage } from "./UserManagementPages";
 import { academicService } from "../../institution-admin/api/academicService";
@@ -56,7 +57,7 @@ vi.mock("../api/userManagementService", () => ({
 }));
 
 function storeWithTenantUser(tenantId: string | null = "tenant-1") {
-  const store = configureStore({ reducer: { auth: authReducer } });
+  const store = configureStore({ reducer: { auth: authReducer, tenantPermissions: tenantPermissionsReducer } });
   store.dispatch(
     setUser({
       id: "u1",
@@ -393,6 +394,22 @@ describe("UserDetailPage", () => {
 
     await waitFor(() => expect(screen.getByText(/no longer be edited/i)).toBeInTheDocument());
     expect(screen.getByLabelText(/Display name/i)).toBeDisabled();
+  });
+
+  it("fires blur-triggered format validation when an invalid mobile number is entered and blurred", async () => {
+    vi.mocked(userManagementService.getUser).mockResolvedValueOnce({ data: sampleUser } as never);
+    renderDetail("/tenants/users/ua-1?scopeType=TENANT");
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Avery Admin" })).toBeInTheDocument());
+
+    const mobileInput = screen.getByLabelText(/Mobile number/i);
+    fireEvent.change(mobileInput, { target: { value: "invalid-phone" } });
+    fireEvent.blur(mobileInput);
+
+    await waitFor(() => {
+      expect(mobileInput).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toHaveTextContent("Include the country code, for example +919876543210.");
+    });
   });
 
   it("shows the one-time temporary password dialog after a successful reset, then clears it", async () => {

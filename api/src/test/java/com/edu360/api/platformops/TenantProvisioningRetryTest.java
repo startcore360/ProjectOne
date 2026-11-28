@@ -35,6 +35,8 @@ import com.edu360.api.identity.UserAccountId;
 import com.edu360.api.identity.UserAccountRepository;
 import com.edu360.api.identity.UserAccountStatus;
 import com.edu360.api.identity.UserIdentityLinkRepository;
+import com.edu360.api.institution.Institution;
+import com.edu360.api.institution.InstitutionIdFormatService;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.LeaveApproverSettingRepository;
 import com.edu360.api.platform.Plan;
@@ -195,6 +197,46 @@ class TenantProvisioningRetryTest {
         assertThat(response.firstAdminTemporaryPassword()).isNotBlank();
         verify(provisioning, never()).provision(any(), any(), anyMap());
         verify(audit).record(owner, tenantId, "TENANT_PROVISIONING_RETRIED", "TENANT_CREATE", "TENANT", tenantId);
+    }
+
+    @Test
+    void create_standaloneSchoolTenant_autoProvisionsOneActiveInstitution() {
+        Plan plan = plan();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(tenantRepository.findBySubdomain("doon-world")).thenReturn(Optional.empty());
+        when(provisioning.provision(any(), any(), anyMap()))
+                .thenAnswer(inv -> status(inv.getArgument(0), "DONE", null, null));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
+        InstitutionIdFormatService idFormatService = mock(InstitutionIdFormatService.class);
+        ReflectionTestUtils.setField(service, "institutionIdFormatService", idFormatService);
+
+        service.createTenant(request(), owner);
+
+        ArgumentCaptor<Institution> saved = ArgumentCaptor.forClass(Institution.class);
+        verify(institutionRepository).save(saved.capture());
+        Institution institution = saved.getValue();
+        assertThat(institution.getInstitutionType()).isEqualTo("SCHOOL");
+        assertThat(institution.getInstitutionName()).isEqualTo("Doon World Academy");
+        assertThat(institution.getInstitutionCode()).isEqualTo("DOON-WORLD");
+        assertThat(institution.getStatus()).isEqualTo("ACTIVE");
+        assertThat(institution.getActivatedAt()).isNotNull();
+        verify(idFormatService).setSystemDefault(any(), eq(institution.getInstitutionId()), eq("{INST}-{YYYY}-{SEQ:4}"));
+    }
+
+    @Test
+    void create_universityGroupTenant_doesNotAutoProvisionAnInstitution() {
+        Plan plan = plan();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(tenantRepository.findBySubdomain("doon-world")).thenReturn(Optional.empty());
+        when(provisioning.provision(any(), any(), anyMap()))
+                .thenAnswer(inv -> status(inv.getArgument(0), "DONE", null, null));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
+        TenantCreateRequest request = request();
+        request.setTenantType("UNIVERSITY_GROUP");
+
+        service.createTenant(request, owner);
+
+        verify(institutionRepository, never()).save(any(Institution.class));
     }
 
     @Test

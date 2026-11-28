@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi, Panel } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { selectPendingApprovalCount } from "../../notifications/hooks/useNotifications";
+import { dashboardService, type DashboardSummary } from "../api/dashboardService";
 import {
   roleDashboardByCode,
   roleOverrides,
@@ -18,10 +20,34 @@ export interface RoleWorkspaceProps {
   roleCode: string;
 }
 
+// Only this one role's dashboard is wired to real numbers so far (see RoleWorkspace's own
+// metrics.map below for exactly which KPI each count fills); every other role still shows the
+// "Live data not yet connected" placeholder until its own real metrics are scoped and built.
+const ROLES_WITH_LIVE_SUMMARY = new Set(["SCHOOL_ADMIN"]);
+
 export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
   const pendingApprovalCount = useAppSelector(selectPendingApprovalCount);
+  const tenantId = useAppSelector((s) => s.auth.user?.tenantId);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
 
   const role = roleDashboardByCode(roleCode);
+
+  useEffect(() => {
+    if (!role || !tenantId || !ROLES_WITH_LIVE_SUMMARY.has(role.code)) return;
+    let active = true;
+    dashboardService
+      .getSummary(tenantId)
+      .then(({ data }) => {
+        if (active) setSummary(data);
+      })
+      .catch(() => {
+        // Placeholder values stay in place if the summary can't be loaded.
+      });
+    return () => {
+      active = false;
+    };
+  }, [role, tenantId]);
+
   if (!role) return null;
   const content = roleOverrides[role.code] ?? {
     ...familyCopy[role.family],
@@ -31,6 +57,27 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
   };
   const quickActions = familyQuickActions[role.family] ?? [];
   const showHero = !NO_HERO_ROLES.has(role.code);
+
+  // School Admin's 3 KPIs, in the catalog's own order (see roleDashboardCatalog.ts):
+  // "User and role tasks" -> active users, "Academic setup" -> active sections,
+  // "Institution operations" -> pending approvals (already live for every role below).
+  const schoolAdminMetric = (i: number): { value: string; context: string } | null => {
+    if (role.code !== "SCHOOL_ADMIN") return null;
+    if (i === 0) {
+      return summary
+        ? { value: String(summary.activeUsers), context: "Active users in your tenant" }
+        : null;
+    }
+    if (i === 1) {
+      return summary
+        ? { value: String(summary.activeSections), context: "Active sections configured" }
+        : null;
+    }
+    if (i === 2) {
+      return { value: String(pendingApprovalCount), context: "Pending approvals" };
+    }
+    return null;
+  };
 
   return (
     <div className="app-dashboard app-page">
@@ -68,15 +115,24 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
       >
         <div className="app-panel__body">
           <div className="kpi-grid">
-            {content.metrics.map((label, i) => (
-              <Kpi
-                key={label}
-                label={label}
-                value={i === 0 && pendingApprovalCount > 0 && label.toLowerCase().includes("approv") ? String(pendingApprovalCount) : "—"}
-                context={i === 0 ? "Live data not yet connected" : "Awaiting backend integration"}
-                icon={i === 1 ? "clock" : i === 2 ? "chart" : "home"}
-              />
-            ))}
+            {content.metrics.map((label, i) => {
+              const live = schoolAdminMetric(i);
+              return (
+                <Kpi
+                  key={label}
+                  label={label}
+                  value={
+                    live
+                      ? live.value
+                      : i === 0 && pendingApprovalCount > 0 && label.toLowerCase().includes("approv")
+                        ? String(pendingApprovalCount)
+                        : "—"
+                  }
+                  context={live ? live.context : i === 0 ? "Live data not yet connected" : "Awaiting backend integration"}
+                  icon={i === 1 ? "clock" : i === 2 ? "chart" : "home"}
+                />
+              );
+            })}
           </div>
         </div>
       </Panel>

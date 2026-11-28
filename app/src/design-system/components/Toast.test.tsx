@@ -97,4 +97,26 @@ describe("Toast & ToastHost popup functionality", () => {
     expect(inlineNotice).toHaveClass("eds-notice");
     expect(screen.getByText("Inline notice")).toBeInTheDocument();
   });
+
+  it("renders all 5 Toast variants using design token styling without hardcoded hexes", () => {
+    const variants = ["info", "success", "warning", "error", "neutral"] as const;
+    const expectedBorderTokens: Record<string, string> = {
+      info: "var(--color-status-info-border)",
+      success: "var(--color-status-success-border)",
+      warning: "var(--color-status-warning-border)",
+      error: "var(--color-status-danger-border)",
+      neutral: "var(--color-status-neutral-border)",
+    };
+
+    for (const v of variants) {
+      const { unmount } = render(
+        <Toast variant={v} title={`${v} title`} description={`${v} description`} />
+      );
+      const toastEl = screen.getByTestId("toast");
+      expect(toastEl).toHaveClass(`eds-toast--${v}`);
+      expect(toastEl.style.border).toContain(expectedBorderTokens[v]);
+      expect(screen.getByText(`${v} title`)).toBeInTheDocument();
+      unmount();
+    }
+  });
 });

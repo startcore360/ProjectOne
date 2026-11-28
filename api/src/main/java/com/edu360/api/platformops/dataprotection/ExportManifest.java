@@ -55,7 +55,9 @@ public final class ExportManifest {
                 "department_equipment_clearance"));
         groups.put("attendance", List.of("attendance_session", "attendance_sync_conflict", "attendance_entry",
                 "attendance_correction_request", "attendance_correction", "attendance_bulk_upload", "term_lock",
-                "term_lock_event", "term_unlock_log", "risk_flag", "risk_remark"));
+                "term_lock_event", "term_unlock_log", "risk_flag", "risk_remark",
+                // V4.1 staff self-attendance check-in (sql/76); photo bytes travel via file_object -> documents/.
+                "institution_attendance_location", "staff_attendance_checkin", "staff_reference_photo"));
         groups.put("exams", List.of("grading_scheme_version", "grade_band", "exam_rule", "exam_pattern",
                 "exam_pattern_component", "exam", "exam_schedule_item", "exam_schedule", "exam_invigilator", "exam_cycle", "exam_mark", "grade_scale", "report_card", "hall_ticket", "marks_submission",
                 "marks_entry", "backlog", "supplementary_registration"));

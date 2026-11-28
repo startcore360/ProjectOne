@@ -28,6 +28,7 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
     academicSessions: [],
   });
   const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [tenantName, setTenantName] = useState<string>("");
 
   const tenantId = session?.tenantId;
   const ticketNumber = session?.ticketNumber || "Active Ticket";
@@ -57,6 +58,9 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
       return;
     }
     let isCurrent = true;
+    api.get(`/platform/tenants/${tenantId}`)
+      .then((res) => { if (isCurrent && res.data?.name) setTenantName(res.data.name); })
+      .catch(() => {});
     const fetchDiagnostics = async () => {
       setLoading(true);
       try {
@@ -136,9 +140,9 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
           note="State-modifying calls blocked"
         />
         <MetricCard
-          label="Tenant ID"
-          value={tenantId ? `${tenantId.slice(0, 8)}…` : "Connected"}
-          note="Active institution workspace"
+          label="Tenant"
+          value={tenantName || (tenantId ? `${tenantId.slice(0, 8)}…` : "Connected")}
+          note={tenantName && tenantId ? `ID: ${tenantId.slice(0, 8)}…` : "Active institution workspace"}
         />
       </div>
 
@@ -222,7 +226,7 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
             >
               <div>
                 <strong style={{ fontSize: "var(--fs-body)" }}>Academic Structure</strong>
-                <p className="app-muted" style={{ margin: "2px 0 0", fontSize: "var(--fs-caption)" }}>
+                <p className="app-muted" style={{ margin: "var(--space-1) 0 0", fontSize: "var(--fs-caption)" }}>
                   Inspect configured departments, programs, classes, sections, and catalog.
                 </p>
               </div>
@@ -244,7 +248,7 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
             >
               <div>
                 <strong style={{ fontSize: "var(--fs-body)" }}>Calendar & Sessions</strong>
-                <p className="app-muted" style={{ margin: "2px 0 0", fontSize: "var(--fs-caption)" }}>
+                <p className="app-muted" style={{ margin: "var(--space-1) 0 0", fontSize: "var(--fs-caption)" }}>
                   Review calendar master events, exams schedules, and session dates.
                 </p>
               </div>
@@ -266,7 +270,7 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
             >
               <div>
                 <strong style={{ fontSize: "var(--fs-body)" }}>Role Previews</strong>
-                <p className="app-muted" style={{ margin: "2px 0 0", fontSize: "var(--fs-caption)" }}>
+                <p className="app-muted" style={{ margin: "var(--space-1) 0 0", fontSize: "var(--fs-caption)" }}>
                   Preview UI layouts as seen by Principal, HOD, Teacher, Student, or Parent.
                 </p>
               </div>
@@ -288,7 +292,7 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
             >
               <div>
                 <strong style={{ fontSize: "var(--fs-body)" }}>Support Session Status</strong>
-                <p className="app-muted" style={{ margin: "2px 0 0", fontSize: "var(--fs-caption)" }}>
+                <p className="app-muted" style={{ margin: "var(--space-1) 0 0", fontSize: "var(--fs-caption)" }}>
                   Review the ticket authorization terms and read-only boundary constraints.
                 </p>
               </div>
@@ -317,7 +321,7 @@ export function SupportSessionDashboard({ session, onEndSession }: SupportSessio
       >
         <div>
           <strong>Finished your investigation?</strong>
-          <p className="app-muted" style={{ margin: "2px 0 0", fontSize: "var(--fs-caption)" }}>
+          <p className="app-muted" style={{ margin: "var(--space-1) 0 0", fontSize: "var(--fs-caption)" }}>
             Ending this support session invalidates the temporary token and returns you to the Platform Console.
           </p>
         </div>

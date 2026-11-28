@@ -14,6 +14,7 @@ import {
 } from "../../../design-system/components";
 import { ErrorState } from "../../../components/feedback/ErrorState";
 import { useSupportSession } from "../../support/useSupportSession";
+import { institutionService, type InstitutionItem } from "../api/institutionService";
 
 type Ticket = {
   supportTicketId: string; ticketNumber: string; subject: string; description: string;
@@ -37,6 +38,16 @@ export default function TenantSupportPage() {
   const [ticketId, setTicketId] = useState("");
   const [durationHours, setDurationHours] = useState("24");
   const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let active = true;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => { if (active) setInstitutions(res.items ?? []); })
+      .catch(() => { if (active) setInstitutions([]); });
+    return () => { active = false; };
+  }, [tenantId]);
 
   const load = useCallback(async () => {
     if (isSupportSession || !tenantId) { setLoading(false); return; }
@@ -151,7 +162,20 @@ export default function TenantSupportPage() {
             <form onSubmit={grantAccess} noValidate>
               <SelectField id="support-grant-ticket" label="Support ticket" required value={ticketId} onChange={(e) => setTicketId(e.target.value)} options={tickets.map((ticket) => ({ value: ticket.supportTicketId, label: `${ticket.ticketNumber} — ${ticket.subject}` }))} />
               <SelectField id="support-grant-duration" label="Duration" value={durationHours} onChange={(e) => setDurationHours(e.target.value)} options={[1,2,4,8,12,24].map((hours) => ({ value: String(hours), label: `${hours} hour(s)` }))} />
-              <TextField id="support-grant-institution" label="Institution ID (optional)" value={institutionId} onChange={(e) => setInstitutionId(e.target.value)} hint="Leave blank to grant tenant-wide read-only access." />
+              <SelectField
+                id="support-grant-institution"
+                label="Institution (optional)"
+                value={institutionId}
+                onChange={(e) => setInstitutionId(e.target.value)}
+                hint="Leave blank to grant tenant-wide read-only access."
+                options={[
+                  { value: "", label: "Tenant-wide (no institution)" },
+                  ...institutions.map((inst) => ({
+                    value: inst.institutionId,
+                    label: `${inst.institutionName} (${inst.institutionCode})`,
+                  })),
+                ]}
+              />
               <Button type="submit" busy={submitting} disabled={tickets.length === 0}>Grant read-only access</Button>
             </form>
           </Panel>

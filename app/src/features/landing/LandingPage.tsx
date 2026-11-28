@@ -12,6 +12,7 @@ import {
   Kicker,
   Modal,
   Notice,
+  PhoneField,
   SelectField,
   TextAreaField,
   TextField,
@@ -608,6 +609,10 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                 <img
                   src={heroImageUrl}
                   alt="EDU 360 workspace preview showing institutional governance and role management"
+                  width={1356}
+                  height={1111}
+                  decoding="async"
+                  fetchPriority="high"
                 />
               </div>
               <div className="landing-hero__badge">
@@ -713,7 +718,14 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
               </article>
               <article className="landing-product-shot">
                 <div className="landing-product-shot__image landing-product-shot__image--login">
-                  <img src={showcaseImageUrl} alt="EDU 360 institution access and sign-in interface preview" loading="lazy" />
+                  <img
+                    src={showcaseImageUrl}
+                    alt="EDU 360 institution access and sign-in interface preview"
+                    width={1356}
+                    height={917}
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <small>Actual EDU 360 access interface</small>
                 </div>
                 <div className="landing-product-shot__copy">
@@ -993,7 +1005,12 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                         {item.kind === "VIDEO" && (
                           <div className="landing-video-thumb">
                             {posterSrc && index < testimonials.length ? (
-                              <img src={posterSrc} alt={`Video thumbnail for ${item.authorName}`} />
+                              <img
+                                src={posterSrc}
+                                alt={`Video thumbnail for ${item.authorName}`}
+                                loading="lazy"
+                                decoding="async"
+                              />
                             ) : (
                               <span className="landing-video-thumb__fallback" aria-hidden="true">{initials || "EDU"}</span>
                             )}
@@ -1224,11 +1241,9 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
                 </div>
 
                 <div className="landing-form-row">
-                  <TextField
+                  <PhoneField
                     id="quote-contact-phone"
-                    label="Phone number"
-                    type="tel"
-                    placeholder="+91 98765 43210"
+                    label="Mobile number"
                     value={qPhone}
                     onChange={(e) => setQPhone(e.target.value)}
                   />
@@ -1410,11 +1425,9 @@ export default function LandingPage({ onNavigate = defaultNavigate }: LandingPag
             value={demoEmail}
             onChange={(e) => setDemoEmail(e.target.value)}
           />
-          <TextField
+          <PhoneField
             id="demo-phone"
-            label="Phone number"
-            type="tel"
-            placeholder="+91 98765 43210"
+            label="Mobile number"
             value={demoPhone}
             onChange={(e) => setDemoPhone(e.target.value)}
           />

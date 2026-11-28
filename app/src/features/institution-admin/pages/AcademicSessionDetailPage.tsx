@@ -35,7 +35,7 @@ export default function AcademicSessionDetailPage() {
 
   return (
     <>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center", marginBottom: "var(--space-3)" }}>
         <button type="button" onClick={makeCurrent} disabled={saving || !tenantId || !institutionId || !academicSessionId}>
           {saving ? "Saving…" : "Make current academic session"}
         </button>

@@ -5,7 +5,14 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.edu360.api.approval.ApprovalRequest;
+import com.edu360.api.approval.ApprovalRequestRepository;
+import com.edu360.api.approval.ApprovalRouting;
+import com.edu360.api.approval.ApprovalScopeResolver;
+import com.edu360.api.approval.ApprovalStep;
+import com.edu360.api.approval.ApprovalStepRepository;
 import com.edu360.api.identity.UserType;
+import com.edu360.api.tenant.TenantContext;
 import com.edu360.api.rbac.PermissionEvaluatorService;
 import com.edu360.api.rbac.RbacPrincipal;
 import com.edu360.api.rbac.RbacScope;
@@ -171,10 +178,28 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
             )
             """;
 
+    static final String STAFF_ATTENDANCE_REVIEW_ACTION = "STAFF_ATTENDANCE_CHECKIN_REVIEW";
+    static final String STAFF_ATTENDANCE_REVIEW_PROCESS = "STAFF_ATTENDANCE_REVIEW";
+
     private final JdbcTemplate jdbc;
 
     @Autowired(required = false)
     private PermissionEvaluatorService permissions;
+
+    // Optional like `permissions`: used only to recognise the routed approver of a check-in selfie.
+    @Autowired(required = false)
+    private ApprovalRouting approvalRouting;
+
+    @Autowired(required = false)
+    private ApprovalRequestRepository approvalRequests;
+
+    @Autowired(required = false)
+    private ApprovalStepRepository approvalSteps;
+
+    // The scope the engine checks the review action at (institution, or the check-in's department
+    // for an HOD). Missing -> the routed-approver path denies (fail closed).
+    @Autowired(required = false)
+    private ApprovalScopeResolver approvalScopeResolver;
 
     public JdbcFileAccessPolicy(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -213,7 +238,92 @@ public class JdbcFileAccessPolicy implements FileAccessPolicy {
                       WHERE de.tenant_id=? AND de.file_id=? AND di.institution_id=?
                     )
                     """, tenantId, fileId, file.getInstitutionId());
+            case STAFF_ATTENDANCE_SELFIE -> canViewAttendanceSelfie(file, principal);
         };
+    }
+
+    /**
+     * A check-in selfie is personal data: the staff member who took it may read it; otherwise
+     * only someone who may decide that check-in - the currently routed approver of its pending
+     * STAFF_ATTENDANCE_REVIEW step (role, named user, delegation or roll-down, exactly as the
+     * approval engine routes it) who also holds STAFF_ATTENDANCE_CHECKIN_REVIEW at the scope the
+     * engine checks (the institution, or the check-in's department for an HOD - so an HOD of
+     * another department is denied even though the HOD role routes), or a holder of
+     * STAFF_ATTENDANCE_CHECKIN_REVIEW at the check-in's institution scope (a department-scoped HOD
+     * never matches that). A selfie not linked to any check-in is the owner's alone.
+     * Everything else, including the requester's peers, is denied.
+     */
+    private boolean canViewAttendanceSelfie(FileObject file, TenantPrincipal principal) {
+        UUID tenantId = principal.tenantId();
+        UUID userId = principal.userAccountId();
+        if (userId != null && userId.equals(file.getUploadedBy())) {
+            return true;
+        }
+        SelfieCheckin checkin;
+        try {
+            checkin = jdbc.query("""
+                    SELECT c.staff_user_id, c.institution_id, c.approval_request_id
+                      FROM app.staff_attendance_checkin c
+                     WHERE c.tenant_id = ? AND c.photo_file_id = ?
+                    """, rs -> rs.next() ? new SelfieCheckin(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+                    rs.getObject(3, UUID.class)) : null, tenantId, file.getId().getFileId());
+        } catch (org.springframework.dao.DataAccessException ex) {
+            return false;
+        }
+        if (checkin == null || userId == null) {
+            return false;
+        }
+        if (userId.equals(checkin.staffUserId())) {
+            return true;
+        }
+        if (isRoutedCheckinApprover(tenantId, userId, checkin.approvalRequestId())) {
+            return true;
+        }
+        if (permissions == null || checkin.institutionId() == null) {
+            return false;
+        }
+        RbacPrincipal caller = new RbacPrincipal(tenantId, userId);
+        return permissions.can(caller, STAFF_ATTENDANCE_REVIEW_ACTION,
+                permissions.targetScope(caller, checkin.institutionId(), null),
+                RbacTarget.of(checkin.staffUserId())).allowed();
+    }
+
+    private boolean isRoutedCheckinApprover(UUID tenantId, UUID userId, UUID approvalRequestId) {
+        if (approvalRequestId == null || approvalRouting == null || approvalRequests == null || approvalSteps == null
+                || approvalScopeResolver == null || permissions == null) {
+            return false;
+        }
+        ApprovalRequest request = approvalRequests.findByIdTenantIdAndIdApprovalRequestId(tenantId, approvalRequestId)
+                .orElse(null);
+        if (request == null || !"PENDING".equals(request.getStatus())
+                || !STAFF_ATTENDANCE_REVIEW_PROCESS.equalsIgnoreCase(request.getProcessCode())
+                || userId.equals(request.getRequestedByUserId())) {
+            return false;
+        }
+        ApprovalStep step = approvalSteps
+                .findByIdTenantIdAndApprovalRequestIdAndStepNo(tenantId, approvalRequestId, request.getCurrentStepNo())
+                .filter(s -> "PENDING".equals(s.getDecision()))
+                .orElse(null);
+        if (step == null) {
+            return false;
+        }
+        String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
+        ApprovalRouting.Route route = approvalRouting.route(tenantId, userId, activeRole, request, step).orElse(null);
+        if (route == null) {
+            return false;
+        }
+        // Same action and scope check the engine makes before a decision (delegator's rights when
+        // acting by delegation), so whoever can open the selfie is exactly whoever can decide it.
+        UUID checked = route.via() == ApprovalRouting.Via.DELEGATION ? route.delegatorUserId() : userId;
+        if (checked == null) {
+            return false;
+        }
+        RbacPrincipal rbac = new RbacPrincipal(tenantId, checked);
+        return permissions.can(rbac, STAFF_ATTENDANCE_REVIEW_ACTION, approvalScopeResolver.scopeFor(rbac, request),
+                RbacTarget.of(request.getRequestedByUserId())).allowed();
+    }
+
+    private record SelfieCheckin(UUID staffUserId, UUID institutionId, UUID approvalRequestId) {
     }
 
     @Override

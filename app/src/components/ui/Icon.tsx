@@ -79,6 +79,7 @@ export function Icon({
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
+      data-icon={name}
       className={classes || undefined}
       {...props}
     >

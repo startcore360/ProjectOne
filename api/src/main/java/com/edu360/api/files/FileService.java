@@ -31,6 +31,10 @@ import com.edu360.api.rbac.UserRoleAssignment;
 public class FileService {
     static final long MAX_BYTES = 10_485_760L;
     static final long ADMISSION_MAX_BYTES = 5_242_880L;
+    /** Matches ck_file_object_staff_attendance_selfie_type (sql/76). */
+    static final long SELFIE_MAX_BYTES = 5_242_880L;
+    static final java.util.Set<String> SELFIE_CONTENT_TYPES = java.util.Set.of("image/jpeg", "image/png");
+    static final String STAFF_ATTENDANCE_REVIEW_ACTION = "STAFF_ATTENDANCE_CHECKIN_REVIEW";
     private final FileObjectRepository repository;
     private final LocalFileStorage storage;
     private final PermissionEvaluatorService permissions;
@@ -66,8 +70,12 @@ public class FileService {
         if (upload == null || upload.isEmpty()) throw new IllegalArgumentException("A non-empty file is required.");
         if (upload.getSize() > MAX_BYTES) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "Files may not exceed 10 MiB.");
         FilePurpose purpose = FilePurpose.parse(purposeValue);
-        long purposeLimit = purpose == FilePurpose.ADMISSION_DOCUMENT ? ADMISSION_MAX_BYTES : MAX_BYTES;
-        if (upload.getSize() > purposeLimit) throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", "Admission documents may not exceed 5 MiB.");
+        long purposeLimit = purpose == FilePurpose.ADMISSION_DOCUMENT ? ADMISSION_MAX_BYTES
+                : purpose == FilePurpose.STAFF_ATTENDANCE_SELFIE ? SELFIE_MAX_BYTES : MAX_BYTES;
+        if (upload.getSize() > purposeLimit) {
+            throw new BusinessRuleViolationException("PAYLOAD_TOO_LARGE", purpose == FilePurpose.STAFF_ATTENDANCE_SELFIE
+                    ? "Check-in selfies may not exceed 5 MiB." : "Admission documents may not exceed 5 MiB.");
+        }
         RbacPrincipal caller = new RbacPrincipal(principal.tenantId(), principal.userAccountId());
         UserRoleAssignment active = permissions.activeAssignment(caller)
                 .orElseThrow(() -> new UnauthorizedException("An active role is required to upload files."));
@@ -96,6 +104,9 @@ public class FileService {
                 && !java.util.Set.of("application/pdf", "image/jpeg", "image/png").contains(contentType)) {
             throw new BusinessRuleViolationException("FILE_TYPE_NOT_ALLOWED",
                     "Medical certificates and admission documents must be PDF, JPG or PNG files.");
+        }
+        if (purpose == FilePurpose.STAFF_ATTENDANCE_SELFIE && !SELFIE_CONTENT_TYPES.contains(contentType)) {
+            throw new BusinessRuleViolationException("FILE_TYPE_NOT_ALLOWED", "A check-in selfie must be a JPG or PNG image.");
         }
 
         FileScanner.ScanResult scan = scanner.scan(content);
@@ -159,6 +170,11 @@ public class FileService {
                 authorizedForPending = permissions.can(caller, "ASSIGNMENT_EVALUATE",
                         scope, RbacTarget.NONE).allowed();
             }
+            if (purpose == FilePurpose.STAFF_ATTENDANCE_SELFIE) {
+                // Holding SUBMIT (every staff role) says nothing about someone else's selfie; the
+                // access policy already limited this to the routed approver / review holder.
+                authorizedForPending = true;
+            }
             if (!authorizedForPending) {
                 throw new UnauthorizedException("Pending files are available only to the uploader or an authorized role.");
             }
@@ -189,6 +205,12 @@ public class FileService {
                     "GRIEVANCE_EVIDENCE_VIEW", scope, RbacTarget.NONE);
             case DISCIPLINARY_EVIDENCE -> permissions.authorize(caller,
                     "DISCIPLINARY_INCIDENT_VIEW", scope, RbacTarget.NONE);
+            case STAFF_ATTENDANCE_SELFIE -> { /* accessPolicy already checked owner, routed approver or review holder */ }
+        }
+        if (purpose == FilePurpose.STAFF_ATTENDANCE_SELFIE && !principal.userAccountId().equals(file.getUploadedBy())) {
+            auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, STAFF_ATTENDANCE_REVIEW_ACTION,
+                    "FILE_OBJECT", fileId, file.getInstitutionId(), null,
+                    Map.of("purpose", FilePurpose.STAFF_ATTENDANCE_SELFIE.name()), 1, "P", "SUCCESS"));
         }
         if (FilePurpose.STAFF_DOCUMENT.name().equals(file.getPurpose())) {
             auditLog.record(new AuditEntry(AuditEventType.SENSITIVE_VIEW, "STAFF_RECORD_VIEW",

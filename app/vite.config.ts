@@ -40,6 +40,9 @@ export default defineConfig({
               return "vendor-axios";
             }
           }
+          if (id.includes("JsonDocumentBuilder") || (id.includes("institution-admin") && (id.includes("components/academic") || id.includes("components\\academic")))) {
+            return "institution-academic-modals";
+          }
         },
       },
     },

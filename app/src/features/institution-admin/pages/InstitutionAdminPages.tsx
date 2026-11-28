@@ -228,10 +228,10 @@ export function InstitutionsPage() {
       {goLiveCheck && !goLiveCheck.ready && (
         <Notice tone="warning" style={{ marginBottom: "var(--space-4)" }}>
           <strong>Go-live readiness warning:</strong>
-          <p style={{ margin: "4px 0" }}>
+          <p style={{ margin: "var(--space-1) 0" }}>
             The following statutory leave approver settings are missing before institutions/tenant can go live:
           </p>
-          <ul style={{ paddingLeft: "var(--space-4)", margin: "4px 0" }}>
+          <ul style={{ paddingLeft: "var(--space-4)", margin: "var(--space-1) 0" }}>
             {goLiveCheck.blockers.map((b, idx) => (
               <li key={idx}>
                 {b.blocker === "VC_LEAVE_APPROVER_MISSING"
@@ -356,7 +356,7 @@ export function InstitutionsPage() {
                           {institution.status === "ACTIVE" ? "Active" : institution.status}
                         </span>
                       ) : (
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center", flexWrap: "wrap" }}>
                           {institution.status === "DRAFT" && (
                             <Button
                               onClick={() => handleActivate(institution)}
@@ -660,7 +660,7 @@ export function RolesPermissionsPage() {
                     {role.type === "Custom" && role.status === "ACTIVE" && role.raw ? (
                       <Button
                         variant="secondary"
-                        style={{ padding: "2px 8px", fontSize: "0.8rem" }}
+                        style={{ padding: "var(--space-1) var(--space-2)", fontSize: "0.8rem" }}
                         onClick={() => setRetireModalItem(role.raw!)}
                       >
                         Retire

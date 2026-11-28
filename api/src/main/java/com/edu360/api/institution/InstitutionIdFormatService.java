@@ -108,6 +108,23 @@ public class InstitutionIdFormatService {
                 false, isLocked(actor.tenantId(), institutionId, "STAFF"));
     }
 
+    /**
+     * System bootstrap only (TenantManagementService, standalone-tenant auto-provisioning): sets
+     * the student ID format for a brand-new institution that has no other institution in the
+     * tenant to clash with and no student yet to lock the format against, so the checks {@link
+     * #set} runs (authorization, clash, lock) do not apply and must not be run with an actor who
+     * does not hold INSTITUTION_CREATE_DRAFT (true of SCHOOL_ADMIN/COLLEGE_ADMIN, see that
+     * action's own javadoc) - this is why it exists as a separate method rather than a parameter
+     * on {@link #set}.
+     */
+    @Transactional
+    public void setSystemDefault(RbacPrincipal actor, UUID institutionId, String studentIdFormat) {
+        InstitutionCodeFormat format = parse(studentIdFormat, "studentIdFormat");
+        upsertStudentPattern(actor, institutionId, format.value());
+        jdbc.query("SELECT app.ensure_institution_code_sequence(?,?,?)",
+                rs -> null, actor.tenantId(), institutionId, "STUDENT");
+    }
+
     /** Allocate a never-reused student code. Call within the transaction that inserts the profile. */
     @Transactional
     public String nextStudentCode(UUID tenantId, UUID institutionId, int academicSessionStartYear) {
@@ -136,7 +153,7 @@ public class InstitutionIdFormatService {
         if (suppliedCode != null && !suppliedCode.isBlank()) {
             String code = suppliedCode.trim().toUpperCase(java.util.Locale.ROOT);
             if (code.length() > 30 || staff.existsByIdTenantIdAndStaffCode(tenantId, code)) {
-                throw new DuplicateResourceException("Staff code is invalid or already used in this tenant.");
+                throw new DuplicateResourceException("Staff code is invalid or already used in this tenant.", "staffCode");
             }
             return code;
         }

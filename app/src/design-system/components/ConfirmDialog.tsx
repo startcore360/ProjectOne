@@ -36,7 +36,7 @@ export function ConfirmDialog({
       description={typeof message === "string" ? message : undefined}
       size="sm"
       footer={
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", width: "100%" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", width: "100%" }}>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             {cancelLabel}
           </Button>
@@ -51,7 +51,7 @@ export function ConfirmDialog({
       }
     >
       {typeof message === "string" ? null : (
-        <div style={{ padding: "8px 0", fontSize: "0.9375rem", lineHeight: 1.5 }}>
+        <div style={{ padding: "var(--space-2) 0", fontSize: "0.9375rem", lineHeight: 1.5 }}>
           {message}
         </div>
       )}

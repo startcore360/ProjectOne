@@ -375,7 +375,7 @@ export function TicketsView() {
                     <small className="app-cell-sub">{t.description}</small>
                     <small className="app-cell-sub">Category: {t.category || "Not triaged"}</small>
                     {t.resolutionNote && (
-                      <p style={{ margin: "4px 0 0", color: "var(--color-status-success-fg)", fontSize: "12px" }}>
+                      <p style={{ margin: "var(--space-1) 0 0", color: "var(--color-status-success-fg)", fontSize: "12px" }}>
                         Resolution: {t.resolutionNote}
                       </p>
                     )}
@@ -402,7 +402,7 @@ export function TicketsView() {
                     )}
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap" }}>
                       {hasGrant && canUseSupportSession && (
                         <Button
                           size="sm"
@@ -475,7 +475,7 @@ export function TicketsView() {
       >
         <form id="resolve-ticket-form" onSubmit={handleConfirmResolve}>
           {resolveError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div style={{ marginBottom: "var(--space-3)" }}>
               <Notice tone="danger" onDismiss={() => setResolveError("")}>{resolveError}</Notice>
             </div>
           )}
@@ -516,11 +516,11 @@ export function TicketsView() {
       >
         <form id="escalate-ticket-form" onSubmit={handleConfirmEscalation}>
           {escalateError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div style={{ marginBottom: "var(--space-3)" }}>
               <Notice tone="danger" onDismiss={() => setEscalateError("")}>{escalateError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <SelectField
               id="escalate-target"
               label="Escalate to"
@@ -565,11 +565,11 @@ export function TicketsView() {
       >
         <form id="triage-ticket-form" onSubmit={handleConfirmTriage}>
           {triageError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div style={{ marginBottom: "var(--space-3)" }}>
               <Notice tone="danger" onDismiss={() => setTriageError("")}>{triageError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <SelectField
               id="triage-category"
               label="Category"

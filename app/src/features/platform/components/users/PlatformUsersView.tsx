@@ -398,7 +398,7 @@ export function PlatformUsersView() {
         onClose={() => setUnlockTarget(null)}
         onConfirm={() => void unlockAccount()}
         title={unlockTarget ? `Unlock sign-in for ${unlockTarget.fullName}?` : "Unlock sign-in?"}
-        message="This clears the failed-login lockout only. It does not change the password, MFA, role, or account activation."
+        message="This clears the failed-login lockout and fixes anything else that blocks an active account from signing in. It does not change the password, two-step login or role."
         confirmLabel="Unlock sign-in"
         confirmTone="primary"
         busy={unlockBusy}

@@ -10,6 +10,7 @@ import {
   Notice,
   PageHeader,
   Panel,
+  PhoneField,
   SearchBox,
   SelectField,
   ShareMenu,
@@ -20,6 +21,8 @@ import {
   TextField,
 } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
+import type { TenantPermissions } from "../../../store/slices/tenantPermissionsSlice";
+import { useFormErrors } from "../../../hooks";
 import { MfaResetDialog } from "../../auth/components/MfaResetDialog";
 import { serverMessage } from "../../auth/serverMessage";
 import { UserLimitBanner } from "../components/users/UserLimitBanner";
@@ -221,7 +224,7 @@ function MoreActionsMenu({ items }: { items: { label: string; onClick: () => voi
             boxShadow: "var(--elevation-2)",
             minWidth: "220px",
             maxWidth: "calc(100vw - 32px)",
-            padding: "4px 0",
+            padding: "var(--space-1) 0",
           }}
           onClick={closeMenu}
         >
@@ -234,7 +237,7 @@ function MoreActionsMenu({ items }: { items: { label: string; onClick: () => voi
                 display: "block",
                 width: "100%",
                 textAlign: "left",
-                padding: "8px 16px",
+                padding: "var(--space-2) var(--space-4)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -253,9 +256,27 @@ function MoreActionsMenu({ items }: { items: { label: string; onClick: () => voi
   );
 }
 
+/** The caller's own active-role scope, as the default "Acting scope" - scope matching is exact
+ *  (see PermissionEvaluatorService), so a School/College/Department-scoped role defaulting to
+ *  "Tenant (university-wide)" got USER_VIEW denied on every "Load users" until they manually
+ *  switched the dropdown. Falls back to TENANT only for the genuinely tenant-wide roles
+ *  (Management, University Admin, ...) or before /me/permissions has loaded. */
+function defaultScopeFrom(permissions: TenantPermissions | null): ActingScope {
+  if (!permissions || !permissions.scopeType || permissions.scopeType === "TENANT") {
+    return { scopeType: "TENANT" };
+  }
+  return {
+    scopeType: permissions.scopeType,
+    institutionId: permissions.institutionId ?? undefined,
+    departmentId: permissions.departmentId ?? undefined,
+  };
+}
+
 export function UserListPage() {
   const tenantId = useAppSelector((state) => state.auth.user?.tenantId);
-  const [scope, setScope] = useState<ActingScope>({ scopeType: "TENANT" });
+  const activePermissions = useAppSelector((state) => state.tenantPermissions.current);
+  const [scope, setScope] = useState<ActingScope>(() => defaultScopeFrom(activePermissions));
+  const [scopeTouched, setScopeTouched] = useState(false);
   const [state, setState] = useState<LoadState>("idle");
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -267,20 +288,10 @@ export function UserListPage() {
   const [showGovernanceModal, setShowGovernanceModal] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreateUserResponse | TopUserResponse | null>(null);
   const [createdStudent, setCreatedStudent] = useState<StudentProfileResponse | null>(null);
-
-  if (!tenantId) {
-    return (
-      <div className="app-page">
-        <PageHeader title="Users & roles" description="Manage tenant user accounts within your permitted scope." />
-        <ErrorState
-          title="Not available"
-          message="This screen is for tenant accounts. No tenant is associated with your sign-in."
-        />
-      </div>
-    );
-  }
+  const autoLoadedRef = useRef(false);
 
   const load = async () => {
+    if (!tenantId) return;
     if (scope.scopeType !== "TENANT" && !scope.institutionId) {
       setState("error");
       setErrorMessage("Choose an institution for this scope before loading users.");
@@ -308,6 +319,37 @@ export function UserListPage() {
     }
   };
 
+  // /me/permissions can resolve after this page's first render; keep the scope in step with it
+  // until the person picks a scope themselves (ScopeFields' onChange below sets scopeTouched).
+  useEffect(() => {
+    if (scopeTouched) return;
+    setScope(defaultScopeFrom(activePermissions));
+  }, [activePermissions, scopeTouched]);
+
+  // Auto-load once the real scope is known, so a non-tenant-wide role sees their register
+  // immediately instead of first hitting an empty/denied state at the old hardcoded TENANT
+  // default and having to notice the dropdown and press "Load users" a second time.
+  useEffect(() => {
+    if (autoLoadedRef.current || scopeTouched) return;
+    if (!activePermissions) return;
+    if (scope.scopeType !== "TENANT" && !scope.institutionId) return;
+    autoLoadedRef.current = true;
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePermissions, scope, scopeTouched]);
+
+  if (!tenantId) {
+    return (
+      <div className="app-page">
+        <PageHeader title="Users & roles" description="Manage tenant user accounts within your permitted scope." />
+        <ErrorState
+          title="Not available"
+          message="This screen is for tenant accounts. No tenant is associated with your sign-in."
+        />
+      </div>
+    );
+  }
+
   const filtered = users.filter((u) =>
     (u.displayName + " " + u.email).toLowerCase().includes(query.toLowerCase())
   );
@@ -318,7 +360,7 @@ export function UserListPage() {
         title="Users & roles"
         description="View and manage tenant user accounts within your permitted scope."
         actions={
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
             <MoreActionsMenu
               items={[
                 { label: "Check if I can create a user", onClick: () => setShowCreateCheck(true) },
@@ -348,7 +390,15 @@ export function UserListPage() {
             void load();
           }}
         >
-          <ScopeFields tenantId={tenantId} scope={scope} onChange={setScope} idPrefix="list" />
+          <ScopeFields
+            tenantId={tenantId}
+            scope={scope}
+            onChange={(next) => {
+              setScopeTouched(true);
+              setScope(next);
+            }}
+            idPrefix="list"
+          />
           <div>
             <Button type="submit" busy={state === "loading"}>
               Load users
@@ -543,6 +593,7 @@ export function UserDetailPage() {
   const [actionBanner, setActionBanner] = useState<ActionBanner>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState("");
+  const { fieldErrors, setFieldError, clearFieldError, clearAll, handleApiError } = useFormErrors();
   const latestUserIdRef = useRef<string | undefined>(userId);
   latestUserIdRef.current = userId;
 
@@ -618,11 +669,13 @@ export function UserDetailPage() {
     event.preventDefault();
     setSaving(true);
     setSaveBanner(null);
+    clearAll();
     try {
       const { data } = await userManagementService.updateUser(tenantId, userId, scope, fields);
       setUser(data);
       setSaveBanner({ tone: "success", message: "Changes saved." });
     } catch (error) {
+      handleApiError(error);
       setSaveBanner({
         tone: isForbidden(error) ? "danger" : "danger",
         message: getApiErrorMessage(error),
@@ -792,12 +845,19 @@ export function UserDetailPage() {
                 disabled={user.status === "DEACTIVATED"}
                 onChange={(e) => setFields({ ...fields, email: e.target.value })}
               />
-              <TextField
+              <PhoneField
                 id="edit-mobile"
-                label="Mobile"
+                label="Mobile number"
                 value={fields.mobile}
                 disabled={user.status === "DEACTIVATED"}
-                onChange={(e) => setFields({ ...fields, mobile: e.target.value })}
+                onChange={(e) => {
+                  setFields({ ...fields, mobile: e.target.value });
+                  clearFieldError("mobile");
+                }}
+                fieldName="mobile"
+                error={fieldErrors.mobile}
+                setFieldError={setFieldError}
+                clearFieldError={clearFieldError}
               />
               {user.status === "DEACTIVATED" ? (
                 <div className="app-note" style={{ gridColumn: "1 / -1" }}>
@@ -966,7 +1026,7 @@ export function UserDetailPage() {
         description="This temporary password will not be shown again after you close this dialog. It is not stored anywhere in this browser."
         size="sm"
         footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", width: "100%" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", width: "100%" }}>
             <Button variant="secondary" onClick={() => void copyTempPassword()}>
               Copy to clipboard
             </Button>
@@ -1004,7 +1064,7 @@ export function UserDetailPage() {
             style={{
               fontFamily: "monospace",
               fontSize: "1.1rem",
-              padding: "0.5rem",
+              padding: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--color-border-divider)",
               backgroundColor: "var(--color-bg-surface)",
@@ -1013,7 +1073,7 @@ export function UserDetailPage() {
             }}
           />
         </div>
-        {copyNotice && <p className="app-empty-inline" style={{ marginTop: "8px" }}>{copyNotice}</p>}
+        {copyNotice && <p className="app-empty-inline" style={{ marginTop: "var(--space-2)" }}>{copyNotice}</p>}
       </Modal>
     </div>
   );

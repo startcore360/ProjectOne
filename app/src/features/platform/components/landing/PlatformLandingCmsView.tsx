@@ -1738,7 +1738,7 @@ export function PlatformLandingCmsPage() {
                       <div
                         key={p.planId || idx}
                         style={{
-                          border: `1px solid ${isBest ? "var(--color-primary-600, #10b981)" : "var(--color-border-divider)"}`,
+                          border: `1px solid ${isBest ? "var(--color-action-primary)" : "var(--color-border-divider)"}`,
                           borderRadius: "var(--radius-md)",
                           padding: "var(--space-3)",
                           background: isBest ? "var(--color-bg-subtle)" : "var(--color-bg-surface)",

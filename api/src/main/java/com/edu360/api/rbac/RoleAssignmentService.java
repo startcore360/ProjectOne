@@ -121,6 +121,17 @@ public class RoleAssignmentService {
                     "Role " + roleDefinition.getRoleCode() + " is " + roleDefinition.getStatus() + "; only an ACTIVE role can be assigned.");
         }
 
+        // 4a. TPA-06: a School Admin or College Admin at TENANT scope is the owner of a standalone school or
+        // college and counts as a top post across it. That is created only when the tenant is set up (the
+        // provisioning step writes it directly). Anyone given the role later gets it at one institution.
+        if (request.scopeType() == ScopeType.TENANT
+                && ("SCHOOL_ADMIN".equals(roleDefinition.getRoleCode())
+                    || "COLLEGE_ADMIN".equals(roleDefinition.getRoleCode()))) {
+            throw new BusinessRuleViolationException(
+                    "ADMIN_ROLE_REQUIRES_INSTITUTION",
+                    roleDefinition.getRoleName() + " is assigned to one institution, not the whole tenant.");
+        }
+
         // 4b. Rule MX-04 enforcement for non-sensitive role assigners (IT Admin / School IT Support)
         if (actingAsNonSensitive) {
             if (request.scopeType() == ScopeType.TENANT) {
