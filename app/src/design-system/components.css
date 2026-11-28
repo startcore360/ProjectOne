@@ -3680,7 +3680,7 @@ html:has(.app-shell--tenant) .app-modal__body > form > footer {
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border-control);
   border-radius: var(--radius-md);
-  color: var(--color-text-link);
+  color: var(--color-text-brand);
   text-decoration: none;
 }
 .app-structure-shortcuts__links a:hover { background: var(--color-bg-subtle); }
