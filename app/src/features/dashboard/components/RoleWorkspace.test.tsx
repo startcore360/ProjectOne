@@ -62,6 +62,15 @@ describe("RoleWorkspace", () => {
   });
 
 
+
+  it("loads the live tenant summary for College Admin", async () => {
+    vi.mocked(dashboardService.getSummary).mockResolvedValueOnce({ data: { activeUsers: 27, activeSections: 9 } } as never);
+    renderWorkspace("COLLEGE_ADMIN");
+    await waitFor(() => { expect(screen.getByText("27")).toBeInTheDocument(); expect(screen.getByText("9")).toBeInTheDocument(); });
+    expect(screen.getByText("Academic setup")).toBeInTheDocument();
+    expect(screen.getByText("Users & roles")).toBeInTheDocument();
+  });
+
   it("loads the live summary and role panels for a College Principal", async () => {
     vi.mocked(dashboardService.getSummary).mockResolvedValueOnce({ data: { activeUsers: 48, activeSections: 16 } } as never);
     renderWorkspace("PRINCIPAL_COLLEGE");
