@@ -135,7 +135,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
       return [
         { label: "Institutions", value: String(institutionSummary.total), context: "Institutions in your university scope", icon: "building" },
         { label: "Active institutions", value: String(institutionSummary.active), context: "Institutions currently active", icon: "check-circle" },
-        { label: "Approvals assigned", value: String(pendingApprovalCount), context: "Pending items in your approval inbox", icon: "clipboard-check" },
+        { label: "Approvals assigned", value: String(pendingApprovalCount), context: "Pending items in your approval inbox", icon: "file-text" },
       ];
     }
     return content.metrics.map((label, index) => ({
