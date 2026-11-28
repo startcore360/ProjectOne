@@ -121,6 +121,9 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
             { label: "Staff directory", href: "/university/staff", description: "Faculty and staff records" },
           ]
         : familyQuickActions[role.family] ?? [];
+  const workspaceQuickActions = pendingApprovalCount > 0
+    ? [...quickActions, { label: "Approval inbox", href: "/approvals", description: "Review approval requests assigned to your active role" }]
+    : quickActions;
   const showHero = !NO_HERO_ROLES.has(role.code);
 
   const liveMetrics: Array<{ label: string; value: string; context: string; icon: IconName }> = (() => {
@@ -231,7 +234,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
         description="AVAILABLE WORKSPACES · Links remain subject to the permissions on each destination"
       >
         <div className="app-action-grid">
-          {quickActions.map((action) => (
+          {workspaceQuickActions.map((action) => (
             <Link key={action.href} to={action.href} className="app-action-tile">
               <span className="app-action-tile__label">{action.label}</span>
               <span className="app-action-tile__desc">{action.description}</span>
