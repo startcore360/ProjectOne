@@ -671,6 +671,48 @@ they're specifically the Principal or grievance committee, and they can never to
 highly sensitive actions like payroll totals, no matter how senior they are. This protects
 your institution from both fraud and from any single point of failure.
 
+**Developer detail — why "top-post coverage" still has hard walls:** the general mechanism
+section above explains that `MANAGEMENT`/`UNIVERSITY_ADMIN` get broad coverage across the
+whole tenant just by holding a tenant-level assignment (`topPostCovers(...)`, lines
+486-506). It would be natural to assume "the top role, therefore, can do anything" — but
+the code deliberately carves out several categories that top-post coverage never reaches,
+and each one maps to a specific real-world risk:
+
+- `SELF_APPROVAL_FORBIDDEN` (lines 197-202) runs *before* any role or scope check at all,
+  so it applies to Management exactly the same as to anyone else — there is no branch in
+  this class that special-cases a senior role past this check. This closes the fraud risk
+  of a top executive approving their own expense, leave, or exception request.
+- `PERSONAL_ACTIONS` (lines 67-73, e.g. `FEE_PAY_ONLINE`, `ASSIGNMENT_SUBMIT`,
+  `STUDENT_LEAVE_APPLY`) are excluded from top-post coverage at lines 259-262. The reasoning
+  is simple: these actions represent something that only makes sense as *that specific
+  person's own* act — Management administering the system doesn't mean Management should
+  be able to, say, submit a student's assignment or pay a student's fee as if it were their
+  own. Allowing that would blur who actually did what, which matters for both audit trails
+  and for things like payment liability.
+- `LOCKED_ACTIONS` (`PAYROLL_APPROVE_TOTALS`, `SALARY_INDIVIDUAL_VIEW`,
+  `TENANT_EXPORT_APPROVE`, `TENANT_DELETION_APPROVE`, `RETENTION_CHANGE_APPROVE`) are
+  excluded at lines 263-266, regardless of seniority. These are actions the business
+  specifically decided should stay with one named role-holder, not with "whoever is most
+  senior today" — payroll totals and sensitive data-protection approvals are the kind of
+  thing where concentrating power in the most senior person, instead of a dedicated
+  specialist role, is itself the risk being avoided.
+- `POT05_CONFIDENTIAL_ACTIONS` (grievance case view/assign/hearing/resolve/evidence) are
+  gated by a specific allow-list, `POT05_AUTHORIZED_ROLE_CODES` (lines 92-94):
+  `INTERNAL_COMPLAINTS_COMMITTEE`, `PRINCIPAL_COLLEGE`, `SCHOOL_PRINCIPAL` — and only when
+  held as a genuine active standard role flagged sensitive (lines 244-251), not a custom
+  role mimicking one. Management, even as the most senior tenant-wide role, is denied
+  `POT05_ROLE_FORBIDDEN` outright if it doesn't specifically hold one of those three codes.
+  The reasoning: grievance cases often concern complaints *about* staff, sometimes senior
+  staff — if Management could always see every grievance case by virtue of being
+  Management, that would undermine the confidentiality the whole grievance process depends
+  on for people to feel safe reporting something in the first place.
+- Finally, `AMBIGUOUS_ROLE_ASSIGNMENT` (lines 215-223): if a user somehow ends up with two
+  simultaneously `ACTIVE` role assignments at the exact same scope (which shouldn't happen
+  in normal operation, but the code defends against it anyway), the system logs a warning
+  and denies rather than trying to merge the two. The reasoning: automatically combining two
+  assignments could silently grant a permission neither assignment alone was meant to carry,
+  so the safer behavior is to refuse and force a human to resolve the duplicate assignment.
+
 **Coming next / planned:**
 - Role roll-down: if a post is vacant, authority automatically passes to a defined stand-in,
   so approvals never get permanently stuck; the institution can withhold a stand-in's

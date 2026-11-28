@@ -71,3 +71,68 @@ content.
 Each file follows the same structure: landing/sign-in/dashboard, what exists in code today,
 what the V4.0 spec plans, and a role-restriction section covering the most senior role in
 full detail plus a shorter delta for every other role in that audience.
+
+## Client Pitch Overview
+
+*This section is the plain-business-language entry point into the whole document set, for
+presenting EDU 360 to a non-technical client deciding whether to buy it. Each of the five
+audience files above now ends with its own "Client Pitch Summary" section — the bullets,
+speaker notes, role tables, and roadmap for that audience — immediately followed by a
+"Developer detail" write-up of the same features for anyone taking over the codebase. This
+overview ties those five together into one story.*
+
+**Title / one-line pitch:** EDU 360 — one platform for every school, college and
+university. One secure login per institution, one system for admissions, attendance,
+exams, fees, staff and parents.
+
+**Who this is for — five audiences, one system:**
+- **Platform Operator** — EDU 360's own team, who run the SaaS business itself: onboarding
+  schools, billing, support, release management. They never see a school's actual student
+  data except through a supervised, time-limited support session. See
+  [`platform.md`](./platform.md#client-pitch-summary).
+- **Institution Admin** — the school/college's own leadership and administrative roles
+  (Management, University Admin, Vice Chancellor, Principal, Head of Department, and the
+  teams under them): they run the institution's structure, staff, fees and records. See
+  [`tenant-admin.md`](./tenant-admin.md#client-pitch-summary).
+- **Staff** — teachers and support staff who deliver the actual day-to-day work: marking
+  attendance, running exams, entering marks, applying for leave. See
+  [`staff.md`](./staff.md#client-pitch-summary).
+- **Student** — the learner's own account: their record, their fees, their results, their
+  own requests. See [`student.md`](./student.md#client-pitch-summary).
+- **Parent/Guardian** — a parent's own account, linked to their child, with its own
+  protected approval process for changing who is linked. See
+  [`parent.md`](./parent.md#client-pitch-summary).
+
+Think of these as five circles, one inside the next: the Platform Operator runs the whole
+service from outside; inside each institution, Admins run operations, Staff deliver
+teaching, and Students and Parents each get a narrow, personal view. Everyone sees only
+what their role needs.
+
+**How sign-in works, in plain terms:** every school/college gets its own private web
+address (e.g. "yourschool.edu360.com"). That address — not a dropdown, not a form field —
+is what tells the system which school's data to show, so logging in at the wrong address
+simply shows nothing, and one school's records are never visible to another school's
+users. Passwords are checked by a dedicated identity service (Keycloak) that EDU 360 never
+stores passwords outside of, and every subsequent action is re-checked, every time, against
+that same identity.
+
+**Closing summary — what's live now vs. what's coming:**
+- **Live today, across all five audiences:** sign-in and strict tenant isolation,
+  institution structure and staff management, student records, fee structures and online
+  payments, attendance, exams and marks entry, leave requests, confidential grievances,
+  guardian linking and change approval, platform tenant lifecycle and billing, and
+  time-limited supervised platform support access.
+- **Coming next:** richer per-role dashboards across every audience, automatic stand-in
+  authority when a post is vacant, a stronger role-match check on publishing results, a
+  fuller self-service surface for students and parents, and phone-verified guardian
+  profile editing. See each audience file's "Coming next / planned" list for specifics.
+
+**Differentiators, in plain terms:**
+- **Strict role-based security** — no one, at any level including the most senior roles,
+  can do more than their specific role allows; this is enforced by the system itself, not
+  by a policy document.
+- **Complete data isolation between schools** — every institution's data is walled off
+  from every other institution's, enforced at the database level, not just hidden in the
+  user interface.
+- **Built-in approval workflows** — no one can approve their own request anywhere in the
+  system, at any level, from a platform executive down to a department head.

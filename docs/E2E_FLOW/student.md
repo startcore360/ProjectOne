@@ -148,8 +148,11 @@ viewing a student's data is a different principal type entirely, covered in `par
 
 ## Client Pitch Summary
 
-*Plain-English version of the above, for a non-technical audience deciding whether to buy
-EDU 360. Status labels: "Live today", "Built, screen coming soon", "On the roadmap".*
+*This section serves two readers at once. The "On screen"/"Speaker notes" parts are the
+plain-English client pitch. Each feature is immediately followed by a "Developer detail"
+block with full technical depth so a new engineer could pick up the feature from this
+section alone, without hunting through the rest of the file. Status labels for the client:
+"Live today", "Built, screen coming soon", "On the roadmap".*
 
 **On screen — what a student can do today:**
 - View their own notifications and notices
@@ -160,6 +163,26 @@ EDU 360. Status labels: "Live today", "Built, screen coming soon", "On the roadm
 **Speaker notes:** Students get a focused, personal view — their own record, their own
 requests, nothing about any other student. Status: Live today.
 
+**Developer detail — how the student's own-record-only restriction actually works
+(applies to every feature below, read this first):** this is one of the simplest and
+strongest patterns in the codebase, and it's worth a junior developer understanding it
+before anything else here, because it explains why a student simply *cannot* reach another
+student's data, structurally, not just by policy. A student's self-service goes through
+the same `SelfServiceController.java` used by staff (see `staff.md`'s Client Pitch Summary
+for the controller-level `UserType` gate explanation). But where staff-only endpoints check
+`principal.userType() == UserType.STAFF`, the student-relevant endpoints instead hard-code
+every database lookup to the calling user's own account ID,
+`principal.userAccountId()` (e.g. lines 48-49, 65, 76, 87). The crucial thing to notice: this
+isn't a permission *check* that could theoretically be bypassed by holding the right role —
+there is no parameter anywhere in these methods that would let a caller specify "whose"
+notifications or leave balance to fetch. The method signature itself only ever reads the
+logged-in user's own ID from their verified token and queries with that. This is a
+stronger guarantee than a role check, because there's no code path to misconfigure that
+would accidentally let it through — the only way to see another student's record at all is
+through a completely different controller (`StudentDirectoryController`, covered in
+`tenant-admin.md`), which requires a staff/admin action code and goes through the full
+`PermissionEvaluatorService` scope-matching mechanism.
+
 **Feature — Raising a confidential grievance**
 - On screen: a student can raise a grievance directly in the system; it is routed to a
   confidential handling process; support staff can never access grievance cases, even with
@@ -169,6 +192,57 @@ requests, nothing about any other student. Status: Live today.
   support team is permanently locked out of — not even a time-limited exception applies
   here.
 - Status: Live today.
+- **Developer detail:** This feature lives in
+  `api/src/main/java/com/edu360/api/governance/controller/GrievanceCaseController.java`,
+  backed by `GrievanceService.java`, and it's a good worked example of a full lifecycle:
+  submit → view → assign → hold a hearing → resolve, with evidence attachable along the
+  way, each step its own endpoint and its own action code, the same one-step-one-code
+  pattern already seen in the exam workflow (`staff.md`). Submitting: `POST
+  /api/tenants/{t}/governance/grievances/submissions` (lines 43-49) calls
+  `GrievanceService.submit`, checking `GRIEVANCE_CASE_SUBMIT`
+  (`GrievanceService.java:60`), writing a new row into `app.grievance_case`. Notably, this
+  endpoint is **not** restricted to students only — any tenant principal holding the
+  `GRIEVANCE_CASE_SUBMIT` action can raise a case, so a staff member or parent with that
+  permission could submit one too; "student" here describes a typical user of this screen,
+  not a hard-coded restriction in the controller.
+
+  Viewing: `GET .../cases`, `GET .../cases/{id}` (lines 51-61) call `GrievanceService.list`/
+  `get`, checking `GRIEVANCE_CASE_VIEW` (`GrievanceService.java:319,340`), reading
+  `app.grievance_case`. Assigning a case to a handler: `POST .../cases/{id}/assign` (lines
+  75-79) calls `GrievanceService.assign`, checking `GRIEVANCE_CASE_ASSIGN`
+  (`GrievanceService.java:128`), updating `app.grievance_case`. Scheduling and recording a
+  hearing: `POST .../cases/{id}/hearing` and `.../minutes` (lines 81-93) call
+  `GrievanceService.scheduleHearing`/`recordMinutes`, checking `GRIEVANCE_HEARING_MANAGE`
+  (`GrievanceService.java:201,226`), writing to a separate table,
+  `app.grievance_hearing` — kept apart from `app.grievance_case` because one case can
+  reasonably have more than one hearing record over time. Resolving: `POST
+  .../cases/{id}/resolve` (lines 102-106) calls `GrievanceService.resolve`, checking
+  `GRIEVANCE_CASE_RESOLVE` (`GrievanceService.java:250,262`) — note this check is
+  target-scoped to the specific case, meaning the resolver's role assignment must cover
+  the institution/department the case actually belongs to, not just "holds the resolve
+  action somewhere" — writing to both `app.grievance_case` (the final outcome) and
+  `app.grievance_action` (an audit-style log of what decision was taken). Evidence:
+  `POST`/`GET .../cases/{id}/evidence` (lines 108-119) call
+  `GrievanceService.uploadEvidence`/`evidence`, checking
+  `GRIEVANCE_EVIDENCE_UPLOAD`/`GRIEVANCE_EVIDENCE_VIEW` (`GrievanceService.java:282,301`),
+  reading/writing `app.grievance_evidence` — kept as its own table since a case can have
+  multiple pieces of evidence attached by multiple people over time.
+
+  The confidentiality guarantee a client cares about most is implemented as a single,
+  blunt, unconditional check that runs before anything else in this controller: the
+  private `principal(...)` helper (lines 121-130) checks whether the authenticated caller
+  is a `SupportPrincipal` (the special principal type representing an active, time-boxed
+  platform support session — see `platform.md`'s Client Pitch Summary for the full
+  explanation of what that is and how its 24-hour cap works). If so, it throws
+  `AccessDeniedException("Support sessions are never permitted to access confidential
+  grievance workflows.")` immediately — for *every single method* in this controller, with
+  no exceptions and no "but this action is support-readable" carve-out of the kind the
+  generic support-session mechanism normally allows. This is deliberately a stronger,
+  harder wall than the generic support isolation described in `platform.md`: the generic
+  mechanism still lets a support session read *some* things flagged
+  `isSupportReadable()`; this controller doesn't even give that generic check a chance to
+  run, because grievances are considered sensitive enough that the team decided no
+  exception should ever exist, full stop, even a logged and time-limited one.
 
 **Who can do what — Student**
 
@@ -186,6 +260,28 @@ else's, and can never be asked to approve anything. It's the simplest, most prot
 the whole system. Even if a decision is ever made about a student (such as a guardian-change
 request concerning them), the system's rule that "no one approves their own case" means a
 student could never end up approving a decision about themselves either.
+
+**Developer detail — why there's no "senior student" exception:** unlike every other
+audience in this document set, there is no role hierarchy here to explain — there is
+exactly one student role, so there's no "most senior role vs. the rest" split to make. The
+restrictions worth knowing precisely: every self-service endpoint is hard-scoped to
+`principal.userAccountId()` as explained above, so there is structurally no endpoint a
+student could call, with any input, that targets someone else's account. `PERSONAL_ACTIONS`
+(`PermissionEvaluatorService.java:67-73`, which includes the student-relevant action codes
+like `STUDENT_LEAVE_APPLY`, `FEE_PAY_ONLINE`, `ASSIGNMENT_SUBMIT`, `RESULT_VIEW_OWN`,
+`ATTENDANCE_VIEW_OWN`, `HALL_TICKET_DOWNLOAD`, `STUDENT_RECORD_VIEW_OWN`,
+`CERTIFICATE_REQUEST`) are excluded from top-post coverage in *both* directions (lines
+259-262) — meaning not only can a senior admin role never perform one of these "as if" it
+were their own (explained from the admin side in `tenant-admin.md`), but a student can
+never be granted someone else's broader action through any coverage mechanism either; the
+exclusion is symmetric. Finally, the student role is never listed anywhere in this
+codebase's role-action model as a holder of an approval action — approving things is, by
+definition in this system's design, something staff/admin roles in a chain do, never the
+student. And even in the hypothetical case where a student's own record became the subject
+of someone else's approval decision (e.g. a guardian-change request naming them), the
+generic `SELF_APPROVAL_FORBIDDEN` rule (`PermissionEvaluatorService.java:197-202`) would
+independently block the student from being both the subject and the decider of that same
+request, the same rule explained in `tenant-admin.md`'s Client Pitch Summary.
 
 **Coming next / planned:**
 - A fuller self-service area: exam schedules, viewing one's own full record, dashboard

@@ -162,8 +162,11 @@ it rather than repeating the whole mechanism.
 
 ## Client Pitch Summary
 
-*Plain-English version of the above, for a non-technical audience deciding whether to buy
-EDU 360. Status labels: "Live today", "Built, screen coming soon", "On the roadmap".*
+*This section serves two readers at once. The "On screen"/"Speaker notes" parts are the
+plain-English client pitch. Each feature is immediately followed by a "Developer detail"
+block with full technical depth so a new engineer could pick up the feature from this
+section alone, without hunting through the rest of the file. Status labels for the client:
+"Live today", "Built, screen coming soon", "On the roadmap".*
 
 **On screen — what staff can do today:**
 - Mark attendance, build timetables, set up exams
@@ -174,14 +177,82 @@ EDU 360. Status labels: "Live today", "Built, screen coming soon", "On the roadm
 **Speaker notes:** This is the everyday toolkit a teacher actually uses — attendance,
 timetable, exams, marks, assignments, leave — all from one account. Status: Live today.
 
+**Developer detail — how staff self-service is separated from academic actions (applies
+to every feature below, read this first):** this audience's code is split into two very
+different kinds of controller, and it's worth a junior developer understanding why. The
+first kind is `api/src/main/java/com/edu360/api/selfservice/SelfServiceController.java` —
+this is where a staff member manages things that are purely about *themselves*:
+notifications, their own leave balance, submitting their own leave request. Every method
+in this controller pulls the currently logged-in person's identity out of the request (a
+`TenantPrincipal`, obtained from Spring's `Authentication` object) and then, for anything
+staff-specific, does an extra check: `principal.userType() == UserType.STAFF` (checked
+at, e.g., lines 98, 111, 127). If that's false, the method throws `AccessDeniedException`
+immediately (e.g. line 99) — notice this happens *before* the normal
+`PermissionEvaluatorService.authorize(...)` action-code check described in
+`tenant-admin.md`'s Client Pitch Summary ever runs. This is a simpler, coarser gate: it
+isn't asking "does this specific role hold this specific action," it's asking "is this
+account even the kind of account (staff vs. student vs. guardian) that this whole
+controller is for." Think of it as a first filter before the more detailed permission
+system gets involved.
+
+The second kind of controller covers the actual teaching work — attendance, assignments,
+exams, timetable, report cards — and these live in
+`api/src/main/java/com/edu360/api/academic/controller/`: `AttendanceController.java`,
+`AssignmentController.java`, `ExaminationController.java`, `TimetableController.java`,
+`ReportCardController.java`. These do **not** have the `UserType.STAFF` coarse gate — they
+go straight to the normal, fine-grained `PermissionEvaluatorService.authorize(...)` check
+(action code + institution/department scope), exactly as explained in `tenant-admin.md`'s
+Client Pitch Summary. The reasoning for the difference: these actions are tied to a role
+and a scope (e.g. "do you hold `ATTENDANCE_MARK` for this class"), not to "are you
+generically a staff member" — a teacher's permission to mark attendance for one specific
+class is a more precise question than "are you staff," so it goes through the more precise
+system. All five of these academic controllers resolve who's calling them the same way: a
+private `principal(auth, tenantId)` helper method requires a `TenantPrincipal` whose own
+`tenantId()` matches the tenant ID in the URL path, otherwise it throws
+`UnauthorizedException`/`ResourceNotFoundException` — this is what stops a teacher logged
+into School A's subdomain from ever successfully calling an endpoint with School B's
+tenant ID in the URL, even before any action-code check runs.
+
 **Feature — Attendance in seconds**
-- On screen: mark daily or period-wise attendance; view attendance registers instantly; set
-  attendance rules for the institution.
+- On screen: mark daily or period-wise attendance; view attendance registers instantly;
+  set attendance rules for the institution.
 - Speaker notes: e.g. a teacher opens today's class, taps each student present, and submits —
   attendance for the whole class is marked in under 30 seconds, with an instant register
   available afterwards.
 - Status: Live today (setting the rules themselves works; a dedicated screen for that is
   Built, screen coming soon).
+- **Developer detail:** Everything here lives in `AttendanceController.java`, which hands
+  off to `AttendanceService.java` for the real logic. A teacher's attendance flow is
+  actually two calls, not one, which is worth understanding because it maps onto a
+  real-world need: first a "session" is created for the class period being marked — `POST
+  /api/tenants/{t}/attendance/sessions` (`AttendanceController.java:10`) calls
+  `AttendanceService.createSession`, checking either `ATTENDANCE_MARK` (a normal class
+  happened) or `ATTENDANCE_NOT_HELD` (the class didn't happen at all, e.g. the teacher was
+  absent or it was a holiday) — (`AttendanceService.java:13,34`) — and writes a new row
+  into `app.attendance_session` (representing "this class, this period, this day exists as
+  something attendance could be recorded against"), plus, for a normal session, starter
+  rows in `app.attendance_entry` (one row per student, to be filled in next). Then the
+  actual present/absent marks are recorded: `POST .../attendance/entries`
+  (`AttendanceController.java:14`) calls `AttendanceService.recordEntries`, re-checking
+  `ATTENDANCE_MARK`, and updates those same `app.attendance_entry` rows with each student's
+  actual status. Splitting "create the session" from "fill in the entries" into two calls
+  means the system can represent "this class happened, but nobody has marked attendance
+  yet" as a distinct, real state — useful for catching a teacher who forgot, rather than
+  that information simply not existing anywhere.
+
+  Viewing the register: `GET .../attendance/register` (`AttendanceController.java:23`)
+  calls `AttendanceService.register`, checking the read-only `ATTENDANCE_VIEW` action
+  code, and reads back from both `app.attendance_entry` and `app.attendance_session`
+  (it needs the session table too, to know which days/periods even had a session created,
+  not just which entries exist).
+
+  Setting the rules: `PUT .../attendance/thresholds` (`AttendanceController.java:27`) calls
+  `AttendanceService.updateThreshold`, checking `ATTENDANCE_RULES_SET`, writing to
+  `app.attendance_threshold_policy` (e.g. the minimum attendance percentage a student needs
+  to avoid being flagged). This endpoint works today, but there is no dedicated
+  threshold-editor screen found under `app/src/features/academic/` in this pass — so an
+  admin wanting to change this today would need the API called directly (e.g. via a support
+  request or an internal tool), not through a polished screen yet.
 
 **Feature — Exams and marks: entered, never self-approved**
 - On screen: teachers enter marks for their own classes; a class teacher can submit marks for
@@ -190,6 +261,52 @@ timetable, exams, marks, assignments, leave — all from one account. Status: Li
   the final results themselves — that step always needs a more senior sign-off. It keeps the
   exam process trustworthy for parents and regulators alike.
 - Status: Live today.
+- **Developer detail:** The exam workflow in `ExaminationController.java` /
+  `ExaminationService.java` is a good illustration of "the same data, moving through
+  several hands, each hand getting a different action code" — a pattern you'll want to
+  recognize elsewhere in this codebase. First, a cycle and schedule are set up: `POST
+  /api/tenants/{t}/academic/exams/cycles` (`ExaminationController.java:23-27`) →
+  `ExaminationService.createCycle`, checking `EXAM_SCHEDULE_INTERNAL`
+  (`ExaminationService.java:30`), writing `app.exam_cycle`; `POST .../exams/schedules`
+  (lines 29-33) → `ExaminationService.schedule`, same action code, writing
+  `app.exam_schedule`; `POST .../exams/schedules/{id}/invigilators/{staffUserId}` (lines
+  40-45) → `ExaminationService.assignInvigilator`, same action code again, writing
+  `app.exam_invigilator` (who is supervising which exam sitting).
+
+  Then the actual marks workflow, which is where the "teachers enter, never approve" rule
+  becomes visible as three *different* action codes for three different steps on the same
+  underlying `app.exam_mark` table: `POST .../exams/marks` (lines 47-51) →
+  `ExaminationService.enterMarks`, checking `MARKS_ENTER`
+  (`ExaminationService.java:92`) — this is the teacher physically typing in a student's
+  score. `POST .../exams/marks/{id}/course-teacher-approve` (lines 53-57) →
+  `ExaminationService.courseTeacherApprove`, checking `MARKS_SUBMIT`
+  (`ExaminationService.java:137`) — note this is a deliberately *lesser* action code than
+  a publish-level grant; "submit" is not the same permission as "publish," even though both
+  touch the same table. `POST .../exams/marks/{id}/external-moderation` (lines 59-64) →
+  `ExaminationService.externalModerate`, checking `MARKS_EXTERNAL_UPLOAD`
+  (`ExaminationService.java:163`) — this endpoint works today (✅ API only — no
+  external-moderation UI was found under `app/src/features/academic/` in this pass, so an
+  external moderator's upload today would have to go through the raw API, not a built
+  screen).
+
+  Finally, viewing and publishing results — a genuinely different controller,
+  `ReportCardController.java`, because by this point we've moved from "marks for one exam"
+  to "a student's compiled report card." `GET /api/tenants/{t}/academic/report-cards/{id}`
+  (lines 18-21) → `ReportCardService.get`, checking the read-only `RESULT_VIEW`
+  (`ReportCardService.java:46`), reading `app.report_card`. `POST
+  .../report-cards/{id}/publish` (lines 23-26) → `ReportCardService.publish`, checking
+  `RESULT_PUBLISH` (`ReportCardService.java:60`) — and this is the key detail to notice:
+  this check is institution-scoped, meaning it requires a role assignment covering the
+  whole institution (via top-post coverage, explained in `tenant-admin.md`), a materially
+  bigger grant than the class/department-level `MARKS_SUBMIT` a Class Teacher holds. In
+  other words, the system doesn't rely on a special "teachers can't publish" rule written
+  specifically for this feature — it relies on the simple structural fact that publishing
+  requires a bigger grant than any ordinary teacher role is given, which is the same
+  general scope-matching mechanism used everywhere else in this codebase. (Also see
+  `tenant-admin.md`'s Client Pitch Summary for a confirmed gap in this same publish flow:
+  it does not yet check that the publisher is the *correct kind* of role for the
+  institution's specific mode — school vs. college-under-university vs. standalone
+  college.)
 
 **Feature — Leave requests**
 - On screen: staff apply for leave and see their own balance; requests go into an approval
@@ -198,6 +315,33 @@ timetable, exams, marks, assignments, leave — all from one account. Status: Li
   they have left, and it's automatically routed to the right approver — no paper forms, no
   chasing people down.
 - Status: Live today.
+- **Developer detail:** This feature lives entirely in
+  `SelfServiceController.java`, backed by `StaffLeaveService` for the staff-specific logic.
+  `GET /api/tenants/{tenantId}/me/leave-types` (line 91) lists which kinds of leave (sick,
+  casual, earned, etc.) this staff member can even apply for — staff-only, otherwise a 403
+  via `AccessDeniedException` (line 99). `GET .../me/leave-balances` (line 104) checks
+  `principal.userType()`: if it's staff, it calls `StaffLeaveService.ownBalances`; for any
+  other user type it falls through to a more generic `selfService.getLeaveBalances` method
+  — a good example of the controller branching on user type to call a different service
+  method, rather than one method trying to handle every kind of user internally.
+
+  Submitting: `POST .../me/leave-requests` (line 119) calls
+  `staffLeaveService.submit(tenantId, principal, request)`. The method's own `@Operation`
+  summary describes this as routing the request "into the configured approval chain" (line
+  120) — meaning the system doesn't hard-code one fixed approver; it looks up whatever
+  approval routing has been configured for this tenant/leave-type combination and creates
+  the appropriate pending-approval record, the same general `ApprovalRequest` mechanism
+  referenced in `tenant-admin.md`'s fee-structure feature. This endpoint is staff-only;
+  anyone else gets a 403.
+
+  Cancelling: `POST .../me/leave-requests/{leaveRequestId}/cancel` (line 133) — described
+  in the code's own summary as only working "before its start date." Crucially, notice this
+  is always scoped to the calling user's own account (`principal.userAccountId()`) — there
+  is no endpoint anywhere in this controller, for submission or cancellation, that accepts
+  someone else's user ID as the target. This means a Head of Department, no matter how
+  senior, literally cannot submit or cancel leave *for* another staff member through this
+  API; if that capability is ever needed, it would require a new, separate endpoint to be
+  built, because the current one is structurally locked to "your own record only."
 
 **Who can do what — Staff roles**
 
@@ -213,6 +357,31 @@ timetable, exams, marks, assignments, leave — all from one account. Status: Li
 staff role — cannot score their own appraisal; that always goes to the Principal instead. And
 no one, at any level, can submit or cancel a leave request on someone else's behalf. These
 are simple rules that prevent favouritism and keep records honest.
+
+**Developer detail — why even the HOD has hard walls:** the Head of Department is the most
+complex role a "staff" person can hold in this codebase, because it sits on both sides of
+the fence — a teaching role with its own self-service, and an approver for
+department-scoped actions elsewhere (see `tenant-admin.md` §4 for the full approver-side
+mechanism). Two restrictions are worth spelling out precisely, because they come from two
+different parts of the code: first, `SELF_APPROVAL_FORBIDDEN`
+(`PermissionEvaluatorService.java:197-202`) fires if the HOD is scoring their *own*
+appraisal submission, before any role check even runs — there is no special case anywhere
+in that class for "but this HOD is senior, so let them." Second, `topPostCovers(...)`
+(`PermissionEvaluatorService.java:486-506`) simply never names `HOD` in any of its
+coverage branches — meaning a HOD's `DEPARTMENT`-scoped assignment must match the exact
+department ID of whatever they're trying to act on (`sameScope(...)`, lines 479-483), with
+no fallback or "nearby department" exception; acting outside their own department is denied
+`NO_ACTIVE_ROLE_IN_SCOPE` outright. On top of both of those, the leave-submission
+restriction described in the Leave feature above isn't even part of
+`PermissionEvaluatorService` at all — it's a simpler, earlier structural fact: every
+leave-related method in `SelfServiceController` is hard-coded to operate only on
+`principal.userAccountId()` (the caller's own account), so there is no code path, for any
+role including HOD, that lets one person submit or cancel leave on another's behalf. Each
+of these three restrictions prevents a different kind of problem: self-approval prevents a
+HOD rubber-stamping their own performance review; exact department scoping prevents a HOD
+reaching into a department they don't actually manage; and the hard-coded "own account
+only" leave scoping prevents anyone, however senior, quietly submitting or withdrawing
+someone else's leave without that person's knowledge.
 
 **Coming next / planned:**
 - A formal "no overlapping leave approver and leave-taker" safety rule, and a configurable
