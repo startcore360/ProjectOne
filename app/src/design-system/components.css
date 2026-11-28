@@ -3689,6 +3689,6 @@ html:has(.app-shell--tenant) .app-modal__body > form > footer {
   .app-structure-context__controls { justify-content: flex-start; }
   .app-structure-data-panel .app-panel__header { align-items: flex-start; flex-wrap: wrap; }
   .app-structure-data-panel .app-panel__header > :last-child { width: 100%; }
-  .app-structure-data-panel .app-panel__header > :last-child .app-button { width: 100%; }
+  .app-structure-data-panel .app-panel__header > :last-child .eds-button { width: 100%; }
   .app-structure-panel-body { padding-right: var(--space-3); padding-left: var(--space-3); }
 }
