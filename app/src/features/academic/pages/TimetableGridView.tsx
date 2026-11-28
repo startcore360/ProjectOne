@@ -25,6 +25,7 @@ export default function TimetableGridView(){
  const [allocations,setAllocations]=useState<SubjectAllocationItem[]>([]);
  const [rooms,setRooms]=useState<Array<{room_id:string;room_number:string;building?:string;capacity?:number;room_type?:string}>>([]);
  const [optionsLoading,setOptionsLoading]=useState(false);
+ const [slotsLoading,setSlotsLoading]=useState(false);
  const [optionsError,setOptionsError]=useState("");
  const [institutionId,setInstitutionId]=useState("");const [sessionId,setSessionId]=useState("");const [sectionId,setSectionId]=useState("");
  const [viewMode,setViewMode]=useState<"SECTION"|"TEACHER"|"ROOM">("SECTION");
@@ -72,9 +73,11 @@ export default function TimetableGridView(){
   return ()=>{active=false;};
  },[tenantId,institutionId,canListAllocations,canManageStructure]);
  const load=useCallback(async()=>{
-  if(!tenantId||!institutionId)return;
-  try{const res=await api.get<Slot[]>("/api/tenants/"+tenantId+"/academic/timetable/slots",{params:{institutionId,sectionId:viewMode==="SECTION"?(sectionId||undefined):undefined,teacherId:viewMode==="TEACHER"?(teacherFilter||undefined):undefined,roomId:viewMode==="ROOM"?(roomFilter||undefined):undefined,academicSessionId:sessionId||undefined,date:dateFilter||undefined,dayOfWeek:dayFilter||undefined}});setSlots(res.data);}
+  if(!tenantId||!institutionId){setSlots([]);return;}
+  setSlotsLoading(true);
+  try{const res=await api.get<Slot[]>("/api/tenants/"+tenantId+"/academic/timetable/slots",{params:{institutionId,sectionId:viewMode==="SECTION"?(sectionId||undefined):undefined,teacherId:viewMode==="TEACHER"?(teacherFilter||undefined):undefined,roomId:viewMode==="ROOM"?(roomFilter||undefined):undefined,academicSessionId:sessionId||undefined,date:dateFilter||undefined,dayOfWeek:dayFilter||undefined}});setSlots(res.data);setFeedback("");}
   catch(e){setFeedback(e instanceof Error?e.message:"Unable to load timetable.");}
+  finally{setSlotsLoading(false);}
  },[tenantId,institutionId,sectionId,sessionId,viewMode,teacherFilter,roomFilter,dateFilter,dayFilter]);
  useEffect(()=>{void load();},[load]);
 
@@ -167,11 +170,13 @@ export default function TimetableGridView(){
   <label>Day filter<select value={dayFilter} onChange={e=>setDayFilter(e.target.value)}><option value="">All days</option>{DAYS.map((d,i)=><option key={d} value={i+1}>{d}</option>)}</select></label>
    <button type="button" onClick={()=>void load()}>Refresh timetable</button>
   </div>
+  {optionsLoading&&<p role="status">Loading institution and timetable setup data…</p>}
   {optionsError&&<div className="eds-error-state" role="alert"><strong>Setup data unavailable</strong><p>{optionsError}</p></div>}
-  <ClashWarningToast message={toast} onDismiss={()=>setToast("")}/>{feedback&&<p role="status">{feedback}</p>}
+  {feedback&&<p role="status">{feedback}</p>}
+  <ClashWarningToast message={toast} onDismiss={()=>setToast("")}/>
   {canBuild&&<>
   <section><h2>Create timetable slot</h2><form onSubmit={createSlot} className="form-grid">
-   <label>Subject allocation<select required value={subjectAllocationId} onChange={e=>{setSubjectAllocationId(e.target.value);const allocation=allocations.find(item=>item.subjectAllocationId===e.target.value);if(allocation?.sectionId)setSectionId(allocation.sectionId);}}><option value="">Select subject / faculty allocation</option>{allocations.filter(item=>item.status==="ACTIVE"&&(!sessionId||sessions.some(session=>session.academicSessionId===sessionId))).map(item=><option key={item.subjectAllocationId} value={item.subjectAllocationId}>{item.courseOfferingId.slice(0,8)} · {item.sectionId?"Section allocation":"Elective group"} · {item.staffAssignmentId.slice(0,8)}</option>)}</select>{!canListAllocations&&<small>Subject allocation lookup requires SUBJECT_ALLOCATE permission. Ask an institution administrator to confirm the allocation.</small>}</label>
+   <label>Subject allocation {canListAllocations?<select required value={subjectAllocationId} onChange={e=>{setSubjectAllocationId(e.target.value);const allocation=allocations.find(item=>item.subjectAllocationId===e.target.value);if(allocation?.sectionId)setSectionId(allocation.sectionId);}}><option value="">Select subject / faculty allocation</option>{allocations.filter(item=>item.status==="ACTIVE").map(item=><option key={item.subjectAllocationId} value={item.subjectAllocationId}>{item.courseOfferingId.slice(0,8)} · {item.sectionId?"Section allocation":"Elective group"} · {item.staffAssignmentId.slice(0,8)}</option>)}</select>:<input required value={subjectAllocationId} onChange={e=>setSubjectAllocationId(e.target.value)} placeholder="Subject allocation reference"/>}{!canListAllocations&&<small>Allocation lookup is permission-restricted. Enter an existing allocation reference supplied by your institution.</small>}</label>
    <label>Period number<input type="number" min="1" max="20" required value={periodNo} onChange={e=>setPeriodNo(e.target.value)}/></label>
    <label>Room<select value={roomId} onChange={e=>setRoomId(e.target.value)}><option value="">No room / online</option>{rooms.map(item=><option key={item.room_id} value={item.room_id}>{item.room_number}{item.building?" · "+item.building:""}</option>)}</select></label>
    <label>Day<select value={day} onChange={e=>setDay(e.target.value)}>{DAYS.map((name,i)=><option key={name} value={i+1}>{name}</option>)}</select></label>
@@ -195,8 +200,8 @@ export default function TimetableGridView(){
    <button disabled={busy||!institutionId}>Create room</button>
   </form></section>
   </>}
-  <div className="timetable-grid-heading"><div><h2>Weekly timetable</h2><p>{selectedInstitution?.institutionName??"Select an institution"}{sessionId?" · "+(sessions.find(item=>item.academicSessionId===sessionId)?.sessionLabel??""):""}</p></div><button type="button" onClick={()=>void load()} disabled={!institutionId||busy}>Refresh</button></div><div style={{overflowX:"auto"}}><table><thead><tr><th>Time</th>{DAYS.map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>
-   {TIMES.map(time=><tr key={time}><th>{time}</th>{DAYS.map((d,index)=>{const cell=byCell.get((index+1)+"-"+time)??[];return <td key={d} onDragOver={e=>e.preventDefault()} onDrop={e=>dropOn(index+1,time,e)} style={{minWidth:130,verticalAlign:"top"}}>
+  <div className="timetable-grid-heading"><div><h2>Weekly timetable</h2><p>{selectedInstitution?.institutionName??"Select an institution"}{sessionId?" · "+(sessions.find(item=>item.academicSessionId===sessionId)?.sessionLabel??""):""}</p></div><button type="button" onClick={()=>void load()} disabled={!institutionId||busy}>Refresh</button></div><div style={{overflowX:"auto"}}><table className="timetable-workspace-grid"><thead><tr><th>Time</th>{DAYS.map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>
+   {slotsLoading?<tr><td colSpan={8}>Loading timetable…</td></tr>:TIMES.map(time=><tr key={time}><th>{time}</th>{DAYS.map((d,index)=>{const cell=byCell.get((index+1)+"-"+time)??[];return <td key={d} onDragOver={e=>e.preventDefault()} onDrop={e=>dropOn(index+1,time,e)} style={{minWidth:130,verticalAlign:"top"}}>
     {cell.map(slot=><div key={slot.timetable_slot_id} draggable={slot.status==="DRAFT"} onDragStart={()=>setDragged(slot)}
      style={{border:"1px solid var(--color-border-divider)",borderRadius:6,padding:6,marginBottom:4,cursor:slot.status==="DRAFT"?"grab":"default"}}>
      <strong>{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</strong><br/>
@@ -206,6 +211,7 @@ export default function TimetableGridView(){
     </div>)}
    </td>;})}</tr>)}
   </tbody></table></div>
+  {!slotsLoading&&institutionId&&slots.length===0&&<div className="eds-empty-state"><strong className="eds-empty-state__title">No timetable periods found</strong><p className="eds-empty-state__description">Try another session or filter, or add the first draft period if your role has build access.</p></div>}
   {canBuild&&<section><h2>Online period access</h2><form onSubmit={accessMeeting} className="form-grid">
    <label>Student access token<input required value={studentAccessToken} onChange={e=>setStudentAccessToken(e.target.value)}/></label>
    <button disabled={busy||!studentAccessToken}>Verify meeting access</button>
