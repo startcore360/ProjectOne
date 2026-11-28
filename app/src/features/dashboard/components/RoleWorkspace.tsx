@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi, Panel } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { selectPendingApprovalCount } from "../../notifications/hooks/useNotifications";
 import { dashboardService, type DashboardSummary } from "../api/dashboardService";
+import { institutionService } from "../../institution-admin/api/institutionService";
 import {
   roleDashboardByCode,
   roleOverrides,
@@ -20,33 +21,79 @@ export interface RoleWorkspaceProps {
   roleCode: string;
 }
 
-// Only this one role's dashboard is wired to real numbers so far (see RoleWorkspace's own
-// metrics.map below for exactly which KPI each count fills); every other role still shows the
-// "Live data not yet connected" placeholder until its own real metrics are scoped and built.
-const ROLES_WITH_LIVE_SUMMARY = new Set(["SCHOOL_ADMIN"]);
+type InstitutionSummary = { total: number; active: number };
+
+// The dashboard summary endpoint is explicitly tenant-wide. It is accurate for the
+// single-institution School and College tenants, but must not be used for a university
+// group with several institutions (see DashboardSummaryController).
+const SINGLE_INSTITUTION_SUMMARY_ROLES = new Set([
+  "SCHOOL_ADMIN",
+  "COLLEGE_ADMIN",
+  "SCHOOL_PRINCIPAL",
+  "PRINCIPAL_COLLEGE",
+]);
+
+const ADMIN_ROLES = new Set(["UNIVERSITY_ADMIN", "COLLEGE_ADMIN", "SCHOOL_ADMIN"]);
+const PRINCIPAL_ROLES = new Set(["PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL"]);
 
 export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
   const pendingApprovalCount = useAppSelector(selectPendingApprovalCount);
   const tenantId = useAppSelector((s) => s.auth.user?.tenantId);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [institutionSummary, setInstitutionSummary] = useState<InstitutionSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const role = roleDashboardByCode(roleCode);
 
+  const refresh = useCallback(() => setRefreshVersion((version) => version + 1), []);
+
   useEffect(() => {
-    if (!role || !tenantId || !ROLES_WITH_LIVE_SUMMARY.has(role.code)) return;
+    if (!role || !tenantId) return undefined;
+    const shouldLoadTenantSummary = SINGLE_INSTITUTION_SUMMARY_ROLES.has(role.code);
+    const shouldLoadInstitutions = role.code === "UNIVERSITY_ADMIN";
+    if (!shouldLoadTenantSummary && !shouldLoadInstitutions) return undefined;
+
     let active = true;
-    dashboardService
-      .getSummary(tenantId)
-      .then(({ data }) => {
-        if (active) setSummary(data);
-      })
-      .catch(() => {
-        // Placeholder values stay in place if the summary can't be loaded.
-      });
+    setLoading(true);
+    setLoadError(null);
+
+    const load = async () => {
+      try {
+        if (shouldLoadTenantSummary) {
+          const response = await dashboardService.getSummary(tenantId);
+          if (active) {
+            setSummary(response.data);
+            setInstitutionSummary(null);
+          }
+        } else {
+          const response = await institutionService.listInstitutions(tenantId);
+          if (active) {
+            const items = Array.isArray(response.items) ? response.items : [];
+            setInstitutionSummary({
+              total: Number.isFinite(response.total) ? response.total : items.length,
+              active: items.filter((item) => item.status === "ACTIVE").length,
+            });
+            setSummary(null);
+          }
+        }
+      } catch {
+        if (active) {
+          setLoadError("Live dashboard data could not be loaded. Retry to check the API again.");
+          setSummary(null);
+          setInstitutionSummary(null);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void load();
     return () => {
       active = false;
     };
-  }, [role, tenantId]);
+  }, [role?.code, tenantId, refreshVersion]);
 
   if (!role) return null;
   const content = roleOverrides[role.code] ?? {
@@ -58,26 +105,30 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
   const quickActions = familyQuickActions[role.family] ?? [];
   const showHero = !NO_HERO_ROLES.has(role.code);
 
-  // School Admin's 3 KPIs, in the catalog's own order (see roleDashboardCatalog.ts):
-  // "User and role tasks" -> active users, "Academic setup" -> active sections,
-  // "Institution operations" -> pending approvals (already live for every role below).
-  const schoolAdminMetric = (i: number): { value: string; context: string } | null => {
-    if (role.code !== "SCHOOL_ADMIN") return null;
-    if (i === 0) {
-      return summary
-        ? { value: String(summary.activeUsers), context: "Active users in your tenant" }
-        : null;
+  const liveMetrics = useMemo(() => {
+    if (summary && SINGLE_INSTITUTION_SUMMARY_ROLES.has(role.code)) {
+      return [
+        { label: "Active users", value: String(summary.activeUsers), context: "Active accounts in this institution", icon: "users" },
+        { label: "Active sections", value: String(summary.activeSections), context: "Configured active sections", icon: "layers" },
+        { label: "Approvals assigned", value: String(pendingApprovalCount), context: "Pending items in your approval inbox", icon: "clipboard-check" },
+      ];
     }
-    if (i === 1) {
-      return summary
-        ? { value: String(summary.activeSections), context: "Active sections configured" }
-        : null;
+    if (institutionSummary && role.code === "UNIVERSITY_ADMIN") {
+      return [
+        { label: "Institutions", value: String(institutionSummary.total), context: "Institutions in your university scope", icon: "building-2" },
+        { label: "Active institutions", value: String(institutionSummary.active), context: "Institutions currently active", icon: "check-circle" },
+        { label: "Approvals assigned", value: String(pendingApprovalCount), context: "Pending items in your approval inbox", icon: "clipboard-check" },
+      ];
     }
-    if (i === 2) {
-      return { value: String(pendingApprovalCount), context: "Pending approvals" };
-    }
-    return null;
-  };
+    return content.metrics.map((label, index) => ({
+      label,
+      value: "—",
+      context: index === 0 ? "Live data not connected for this metric" : "Awaiting an implemented, permission-scoped API",
+      icon: index === 1 ? "clock" : index === 2 ? "chart" : "home",
+    }));
+  }, [summary, institutionSummary, role.code, pendingApprovalCount, content.metrics]);
+
+  const isLeadershipDashboard = ADMIN_ROLES.has(role.code) || PRINCIPAL_ROLES.has(role.code);
 
   return (
     <div className="app-dashboard app-page">
@@ -107,40 +158,58 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
 
       <Panel
         title={content.title}
-        description={
-          pendingApprovalCount > 0
-            ? `${pendingApprovalCount} pending approval${pendingApprovalCount !== 1 ? "s" : ""} · AT A GLANCE`
-            : "AT A GLANCE · Key metrics for this role"
-        }
+        description={isLeadershipDashboard ? "LIVE OVERVIEW · Metrics available within your role and institution scope" : "AT A GLANCE · Key metrics for this role"}
       >
         <div className="app-panel__body">
           <div className="kpi-grid">
-            {content.metrics.map((label, i) => {
-              const live = schoolAdminMetric(i);
-              return (
-                <Kpi
-                  key={label}
-                  label={label}
-                  value={
-                    live
-                      ? live.value
-                      : i === 0 && pendingApprovalCount > 0 && label.toLowerCase().includes("approv")
-                        ? String(pendingApprovalCount)
-                        : "—"
-                  }
-                  context={live ? live.context : i === 0 ? "Live data not yet connected" : "Awaiting backend integration"}
-                  icon={i === 1 ? "clock" : i === 2 ? "chart" : "home"}
-                />
-              );
-            })}
+            {liveMetrics.map((metric) => (
+              <Kpi
+                key={metric.label}
+                label={metric.label}
+                value={metric.value}
+                context={metric.context}
+                icon={metric.icon}
+              />
+            ))}
           </div>
+          {isLeadershipDashboard && (
+            <div className="app-dashboard__data-status" aria-live="polite">
+              <span>
+                {loading ? "Updating live data…" : loadError ? loadError : "Approval count is supplied by the live approval inbox."}
+              </span>
+              <button type="button" className="app-dashboard__refresh" onClick={refresh} disabled={loading}>
+                <Icon name="refresh-cw" size={15} />
+                {loading ? "Refreshing" : "Refresh data"}
+              </button>
+            </div>
+          )}
         </div>
       </Panel>
 
+      {content.panels.length > 0 && (
+        <section className="app-role-insights" aria-label={`${role.name} work areas`}>
+          <div className="app-role-insights__heading">
+            <div>
+              <p className="app-eyebrow">{isLeadershipDashboard ? "LEADERSHIP & OPERATIONS" : "ROLE WORKSPACE"}</p>
+              <h2>{PRINCIPAL_ROLES.has(role.code) ? "Institution oversight" : ADMIN_ROLES.has(role.code) ? "Administration work areas" : "Your work areas"}</h2>
+            </div>
+          </div>
+          <div className="app-role-insight-grid">
+            {content.panels.map(([title, eyebrow, description]) => (
+              <article className="app-role-insight" key={title}>
+                <p className="app-eyebrow">{eyebrow}</p>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Panel
         id="workspace-actions"
-        title="Where would you like to go?"
-        description="QUICK NAVIGATION · Available pages for your role"
+        title="Quick navigation"
+        description="AVAILABLE WORKSPACES · Links remain subject to the permissions on each destination"
       >
         <div className="app-action-grid">
           {quickActions.map((action) => (
@@ -150,9 +219,6 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
             </Link>
           ))}
         </div>
-        <p className="app-action-note">
-          Live work-queue data will appear here once backend task integration is complete. Available actions remain controlled by your assigned role and permissions.
-        </p>
       </Panel>
     </div>
   );
