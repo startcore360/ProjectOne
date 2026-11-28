@@ -53,7 +53,7 @@ class ApprovalInboxControllerTest {
     @Test
     @DisplayName("ACT-APPROVAL_INBOX-ALLOW: Approver lists pending steps")
     void actApprovalInbox_allow() {
-        pending(requester);
+        ApprovalRequest requested = pending(requester);
         Authentication auth = t.auth(t.as(principal));
 
         var response = controller.listPendingApprovals(t.tenantId, auth);
@@ -61,6 +61,9 @@ class ApprovalInboxControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().items()).hasSize(1);
         assertThat(response.getBody().items().get(0).approverRoleCode()).isEqualTo("PRINCIPAL_COLLEGE");
+        assertThat(response.getBody().items().get(0).approvalRequestId()).isEqualTo(requested.getId().getApprovalRequestId());
+        assertThat(response.getBody().items().get(0).processCode()).isEqualTo(requested.getProcessCode());
+        assertThat(response.getBody().items().get(0).subjectId()).isEqualTo(requested.getSubjectId());
     }
 
     @Test
