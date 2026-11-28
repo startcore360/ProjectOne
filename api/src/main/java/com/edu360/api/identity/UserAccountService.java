@@ -85,14 +85,16 @@ public class UserAccountService {
         String normalizedEmail = request.email() != null ? request.email().toLowerCase().trim() : null;
         if (normalizedEmail != null && userAccountRepository.existsByIdTenantIdAndEmail(tenantId, normalizedEmail)) {
             throw new DuplicateResourceException(
-                    "A user with email '" + normalizedEmail + "' already exists in this tenant."
+                    "A user with email '" + normalizedEmail + "' already exists in this tenant.",
+                    "email"
             );
         }
 
         if (request.mobile() != null && request.userType() == UserType.GUARDIAN
                 && userAccountRepository.existsByIdTenantIdAndMobile(tenantId, request.mobile().trim())) {
             throw new DuplicateResourceException(
-                    "A guardian with mobile number '" + request.mobile() + "' already exists in this tenant."
+                    "A guardian with mobile number '" + request.mobile() + "' already exists in this tenant.",
+                    "mobile"
             );
         }
 

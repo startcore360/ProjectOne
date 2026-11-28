@@ -203,6 +203,88 @@ class FileServiceTest {
                 .hasMessageContaining("not available");
     }
 
+    // ------------------------------------------------------------ STAFF_ATTENDANCE_SELFIE
+
+    @Test
+    void selfieUploadIsAuthorizedBySubmitAndStoredWithTheSelfiePurpose() {
+        allowUpload();
+        MockMultipartFile upload = new MockMultipartFile("file", "selfie.jpg", "image/jpeg",
+                new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0, 0x10});
+
+        service.upload(principal, upload, "STAFF_ATTENDANCE_SELFIE", null);
+
+        verify(permissions).authorize(any(), eq("STAFF_ATTENDANCE_CHECKIN_SUBMIT"), any(), any());
+        ArgumentCaptor<FileObject> saved = ArgumentCaptor.forClass(FileObject.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getPurpose()).isEqualTo("STAFF_ATTENDANCE_SELFIE");
+        assertThat(saved.getValue().getContentType()).isEqualTo("image/jpeg");
+    }
+
+    @Test
+    void selfieUploadRejectsAPdfEvenThoughPdfIsASafeType() {
+        allowPermission();
+        MockMultipartFile upload = new MockMultipartFile("file", "selfie.pdf", "application/pdf",
+                "%PDF-1.7 sample".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+
+        assertThatThrownBy(() -> service.upload(principal, upload, "STAFF_ATTENDANCE_SELFIE", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("JPG or PNG");
+        verify(storage, never()).store(any(), any(), any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void selfieUploadRejectsFilesAboveFiveMiB() {
+        MockMultipartFile upload = new MockMultipartFile("file", "selfie.jpg", "image/jpeg",
+                new byte[5 * 1024 * 1024 + 1]);
+        assertThatThrownBy(() -> service.upload(principal, upload, "STAFF_ATTENDANCE_SELFIE", null))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("5 MiB");
+        verify(permissions, never()).activeAssignment(any());
+    }
+
+    @Test
+    void selfieViewedByAReviewerIsAuditedAsASensitiveView() {
+        UUID institutionId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(institutionId).purpose("STAFF_ATTENDANCE_SELFIE")
+                .storageKey("tenants/selfie.jpg").originalFilename("selfie.jpg")
+                .contentType("image/jpeg").sizeBytes(8).sha256("hash")
+                .scanStatus("CLEAN").status("ACTIVE").uploadedBy(UUID.randomUUID())
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(true);
+        when(permissions.targetScope(any(), eq(institutionId), eq(null)))
+                .thenReturn(com.edu360.api.rbac.RbacScope.institution(institutionId));
+        when(storage.openRead("tenants/selfie.jpg")).thenReturn(new java.io.ByteArrayInputStream(new byte[]{1}));
+
+        service.download(principal, fileId);
+
+        ArgumentCaptor<AuditEntry> audit = ArgumentCaptor.forClass(AuditEntry.class);
+        verify(auditLog).record(audit.capture());
+        assertThat(audit.getValue().eventType().name()).isEqualTo("SENSITIVE_VIEW");
+        assertThat(audit.getValue().actionCode()).isEqualTo("STAFF_ATTENDANCE_CHECKIN_REVIEW");
+        assertThat(audit.getValue().entityId()).isEqualTo(fileId);
+    }
+
+    @Test
+    void selfieRefusedByTheAccessPolicyIsNeverStreamed() {
+        UUID fileId = UUID.randomUUID();
+        FileObject file = FileObject.builder()
+                .id(new FileObjectId(tenantId, fileId)).institutionId(UUID.randomUUID()).purpose("STAFF_ATTENDANCE_SELFIE")
+                .storageKey("tenants/selfie.jpg").originalFilename("selfie.jpg")
+                .contentType("image/jpeg").sizeBytes(8).sha256("hash")
+                .scanStatus("CLEAN").status("ACTIVE").uploadedBy(UUID.randomUUID())
+                .createdBy(userId).updatedBy(userId).build();
+        when(repository.findById(new FileObjectId(tenantId, fileId))).thenReturn(Optional.of(file));
+        when(accessPolicy.canAccess(file, principal)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.download(principal, fileId)).isInstanceOf(UnauthorizedException.class);
+        verify(storage, never()).openRead(any());
+        verify(auditLog, never()).record(any(AuditEntry.class));
+    }
+
     @Test
     void pendingDownloadDeniesNonUploaderWithoutPurposePermission() {
         UUID institutionId = UUID.randomUUID();

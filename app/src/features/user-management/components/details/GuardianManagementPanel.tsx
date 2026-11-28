@@ -7,12 +7,14 @@ import {
   Modal,
   Notice,
   Panel,
+  PhoneField,
   ErrorState,
   SelectField,
   SkeletonTable,
   TextAreaField,
   TextField,
 } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
 import { getApiErrorMessage } from "../../../../services/apiHelper";
 import {
   guardianService,
@@ -44,6 +46,7 @@ export function GuardianManagementPanel({
   const [relationship, setRelationship] = useState("FATHER");
   const [isPrimary, setIsPrimary] = useState(true);
   const [linking, setLinking] = useState(false);
+  const { fieldErrors, setFieldError, clearFieldError, clearAll, handleApiError } = useFormErrors();
 
   // Change request modal state
   const [changeModalItem, setChangeModalItem] = useState<GuardianLinkItem | null>(null);
@@ -85,6 +88,7 @@ export function GuardianManagementPanel({
       return;
     }
     setLinking(true);
+    clearAll();
     try {
       await guardianService.linkGuardian(
         currentTenantId,
@@ -108,6 +112,7 @@ export function GuardianManagementPanel({
       setEmail("");
       void fetchLinks();
     } catch (err: unknown) {
+      handleApiError(err);
       setFeedback({ tone: "danger", message: getApiErrorMessage(err) });
     } finally {
       setLinking(false);
@@ -204,18 +209,18 @@ export function GuardianManagementPanel({
           >
             {links.map((link) => (
               <tr key={link.studentGuardianLinkId}>
-                <td style={{ padding: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>
                   <strong>{link.guardianName}</strong>
                 </td>
-                <td style={{ padding: "8px" }}>{link.relationship}</td>
-                <td style={{ padding: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>{link.relationship}</td>
+                <td style={{ padding: "var(--space-2)" }}>
                   {link.isPrimary ? (
                     <Badge tone="success">PRIMARY</Badge>
                   ) : (
                     <span style={{ color: "var(--color-text-muted)" }}>—</span>
                   )}
                 </td>
-                <td style={{ padding: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>
                   {link.changeApprovalRequestId ? (
                     <Badge tone="warning">Change Pending</Badge>
                   ) : (
@@ -226,8 +231,8 @@ export function GuardianManagementPanel({
                     </Badge>
                   )}
                 </td>
-                <td style={{ padding: "8px" }}>
-                  <div style={{ display: "flex", gap: "8px" }}>
+                <td style={{ padding: "var(--space-2)" }}>
+                  <div style={{ display: "flex", gap: "var(--space-2)" }}>
                     {link.changeApprovalRequestId ? (
                       <Button
                         variant="secondary"
@@ -276,13 +281,19 @@ export function GuardianManagementPanel({
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <TextField
+            <PhoneField
               id="guardian-mobile"
-              label="Mobile Number *"
+              label="Mobile number"
               required
               value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              placeholder="+919876543210"
+              onChange={(e) => {
+                setMobile(e.target.value);
+                clearFieldError("mobile");
+              }}
+              fieldName="mobile"
+              error={fieldErrors.mobile}
+              setFieldError={setFieldError}
+              clearFieldError={clearFieldError}
             />
           </div>
 
@@ -341,7 +352,7 @@ export function GuardianManagementPanel({
         size="md"
       >
         <form onSubmit={handleRequestChangeSubmit}>
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text-secondary, #666)", marginBottom: "var(--space-3)" }}>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
             Requesting change for guardian: <strong>{changeModalItem?.guardianName}</strong> ({changeModalItem?.relationship})
           </p>
 
@@ -377,16 +388,16 @@ export function GuardianManagementPanel({
         size="md"
       >
         <form onSubmit={handleDecideSubmit}>
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text-secondary, #666)", marginBottom: "var(--space-3)" }}>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>
             Reviewing pending change request for: <strong>{decideModalItem?.guardianName}</strong>
           </p>
 
           <div style={{ marginBottom: "var(--space-4)" }}>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "8px" }}>
+            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-2)" }}>
               Principal Decision
             </label>
-            <div style={{ display: "flex", gap: "16px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <div style={{ display: "flex", gap: "var(--space-4)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", cursor: "pointer" }}>
                 <input
                   type="radio"
                   name="decision"
@@ -395,7 +406,7 @@ export function GuardianManagementPanel({
                 />
                 Approve and block previous guardian access
               </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", cursor: "pointer" }}>
                 <input
                   type="radio"
                   name="decision"

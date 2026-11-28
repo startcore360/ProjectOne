@@ -3,9 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import "./StaffRecordsPage.css";
 import {
   Badge, Button, DateField, EmptyState, ErrorState, Modal, Notice, PageHeader,
-  Pagination, Panel, SearchBox, SelectField, SkeletonCard, SkeletonText, TextAreaField, TextField, DataTable,
+  Pagination, Panel, PhoneField, SearchBox, SelectField, SkeletonCard, SkeletonText, TextAreaField, TextField, DataTable,
 } from "../../../design-system/components";
 import { getApiErrorMessage } from "../../../services/apiHelper";
+import { useFormErrors } from "../../../hooks";
 import { useAppSelector } from "../../../store/hooks";
 import { useTenantAccess } from "../../profile/hooks/useTenantAccess";
 import { FileDrop } from "../../../components/common/FileDrop";
@@ -14,6 +15,7 @@ import {
   staffService, type StaffAssignment, type StaffDocument, type StaffProfile,
   type StaffProfilePayload, type StaffServiceRecord,
 } from "../api/staffService";
+import { institutionService, type InstitutionItem, type DepartmentItem } from "../api/institutionService";
 import { getLocalDateString } from "../../../utils/dateUtils";
 
 type LoadState = "idle" | "loading" | "loaded" | "error";
@@ -95,6 +97,21 @@ export default function StaffRecordsPage() {
   const [draft, setDraft] = useState<StaffProfilePayload>({ fullName: "", officialEmail: "", employmentStatus: "ACTIVE", joinedOn: today() });
   const [profileDraft, setProfileDraft] = useState<StaffProfilePayload | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const {
+    fieldErrors: editFieldErrors,
+    setFieldError: setEditFieldError,
+    clearFieldError: clearEditFieldError,
+    clearAll: clearEditAll,
+    handleApiError: handleEditApiError,
+  } = useFormErrors();
+
+  const {
+    fieldErrors: createFieldErrors,
+    setFieldError: setCreateFieldError,
+    clearFieldError: clearCreateFieldError,
+    clearAll: clearCreateAll,
+    handleApiError: handleCreateApiError,
+  } = useFormErrors();
   const [assignmentDraft, setAssignmentDraft] = useState({ institutionId: "", departmentId: "", designation: "", effectiveFrom: today() });
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [documentType, setDocumentType] = useState("DEGREE");
@@ -109,7 +126,30 @@ export default function StaffRecordsPage() {
   });
   const [savingService, setSavingService] = useState(false);
   const [newStaffCreds, setNewStaffCreds] = useState<ProvisionedUserCredentials | null>(null);
+  const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const latestStaffIdRef = useRef<string | null>(staffId ?? null);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let active = true;
+    institutionService.listInstitutions(tenantId)
+      .then((res) => { if (active) setInstitutions(res.items ?? []); })
+      .catch(() => { if (active) setInstitutions([]); });
+    return () => { active = false; };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId || !assignmentDraft.institutionId) {
+      setDepartments([]);
+      return;
+    }
+    let active = true;
+    institutionService.listDepartments(tenantId, assignmentDraft.institutionId)
+      .then((res) => { if (active) setDepartments(Array.isArray(res) ? res : []); })
+      .catch(() => { if (active) setDepartments([]); });
+    return () => { active = false; };
+  }, [tenantId, assignmentDraft.institutionId]);
 
   const loadDirectory = useCallback(async (search: string) => {
     if (!tenantId) return;
@@ -184,6 +224,7 @@ export default function StaffRecordsPage() {
     if (!draft.fullName?.trim()) { setCreateError("Enter the staff member’s full name."); return; }
     setCreating(true);
     setCreateError("");
+    clearCreateAll();
     try {
       const created = await staffService.create(tenantId, {
         ...draft, fullName: draft.fullName.trim(), officialEmail: draft.officialEmail?.trim(),
@@ -207,6 +248,7 @@ export default function StaffRecordsPage() {
           : "No role was assigned — assign a staff role before granting application access.",
       });
     } catch (error) {
+      handleCreateApiError(error);
       setCreateError(getApiErrorMessage(error));
     } finally { setCreating(false); }
   };
@@ -216,6 +258,7 @@ export default function StaffRecordsPage() {
     if (!tenantId || !selected || !profileDraft || !etag) return;
     setSavingProfile(true);
     setFeedback(null);
+    clearEditAll();
     try {
       const result = await staffService.update(tenantId, selected.id, etag, {
         ...profileDraft, fullName: profileDraft.fullName?.trim(),
@@ -231,6 +274,7 @@ export default function StaffRecordsPage() {
       setFeedback({ tone: "success", message: "Staff profile updated." });
       await loadDirectory(query);
     } catch (error) {
+      handleEditApiError(error);
       const statusCode = (error as { response?: { status?: number } })?.response?.status;
       setFeedback({ tone: "danger", message: statusCode === 409 || statusCode === 412
         ? "This staff profile changed after you opened it. Reload the record before saving."
@@ -385,9 +429,44 @@ export default function StaffRecordsPage() {
                 {profileDraft && <form onSubmit={saveProfile} className="app-form">
                   <div className="app-form-grid">
                     <TextField id="staff-edit-code" label="Staff code" value={profileDraft.staffCode ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, staffCode: e.target.value })} disabled={!canManage} />
-                    <TextField id="staff-edit-name" label="Full name" required value={profileDraft.fullName ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, fullName: e.target.value })} disabled={!canManage} />
-                    <TextField id="staff-edit-email" label="Personal email" type="email" value={profileDraft.personalEmail ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, personalEmail: e.target.value })} disabled={!canManage} />
-                    <TextField id="staff-edit-mobile" label="Personal mobile (E.164)" value={profileDraft.personalMobile ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, personalMobile: e.target.value })} disabled={!canManage} />
+                    <TextField
+                      id="staff-edit-name"
+                      label="Full name"
+                      required
+                      value={profileDraft.fullName ?? ""}
+                      onChange={(e) => setProfileDraft({ ...profileDraft, fullName: e.target.value })}
+                      disabled={!canManage}
+                      fieldName="fullName"
+                      error={editFieldErrors.fullName}
+                      setFieldError={setEditFieldError}
+                      clearFieldError={clearEditFieldError}
+                    />
+                    <TextField
+                      id="staff-edit-email"
+                      label="Personal email"
+                      type="email"
+                      value={profileDraft.personalEmail ?? ""}
+                      onChange={(e) => setProfileDraft({ ...profileDraft, personalEmail: e.target.value })}
+                      disabled={!canManage}
+                      fieldName="personalEmail"
+                      error={editFieldErrors.personalEmail}
+                      setFieldError={setEditFieldError}
+                      clearFieldError={clearEditFieldError}
+                    />
+                    <PhoneField
+                      id="staff-edit-mobile"
+                      label="Mobile number"
+                      value={profileDraft.personalMobile ?? ""}
+                      onChange={(e) => {
+                        setProfileDraft({ ...profileDraft, personalMobile: e.target.value });
+                        clearEditFieldError("personalMobile");
+                      }}
+                      disabled={!canManage}
+                      fieldName="personalMobile"
+                      error={editFieldErrors.personalMobile}
+                      setFieldError={setEditFieldError}
+                      clearFieldError={clearEditFieldError}
+                    />
                     <DateField id="staff-edit-dob" label="Date of birth" value={profileDraft.dateOfBirth ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, dateOfBirth: e.target.value })} disabled={!canManage} />
                     <TextField id="staff-edit-national" label="National ID (last four only)" maxLength={4} value={profileDraft.nationalIdLast4 ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, nationalIdLast4: e.target.value.replace(/\D/g, "") })} disabled={!canManage} />
                     <SelectField id="staff-edit-status" label="Employment status" value={profileDraft.employmentStatus ?? "ACTIVE"} onChange={(e) => setProfileDraft({ ...profileDraft, employmentStatus: e.target.value })} disabled={!canManage}
@@ -408,8 +487,33 @@ export default function StaffRecordsPage() {
                 )}
                 {canManage && <form onSubmit={addAssignment} className="app-form app-form-divider">
                   <div className="app-form-grid">
-                    <TextField id="staff-inst-id" label="Institution ID (optional)" value={assignmentDraft.institutionId} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, institutionId: e.target.value })} />
-                    <TextField id="staff-dept-id" label="Department ID (optional)" value={assignmentDraft.departmentId} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, departmentId: e.target.value })} />
+                    <SelectField
+                      id="staff-inst-id"
+                      label="Institution (optional)"
+                      value={assignmentDraft.institutionId}
+                      onChange={(e) => setAssignmentDraft({ ...assignmentDraft, institutionId: e.target.value, departmentId: "" })}
+                    >
+                      <option value="">Tenant-wide (no institution)</option>
+                      {institutions.map((inst) => (
+                        <option key={inst.institutionId} value={inst.institutionId}>
+                          {inst.institutionName} ({inst.institutionCode})
+                        </option>
+                      ))}
+                    </SelectField>
+                    <SelectField
+                      id="staff-dept-id"
+                      label="Department (optional)"
+                      value={assignmentDraft.departmentId}
+                      onChange={(e) => setAssignmentDraft({ ...assignmentDraft, departmentId: e.target.value })}
+                      disabled={!assignmentDraft.institutionId}
+                    >
+                      <option value="">No department</option>
+                      {departments.map((dept) => (
+                        <option key={dept.departmentId} value={dept.departmentId}>
+                          {dept.departmentName} ({dept.departmentCode})
+                        </option>
+                      ))}
+                    </SelectField>
                     <TextField id="staff-designation" label="Designation" required value={assignmentDraft.designation} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, designation: e.target.value })} />
                     <DateField id="staff-assignment-start" label="Effective from" required value={assignmentDraft.effectiveFrom} onChange={(e) => setAssignmentDraft({ ...assignmentDraft, effectiveFrom: e.target.value })} />
                   </div>
@@ -480,12 +584,55 @@ export default function StaffRecordsPage() {
         <form onSubmit={createStaff} className="app-form">
           {createError && <Notice tone="danger">{createError}</Notice>}
           <div className="app-form-grid">
-            <TextField id="new-staff-full-name" label="Full name" required value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} />
+            <TextField
+              id="new-staff-full-name"
+              label="Full name"
+              required
+              value={draft.fullName}
+              onChange={(e) => setDraft({ ...draft, fullName: e.target.value })}
+              fieldName="fullName"
+              error={createFieldErrors.fullName}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
             <TextField id="new-staff-code" label="Staff code (optional)" value={draft.staffCode ?? ""} onChange={(e) => setDraft({ ...draft, staffCode: e.target.value })} />
-            <TextField id="new-staff-official-email" label="Official email (login)" type="email" required value={draft.officialEmail ?? ""} onChange={(e) => setDraft({ ...draft, officialEmail: e.target.value })} />
-            <TextField id="new-staff-personal-email" label="Personal email (secondary login after verification)" type="email" value={draft.personalEmail ?? ""} onChange={(e) => setDraft({ ...draft, personalEmail: e.target.value })} />
+            <TextField
+              id="new-staff-official-email"
+              label="Official email (login)"
+              type="email"
+              required
+              value={draft.officialEmail ?? ""}
+              onChange={(e) => setDraft({ ...draft, officialEmail: e.target.value })}
+              fieldName="officialEmail"
+              error={createFieldErrors.officialEmail}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
+            <TextField
+              id="new-staff-personal-email"
+              label="Personal email (secondary login after verification)"
+              type="email"
+              value={draft.personalEmail ?? ""}
+              onChange={(e) => setDraft({ ...draft, personalEmail: e.target.value })}
+              fieldName="personalEmail"
+              error={createFieldErrors.personalEmail}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
             <TextField id="new-staff-role" label="Initial role code (optional)" value={draft.initialRoleCode ?? ""} onChange={(e) => setDraft({ ...draft, initialRoleCode: e.target.value })} />
-            <TextField id="new-staff-mobile" label="Personal mobile (E.164)" value={draft.personalMobile ?? ""} onChange={(e) => setDraft({ ...draft, personalMobile: e.target.value })} />
+            <PhoneField
+              id="new-staff-mobile"
+              label="Mobile number"
+              value={draft.personalMobile ?? ""}
+              onChange={(e) => {
+                setDraft({ ...draft, personalMobile: e.target.value });
+                clearCreateFieldError("personalMobile");
+              }}
+              fieldName="personalMobile"
+              error={createFieldErrors.personalMobile}
+              setFieldError={setCreateFieldError}
+              clearFieldError={clearCreateFieldError}
+            />
             <DateField id="new-staff-dob" label="Date of birth" value={draft.dateOfBirth ?? ""} onChange={(e) => setDraft({ ...draft, dateOfBirth: e.target.value })} />
             <TextField id="new-staff-national-id" label="National ID (last four only)" maxLength={4} value={draft.nationalIdLast4 ?? ""} onChange={(e) => setDraft({ ...draft, nationalIdLast4: e.target.value.replace(/\D/g, "") })} />
             <DateField id="new-staff-joined-on" label="Joined on" value={draft.joinedOn ?? ""} onChange={(e) => setDraft({ ...draft, joinedOn: e.target.value })} />

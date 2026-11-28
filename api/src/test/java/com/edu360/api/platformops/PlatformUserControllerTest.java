@@ -141,7 +141,7 @@ class PlatformUserControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         org.mockito.Mockito.verify(keycloakAdminClient)
-                .clearBruteForceLockout("edu360-platform", "kc-staff");
+                .restoreSignIn("edu360-platform", "kc-staff");
     }
 
     @Test
@@ -168,6 +168,7 @@ class PlatformUserControllerTest {
         org.mockito.Mockito.verify(keycloakAdminClient).resetPassword(
                 eq("edu360-platform"), eq("kc-owner-2"), anyString(), eq(true));
         org.mockito.Mockito.verify(keycloakAdminClient).logoutUser("edu360-platform", "kc-owner-2");
+        org.mockito.Mockito.verify(keycloakAdminClient).restoreSignIn("edu360-platform", "kc-owner-2");
     }
 
     @Test

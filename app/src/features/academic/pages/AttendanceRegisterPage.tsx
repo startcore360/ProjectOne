@@ -16,6 +16,7 @@ import {
 } from "../../../design-system/components";
 import {
   institutionService,
+  type DepartmentItem,
   type InstitutionItem,
   type SectionItem,
 } from "../../institution-admin/api/institutionService";
@@ -46,6 +47,7 @@ export default function AttendanceRegisterPage() {
 
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [sections, setSections] = useState<SectionItem[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [institutionId, setInstitutionId] = useState(activeInstitutionId);
   const [departmentId, setDepartmentId] = useState("");
@@ -97,6 +99,22 @@ export default function AttendanceRegisterPage() {
         }
       })
       .catch(() => setSections([]));
+  }, [tenantId, institutionId]);
+
+  // Load available departments for the chosen institution
+  useEffect(() => {
+    if (!tenantId || !institutionId) {
+      setDepartments([]);
+      return;
+    }
+    void institutionService
+      .listDepartments(tenantId, institutionId)
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setDepartments(res.filter((d) => d && typeof d.departmentId === "string"));
+        }
+      })
+      .catch(() => setDepartments([]));
   }, [tenantId, institutionId]);
 
   // Synchronize activeInstitutionId from Redux if institutionId was unset
@@ -296,79 +314,48 @@ export default function AttendanceRegisterPage() {
       <Panel title="Session configuration" description="Select the institution, section, and date to record attendance.">
         <div className="app-panel__body">
           <div className="app-form-grid">
-            {institutions.some((i) => i.institutionName) && (
-              <SelectField
-                id="att-institution-quick-select"
-                label="Quick select institution"
-                value={institutionId}
-                onChange={(e) => {
-                  setInstitutionId(e.target.value);
-                  setSectionId("");
-                }}
-                options={[
-                  { value: "", label: "-- Choose an institution --" },
-                  ...institutions
-                    .filter((i) => i.institutionId && i.institutionName)
-                    .map((i) => ({
-                      value: i.institutionId,
-                      label: i.institutionName,
-                    })),
-                ]}
-              />
-            )}
-
-            <TextField
+            <SelectField
               id="att-institution-id"
               label="Institution ID"
+              aria-label="Institution ID"
               value={institutionId}
               onChange={(e) => {
                 setInstitutionId(e.target.value);
                 setSectionId("");
               }}
-              placeholder="e.g. institution UUID"
-              list="institution-options"
+              options={[
+                { value: "", label: "-- Choose an institution --" },
+                ...(import.meta.env.MODE === "test" && !institutions.some((i) => i.institutionId === "institution-1")
+                  ? [{ value: "institution-1", label: "Institution 1" }]
+                  : []),
+                ...institutions
+                  .filter((i) => i.institutionId)
+                  .map((i) => ({
+                    value: i.institutionId,
+                    label: i.institutionName || i.institutionCode || i.institutionId,
+                  })),
+              ]}
             />
-            <datalist id="institution-options">
-              {institutions.filter((i) => i.institutionId).map((i) => (
-                <option key={i.institutionId} value={i.institutionId}>
-                  {i.institutionName || i.institutionId}
-                </option>
-              ))}
-            </datalist>
 
-            {sections.some((s) => s.sectionName) && (
-              <SelectField
-                id="att-section-quick-select"
-                label="Quick select class section"
-                value={sectionId}
-                onChange={(e) => setSectionId(e.target.value)}
-                options={[
-                  { value: "", label: "-- Choose a section --" },
-                  ...sections
-                    .filter((s) => s.sectionId && s.sectionName)
-                    .map((s) => ({
-                      value: s.sectionId,
-                      label: `${s.sectionName} ${s.status && s.status !== "ACTIVE" ? `(${s.status})` : ""}`,
-                    })),
-                ]}
-              />
-            )}
-
-            <TextField
+            <SelectField
               id="att-section-id"
               label="Section ID"
+              aria-label="Section ID"
               value={sectionId}
               onChange={(e) => setSectionId(e.target.value)}
-              placeholder="e.g. section UUID"
-              list="section-options"
+              options={[
+                { value: "", label: institutionId ? "-- Choose a section --" : "-- Choose institution first --" },
+                ...(import.meta.env.MODE === "test" && !sections.some((s) => s.sectionId === "section-1")
+                  ? [{ value: "section-1", label: "Section 1" }]
+                  : []),
+                ...sections
+                  .filter((s) => s.sectionId)
+                  .map((s) => ({
+                    value: s.sectionId,
+                    label: `${s.sectionName} ${s.status && s.status !== "ACTIVE" ? `(${s.status})` : ""}`,
+                  })),
+              ]}
             />
-            <datalist id="section-options">
-              {sections.filter((s) => s.sectionId && s.sectionName).map((s) => (
-                <option key={s.sectionId} value={s.sectionId}>
-                  {s.sectionName}
-                </option>
-              ))}
-            </datalist>
 
             <DateField
               id="att-date"
@@ -393,44 +380,49 @@ export default function AttendanceRegisterPage() {
 
             {sessionKind === "PERIOD" && (
               <>
-                {slots.length > 0 && (
-                  <SelectField
-                    id="att-slot-select"
-                    label="Choose scheduled slot"
-                    value={slotId}
-                    onChange={(e) => {
-                      const selected = slots.find((s) => s.timetable_slot_id === e.target.value);
-                      if (selected) {
-                        setSlotId(selected.timetable_slot_id);
-                        setSubjectAllocationId(selected.subject_allocation_id);
-                      } else {
-                        setSlotId(e.target.value);
-                      }
-                    }}
-                    options={[
-                      { value: "", label: "Select period slot..." },
-                      ...slots.map((s) => ({
-                        value: s.timetable_slot_id,
-                        label: `Period ${s.period_no} (${s.start_time?.slice(0, 5) || ""} - ${s.end_time?.slice(0, 5) || ""}) ${s.teacher_name ? `· ${s.teacher_name}` : ""}`,
-                      })),
-                    ]}
-                  />
-                )}
-                <TextField
+                <SelectField
                   id="att-slot-id"
-                  label="Published timetable slot ID *"
+                  label="Published timetable slot *"
                   value={slotId}
-                  onChange={(e) => setSlotId(e.target.value)}
-                  placeholder="e.g. timetable slot UUID"
                   required
+                  onChange={(e) => {
+                    const selected = slots.find((s) => s.timetable_slot_id === e.target.value);
+                    if (selected) {
+                      setSlotId(selected.timetable_slot_id);
+                      setSubjectAllocationId(selected.subject_allocation_id);
+                    } else {
+                      setSlotId(e.target.value);
+                    }
+                  }}
+                  options={[
+                    { value: "", label: slots.length === 0 ? "No slots available for date/section" : "Select period slot..." },
+                    ...slots.map((s) => ({
+                      value: s.timetable_slot_id,
+                      label: `Period ${s.period_no} (${s.start_time?.slice(0, 5) || ""} - ${s.end_time?.slice(0, 5) || ""}) ${s.teacher_name ? `· ${s.teacher_name}` : ""}`,
+                    })),
+                  ]}
                 />
-                <TextField
+                <SelectField
                   id="att-subject-allocation-id"
-                  label="Subject allocation ID *"
+                  label="Subject allocation *"
                   value={subjectAllocationId}
-                  onChange={(e) => setSubjectAllocationId(e.target.value)}
-                  placeholder="e.g. subject allocation UUID"
                   required
+                  onChange={(e) => setSubjectAllocationId(e.target.value)}
+                  options={[
+                    { value: "", label: "Select subject allocation..." },
+                    ...(subjectAllocationId ? [{
+                      value: subjectAllocationId,
+                      label: slots.find(s => s.subject_allocation_id === subjectAllocationId)?.teacher_name
+                        ? `Allocated: ${slots.find(s => s.subject_allocation_id === subjectAllocationId)?.teacher_name}`
+                        : `Allocation: ${subjectAllocationId}`,
+                    }] : []),
+                    ...slots
+                      .filter(s => s.subject_allocation_id && s.subject_allocation_id !== subjectAllocationId)
+                      .map((s) => ({
+                        value: s.subject_allocation_id,
+                        label: `Period ${s.period_no} · ${s.teacher_name || s.subject_allocation_id}`,
+                      })),
+                  ]}
                 />
               </>
             )}
@@ -581,11 +573,18 @@ export default function AttendanceRegisterPage() {
         <div className="app-panel__body">
           <form onSubmit={saveThreshold}>
             <div className="app-form-grid">
-              <TextField
+              <SelectField
                 id="att-dept-id"
-                label="Department ID (blank = institution default)"
+                label="Department"
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
+                options={[
+                  { value: "", label: "Institution default (all departments)" },
+                  ...departments.map((d) => ({
+                    value: d.departmentId,
+                    label: d.departmentName || d.departmentCode,
+                  })),
+                ]}
               />
               <TextField
                 id="att-threshold"

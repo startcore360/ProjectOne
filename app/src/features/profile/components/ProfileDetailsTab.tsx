@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import axios from "axios";
-import { Button, Notice, TextField } from "../../../design-system/components";
+import { Button, Notice, PhoneField, TextField } from "../../../design-system/components";
+import { useFormErrors } from "../../../hooks";
 import { getApiErrorMessage } from "../../../services/apiHelper";
 import { profileService, type ProfileResponse } from "../api/profileService";
 import { LockIcon, PencilIcon } from "./ProfileIcons";
@@ -44,7 +45,7 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [mobile, setMobile] = useState(profile.mobile ?? "");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const { fieldErrors, setFieldError, clearFieldError, clearAll } = useFormErrors();
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -62,14 +63,14 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
   const startEdit = () => {
     setDisplayName(profile.displayName);
     setMobile(profile.mobile ?? "");
-    setFieldErrors({});
+    clearAll();
     setSaveError(null);
     setEditing(true);
   };
 
   const cancel = () => {
     setEditing(false);
-    setFieldErrors({});
+    clearAll();
     setSaveError(null);
     onDirtyChange(false);
   };
@@ -87,8 +88,12 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
     e.preventDefault();
     setSaveError(null);
     const clientErrors = validate();
-    setFieldErrors(clientErrors);
-    if (Object.keys(clientErrors).length > 0) return;
+    clearAll();
+    if (Object.keys(clientErrors).length > 0) {
+      if (clientErrors.displayName) setFieldError("displayName", clientErrors.displayName);
+      if (clientErrors.mobile) setFieldError("mobile", clientErrors.mobile);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -101,8 +106,12 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
       onDirtyChange(false);
     } catch (err) {
       const backendErrors = backendFieldErrors(err);
-      if (backendErrors) setFieldErrors(backendErrors);
-      else setSaveError(friendlyError(err));
+      if (backendErrors) {
+        if (backendErrors.displayName) setFieldError("displayName", backendErrors.displayName);
+        if (backendErrors.mobile) setFieldError("mobile", backendErrors.mobile);
+      } else {
+        setSaveError(friendlyError(err));
+      }
     } finally {
       setSaving(false);
     }
@@ -174,17 +183,25 @@ export function ProfileDetailsTab({ profile, isPlatform, onSaved, onDirtyChange 
               disabled={saving}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              fieldName="displayName"
               error={fieldErrors.displayName}
+              setFieldError={setFieldError}
+              clearFieldError={clearFieldError}
             />
             {!isPlatform && !isGuardian && (
-              <TextField
+              <PhoneField
                 id="profile-mobile"
-                label="Mobile"
-                placeholder="+15551234567"
+                label="Mobile number"
                 disabled={saving}
                 value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
+                onChange={(e) => {
+                  setMobile(e.target.value);
+                  clearFieldError("mobile");
+                }}
+                fieldName="mobile"
                 error={fieldErrors.mobile}
+                setFieldError={setFieldError}
+                clearFieldError={clearFieldError}
               />
             )}
           </div>

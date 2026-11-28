@@ -126,17 +126,44 @@ class PlatformUserUpdateTest {
                 new PlatformUserUpdateRequest(null, null, null, PlatformUserStatus.ACTIVE), OWNER);
 
         assertThat(res.status()).isEqualTo(PlatformUserStatus.ACTIVE);
-        verify(keycloak).setUserEnabledStrict("edu360-platform", "kc-staff", true);
+        verify(keycloak).restoreSignIn("edu360-platform", "kc-staff");
+        verify(keycloak, never()).setUserEnabledStrict(anyString(), anyString(), anyBoolean());
         verify(auditWriter).record(eq(OWNER), isNull(), eq("PLATFORM_USER_UPDATED"), eq("UPDATE"),
                 eq("PLATFORM_USER_MANAGE"), eq("platform_user"), eq(staffId), eq(PlatformAuditWriter.SUCCESS),
                 argThat(changes -> changes.get("status").equals(Map.of("old", "INACTIVE", "new", "ACTIVE"))));
     }
 
     @Test
-    void unlockingClearsOnlyTheKeycloakBruteForceLockoutAndAuditsIt() {
+    void ifKeycloakCannotRestoreSignInTheAccountStaysInactive() {
+        PlatformUser inactive = PlatformUser.builder()
+                .platformUserId(staffId).fullName("Staff").email("staff@edu360.test").identitySubject("kc-staff")
+                .platformRole(PlatformRole.BILLING_MANAGER).status(PlatformUserStatus.INACTIVE).build();
+        when(users.findById(staffId)).thenReturn(Optional.of(inactive));
+        doThrow(new KeycloakProvisioningException("down")).when(keycloak).restoreSignIn(anyString(), anyString());
+
+        assertThatThrownBy(() -> service.updatePlatformUser(staffId,
+                new PlatformUserUpdateRequest(null, null, null, PlatformUserStatus.ACTIVE), OWNER))
+                .isInstanceOf(KeycloakProvisioningException.class);
+
+        verify(users, never()).save(any());
+    }
+
+    @Test
+    void ifKeycloakCannotRestoreSignInUnlockReportsFailureAndWritesNoSuccessAudit() {
+        doThrow(new KeycloakProvisioningException("down")).when(keycloak).restoreSignIn(anyString(), anyString());
+
+        assertThatThrownBy(() -> service.unlockPlatformUser(staffId, OWNER))
+                .isInstanceOf(KeycloakProvisioningException.class);
+
+        verify(auditWriter, never()).record(any(), any(), eq("PLATFORM_USER_UNLOCKED"), anyString(), anyString(),
+                anyString(), any(), anyString());
+    }
+
+    @Test
+    void unlockingRestoresSignInWithoutTouchingPasswordOrMfaAndAuditsIt() {
         service.unlockPlatformUser(staffId, OWNER);
 
-        verify(keycloak).clearBruteForceLockout("edu360-platform", "kc-staff");
+        verify(keycloak).restoreSignIn("edu360-platform", "kc-staff");
         verify(keycloak, never()).resetPassword(anyString(), anyString(), anyString(), anyBoolean());
         verify(keycloak, never()).logoutUser(anyString(), anyString());
         verify(users, never()).save(any());
@@ -150,7 +177,7 @@ class PlatformUserUpdateTest {
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("own platform account");
 
-        verify(keycloak, never()).clearBruteForceLockout(anyString(), anyString());
+        verify(keycloak, never()).restoreSignIn(anyString(), anyString());
     }
 
     @Test
@@ -163,7 +190,7 @@ class PlatformUserUpdateTest {
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessageContaining("Reactivate this platform account");
 
-        verify(keycloak, never()).clearBruteForceLockout(anyString(), anyString());
+        verify(keycloak, never()).restoreSignIn(anyString(), anyString());
     }
 
     @Test

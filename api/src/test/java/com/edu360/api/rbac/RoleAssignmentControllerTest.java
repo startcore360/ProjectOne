@@ -293,6 +293,51 @@ class RoleAssignmentControllerTest {
         );
     }
 
+    private RoleDefinition adminRoleDefinition(String roleCode, String roleName, RoleLevel level) {
+        RoleDefinition roleDefinition = RoleDefinition.builder()
+                .id(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID))
+                .roleCode(roleCode).roleName(roleName)
+                .roleOrigin(RoleOrigin.STANDARD).roleLevel(level)
+                .status(RoleDefinitionStatus.ACTIVE).build();
+        when(userAccountRepository.findById(new UserAccountId(TENANT_ID, TARGET_USER_ID)))
+                .thenReturn(Optional.of(mock(UserAccount.class)));
+        when(roleDefinitionRepository.findById(new RoleDefinitionId(TENANT_ID, ROLE_DEF_ID)))
+                .thenReturn(Optional.of(roleDefinition));
+        return roleDefinition;
+    }
+
+    @Test
+    @DisplayName("TPA-06: School Admin and College Admin cannot be assigned to the whole tenant, only to an institution")
+    void actRoleAssign_guard_adminRolesRequireAnInstitution() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID);
+        for (String[] role : new String[][] {
+                {"SCHOOL_ADMIN", "School Admin"}, {"COLLEGE_ADMIN", "College Admin"}}) {
+            adminRoleDefinition(role[0], role[1], role[0].startsWith("SCHOOL") ? RoleLevel.SCHOOL : RoleLevel.COLLEGE);
+            AssignRoleRequest request = new AssignRoleRequest(ROLE_DEF_ID, null, ScopeType.TENANT, null, null, null, null);
+
+            assertThatThrownBy(() -> controller.assignRole(TENANT_ID, TARGET_USER_ID, request, auth))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "ADMIN_ROLE_REQUIRES_INSTITUTION");
+        }
+        verify(userRoleAssignmentRepository, org.mockito.Mockito.never()).save(any(UserRoleAssignment.class));
+    }
+
+    @Test
+    @DisplayName("TPA-06: School Admin can still be assigned to one institution")
+    void actRoleAssign_allow_schoolAdminAtInstitution() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID);
+        adminRoleDefinition("SCHOOL_ADMIN", "School Admin", RoleLevel.SCHOOL);
+        when(userRoleAssignmentRepository.save(any(UserRoleAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+        AssignRoleRequest request = new AssignRoleRequest(
+                ROLE_DEF_ID, null, ScopeType.INSTITUTION, INSTITUTION_ID, null, null, null);
+
+        ResponseEntity<UserRoleAssignmentResponse> response =
+                controller.assignRole(TENANT_ID, TARGET_USER_ID, request, auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().roleCode()).isEqualTo("SCHOOL_ADMIN");
+    }
+
     @Test
     @DisplayName("ACT-ROLE_ASSIGN-GUARD: Self-end assignment attempt is rejected with 403 (Addendum Rule 11)")
     void actRoleAssign_guard_selfEndForbidden() {

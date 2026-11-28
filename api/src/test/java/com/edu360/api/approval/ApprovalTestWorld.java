@@ -39,6 +39,11 @@ import com.edu360.api.institution.InstitutionId;
 import com.edu360.api.institution.InstitutionRepository;
 import com.edu360.api.institution.InstitutionService;
 import com.edu360.api.institution.LeaveApproverSettingRepository;
+import com.edu360.api.institution.StaffAssignment;
+import com.edu360.api.institution.StaffAssignmentRepository;
+import com.edu360.api.institution.StaffProfile;
+import com.edu360.api.institution.StaffProfileId;
+import com.edu360.api.institution.StaffProfileRepository;
 import com.edu360.api.rbac.AssignmentStatus;
 import com.edu360.api.rbac.RbacTestWorld;
 import com.edu360.api.rbac.ScopeType;
@@ -82,6 +87,11 @@ final class ApprovalTestWorld {
     final PromotionRunRepository promotionRunRepository = mock(PromotionRunRepository.class);
     final ApprovalRequestRepository requestRepository = mock(ApprovalRequestRepository.class);
     final ApprovalStepRepository stepRepository = mock(ApprovalStepRepository.class);
+    final StaffProfileRepository staffProfileRepository = mock(StaffProfileRepository.class);
+    final StaffAssignmentRepository staffAssignmentRepository = mock(StaffAssignmentRepository.class);
+    final Map<UUID, StaffProfile> staffProfiles = new LinkedHashMap<>();
+    final List<StaffAssignment> staffAssignments = new ArrayList<>();
+    final ApprovalScopeResolver scopeResolver;
 
     ApprovalTestWorld() {
         DelegationRepository delegationRepository = mock(DelegationRepository.class);
@@ -198,8 +208,17 @@ final class ApprovalTestWorld {
 
         routing = new ApprovalRouting(delegationRepository, w.evaluator, w.roleDefinitionRepository,
                 w.userRoleAssignmentRepository, overrideRepository, defaultRepository, institutionRepository);
+        // -- staff profiles / assignments (the department a staff-originated request belongs to)
+        lenient().when(staffProfileRepository.findByIdTenantIdAndUserAccountId(any(), any())).thenAnswer(inv ->
+                staffProfiles.values().stream().filter(p -> p.getId().getTenantId().equals(inv.getArgument(0))
+                        && p.getUserAccountId().equals(inv.getArgument(1))).findFirst());
+        lenient().when(staffAssignmentRepository.findByTenantIdAndStaffProfileIdOrderByEffectiveFromDesc(any(), any()))
+                .thenAnswer(inv -> staffAssignments.stream().filter(a -> a.getTenantId().equals(inv.getArgument(0))
+                        && a.getStaffProfileId().equals(inv.getArgument(1))).toList());
+
+        scopeResolver = new ApprovalScopeResolver(w.evaluator, staffProfileRepository, staffAssignmentRepository);
         inbox = new ApprovalInboxService(requestRepository, stepRepository, w.auditLogService, linkRepository,
-                institutionRepository, promotionRunRepository, w.evaluator, routing, leaveRepository);
+                institutionRepository, promotionRunRepository, w.evaluator, routing, leaveRepository, scopeResolver);
         delegation = new ApprovalDelegationService(delegationRepository, batchRepository, w.evaluator,
                 w.auditLogService, w.userAccountRepository, requestRepository, inbox);
         guardian = new GuardianLinkService(linkRepository, profileRepository, w.evaluator, w.auditLogService,
@@ -230,6 +249,29 @@ final class ApprovalTestWorld {
         UUID u = w.user(name);
         w.assign(u, roleCode, scope, institutionId, null);
         return u;
+    }
+
+    /** Gives the user a staff profile with one ACTIVE staff assignment in the institution/department. */
+    StaffAssignment staffAssignment(UUID userId, UUID institutionId, UUID departmentId) {
+        StaffProfile profile = staffProfiles.values().stream().filter(p -> p.getUserAccountId().equals(userId))
+                .findFirst().orElseGet(() -> {
+                    StaffProfile p = new StaffProfile();
+                    p.setId(new StaffProfileId(tenantId, UUID.randomUUID()));
+                    p.setUserAccountId(userId);
+                    staffProfiles.put(p.getStaffProfileId(), p);
+                    return p;
+                });
+        StaffAssignment a = new StaffAssignment();
+        a.setStaffAssignmentId(UUID.randomUUID());
+        a.setTenantId(tenantId);
+        a.setStaffProfileId(profile.getStaffProfileId());
+        a.setInstitutionId(institutionId);
+        a.setDepartmentId(departmentId);
+        a.setDesignation("Faculty");
+        a.setEffectiveFrom(java.time.LocalDate.now().minusYears(1));
+        a.setStatus("ACTIVE");
+        staffAssignments.add(a);
+        return a;
     }
 
     StudentProfile student(UUID institutionId) {

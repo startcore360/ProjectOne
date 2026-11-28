@@ -61,7 +61,9 @@ public class PlatformUserManagementService {
 
         if (platformUserRepository.findByEmail(normalizedEmail).isPresent()) {
             throw new DuplicateResourceException(
-                    "A platform user with email '" + normalizedEmail + "' already exists.");
+                    "A platform user with email '" + normalizedEmail + "' already exists.",
+                    "email"
+            );
         }
 
         AssignedRole assigned = resolveRole(request.getPlatformRole(), request.getPlatformRoleId());
@@ -161,8 +163,11 @@ public class PlatformUserManagementService {
         if (changesStatus) {
             boolean enable = request.status() == PlatformUserStatus.ACTIVE;
             // Do not persist ACTIVE/INACTIVE unless Keycloak confirms the enabled-state update.
-            keycloakAdminClient.setUserEnabledStrict(realm, user.getIdentitySubject(), enable);
-            if (!enable) {
+            if (enable) {
+                // Enables the account and also clears any old lockout / stuck required action.
+                keycloakAdminClient.restoreSignIn(realm, user.getIdentitySubject());
+            } else {
+                keycloakAdminClient.setUserEnabledStrict(realm, user.getIdentitySubject(), false);
                 keycloakAdminClient.logoutUser(realm, user.getIdentitySubject());
             }
             changes.put("status", change(user.getStatus().name(), request.status().name()));
@@ -189,7 +194,9 @@ public class PlatformUserManagementService {
                     "PLATFORM_USER_INACTIVE", "Reactivate this platform account before unlocking sign-in.");
         }
 
-        keycloakAdminClient.clearBruteForceLockout(
+        // Clears the lockout AND repairs a disabled account / stuck UPDATE_PASSWORD, so "unlocked"
+        // really means the person can sign in again. Password and MFA are not touched.
+        keycloakAdminClient.restoreSignIn(
                 keycloakProperties.getPlatformRealm(), user.getIdentitySubject());
         auditWriter.record(principal, null, "PLATFORM_USER_UNLOCKED", "UPDATE", "PLATFORM_USER_MANAGE",
                 "PLATFORM_USER", platformUserId, PlatformAuditWriter.SUCCESS);
@@ -218,6 +225,8 @@ public class PlatformUserManagementService {
         String realm = keycloakProperties.getPlatformRealm();
         String temporaryPassword = generateTemporaryPassword();
         keycloakAdminClient.resetPassword(realm, user.getIdentitySubject(), temporaryPassword, true);
+        // So the new password works straight away, not after a lockout or stuck action expires.
+        keycloakAdminClient.restoreSignIn(realm, user.getIdentitySubject());
         keycloakAdminClient.logoutUser(realm, user.getIdentitySubject());
 
         auditWriter.record(principal, null, "PLATFORM_USER_PASSWORD_RESET", "UPDATE",

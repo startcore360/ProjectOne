@@ -532,7 +532,7 @@
 .landing-video-thumb {
   position: relative;
   width: 100%;
-  height: 120px;
+  aspect-ratio: 16 / 9;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: linear-gradient(135deg, var(--color-action-primary), var(--color-text-brand));
@@ -547,7 +547,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.55;
+  opacity: 0.85;
 }
 
 .landing-play-btn {
@@ -1490,8 +1490,8 @@
 .landing-marquee-track--paused { animation-play-state:paused; }
 .landing-marquee-track--reverse { animation-direction:reverse; }
 .landing-quote-card { flex:0 0 clamp(290px,26vw,390px); }
-.landing-video-thumb { position:relative; min-height:170px; overflow:hidden; border-radius:14px; background:var(--color-bg-subtle); }
-.landing-video-thumb img { display:block; width:100%; height:190px; object-fit:cover; }
+.landing-video-thumb { position:relative; width:100%; aspect-ratio:16/9; overflow:hidden; border-radius:14px; background:var(--color-bg-subtle); }
+.landing-video-thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .landing-video-thumb:not(:has(img)) { display:grid; place-items:center; background:linear-gradient(135deg,var(--color-bg-brand-soft),var(--color-bg-subtle)); }
 .landing-video-thumb:not(:has(img))::before { content:"EDU 360 · COMMUNITY STORY"; color:var(--color-text-muted); font-size:10px; font-weight:800; letter-spacing:.12em; }
 .landing-play-btn { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:grid; place-items:center; width:48px; height:48px; border:1px solid rgba(255,255,255,.55); border-radius:50%; background:rgba(23,55,43,.86); color:#fff; box-shadow:0 8px 24px rgba(0,0,0,.2); }

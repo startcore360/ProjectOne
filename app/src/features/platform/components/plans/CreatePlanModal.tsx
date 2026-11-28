@@ -212,7 +212,7 @@ export function CreatePlanModal({
                 <strong style={{ display: "block", fontSize: "var(--fs-body)", color: "var(--color-text)" }}>
                   Live subscription calculation
                 </strong>
-                <p style={{ margin: "2px 0 0", fontSize: "var(--fs-body-xs)", color: "var(--color-text-muted)" }}>
+                <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--fs-body-xs)", color: "var(--color-text-muted)" }}>
                   Recalculates based on billing term, base pricing, package add-ons, and discounts.
                 </p>
               </div>
@@ -265,7 +265,7 @@ export function CreatePlanModal({
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "4px",
+                  gap: "var(--space-1)",
                 }}
               >
                 {showEstimateBreakdown ? "▲ Hide breakdown" : "▼ Show line item breakdown"}
@@ -453,8 +453,8 @@ export function CreatePlanModal({
                           style={{
                             display: "flex",
                             alignItems: "flex-start",
-                            gap: "8px",
-                            padding: "8px 10px",
+                            gap: "var(--space-2)",
+                            padding: "var(--space-2) var(--space-3)",
                             background: isChecked ? "var(--color-bg-brand-soft)" : "var(--color-bg-surface)",
                             border: `1px solid ${isChecked ? "var(--color-action-primary)" : "var(--color-border-divider)"}`,
                             borderRadius: "var(--radius-md)",
@@ -466,9 +466,9 @@ export function CreatePlanModal({
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => toggleModule(mod.code)}
-                            style={{ marginTop: "2px" }}
+                            style={{ marginTop: "var(--space-1)" }}
                           />
-                          <div style={{ display: "grid", gap: "2px", minWidth: 0 }}>
+                          <div style={{ display: "grid", gap: "var(--space-1)", minWidth: 0 }}>
                             <strong style={{ fontSize: "var(--fs-body-xs)", color: "var(--color-text)", lineHeight: 1.2 }}>
                               {mod.name}
                             </strong>
@@ -555,7 +555,7 @@ export function CreatePlanModal({
               <strong style={{ fontSize: "var(--fs-body)", color: "var(--color-text)", display: "block" }}>Capacity &amp; Resource Limits</strong>
               <span style={{ fontSize: "var(--fs-body-xs)", color: "var(--color-text-muted)" }}>Enrolment ceilings and cloud usage allowances</span>
             </div>
-            <span style={{ fontSize: "11px", padding: "2px 8px", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-pill)", color: "var(--color-text-muted)", border: "1px solid var(--color-border-divider)" }}>
+            <span style={{ fontSize: "11px", padding: "var(--space-1) var(--space-2)", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-pill)", color: "var(--color-text-muted)", border: "1px solid var(--color-border-divider)" }}>
               0 = Unlimited
             </span>
           </div>
@@ -813,7 +813,7 @@ export function CreatePlanModal({
           </div>
 
           <div className="app-form-grid" style={{ padding: "var(--space-4)", background: "var(--color-bg-surface)", borderRadius: "var(--radius-lg)", border: "var(--border-width) solid var(--color-border-divider)", boxShadow: "var(--elevation-card)" }}>
-            <label className="app-form-field" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, cursor: "pointer" }}>
+            <label className="app-form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", margin: 0, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={createDraft.customDomainAllowed}
@@ -824,7 +824,7 @@ export function CreatePlanModal({
                 <small style={{ color: "var(--color-text-muted)" }}>Permit institutions to bind their own vanity domain</small>
               </span>
             </label>
-            <label className="app-form-field" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, cursor: "pointer" }}>
+            <label className="app-form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", margin: 0, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={createDraft.brandingColorsAllowed}
@@ -899,7 +899,7 @@ export function CreatePlanModal({
 
         <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--space-3)", marginTop: "var(--space-4)", flexWrap: "wrap" }}>
           {canConfigurePricing && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", padding: "6px 14px", background: "var(--color-bg-surface)", border: "var(--border-width) solid var(--color-border-divider)", borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-card)" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-2) var(--space-3)", background: "var(--color-bg-surface)", border: "var(--border-width) solid var(--color-border-divider)", borderRadius: "var(--radius-md)", boxShadow: "var(--elevation-card)" }}>
               <span style={{ fontSize: "var(--fs-caption)", color: "var(--color-text-muted)" }}>
                 Est. Total ({createDraft.billingCycleMonths}m):
               </span>

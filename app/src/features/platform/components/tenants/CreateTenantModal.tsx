@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
-import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
-import type { PlanItem, TenantType, IsolationMode } from "../../api/platformTenantService";
+import { Button, Modal, Notice, PhoneField, SelectField, TextField, validateNationalIdLast4 } from "../../../../design-system/components";
+import { useFormErrors } from "../../../../hooks";
+import type { PlanItem, TenantType, IsolationMode, FirstUserRole } from "../../api/platformTenantService";
 
 export interface CreateTenantDraft {
   tenantName: string;
@@ -8,12 +9,34 @@ export interface CreateTenantDraft {
   planId: string;
   subdomain: string;
   isolationMode: IsolationMode;
+  firstUserRole: FirstUserRole;
   firstAdminName: string;
   firstAdminEmail: string;
   firstAdminMobile: string;
   firstAdminNationalIdLast4: string;
   retentionMonths: number | "";
   backupRetentionDays: number | "";
+}
+
+// The first user is the owner of the new tenant. Only the Admin owner can be created today; the combined
+// Principal + Admin owner is shown so the choice is visible, but cannot be picked yet (the server refuses it).
+function firstUserRoleOptions(tenantType: TenantType) {
+  if (tenantType === "UNIVERSITY_GROUP") {
+    return [{ value: "ADMIN", label: "University Admin" }];
+  }
+  const admin = tenantType === "STANDALONE_COLLEGE" ? "College Admin" : "School Admin";
+  return [
+    { value: "ADMIN", label: `${admin}: owner who runs it and hires a Principal later` },
+    { value: "PRINCIPAL_ADMIN", label: "Principal + Admin: owner and Principal in one account (coming soon)", disabled: true },
+  ];
+}
+
+function firstUserRoleHint(tenantType: TenantType) {
+  if (tenantType === "UNIVERSITY_GROUP") {
+    return "The University Admin runs the whole university and creates the Vice Chancellor, Registrar and other top users.";
+  }
+  const place = tenantType === "STANDALONE_COLLEGE" ? "college" : "school";
+  return `This person is the owner. They run the ${place}, create staff and hire the Principal.`;
 }
 
 export interface CreateTenantModalProps {
@@ -39,6 +62,7 @@ export function CreateTenantModal({
   createError,
   onNameChange,
 }: CreateTenantModalProps) {
+  const { fieldErrors, setFieldError, clearFieldError } = useFormErrors();
   return (
     <Modal
       isOpen={isOpen}
@@ -57,6 +81,10 @@ export function CreateTenantModal({
           value={draft.tenantName}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder="e.g. Lakeside World School"
+          fieldName="tenantName"
+          error={fieldErrors.tenantName}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
         />
         <TextField
           id="tenant-subdomain"
@@ -65,6 +93,10 @@ export function CreateTenantModal({
           value={draft.subdomain}
           onChange={(e) => setDraft({ ...draft, subdomain: e.target.value.toLowerCase().trim() })}
           placeholder="e.g. lakeside"
+          fieldName="subdomain"
+          error={fieldErrors.subdomain}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
         />
         <div className="app-form-grid">
           <SelectField
@@ -132,8 +164,20 @@ export function CreateTenantModal({
             value={draft.firstAdminName}
             onChange={(e) => setDraft({ ...draft, firstAdminName: e.target.value })}
             placeholder="e.g. Dr. Ramesh Kumar"
+            fieldName="firstAdminName"
+            error={fieldErrors.firstAdminName}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
         </div>
+        <SelectField
+          id="tenant-first-user-role"
+          label="First user's role"
+          value={draft.firstUserRole}
+          onChange={(e) => setDraft({ ...draft, firstUserRole: e.target.value as FirstUserRole })}
+          options={firstUserRoleOptions(draft.tenantType)}
+          hint={firstUserRoleHint(draft.tenantType)}
+        />
         <TextField
           id="tenant-admin-email"
           label="Primary administrator email"
@@ -142,14 +186,21 @@ export function CreateTenantModal({
           value={draft.firstAdminEmail}
           onChange={(e) => setDraft({ ...draft, firstAdminEmail: e.target.value })}
           placeholder="principal@lakeside.edu"
+          fieldName="firstAdminEmail"
+          error={fieldErrors.firstAdminEmail}
+          setFieldError={setFieldError}
+          clearFieldError={clearFieldError}
         />
         <div className="app-form-grid">
-          <TextField
+          <PhoneField
             id="tenant-admin-mobile"
             label="Primary contact mobile (+91 format)"
             value={draft.firstAdminMobile}
             onChange={(e) => setDraft({ ...draft, firstAdminMobile: e.target.value })}
-            placeholder="+919876543210"
+            fieldName="firstAdminMobile"
+            error={fieldErrors.firstAdminMobile}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
           <TextField
             id="tenant-admin-national-id"
@@ -164,6 +215,11 @@ export function CreateTenantModal({
             inputMode="numeric"
             pattern="\d{4}"
             hint="Enter exactly 4 numeric digits."
+            fieldName="firstAdminNationalIdLast4"
+            error={fieldErrors.firstAdminNationalIdLast4}
+            validator={validateNationalIdLast4}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
         </div>
         <div className="app-note">

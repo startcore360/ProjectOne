@@ -495,7 +495,13 @@ public class PermissionEvaluatorService {
             return a.getScopeType() == ScopeType.TENANT;
         }
         return switch (roleCode) {
-            case "MANAGEMENT", "UNIVERSITY_ADMIN" -> a.getScopeType() == ScopeType.TENANT;
+            // TPA-05 (University Admin) and TPA-06 (School Admin / College Admin: the owner of a standalone
+            // school or college, set up at tenant creation). Both are tenant-scoped top posts; the same
+            // personal-action and locked-action exclusions apply to them as to every top post (TPA-04).
+            // SCHOOL_ADMIN / COLLEGE_ADMIN only ever hold a TENANT-scope assignment through tenant creation:
+            // RoleAssignmentService refuses to hand it out any other way, so this cannot be widened by
+            // assigning the role at tenant scope later.
+            case "MANAGEMENT", "UNIVERSITY_ADMIN", "SCHOOL_ADMIN", "COLLEGE_ADMIN" -> a.getScopeType() == ScopeType.TENANT;
             case "VICE_CHANCELLOR" -> a.getScopeType() == ScopeType.TENANT
                     || (a.getScopeType() == ScopeType.INSTITUTION && Objects.equals(a.getInstitutionId(), scope.institutionId()));
             case "PRINCIPAL_COLLEGE", "SCHOOL_PRINCIPAL" -> a.getScopeType() == ScopeType.INSTITUTION

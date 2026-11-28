@@ -163,7 +163,7 @@ export function ReleasesView() {
       </div>
 
       <Panel title="Platform Releases" description="All tracked application and database versions">
-        <div className="app-toolbar" style={{ marginBottom: "16px" }}>
+        <div className="app-toolbar" style={{ marginBottom: "var(--space-4)" }}>
           <SearchBox
             value={query}
             onChange={(val) => setQuery(val)}
@@ -183,7 +183,7 @@ export function ReleasesView() {
                 <td>
                   <strong>{r.versionLabel}</strong>
                   {r.isHotfix && (
-                    <span style={{ marginLeft: "8px", color: "var(--color-status-danger-fg)", fontWeight: "bold", fontSize: "11px" }}>
+                    <span style={{ marginLeft: "var(--space-2)", color: "var(--color-status-danger-fg)", fontWeight: "bold", fontSize: "11px" }}>
                       [HOTFIX]
                     </span>
                   )}
@@ -203,7 +203,7 @@ export function ReleasesView() {
                   <StatusBadge value={r.status} />
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap" }}>
                     {canManageRelease && (
                       <Button size="sm" variant="secondary" onClick={() => openEdit(r)}>
                         Edit
@@ -243,11 +243,11 @@ export function ReleasesView() {
       >
         <form onSubmit={handleCreate}>
           {createError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div style={{ marginBottom: "var(--space-3)" }}>
               <Notice tone="danger">{createError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <TextField
               id="release-version-label"
               label="Version Label"
@@ -277,7 +277,7 @@ export function ReleasesView() {
               onChange={(e) => setCreateDraft({ ...createDraft, isHotfix: e.target.checked })}
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-5)" }}>
             <Button variant="secondary" onClick={() => setShowCreate(false)} type="button">
               Cancel
             </Button>
@@ -300,11 +300,11 @@ export function ReleasesView() {
       >
         <form onSubmit={handleSaveEdit}>
           {editError && (
-            <div style={{ marginBottom: "12px" }}>
+            <div style={{ marginBottom: "var(--space-3)" }}>
               <Notice tone="danger">{editError}</Notice>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <TextField
               id="edit-release-schema"
               label="Schema Version"
@@ -327,7 +327,7 @@ export function ReleasesView() {
               onChange={(e) => setEditHotfix(e.target.checked)}
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-5)" }}>
             <Button variant="secondary" onClick={() => setEditingRelease(null)} type="button">
               Cancel
             </Button>

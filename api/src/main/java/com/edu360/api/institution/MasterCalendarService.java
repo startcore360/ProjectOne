@@ -63,7 +63,7 @@ public class MasterCalendarService {
                 : academicSessionRepository.existsByTenantIdAndInstitutionIdAndSessionLabel(principal.tenantId(), request.institutionId(), label);
 
         if (exists) {
-            throw new DuplicateResourceException("Academic session with label '" + label + "' already exists.");
+            throw new DuplicateResourceException("Academic session with label '" + label + "' already exists.", "sessionLabel");
         }
 
         AcademicSession session = AcademicSession.builder()

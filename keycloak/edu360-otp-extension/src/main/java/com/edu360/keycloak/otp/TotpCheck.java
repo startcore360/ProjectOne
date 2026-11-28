@@ -10,6 +10,13 @@ import org.keycloak.models.utils.TimeBasedOTP;
  * Keycloak's own TimeBasedOTP and the realm's OTP policy (algorithm, digits, period, look-ahead)
  * - the same rules Keycloak applies at sign-in, so a code accepted here also works there.
  * Kept separate from the JAX-RS resource so it can be unit-tested without a server.
+ *
+ * Edu360OtpResource generates the secret via HmacOTP.generateSecret(20) (raw ASCII).
+ * When presented to the user via QR code or manual entry, Keycloak's TotpUtils encodes those
+ * bytes to Base32: Base32.encode(secret.getBytes()). The authenticator app decodes that Base32
+ * string back to the original raw bytes: secret.getBytes(StandardCharsets.UTF_8).
+ * Keycloak's OTPCredentialProvider also validates using secret.getBytes(StandardCharsets.UTF_8).
+ * Therefore, validation must use secret.getBytes(StandardCharsets.UTF_8).
  */
 final class TotpCheck {
 

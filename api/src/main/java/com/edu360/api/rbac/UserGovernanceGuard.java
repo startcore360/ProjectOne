@@ -30,6 +30,22 @@ public class UserGovernanceGuard {
             "SCHOOL_PRINCIPAL"
     );
 
+    /**
+     * TPA-06: the Admin owner of a standalone school or college hires the Principal and must be able to
+     * reset or deactivate that account. Only the owner counts, meaning the Admin holding the TENANT-scope
+     * assignment that tenant creation gives them (RoleAssignmentService refuses to hand that out any other
+     * way). An ordinary Admin assigned to one institution stays below the Principal (A-06, REG-A06-2).
+     */
+    private static final Set<String> OWNER_ADMIN_ROLES = Set.of("SCHOOL_ADMIN", "COLLEGE_ADMIN");
+
+    private static boolean isTopGovernance(RoleDefinition def, UserRoleAssignment assignment) {
+        if (def == null) {
+            return false;
+        }
+        return TOP_GOVERNANCE_ROLES.contains(def.getRoleCode())
+                || (OWNER_ADMIN_ROLES.contains(def.getRoleCode()) && assignment.getScopeType() == ScopeType.TENANT);
+    }
+
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final RoleDefinitionRepository roleDefinitionRepository;
 
@@ -67,7 +83,7 @@ public class UserGovernanceGuard {
                 RoleDefinition def = roleDefinitionRepository
                         .findById(new RoleDefinitionId(tenantId, a.getRoleDefinitionId()))
                         .orElse(null);
-                return def != null && TOP_GOVERNANCE_ROLES.contains(def.getRoleCode());
+                return isTopGovernance(def, a);
             });
 
             if (targetIsTopGovernance) {
@@ -78,7 +94,7 @@ public class UserGovernanceGuard {
                     RoleDefinition def = roleDefinitionRepository
                             .findById(new RoleDefinitionId(tenantId, a.getRoleDefinitionId()))
                             .orElse(null);
-                    return def != null && TOP_GOVERNANCE_ROLES.contains(def.getRoleCode());
+                    return isTopGovernance(def, a);
                 });
 
                 if (!callerIsTopGovernance) {

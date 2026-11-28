@@ -148,4 +148,74 @@ class KeycloakAdminClientTest {
 
         server.verify();
     }
+
+    private static final String TOKEN_URL = "http://kc.test/realms/master/protocol/openid-connect/token";
+    private static final String USER_URL = "http://kc.test/admin/realms/" + REALM + "/users/kc-user-123";
+    private static final String LOCKOUT_URL =
+            "http://kc.test/admin/realms/" + REALM + "/attack-detection/brute-force/users/kc-user-123";
+
+    @Test
+    void restoreSignIn_enablesDisabledUserDropsStuckActionKeepsEverythingElseAndClearsLockout() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KeycloakAdminClient client = new KeycloakAdminClient(builder, properties());
+
+        server.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(USER_URL)).andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"id\":\"kc-user-123\",\"enabled\":false,\"firstName\":\"Sha\","
+                        + "\"requiredActions\":[\"UPDATE_PASSWORD\",\"CONFIGURE_TOTP\"],"
+                        + "\"attributes\":{\"mfa_required\":[\"true\"]}}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(USER_URL)).andExpect(method(HttpMethod.PUT))
+                .andExpect(jsonPath("$.enabled").value(true))
+                .andExpect(jsonPath("$.firstName").value("Sha"))
+                .andExpect(jsonPath("$.attributes.mfa_required[0]").value("true"))
+                .andExpect(jsonPath("$.requiredActions.length()").value(1))
+                .andExpect(jsonPath("$.requiredActions[0]").value("CONFIGURE_TOTP"))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+        server.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(LOCKOUT_URL)).andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        client.restoreSignIn(REALM, "kc-user-123");
+
+        server.verify();
+    }
+
+    @Test
+    void restoreSignIn_leavesAHealthyUserUntouchedAndOnlyClearsTheLockout() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KeycloakAdminClient client = new KeycloakAdminClient(builder, properties());
+
+        server.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(USER_URL)).andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"id\":\"kc-user-123\",\"enabled\":true,\"requiredActions\":[]}",
+                        MediaType.APPLICATION_JSON));
+        // No PUT is expected: any unexpected request fails the test.
+        server.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(LOCKOUT_URL)).andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        client.restoreSignIn(REALM, "kc-user-123");
+
+        server.verify();
+    }
+
+    @Test
+    void restoreSignIn_reportsAKeycloakFailureInsteadOfPretendingItWorked() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KeycloakAdminClient client = new KeycloakAdminClient(builder, properties());
+
+        server.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("{\"access_token\":\"admin-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(USER_URL)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> client.restoreSignIn(REALM, "kc-user-123"))
+                .isInstanceOf(KeycloakProvisioningException.class);
+    }
 }

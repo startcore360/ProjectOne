@@ -36,10 +36,6 @@ const VARIANT: Record<
   ToastVariant,
   {
     iconName: IconName;
-    container: string;
-    alertContainer: string;
-    titleClass: string;
-    descClass: string;
     border: string;
     bg: string;
     alertBg: string;
@@ -48,58 +44,38 @@ const VARIANT: Record<
 > = {
   info: {
     iconName: "info",
-    container: "bg-[rgba(37,99,235,0.1)] border-[#2563EB]",
-    alertContainer: "bg-white border-[#2563EB]",
-    titleClass: "text-[#2563EB]",
-    descClass: "text-[var(--color-text-secondary)]",
-    border: "#2563EB",
-    bg: "rgba(37, 99, 235, 0.1)",
-    alertBg: "var(--color-bg-surface, #ffffff)",
-    titleColor: "#2563EB",
+    border: "var(--color-status-info-border)",
+    bg: "var(--color-status-info-bg)",
+    alertBg: "var(--color-bg-surface)",
+    titleColor: "var(--color-status-info-fg)",
   },
   success: {
     iconName: "check-circle",
-    container: "bg-[#ECFDF3] border-[#16A34A]",
-    alertContainer: "bg-white border-[#16A34A]",
-    titleClass: "text-[#15803D]",
-    descClass: "text-[var(--color-text-secondary)]",
-    border: "#16A34A",
-    bg: "#ECFDF3",
-    alertBg: "var(--color-bg-surface, #ffffff)",
-    titleColor: "#15803D",
+    border: "var(--color-status-success-border)",
+    bg: "var(--color-status-success-bg)",
+    alertBg: "var(--color-bg-surface)",
+    titleColor: "var(--color-status-success-fg)",
   },
   warning: {
     iconName: "alert",
-    container: "bg-[#F59E0B]/10 border border-[#F59E0B]",
-    alertContainer: "bg-white border-[#F59E0B]",
-    titleClass: "text-[#F59E0B]",
-    descClass: "text-[var(--color-text-secondary)]",
-    border: "#F59E0B",
-    bg: "rgba(245, 158, 11, 0.1)",
-    alertBg: "var(--color-bg-surface, #ffffff)",
-    titleColor: "#F59E0B",
+    border: "var(--color-status-warning-border)",
+    bg: "var(--color-status-warning-bg)",
+    alertBg: "var(--color-bg-surface)",
+    titleColor: "var(--color-status-warning-fg)",
   },
   error: {
     iconName: "error",
-    container: "bg-white border-[#D1D1D6]",
-    alertContainer: "bg-white border-[#D1D1D6]",
-    titleClass: "text-[#DC2626]",
-    descClass: "text-[#DC2626]",
-    border: "#DC2626",
-    bg: "var(--color-bg-surface, #ffffff)",
-    alertBg: "var(--color-bg-surface, #ffffff)",
-    titleColor: "#DC2626",
+    border: "var(--color-status-danger-border)",
+    bg: "var(--color-status-danger-bg)",
+    alertBg: "var(--color-bg-surface)",
+    titleColor: "var(--color-status-danger-fg)",
   },
   neutral: {
     iconName: "info",
-    container: "bg-white border-[#D1D1D6]",
-    alertContainer: "bg-white border-[#D1D1D6]",
-    titleClass: "text-[var(--color-text-primary)]",
-    descClass: "text-[var(--color-text-secondary)]",
-    border: "#D1D1D6",
-    bg: "var(--color-bg-surface, #ffffff)",
-    alertBg: "var(--color-bg-surface, #ffffff)",
-    titleColor: "var(--color-text, #0f172a)",
+    border: "var(--color-status-neutral-border)",
+    bg: "var(--color-status-neutral-bg)",
+    alertBg: "var(--color-bg-surface)",
+    titleColor: "var(--color-status-neutral-fg)",
   },
 };
 
@@ -170,34 +146,33 @@ const Toast = ({
         flex items-start gap-[12px] px-[16px] py-[14px]
         border rounded-[8px]
         ${isAlert ? "w-full shadow-lg" : width}
-        ${isAlert ? v.alertContainer : v.container}
         ${className ?? ""}
       `.trim()}
       style={{
         display: "flex",
         alignItems: "flex-start",
-        gap: "12px",
-        padding: "14px 16px",
+        gap: "var(--space-3)",
+        padding: "var(--space-3) var(--space-4)",
         borderRadius: "8px",
         border: `1px solid ${v.border}`,
         background: isAlert ? v.alertBg : v.bg,
         boxShadow: isAlert
-          ? "0 12px 32px -4px rgba(0, 0, 0, 0.18), 0 4px 12px -2px rgba(0, 0, 0, 0.08)"
+          ? "var(--elevation-2, 0 8px 24px rgba(0, 0, 0, 0.12))"
           : "none",
         width: isAlert ? "100%" : width,
         cursor: onDismiss ? "pointer" : "default",
-        color: "var(--color-text, #0f172a)",
+        color: "var(--color-text)",
         ...style,
       }}
     >
-      <div className="mt-[2px] shrink-0" style={{ flexShrink: 0, marginTop: "2px", color: v.titleColor }}>
+      <div className="mt-[2px] shrink-0" style={{ flexShrink: 0, marginTop: "var(--space-1)", color: v.titleColor }}>
         <Icon name={v.iconName} size={18} />
       </div>
 
       <div className="flex-1 min-w-0" style={{ flex: 1, minWidth: 0 }}>
         {title && (
           <p
-            className={`text-[14px] font-semibold leading-[20px] mb-[2px] break-words ${v.titleClass}`}
+            className="text-[14px] font-semibold leading-[20px] mb-[2px] break-words"
             style={{
               fontSize: "14px",
               fontWeight: 650,
@@ -213,11 +188,11 @@ const Toast = ({
 
         {content ? (
           <div
-            className={`text-[12px] sm:text-[14px] font-normal leading-[18px] break-words ${v.descClass}`}
+            className="text-[12px] sm:text-[14px] font-normal leading-[18px] break-words"
             style={{
               fontSize: "13px",
               lineHeight: "18px",
-              color: "var(--color-text-muted, #64748b)",
+              color: "var(--color-text-muted)",
               wordBreak: "break-word",
             }}
           >
@@ -225,12 +200,12 @@ const Toast = ({
           </div>
         ) : description ? (
           <p
-            className={`text-[14px] font-normal leading-[18px] break-words ${v.descClass}`}
+            className="text-[14px] font-normal leading-[18px] break-words"
             style={{
               fontSize: "13px",
               lineHeight: "18px",
               margin: 0,
-              color: "var(--color-text-muted, #64748b)",
+              color: "var(--color-text-muted)",
               wordBreak: "break-word",
             }}
           >
@@ -240,7 +215,7 @@ const Toast = ({
       </div>
 
       {showAction && action && (
-        <div className="flex items-center pl-[12px]" style={{ display: "flex", alignItems: "center", paddingLeft: "12px", flexShrink: 0 }}>
+        <div className="flex items-center pl-[12px]" style={{ display: "flex", alignItems: "center", paddingLeft: "var(--space-3)", flexShrink: 0 }}>
           <Button
             onClick={(e) => {
               e.stopPropagation();
@@ -262,24 +237,24 @@ const Toast = ({
             dismiss();
           }}
           aria-label="Dismiss"
-          className="ml-2 shrink-0 mt-[2px] opacity-40 hover:opacity-80 transition-opacity"
+          className="ml-2 shrink-0 mt-[2px] opacity-60 hover:opacity-100 transition-opacity"
           style={{
             background: "none",
             border: "none",
             cursor: "pointer",
-            padding: "4px",
-            marginLeft: "8px",
-            marginTop: "2px",
-            color: "currentColor",
-            opacity: 0.5,
+            padding: "var(--space-1)",
+            marginLeft: "var(--space-2)",
+            marginTop: "var(--space-1)",
+            color: "var(--color-text-muted)",
+            opacity: 0.6,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             borderRadius: "4px",
             flexShrink: 0,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path

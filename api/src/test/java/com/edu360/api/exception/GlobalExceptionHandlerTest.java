@@ -2,6 +2,8 @@ package com.edu360.api.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -76,5 +78,26 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).doesNotContainKey("detail");
         String everything = String.valueOf(response.getBody());
         assertThat(everything).doesNotContain("IllegalStateException").doesNotContain("SELECT").doesNotContain("secret");
+    }
+
+    @Test
+    void duplicateWithoutFieldNameEmitsConflictWithoutFieldErrors() {
+        var response = handler.handleDuplicate(
+                new DuplicateResourceException("Entity already exists"), null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).containsEntry("code", "DUPLICATE_RESOURCE");
+        assertThat(response.getBody()).doesNotContainKey("fieldErrors");
+    }
+
+    @Test
+    void duplicateWithFieldNameEmitsConflictWithFieldErrorsMap() {
+        var response = handler.handleDuplicate(
+                new DuplicateResourceException("Email already taken", "email"), null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).containsEntry("code", "DUPLICATE_RESOURCE");
+        assertThat(response.getBody()).containsKey("fieldErrors");
+        @SuppressWarnings("unchecked")
+        var fieldErrors = (Map<String, String>) response.getBody().get("fieldErrors");
+        assertThat(fieldErrors).containsEntry("email", "Email already taken");
     }
 }

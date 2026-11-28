@@ -851,7 +851,7 @@ export function PlansView() {
                     </span>
                   </div>
                   {/* Backward compatible text for tests / screen readers */}
-                  <p style={{ margin: "2px 0 0", fontSize: "var(--fs-body-xs)", color: "var(--color-text-muted)" }}>
+                  <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--fs-body-xs)", color: "var(--color-text-muted)" }}>
                     ₹{plan.priceAmount} · {plan.pricingType}
                   </p>
                 </div>

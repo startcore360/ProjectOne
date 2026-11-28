@@ -8,7 +8,7 @@ The treatment column was prepared for this review. The register does not classif
 
 ## How the top posts relate
 
-Product Owner runs the platform. Inside a university tenant the order is University Admin (TPA-05, 9 November 2026), then Management, then Vice Chancellor, then Principal or School Principal. Inside a standalone college or school, Management comes first, then the Principal; whether the College or School Admin sits above them is still open.
+Product Owner runs the platform. Inside a university tenant the order is University Admin (TPA-05, 9 November 2026), then Management, then Vice Chancellor, then Principal or School Principal. Inside a standalone college or school, the College or School Admin set up when the tenant is created is the owner and comes first (TPA-06, 28 November 2026), then Management, then the Principal.
 
 | Top post | Actions today | Actions under this rule | Area |
 |---|---:|---:|---|

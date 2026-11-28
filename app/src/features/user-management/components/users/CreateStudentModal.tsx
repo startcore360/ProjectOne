@@ -197,7 +197,10 @@ export function CreateStudentModal({ tenantId, isOpen, onClose, onCreated }: Cre
             value={fullName}
             onChange={(event) => { setFullName(event.target.value); clearFieldError("fullName"); }}
             placeholder="Enter the student's legal name"
+            fieldName="fullName"
             error={fieldErrors.fullName}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
           <SelectField
             id="student-institution"

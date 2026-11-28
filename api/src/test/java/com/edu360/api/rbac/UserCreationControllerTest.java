@@ -211,7 +211,29 @@ class UserCreationControllerTest {
 
         assertThatThrownBy(() -> controller.createUser(TENANT_ID, req, auth))
                 .isInstanceOf(DuplicateResourceException.class)
-                .hasMessageContaining("already exists");
+                .hasMessageContaining("already exists")
+                .extracting(ex -> ((DuplicateResourceException) ex).getFieldName())
+                .isEqualTo("email");
+    }
+
+    @Test
+    @DisplayName("ACT-USER_CREATE-GUARD: Duplicate guardian mobile throws 409 with fieldName mobile")
+    void actUserCreate_guard_duplicateMobile() {
+        Authentication auth = authenticatedTenantUser(TENANT_ID, ADMIN_USER_ID);
+        CreateUserRequest req = new CreateUserRequest(
+                UserType.GUARDIAN, "Rajesh Kumar", "rajesh@example.com", "+919876543210", null, null, ScopeType.TENANT, null, null
+        );
+
+        when(userAccountRepository.existsByIdTenantIdAndEmail(TENANT_ID, "rajesh@example.com"))
+                .thenReturn(false);
+        when(userAccountRepository.existsByIdTenantIdAndMobile(TENANT_ID, "+919876543210"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> controller.createUser(TENANT_ID, req, auth))
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessageContaining("already exists")
+                .extracting(ex -> ((DuplicateResourceException) ex).getFieldName())
+                .isEqualTo("mobile");
     }
 
     @Test

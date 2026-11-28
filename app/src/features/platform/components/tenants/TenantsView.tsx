@@ -137,7 +137,7 @@ function RowMenu({ tenantName, children }: { tenantName?: string; children: Reac
             boxShadow: "var(--elevation-2)",
             minWidth: "140px",
             maxWidth: "calc(100vw - 32px)",
-            padding: "4px 0",
+            padding: "var(--space-1) 0",
           }}
           onClick={closeMenu}
         >
@@ -155,7 +155,7 @@ function MenuAction({ onClick, children }: { onClick: () => void; children: Reac
       onClick={onClick}
       style={{
         display: "block", width: "100%", textAlign: "left",
-        padding: "7px 14px", background: "none", border: "none", cursor: "pointer",
+        padding: "var(--space-2) var(--space-3)", background: "none", border: "none", cursor: "pointer",
         fontSize: "var(--fs-body)", color: "var(--color-text)",
       }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--color-bg-subtle)"; }}
@@ -171,6 +171,7 @@ import {
   type PlanItem,
   type TenantType,
   type IsolationMode,
+  type FirstUserRole,
 } from "../../api/platformTenantService";
 import { usePlatformAccess } from "../../platformAccess";
 import { CreateTenantModal, type CreateTenantDraft } from "./CreateTenantModal";
@@ -264,6 +265,7 @@ export function TenantsView() {
     planId: "",
     subdomain: "",
     isolationMode: "SHARED" as IsolationMode,
+    firstUserRole: "ADMIN" as FirstUserRole,
     firstAdminName: "",
     firstAdminEmail: "",
     firstAdminMobile: "",
@@ -374,6 +376,7 @@ export function TenantsView() {
         planId: selectedPlanId,
         subdomain: draft.subdomain,
         isolationMode: draft.isolationMode,
+        firstUserRole: draft.firstUserRole,
         firstAdminName: draft.firstAdminName,
         firstAdminEmail: draft.firstAdminEmail,
         firstAdminMobile: draft.firstAdminMobile ? draft.firstAdminMobile : undefined,
@@ -402,6 +405,7 @@ export function TenantsView() {
         planId: plans[0]?.planId ?? "",
         subdomain: "",
         isolationMode: "SHARED",
+        firstUserRole: "ADMIN",
         firstAdminName: "",
         firstAdminEmail: "",
         firstAdminMobile: "",
@@ -761,7 +765,7 @@ export function TenantsView() {
                 <td>{tenant.suspendedAt ? new Date(tenant.suspendedAt).toLocaleString() : "—"}</td>
                 <td>{tenant.archivedAt ? new Date(tenant.archivedAt).toLocaleString() : "—"}</td>
                 <td>
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
                     {tenant.status === "Setup failed" && (canCreate || canEditSettings) && (
                       <Button size="sm" variant="secondary" onClick={() => setSetupTarget(tenant)}>Setup</Button>
                     )}
@@ -862,11 +866,11 @@ export function TenantsView() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", padding: "var(--space-3)", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)" }}>
             <div>
               <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--color-text-muted)" }}>Current Plan</span>
-              <strong style={{ display: "block", fontSize: "var(--fs-body)", color: "var(--color-text)", marginTop: "2px" }}>{selectedTenant?.plan ?? "—"}</strong>
+              <strong style={{ display: "block", fontSize: "var(--fs-body)", color: "var(--color-text)", marginTop: "var(--space-1)" }}>{selectedTenant?.plan ?? "—"}</strong>
             </div>
             <div>
               <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--color-text-muted)" }}>Target Plan</span>
-              <strong style={{ display: "block", fontSize: "var(--fs-body)", color: planChangePlanId ? "var(--color-action-primary)" : "var(--color-text-muted)", marginTop: "2px" }}>
+              <strong style={{ display: "block", fontSize: "var(--fs-body)", color: planChangePlanId ? "var(--color-action-primary)" : "var(--color-text-muted)", marginTop: "var(--space-1)" }}>
                 {plans.find((p) => p.planId === planChangePlanId)?.planName ?? "Select below"}
               </strong>
             </div>
@@ -885,7 +889,7 @@ export function TenantsView() {
                   setPlanChangeEffective("RENEWAL");
                 }
               }} required
-                style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)", fontSize: "var(--fs-body-sm)" }}>
+                style={{ width: "100%", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)", fontSize: "var(--fs-body-sm)" }}>
                 <option value="">Select a plan</option>
                 {plans.filter((plan) => plan.status === "ACTIVE" && plan.planId !== selectedTenant?.planId).map((plan) => (
                   <option key={plan.planId} value={plan.planId}>{plan.planName} · {plan.currencyCode} {plan.priceAmount.toLocaleString("en-IN")} · {plan.billingCycleMonths} months</option>
@@ -898,7 +902,7 @@ export function TenantsView() {
                 Effective schedule
               </label>
               <select id="tenant-plan-change-effective" value={planChangeEffective} onChange={(e) => setPlanChangeEffective(e.target.value as "NOW" | "RENEWAL")}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)", fontSize: "var(--fs-body-sm)" }}>
+                style={{ width: "100%", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border-divider)", background: "var(--color-bg-surface)", color: "var(--color-text)", fontSize: "var(--fs-body-sm)" }}>
                 <option value="RENEWAL">At next renewal (recommended for downgrades)</option>
                 <option value="NOW" disabled={planChangeRequiresRenewal}>
                   Immediately (legacy upgrades only · creates pro-rata invoice)

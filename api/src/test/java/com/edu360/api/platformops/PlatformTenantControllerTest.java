@@ -340,6 +340,25 @@ class PlatformTenantControllerTest {
                 .hasMessageContaining("Invalid tenant type");
     }
 
+    @Test
+    void act_tenantCreate_guard_rejectsPrincipalPlusAdminUntilItExists() {
+        when(tenantRepository.findBySubdomain("dwps-delhi")).thenReturn(Optional.empty());
+
+        TenantCreateRequest request = sampleRequest();
+        request.setFirstUserRole(com.edu360.api.platformops.dto.FirstUserRole.PRINCIPAL_ADMIN);
+
+        assertThatThrownBy(() -> controller.createTenant(request, authFor(PlatformRole.PLATFORM_ADMIN)))
+                .isInstanceOf(com.edu360.api.exception.BusinessRuleViolationException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "FIRST_USER_ROLE_NOT_AVAILABLE");
+        // Refused before any plan lookup or tenant write, so nothing half-built is left behind.
+        org.mockito.Mockito.verify(planRepository, org.mockito.Mockito.never()).findById(any());
+    }
+
+    @Test
+    void firstUserRoleDefaultsToAdminWhenTheRequestOmitsIt() {
+        assertThat(sampleRequest().getFirstUserRole()).isEqualTo(com.edu360.api.platformops.dto.FirstUserRole.ADMIN);
+    }
+
     // -------------------------------------------------------------------------
     // Plan listing endpoint: GET /v1/platform/plans
     // -------------------------------------------------------------------------

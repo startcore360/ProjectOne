@@ -734,15 +734,23 @@ a {
 .app-brand {
   padding: 0 var(--space-2) var(--space-2);
 }
-/* The sidebar brand mark is the Edu360Logo emblem (variant="mark"), not a lettered box.
-   Its viewBox is ~5:4, so fixing the height lets the width follow (~48px, still inside the
-   72px collapsed rail); 38px keeps the panel glyphs readable. flex-shrink stops the
-   wordmark from squeezing it. */
+/* The sidebar brand mark is the Edu360Logo emblem (variant="mark"), not a lettered box. Its
+   viewBox is ~5:4, so fixing the height lets the width follow. It is never hidden when the
+   sidebar collapses, only the "EDU 360" wordmark next to it is - but the 72px collapsed rail
+   (--sidebar-rail) has far less width to give it than the expanded sidebar does, and
+   .app-sidebar has overflow:hidden, so the two states get their own size below instead of one
+   shared value: 44px while expanded (was 38px, too small to read at a glance), 40px when
+   collapsed - still clearly bigger than before, and sized to the rail's real content width (72px
+   rail - padding-inline - the logo button's own 2px padding) so it is never clipped.
+   flex-shrink stops the wordmark from squeezing it. */
 .app-brand__mark {
   display: block;
   flex-shrink: 0;
   width: auto;
-  height: 38px;
+  height: 44px;
+}
+.app-sidebar--collapsed .app-brand__mark {
+  height: 40px;
 }
 /* D10's .side-card__group: an overline label grouping a set of nav items, repeatable per
    section - previously this was one flat ungrouped list with a single label above it all. */
@@ -819,6 +827,12 @@ a {
   .app-nav {
     scroll-behavior: smooth;
   }
+}
+.app-nav__divider {
+  height: 1px;
+  background: var(--color-border-divider);
+  margin: var(--space-2) var(--space-3);
+  border: none;
 }
 /* D10's .nav-item: no min-height override needed beyond --target-min, no hardcoded icon size. */
 .app-nav__link {

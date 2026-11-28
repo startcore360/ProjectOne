@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
@@ -27,7 +29,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.identity.UserAccount;
+import com.edu360.api.identity.UserAccountId;
+import com.edu360.api.identity.UserAccountRepository;
+import com.edu360.api.identity.UserType;
 import com.edu360.api.platform.PlatformRole;
+import com.edu360.api.platform.PlatformUser;
+import com.edu360.api.platform.PlatformUserRepository;
 import com.edu360.api.platformops.dto.AuditLogPageResponse;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -167,5 +175,54 @@ class PlatformAuditLogControllerTest {
                 org.mockito.ArgumentMatchers.eq("EXPORT"), org.mockito.ArgumentMatchers.eq("PLATFORM_AUDIT_VIEW"),
                 org.mockito.ArgumentMatchers.eq("AUDIT_LOG_EXPORT"), any(UUID.class),
                 org.mockito.ArgumentMatchers.eq(PlatformAuditWriter.FAILED));
+    }
+
+    @Test
+    void listAuditActors_withoutTenant_returnsPlatformStaffOnly() {
+        PlatformUserRepository platformUserRepo = mock(PlatformUserRepository.class);
+        UserAccountRepository userAccountRepo = mock(UserAccountRepository.class);
+        PlatformUser pu = PlatformUser.builder()
+                .platformUserId(UUID.randomUUID())
+                .fullName("Platform Staff User")
+                .email("staff@edu360.local")
+                .status(com.edu360.api.platform.PlatformUserStatus.ACTIVE)
+                .build();
+        when(platformUserRepo.findAll()).thenReturn(List.of(pu));
+
+        PlatformAuditLogController c = new PlatformAuditLogController(
+                platformPermissionService, auditOutboxEventRepository, platformAuditWriter,
+                platformUserRepo, userAccountRepo);
+
+        var response = c.listAuditActors(null, null, authFor(PlatformRole.PLATFORM_ADMIN));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().get(0).displayName()).isEqualTo("Platform Staff User");
+        assertThat(response.getBody().get(0).actorType()).isEqualTo("PLATFORM_STAFF");
+        verifyNoInteractions(userAccountRepo);
+    }
+
+    @Test
+    void listAuditActors_withTenant_returnsTenantUsersOnly() {
+        PlatformUserRepository platformUserRepo = mock(PlatformUserRepository.class);
+        UserAccountRepository userAccountRepo = mock(UserAccountRepository.class);
+        UUID tenantId = UUID.randomUUID();
+        UserAccount ua = UserAccount.builder()
+                .id(new UserAccountId(tenantId, UUID.randomUUID()))
+                .userType(UserType.STAFF)
+                .displayName("Anita Sharma")
+                .email("anita@nb.edu.in")
+                .build();
+        when(userAccountRepo.findByIdTenantId(tenantId)).thenReturn(List.of(ua));
+
+        PlatformAuditLogController c = new PlatformAuditLogController(
+                platformPermissionService, auditOutboxEventRepository, platformAuditWriter,
+                platformUserRepo, userAccountRepo);
+
+        var response = c.listAuditActors(tenantId, null, authFor(PlatformRole.PLATFORM_ADMIN));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().get(0).displayName()).isEqualTo("Anita Sharma");
+        assertThat(response.getBody().get(0).actorType()).isEqualTo("TENANT_USER");
+        verifyNoInteractions(platformUserRepo);
     }
 }

@@ -66,7 +66,7 @@ public class PlatformCustomRoleService {
         PlatformActionPolicy.requireCustomisable(request.basePlatformRole());
         validateActions(request.actions(), request.basePlatformRole());
         if (roleRepository.existsByRoleNameIgnoreCase(name)) {
-            throw new DuplicateResourceException("A platform role named '" + name + "' already exists.");
+            throw new DuplicateResourceException("A platform role named '" + name + "' already exists.", "roleName");
         }
         if (request.updateTemplate() && request.sourceTemplateId() == null) {
             throw new BusinessRuleViolationException("Choose a template before saving these permissions to it.");
@@ -107,7 +107,7 @@ public class PlatformCustomRoleService {
         }
         String name = request.roleName().trim();
         if (roleRepository.existsByRoleNameIgnoreCaseAndPlatformRoleIdNot(name, roleId)) {
-            throw new DuplicateResourceException("A platform role named '" + name + "' already exists.");
+            throw new DuplicateResourceException("A platform role named '" + name + "' already exists.", "roleName");
         }
 
         role.setRoleName(name);

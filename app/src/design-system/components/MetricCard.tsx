@@ -56,7 +56,7 @@ function getSplinePath(points: { x: number; y: number }[]): string {
 
 export const KpiSparkline = memo(function KpiSparkline({
   data,
-  color = "var(--color-action-primary, #10b981)",
+  color = "var(--color-action-primary)",
   height = 48,
   label = "Metric trend",
 }: {
@@ -89,7 +89,7 @@ export const KpiSparkline = memo(function KpiSparkline({
   const gradId = `spark-grad-${Math.abs(Math.round(values.reduce((a, b) => a + b, 0) * 10) + label.length)}`;
 
   return (
-    <div className="kpi__sparkline-wrap" style={{ width: "100%", height: `${height}px`, margin: "8px 0 4px" }}>
+    <div className="kpi__sparkline-wrap" style={{ width: "100%", height: `${height}px`, margin: "var(--space-2) 0 var(--space-1)" }}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
@@ -183,7 +183,7 @@ export const MetricCard = memo(function MetricCard({
             <span
               className="kpi__unit"
               style={{
-                marginLeft: "4px",
+                marginLeft: "var(--space-1)",
                 fontSize: "0.875rem",
                 fontWeight: "normal",
                 color: "var(--color-text-muted)",

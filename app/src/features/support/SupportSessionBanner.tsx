@@ -15,7 +15,7 @@ export function SupportSessionBanner() {
         gap: "var(--space-4)",
         padding: "var(--space-3) var(--space-4)",
         background: "var(--color-status-danger-fg)",
-        color: "var(--color-text-on-danger, #ffffff)",
+        color: "var(--color-text-on-danger)",
         borderRadius: "var(--radius-sm)",
         margin: "var(--space-3) 0",
       }}
@@ -31,8 +31,8 @@ export function SupportSessionBanner() {
         variant="secondary"
         onClick={endSupportSession}
         style={{
-          border: "1px solid var(--color-text-on-danger, #ffffff)",
-          color: "var(--color-text-on-danger, #ffffff)",
+          border: "1px solid var(--color-text-on-danger)",
+          color: "var(--color-text-on-danger)",
           background: "transparent",
         }}
       >

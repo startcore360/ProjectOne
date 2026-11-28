@@ -122,40 +122,6 @@ export function RoleSwitcher({ layout = "inline" }: RoleSwitcherProps = {}) {
     );
   }
 
-  // In DEV mode (outside automated test runs), allow switching active admin roles for convenient testing
-  if (import.meta.env.DEV && !import.meta.env.VITEST) {
-    const devAdminRoles = [
-      { code: "UNIVERSITY_ADMIN", name: "University Admin" },
-      { code: "COLLEGE_ADMIN", name: "College Admin" },
-      { code: "SCHOOL_ADMIN", name: "School Admin" },
-    ];
-    const currentCode = roleCode || "UNIVERSITY_ADMIN";
-
-    return (
-      <label className={className}>
-        <span className="role-switcher__label">Role</span>
-        <select
-          className="role-switcher__select"
-          aria-label="Switch active role"
-          value={currentCode}
-          onChange={(e) => {
-            const found = devAdminRoles.find((r) => r.code === e.target.value);
-            if (found) {
-              dispatch(switchActiveRole({ roleCode: found.code, roleName: found.name }));
-              goToDashboard();
-            }
-          }}
-        >
-          {devAdminRoles.map((r) => (
-            <option key={r.code} value={r.code}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
-
   const roleLabel = roleName || roleCode || userType || "Member";
   const activeRole = roles.find((role) => role.userRoleAssignmentId === currentId) || roles[0];
   const activeContext = activeRole ? contextLabel(activeRole) : "";

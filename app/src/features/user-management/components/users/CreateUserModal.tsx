@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Modal, Notice, SelectField, TextField } from "../../../../design-system/components";
+import { Button, Modal, Notice, PhoneField, SelectField, TextField, validateNationalIdLast4 } from "../../../../design-system/components";
 import { useFormErrors } from "../../../../hooks";
 import {
   userManagementService,
@@ -35,6 +35,7 @@ export function CreateUserModal({
     fieldErrors,
     formError,
     handleApiError,
+    setFieldError,
     clearFieldError,
     clearAll,
   } = useFormErrors();
@@ -80,9 +81,12 @@ export function CreateUserModal({
             label="Full name"
             required
             value={displayName}
-            onChange={(e) => { setDisplayName(e.target.value); clearFieldError("displayName"); }}
+            onChange={(e) => setDisplayName(e.target.value)}
             placeholder="e.g. Dr. Anita Sharma"
             error={fieldErrors.displayName}
+            fieldName="displayName"
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
           <SelectField
             id="create-user-type"
@@ -103,30 +107,36 @@ export function CreateUserModal({
             type="email"
             required
             value={email}
-            onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="e.g. anita.sharma@northbridge.edu.in"
             error={fieldErrors.email}
+            fieldName="email"
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
-          <TextField
+          <PhoneField
             id="create-mobile"
             label="Mobile number"
-            type="tel"
-            inputMode="tel"
-            hint="Include the country code, for example +919876543210."
             required
             value={mobile}
             onChange={(e) => { setMobile(e.target.value); clearFieldError("mobile"); }}
-            placeholder="+919876543210"
             error={fieldErrors.mobile}
+            fieldName="mobile"
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
           <TextField
             id="create-national-id"
             label="Aadhaar / National ID (Last 4 digits only)"
             value={nationalIdLast4}
             maxLength={4}
-            onChange={(e) => { setNationalIdLast4(e.target.value.replace(/\D/g, "")); clearFieldError("nationalIdLast4"); }}
+            onChange={(e) => setNationalIdLast4(e.target.value.replace(/\D/g, ""))}
             placeholder="e.g. 5678"
             error={fieldErrors.nationalIdLast4}
+            fieldName="nationalIdLast4"
+            validator={(val) => validateNationalIdLast4(val, false)}
+            setFieldError={setFieldError}
+            clearFieldError={clearFieldError}
           />
           <TextField
             id="create-initial-role"

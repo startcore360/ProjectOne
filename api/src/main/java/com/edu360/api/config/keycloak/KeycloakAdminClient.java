@@ -267,7 +267,7 @@ public class KeycloakAdminClient {
             return location.substring(location.lastIndexOf('/') + 1);
         } catch (HttpClientErrorException ex) {
             if (ex.getStatusCode() == HttpStatusCode.valueOf(409)) {
-                throw new DuplicateResourceException("A user with username '" + username + "' already exists in identity provider (BS-22).");
+                throw new DuplicateResourceException("A user with username '" + username + "' already exists in identity provider (BS-22).", "email");
             }
             throw ex;
         }
@@ -315,13 +315,24 @@ public class KeycloakAdminClient {
 
     /**
      * Resets a user's password with configurable must_change_password policy.
+     *
+     * WHY the credential itself is always sent as "temporary": false, same as createUser: Keycloak's
+     * own reset-password endpoint treats "temporary": true as more than a flag - it silently adds
+     * its native UPDATE_PASSWORD required action to the user. Once that is pending, Keycloak's
+     * token endpoint refuses every direct-grant login outright ("Account is not fully set up"),
+     * before it even looks at the password or the authenticator code - so a user with an existing
+     * authenticator saw a correct TOTP code rejected as invalid, and one without MFA saw a bogus
+     * "set up an authenticator" challenge, both really caused by the stuck required action, not by
+     * anything wrong with their credentials. This app already enforces its own forced-change screen
+     * through the must_change_password attribute/claim (see MustChangePasswordFilter), so Keycloak's
+     * native mechanism is never needed and must not be allowed to engage.
      */
     public void resetPassword(String realm, String keycloakUserId, String newPassword, boolean mustChangePassword) {
         String adminToken = fetchMasterAdminAccessToken();
         Map<String, Object> credential = Map.of(
                 "type", "password",
                 "value", newPassword,
-                "temporary", mustChangePassword);
+                "temporary", false);
 
         restClient.put()
                 .uri(properties.getBaseUrl() + "/admin/realms/" + realm
@@ -803,6 +814,57 @@ public class KeycloakAdminClient {
                 .header("Authorization", "Bearer " + adminToken).retrieve().toBodilessEntity();
     }
 
+    /**
+     * WHAT: puts a platform/tenant account that the app considers ACTIVE back into a state where
+     * Keycloak will let it sign in: enabled, no stuck native UPDATE_PASSWORD required action, and no
+     * brute-force lockout. Anything else on the user (password, attributes, MFA) is left alone.
+     *
+     * WHY: Unlock, Reactivate and Reset password used to fix only one of these three things each.
+     * A Keycloak account that was disabled or held a stuck UPDATE_PASSWORD still answered every
+     * sign-in with "invalid credentials" even after the admin pressed Unlock and saw "success".
+     * One GET + at most one PUT keeps the rest of the user representation intact (same reason as
+     * setMustChangePasswordAttribute). Failures surface as KeycloakProvisioningException so the
+     * caller never reports success for a repair that did not happen.
+     */
+    @SuppressWarnings("unchecked")
+    public void restoreSignIn(String realm, String keycloakUserId) {
+        try {
+            String adminToken = fetchMasterAdminAccessToken();
+            String userUrl = properties.getBaseUrl() + "/admin/realms/" + realm + "/users/" + keycloakUserId;
+            Map<String, Object> current = restClient.get()
+                    .uri(userUrl)
+                    .header("Authorization", "Bearer " + adminToken)
+                    .retrieve()
+                    .body(Map.class);
+            if (current == null) {
+                throw new KeycloakProvisioningException("Keycloak user could not be read to restore sign-in.");
+            }
+            boolean enabled = Boolean.TRUE.equals(current.get("enabled"));
+            java.util.List<String> actions = new java.util.ArrayList<>(
+                    current.get("requiredActions") instanceof List<?> existing
+                            ? existing.stream().map(String::valueOf).toList()
+                            : List.of());
+            boolean hadStuckAction = actions.remove("UPDATE_PASSWORD");
+            if (!enabled || hadStuckAction) {
+                Map<String, Object> updated = new java.util.HashMap<>(current);
+                updated.put("enabled", true);
+                updated.put("requiredActions", actions);
+                restClient.put()
+                        .uri(userUrl)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .body(updated)
+                        .retrieve()
+                        .toBodilessEntity();
+            }
+            clearBruteForceLockout(realm, keycloakUserId);
+        } catch (KeycloakProvisioningException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            // Do not surface provider response bodies or credential-bearing URLs.
+            throw new KeycloakProvisioningException("Keycloak could not restore this account's sign-in.", ex);
+        }
+    }
+
     public void clearBruteForceLockout(String realm, String keycloakUserId) {
         String adminToken = fetchMasterAdminAccessToken();
         restClient.delete()
@@ -824,6 +886,12 @@ public class KeycloakAdminClient {
      * {"attributes": ...} body silently wiped the user's firstName/lastName/email, which then
      * made every subsequent login attempt fail outright. Fetching the current representation and
      * only changing the one field keeps everything else exactly as it was.
+     *
+     * Also clears Keycloak's own native UPDATE_PASSWORD required action here, in the same
+     * GET-then-PUT, if present: a past call to resetPassword (before this method also sent
+     * "temporary": false, see its own javadoc) could have left it stuck on the account, and a
+     * pending required action makes Keycloak's token endpoint refuse every direct-grant login
+     * outright, with no connection to whether the password or authenticator code was right.
      */
     @SuppressWarnings("unchecked")
     private void setMustChangePasswordAttribute(String adminToken, String realm, String keycloakUserId,
@@ -846,6 +914,13 @@ public class KeycloakAdminClient {
 
         java.util.Map<String, Object> updated = new java.util.HashMap<>(current);
         updated.put("attributes", attributes);
+        if (current.get("requiredActions") instanceof List<?> existingActions
+                && existingActions.contains("UPDATE_PASSWORD")) {
+            java.util.List<String> actions = new java.util.ArrayList<>(
+                    existingActions.stream().map(String::valueOf).toList());
+            actions.remove("UPDATE_PASSWORD");
+            updated.put("requiredActions", actions);
+        }
 
         restClient.put()
                 .uri(userUrl)

@@ -51,7 +51,7 @@ function MenuItem({ onClick, label, swatch, children }: { onClick: () => void; l
           height: "22px",
           borderRadius: "50%",
           background: swatch,
-          color: "#fff",
+          color: "var(--color-bg-surface, #ffffff)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -162,7 +162,7 @@ export function ShareMenu({
           aria-expanded={open}
           aria-label={label}
           title={label}
-          style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}
+          style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)", whiteSpace: "nowrap" }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="18" cy="5" r="3" />
@@ -211,19 +211,19 @@ export function ShareMenu({
           aria-label={`${label} destinations`}
           style={{
             position: "absolute",
-            top: `calc(100% + 6px)`,
+            top: `calc(100% + var(--space-1))`,
             right: 0,
             zIndex: 20,
             minWidth: "200px",
             background: "var(--color-bg-surface)",
             border: "1px solid var(--color-border-divider)",
             borderRadius: "var(--radius-md)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            boxShadow: "var(--elevation-2, 0 8px 24px rgba(0, 0, 0, 0.18))",
             padding: "var(--space-1)",
             display: "grid",
           }}
         >
-          <MenuItem onClick={() => void handleCopy()} label={copyLabel} swatch="#475569">
+          <MenuItem onClick={() => void handleCopy()} label={copyLabel} swatch="var(--color-text-muted)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
               <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
@@ -239,14 +239,14 @@ export function ShareMenu({
               <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.458c.536-.196 1.006.128.832.943z" />
             </svg>
           </MenuItem>
-          <MenuItem onClick={handleEmail} label="Email" swatch="#0284c7">
+          <MenuItem onClick={handleEmail} label="Email" swatch="var(--color-status-info-fg, #0284c7)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
               <polyline points="22,6 12,13 2,6" />
             </svg>
           </MenuItem>
           {canNativeShare && (
-            <MenuItem onClick={() => void handleNativeShare()} label="More..." swatch="#6366f1">
+            <MenuItem onClick={() => void handleNativeShare()} label="More..." swatch="var(--color-action-primary, #6366f1)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="18" cy="5" r="3" />
                 <circle cx="6" cy="12" r="3" />

@@ -1,6 +1,8 @@
 package com.edu360.api.platformops.entitlement;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,11 +48,50 @@ public class EntitlementCatalog {
                 (org.springframework.jdbc.core.RowCallbackHandler) rs -> requires
                         .computeIfAbsent(rs.getString("module_code"), k -> new ArrayList<>())
                         .add(rs.getString("requires_module_code")));
-        return jdbc.query("SELECT module_code, module_name, phase FROM ref.module_catalog WHERE is_entitlement "
+        List<Module> modules = jdbc.query("SELECT module_code, module_name, phase FROM ref.module_catalog WHERE is_entitlement "
                         + "ORDER BY phase, module_name",
                 (rs, i) -> new Module(rs.getString("module_code"), rs.getString("module_name"), rs.getInt("phase"),
                         List.copyOf(features.getOrDefault(rs.getString("module_code"), List.of())),
                         List.copyOf(requires.getOrDefault(rs.getString("module_code"), List.of()))));
+
+        return sortByDependencyDepth(modules, requires);
+    }
+
+    /**
+     * Plain alphabetical order buries a foundational module like USERS_ACCESS - which nothing
+     * requires but everything else requires - below every module that needs it enabled first:
+     * found by actually opening the tenant features editor with an empty plan and seeing every
+     * checkbox disabled with no visibly-enabled one above the fold to unblock them. Sorting by
+     * dependency depth first keeps a module that requires nothing (depth 0) always above anything
+     * that (transitively) requires it. Package-visible (not private) so EntitlementCatalogTest can
+     * verify the ordering directly, without a database.
+     */
+    static List<Module> sortByDependencyDepth(List<Module> modules, Map<String, List<String>> requires) {
+        Map<String, Integer> depth = new HashMap<>();
+        modules.forEach(m -> dependencyDepth(m.moduleCode(), requires, depth, new java.util.HashSet<>()));
+        List<Module> sorted = new ArrayList<>(modules);
+        sorted.sort(Comparator.comparingInt(Module::phase)
+                .thenComparingInt(m -> depth.getOrDefault(m.moduleCode(), 0))
+                .thenComparing(Module::moduleName));
+        return sorted;
+    }
+
+    /** 0 for a module nothing requires; otherwise 1 + the deepest of what it itself requires.
+     *  visiting guards against a cycle in the reference data turning this into infinite recursion -
+     *  module_dependency is meant to be a DAG, but this must never hang the whole screen if it isn't. */
+    private static int dependencyDepth(String moduleCode, Map<String, List<String>> requires,
+                                        Map<String, Integer> memo, Set<String> visiting) {
+        Integer cached = memo.get(moduleCode);
+        if (cached != null) return cached;
+        List<String> deps = requires.get(moduleCode);
+        if (deps == null || deps.isEmpty() || !visiting.add(moduleCode)) {
+            memo.put(moduleCode, 0);
+            return 0;
+        }
+        int depth = 1 + deps.stream().mapToInt(dep -> dependencyDepth(dep, requires, memo, visiting)).max().orElse(0);
+        visiting.remove(moduleCode);
+        memo.put(moduleCode, depth);
+        return depth;
     }
 
     /** module -> the modules it requires. */

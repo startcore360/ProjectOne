@@ -39,11 +39,11 @@ export function ActivateTenantModal({
     >
       <form onSubmit={onSubmit}>
         {activateError && (
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <Notice tone="danger">{activateError}</Notice>
           </div>
         )}
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <TextField
             id="payment-ref-input"
             label="Payment / Transaction Reference"
@@ -52,7 +52,7 @@ export function ActivateTenantModal({
             placeholder="e.g. PAY-2026-X8841"
           />
         </div>
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
           <TextField
             id="activate-note-input"
             label="Activation Note"
@@ -61,7 +61,7 @@ export function ActivateTenantModal({
             placeholder="e.g. Verified by finance desk"
           />
         </div>
-        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+        <footer style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button type="button" variant="secondary" onClick={onClose} disabled={activating}>
             Cancel
           </Button>

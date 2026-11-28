@@ -68,7 +68,7 @@ describe("StudentDirectoryPage", () => {
     await screen.findByRole("heading", { name: "Asha Rao" });
     await user.click(screen.getByRole("button", { name: "Add guardian" }));
     await user.type(screen.getByLabelText("Full name (Required)"), "Meera Rao");
-    await user.type(screen.getByLabelText("Mobile (E.164) (Required)"), "+919876543210");
+    await user.type(screen.getByLabelText(/Mobile.*\(Required\)/i), "+919876543210");
     await user.type(screen.getByLabelText("Email"), "meera@example.com");
     await user.selectOptions(screen.getByLabelText("Relationship"), "MOTHER");
     await user.click(screen.getByLabelText("Emergency contact"));

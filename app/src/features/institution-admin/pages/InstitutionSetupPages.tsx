@@ -2845,7 +2845,7 @@ export function TermLockPage() {
                         can("TERM_UNLOCK") ? (
                           <Button
                             variant="secondary"
-                            style={{ padding: "2px 8px", fontSize: "0.8rem" }}
+                            style={{ padding: "var(--space-1) var(--space-2)", fontSize: "0.8rem" }}
                             onClick={() => setUnlockModalItem(lock)}
                           >
                             Unlock Term
@@ -3345,7 +3345,7 @@ export function DelegationsApprovalsPage() {
                         {d.status === "ACTIVE" ? (
                           <Button
                             variant="secondary"
-                            style={{ padding: "2px 8px", fontSize: "0.8rem" }}
+                            style={{ padding: "var(--space-1) var(--space-2)", fontSize: "0.8rem" }}
                             onClick={() => handleCancelDelegation(d.delegationId)}
                           >
                             Cancel Delegation

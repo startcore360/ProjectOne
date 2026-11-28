@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -24,15 +25,16 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import com.edu360.api.config.PlatformPrincipal;
 import com.edu360.api.exception.UnauthorizedException;
+import com.edu360.api.identity.UserAccountRepository;
+import com.edu360.api.platform.PlatformUserRepository;
+import com.edu360.api.platformops.dto.AuditActorResponse;
 import com.edu360.api.platformops.dto.AuditLogEntryResponse;
 import com.edu360.api.platformops.dto.AuditLogPageResponse;
 import com.edu360.api.platformops.role.PlatformAuditWriter;
-
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
 @RequestMapping({"/v1/platform/audit-logs", "/api/platform/audit-logs"})
-@RequiredArgsConstructor
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Platform Ops", description = "Platform Admin / Product Owner read-mostly operations")
 public class PlatformAuditLogController {
     private static final int MAX_EXPORT_ROWS = 50_000;
@@ -41,6 +43,29 @@ public class PlatformAuditLogController {
     private final PlatformPermissionService platformPermissionService;
     private final PlatformAuditOutboxEventRepository auditOutboxEventRepository;
     private final PlatformAuditWriter platformAuditWriter;
+    private final PlatformUserRepository platformUserRepository;
+    private final UserAccountRepository userAccountRepository;
+
+    public PlatformAuditLogController(
+            PlatformPermissionService platformPermissionService,
+            PlatformAuditOutboxEventRepository auditOutboxEventRepository,
+            PlatformAuditWriter platformAuditWriter) {
+        this(platformPermissionService, auditOutboxEventRepository, platformAuditWriter, null, null);
+    }
+
+    @Autowired
+    public PlatformAuditLogController(
+            PlatformPermissionService platformPermissionService,
+            PlatformAuditOutboxEventRepository auditOutboxEventRepository,
+            PlatformAuditWriter platformAuditWriter,
+            PlatformUserRepository platformUserRepository,
+            UserAccountRepository userAccountRepository) {
+        this.platformPermissionService = platformPermissionService;
+        this.auditOutboxEventRepository = auditOutboxEventRepository;
+        this.platformAuditWriter = platformAuditWriter;
+        this.platformUserRepository = platformUserRepository;
+        this.userAccountRepository = userAccountRepository;
+    }
 
     @GetMapping
     @io.swagger.v3.oas.annotations.Operation(summary = "List filtered platform audit events (PLATFORM_AUDIT_VIEW)")
@@ -97,6 +122,46 @@ public class PlatformAuditLogController {
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"platform-audit-logs.csv\"")
                 .body(stream);
+    }
+
+    @GetMapping("/actors")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Search candidate actors for audit log filtering (PLATFORM_AUDIT_VIEW)")
+    public ResponseEntity<List<AuditActorResponse>> listAuditActors(
+            @RequestParam(required = false) UUID tenantId,
+            @RequestParam(required = false) String query,
+            Authentication authentication) {
+        requireAuditViewer(authentication);
+        String q = query != null ? query.trim().toLowerCase(java.util.Locale.ROOT) : "";
+
+        if (tenantId != null) {
+            if (userAccountRepository == null) return ResponseEntity.ok(List.of());
+            List<AuditActorResponse> tenantUsers = userAccountRepository.findByIdTenantId(tenantId).stream()
+                    .filter(u -> q.isEmpty()
+                            || (u.getDisplayName() != null && u.getDisplayName().toLowerCase(java.util.Locale.ROOT).contains(q))
+                            || (u.getEmail() != null && u.getEmail().toLowerCase(java.util.Locale.ROOT).contains(q)))
+                    .map(u -> new AuditActorResponse(
+                            u.getId().getUserAccountId(),
+                            u.getDisplayName() != null ? u.getDisplayName() : u.getEmail(),
+                            u.getEmail(),
+                            "TENANT_USER"))
+                    .limit(50)
+                    .toList();
+            return ResponseEntity.ok(tenantUsers);
+        }
+
+        if (platformUserRepository == null) return ResponseEntity.ok(List.of());
+        List<AuditActorResponse> platformStaff = platformUserRepository.findAll().stream()
+                .filter(u -> q.isEmpty()
+                        || (u.getFullName() != null && u.getFullName().toLowerCase(java.util.Locale.ROOT).contains(q))
+                        || (u.getEmail() != null && u.getEmail().toLowerCase(java.util.Locale.ROOT).contains(q)))
+                .map(u -> new AuditActorResponse(
+                        u.getPlatformUserId(),
+                        u.getFullName() != null ? u.getFullName() : u.getEmail(),
+                        u.getEmail(),
+                        "PLATFORM_STAFF"))
+                .limit(50)
+                .toList();
+        return ResponseEntity.ok(platformStaff);
     }
 
     private void writeCsv(OutputStream output, UUID tenantId, UUID actorUserId, String actionCode,

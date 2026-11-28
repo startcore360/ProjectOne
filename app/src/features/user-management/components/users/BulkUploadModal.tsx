@@ -136,10 +136,10 @@ export function BulkUploadModal({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "0.75rem 1rem",
+            padding: "var(--space-3) var(--space-4)",
             background: "var(--color-bg-subtle)",
             borderRadius: "6px",
-            marginBottom: "1rem",
+            marginBottom: "var(--space-4)",
             border: "1px solid var(--color-border-divider)",
           }}
         >
@@ -161,10 +161,10 @@ export function BulkUploadModal({
 
         {/* Form */}
         <form onSubmit={handlePreValidate}>
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <label
               htmlFor="csv-file-input"
-              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.25rem" }}
+              style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-1)" }}
             >
               2. Select CSV File
             </label>
@@ -175,7 +175,7 @@ export function BulkUploadModal({
               onChange={handleFileChange}
               style={{
                 width: "100%",
-                padding: "0.5rem",
+                padding: "var(--space-2)",
                 borderRadius: "var(--radius-sm)",
                 border: "1px solid var(--color-border-divider)",
                 backgroundColor: "var(--color-bg-surface)",
@@ -184,7 +184,7 @@ export function BulkUploadModal({
             />
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <TextAreaField
               id="csv-textarea"
               label="Or paste CSV text directly:"
@@ -196,7 +196,7 @@ export function BulkUploadModal({
             />
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <SelectField
               id="bulk-institution"
               label="Institution (Optional for university-wide uploads)"
@@ -213,19 +213,19 @@ export function BulkUploadModal({
           </div>
 
           {error && (
-            <div style={{ marginBottom: "1rem" }}>
+            <div style={{ marginBottom: "var(--space-4)" }}>
               <Notice tone="danger">{error}</Notice>
             </div>
           )}
 
           {completedMessage && (
-            <div style={{ marginBottom: "1rem" }}>
+            <div style={{ marginBottom: "var(--space-4)" }}>
               <Notice tone="success">{completedMessage}</Notice>
             </div>
           )}
 
           {!job && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
               <Button type="button" variant="secondary" onClick={onClose} disabled={validating}>
                 Cancel
               </Button>
@@ -238,13 +238,13 @@ export function BulkUploadModal({
 
         {/* Pre-validation Report */}
         {job && (
-          <div style={{ marginTop: "1.25rem", borderTop: "1px solid var(--color-border-divider)", paddingTop: "1rem" }}>
-            <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>
+          <div style={{ marginTop: "var(--space-5)", borderTop: "1px solid var(--color-border-divider)", paddingTop: "var(--space-4)" }}>
+            <h3 style={{ fontSize: "1rem", margin: "0 0 var(--space-2)" }}>
               Pre-validation results
             </h3>
 
             <div className="app-stat-row">
-              <div style={{ background: "var(--color-bg-subtle)", padding: "0.75rem", borderRadius: "6px", textAlign: "center" }}>
+              <div style={{ background: "var(--color-bg-subtle)", padding: "var(--space-3)", borderRadius: "6px", textAlign: "center" }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Total Rows</div>
                 <div style={{ fontSize: "1.25rem", fontWeight: "bold" }}>{job.totalRows}</div>
               </div>
@@ -268,8 +268,8 @@ export function BulkUploadModal({
 
             {/* Error Rows Breakdown Table */}
             {rowErrors.length > 0 && (
-              <div style={{ marginBottom: "1rem" }}>
-                <h4 style={{ fontSize: "0.875rem", color: "var(--color-status-danger-fg)", margin: "0 0 0.5rem" }}>
+              <div style={{ marginBottom: "var(--space-4)" }}>
+                <h4 style={{ fontSize: "0.875rem", color: "var(--color-status-danger-fg)", margin: "0 0 var(--space-2)" }}>
                   Rows with errors can be corrected and imported later:
                 </h4>
                 <DataTable
@@ -281,7 +281,7 @@ export function BulkUploadModal({
                       <td><code>{err.rowNumber}</code></td>
                       <td><strong>{err.fieldName || "—"}</strong></td>
                       <td><Badge tone="neutral">{err.errorCode}</Badge></td>
-                      <td style={{ color: "var(--color-text-secondary, #64748b)" }}>{err.errorMessage}</td>
+                      <td style={{ color: "var(--color-text-muted)" }}>{err.errorMessage}</td>
                     </tr>
                   ))}
                 </DataTable>
@@ -291,12 +291,12 @@ export function BulkUploadModal({
             {/* Statutory Notice */}
             <div
               style={{
-                padding: "0.625rem 0.875rem",
+                padding: "var(--space-2) var(--space-3)",
                 backgroundColor: "var(--color-bg-subtle)",
                 borderRadius: "6px",
                 fontSize: "0.8125rem",
                 color: "var(--color-text-muted)",
-                marginBottom: "1rem",
+                marginBottom: "var(--space-4)",
               }}
             >
               <strong>Privacy notice:</strong> Unmasked 12-digit Aadhaar numbers are rejected. Only masked 4-digit national IDs are accepted and persisted.
@@ -304,7 +304,7 @@ export function BulkUploadModal({
 
             {/* Actions */}
             {job.status !== "COMPLETED" ? (
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)", flexWrap: "wrap" }}>
                 <Button type="button" variant="secondary" onClick={onClose} disabled={starting}>
                   Cancel
                 </Button>
