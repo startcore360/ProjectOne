@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../../../components/ui/Icon";
 import { PageHeader, Kpi, Panel } from "../../../design-system/components";
@@ -105,7 +105,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
   const quickActions = familyQuickActions[role.family] ?? [];
   const showHero = !NO_HERO_ROLES.has(role.code);
 
-  const liveMetrics = useMemo(() => {
+  const liveMetrics = (() => {
     if (summary && SINGLE_INSTITUTION_SUMMARY_ROLES.has(role.code)) {
       return [
         { label: "Active users", value: String(summary.activeUsers), context: "Active accounts in this institution", icon: "users" },
@@ -126,7 +126,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
       context: index === 0 ? "Live data not connected for this metric" : "Awaiting an implemented, permission-scoped API",
       icon: index === 1 ? "clock" : index === 2 ? "chart" : "home",
     }));
-  }, [summary, institutionSummary, role.code, pendingApprovalCount, content.metrics]);
+  })();
 
   const isLeadershipDashboard = ADMIN_ROLES.has(role.code) || PRINCIPAL_ROLES.has(role.code);
 
