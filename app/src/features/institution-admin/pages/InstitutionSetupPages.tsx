@@ -1601,7 +1601,7 @@ export function AcademicStructurePage() {
           if (!institutionId) {
             const firstId = res.items[0].institutionId;
             setInstitutionId(firstId);
-            void loadStructureFor(firstId);
+            void loadStructureFor(firstId, res.items);
           }
         }
       })
@@ -1611,12 +1611,12 @@ export function AcademicStructurePage() {
 
   if (!tenantId) return <NoTenantNotice />;
 
-  const loadStructureFor = async (id: string) => {
+  const loadStructureFor = async (id: string, availableInstitutions: InstitutionItem[] = institutions) => {
     if (!isValidUuid(id)) {
       setError("Choose a registered institution.");
       return;
     }
-    const target = institutions.find((institution) => institution.institutionId === id);
+    const target = availableInstitutions.find((institution) => institution.institutionId === id);
     const schoolContext = target?.institutionType === "SCHOOL" || roleCode === "SCHOOL_ADMIN";
     setLoading(true);
     setError(null);
@@ -1989,9 +1989,9 @@ export function AcademicStructurePage() {
         </div>
       )}
 
-      <Panel title="Select institution" description="Choose a registered institution to view and manage its academic hierarchy.">
-        <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-          <div style={{ maxWidth: "480px", marginBottom: "var(--space-3)" }}>
+      <Panel title="Institution context" description="Choose the registered institution whose academic structure you want to manage." className="app-structure-context">
+        <div className="app-structure-context__body">
+          <div className="app-structure-context__selector">
               <SelectField
                 id="quick-inst-select"
                 label="Choose from registered institutions"
@@ -2017,7 +2017,7 @@ export function AcademicStructurePage() {
                 ))}
               </SelectField>
             </div>
-          <div style={{ marginTop: "var(--space-3)" }}>
+          <div className="app-structure-context__controls">
             <div className="app-inline-actions">
               <Button type="button" onClick={() => void loadStructure()} busy={loading} disabled={!institutionId}>
                 {loading ? "Loading…" : "Load structure"}
@@ -2191,8 +2191,8 @@ export function AcademicStructurePage() {
             ) : null}
           </Panel>
 
-          <Panel title="School setup shortcuts" description="Continue with teacher assignments and weekly calendar rules.">
-            <div className="app-inline-actions">
+          <Panel title="Related school setup" description="Continue with teacher assignments and academic calendar configuration." className="app-structure-shortcuts">
+            <div className="app-structure-shortcuts__links">
               <a href="/university/setup/class-teacher">Assign class teachers</a>
               <a href="/university/setup/weekly-off">Configure weekly off</a>
               <a href="/university/setup/calendar-events">Manage academic sessions and calendar events</a>
@@ -2206,19 +2206,13 @@ export function AcademicStructurePage() {
           {/* Departments Panel */}
           <Panel
             title="Academic Departments"
-            description="Academic departments are available for colleges; school structures use classes and sections."
+            description="Organise departments, faculty leadership and student groups."
+            action={!isSupportSession ? <Button type="button" onClick={() => setShowAddDept(true)}>Add Department</Button> : undefined}
+            className="app-structure-data-panel"
           >
-            <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-              {!isSupportSession && (
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-                  <Button type="button" onClick={() => setShowAddDept(true)}>
-                    Add Department
-                  </Button>
-                </div>
-              )}
-
+            <div className="app-structure-panel-body">
               {departments.length === 0 ? (
-                <p className="app-sample-note">No departments found for this institution.</p>
+                <EmptyState title="No departments yet" description="Add the first academic department to start organising programmes and faculty." />
               ) : (
                 <div className="app-table-wrap">
                   <table className="app-table">
@@ -2288,24 +2282,13 @@ export function AcademicStructurePage() {
           {/* Programs Panel */}
           <Panel
             title="Degree Programs"
-            description="Degree and certification programs under departments (e.g. B.Tech, M.Sc)."
+            description="Manage degree and certification programmes within academic departments."
+            action={!isSupportSession ? <Button type="button" disabled={departments.length === 0} onClick={() => setShowAddProg(true)} title={departments.length === 0 ? "Create a department first" : ""}>Add Program</Button> : undefined}
+            className="app-structure-data-panel"
           >
-            <div style={{ padding: "0 var(--space-5) var(--space-5)" }}>
-              {!isSupportSession && (
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-                  <Button
-                    type="button"
-                    disabled={departments.length === 0}
-                    onClick={() => setShowAddProg(true)}
-                    title={departments.length === 0 ? "Create a department first" : ""}
-                  >
-                    Add Program
-                  </Button>
-                </div>
-              )}
-
+            <div className="app-structure-panel-body">
               {programs.length === 0 ? (
-                <p className="app-sample-note">No degree programs found for this institution.</p>
+                <EmptyState title="No degree programmes yet" description={departments.length === 0 ? "Create a department before adding a degree programme." : "Add the first degree or certification programme for this institution."} />
               ) : (
                 <div className="app-table-wrap">
                   <table className="app-table">
@@ -2345,6 +2328,7 @@ export function AcademicStructurePage() {
           <Panel
             title="Curriculum version history"
             description="Curriculum snapshots are append-only. Each change creates a new numbered version with an effective date range."
+            className="app-structure-advanced-panel"
           >
             {curriculumError && <Notice tone="danger">{curriculumError}</Notice>}
             <div className="app-form">
@@ -2401,6 +2385,7 @@ export function AcademicStructurePage() {
           <Panel
             title="Program years and semester calendar"
             description="Configure program years and dated semesters. Term dates are checked for institution-wide overlap by the API and database constraint."
+            className="app-structure-advanced-panel"
           >
             {catalogError && <Toast variant="error" description={catalogError} />}
             <div className="app-form">
