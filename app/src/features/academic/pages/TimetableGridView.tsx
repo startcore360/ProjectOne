@@ -18,6 +18,7 @@ export default function TimetableGridView(){
  const {canAny}=useTenantAccess();
  const canBuild=canAny(["TIMETABLE_BUILD"]);
  const canListAllocations=canAny(["SUBJECT_ALLOCATE"]);
+ const canManageStructure=canAny(["STRUCTURE_MANAGE"]);
  const [institutions,setInstitutions]=useState<InstitutionItem[]>([]);
  const [sessions,setSessions]=useState<AcademicSessionItem[]>([]);
  const [sections,setSections]=useState<SectionItem[]>([]);
@@ -37,7 +38,6 @@ export default function TimetableGridView(){
  const [tokenExpiry,setTokenExpiry]=useState(()=>new Date(Date.now()+7*86400000).toISOString().slice(0,16));
  const [dragged,setDragged]=useState<Slot|null>(null);const [toast,setToast]=useState("");const [feedback,setFeedback]=useState("");const [busy,setBusy]=useState(false);
  const [studentAccessToken,setStudentAccessToken]=useState("");const [accessUrl,setAccessUrl]=useState("");
- const selectedAllocation=allocations.find(item=>item.subjectAllocationId===subjectAllocationId);
  const selectedInstitution=institutions.find(item=>item.institutionId===institutionId);
 
  useEffect(()=>{
@@ -70,7 +70,7 @@ export default function TimetableGridView(){
   }).catch(error=>{if(active)setOptionsError(error instanceof Error?error.message:"Unable to load timetable setup options.");})
    .finally(()=>{if(active)setOptionsLoading(false);});
   return ()=>{active=false;};
- },[tenantId,institutionId,canListAllocations]);
+ },[tenantId,institutionId,canListAllocations,canManageStructure]);
  const load=useCallback(async()=>{
   if(!tenantId||!institutionId)return;
   try{const res=await api.get<Slot[]>("/api/tenants/"+tenantId+"/academic/timetable/slots",{params:{institutionId,sectionId:viewMode==="SECTION"?(sectionId||undefined):undefined,teacherId:viewMode==="TEACHER"?(teacherFilter||undefined):undefined,roomId:viewMode==="ROOM"?(roomFilter||undefined):undefined,academicSessionId:sessionId||undefined,date:dateFilter||undefined,dayOfWeek:dayFilter||undefined}});setSlots(res.data);}
@@ -157,7 +157,7 @@ export default function TimetableGridView(){
    <label>Institution ID<input value={institutionId} onChange={e=>setInstitutionId(e.target.value)}/></label>
    <label>Academic session ID (filter)<input value={sessionId} onChange={e=>setSessionId(e.target.value)}/></label>
    <label>View<select value={viewMode} onChange={e=>setViewMode(e.target.value as "SECTION"|"TEACHER"|"ROOM")}><option value="SECTION">Section view</option><option value="TEACHER">Teacher view</option><option value="ROOM">Room view</option></select></label>
-  {viewMode==="SECTION"&&<label>Class / Section<select value={sectionId} onChange={e=>setSectionId(e.target.value)}><option value="">All sections</option>{sections.map(item=><option key={item.sectionId} value={item.sectionId}>{item.sectionName}</option>)}</select></label>}
+  {viewMode==="SECTION"&&canManageStructure&&<label>Class / Section<select value={sectionId} onChange={e=>setSectionId(e.target.value)}><option value="">All sections</option>{sections.map(item=><option key={item.sectionId} value={item.sectionId}>{item.sectionName}</option>)}</select></label>}
   {viewMode==="TEACHER"&&<label>Teacher ID<input value={teacherFilter} onChange={e=>setTeacherFilter(e.target.value)}/></label>}
   {viewMode==="ROOM"&&<label>Room ID<input value={roomFilter} onChange={e=>setRoomFilter(e.target.value)}/></label>}
   <label>Effective date<input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/></label>
