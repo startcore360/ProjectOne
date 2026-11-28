@@ -154,7 +154,7 @@ export default function ApprovalInboxPage() {
         <Panel title="Request details" description="Review the approval chain before making a decision.">
           {!selectedId ? (
             <div className="app-approval-empty">
-              <Icon name="inbox" size={26} />
+              <Icon name="file-text" size={26} />
               <strong>Select a request</strong>
               <span>Choose a pending item to review its details and decision history.</span>
             </div>
