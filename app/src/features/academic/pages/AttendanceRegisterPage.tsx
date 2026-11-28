@@ -11,7 +11,6 @@ import {
   Notice,
   Panel,
   MetricCard,
-  Badge,
 } from "../../../design-system/components";
 import {
   institutionService,
@@ -24,7 +23,6 @@ type Student = {
   student_profile_id: string;
   student_code: string;
   full_name: string;
-  has_medical_exemption?: boolean;
 };
 type Status = "PRESENT" | "ABSENT" | "ON_APPROVED_LEAVE" | "NOT_HELD" | "";
 type SessionKind = "DAILY" | "PERIOD" | "SCHOOL_FIRST_HALF" | "SCHOOL_SECOND_HALF";
@@ -444,14 +442,6 @@ export default function AttendanceRegisterPage() {
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={() => markAll("ABSENT")}
-                  >
-                    Mark all Absent
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
                     onClick={() => markAll("")}
                   >
                     Clear all
@@ -473,15 +463,8 @@ export default function AttendanceRegisterPage() {
                 <tbody>
                   {students.map((student) => (
                     <tr key={student.enrollment_id} tabIndex={0} onKeyDown={(e) => keyboard(student.enrollment_id, e)}>
-                      <td>
-                        <span style={{ fontWeight: "var(--fw-medium)" }}>{student.full_name}</span>{" "}
-                        <small style={{ color: "var(--color-text-muted)" }}>({student.student_code})</small>
-                        {student.has_medical_exemption && (
-                          <Badge tone="warning" style={{ marginLeft: "var(--space-2)" }}>
-                            Medical exemption
-                          </Badge>
-                        )}
-                      </td>
+                      <td>{student.student_code || "—"}</td>
+                      <td><span style={{ fontWeight: "var(--fw-medium)" }}>{student.full_name}</span></td>
                       {(["PRESENT", "ABSENT", "ON_APPROVED_LEAVE"] as Status[]).map((status) => (
                         <td key={status} style={{ textAlign: "center" }}>
                           <input
