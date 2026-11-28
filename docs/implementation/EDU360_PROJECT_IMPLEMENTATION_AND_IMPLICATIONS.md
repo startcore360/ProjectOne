@@ -313,6 +313,17 @@ Each decision must be resolved from the authoritative V4.0 source or escalated f
 | `639bf981934dbf72d622d5dba5e3a1796a810736` | Timetable | Check dropdown conflicts against all authorized institution timetable slots. |
 | `ac3ad964214a1b2e8005e10b6fa5f1ba30200f54` | Documentation | Add detailed Timetable Management implementation/implications register. |
 
+| `04fcb567ed02e0c666797e14e74dc601134668ca` | Attendance | Add HOD attendance review workspace. |
+| `5a2c3cecf5d136f97172685129d2d765df1e5431` | Attendance | Add HOD oversight route and permission gate. |
+| `59e21403c61fd57989f1aac085e00ab7dc1ec79a` | Attendance | Add HOD oversight layout styles. |
+| `436a78ead74683fd485028b10eb8f07f1843b0e3` | Attendance | Refocus teacher marking on current class/session; remove unrelated rules configuration and sensitive medical detail. |
+| `a9eed90b0f3a12a3c21ac8a9c608a4a364eefe9` | Attendance | Correct teacher roster columns and bulk controls. |
+| `477819c3f5688a73b2950bdf0a0b51c48eee2d72` | Attendance | Add submitted-session state and local-date handling. |
+| `4ea6c2b83acaf9e725bf302522c730c0f738decf` | Attendance | Align teacher register test labels. |
+| `5b21caa9c540660237981de785136232a155a513` | Attendance | Repair submitted-state JSX condition. |
+| `d20c8b223210aa20c357f0ab182881921c67772b` | Attendance | Remove stray roster header escape. |
+| `1c1181c2a5269121e6e7e5e4ebfc5418ba8be04a` | Documentation | Record first teacher/HOD Attendance UI slice and open risks. |
+
 ### Future commits
 Append one row per code commit and include the new SHA, module, summary and verification state. When a documentation update is made in a separate commit, identify the code commit it documents.
 
