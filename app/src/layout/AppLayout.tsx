@@ -455,7 +455,7 @@ export default function AppLayout() {
           <NavLink to="/profile" className="app-topbar__avatar" aria-label={`${name} - view profile`} title="View profile">{avatar}</NavLink>
         </div>
       </div>
-      <main className="app-content">
+      <main className={`app-content${isCollegeLevel || isSchoolLevel ? " app-content--institution" : ""}`}>
         {isSupportSession && <SupportSessionBanner />}
         {!user?.platformRole && <TrialExpiredBanner />}
         {isPlatformConsole && platformPermissionsFailed && (
