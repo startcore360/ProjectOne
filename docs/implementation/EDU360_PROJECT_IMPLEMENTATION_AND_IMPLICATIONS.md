@@ -130,7 +130,7 @@ Repository areas reviewed in the work to date include frontend pages/components 
 - API authorization remains authoritative for department scope; an out-of-scope section request is surfaced as an error.
 - Added responsive layout styles for the HOD review workspace.
 - Refocused the teacher register around the current class/session, renamed raw-ID labels, removed medical-exemption detail and threshold configuration from the marking task, added roll/ID as a separate column, and added submitted-session read-only handling.
-- Reused an existing unsubmitted session ID when saving, rather than always creating another session. Updated the related test labels.
+- Removed the old date-wide register preload from the teacher marking form because the current register API returns every session for a date without a timetable-slot filter; merging those rows could silently put one period's marks into another period. The form now starts a clean session-specific draft. The backend still needs natural idempotency and a slot-scoped register/read endpoint before duplicate-safe resume and submitted-state locking can be delivered. Updated the related test labels.
 
 **Commits**
 - `04fcb567ed02e0c666797e14e74dc601134668ca` — add HOD attendance review workspace.
@@ -150,7 +150,7 @@ Repository areas reviewed in the work to date include frontend pages/components 
 - The existing `AttendanceController` does not expose the correction-request/approval, attendance-summary, bulk-upload, substitute-assignment or sync-conflict operations specified in OpenAPI.
 - The existing `AttendanceService` authorizes the attendance action and department/institution scope but does not visibly enforce the assigned-teacher / substitute-for-date rule at the service layer. This is a blocking authorization gap to resolve before relying on teacher marking for production.
 - Current HOD screen reviews one selected section/date using the existing register API. It is not yet a complete department dashboard, defaulter/risk list, or correction inbox.
-- The existing register response can include session metadata but the current save flow creates a new session and writes entries separately; natural idempotency, submitted-state lifecycle, term-lock UI and preservation of correction history need backend/API alignment.
+- The existing register response returns all sessions for a section/date without a timetable-slot filter or enough period metadata for a safe teacher-side session resume. The teacher form therefore does not preload those rows. The current save flow creates a session and writes entries separately; natural idempotency, slot-scoped reads, submitted-state lifecycle, term-lock UI and preservation of correction history need backend/API alignment.
 - Teacher register still needs its dedicated UX refinement and separation of threshold/rules configuration from the marking task.
 - No tests, frontend build, backend build or runtime checks were executed for these commits.
 
@@ -322,6 +322,7 @@ Each decision must be resolved from the authoritative V4.0 source or escalated f
 | `4ea6c2b83acaf9e725bf302522c730c0f738decf` | Attendance | Align teacher register test labels. |
 | `5b21caa9c540660237981de785136232a155a513` | Attendance | Repair submitted-state JSX condition. |
 | `d20c8b223210aa20c357f0ab182881921c67772b` | Attendance | Remove stray roster header escape. |
+| `614f22c5737de0f0669c0d39ced5f116fe5b5ddf` | Attendance | Avoid mixing date-wide register rows from different periods in the teacher marking form. |
 | `1c1181c2a5269121e6e7e5e4ebfc5418ba8be04a` | Documentation | Record first teacher/HOD Attendance UI slice and open risks. |
 
 ### Future commits
