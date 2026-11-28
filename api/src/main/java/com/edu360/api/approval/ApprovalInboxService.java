@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.edu360.api.academic.PromotionRunRepository;
 import com.edu360.api.approval.dto.ApprovalInboxResponseDto;
+import com.edu360.api.approval.dto.ApprovalInboxItemDto;
 import com.edu360.api.approval.dto.ApprovalStepDto;
 import com.edu360.api.approval.dto.ApprovalSummaryDto;
 import com.edu360.api.approval.dto.DecideApprovalRequestDto;
@@ -138,7 +139,7 @@ public class ApprovalInboxService {
         String activeRole = TenantContext.isSet() ? TenantContext.currentActiveRoleCode() : null;
         UUID userId = principal.userAccountId();
         Map<UUID, ApprovalRequest> requests = new HashMap<>();
-        List<ApprovalStepDto> items = new ArrayList<>();
+        List<ApprovalInboxItemDto> items = new ArrayList<>();
 
         for (ApprovalStep step : approvalStepRepository.findByIdTenantIdAndDecision(tenantId, "PENDING")) {
             ApprovalRequest req = requests.computeIfAbsent(step.getApprovalRequestId(), id ->
@@ -169,7 +170,7 @@ public class ApprovalInboxService {
                     RbacTarget.of(req.getRequestedByUserId())).allowed()) {
                 continue;
             }
-            items.add(toStepDto(step));
+            items.add(toInboxItemDto(step, req));
         }
         return new ApprovalInboxResponseDto(items, new ApprovalInboxResponseDto.PageInfoDto(items.size(), 1, 1, items.size()));
     }
@@ -567,6 +568,14 @@ public class ApprovalInboxService {
 
     private static ResourceNotFoundException notFound(UUID approvalRequestId) {
         return new ResourceNotFoundException("Approval request " + approvalRequestId + " not found");
+    }
+
+    private ApprovalInboxItemDto toInboxItemDto(ApprovalStep step, ApprovalRequest request) {
+        return new ApprovalInboxItemDto(
+                request.getId().getApprovalRequestId(), step.getStepNo(), step.getApproverRoleCode(),
+                step.getDecision(), request.getProcessCode(), request.getSubjectType(), request.getSubjectId(),
+                request.getInstitutionId(), request.getRequesterActiveRole(), request.getCreatedAt(),
+                request.getCurrentStepNo(), request.getStatus());
     }
 
     private ApprovalStepDto toStepDto(ApprovalStep step) {
