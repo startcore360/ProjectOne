@@ -106,8 +106,8 @@ export default function TimetableGridView(){
    await load();
   }catch(e){
    const failure=e as {response?:{data?:{code?:string;message?:string}}};const code=failure.response?.data?.code??"";
-   setToast(code.includes("TEACHER_DOUBLE_BOOKED")?"Teacher already has a slot at this time."
-    :code.includes("ROOM_OCCUPIED")?"Room is already occupied at this time."
+   setToast(code.includes("TEACHER_DOUBLE_BOOKED")?"Teacher is already scheduled. The current database constraint blocks this save."
+    :code.includes("ROOM_OCCUPIED")?"Room is already booked. The current database constraint blocks this save."
     :failure.response?.data?.message??(e instanceof Error?e.message:"Unable to create timetable slot."));
   }finally{setBusy(false);}
  }
@@ -142,14 +142,14 @@ export default function TimetableGridView(){
    return slot.timetable_slot_id!==dragged.timetable_slot_id&&slot.day_of_week===dayOfWeek&&dateOverlap&&(teacherClash||roomClash)
     &&startAt<slot.end_time&&newEnd>slot.start_time;
   });
-  if(clashes)setToast("Clash warning: this move overlaps an existing teacher or room booking. The timetable rule allows the change; review the warning before publishing.");
+  if(clashes)setToast("Potential clash detected. The current database may reject this move; review the conflict before retrying.");
   const clashWarning=clashes?"Clash warning: this move overlaps an existing teacher or room booking. The timetable rule allows the change; review the warning before publishing.":"";
   void api.put("/api/tenants/"+tenantId+"/timetable/slots/"+dragged.timetable_slot_id,{
    institutionId,dayOfWeek,periodNo:dragged.period_no,startTime:startAt,endTime:newEnd,roomId:dragged.room_id,
   }).then(()=>{setToast(clashWarning);setFeedback("Draft timetable slot moved.");void load();})
    .catch((e:unknown)=>{const failure=e as {response?:{data?:{code?:string;message?:string}}};const code=failure.response?.data?.code??"";
-    setToast(code.includes("TEACHER_DOUBLE_BOOKED")?"Teacher already has a slot at this time."
-     :code.includes("ROOM_OCCUPIED")?"Room is already occupied at this time."
+    setToast(code.includes("TEACHER_DOUBLE_BOOKED")?"Teacher is already scheduled. The current database constraint blocks this move."
+     :code.includes("ROOM_OCCUPIED")?"Room is already booked. The current database constraint blocks this move."
      :failure.response?.data?.message??(e instanceof Error?e.message:"The timetable engine rejected this move."));
    });
   setDragged(null);
@@ -205,7 +205,7 @@ export default function TimetableGridView(){
     {cell.map(slot=><div key={slot.timetable_slot_id} draggable={slot.status==="DRAFT"} onDragStart={()=>setDragged(slot)}
      style={{border:"1px solid var(--color-border-divider)",borderRadius:6,padding:6,marginBottom:4,cursor:slot.status==="DRAFT"?"grab":"default"}}>
      <strong>{slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</strong><br/>
-     <small>{slot.course_offering_id.slice(0,8)} · {slot.teacher_name??slot.teacher_id?.slice(0,8)??"Teacher pending"} · {slot.room_number??slot.room_id?.slice(0,8)??"Online"}</small><br/>
+     <small>Section {slot.section_id?.slice(0,8)??"Elective"} · {slot.course_offering_id.slice(0,8)} · {slot.teacher_name??slot.teacher_id?.slice(0,8)??"Teacher pending"} · {slot.room_number??slot.room_id?.slice(0,8)??"Online"}</small><br/>
      <small>{slot.status}{slot.is_online?" · Online":""}</small>
      {canBuild&&slot.status==="DRAFT"&&<button type="button" disabled={busy} onClick={()=>void publishSlot(slot)}>Publish slot</button>}
     </div>)}
