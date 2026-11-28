@@ -48,7 +48,7 @@ export default function AttendanceRegisterPage() {
   const [sectionId, setSectionId] = useState("");
   const [slotId, setSlotId] = useState("");
   const [subjectAllocationId, setSubjectAllocationId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => { const now = new Date(); return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-"); });
   const [sessionKind, setSessionKind] = useState<SessionKind>("PERIOD");
   const [students, setStudents] = useState<Student[]>([]);
   const [marks, setMarks] = useState<Record<string, Status>>({});
@@ -143,7 +143,7 @@ export default function AttendanceRegisterPage() {
 
       // Attempt to load existing register asynchronously without blocking roster load
       void api
-        .get<Array<{ enrollment_id: string; attendance_status: Status; attendance_session_id?: string }>>(
+        .get<Array<{ enrollment_id: string; attendance_status: Status; attendance_session_id?: string; submitted_at?: string | null }>>(
           "/api/tenants/" + tenantId + "/academic/attendance/register",
           { params: { institutionId, sectionId, date } }
         )
