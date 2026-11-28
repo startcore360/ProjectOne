@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Icon } from "../../../components/ui/Icon";
+import { Icon, type IconName } from "../../../components/ui/Icon";
 import { PageHeader, Kpi, Panel } from "../../../design-system/components";
 import { useAppSelector } from "../../../store/hooks";
 import { selectPendingApprovalCount } from "../../notifications/hooks/useNotifications";
@@ -123,7 +123,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
         : familyQuickActions[role.family] ?? [];
   const showHero = !NO_HERO_ROLES.has(role.code);
 
-  const liveMetrics = (() => {
+  const liveMetrics: Array<{ label: string; value: string; context: string; icon: IconName }> = (() => {
     if (summary && SINGLE_INSTITUTION_SUMMARY_ROLES.has(role.code)) {
       return [
         { label: "Active users", value: String(summary.activeUsers), context: "Active accounts in this institution", icon: "users" },
@@ -141,7 +141,7 @@ export function RoleWorkspace({ name, roleCode }: RoleWorkspaceProps) {
     return content.metrics.map((label, index) => ({
       label,
       value: "—",
-      context: index === 0 ? "Live data not connected for this metric" : "Awaiting an implemented, permission-scoped API",
+      context: loading ? "Loading from the dashboard API…" : loadError ? "Live data unavailable" : index === 0 ? "Live data not connected for this metric" : "Awaiting an implemented, permission-scoped API",
       icon: index === 1 ? "clock" : index === 2 ? "chart" : "home",
     }));
   })();
