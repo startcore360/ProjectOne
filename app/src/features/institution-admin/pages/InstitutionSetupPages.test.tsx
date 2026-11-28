@@ -99,6 +99,23 @@ describe("Institution setup action screens", () => {
     expect(screen.getByText(/requires a signed-in institution identity/i)).toBeInTheDocument();
   });
 
+  it("loads the school structure automatically using the institution returned by the initial lookup", async () => {
+    vi.spyOn(institutionService, "listInstitutions").mockResolvedValue({
+      items: [{ institutionId: INST_ID, institutionName: "Manoj School", institutionCode: "MNS", institutionType: "SCHOOL" }],
+      total: 1,
+    } as unknown as Awaited<ReturnType<typeof institutionService.listInstitutions>>);
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+
+    renderWithTenant(<AcademicStructurePage />);
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/${INST_ID}/classes`);
+      expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/institutions/${INST_ID}/sections`);
+      expect(api.get).toHaveBeenCalledWith(`/api/tenants/${TENANT_ID}/academic-sessions`, { params: { institutionId: INST_ID } });
+    });
+    expect(screen.getByRole("heading", { name: "School classes" })).toBeInTheDocument();
+  });
+
   it("keeps the HOD action disabled until a department and person are selected", () => {
     renderWithTenant(<HodAssignmentPage />);
     expect(screen.getByRole("button", { name: /assign hod/i })).toBeDisabled();
