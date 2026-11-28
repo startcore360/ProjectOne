@@ -42,15 +42,15 @@ export default function TimetableGridView(){
  const selectedInstitution=institutions.find(item=>item.institutionId===institutionId);
  const overlaps=(slot:Slot)=>slot.day_of_week===Number(day)
   &&(!validTo||validTo>=slot.valid_from)&&(!slot.valid_to||slot.valid_to>=validFrom)
-  &&start<slot.end_time&&end>slot.start_time;
+  &&(start+":00")<slot.end_time&&(end+":00")>slot.start_time;
  const allocationConflict=(allocation:SubjectAllocationItem)=>{
-  const sameClass=slots.find(slot=>slot.subject_allocation_id===allocation.subjectAllocationId
+  const sameClass=conflictSlots.find(slot=>slot.subject_allocation_id===allocation.subjectAllocationId
    &&(allocation.sectionId?slot.section_id===allocation.sectionId:slot.subject_group_id===allocation.subjectGroupId)
    &&overlaps(slot));
   return sameClass?{slot:sameClass,reason:"Already allocated to this class at "+sameClass.start_time.slice(0,5)+"–"+sameClass.end_time.slice(0,5)}:null;
  };
  const roomConflict=(room:string)=>{
-  const occupied=slots.find(slot=>slot.room_id===room&&overlaps(slot));
+  const occupied=conflictSlots.find(slot=>slot.room_id===room&&overlaps(slot));
   return occupied?{slot:occupied,reason:"Room already allocated "+occupied.start_time.slice(0,5)+"–"+occupied.end_time.slice(0,5)}:null;
  };
 
@@ -86,6 +86,14 @@ export default function TimetableGridView(){
    .finally(()=>{if(active)setOptionsLoading(false);});
   return ()=>{active=false;};
  },[tenantId,institutionId,canListAllocations,canManageStructure]);
+ useEffect(()=>{
+  if(!tenantId||!institutionId){setConflictSlots([]);return;}
+  let active=true;
+  api.get<Slot[]>("/api/tenants/"+tenantId+"/academic/timetable/slots",{params:{institutionId,academicSessionId:sessionId||undefined}})
+   .then(res=>{if(active)setConflictSlots(res.data);})
+   .catch(()=>{if(active)setConflictSlots([]);});
+  return ()=>{active=false;};
+ },[tenantId,institutionId,sessionId]);
  const load=useCallback(async()=>{
   if(!tenantId||!institutionId){setSlots([]);return;}
   setSlotsLoading(true);
