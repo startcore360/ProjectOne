@@ -3645,3 +3645,50 @@ html:has(.app-shell--tenant) .app-modal__body > form > footer {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Academic structure workspace: align context, actions and data sections to the shared
+   Stillwater panel rhythm without changing the underlying institution workflows. */
+.app-structure-context__body,
+.app-structure-panel-body {
+  padding: 0 var(--space-5) var(--space-5);
+}
+.app-structure-context__body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: var(--space-4);
+}
+.app-structure-context__selector { min-width: 0; max-width: 34rem; }
+.app-structure-context__controls { display: flex; align-items: center; gap: var(--space-3); }
+.app-structure-context__controls .app-inline-actions { margin: 0; }
+.app-structure-data-panel .app-panel__header { align-items: center; }
+.app-structure-data-panel .app-panel__header > :last-child { flex: 0 0 auto; }
+.app-structure-data-panel .app-inline-actions { flex-wrap: wrap; }
+.app-structure-data-panel .app-table-wrap { border-top: 1px solid var(--color-border-divider); }
+.app-structure-advanced-panel .app-form { display: grid; gap: var(--space-4); }
+.app-structure-shortcuts__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-5);
+}
+.app-structure-shortcuts__links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  color: var(--color-text-link);
+  text-decoration: none;
+}
+.app-structure-shortcuts__links a:hover { background: var(--color-bg-subtle); }
+@media (max-width: 720px) {
+  .app-structure-context__body { grid-template-columns: minmax(0, 1fr); }
+  .app-structure-context__controls { justify-content: flex-start; }
+  .app-structure-data-panel .app-panel__header { align-items: flex-start; flex-wrap: wrap; }
+  .app-structure-data-panel .app-panel__header > :last-child { width: 100%; }
+  .app-structure-data-panel .app-panel__header > :last-child .app-button { width: 100%; }
+  .app-structure-panel-body { padding-right: var(--space-3); padding-left: var(--space-3); }
+}
