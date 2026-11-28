@@ -43,7 +43,8 @@ function renderWorkspace(roleCode: string) {
   );
 }
 
-describe("RoleWorkspace", () => {\n  beforeEach(() => vi.clearAllMocks());
+describe("RoleWorkspace", () => {
+  beforeEach(() => vi.clearAllMocks());
   it("shows real active-user and active-section counts for School Admin once loaded", async () => {
     vi.mocked(dashboardService.getSummary).mockResolvedValueOnce({
       data: { activeUsers: 12, activeSections: 7 },
