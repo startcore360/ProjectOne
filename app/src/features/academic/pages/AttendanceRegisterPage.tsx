@@ -3,7 +3,6 @@ import type { FormEvent, KeyboardEvent } from "react";
 import api from "../../../services/axios";
 import { useAppSelector } from "../../../store/hooks";
 import {
-  TextField,
   SelectField,
   DateField,
   CheckboxField,
@@ -16,7 +15,6 @@ import {
 } from "../../../design-system/components";
 import {
   institutionService,
-  type DepartmentItem,
   type InstitutionItem,
   type SectionItem,
 } from "../../institution-admin/api/institutionService";
@@ -47,10 +45,8 @@ export default function AttendanceRegisterPage() {
 
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [sections, setSections] = useState<SectionItem[]>([]);
-  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [institutionId, setInstitutionId] = useState(activeInstitutionId);
-  const [departmentId, setDepartmentId] = useState("");
   const [sectionId, setSectionId] = useState("");
   const [slotId, setSlotId] = useState("");
   const [subjectAllocationId, setSubjectAllocationId] = useState("");
@@ -63,7 +59,7 @@ export default function AttendanceRegisterPage() {
   const [feedback, setFeedback] = useState("");
   const [isError, setIsError] = useState(false);
   const [sessionId, setSessionId] = useState("");
-  const [threshold, setThreshold] = useState("");
+  const [sessionSubmitted, setSessionSubmitted] = useState(false);
 
   // Load available institutions
   useEffect(() => {
@@ -99,22 +95,6 @@ export default function AttendanceRegisterPage() {
         }
       })
       .catch(() => setSections([]));
-  }, [tenantId, institutionId]);
-
-  // Load available departments for the chosen institution
-  useEffect(() => {
-    if (!tenantId || !institutionId) {
-      setDepartments([]);
-      return;
-    }
-    void institutionService
-      .listDepartments(tenantId, institutionId)
-      .then((res) => {
-        if (Array.isArray(res)) {
-          setDepartments(res.filter((d) => d && typeof d.departmentId === "string"));
-        }
-      })
-      .catch(() => setDepartments([]));
   }, [tenantId, institutionId]);
 
   // Synchronize activeInstitutionId from Redux if institutionId was unset
@@ -157,6 +137,8 @@ export default function AttendanceRegisterPage() {
         { params: { institutionId, date } }
       );
       const rosterData = Array.isArray(res.data) ? res.data : [];
+      setSessionId("");
+      setSessionSubmitted(false);
       setStudents(rosterData);
       setMarks(Object.fromEntries(rosterData.map((x) => [x.enrollment_id, ""])));
       setIsError(false);
@@ -170,9 +152,11 @@ export default function AttendanceRegisterPage() {
         .then((regRes) => {
           if (Array.isArray(regRes.data) && regRes.data.length > 0) {
             let existingSessionId = "";
+            let submitted = false;
             const existingMarks: Record<string, Status> = {};
             for (const row of regRes.data) {
               if (row.attendance_session_id) existingSessionId = row.attendance_session_id;
+              if (row.submitted_at) submitted = true;
               if (row.enrollment_id && row.attendance_status) {
                 existingMarks[row.enrollment_id] = row.attendance_status;
               }
@@ -182,6 +166,7 @@ export default function AttendanceRegisterPage() {
             }
             if (existingSessionId) {
               setSessionId(existingSessionId);
+              setSessionSubmitted(submitted);
             }
           }
         })
@@ -197,16 +182,6 @@ export default function AttendanceRegisterPage() {
   useEffect(() => {
     void loadRoster();
   }, [loadRoster]);
-
-  useEffect(() => {
-    if (!tenantId || !institutionId) return;
-    void api
-      .get("/api/tenants/" + tenantId + "/academic/attendance/thresholds", {
-        params: { institutionId, departmentId: departmentId || undefined },
-      })
-      .then((r) => setThreshold(String(r.data.minimum_attendance_percentage)))
-      .catch(() => setThreshold(""));
-  }, [tenantId, institutionId, departmentId]);
 
   const counts = useMemo(
     () => ({
@@ -248,7 +223,7 @@ export default function AttendanceRegisterPage() {
         enrollmentId: s.enrollment_id,
         status: notHeld ? "NOT_HELD" : marks[s.enrollment_id],
       }));
-      const response = await api.post("/api/tenants/" + tenantId + "/academic/attendance/sessions", {
+      const response = sessionId ? { data: { attendance_session_id: sessionId } } : await api.post("/api/tenants/" + tenantId + "/academic/attendance/sessions", {
         institutionId,
         sectionId,
         subjectGroupId: null,
@@ -265,31 +240,11 @@ export default function AttendanceRegisterPage() {
         entries,
       });
       setSessionId(response.data.attendance_session_id);
+      setSessionSubmitted(false);
       setFeedback("Attendance session and entries saved.");
       setIsError(false);
     } catch (e) {
       setFeedback(e instanceof Error ? e.message : "Unable to save attendance.");
-      setIsError(true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function saveThreshold(event: FormEvent) {
-    event.preventDefault();
-    if (!tenantId) return;
-    setBusy(true);
-    setFeedback("");
-    try {
-      await api.put("/api/tenants/" + tenantId + "/academic/attendance/thresholds", {
-        institutionId,
-        departmentId: departmentId || null,
-        minimumAttendancePercentage: Number(threshold),
-      });
-      setFeedback("Attendance threshold settings saved.");
-      setIsError(false);
-    } catch (e) {
-      setFeedback(e instanceof Error ? e.message : "Unable to save attendance threshold.");
       setIsError(true);
     } finally {
       setBusy(false);
@@ -301,9 +256,13 @@ export default function AttendanceRegisterPage() {
   return (
     <main className="app-page">
       <PageHeader
-        title="Attendance register"
-        description="Capture school half-day or college period attendance. Keyboard shortcuts: P = Present, A = Absent, O = On approved leave. Only canonical statuses are available."
+        title="Mark attendance"
+        description="Mark only the selected class and session. Use P, A or O on a focused student row; no full-day history is shown here."
       />
+
+      {sessionSubmitted && (
+        <Notice tone="warning">This session has already been submitted and is read-only. Any change must use the formal correction request process; direct edits are disabled.</Notice>
+      )}
 
       {feedback && (
         <Notice tone={isError ? "danger" : "success"}>
@@ -311,13 +270,13 @@ export default function AttendanceRegisterPage() {
         </Notice>
       )}
 
-      <Panel title="Session configuration" description="Select the institution, section, and date to record attendance.">
+      <Panel title="Choose attendance session" description="Select your assigned class and the teaching session you are recording.">
         <div className="app-panel__body">
           <div className="app-form-grid">
             <SelectField
               id="att-institution-id"
-              label="Institution ID"
-              aria-label="Institution ID"
+              label="Institution"
+              aria-label="Institution"
               value={institutionId}
               onChange={(e) => {
                 setInstitutionId(e.target.value);
@@ -339,8 +298,8 @@ export default function AttendanceRegisterPage() {
 
             <SelectField
               id="att-section-id"
-              label="Section ID"
-              aria-label="Section ID"
+              label="Class / section"
+              aria-label="Class / section"
               value={sectionId}
               onChange={(e) => setSectionId(e.target.value)}
               options={[
@@ -440,7 +399,7 @@ export default function AttendanceRegisterPage() {
         </div>
       </Panel>
 
-      <Panel title="Register summary" description="Summary count of marked attendance.">
+      <Panel title="Marking progress" description="Live counts for this session only.">
         <div className="app-panel__body">
           <div className="kpi-grid">
             <MetricCard label="Present count" value={counts.present} />
@@ -451,7 +410,7 @@ export default function AttendanceRegisterPage() {
         </div>
       </Panel>
 
-      <Panel title="Roster & attendance sheet" description="Mark attendance per student or mark the entire session not held.">
+      <Panel title="Class register" description="Mark each student for this session. The complete student attendance history is intentionally not part of this task.">
         <div className="app-panel__body">
           <form onSubmit={submit}>
             <div
@@ -505,7 +464,7 @@ export default function AttendanceRegisterPage() {
               <table className="eds-table">
                 <thead>
                   <tr>
-                    <th>Student</th>
+                    <th>Roll / ID</th>\n                    <th>Student</th>
                     <th style={{ textAlign: "center", width: "120px" }}>Present</th>
                     <th style={{ textAlign: "center", width: "120px" }}>Absent</th>
                     <th style={{ textAlign: "center", width: "150px" }}>Approved leave</th>
@@ -540,7 +499,7 @@ export default function AttendanceRegisterPage() {
                   ))}
                   {students.length === 0 && (
                     <tr>
-                      <td colSpan={4} style={{ textAlign: "center", padding: "var(--space-6)", color: "var(--color-text-muted)" }}>
+                      <td colSpan={5} style={{ textAlign: "center", padding: "var(--space-6)", color: "var(--color-text-muted)" }}>
                         No students loaded. Configure the section above and click "Load class roster".
                       </td>
                     </tr>
@@ -554,7 +513,7 @@ export default function AttendanceRegisterPage() {
                 type="submit"
                 disabled={
                   busy ||
-                  students.length === 0 ||
+                  students.length === 0 ||\n                  sessionSubmitted ||
                   !institutionId ||
                   !sectionId ||
                   periodIncomplete ||
@@ -569,47 +528,6 @@ export default function AttendanceRegisterPage() {
         </div>
       </Panel>
 
-      <Panel title="Exam eligibility threshold (PO-T02)" description="Configure minimum attendance requirements for exam eligibility.">
-        <div className="app-panel__body">
-          <form onSubmit={saveThreshold}>
-            <div className="app-form-grid">
-              <SelectField
-                id="att-dept-id"
-                label="Department"
-                value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
-                options={[
-                  { value: "", label: "Institution default (all departments)" },
-                  ...departments.map((d) => ({
-                    value: d.departmentId,
-                    label: d.departmentName || d.departmentCode,
-                  })),
-                ]}
-              />
-              <TextField
-                id="att-threshold"
-                label="Minimum attendance % *"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                required
-                value={threshold}
-                onChange={(e) => setThreshold(e.target.value)}
-              />
-            </div>
-            <div style={{ marginTop: "var(--space-4)", display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" disabled={busy || !institutionId} busy={busy}>
-                Save threshold
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Panel>
-
-      <p style={{ fontSize: "var(--fs-caption)", color: "var(--color-text-muted)" }}>
-        Students and primary guardians submit medical certificates from the student portal. Authorized approvers review requests in the medical exemption review workspace.
-      </p>
     </main>
   );
 }
