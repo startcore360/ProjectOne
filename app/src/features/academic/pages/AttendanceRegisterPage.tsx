@@ -454,7 +454,8 @@ export default function AttendanceRegisterPage() {
               <table className="eds-table">
                 <thead>
                   <tr>
-                    <th>Roll / ID</th>\n                    <th>Student</th>
+                    <th>Roll / ID</th>
+                    <th>Student</th>
                     <th style={{ textAlign: "center", width: "120px" }}>Present</th>
                     <th style={{ textAlign: "center", width: "120px" }}>Absent</th>
                     <th style={{ textAlign: "center", width: "150px" }}>Approved leave</th>
