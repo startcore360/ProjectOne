@@ -2395,3 +2395,182 @@ textarea.app-input { min-height: 88px; padding: 10px 14px; resize: vertical; }
 
 /* Dashboard tile titles are h2 for structure; keep the small KPI label look. */
 .kpi .kpi__label { font-family: inherit; line-height: inherit; }
+
+
+/* Institution workspaces — same Stillwater design language, with a calmer and more
+   deliberate information hierarchy for School Admin, College Admin and Principal roles.
+   Kept scoped to the institution shell so Platform screens retain their existing treatment. */
+.app-content--institution {
+  max-width: calc(var(--content-max) + 112px);
+  padding-top: clamp(24px, 3.2vw, 36px);
+}
+.app-content--institution .app-page {
+  gap: clamp(20px, 2.2vw, 28px);
+}
+.app-content--institution .eds-page-header {
+  align-items: center;
+  gap: var(--space-5);
+  margin-bottom: 0;
+}
+.app-content--institution .eds-page-header__title {
+  letter-spacing: -0.035em;
+}
+.app-content--institution .eds-page-header__description {
+  max-width: 72ch;
+  line-height: 1.6;
+}
+.app-content--institution .eds-page-header__actions {
+  flex: 0 0 auto;
+}
+.app-content--institution .app-panel {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-card);
+}
+.app-content--institution .app-panel__header {
+  align-items: center;
+  padding: clamp(18px, 2vw, 24px) clamp(18px, 2.2vw, 26px) var(--space-4);
+}
+.app-content--institution .app-panel__header h2 {
+  letter-spacing: -0.02em;
+}
+.app-content--institution .app-panel__header p {
+  max-width: 76ch;
+  line-height: 1.55;
+}
+.app-content--institution .app-panel__body {
+  padding: 0 clamp(18px, 2.2vw, 26px) clamp(18px, 2.2vw, 26px);
+}
+.app-content--institution .app-toolbar {
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 clamp(18px, 2.2vw, 26px) var(--space-4);
+}
+.app-content--institution .app-two-col {
+  gap: clamp(16px, 2vw, 22px);
+}
+.app-content--institution .app-page form:not(.app-toolbar) {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+.app-content--institution .app-page form:not(.app-toolbar) > .eds-field,
+.app-content--institution .app-page form:not(.app-toolbar) .eds-field {
+  min-width: 0;
+  margin-top: 0;
+}
+.app-content--institution .eds-field label {
+  margin-bottom: var(--space-2);
+  font-weight: var(--fw-semibold);
+}
+.app-content--institution .eds-field input,
+.app-content--institution .eds-field select,
+.app-content--institution .eds-field textarea {
+  border-radius: var(--radius-md);
+  transition: border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard);
+}
+.app-content--institution .eds-field input:focus,
+.app-content--institution .eds-field select:focus,
+.app-content--institution .eds-field textarea:focus {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 14%, transparent);
+}
+.app-content--institution .app-table-wrap {
+  border-top-color: var(--color-border-divider);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+.app-content--institution .app-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.app-content--institution .app-table th {
+  padding: 14px 18px;
+  background: var(--color-bg-subtle);
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+.app-content--institution .app-table td {
+  padding: 16px 18px;
+}
+.app-content--institution .app-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: var(--radius-lg);
+}
+.app-content--institution .app-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: var(--radius-lg);
+}
+.app-content--institution .app-callout {
+  align-items: flex-start;
+  padding: clamp(16px, 2vw, 20px);
+  border-radius: var(--radius-lg);
+  line-height: 1.6;
+}
+.app-content--institution .kpi-grid {
+  gap: var(--space-4);
+}
+.app-content--institution .kpi {
+  border-radius: var(--radius-lg);
+  padding: clamp(16px, 1.8vw, 20px);
+}
+.app-content--institution .app-action-grid {
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+.app-content--institution .app-action-tile {
+  min-height: 104px;
+  justify-content: center;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+}
+.app-content--institution .app-action-tile__label {
+  font-size: var(--fs-body);
+}
+.app-content--institution .app-action-note {
+  padding: 0 clamp(18px, 2.2vw, 26px) var(--space-5);
+  line-height: 1.6;
+}
+.app-content--institution .app-inline-notice,
+.app-content--institution .eds-notice {
+  border-radius: var(--radius-lg);
+  line-height: 1.55;
+}
+@media (max-width: 760px) {
+  .app-content--institution .eds-page-header {
+    align-items: stretch;
+  }
+  .app-content--institution .eds-page-header__actions {
+    width: 100%;
+  }
+  .app-content--institution .eds-page-header__actions > * {
+    max-width: 100%;
+  }
+  .app-content--institution .app-toolbar {
+    align-items: stretch;
+  }
+  .app-content--institution .app-page form:not(.app-toolbar) {
+    gap: var(--space-3);
+  }
+}
+@media (max-width: 640px) {
+  .app-content--institution {
+    padding-top: var(--space-5);
+  }
+  .app-content--institution .app-panel__header {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+  .app-content--institution .app-panel__body {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+  .app-content--institution .app-toolbar {
+    padding-inline: var(--space-4);
+  }
+  .app-content--institution .app-table th,
+  .app-content--institution .app-table td {
+    padding: 13px 14px;
+  }
+  .app-content--institution .app-action-grid {
+    grid-template-columns: 1fr;
+    padding-inline: var(--space-4);
+  }
+}
